@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { signInAsPersona } from './dev-actors.ts'
+import { listDevActors, signInAsPersona } from './dev-actors.ts'
 
 test('signInAsPersona posts only the persona id to the persona endpoint', async () => {
   let seen: { url: string; init: RequestInit } | null = null
@@ -41,4 +41,33 @@ test('signInAsPersona throws on a refused sign-in', async () => {
   } finally {
     globalThis.fetch = original
   }
+})
+
+test('listDevActors asks the persona list for the app, and treats a refusal as nobody', async () => {
+  const urls: string[] = []
+  const original = globalThis.fetch
+  let ok = true
+  globalThis.fetch = (async (url: string) => {
+    urls.push(url)
+    return {
+      ok,
+      status: ok ? 200 : 404,
+      json: async () => ({
+        actors: [{ id: 'admin', name: 'Admin', jobTitle: null }],
+      }),
+    } as Response
+  }) as unknown as typeof fetch
+  try {
+    assert.deepEqual(await listDevActors({ apiUrl: '/api', app: 'web' }), [
+      { id: 'admin', name: 'Admin', jobTitle: null },
+    ])
+    ok = false
+    assert.deepEqual(await listDevActors({ apiUrl: '/api' }), [])
+  } finally {
+    globalThis.fetch = original
+  }
+  assert.deepEqual(urls, [
+    '/api/auth/sign-in/personas?app=web',
+    '/api/auth/sign-in/personas',
+  ])
 })

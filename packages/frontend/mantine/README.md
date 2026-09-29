@@ -48,17 +48,16 @@ to ship one, since without it a reviewer is locked out of their own sandbox.
 ```tsx
 import { DevActorSwitcher } from '@pikku/mantine/dev'
 ;<DevActorSwitcher
-  list={() => rpc.invoke('listDevActors', { app: appSlug })}
   apiUrl={apiUrl()}
+  app={appSlug}
   onSignedIn={() => navigate({ to: '/' })}
 />
 ```
 
-No credential reaches the bundle: it lists personas from the app's
-`listDevActors` function and signs in by persona id through
-`/auth/sign-in/persona`. Both are the server's call — build them from
-`listDevActors` and `devSwitcherOn` in `@pikku/better-auth` and pass
-`personaSignIn` to `pikkuActor`. Outside `pikku dev` the server offers nobody
+No credential reaches the bundle: it lists personas from
+`/auth/sign-in/personas` and signs in by persona id through
+`/auth/sign-in/persona`. Both are served by `pikkuActor({ personaSignIn })` from
+`@pikku/better-auth`, gated with `devSwitcherOn`. Outside `pikku dev` the server offers nobody
 unless the stage opts into actor sign-in and turns its `devSwitcher` flag on, so
 the control renders `null` in production.
 

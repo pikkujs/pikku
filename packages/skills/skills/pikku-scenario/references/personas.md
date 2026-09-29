@@ -83,15 +83,10 @@ Declared actors are not only for automated runs. `signInPath` is Better Auth's
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The switcher holds no credential. It asks the app's `listDevActors` function
-for the personas to offer and signs in by posting only a persona id to
-`/auth/sign-in/persona`; the server resolves the address. Two server pieces,
-both built from `@pikku/better-auth` — an exposed, sessionless function:
-
-```ts snippet:listDevActors
-```
-
-and, in the auth config:
+The switcher holds no credential. It lists personas from
+`/auth/sign-in/personas` and signs in by posting only a persona id to
+`/auth/sign-in/persona`; the server resolves the address. One server piece
+serves both, in the auth config:
 
 ```ts snippet:personaSignIn
 ```
@@ -107,17 +102,16 @@ one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them
 errors:
 
-- **`listDevActors` returns nobody.** On a deployed stage that is the gate
+- **The list is empty.** On a deployed stage that is the gate
   doing its job — check the opt-in and the `devSwitcher` flag. Locally, check
   the personas declare an `email` (via `scenarios.emailDomain`) and are not
   `runnable: false`.
-- **The function is not exposed, or the frontend calls another API.** A dev
+- **`personaSignIn` is missing, or the frontend calls another API.** A dev
   proxy (`VITE_API_PROXY`, default `http://localhost:3000`) that points at
   another project's API lists that project's personas, or none.
 - **It is not mounted on the page you are looking at.** The template mounts it
   on the login screen. A public homepage that replaces the `/` → `/app`
   redirect needs its own `<DevActorSwitcher />` in the public layout.
 
-When the switcher lists personas but every click 404s, the auth config is
-missing `personaSignIn`; a 401 means its `allowed()` disagrees with the gate
-`listDevActors` used — pass both the same `devSwitcherOn` call.
+When the switcher lists personas but a click 404s, that persona has no `email`
+or is `runnable: false`.

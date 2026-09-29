@@ -46,11 +46,7 @@ export type {
   ActorSignInGate,
   ActorSignInReason,
 } from './actor-sign-in-gate.js'
-export {
-  DEV_SWITCHER_FLAG,
-  devSwitcherOn,
-  listDevActors,
-} from './dev-actors.js'
+export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-actors.js'
 export type { DevActor, DevActorPersona } from './dev-actors.js'
 
 export type { PersonaOrphanPolicy } from './provision-personas.js'

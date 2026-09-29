@@ -160,8 +160,7 @@ const LOGIN_FILE_PATTERN =
 //
 // Canonical implementation is `<DevActorSwitcher>` from `@pikku/mantine/dev`
 // (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
-// it lists personas from the app's `listDevActors` and signs in by id through
-// POST /auth/sign-in/persona. A local component calling `signInAsPersona()`, and
+// it lists and signs in personas by id through `pikkuActor({ personaSignIn })`. A local component calling `signInAsPersona()`, and
 // the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
 // pass, so apps that predate the package keep working.
 const ACTOR_QUICK_LOGIN_PATTERNS = [
@@ -1835,16 +1834,14 @@ export async function runValidate(
               `In ${loginFiles[0]}:`,
               "  import { DevActorSwitcher } from '@pikku/mantine/dev'",
               '  <DevActorSwitcher',
-              "    list={() => rpc.invoke('listDevActors', { app: appSlug })}",
               '    apiUrl={apiUrl()}',
+              '    app={appSlug}',
               "    onSignedIn={() => navigate({ to: '/' })}",
               '  />',
-              'It needs two things on the server, both built from @pikku/better-auth:',
-              '  - an exposed listDevActors function returning',
-              '    { actors: listDevActors(personaList, app) }, or none when',
-              '    devSwitcherOn(featureFlags, optIn) is false;',
-              '  - pikkuActor({ personaSignIn: { personas: personaList,',
-              '    allowed: () => devSwitcherOn(featureFlags, optIn) } }).',
+              'On the server, pikkuActor from @pikku/better-auth serves the list and',
+              'the sign-in:',
+              '  pikkuActor({ personaSignIn: { personas: personaList,',
+              '    allowed: () => devSwitcherOn(featureFlags, optIn) } })',
               'No credential reaches the bundle: the switcher signs in by persona id.',
               'It shows under `pikku dev`; a deployed stage shows it only when actor',
               'sign-in is opted in and its devSwitcher flag is on.',

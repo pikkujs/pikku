@@ -39,21 +39,19 @@ endpoint. It is UI-free, so you can render it however you like — or use the
 ready-made `<DevActorSwitcher />` from `@pikku/mantine/dev`.
 
 ```typescript
-import { useDevActors, usePikkuRPC } from '@pikku/react'
+import { useDevActors } from '@pikku/react'
 
-const rpc = usePikkuRPC()
 const { actors, signInAs, isPending } = useDevActors({
-  list: () => rpc.invoke('listDevActors', { app: appSlug }),
   apiUrl: apiUrl(),
+  app: appSlug,
   onSignedIn: () => navigate({ to: '/' }),
 })
 ```
 
-No credential reaches the bundle. `list` asks the app's `listDevActors`
-function for the personas to offer, and `signInAs(id)` posts only the persona id
-to `/auth/sign-in/persona`. The server decides both: build them from
-`listDevActors` and `devSwitcherOn` in `@pikku/better-auth`, and pass
-`personaSignIn` to `pikkuActor`. They offer nobody outside `pikku dev` unless a
+No credential reaches the bundle. The hook lists personas from
+`/auth/sign-in/personas`, and `signInAs(id)` posts only the persona id to
+`/auth/sign-in/persona`. The server decides both: pass `personaSignIn` to
+`pikkuActor` from `@pikku/better-auth`, gated with `devSwitcherOn`. They offer nobody outside `pikku dev` unless a
 stage opts into actor sign-in and turns its `devSwitcher` flag on, and the
 endpoint only signs in users flagged `actor: true`, so it can never impersonate
 a real user.

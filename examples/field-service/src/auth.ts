@@ -122,8 +122,8 @@ export const auth = pikkuBetterAuth(
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
-          // POST /api/auth/sign-in/persona { id } — the "Sign in as …"
-          // switcher. No credential: the same gate as listDevActors decides.
+          // The "Sign in as …" switcher: GET /api/auth/sign-in/personas lists,
+          // POST /api/auth/sign-in/persona { id } signs in. No credential.
           personaSignIn: {
             personas: personaList,
             allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),

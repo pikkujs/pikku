@@ -19,6 +19,8 @@ import {
   WEAK_ACTOR_ROOT_SECRET_MESSAGE,
   weakActorRootSecretMessage,
 } from './actor-sign-in-gate.js'
+import { isSignInable, listDevActors } from './dev-actors.js'
+import type { DevActorPersona } from './dev-actors.js'
 
 export interface ActorPluginOptions {
   /**
@@ -44,12 +46,14 @@ export interface ActorPluginOptions {
    */
   allowSignIn?: string
   /**
-   * Opens `POST /sign-in/persona { id }`, which signs in as a declared persona
-   * without the caller presenting a credential — the switcher a reviewer uses on
-   * a preview. `allowed` is asked on every call, so the app can gate it on a flag.
+   * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/personas
+   * ?app=` lists the personas it may offer, and `POST /sign-in/persona { id }`
+   * signs in as one without the caller presenting a credential. `allowed` is
+   * asked on every call, so the app can gate both on a flag — pass
+   * `() => devSwitcherOn(featureFlags, optIn)`.
    */
   personaSignIn?: {
-    personas: ReadonlyArray<{ id: string; email?: string; name?: string; runnable?: boolean }>
+    personas: ReadonlyArray<DevActorPersona>
     allowed: () => boolean | Promise<boolean>
   }
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
@@ -277,6 +281,22 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
       ),
       ...(options.personaSignIn
         ? {
+            listPersonas: createAuthEndpoint(
+              '/sign-in/personas',
+              {
+                method: 'GET',
+                query: z.object({ app: z.string().optional() }).optional(),
+              },
+              async (ctx) => {
+                const personaSignIn = options.personaSignIn!
+                const open = gate.enabled && (await personaSignIn.allowed())
+                return ctx.json({
+                  actors: open
+                    ? listDevActors(personaSignIn.personas, ctx.query?.app)
+                    : [],
+                })
+              }
+            ),
             signInPersona: createAuthEndpoint(
               '/sign-in/persona',
               { method: 'POST', body: z.object({ id: z.string() }) },
@@ -289,7 +309,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
                 }
                 const persona = personaSignIn.personas.find(
                   (candidate) =>
-                    candidate.id === ctx.body.id && candidate.runnable !== false
+                    candidate.id === ctx.body.id && isSignInable(candidate)
                 )
                 if (!persona?.email) {
                   throw new APIError('NOT_FOUND', {

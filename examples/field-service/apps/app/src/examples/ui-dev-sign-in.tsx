@@ -5,27 +5,20 @@
 //~ lang: tsx
 
 //~ steps:
-//~ The frontend is the small half. On Mantine, render `<DevActorSwitcher list={…}
-//~ apiUrl={…} />` from `@pikku/mantine/dev` instead of this; otherwise drive
-//~ `useDevActors` with your own markup, as here.
+//~ On Mantine, render `<DevActorSwitcher apiUrl={…} />` from `@pikku/mantine/dev`
+//~ instead of this; otherwise drive `useDevActors` with your own markup, as here.
 //~
-//~ The server half is what goes missing, and neither failure errors:
-//~ - `listDevActors`, an exposed sessionless function returning
-//~   `listDevActors(personaList, app)` behind `devSwitcherOn` — see
-//~   `src/functions/dev-actors.function.ts`. Without it the switcher lists nobody.
-//~ - `personaSignIn` on `pikkuActor`, gated by the same `devSwitcherOn` call — see
-//~   `src/auth.ts`. Without it every click 404s.
+//~ The server half is `personaSignIn` on `pikkuActor` — see `src/auth.ts`. It
+//~ serves both the list and the sign-in, so without it the switcher silently
+//~ lists nobody. Gate it with `allowed: () => devSwitcherOn(featureFlags, optIn)`.
 //~
 //~ Only a persona's id and label reach the browser, so there is no credential to
 //~ keep out of the production bundle.
 // ===== FILE: src/components/dev-sign-in.tsx =====
-import { useDevActors, usePikkuRPC } from '@pikku/react'
-import type { PikkuRPC } from '../../../../.pikku/pikku-rpc.gen'
+import { useDevActors } from '@pikku/react'
 
 export const DevSignIn = () => {
-  const rpc = usePikkuRPC<PikkuRPC>()
   const { actors, signInAs, isPending } = useDevActors({
-    list: () => rpc.invoke('listDevActors', {}),
     apiUrl: '/api',
     //~ A full reload rather than a router push: everything on the page was
     //~ fetched as nobody.

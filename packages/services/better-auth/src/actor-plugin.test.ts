@@ -209,11 +209,46 @@ const signInPersona = (auth: ReturnType<typeof makeAuth>, id: string) =>
     })
   )
 
+const listPersonas = (auth: ReturnType<typeof makeAuth>, app?: string) =>
+  auth.handler(
+    new Request(
+      `http://localhost:3000/api/auth/sign-in/personas${app ? `?app=${app}` : ''}`
+    )
+  )
+
 describe('persona sign-in', () => {
   const personas = [
-    { id: 'customer', email: 'customer@actors.local', name: 'Customer' },
+    { id: 'customer', email: 'customer@actors.local', name: 'Customer', app: 'web' },
+    { id: 'admin', email: 'admin@actors.local', name: 'Admin', app: 'admin' },
     { id: 'banned', email: 'banned@actors.local', runnable: false },
   ]
+
+  test('lists only the personas it will sign in, narrowed to the app', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [
+      { id: 'customer', name: 'Customer', jobTitle: null },
+      { id: 'admin', name: 'Admin', jobTitle: null },
+    ])
+    assert.deepEqual(
+      (await (await listPersonas(auth, 'admin')).json()).actors.map(
+        (actor: { id: string }) => actor.id
+      ),
+      ['admin']
+    )
+  })
+
+  test('lists nobody when `allowed` refuses', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas, allowed: () => false },
+    })
+    const res = await listPersonas(auth)
+    assert.equal(res.status, 200)
+    assert.deepEqual((await res.json()).actors, [])
+  })
+
   beforeEach(() => {
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
   })

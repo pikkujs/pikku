@@ -1646,7 +1646,7 @@ describe('pikku fabric validate', () => {
         assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
-        assert.match(finding!.fixHint, /listDevActors/)
+        assert.match(finding!.fixHint, /devSwitcherOn/)
         assert.match(finding!.fixHint, /personaSignIn/)
         assert.doesNotMatch(finding!.fixHint, /VITE_DEV_ACTOR/)
         assert.strictEqual(result.ok, false)
@@ -1686,7 +1686,7 @@ describe('pikku fabric validate', () => {
           'src/pages/LoginPage.tsx':
             "import { useDevActors } from '@pikku/react'\n" +
             'export const LoginPage = () => {\n' +
-            '  const { actors, signInAs } = useDevActors({ list: listDevActors, apiUrl: "/api" })\n' +
+            '  const { actors, signInAs } = useDevActors({ apiUrl: "/api" })\n' +
             '  return <>{actors.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
         })
         const result = await runValidate(tmp)

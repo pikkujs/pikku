@@ -6,10 +6,10 @@
 '@pikku/skills': patch
 ---
 
-The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from the app's `listDevActors` function and signs in by persona id through `POST /auth/sign-in/persona`, which `pikkuActor({ personaSignIn })` serves.
+The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from `GET /auth/sign-in/personas` and signs in by persona id through `POST /auth/sign-in/persona`; `pikkuActor({ personaSignIn })` serves both, so the app writes no listing function.
 
-**Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ list, apiUrl, onSignedIn }`. `list` is a call to the app's `listDevActors` RPC, e.g. `() => rpc.invoke('listDevActors', { app })`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor` for callers outside React.
+**Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ apiUrl, app?, onSignedIn }`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor`, and `listDevActors({ apiUrl, app })` fetches the list, for callers outside React.
 
-`@pikku/better-auth` exports the server pieces: `listDevActors(personas, app?)`, which returns the personas the persona endpoint accepts (narrowed to `app` when it declares its own), and `devSwitcherOn(featureFlags, optIn)`, which is always on under `pikku dev` and on a deployed stage requires the actor sign-in opt-in plus the `devSwitcher` flag. Use the same `devSwitcherOn` call for the listing function and for `personaSignIn.allowed`.
+`@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when `allowed()` refuses. New `devSwitcherOn(featureFlags, optIn)` is the gate to pass as `allowed`: always on under `pikku dev`, and on a deployed stage it requires the actor sign-in opt-in plus the `devSwitcher` flag.
 
 `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.

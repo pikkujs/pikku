@@ -249,12 +249,11 @@ persona with no password, so the app can be reviewed as each kind of user.
 their own sandbox.
 
 ```tsx
-import { useDevActors, usePikkuRPC } from '@pikku/react'
+import { useDevActors } from '@pikku/react'
 
-const rpc = usePikkuRPC()
 const { actors, signInAs, pendingId, isPending, error } = useDevActors({
-  list: () => rpc.invoke('listDevActors', { app: appSlug }),
   apiUrl: apiUrl(),
+  app: appSlug,
   onSignedIn: () => navigate({ to: '/' }),
 })
 ```
@@ -263,14 +262,14 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
   `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
   `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
   and so must not export components Mantine has no counterpart for.
-- **No credential reaches the bundle.** `list` calls the app's `listDevActors`
-  function and `signInAs(id)` posts only the persona id to
-  `/auth/sign-in/persona`. The server decides who is offered and who may sign
-  in, and offers nobody in production — see **pikku-scenario** for the two
-  server pieces.
+- **No credential reaches the bundle.** It lists from `/auth/sign-in/personas`
+  and `signInAs(id)` posts only the persona id to `/auth/sign-in/persona`. The
+  server decides who is offered and who may sign in, and offers nobody in
+  production — see **pikku-scenario** for `personaSignIn`.
 - **It takes `onSignedIn` rather than a router**, since every app lands
   somewhere different.
-- `signInAsPersona()` is exported too, for a non-React caller. The endpoint only
+- `listDevActors()` and `signInAsPersona()` are exported too, for a non-React
+  caller. The endpoint only
   signs in rows flagged `actor: true`, so it can never impersonate a real user —
   see **pikku-auth**.
 

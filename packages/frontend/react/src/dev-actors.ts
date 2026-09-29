@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 /**
- * One scenario persona the switcher offers for one-click sign-in, as the app's
- * `listDevActors` function returns it (`listDevActors` from
- * `@pikku/better-auth`). No address and no credential: sign-in names the
- * persona by id and the server resolves the rest.
+ * One scenario persona the switcher offers for one-click sign-in, as
+ * `GET /auth/sign-in/personas` lists it. No address and no credential: sign-in
+ * names the persona by id and the server resolves the rest.
  */
 export type DevActor = {
   id: string
@@ -41,14 +40,27 @@ export const signInAsPersona = async ({
   }
 }
 
-export type UseDevActorsOptions = {
-  /**
-   * Fetches the personas to offer — the app's `listDevActors` RPC, e.g.
-   * `() => rpc.invoke('listDevActors', { app })`. Called once on mount; the
-   * server returns none wherever the switcher is off.
-   */
-  list: () => Promise<{ actors: DevActor[] }>
+export type ListDevActorsOptions = {
+  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/personas` is appended. */
   apiUrl: string
+  /** Narrows to this app's personas when it declares any. */
+  app?: string
+}
+
+/** The personas `pikkuActor({ personaSignIn })` will sign in — none wherever the switcher is off. */
+export const listDevActors = async ({
+  apiUrl,
+  app,
+}: ListDevActorsOptions): Promise<DevActor[]> => {
+  const query = app ? `?app=${encodeURIComponent(app)}` : ''
+  const response = await fetch(`${apiUrl}/auth/sign-in/personas${query}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) return []
+  return ((await response.json()) as { actors?: DevActor[] }).actors ?? []
+}
+
+export type UseDevActorsOptions = ListDevActorsOptions & {
   /** Called after a successful sign-in — the app owns where that lands. */
   onSignedIn?: () => void | Promise<void>
 }
@@ -70,22 +82,19 @@ export type UseDevActorsResult = {
  * a broken dev affordance must not take the login screen down with it.
  */
 export const useDevActors = ({
-  list,
   apiUrl,
+  app,
   onSignedIn,
 }: UseDevActorsOptions): UseDevActorsResult => {
   const [actors, setActors] = useState<DevActor[]>([])
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
-  const listRef = useRef(list)
-  listRef.current = list
 
   useEffect(() => {
     let live = true
-    listRef
-      .current()
-      .then((result) => {
-        if (live) setActors(result?.actors ?? [])
+    listDevActors({ apiUrl, app })
+      .then((listed) => {
+        if (live) setActors(listed)
       })
       .catch(() => {
         if (live) setActors([])
@@ -93,7 +102,7 @@ export const useDevActors = ({
     return () => {
       live = false
     }
-  }, [])
+  }, [apiUrl, app])
 
   const signInAs = useCallback(
     (id: string) => {

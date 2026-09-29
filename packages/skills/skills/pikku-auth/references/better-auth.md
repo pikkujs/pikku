@@ -559,10 +559,10 @@ actor`. So the secret cannot take over a **real user's** account — the blast
   credential leaks neither the length nor a prefix of the right one.
 
 This is the endpoint `pikku scenario` signs its actors in through. The frontend
-switcher does not use it: it posts a persona id to `/sign-in/persona`, which
-`pikkuActor({ personaSignIn: { personas, allowed } })` serves with no credential
-— see `pikku-scenario` for the server pieces and `pikku-react` for
-`useDevActors()`.
+switcher does not use it: it lists from `/sign-in/personas` and posts a persona
+id to `/sign-in/persona`, both served by
+`pikkuActor({ personaSignIn: { personas, allowed } })` with no credential — see
+`pikku-scenario` for the setup and `pikku-react` for `useDevActors()`.
 
 ### Provisioning personas
 

@@ -1,21 +1,12 @@
 import type { FC, CSSProperties } from 'react'
-import {
-  asI18n,
-  useDevActors,
-  type I18nString,
-  type UseDevActorsOptions,
-} from '@pikku/react'
+import { asI18n, useDevActors, type I18nString } from '@pikku/react'
 import { Button, Menu, Text } from '../core/index.js'
 
 export type DevActorSwitcherProps = {
-  /**
-   * Fetches the personas to offer — the app's `listDevActors` RPC, e.g.
-   * `() => rpc.invoke('listDevActors', { app })`. The server returns none
-   * wherever the switcher is off, and then this renders nothing.
-   */
-  list: UseDevActorsOptions['list']
   /** API base, including the `/api` prefix if the app has one. */
   apiUrl: string
+  /** Narrows to this app's personas when it declares any. */
+  app?: string
   /**
    * Where a successful sign-in lands. The app owns this — the templates go to
    * `/app`, other apps to `/` — which is also why this component takes a
@@ -48,8 +39,8 @@ const CORNERS: Record<
  * own sandbox — which is why `pikku fabric validate` requires any frontend with
  * a login screen to ship one.
  *
- * No credential reaches the bundle: it lists personas from the server and signs
- * in by persona id through `pikkuActor({ personaSignIn })`. Renders nothing
+ * No credential reaches the bundle: it lists and signs in personas by id through
+ * `pikkuActor({ personaSignIn })`. Renders nothing
  * when the server offers none, which is every production deployment.
  *
  * Strings here are passed through `asI18n` rather than a message catalogue: this
@@ -57,15 +48,15 @@ const CORNERS: Record<
  * consuming app three keys for text only its own developers see.
  */
 export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
-  list,
   apiUrl,
+  app,
   onSignedIn,
   label = asI18n('Sign in as …'),
   position = 'bottom-right',
 }) => {
   const { actors, signInAs, pendingId, isPending, error } = useDevActors({
-    list,
     apiUrl,
+    app,
     onSignedIn,
   })
 

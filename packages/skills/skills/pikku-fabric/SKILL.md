@@ -479,9 +479,8 @@ app they were asked to look at.
 Satisfy it with `<DevActorSwitcher />` from `@pikku/mantine/dev`, or with your
 own UI built on `useDevActors()` or `signInAsPersona()` from `@pikku/react` —
 validate accepts any of those call sites as evidence, so custom rendering
-passes. Either way the app needs a `listDevActors` function and `personaSignIn`
-on `pikkuActor`; see **pikku-scenario** for both and **pikku-react** for the
-props.
+passes. Either way the server needs `personaSignIn` on `pikkuActor`; see
+**pikku-scenario** for it and **pikku-react** for the props.
 
 The validator also accepts the shapes that predate the package — a hand-rolled
 `signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
