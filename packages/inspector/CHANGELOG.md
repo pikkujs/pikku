@@ -1,3 +1,9 @@
+## 0.12.94
+
+### Patch Changes
+
+- 4323bcf: Inline wiring functions now record their source file, so `pikku release` leaves scaffold-injected ones out of the API surface.
+
 ## 0.12.93
 
 ### Patch Changes
