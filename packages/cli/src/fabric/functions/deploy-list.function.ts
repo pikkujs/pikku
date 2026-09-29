@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { resolveStageId } from '../lib/stage.js'
+import { autoDeployOffHints, resolveStageId } from '../lib/stage.js'
 import { table, statusColor, dim } from '../lib/output.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 
@@ -13,6 +13,7 @@ export const FabricDeployListInput = z.object({
 export const FabricDeployListOutput = z.object({
   branch: z.string(),
   deployments: z.array(z.any()),
+  hints: z.array(z.string()),
 })
 
 export const FabricDeployList = pikkuSessionlessFunc({
@@ -33,7 +34,10 @@ export const FabricDeployList = pikkuSessionlessFunc({
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const stageId = await resolveStageId(rpc, ctx.projectId, branch)
     const { deployments } = await rpc.invoke('listDeployments', { stageId })
-    return { branch, deployments }
+    const hints = deployments.some((d) => d.status === 'suspended')
+      ? await autoDeployOffHints(rpc, ctx.projectId, branch)
+      : []
+    return { branch, deployments, hints }
   },
 })
 
@@ -52,7 +56,11 @@ type DeploymentRow = {
 
 export const renderDeployList = (
   _s: unknown,
-  { branch, deployments }: { branch: string; deployments: DeploymentRow[] }
+  {
+    branch,
+    deployments,
+    hints,
+  }: { branch: string; deployments: DeploymentRow[]; hints: string[] }
 ): void => {
   if (deployments.length === 0) {
     console.log(dim(`No deployments for ${branch}.`))
@@ -71,4 +79,5 @@ export const renderDeployList = (
       ])
     )
   )
+  for (const hint of hints) console.log(dim(hint))
 }
