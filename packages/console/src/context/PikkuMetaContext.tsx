@@ -9,6 +9,7 @@ import React, {
 import { usePikkuRPC } from './PikkuRpcProvider'
 import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { WebhookSourcesMeta } from '@pikku/core/trigger'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
@@ -31,6 +32,7 @@ type PikkuMetaState = Omit<
 > & {
   personas: Record<string, ResolvedPersona>
   systemRoles: SystemRoleDefinitionsMeta
+  webhookSourceMeta: WebhookSourcesMeta
 }
 
 interface PikkuMetaContextType {
@@ -77,6 +79,7 @@ const EMPTY_META: PikkuMetaState = {
   features: {},
   triggerMeta: {},
   triggerSourceMeta: {},
+  webhookSourceMeta: {},
   middlewareGroupsMeta: {
     definitions: {},
     instances: {},
@@ -156,6 +159,9 @@ export const PikkuMetaProvider: React.FC<{
         features: allMeta.features ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
+        webhookSourceMeta:
+          (allMeta as { webhookSourceMeta?: WebhookSourcesMeta })
+            .webhookSourceMeta ?? {},
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,
         permissionsGroupsMeta: allMeta.permissionsGroupsMeta,
         agentsMeta: allMeta.agentsMeta,
