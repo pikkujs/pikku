@@ -5,7 +5,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as changesLib from '../lib/changes.js'
-import * as gitLib from '../lib/git.js'
+import * as gitLib from '../../utils/git.js'
 
 /**
  * The commands themselves, not the helpers they call: what reaches
@@ -59,7 +59,7 @@ const realGit = { ...gitLib }
 /** Whether the faked answers above are still in force. */
 let gitOverride = true
 
-mock.module('../lib/git.js', () => ({
+mock.module('../../utils/git.js', () => ({
   ...realGit,
   isGitRepo: async (cwd?: string) =>
     gitOverride ? git.repo : realGit.isGitRepo(cwd),

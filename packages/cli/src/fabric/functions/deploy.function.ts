@@ -2,11 +2,8 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import {
-  assertNamedBranchDeploySafety,
-  currentBranch,
-  resolveRef,
-} from '../lib/git.js'
+import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
+import { currentBranch, resolveRef } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'

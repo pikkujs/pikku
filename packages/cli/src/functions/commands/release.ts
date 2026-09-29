@@ -8,7 +8,7 @@ import {
   isAncestor,
   isWorkingTreeClean,
   resolveRef,
-} from '../../fabric/lib/git.js'
+} from '../../utils/git.js'
 import { loadManifest } from '../../utils/contract-versions.js'
 import { loadSurface, readSurface, type Surface } from '../../utils/surface.js'
 import {

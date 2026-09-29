@@ -3,7 +3,7 @@ import {
   headSha,
   isGitRepo,
   isWorkingTreeClean,
-} from '../../fabric/lib/git.js'
+} from '../../utils/git.js'
 import type { ScenarioRunStore, ScenarioRunVersion } from '@pikku/core/scenario'
 
 /**

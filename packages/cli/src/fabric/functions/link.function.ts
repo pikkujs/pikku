@@ -5,7 +5,6 @@ import { resolveApiContext, writeProjectConfig } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import {
   addRemote,
-  assertDeploySafety,
   currentBranch,
   getRemoteUrl,
   hasCommits,
@@ -13,7 +12,8 @@ import {
   isWorkingTreeClean,
   pushWithCredential,
   removeRemote,
-} from '../lib/git.js'
+} from '../../utils/git.js'
+import { assertDeploySafety } from '../lib/deploy-safety.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { resolveOrganizationId } from '../lib/organization.js'
 import { promptConfirm } from '../lib/prompt.js'

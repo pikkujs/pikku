@@ -15,7 +15,7 @@ import {
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
-import { isGitRepo, isTracked } from '../lib/git.js'
+import { isGitRepo, isTracked } from '../../utils/git.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
