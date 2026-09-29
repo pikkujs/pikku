@@ -6,6 +6,8 @@ export {
   runWebhookSourceLifecycle,
   declaredTriggerSources,
   reconcileTriggerSources,
+  enableTriggerSource,
+  disableTriggerSource,
   reconcileWebhookRegistrations,
   teardownTriggerSources,
   subscribedWebhookEvents,

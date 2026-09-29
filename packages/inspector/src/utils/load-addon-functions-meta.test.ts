@@ -436,3 +436,70 @@ describe('loadAddonFunctionsMeta — where an addon resolves from', () => {
     assert.match(warnings[0], /pikku-functions-meta\.gen\.json/)
   })
 })
+
+describe('loadAddonFunctionsMeta — webhook sources an addon declares', () => {
+  let rootDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-webhooks-'))
+    writeAddonFixture(rootDir)
+    const webhooks = join(rootDir, 'node_modules', ADDON, '.pikku', 'webhooks')
+    mkdirSync(webhooks, { recursive: true })
+    writeFileSync(
+      join(webhooks, 'pikku-webhook-sources-meta.gen.json'),
+      JSON.stringify({
+        slack: {
+          name: 'slack',
+          method: 'post',
+          route: '/webhooks/slack',
+          events: ['message'],
+          receive: 'slackWebhookReceive',
+          setup: 'slackWebhookSetup',
+        },
+      })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const load = async (existing: Record<string, any> = {}) => {
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([
+        ['slack-marketing', { package: ADDON }],
+        ['slack-support', { package: ADDON }],
+      ])
+    ) as any
+    state.triggers = { webhookSourceMeta: { ...existing } }
+    state.serviceAggregation = { usedFunctions: new Set() }
+    await loadAddonFunctionsMeta(logger, state)
+    return state
+  }
+
+  test('mounts one source per addon instance, named and routed after its namespace', async () => {
+    const state = await load()
+
+    assert.deepEqual(state.triggers.webhookSourceMeta['slack-marketing'], {
+      name: 'slack-marketing',
+      method: 'post',
+      route: '/webhooks/slack-marketing',
+      events: ['message'],
+      receive: 'slack-marketing:slackWebhookReceive',
+      setup: 'slack-marketing:slackWebhookSetup',
+    })
+    assert.ok(state.triggers.webhookSourceMeta['slack-support'])
+    assert.ok(
+      state.serviceAggregation.usedFunctions.has(
+        'slack-support:slackWebhookReceive'
+      )
+    )
+  })
+
+  test('leaves a source the app declares itself alone', async () => {
+    const own = { name: 'slack-support', route: '/hooks/mine' }
+    const state = await load({ 'slack-support': own })
+    assert.equal(state.triggers.webhookSourceMeta['slack-support'], own)
+  })
+})

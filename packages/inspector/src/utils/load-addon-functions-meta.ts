@@ -8,6 +8,7 @@ import {
   type AddonResolver,
 } from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
+import type { WebhookSourceMeta, WebhookSourcesMeta } from '@pikku/core/trigger'
 import type {
   ExportedChannelContractsMeta,
   ExportedHTTPRouteConfigMeta,
@@ -226,6 +227,35 @@ const registerAddonTypes = (
       state.functions.typesMap.addType(name, typesPath)
     }
   }
+}
+
+/**
+ * The webhook sources an addon declares, as the app mounts them. The source is
+ * named after the addon's namespace, so two instances of one addon get a
+ * route each; an addon declaring several suffixes each with its own name.
+ * Every source starts off: the app turns one on at runtime.
+ */
+export const namespaceAddonWebhookSources = (
+  sources: WebhookSourcesMeta,
+  namespace: string
+): WebhookSourcesMeta => {
+  const declared = Object.values(sources)
+  const namespaced: WebhookSourcesMeta = {}
+  for (const source of declared) {
+    const name =
+      declared.length === 1 ? namespace : `${namespace}-${source.name}`
+    const meta: WebhookSourceMeta = {
+      ...source,
+      name,
+      route: `/webhooks/${name}`,
+    }
+    for (const step of ['receive', 'check', 'setup', 'teardown'] as const) {
+      const funcId = source[step]
+      if (funcId && !funcId.includes(':')) meta[step] = `${namespace}:${funcId}`
+    }
+    namespaced[name] = meta
+  }
+  return namespaced
 }
 
 /**
@@ -499,6 +529,31 @@ export async function loadAddonFunctionsMeta(
             )
           }
         } catch {}
+      }
+
+      try {
+        const webhookSourcesPath = require.resolve(
+          `${decl.package}/.pikku/webhooks/pikku-webhook-sources-meta.gen.json`
+        )
+        const sources = namespaceAddonWebhookSources(
+          JSON.parse(await readFile(webhookSourcesPath, 'utf-8')),
+          namespace
+        )
+        for (const [name, source] of Object.entries(sources)) {
+          if (state.triggers.webhookSourceMeta[name]) continue
+          state.triggers.webhookSourceMeta[name] = source
+          for (const step of [
+            'receive',
+            'check',
+            'setup',
+            'teardown',
+          ] as const) {
+            const funcId = source[step]
+            if (funcId) state.serviceAggregation.usedFunctions.add(funcId)
+          }
+        }
+      } catch {
+        // No addon webhook sources
       }
 
       try {

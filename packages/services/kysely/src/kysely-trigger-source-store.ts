@@ -22,7 +22,10 @@ const parseState = (value: unknown) => {
 const toRow = (row: Selectable<PikkuTriggerSourceTable>): TriggerSourceRow => ({
   name: row.name,
   kind: row.kind as TriggerSourceRow['kind'],
+  baseUrl: row.baseUrl,
+  labelPrefix: row.labelPrefix,
   declared: !!row.declared,
+  enabled: !!row.enabled,
   status: row.status,
   state: parseState(row.state),
   detail: row.detail,
@@ -42,12 +45,16 @@ export class KyselyTriggerSourceStore implements TriggerSourceStore {
 
   async syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
-      for (const { name, kind } of sources) {
+      for (const { name, kind, baseUrl, labelPrefix } of sources) {
+        const address = {
+          ...(baseUrl !== undefined ? { baseUrl } : {}),
+          ...(labelPrefix !== undefined ? { labelPrefix } : {}),
+        }
         await trx
           .insertInto('pikkuTriggerSource')
-          .values({ name, kind, declared: true })
+          .values({ name, kind, declared: true, ...address })
           .onConflict((oc) =>
-            oc.column('name').doUpdateSet({ kind, declared: true })
+            oc.column('name').doUpdateSet({ kind, declared: true, ...address })
           )
           .execute()
       }
@@ -98,6 +105,17 @@ export class KyselyTriggerSourceStore implements TriggerSourceStore {
         detail: result.detail ?? null,
         updatedAt: new Date(),
       })
+      .where('name', '=', name)
+      .executeTakeFirst()
+    if (!numUpdatedRows) {
+      throw new Error(`Unknown trigger source: ${name}`)
+    }
+  }
+
+  async setTriggerSourceEnabled(name: string, enabled: boolean): Promise<void> {
+    const { numUpdatedRows } = await this.db
+      .updateTable('pikkuTriggerSource')
+      .set({ enabled })
       .where('name', '=', name)
       .executeTakeFirst()
     if (!numUpdatedRows) {

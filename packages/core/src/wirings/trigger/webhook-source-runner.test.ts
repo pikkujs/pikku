@@ -6,6 +6,8 @@ import {
   receiveWebhookSourceRequest,
   runWebhookSourceLifecycle,
   reconcileTriggerSources,
+  enableTriggerSource,
+  disableTriggerSource,
   reconcileWebhookRegistrations,
   teardownTriggerSources,
   subscribedWebhookEvents,
@@ -364,6 +366,8 @@ describe('reconcileTriggerSources / teardownTriggerSources', () => {
       return { status: 'deleted' }
     })
 
+    await store.syncTriggerSources([{ name: 'shop', kind: 'webhook' }])
+    await store.setTriggerSourceEnabled('shop', true)
     await reconcileTriggerSources(lifecycle)
     const row = await store.getTriggerSource('shop')
     assert.equal(row!.status, 'created')
@@ -379,7 +383,11 @@ describe('reconcileTriggerSources / teardownTriggerSources', () => {
 
   test('keeps the state when setup fails, and marks orphans', async () => {
     const store = withStore()
-    await store.syncTriggerSources([{ name: 'gone', kind: 'webhook' }])
+    await store.syncTriggerSources([
+      { name: 'gone', kind: 'webhook' },
+      { name: 'shop', kind: 'webhook' },
+    ])
+    await store.setTriggerSourceEnabled('shop', true)
     setWebhookSourceMeta({ name: 'shop', setup: 'shop:setup' })
     registerFunction('shop:setup', () => {
       throw new Error('bad key')
@@ -396,6 +404,118 @@ describe('reconcileTriggerSources / teardownTriggerSources', () => {
         ['shop', true, 'failed', 'bad key'],
       ]
     )
+  })
+})
+
+describe('enabling trigger sources', () => {
+  const lifecycle = { baseUrl: 'https://shop.test', labelPrefix: 'p' }
+  const withStore = () => {
+    const triggerSourceStore = new InMemoryTriggerSourceStore()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      triggerSourceStore,
+    } as never)
+    return triggerSourceStore
+  }
+
+  test('reconcile leaves a source nobody enabled alone', async () => {
+    const store = withStore()
+    let setups = 0
+    setWebhookSourceMeta({ name: 'shop', setup: 'shop:setup' })
+    registerFunction('shop:setup', () => {
+      setups++
+      return { status: 'created' }
+    })
+
+    const [outcome] = await reconcileTriggerSources(lifecycle)
+
+    assert.equal(setups, 0)
+    assert.deepEqual(outcome, {
+      source: 'shop',
+      url: 'https://shop.test/webhooks/shop',
+      status: 'skipped',
+      reason: 'disabled',
+    })
+    const row = await store.getTriggerSource('shop')
+    assert.equal(row!.enabled, false)
+    assert.equal(row!.status, null)
+  })
+
+  test('enable registers the source; disable tears it down and forgets its state', async () => {
+    const store = withStore()
+    let teardownInput: any
+    setWebhookSourceMeta({
+      name: 'shop',
+      setup: 'shop:setup',
+      teardown: 'shop:teardown',
+    })
+    registerFunction('shop:setup', () => ({
+      status: 'created',
+      state: { id: 'we_1' },
+    }))
+    registerFunction('shop:teardown', (_services, data) => {
+      teardownInput = data
+      return { status: 'deleted' }
+    })
+
+    const enabled = await enableTriggerSource({ name: 'shop', ...lifecycle })
+    assert.equal(enabled.status, 'created')
+    let row = await store.getTriggerSource('shop')
+    assert.equal(row!.enabled, true)
+    assert.deepEqual(row!.state, { id: 'we_1' })
+
+    const disabled = await disableTriggerSource({ name: 'shop', ...lifecycle })
+    assert.equal(disabled.status, 'deleted')
+    assert.deepEqual(teardownInput, {
+      label: 'p:shop',
+      previous: { id: 'we_1' },
+    })
+    row = await store.getTriggerSource('shop')
+    assert.equal(row!.enabled, false)
+    assert.equal(row!.status, 'deleted')
+    assert.equal(row!.state, null)
+  })
+
+  test('enable without an address uses the one the last reconcile recorded', async () => {
+    const store = withStore()
+    let setupInput: any
+    setWebhookSourceMeta({ name: 'shop', setup: 'shop:setup' })
+    registerFunction('shop:setup', (_services, data) => {
+      setupInput = data
+      return { status: 'created' }
+    })
+
+    await assert.rejects(enableTriggerSource({ name: 'shop' }), /no address/)
+    assert.equal((await store.getTriggerSource('shop'))!.enabled, false)
+
+    await reconcileTriggerSources(lifecycle)
+    await enableTriggerSource({ name: 'shop' })
+
+    assert.equal(setupInput.url, 'https://shop.test/webhooks/shop')
+    assert.equal(setupInput.label, 'p:shop')
+  })
+
+  test('a disabled source answers 404 without running receive', async () => {
+    const store = withStore()
+    let received = 0
+    setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
+    registerFunction('shop:receive', () => {
+      received++
+      return { events: [] }
+    })
+    await store.syncTriggerSources([{ name: 'shop', kind: 'webhook' }])
+
+    const result = await receiveWebhookSourceRequest('shop', httpWire({}))
+
+    assert.ok(result instanceof Response)
+    assert.equal(result.status, 404)
+    assert.equal(received, 0)
+
+    await store.setTriggerSourceEnabled('shop', true)
+    assert.deepEqual(await receiveWebhookSourceRequest('shop', httpWire({})), {
+      received: 0,
+    })
+    assert.equal(received, 1)
   })
 })
 

@@ -7,7 +7,11 @@ import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import type { DeclaredTriggerSource } from '../../services/trigger-source-store.js'
+import type {
+  DeclaredTriggerSource,
+  TriggerSourceRow,
+  TriggerSourceStore,
+} from '../../services/trigger-source-store.js'
 import type {
   CoreTriggerWebhookSource,
   TriggerEvent,
@@ -129,7 +133,8 @@ const validateEvents = async (
 /**
  * The body of a webhook source's route: `receive`, validate, and queue every
  * event some trigger listens for. Events nobody listens for are answered and
- * dropped, so the provider does not retry them forever.
+ * dropped, so the provider does not retry them forever. With a
+ * `triggerSourceStore`, a source nobody enabled answers 404.
  */
 export const receiveWebhookSourceRequest = async (
   sourceName: string,
@@ -137,6 +142,10 @@ export const receiveWebhookSourceRequest = async (
 ): Promise<Response | { received: number }> => {
   const singletonServices = getSingletonServices()
   const meta = getSourceMeta(sourceName)
+  const store = singletonServices.triggerSourceStore
+  if (store && !(await store.getTriggerSource(sourceName))?.enabled) {
+    return new Response(null, { status: 404 })
+  }
   const source = pikkuState(null, 'trigger', 'webhookSources').get(sourceName)
   const request = await readRequest(wire.http)
 
@@ -385,19 +394,44 @@ const requireTriggerSourceStore = (
 }
 
 /** The trigger sources this app declares, as the store is synced to. */
-export const declaredTriggerSources = (): DeclaredTriggerSource[] =>
+export const declaredTriggerSources = (
+  address?: LifecycleInput
+): DeclaredTriggerSource[] =>
   Object.keys(pikkuState(null, 'trigger', 'webhookSourceMeta')).map((name) => ({
     name,
     kind: 'webhook',
+    ...address,
   }))
 
 const detailOf = (outcome: WebhookSourceOutcome) =>
   outcome.instructions ?? outcome.error ?? outcome.reason ?? null
 
+const registerTriggerSource = async (
+  store: TriggerSourceStore,
+  meta: WebhookSourceMeta,
+  input: LifecycleInput,
+  previous: WebhookSourceState | undefined,
+  singletonServices: CoreSingletonServices
+) => {
+  const outcome = await runSourceLifecycleStep(
+    meta,
+    'setup',
+    input,
+    previous,
+    singletonServices
+  )
+  await store.recordTriggerSource(meta.name, {
+    status: outcome.status,
+    ...(outcome.state ? { state: outcome.state } : {}),
+    detail: detailOf(outcome),
+  })
+  return outcome
+}
+
 /**
- * Registers every declared webhook source with its provider: `check`, then
+ * Registers every enabled webhook source with its provider: `check`, then
  * `setup` where it is missing or drifted, recording what was registered.
- * Run after a deployment goes live.
+ * A source nobody enabled is skipped. Run after a deployment goes live.
  */
 export const reconcileTriggerSources = async ({
   singletonServices = getSingletonServices(),
@@ -406,27 +440,110 @@ export const reconcileTriggerSources = async ({
   singletonServices?: CoreSingletonServices
 }): Promise<WebhookSourceOutcome[]> => {
   const store = requireTriggerSourceStore(singletonServices)
-  await store.syncTriggerSources(declaredTriggerSources())
+  await store.syncTriggerSources(
+    declaredTriggerSources({
+      baseUrl: input.baseUrl,
+      labelPrefix: input.labelPrefix,
+    })
+  )
   const outcomes: WebhookSourceOutcome[] = []
   for (const meta of Object.values(
     pikkuState(null, 'trigger', 'webhookSourceMeta')
   )) {
     const row = await store.getTriggerSource(meta.name)
-    const outcome = await runSourceLifecycleStep(
-      meta,
-      'setup',
-      input,
-      row?.state ?? undefined,
-      singletonServices
+    if (!row?.enabled) {
+      outcomes.push({
+        source: meta.name,
+        url: sourceAddress(meta, input).url,
+        status: 'skipped',
+        reason: 'disabled',
+      })
+      continue
+    }
+    outcomes.push(
+      await registerTriggerSource(
+        store,
+        meta,
+        input,
+        row.state ?? undefined,
+        singletonServices
+      )
     )
-    await store.recordTriggerSource(meta.name, {
-      status: outcome.status,
-      ...(outcome.state ? { state: outcome.state } : {}),
-      detail: detailOf(outcome),
-    })
-    outcomes.push(outcome)
   }
   return outcomes
+}
+
+type SwitchInput = Partial<LifecycleInput> & {
+  name: string
+  singletonServices?: CoreSingletonServices
+}
+
+/** The address given, or the one the last deployment synced onto the row. */
+const switchAddress = (
+  row: TriggerSourceRow | null,
+  { baseUrl, labelPrefix, name }: SwitchInput
+): LifecycleInput => {
+  const address = {
+    baseUrl: baseUrl ?? row?.baseUrl,
+    labelPrefix: labelPrefix ?? row?.labelPrefix,
+  }
+  if (!address.baseUrl || !address.labelPrefix) {
+    throw new Error(
+      `Trigger source '${name}' has no address yet: pass baseUrl and labelPrefix, or deploy so reconcile records them.`
+    )
+  }
+  return address as LifecycleInput
+}
+
+/**
+ * Turns a declared webhook source on and registers it with its provider, at
+ * the address given or the one the last deployment recorded.
+ */
+export const enableTriggerSource = async ({
+  singletonServices = getSingletonServices(),
+  ...input
+}: SwitchInput): Promise<WebhookSourceOutcome> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const meta = getSourceMeta(input.name)
+  await store.syncTriggerSources(declaredTriggerSources())
+  const row = await store.getTriggerSource(input.name)
+  const address = switchAddress(row, input)
+  await store.setTriggerSourceEnabled(input.name, true)
+  return registerTriggerSource(
+    store,
+    meta,
+    address,
+    row?.state ?? undefined,
+    singletonServices
+  )
+}
+
+/**
+ * Turns a webhook source off: it stops receiving at once, then is removed
+ * from its provider. A failed teardown leaves it off and records the error.
+ */
+export const disableTriggerSource = async ({
+  singletonServices = getSingletonServices(),
+  ...input
+}: SwitchInput): Promise<WebhookSourceOutcome> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const meta = getSourceMeta(input.name)
+  const row = await store.getTriggerSource(input.name)
+  const address = switchAddress(row, input)
+  await store.setTriggerSourceEnabled(input.name, false)
+  const outcome = await runSourceLifecycleStep(
+    meta,
+    'teardown',
+    address,
+    row?.state ?? undefined,
+    singletonServices
+  )
+  await store.recordTriggerSource(input.name, {
+    status: outcome.status,
+    ...(outcome.status === 'failed' ? {} : { state: null }),
+    detail: detailOf(outcome),
+  })
+  return outcome
 }
 
 /** What one source registered with its provider, as a caller keeps it between runs. */
