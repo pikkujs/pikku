@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +9,11 @@ import { after, before, beforeEach, describe, test } from 'node:test'
 
 const scratch = mkdtempSync(join(tmpdir(), 'pikku-webhook-source-'))
 process.env.FAKE_PROVIDER_FILE = join(scratch, 'provider.json')
-process.env.SHOP_WEBHOOK_SECRET = 'shop-signing-secret'
+process.env.CREDENTIALS_FILE = join(scratch, 'credentials.json')
+writeFileSync(
+  process.env.CREDENTIALS_FILE,
+  JSON.stringify({ shopWebhookSecret: 'shop-signing-secret' })
+)
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
@@ -35,10 +33,11 @@ const pikkuBin = join(
   'pikku.js'
 )
 
-const sign = (body: string) =>
-  createHmac('sha256', process.env.SHOP_WEBHOOK_SECRET!)
-    .update(body)
-    .digest('hex')
+const storedCredentials = (): Record<string, unknown> =>
+  JSON.parse(readFileSync(process.env.CREDENTIALS_FILE!, 'utf-8'))
+
+const sign = (body: string, secret = 'shop-signing-secret') =>
+  createHmac('sha256', secret).update(body).digest('hex')
 
 const post = (payload: unknown, signature?: string) => {
   const body = JSON.stringify(payload)
@@ -171,12 +170,16 @@ describe('pikku webhooks: provider lifecycle', () => {
     ])
   })
 
-  test('setup registers the route for the wired events and prints the secret', () => {
+  test('setup registers the route and stores the secret, never printing it', () => {
     const [outcome] = webhooksCli('setup')
 
-    assert.equal(outcome.status, 'created')
-    assert.equal(outcome.secretName, 'SHOP_WEBHOOK_SECRET')
-    assert.equal(outcome.secret, 'whsec_shop:main:shop')
+    assert.deepEqual(outcome, {
+      source: 'shop',
+      url: 'https://shop.test/api/webhooks/shop',
+      status: 'created',
+      state: { id: 'we_1' },
+    })
+    assert.equal(storedCredentials().shopWebhookSecret, 'whsec_shop:main:shop')
     assert.deepEqual(readEndpoints(), [
       {
         id: 'we_1',
@@ -186,6 +189,21 @@ describe('pikku webhooks: provider lifecycle', () => {
         secret: 'whsec_shop:main:shop',
       },
     ])
+  })
+
+  test('the secret setup stored verifies the next delivery, with no restart', async () => {
+    const body = JSON.stringify({
+      type: 'order.paid',
+      id: 'evt_6',
+      data: { orderId: 'o6', total: 6 },
+    })
+    const response = await post(
+      JSON.parse(body),
+      sign(body, 'whsec_shop:main:shop')
+    )
+
+    assert.equal(response.status, 200)
+    await waitFor(() => firedOrders.length === 1)
   })
 
   test('a second setup is a no-op', () => {
@@ -211,20 +229,8 @@ describe('pikku webhooks: provider lifecycle', () => {
       'deleted'
     )
     assert.deepEqual(readEndpoints(), [])
+    assert.equal(storedCredentials().shopWebhookSecret, undefined)
     assert.equal(webhooksCli('teardown')[0].status, 'absent')
-  })
-
-  test('--secretsOut keeps the secret out of stdout', () => {
-    const secretsOut = join(scratch, 'secrets.json')
-    const [outcome] = webhooksCli('setup', '--secretsOut', secretsOut)
-
-    assert.equal(outcome.status, 'created')
-    assert.equal(outcome.secretName, 'SHOP_WEBHOOK_SECRET')
-    assert.equal(outcome.secret, undefined)
-    assert.deepEqual(JSON.parse(readFileSync(secretsOut, 'utf-8')), {
-      SHOP_WEBHOOK_SECRET: 'whsec_shop:main:shop',
-    })
-    assert.equal(statSync(secretsOut).mode & 0o777, 0o600)
   })
 
   test('a missing --labelPrefix is refused before any provider call', () => {

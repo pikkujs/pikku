@@ -7,9 +7,10 @@ import {
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { WebhookSigningSecret } from '@pikku/core/hmac'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
+import { FileCredentialService } from './file-credential-service.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -35,6 +36,9 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
     const queueService =
       existingServices?.queueService || new InMemoryQueueService()
+    const credentialService = new FileCredentialService(
+      await variables.get('CREDENTIALS_FILE')
+    )
 
     return {
       config,
@@ -49,16 +53,12 @@ export const createSingletonServices = pikkuServices(
       incomingWebhookService:
         existingServices?.incomingWebhookService ||
         new IncomingWebhookService(queueService, 1),
-      verifyShopSignature: async (body, signature) => {
-        const secret = (await secrets.getSecret('SHOP_WEBHOOK_SECRET')).reveal()
-        const expected = Buffer.from(
-          createHmac('sha256', secret).update(body).digest('hex')
-        )
-        const given = Buffer.from(signature)
-        return (
-          expected.length === given.length && timingSafeEqual(expected, given)
-        )
-      },
+      credentialService,
+      shopSigningSecret: WebhookSigningSecret.fromCredential(
+        'shop',
+        credentialService,
+        'shopWebhookSecret'
+      ),
     }
   }
 )

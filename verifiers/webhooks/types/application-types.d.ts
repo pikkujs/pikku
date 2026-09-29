@@ -1,3 +1,5 @@
+import type { WebhookSigningSecret } from '@pikku/core/hmac'
+import type { CredentialService } from '@pikku/core/services'
 import type {
   CoreConfig,
   CoreServices,
@@ -8,8 +10,9 @@ import type {
 export interface Config extends CoreConfig {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
-  /** Whether a shop webhook body carries a valid signature. */
-  verifyShopSignature: (body: Uint8Array, signature: string) => Promise<boolean>
+  credentialService: CredentialService
+  /** The shop's signing secret, read from the credential store per delivery. */
+  shopSigningSecret: WebhookSigningSecret
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

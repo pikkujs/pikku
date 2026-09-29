@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { UnauthorizedError } from '@pikku/core/errors'
 import {
   wireTrigger,
   wireTriggerWebhookSource,
@@ -12,21 +11,23 @@ export const failNextOrders = new Set<string>()
 
 wireTriggerWebhookSource({
   name: 'shop',
-  secret: 'SHOP_WEBHOOK_SECRET',
   events: {
     'order.paid': z.object({ orderId: z.string(), total: z.number() }),
     'order.refunded': z.object({ orderId: z.string() }),
   },
   receive: {
-    func: async ({ verifyShopSignature }, request) => {
+    func: async ({ shopSigningSecret }, request) => {
       const body = JSON.parse(new TextDecoder().decode(request.body))
       if (body.type === 'url_verification') {
         return { respond: { status: 200, body: { challenge: body.challenge } } }
       }
-      const signature = request.headers['x-shop-signature'] ?? ''
-      if (!(await verifyShopSignature(request.body, signature))) {
-        throw new UnauthorizedError('Bad signature')
-      }
+      const secret = await shopSigningSecret.load()
+      secret.verifyHmac(
+        request.headers['x-shop-signature'],
+        'sha256',
+        request.body,
+        'hex'
+      )
       return { events: [{ name: body.type, id: body.id, data: body.data }] }
     },
   },
@@ -41,7 +42,7 @@ wireTriggerWebhookSource({
     },
   },
   setup: {
-    func: async (_services, { url, label, events }) => {
+    func: async ({ credentialService }, { url, label, events }) => {
       const endpoints = readEndpoints()
       const existing = endpoints.find((e) => e.label === label)
       if (existing) {
@@ -57,18 +58,16 @@ wireTriggerWebhookSource({
         secret: `whsec_${label}`,
       }
       writeEndpoints([...endpoints, endpoint])
-      return {
-        status: 'created',
-        state: { id: endpoint.id },
-        secret: endpoint.secret,
-      }
+      await credentialService.set('shopWebhookSecret', endpoint.secret)
+      return { status: 'created', state: { id: endpoint.id } }
     },
   },
   teardown: {
-    func: async (_services, { label }) => {
+    func: async ({ credentialService }, { label }) => {
       const endpoints = readEndpoints()
       const kept = endpoints.filter((e) => e.label !== label)
       writeEndpoints(kept)
+      await credentialService.delete('shopWebhookSecret')
       return { status: kept.length === endpoints.length ? 'absent' : 'deleted' }
     },
   },
