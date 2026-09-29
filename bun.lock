@@ -2382,6 +2382,18 @@
         "zod": "^4",
       },
     },
+    "verifiers/validate": {
+      "name": "@pikku/verifiers-validate",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+        "zod": "^4",
+      },
+    },
     "verifiers/variables": {
       "name": "@pikku/verifiers-variables",
       "dependencies": {
@@ -3557,6 +3569,8 @@
     "@pikku/verifiers-treeshaking": ["@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking"],
 
     "@pikku/verifiers-types": ["@pikku/verifiers-types@workspace:verifiers/types"],
+
+    "@pikku/verifiers-validate": ["@pikku/verifiers-validate@workspace:verifiers/validate"],
 
     "@pikku/verifiers-variables": ["@pikku/verifiers-variables@workspace:verifiers/variables"],
 
@@ -6496,6 +6510,8 @@
 
     "@pikku/verifiers-types/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-validate/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-variables/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-webhooks/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -7105,6 +7121,8 @@
     "@pikku/verifiers-treeshaking/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-types/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-validate/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-variables/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

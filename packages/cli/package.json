@@ -109,6 +109,7 @@
   },
   "exports": {
     ".": "./dist/bin/pikku.js",
+    "./validate": "./dist/src/functions/validate/validate-registry.js",
     "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
     "./server/server-ready": "./dist/src/server/server-ready.js",
     "./surface.json": "./surface.json"

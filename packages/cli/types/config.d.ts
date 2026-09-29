@@ -812,6 +812,15 @@ export type PikkuCLIInput = {
      * this one is evaluated by `pikku validate`, not by codegen.
      */
     customServerBootstrap?: 'off' | 'warn' | 'error'
+    /**
+     * Flag app code importing `@pikku/core`. The generated `#pikku` alias is
+     * the app surface and is typed against this project; the core subpath
+     * carries the untyped copy of the same name. `@pikku/core/services` is
+     * exempt — the service implementations bootstrap picks are a choice, not a
+     * wiring. Defaults to 'error'. Like `customServerBootstrap`, evaluated by
+     * `pikku validate` rather than by codegen.
+     */
+    coreImport?: 'off' | 'warn' | 'error'
   }
 
   /**
