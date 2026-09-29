@@ -279,7 +279,6 @@ describe('runWebhookSourceLifecycle', () => {
     setWebhookSourceMeta({
       name: 'shop',
       events: ['paid', 'refunded'],
-      secret: 'SHOP_WEBHOOK_SECRET',
       check: 'shop:check',
       setup: 'shop:setup',
     })
@@ -287,7 +286,7 @@ describe('runWebhookSourceLifecycle', () => {
     registerFunction('shop:check', () => ({ status: 'missing' }))
     registerFunction('shop:setup', (_services, data) => {
       input = data
-      return { status: 'created', state: { id: 'we_1' }, secret: 'whsec' }
+      return { status: 'created', state: { id: 'we_1' } }
     })
 
     const [outcome] = await runWebhookSourceLifecycle({
@@ -306,8 +305,6 @@ describe('runWebhookSourceLifecycle', () => {
       url: 'https://shop.test/webhooks/shop',
       status: 'created',
       state: { id: 'we_1' },
-      secretName: 'SHOP_WEBHOOK_SECRET',
-      secret: 'whsec',
     })
   })
 

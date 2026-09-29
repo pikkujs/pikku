@@ -129,9 +129,12 @@ id?, data }] }`, or `{ respond: { status, body } }` for a handshake. Throwing
   even on queues that ignore job ids, and records each attempt and its last
   error. Its `webhookReceipt` table comes from `pikku db generate`; `pikku dev`
   and `pikku serve` use it when a Kysely database is configured.
-- `receive` sees singleton services without `secrets`: read the signing secret
-  in a service method, and declare it with `defineSecret`. Name it in `secret`
-  so deploy knows where `setup` should store it.
+- `receive` sees singleton services without `secrets`. Declare the signing
+  secret with `defineCredential({ type: 'singleton', ... })` and hold it as
+  `WebhookSigningSecret.fromCredential(provider, credentialService, name)`
+  from `@pikku/core/hmac`; `receive` calls `await signingSecret.load()` and
+  checks against what it returns. A handshake that hands over the secret
+  (Asana) stores it with `credentialService.set`.
 
 `check`, `setup` and `teardown` register the route with the provider. Each gets
 `{ url, label, events, previous? }`, where `events` are only the ones some
@@ -145,10 +148,9 @@ pikku webhooks teardown --url https://api.example.com --labelPrefix shop:prod --
 
 Each prints one JSON line per source (`ok`, `missing`, `drifted`, `created`,
 `updated`, `unchanged`, `manual`, `deleted`, `absent`, `skipped`, `failed`). `setup` only
-runs where `check` does not report `ok`, and a `setup` that returns a new signing
-secret prints it with the `secret` name to store it under. In CI pass
-`--secretsOut <file>`: secrets are written there (mode 600) as
-`{ secretName: secret }` and left out of stdout. Any step can be
+runs where `check` does not report `ok`. A `setup` that gets a signing secret
+from the provider stores it with `credentialService.set`, and `teardown`
+deletes it, so a new secret needs no deploy and never reaches stdout. Any step can be
 `ref('<addon>:<fn>')` to use an addon's implementation.
 
 ## Usage Patterns

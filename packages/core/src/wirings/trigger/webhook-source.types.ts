@@ -56,8 +56,6 @@ export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'
       state?: WebhookSourceState
-      /** Only when the provider issued a new signing secret. */
-      secret?: string
     }
   /** The provider has no API for this: `instructions` tell a person what to set by hand. */
   | { status: 'manual'; instructions: string }
@@ -85,8 +83,6 @@ export type CoreTriggerWebhookSource<
   method?: WebhookSourceMethod | WebhookSourceMethod[]
   /** Defaults to `/webhooks/<name>`. */
   route?: string
-  /** The secret `receive` verifies with, which `setup` produces. */
-  secret?: string
   /** What the source can produce. Each event's data is validated against its schema before it is queued. */
   events?: Events
   /** Omitted: the JSON body is one event dispatched to the trigger named `<name>`. */
@@ -100,7 +96,6 @@ export type WebhookSourceMeta = {
   name: string
   method: WebhookSourceMethod | WebhookSourceMethod[]
   route: string
-  secret?: string
   events: string[]
   receive?: string
   check?: string

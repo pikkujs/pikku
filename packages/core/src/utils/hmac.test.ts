@@ -46,3 +46,47 @@ describe('WebhookSigningSecret', () => {
     })
   })
 })
+
+describe('WebhookSigningSecret.fromCredential', () => {
+  const store = (values: Record<string, string>) =>
+    ({ get: async (name: string) => values[name] ?? null }) as any
+
+  test('checks against the value stored when it loads', async () => {
+    const values: Record<string, string> = { HOOK: 'first' }
+    const secret = WebhookSigningSecret.fromCredential(
+      'Shop',
+      store(values),
+      'HOOK'
+    )
+    const sign = (key: string) =>
+      createHmac('sha256', key).update('body').digest('hex')
+
+    ;(await secret.load()).verifyHmac(sign('first'), 'sha256', 'body', 'hex')
+    values.HOOK = 'second'
+    const loaded = await secret.load()
+    loaded.verifyHmac(sign('second'), 'sha256', 'body', 'hex')
+    assert.throws(() =>
+      loaded.verifyHmac(sign('first'), 'sha256', 'body', 'hex')
+    )
+  })
+
+  test('refuses everything until something is stored', async () => {
+    const secret = WebhookSigningSecret.fromCredential(
+      'Shop',
+      store({}),
+      'HOOK'
+    )
+    assert.equal(secret.configured, false)
+    assert.equal((await secret.load()).configured, false)
+    assert.throws(() => secret.verifyToken('x'), /has no signing secret/)
+  })
+
+  test('refuses everything without a credential service', async () => {
+    const secret = WebhookSigningSecret.fromCredential(
+      'Shop',
+      undefined,
+      'HOOK'
+    )
+    assert.equal((await secret.load()).configured, false)
+  })
+})

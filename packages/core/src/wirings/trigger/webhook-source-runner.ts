@@ -250,9 +250,6 @@ export type WebhookSourceOutcome = {
     | 'failed'
   reason?: string
   state?: WebhookSourceState
-  /** The name the produced signing secret must be stored under. */
-  secretName?: string
-  secret?: string
   instructions?: string
   error?: string
 }
@@ -346,12 +343,7 @@ export const runWebhookSourceLifecycle = async ({
         outcome('manual', { instructions: result.instructions })
         continue
       }
-      outcome(result.status, {
-        ...(result.state ? { state: result.state } : {}),
-        ...(result.secret && meta.secret
-          ? { secretName: meta.secret, secret: result.secret }
-          : {}),
-      })
+      outcome(result.status, result.state ? { state: result.state } : {})
     } catch (error) {
       outcome('failed', {
         error: error instanceof Error ? error.message : String(error),

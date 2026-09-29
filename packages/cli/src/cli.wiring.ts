@@ -649,7 +649,7 @@ wireCLI({
         setup: pikkuCLICommand({
           func: webhooksSetup,
           description:
-            'Create or update each webhook source at its provider where its check is not ok, printing one JSON line per source with any signing secret it produced',
+            'Create or update each webhook source at its provider where its check is not ok, printing one JSON line per source',
           options: {
             url: {
               description:
@@ -662,10 +662,6 @@ wireCLI({
             previous: {
               description:
                 'A JSON file of what the last setup returned as state, by source name',
-            },
-            secretsOut: {
-              description:
-                'Write produced signing secrets to this file (mode 600) as { secretName: secret } instead of printing them',
             },
           },
         }),

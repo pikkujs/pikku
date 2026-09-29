@@ -1,5 +1,6 @@
 import { createHmac, createVerify, timingSafeEqual } from 'node:crypto'
 import { UnauthorizedError } from '../errors/errors.js'
+import type { CredentialService } from '../services/credential-service.js'
 
 /**
  * HMAC-SHA256 of a payload, hex-encoded. Senders wrap this in their own scheme
@@ -24,21 +25,47 @@ export function timingSafeStringEqual(a: string, b: string): boolean {
 type WebhookPayload = string | Uint8Array
 type HmacAlgorithm = 'sha1' | 'sha256' | 'sha512'
 type SecretEncoding = 'utf8' | 'hex' | 'base64'
+type SecretSource = string | null | (() => Promise<string | null>)
 
 /**
  * A provider's webhook signing secret, held by a singleton service so a
  * webhook `receive` step can check signatures without reading it. Built with
  * null when the app never provisioned the secret: every check then refuses, so
  * an unconfigured receiver accepts nothing.
+ *
+ * Built with a lookup, as `fromCredential` does, it checks nothing until
+ * `load()` reads the current value.
  */
 export class WebhookSigningSecret {
   constructor(
     private readonly provider: string,
-    private readonly secret: string | null
+    private readonly secret: SecretSource
   ) {}
 
+  /**
+   * The secret a `setup` step or a handshake stored in the credential store,
+   * so a new one takes effect without a deploy.
+   */
+  static fromCredential(
+    provider: string,
+    credentials: CredentialService | undefined,
+    name: string
+  ): WebhookSigningSecret {
+    return new WebhookSigningSecret(provider, async () =>
+      credentials ? credentials.get<string>(name) : null
+    )
+  }
+
   get configured(): boolean {
-    return this.secret !== null
+    return typeof this.secret === 'string'
+  }
+
+  /** The secret as it is now, to check one delivery against. */
+  async load(): Promise<WebhookSigningSecret> {
+    if (typeof this.secret !== 'function') {
+      return this
+    }
+    return new WebhookSigningSecret(this.provider, await this.secret())
   }
 
   /** For handshakes that answer with a digest, such as Zoom's URL validation. */
@@ -87,7 +114,11 @@ export class WebhookSigningSecret {
         !!signature &&
         createVerify(options.algorithm ?? 'sha256')
           .update(payload)
-          .verify({ key, dsaEncoding: options.dsaEncoding }, signature, 'base64')
+          .verify(
+            { key, dsaEncoding: options.dsaEncoding },
+            signature,
+            'base64'
+          )
     } catch {
       valid = false
     }
@@ -97,7 +128,7 @@ export class WebhookSigningSecret {
   }
 
   private require(): string {
-    if (this.secret === null) {
+    if (typeof this.secret !== 'string') {
       throw new UnauthorizedError(
         `The ${this.provider} webhook receiver has no signing secret`
       )

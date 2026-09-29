@@ -44,7 +44,6 @@ describe('wireTriggerWebhookSource', () => {
       HEADER +
         `wireTriggerWebhookSource({
   name: 'shop',
-  secret: 'SHOP_SECRET',
   events: { 'order.paid': schema, 'order.refunded': schema },
   receive: { func: async () => ({ events: [] }) },
   check: { func: async () => ({ status: 'ok' }) },
@@ -59,7 +58,6 @@ wireTrigger({ name: 'shop:order.paid', func: { func: async () => {} } })
       method: 'post',
       route: '/webhooks/shop',
       events: ['order.paid', 'order.refunded'],
-      secret: 'SHOP_SECRET',
       receive: 'trigger-webhook:shop:receive',
       check: 'trigger-webhook:shop:check',
     })

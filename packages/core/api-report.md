@@ -2950,7 +2950,6 @@ export type CoreTriggerWebhookSource<
   name: string
   method?: WebhookSourceMethod | WebhookSourceMethod[]
   route?: string
-  secret?: string
   events?: Events
   receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
@@ -3011,7 +3010,6 @@ export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'
       state?: WebhookSourceState
-      secret?: string
     }
   | { status: 'manual'; instructions: string }
 export type WebhookSourceJob = {
@@ -3023,7 +3021,6 @@ export type WebhookSourceMeta = {
   name: string
   method: WebhookSourceMethod | WebhookSourceMethod[]
   route: string
-  secret?: string
   events: string[]
   receive?: string
   check?: string
@@ -3042,8 +3039,6 @@ export type WebhookSourceOutcome = {
     | 'failed'
   reason?: string
   state?: WebhookSourceState
-  secretName?: string
-  secret?: string
   instructions?: string
   error?: string
 }
@@ -6039,8 +6034,10 @@ wrapDEK: (kek: CryptoKey, plaintextDEK: string) => Promise<WrappedValue>
 hmacSha256Hex: (secret: string, payload: string) => string
 timingSafeStringEqual: (a: string, b: string) => boolean
 export class WebhookSigningSecret {
-  constructor(private readonly provider: string, private readonly secret: string | null)
+  constructor(private readonly provider: string, private readonly secret: SecretSource)
+  static fromCredential(provider: string, credentials: CredentialService | undefined, name: string): WebhookSigningSecret
   get configured(): boolean
+  load(): Promise<WebhookSigningSecret>
   hmac(algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): string
   verifyHmac(signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): void
   verifyToken(token: string | undefined): void
