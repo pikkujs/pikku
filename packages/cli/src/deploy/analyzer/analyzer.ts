@@ -362,11 +362,7 @@ export function analyzeDeployment(
     const handlers: DeploymentHandler[] = []
 
     // HTTP routes for this function
-    const routes = collectHttpRoutes(
-      httpMeta,
-      funcId,
-      claimedSyntheticBridges
-    )
+    const routes = collectHttpRoutes(httpMeta, funcId, claimedSyntheticBridges)
     if (routes.length > 0) {
       handlers.push({ type: 'fetch', routes })
     }

@@ -1312,7 +1312,9 @@ describe('unroutedHttpWirings', () => {
     // The shape every dropped route had: declared, generated into the meta,
     // owned by nothing. Previously indistinguishable from a healthy build.
     assert.deepEqual(
-      unroutedHttpWirings(state.http.meta, []).map((r) => r.route).sort(),
+      unroutedHttpWirings(state.http.meta, [])
+        .map((r) => r.route)
+        .sort(),
       ['/agents/shop', '/rpc/:rpcName', '/rpc/:rpcName']
     )
   })
