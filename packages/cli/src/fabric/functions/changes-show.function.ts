@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { age, changesContext } from '../lib/changes.js'
+import { age, changesContext, resolveChangeId } from '../lib/changes.js'
 import { dim, keyValue, safe, safeBlock, statusColor } from '../lib/output.js'
 import type { GetChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -20,8 +20,9 @@ export const FabricChangesShow = pikkuSessionlessFunc({
   input: FabricChangesShowInput,
   output: FabricChangesShowOutput,
   func: async (_services, input) => {
-    const { rpc } = await changesContext(input.apiUrl)
-    return await rpc.invoke('getChange', { changeId: input.changeId })
+    const { rpc, projectId } = await changesContext(input.apiUrl)
+    const changeId = await resolveChangeId(rpc, projectId, input.changeId)
+    return await rpc.invoke('getChange', { changeId })
   },
 })
 
