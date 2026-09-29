@@ -84,7 +84,7 @@ describe('WebhookSourceConfiguration', () => {
     credentialsMeta = {}
     const out = text(render(panel()))
     assert.match(out, /Reads and checks each message/)
-    assert.match(out, /Connects itself to Stripe when you publish/)
+    assert.match(out, /Connects itself to Stripe when you turn it on/)
     assert.doesNotMatch(out, /Checks the connection is still in place/)
     assert.doesNotMatch(out, /Disconnects itself/)
   })
@@ -106,27 +106,46 @@ describe('WebhookSourceConfiguration', () => {
     assert.doesNotMatch(render(panel()), /webhook-source-registration/)
   })
 
-  test('a source with no stored row is set up on the next deploy', () => {
+  test('a source with no stored row waits for the next publish, with no switch', () => {
     const html = render(panel(), undefined, [])
     assert.match(html, /webhook-source-registration-pending/)
-    assert.match(text(html), /Not set up yet/)
+    assert.match(text(html), /Not published yet/)
+    assert.doesNotMatch(html, /webhook-source-enabled/)
+  })
+
+  test('a stored source starts off, with the switch unchecked', () => {
+    const row = {
+      name: 'stripe',
+      declared: true,
+      enabled: false,
+      status: null,
+      detail: null,
+    }
+    const html = render(panel(), undefined, [row])
+    assert.match(html, /webhook-source-registration-off/)
+    assert.match(text(html), /Stripe is off/)
+    assert.match(html, /data-testid="webhook-source-enabled"/)
+    assert.doesNotMatch(html, /checked=""/)
   })
 
   test('a registered source reads as registered', () => {
     const row = {
       name: 'stripe',
       declared: true,
+      enabled: true,
       status: 'registered',
       detail: null,
     }
     const html = render(panel(), undefined, [row])
     assert.match(html, /webhook-source-registration-registered/)
+    assert.match(html, /checked=""/)
   })
 
   test('a failed registration shows the provider detail', () => {
     const row = {
       name: 'stripe',
       declared: true,
+      enabled: true,
       status: 'failed',
       detail: 'HTTP 401 from Stripe',
     }

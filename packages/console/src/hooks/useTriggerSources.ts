@@ -5,6 +5,7 @@ export type TriggerSourceRow = {
   name: string
   kind: string
   declared: boolean
+  enabled: boolean
   status: string | null
   detail: string | null
   updatedAt: string | null
@@ -37,12 +38,28 @@ export function useForgetTriggerSource() {
   })
 }
 
-export type RegistrationState = 'pending' | 'registered' | 'manual' | 'failed'
+export function useSetTriggerSourceEnabled() {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
+      rpc.invoke(
+        enabled ? 'admin:triggerSourceEnable' : 'admin:triggerSourceDisable',
+        { name }
+      ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export type RegistrationState =
+  'pending' | 'off' | 'registered' | 'manual' | 'failed'
 
 export const registrationState = (
   row: TriggerSourceRow | undefined
 ): RegistrationState => {
-  if (!row?.status) return 'pending'
+  if (!row) return 'pending'
+  if (!row.enabled) return 'off'
+  if (!row.status) return 'pending'
   if (row.status === 'failed') return 'failed'
   if (row.status === 'manual') return 'manual'
   return 'registered'

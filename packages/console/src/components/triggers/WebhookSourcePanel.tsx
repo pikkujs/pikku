@@ -1,5 +1,5 @@
 import React from 'react'
-import { Anchor, Box, Group, Stack, Text } from '@pikku/mantine/core'
+import { Anchor, Box, Group, Stack, Switch, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { useQuery } from '@tanstack/react-query'
 import { Webhook } from 'lucide-react'
@@ -15,6 +15,7 @@ import {
 import { toEnglishName } from '../../lib/strings'
 import {
   registrationState,
+  useSetTriggerSourceEnabled,
   useTriggerSources,
   type RegistrationState,
 } from '../../hooks/useTriggerSources'
@@ -80,6 +81,7 @@ const SecretStatus: React.FC<{ source: string; name: string }> = ({
 
 const REGISTRATION_TONE = {
   pending: 'neutral',
+  off: 'neutral',
   registered: 'good',
   manual: 'warn',
   failed: 'bad',
@@ -90,17 +92,20 @@ const Registration: React.FC<{ source: string; name: string }> = ({
   name,
 }) => {
   const { data: rows, isError } = useTriggerSources()
+  const setEnabled = useSetTriggerSourceEnabled()
   if (isError || !rows) return null
   const row = rows.find((r) => r.name === name)
   const state = registrationState(row)
   const badge = {
     pending: m.webhook_source_registration_badge_pending,
+    off: m.webhook_source_registration_badge_off,
     registered: m.webhook_source_registration_badge_registered,
     manual: m.webhook_source_registration_badge_manual,
     failed: m.webhook_source_registration_badge_failed,
   }[state]()
   const text = {
     pending: m.webhook_source_registration_pending,
+    off: m.webhook_source_registration_off,
     registered: m.webhook_source_registration_registered,
     manual: m.webhook_source_registration_manual,
     failed: m.webhook_source_registration_failed,
@@ -110,10 +115,26 @@ const Registration: React.FC<{ source: string; name: string }> = ({
     <Box data-testid={`webhook-source-registration-${state}`}>
       <SectionLabel>{m.webhook_source_registration()}</SectionLabel>
       <Stack gap={4}>
-        <Group gap="xs">
+        <Group justify="space-between" wrap="nowrap">
           <StatusBadge tone={REGISTRATION_TONE[state]} size="sm">
             {badge}
           </StatusBadge>
+          {row && (
+            <Switch
+              size="md"
+              label={m.webhook_source_registration_switch()}
+              labelPosition="left"
+              checked={row.enabled}
+              disabled={setEnabled.isPending}
+              data-testid="webhook-source-enabled"
+              onChange={(event) =>
+                setEnabled.mutate({
+                  name,
+                  enabled: event.currentTarget.checked,
+                })
+              }
+            />
+          )}
         </Group>
         <Text size="sm">{text}</Text>
         {row?.detail && (state === 'manual' || state === 'failed') && (
