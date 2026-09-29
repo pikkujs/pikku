@@ -1,5 +1,11 @@
 # @pikku/addon-admin
 
+## 0.12.9
+
+### Patch Changes
+
+- 35a0bb6: `admin:flagList` lists a declared flag the store holds no row for, as live and unbacked, instead of leaving it off the board.
+
 ## 0.12.8
 
 ### Patch Changes

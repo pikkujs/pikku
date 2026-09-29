@@ -265,10 +265,10 @@
     },
     "packages/addon/pikku-admin": {
       "name": "@pikku/addon-admin",
-      "version": "0.12.8",
+      "version": "0.12.9",
       "devDependencies": {
         "@pikku/better-auth": "^0.12.49",
-        "@pikku/cli": "^0.12.171",
+        "@pikku/cli": "^0.12.172",
         "@pikku/core": "*",
         "@standard-schema/spec": "^1.1.0",
         "zod": "^4",
@@ -348,7 +348,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.171",
+      "version": "0.12.172",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -374,7 +374,7 @@
         "@pikku/node-http-server": "^0.12.17",
         "@pikku/openapi-parser": "^0.12.23",
         "@pikku/schedule": "^0.12.8",
-        "@pikku/skills": "^0.12.42",
+        "@pikku/skills": "^0.12.43",
         "@pikku/websocket": "^0.12.5",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -447,7 +447,7 @@
     },
     "packages/console": {
       "name": "@pikku/console",
-      "version": "0.12.91",
+      "version": "0.12.92",
       "dependencies": {
         "@assistant-ui/react": "^0.15.14",
         "@codemirror/lang-html": "^6.4.12",
@@ -466,7 +466,7 @@
         "@pikku/assistant-ui": "^0.12.13",
         "@pikku/better-auth": "^0.12.47",
         "@pikku/fetch": "^0.12.11",
-        "@pikku/mantine": "^0.12.14",
+        "@pikku/mantine": "^0.12.15",
         "@pikku/react": "^0.12.12",
         "@pikku/react-layout-panel": "^0.1.2",
         "@pikku/workflow-graph": "^0.12.2",
@@ -505,9 +505,9 @@
       "devDependencies": {
         "@inlang/paraglide-js": "^2.24.1",
         "@mantine/colors-generator": "^9.5.1",
-        "@pikku/addon-admin": "^0.12.6",
+        "@pikku/addon-admin": "^0.12.9",
         "@pikku/addon-console": "^0.12.54",
-        "@pikku/cli": "^0.12.170",
+        "@pikku/cli": "^0.12.172",
         "@pikku/core": "^0.12.127",
         "@pikku/websocket": "^0.12.5",
         "@standard-schema/spec": "^1.1.0",
@@ -605,7 +605,7 @@
     },
     "packages/frontend/mantine": {
       "name": "@pikku/mantine",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "devDependencies": {
         "@mantine/core": "^9.5.1",
         "@mantine/hooks": "^9.5.1",
@@ -1361,7 +1361,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.42",
+      "version": "0.12.43",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
@@ -1606,7 +1606,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.171",
+        "@pikku/cli": "^0.12.172",
         "@pikku/core": "^0.12.128",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",

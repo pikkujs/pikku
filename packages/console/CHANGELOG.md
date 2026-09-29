@@ -1,3 +1,11 @@
+## 0.12.92
+
+### Patch Changes
+
+- fc07038: Feature flags page uses the card layout: switches grouped by state in plain words, the ones needing a look first, raw names under For developers
+- Updated dependencies [e8d6374]
+  - @pikku/mantine@0.12.15
+
 ## 0.12.91
 
 ### Patch Changes
