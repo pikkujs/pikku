@@ -10,7 +10,9 @@ import {
   readJsonSafe,
   runSharedProjectChecks,
   staticStubbedImports,
+  WIRES_ADMIN_ADDON,
 } from './shared-checks.js'
+import { blankComments } from '../../fabric/lib/blank-comments.js'
 
 const AUTH_CONFIG = `
   export const auth = betterAuth({
@@ -397,5 +399,108 @@ describe('runSharedProjectChecks: raw sql identifiers', () => {
     )
 
     assert.deepStrictEqual(await rawSqlFindings(), [])
+  })
+})
+
+describe('WIRES_ADMIN_ADDON', () => {
+  const wires = (source: string) =>
+    WIRES_ADMIN_ADDON.test(blankComments(source))
+
+  test('matches the admin addon wiring', () => {
+    assert.ok(
+      wires(`wireAddon({
+  name: 'admin',
+  package: '@pikku/addon-admin',
+  globalCredentials: 'every credential, for every user',
+})`)
+    )
+  })
+
+  test('does not match a different addon', () => {
+    assert.ok(
+      !wires(`wireAddon({
+  name: 'console',
+  package: '@pikku/addon-console',
+  scopes: ['pikku:console'],
+})`)
+    )
+  })
+
+  // The scaffolded console wiring ships a comment naming this package to say
+  // why it is not the console's scope root. Reading it as a wiring reported
+  // every app that scaffolded a console as already administered.
+  test('does not match the package named in a neighbouring comment', () => {
+    assert.ok(
+      !wires(`// Administering the application is \`@pikku/addon-admin\` under the
+// \`admin\` tree, and the two are granted separately.
+wireAddon({
+  name: 'console',
+  package: '@pikku/addon-console',
+})`)
+    )
+  })
+
+  test('does not match the package outside any wiring call', () => {
+    assert.ok(!wires(`import '@pikku/addon-admin'`))
+  })
+})
+
+describe('runSharedProjectChecks: admin addon wiring', () => {
+  let root: string
+  const fnDir = () => join(root, 'packages', 'functions')
+  const withBetterAuthSession = async () => {
+    const dir = join(fnDir(), '.pikku', 'middleware')
+    await mkdir(dir, { recursive: true })
+    await writeFile(
+      join(dir, 'pikku-middleware-groups-meta.gen.json'),
+      JSON.stringify({
+        instances: { session: { definitionId: 'betterAuthSession' } },
+      })
+    )
+  }
+  const writeSource = async (name: string, body: string) => {
+    const dir = join(fnDir(), 'src')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, name), body)
+  }
+  const adminFindings = async () =>
+    (await runSharedProjectChecks(root)).findings.filter(
+      (f) => f.id === 'admin-addon-not-wired'
+    )
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'pikku-admin-addon-'))
+  })
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true })
+  })
+
+  test('reports an app with better-auth that never wires the admin addon', async () => {
+    await withBetterAuthSession()
+    await writeSource(
+      'addons.ts',
+      "wireAddon({ name: 'console', package: '@pikku/addon-console' })"
+    )
+
+    const findings = await adminFindings()
+
+    assert.strictEqual(findings.length, 1)
+    assert.strictEqual(findings[0]!.severity, 'error')
+  })
+
+  test('is silent once the admin addon is wired', async () => {
+    await withBetterAuthSession()
+    await writeSource(
+      'addons.ts',
+      "wireAddon({ name: 'admin', package: '@pikku/addon-admin', globalCredentials: 'all' })"
+    )
+
+    assert.deepStrictEqual(await adminFindings(), [])
+  })
+
+  test('is silent for an app with no auth to administer', async () => {
+    await writeSource('addons.ts', 'export {}')
+
+    assert.deepStrictEqual(await adminFindings(), [])
   })
 })

@@ -481,6 +481,43 @@ const rawSqlIdentifierOffenders = async (
 }
 
 /**
+ * A `wireAddon` call naming the admin addon. One level of nested braces is
+ * allowed for an options object; the package specifier must appear inside the
+ * same call.
+ */
+export const WIRES_ADMIN_ADDON =
+  /wireAddon\s*\(\s*\{(?:[^{}]|\{[^{}]*\})*?@pikku\/addon-admin/
+
+/**
+ * Whether any source file actually wires `@pikku/addon-admin`.
+ *
+ * Matched against the `wireAddon({ ... })` call itself, over comment-blanked
+ * text: the scaffolded console wiring carries a comment naming this package to
+ * explain why it is NOT the console's scope root, and a per-file search for the
+ * two words reports every app that copied that comment as already wired.
+ */
+const wiresAdminAddon = async (srcDir: string): Promise<boolean> => {
+  if (!existsSync(srcDir)) return false
+  let entries: string[]
+  try {
+    entries = (await readdir(srcDir, { recursive: true })).filter(
+      (f): f is string =>
+        typeof f === 'string' &&
+        f.endsWith('.ts') &&
+        !f.includes('node_modules')
+    )
+  } catch {
+    return false
+  }
+  const texts = await Promise.all(
+    entries.map((f) => readTextSafe(join(srcDir, f)))
+  )
+  return texts.some(
+    (t) => Boolean(t) && WIRES_ADMIN_ADDON.test(blankComments(t!))
+  )
+}
+
+/**
  * Scaffold flags that gate a generated surface the pikku console calls.
  *
  * `console` gates app introspection, so nothing renders without it;
@@ -790,6 +827,40 @@ export async function runSharedProjectChecks(
     // appear nowhere else in pikku or in any template — it never fired against a
     // real app, and would have been wrong for every one of them if it had.
     const authEnabled = await hasAuthSessionMiddleware(fnDir)
+
+    // Administering an application — the user directory, banning, roles and
+    // scope grants, the audit trail — is expected of every pikku app out of the
+    // box, and is what the console's Users and Scopes pages call. It arrives as
+    // `@pikku/addon-admin`, not as application code: an app that has not wired
+    // it exposes no `admin:*` RPC, so those pages have nothing to talk to and a
+    // Fabric operator signs in holding a grant that reaches nothing.
+    //
+    // Gated on better-auth being wired because `admin:users:*` reads and writes
+    // through its adapter — an app with no auth has no directory to administer.
+    if (authEnabled && !(await wiresAdminAddon(join(fnDir, 'src')))) {
+      e(
+        'admin-addon-not-wired',
+        '@pikku/addon-admin is not wired — the app exposes no admin:* RPCs, so the console Users and Scopes pages have nothing to call',
+        join(fnDir, 'src'),
+        lines(
+          'Install it and wire it once, anywhere under packages/functions/src:',
+          '',
+          "import { wireAddon } from '#pikku/addon'",
+          '',
+          'wireAddon({',
+          "  name: 'admin',",
+          "  package: '@pikku/addon-admin',",
+          '  globalCredentials:',
+          "    'administering credentials means setting and clearing any of them, for any user, so it cannot be scoped to a declared set',",
+          '})',
+          '',
+          'The functions are each gated on their own `admin:*` scope, so registering a',
+          'ScopeService in createSingletonServices is what makes those grants land —',
+          'without one nobody, including the Fabric operator, holds anything.',
+          'Banning additionally needs better-auth wired with `pikkuBan()`.'
+        )
+      )
+    }
     const configText = await readTextSafe(join(fnDir, 'src', 'config.ts'))
     const missingAuthTables: string[] = []
     if (existsSync(migrationsDir)) {
