@@ -1,32 +1,29 @@
-import type { CredentialOverrideMeta } from '../types.js'
+import type { CredentialOverrideMeta } from "../types.js";
 import type {
   InspectorState,
   InspectorLogger,
   InspectorOptions,
   MiddlewareGroupMeta,
   InspectorDiagnostic,
-} from '../types.js'
-import type {
-  FunctionServicesMeta,
-  PermissionMetadata,
-} from '@pikku/core/function'
-import type { MiddlewareMetadata } from '@pikku/core/middleware'
-import type ts from 'typescript'
-import { existsSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
-import { join } from 'node:path'
-import { extractTypeKeys } from './type-utils.js'
-import { ErrorCode } from '../error-codes.js'
-import { findSecretAliasServices } from './secret-alias-services.js'
-import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
-import { resolveCoreType } from './resolve-core-type.js'
-import { relative } from 'node:path'
-import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
-import { flattenScopeDefinitions } from '@pikku/core/scope'
-import type { WorkflowStepMeta } from '@pikku/core/workflow'
-import type { ScenarioStepMeta } from '@pikku/core/scenario'
-import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
-import { addonResolutionDirs } from './addon-resolution.js'
+} from "../types.js";
+import type { FunctionServicesMeta, PermissionMetadata } from "@pikku/core/function";
+import type { MiddlewareMetadata } from "@pikku/core/middleware";
+import type ts from "typescript";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+import { extractTypeKeys } from "./type-utils.js";
+import { ErrorCode } from "../error-codes.js";
+import { findSecretAliasServices } from "./secret-alias-services.js";
+import { deriveOAuth2AppSecrets } from "@pikku/core/secret";
+import { resolveCoreType } from "./resolve-core-type.js";
+import { relative } from "node:path";
+import { AUTH_HANDLER_FUNC_ID } from "../add/add-auth.js";
+import { flattenScopeDefinitions } from "@pikku/core/scope";
+import type { WorkflowStepMeta } from "@pikku/core/workflow";
+import type { ScenarioStepMeta } from "@pikku/core/scenario";
+import { DYNAMIC_SCENARIO_STEP_TARGET } from "./workflow/dsl/patterns.js";
+import { addonResolutionDirs } from "./addon-resolution.js";
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -42,16 +39,16 @@ import { addonResolutionDirs } from './addon-resolution.js'
  * `aggregateRequiredServices` so it flows into `requiredServices`.
  */
 export function stampAuthHandlerServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const definition = state.auth.definition
-  if (!definition) return
-  const handlerMeta = state.functions.meta[AUTH_HANDLER_FUNC_ID]
-  if (!handlerMeta) return
+  const definition = state.auth.definition;
+  if (!definition) return;
+  const handlerMeta = state.functions.meta[AUTH_HANDLER_FUNC_ID];
+  if (!handlerMeta) return;
   handlerMeta.services = {
     optimized: definition.services.optimized,
     services: [...definition.services.services],
-  }
+  };
 }
 
 /**
@@ -59,15 +56,11 @@ export function stampAuthHandlerServices(
  * Only extracts type:'wire' variants (individual middleware/permissions).
  * Skips type:'http' and type:'tag' (reference groups, not individuals).
  */
-export function extractWireNames(
-  list?: Array<MiddlewareMetadata | PermissionMetadata>
-): string[] {
-  if (!list) return []
+export function extractWireNames(list?: Array<MiddlewareMetadata | PermissionMetadata>): string[] {
+  if (!list) return [];
   return list
-    .filter(
-      (item): item is { type: 'wire'; name: string } => item.type === 'wire'
-    )
-    .map((item) => item.name)
+    .filter((item): item is { type: "wire"; name: string } => item.type === "wire")
+    .map((item) => item.name);
 }
 
 /**
@@ -77,21 +70,21 @@ export function extractWireNames(
  */
 function expandAndAddGroupServices(
   list: MiddlewareMetadata[] | undefined,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  addServices: (services: FunctionServicesMeta | undefined) => void
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+  addServices: (services: FunctionServicesMeta | undefined) => void,
 ): void {
-  if (!list) return
+  if (!list) return;
 
   for (const item of list) {
-    if (item.type === 'tag') {
-      const groupMeta = state.middleware.tagMiddleware.get(item.tag)
+    if (item.type === "tag") {
+      const groupMeta = state.middleware.tagMiddleware.get(item.tag);
       if (groupMeta?.services) {
-        addServices(groupMeta.services)
+        addServices(groupMeta.services);
       }
-    } else if (item.type === 'http' && 'route' in item) {
-      const groupMeta = state.http.routeMiddleware.get(item.route)
+    } else if (item.type === "http" && "route" in item) {
+      const groupMeta = state.http.routeMiddleware.get(item.route);
       if (groupMeta?.services) {
-        addServices(groupMeta.services)
+        addServices(groupMeta.services);
       }
     }
   }
@@ -102,40 +95,30 @@ function expandAndAddGroupServices(
  * This provides the complete list of available services for code generation.
  * Only runs if typesLookup is available (omitted in deserialized states).
  */
-function extractAllServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
-): void {
+function extractAllServices(state: InspectorState | Omit<InspectorState, "typesLookup">): void {
   // Skip if typesLookup is not available (e.g., deserialized state)
-  if (!('typesLookup' in state)) {
-    return
+  if (!("typesLookup" in state)) {
+    return;
   }
 
   // Extract all singleton services from the SingletonServices type
   const singletonServicesType = resolveCoreType(
     state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
+    state.singletonServicesTypeImportMap,
+  );
   if (singletonServicesType) {
-    state.serviceAggregation.allSingletonServices = extractTypeKeys(
-      singletonServicesType
-    ).sort()
+    state.serviceAggregation.allSingletonServices = extractTypeKeys(singletonServicesType).sort();
   }
 
   // Extract all services from the Services type
-  const servicesType = resolveCoreType(
-    state.typesLookup,
-    state.wireServicesTypeImportMap
-  )
+  const servicesType = resolveCoreType(state.typesLookup, state.wireServicesTypeImportMap);
   if (servicesType) {
     // Wire services are those in Services but not in SingletonServices
-    const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
+    const singletonSet = new Set(state.serviceAggregation.allSingletonServices);
     state.serviceAggregation.allWireServices = extractTypeKeys(servicesType)
       .filter((name) => !singletonSet.has(name))
-      .sort()
-    markSingletonServicesOnly(
-      state,
-      new Set(state.serviceAggregation.allWireServices)
-    )
+      .sort();
+    markSingletonServicesOnly(state, new Set(state.serviceAggregation.allWireServices));
   }
 }
 
@@ -146,17 +129,17 @@ function extractAllServices(
  * mark every function.
  */
 function markSingletonServicesOnly(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  wireServices: Set<string>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+  wireServices: Set<string>,
 ): void {
   for (const meta of Object.values(state.functions.meta)) {
     if (
       meta.services?.optimized &&
       !meta.services.services.some((name) => wireServices.has(name))
     ) {
-      meta.singletonServicesOnly = true
+      meta.singletonServicesOnly = true;
     } else {
-      delete meta.singletonServicesOnly
+      delete meta.singletonServicesOnly;
     }
   }
 }
@@ -169,33 +152,33 @@ function markSingletonServicesOnly(
  * in the add-* methods during AST traversal for efficiency.
  */
 export function aggregateRequiredServices(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
   // First, extract all available services from types
-  extractAllServices(state)
+  extractAllServices(state);
 
   const { requiredServices, usedFunctions, usedMiddleware, usedPermissions } =
-    state.serviceAggregation
+    state.serviceAggregation;
 
   // Internal services (always excluded from tree-shaking)
-  const internalServices = new Set(['rpc', 'mcp', 'channel', 'userSession'])
+  const internalServices = new Set(["rpc", "mcp", "channel", "userSession"]);
 
   const addServices = (services: FunctionServicesMeta | undefined) => {
-    if (!services || !services.services) return
+    if (!services || !services.services) return;
     services.services.forEach((service) => {
       if (!internalServices.has(service)) {
-        requiredServices.add(service)
+        requiredServices.add(service);
       }
-    })
-  }
+    });
+  };
 
   // 1. Services from used functions
   usedFunctions.forEach((funcName) => {
-    const funcMeta = state.functions.meta[funcName]
+    const funcMeta = state.functions.meta[funcName];
     if (funcMeta?.services) {
-      addServices(funcMeta.services)
+      addServices(funcMeta.services);
     }
-  })
+  });
 
   // 1b. Services the auth factory touches, read from the definition rather than
   // from the generated handler.
@@ -208,73 +191,65 @@ export function aggregateRequiredServices(
   // inspected from hand-written source either way, so taking the answer from
   // there makes a clean build agree with an incremental one.
   if (state.auth?.definition) {
-    addServices(state.auth.definition.services)
+    addServices(state.auth.definition.services);
   }
 
   // 2. Services from used middleware (individual + groups)
   usedMiddleware.forEach((middlewareName) => {
-    const middlewareMeta = state.middleware.definitions[middlewareName]
+    const middlewareMeta = state.middleware.definitions[middlewareName];
     if (middlewareMeta?.services) {
-      addServices(middlewareMeta.services)
+      addServices(middlewareMeta.services);
     }
-  })
+  });
 
   // 3. Services from used permissions (individual + groups)
   usedPermissions.forEach((permissionName) => {
-    const permissionMeta = state.permissions.definitions[permissionName]
+    const permissionMeta = state.permissions.definitions[permissionName];
     if (permissionMeta?.services) {
-      addServices(permissionMeta.services)
+      addServices(permissionMeta.services);
     }
-  })
+  });
 
   // 4. Services from middleware/permission groups used in wirings
   // We need to check all wirings and expand any tag/HTTP-pattern groups they use
-  for (const method of [
-    'get',
-    'post',
-    'put',
-    'patch',
-    'delete',
-    'head',
-    'options',
-  ] as const) {
+  for (const method of ["get", "post", "put", "patch", "delete", "head", "options"] as const) {
     for (const routeMeta of Object.values(state.http.meta[method])) {
-      expandAndAddGroupServices(routeMeta.middleware, state, addServices)
+      expandAndAddGroupServices(routeMeta.middleware, state, addServices);
     }
   }
 
   // Also check other wiring types (channels, queues, schedulers, MCP)
   for (const channelMeta of Object.values(state.channels.meta)) {
-    expandAndAddGroupServices(channelMeta.middleware, state, addServices)
+    expandAndAddGroupServices(channelMeta.middleware, state, addServices);
   }
 
   for (const queueMeta of Object.values(state.queueWorkers.meta)) {
-    expandAndAddGroupServices(queueMeta.middleware, state, addServices)
+    expandAndAddGroupServices(queueMeta.middleware, state, addServices);
   }
 
   for (const scheduleMeta of Object.values(state.scheduledTasks.meta)) {
-    expandAndAddGroupServices(scheduleMeta.middleware, state, addServices)
+    expandAndAddGroupServices(scheduleMeta.middleware, state, addServices);
   }
 
   for (const toolMeta of Object.values(state.mcpEndpoints.toolsMeta)) {
-    expandAndAddGroupServices(toolMeta.middleware, state, addServices)
+    expandAndAddGroupServices(toolMeta.middleware, state, addServices);
   }
 
   for (const promptMeta of Object.values(state.mcpEndpoints.promptsMeta)) {
-    expandAndAddGroupServices(promptMeta.middleware, state, addServices)
+    expandAndAddGroupServices(promptMeta.middleware, state, addServices);
   }
 
   for (const resourceMeta of Object.values(state.mcpEndpoints.resourcesMeta)) {
-    expandAndAddGroupServices(resourceMeta.middleware, state, addServices)
+    expandAndAddGroupServices(resourceMeta.middleware, state, addServices);
   }
 
   // 5. Services from session service factories
   for (const singletonServices of state.wireServicesMeta.values()) {
     singletonServices.forEach((service) => {
       if (!internalServices.has(service)) {
-        requiredServices.add(service)
+        requiredServices.add(service);
       }
-    })
+    });
   }
 
   // 6. Implicit platform services required by wiring types
@@ -286,32 +261,26 @@ export function aggregateRequiredServices(
     Object.keys(state.workflows.meta).length > 0 ||
     Object.keys(state.functions.meta).some(
       (id) =>
-        id.startsWith('workflowStart:') ||
-        id.startsWith('workflowStatus:') ||
-        id.startsWith('workflow:')
-    )
+        id.startsWith("workflowStart:") ||
+        id.startsWith("workflowStatus:") ||
+        id.startsWith("workflow:"),
+    );
   if (hasWorkflows) {
-    requiredServices.add('workflowService')
-    requiredServices.add('workflowRunService')
-    requiredServices.add('schedulerService')
-    requiredServices.add('queueService')
+    requiredServices.add("workflowService");
+    requiredServices.add("workflowRunService");
+    requiredServices.add("schedulerService");
+    requiredServices.add("queueService");
   }
 
   // Webhook source routes and their worker are generated and destructure
   // nothing, so they are found by id: the route accepts into the queue through
   // incomingWebhookService and the worker records attempts through it.
-  const hasWebhookSources = Object.values(
-    state.triggers?.webhookSourceMeta ?? {}
-  ).some(
-    ({ method, route }) =>
-      state.functions.meta[`http:${method}:${route}`] !== undefined
-  )
-  if (
-    hasWebhookSources ||
-    state.functions.meta['queue:pikku-incoming-webhooks'] !== undefined
-  ) {
-    requiredServices.add('incomingWebhookService')
-    requiredServices.add('queueService')
+  const hasWebhookSources = Object.values(state.triggers?.webhookSourceMeta ?? {}).some(
+    ({ method, route }) => state.functions.meta[`http:${method}:${route}`] !== undefined,
+  );
+  if (hasWebhookSources || state.functions.meta["queue:pikku-incoming-webhooks"] !== undefined) {
+    requiredServices.add("incomingWebhookService");
+    requiredServices.add("queueService");
   }
 
   // 6b. Inject synthetic queue workers for workflow graph steps.
@@ -319,68 +288,67 @@ export function aggregateRequiredServices(
   // Without these, the PikkuWorkflowService constructor can't find
   // per-workflow queue entries and falls back to shared queue names.
   for (const [, graph] of Object.entries(state.workflows.graphMeta)) {
-    if (!graph.nodes || !graph.name) continue
+    if (!graph.nodes || !graph.name) continue;
     // A scenario is a workflow, but it only ever runs in-process under
     // `pikku scenario run` — no step of one is dispatched through a queue. The
     // synthetic entries were pure leakage: they put a
     // `wf-orchestrator-<scenario>` worker into the app's queue meta, which every
     // bundle imports and a provider then creates as a real production queue.
-    if (graph.source === 'scenario') continue
+    if (graph.source === "scenario") continue;
 
     const toKebab = (s: string) =>
       s
-        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-        .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
-        .toLowerCase()
+        .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+        .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+        .toLowerCase();
 
     // Orchestrator queue
-    const orchQueueName = `wf-orchestrator-${toKebab(graph.name)}`
+    const orchQueueName = `wf-orchestrator-${toKebab(graph.name)}`;
     if (!state.queueWorkers.meta[orchQueueName]) {
       state.queueWorkers.meta[orchQueueName] = {
         name: orchQueueName,
         pikkuFuncId: `pikkuWorkflowOrchestrator:${graph.name}`,
-      }
+      };
     }
 
     // Per-step queues — only for steps explicitly marked workflowQueued: true
     for (const node of Object.values(graph.nodes)) {
-      if (!('rpcName' in node) || !node.rpcName) continue
-      const rpcName = node.rpcName as string
+      if (!("rpcName" in node) || !node.rpcName) continue;
+      const rpcName = node.rpcName as string;
       const funcId =
-        state.rpc?.internalMeta?.[rpcName] ??
-        state.rpc?.exposedMeta?.[rpcName] ??
-        rpcName
-      const funcMeta = (state.functions.meta[funcId] ??
-        state.functions.meta[rpcName]) as { workflowQueued?: boolean }
-      if (funcMeta?.workflowQueued !== true) continue
-      const stepQueueName = `wf-step-${toKebab(rpcName)}`
+        state.rpc?.internalMeta?.[rpcName] ?? state.rpc?.exposedMeta?.[rpcName] ?? rpcName;
+      const funcMeta = (state.functions.meta[funcId] ?? state.functions.meta[rpcName]) as {
+        workflowQueued?: boolean;
+      };
+      if (funcMeta?.workflowQueued !== true) continue;
+      const stepQueueName = `wf-step-${toKebab(rpcName)}`;
       if (!state.queueWorkers.meta[stepQueueName]) {
         state.queueWorkers.meta[stepQueueName] = {
           name: stepQueueName,
           pikkuFuncId: `pikkuWorkflowWorker:${rpcName}`,
-        }
+        };
       }
     }
   }
 
   // AI agents need agentStorage + agentRunState + agentRunService + agentRunner
   if (Object.keys(state.agents.agentsMeta).length > 0) {
-    requiredServices.add('agentStorage')
-    requiredServices.add('agentRunState')
-    requiredServices.add('agentRunService')
-    requiredServices.add('agentRunner')
+    requiredServices.add("agentStorage");
+    requiredServices.add("agentRunState");
+    requiredServices.add("agentRunService");
+    requiredServices.add("agentRunner");
   }
 
   // Channels need eventHub for pub/sub
   if (Object.keys(state.channels.meta).length > 0) {
-    requiredServices.add('eventHub')
+    requiredServices.add("eventHub");
   }
 
   // Declared scopes need scopeService to resolve a grant. Nothing in a project
   // destructures it — the generated auth layer reaches it — so the declaration
   // is the only signal there is.
   if ((state.scopes?.definitions?.length ?? 0) > 0) {
-    requiredServices.add('scopeService')
+    requiredServices.add("scopeService");
   }
 
   // Declared feature flags need featureFlags for the same reason, from the
@@ -389,7 +357,7 @@ export function aggregateRequiredServices(
   // ever says the project has flags. Without this the flag tables are left out
   // of the generated migration and every gate silently resolves open.
   if ((state.featureFlags?.definitions?.length ?? 0) > 0) {
-    requiredServices.add('featureFlags')
+    requiredServices.add("featureFlags");
   }
 
   // A `defineAnalyticsEvents` declaration means events are emitted, and the
@@ -397,56 +365,47 @@ export function aggregateRequiredServices(
   // that either — functions are handed the request-scoped `analytics` — so the
   // declaration is again the only signal.
   if ((state.analytics?.length ?? 0) > 0) {
-    requiredServices.add('analyticsService')
+    requiredServices.add("analyticsService");
   }
 
   if ((state.credentials?.definitions?.length ?? 0) > 0) {
-    requiredServices.add('credentialService')
+    requiredServices.add("credentialService");
   }
 
   // 7. Services that consumed addons need from the parent project.
-  const addonFnServices = new Map<string, string[] | undefined>()
+  const addonFnServices = new Map<string, string[] | undefined>();
   for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {
     for (const [id, meta] of Object.entries(fns)) {
       addonFnServices.set(
         `${namespace}:${id}`,
-        (meta as { services?: FunctionServicesMeta })?.services?.services
-      )
+        (meta as { services?: FunctionServicesMeta })?.services?.services,
+      );
     }
   }
-  const parentDeclared = state.addonRequiredParentServices ?? []
-  const parentDeclaredSet = new Set(parentDeclared)
-  const defaultServices = new Set([
-    'config',
-    'logger',
-    'variables',
-    'schema',
-    'secrets',
-  ])
-  let usesAddonFn = false
-  let addonFactoryNeeded = false
+  const parentDeclared = state.addonRequiredParentServices ?? [];
+  const parentDeclaredSet = new Set(parentDeclared);
+  const defaultServices = new Set(["config", "logger", "variables", "schema", "secrets"]);
+  let usesAddonFn = false;
+  let addonFactoryNeeded = false;
   for (const funcId of usedFunctions) {
-    if (!addonFnServices.has(funcId)) continue
-    usesAddonFn = true
-    const services = addonFnServices.get(funcId)
+    if (!addonFnServices.has(funcId)) continue;
+    usesAddonFn = true;
+    const services = addonFnServices.get(funcId);
     if (!services) {
-      addonFactoryNeeded = true
-      continue
+      addonFactoryNeeded = true;
+      continue;
     }
     for (const service of services) {
       if (parentDeclaredSet.has(service)) {
-        requiredServices.add(service)
-      } else if (
-        !internalServices.has(service) &&
-        !defaultServices.has(service)
-      ) {
-        addonFactoryNeeded = true
+        requiredServices.add(service);
+      } else if (!internalServices.has(service) && !defaultServices.has(service)) {
+        addonFactoryNeeded = true;
       }
     }
   }
   if (usesAddonFn && addonFactoryNeeded) {
     for (const service of parentDeclared) {
-      requiredServices.add(service)
+      requiredServices.add(service);
     }
   }
 
@@ -462,62 +421,57 @@ export function aggregateRequiredServices(
     // map claiming an addon needs nothing, which is what drove addons to list
     // their own services under `forceRequiredServices` by hand.
     for (const funcMeta of Object.values(state.functions.meta)) {
-      addServices(funcMeta?.services)
+      addServices(funcMeta?.services);
     }
 
-    const createdSet = new Set(state.addonCreatedServices ?? [])
-    const parentServices = new Set(parentDeclared)
+    const createdSet = new Set(state.addonCreatedServices ?? []);
+    const parentServices = new Set(parentDeclared);
     for (const service of requiredServices) {
       if (
         !createdSet.has(service) &&
         !internalServices.has(service) &&
         !defaultServices.has(service)
       ) {
-        parentServices.add(service)
+        parentServices.add(service);
       }
     }
-    state.addonRequiredParentServices = [...parentServices]
+    state.addonRequiredParentServices = [...parentServices];
   }
 }
 
 export function validateSecretOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const { wireAddonDeclarations } = state.rpc
-  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
 
   // secretOverrides key on (and resolve to) SECRET IDs — the string the addon
   // passes to getSecret — so validate against secretId, falling back to name for
   // older meta without a secretId field.
-  const secretIds = new Set(
-    state.secrets.definitions.map((d: any) => d.secretId ?? d.name)
-  )
+  const secretIds = new Set(state.secrets.definitions.map((d: any) => d.secretId ?? d.name));
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [logicalName, resolvedName] of Object.entries(
-      addonDecl.secretOverrides ?? {}
-    )) {
+    for (const [logicalName, resolvedName] of Object.entries(addonDecl.secretOverrides ?? {})) {
       if (!secretIds.has(resolvedName)) {
-        const availableSecrets = Array.from(secretIds)
+        const availableSecrets = Array.from(secretIds);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
-        )
+          `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(", ") || "none"}`,
+        );
       }
     }
 
     // A grant names the secret as the addon reads it, so it resolves through
     // the override map before it can be looked up in the project.
     for (const logicalName of addonDecl.secretGrants ?? []) {
-      const resolvedName =
-        addonDecl.secretOverrides?.[logicalName] ?? logicalName
+      const resolvedName = addonDecl.secretOverrides?.[logicalName] ?? logicalName;
       if (!secretIds.has(resolvedName)) {
-        const availableSecrets = Array.from(secretIds)
+        const availableSecrets = Array.from(secretIds);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
-        )
+          `Secret grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(", ") || "none"}`,
+        );
       }
     }
   }
@@ -525,25 +479,19 @@ export function validateSecretOverrides(
 
 export function validateCredentialOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const { wireAddonDeclarations } = state.rpc
-  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
 
-  const credentialNames = new Set(
-    state.credentials?.definitions.map((d) => d.name) ?? []
-  )
+  const credentialNames = new Set(state.credentials?.definitions.map((d) => d.name) ?? []);
 
   /** Only a rename has a target to check; a mode-only override renames nothing. */
-  const renameTarget = (
-    override: CredentialOverrideMeta
-  ): string | undefined =>
-    typeof override === 'string' ? override : override.name
+  const renameTarget = (override: CredentialOverrideMeta): string | undefined =>
+    typeof override === "string" ? override : override.name;
 
-  const overrideMode = (
-    override: CredentialOverrideMeta
-  ): 'singleton' | 'wire' | undefined =>
-    typeof override === 'string' ? undefined : override.mode
+  const overrideMode = (override: CredentialOverrideMeta): "singleton" | "wire" | undefined =>
+    typeof override === "string" ? undefined : override.mode;
 
   /**
    * Which declaration set each resolved name's mode. Credential generation
@@ -553,51 +501,46 @@ export function validateCredentialOverrides(
    */
   const modeClaims = new Map<
     string,
-    { mode: 'singleton' | 'wire'; namespace: string; logicalName: string }
-  >()
+    { mode: "singleton" | "wire"; namespace: string; logicalName: string }
+  >();
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [logicalName, override] of Object.entries(
-      addonDecl.credentialOverrides ?? {}
-    )) {
+    for (const [logicalName, override] of Object.entries(addonDecl.credentialOverrides ?? {})) {
       // A mode-only override still names a credential — the addon's own. It
       // has to exist, or generation resolves nothing and the credential keeps
       // its default mode with no sign that the wiring asked for another.
-      const renamed = renameTarget(override)
-      const resolvedName = renamed ?? logicalName
+      const renamed = renameTarget(override);
+      const resolvedName = renamed ?? logicalName;
       if (!credentialNames.has(resolvedName)) {
-        const availableCredentials = Array.from(credentialNames)
-        const target = renamed
-          ? `'${logicalName}' -> '${resolvedName}'`
-          : `'${logicalName}'`
+        const availableCredentials = Array.from(credentialNames);
+        const target = renamed ? `'${logicalName}' -> '${resolvedName}'` : `'${logicalName}'`;
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override ${target} in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
-        )
+          `Credential override ${target} in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(", ") || "none"}`,
+        );
       }
 
-      const mode = overrideMode(override)
-      if (!mode) continue
-      const claim = modeClaims.get(resolvedName)
+      const mode = overrideMode(override);
+      if (!mode) continue;
+      const claim = modeClaims.get(resolvedName);
       if (claim && claim.mode !== mode) {
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential '${resolvedName}' is wired '${claim.mode}' by '${claim.logicalName}' in addon '${claim.namespace}' and '${mode}' by '${logicalName}' in addon '${namespace}'. One credential holds one mode, so the second wiring would silently take the first's resolution. Give them separate names, or wire both the same way.`
-        )
+          `Credential '${resolvedName}' is wired '${claim.mode}' by '${claim.logicalName}' in addon '${claim.namespace}' and '${mode}' by '${logicalName}' in addon '${namespace}'. One credential holds one mode, so the second wiring would silently take the first's resolution. Give them separate names, or wire both the same way.`,
+        );
       }
-      modeClaims.set(resolvedName, { mode, namespace, logicalName })
+      modeClaims.set(resolvedName, { mode, namespace, logicalName });
     }
 
     for (const logicalName of addonDecl.credentialGrants ?? []) {
-      const override = addonDecl.credentialOverrides?.[logicalName]
-      const resolvedName =
-        (override ? renameTarget(override) : undefined) ?? logicalName
+      const override = addonDecl.credentialOverrides?.[logicalName];
+      const resolvedName = (override ? renameTarget(override) : undefined) ?? logicalName;
       if (!credentialNames.has(resolvedName)) {
-        const availableCredentials = Array.from(credentialNames)
+        const availableCredentials = Array.from(credentialNames);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
-        )
+          `Credential grant '${logicalName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(", ") || "none"}`,
+        );
       }
     }
   }
@@ -605,29 +548,25 @@ export function validateCredentialOverrides(
 
 export function validateVariableOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const { wireAddonDeclarations } = state.rpc
-  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
 
   // variableOverrides key on (and resolve to) VARIABLE IDs, so validate against
   // variableId, falling back to name for older meta without a variableId field.
-  const variableIds = new Set(
-    state.variables.definitions.map((d: any) => d.variableId ?? d.name)
-  )
+  const variableIds = new Set(state.variables.definitions.map((d: any) => d.variableId ?? d.name));
 
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    if (!addonDecl.variableOverrides) continue
+    if (!addonDecl.variableOverrides) continue;
 
-    for (const [logicalName, resolvedName] of Object.entries(
-      addonDecl.variableOverrides
-    )) {
+    for (const [logicalName, resolvedName] of Object.entries(addonDecl.variableOverrides)) {
       if (!variableIds.has(resolvedName)) {
-        const availableVariables = Array.from(variableIds)
+        const availableVariables = Array.from(variableIds);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
-        )
+          `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(", ") || "none"}`,
+        );
       }
     }
   }
@@ -644,30 +583,30 @@ export function validateVariableOverrides(
  * attempt means it is genuinely absent.
  */
 const isPackageResolvable = (pkg: string, dirs: string[]): boolean => {
-  const NOT_FOUND = new Set(['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND'])
+  const NOT_FOUND = new Set(["MODULE_NOT_FOUND", "ERR_MODULE_NOT_FOUND"]);
   for (const dir of dirs) {
-    let req: ReturnType<typeof createRequire>
+    let req: ReturnType<typeof createRequire>;
     try {
-      req = createRequire(join(dir, 'package.json'))
+      req = createRequire(join(dir, "package.json"));
     } catch {
-      return true // cannot ask; do not accuse
+      return true; // cannot ask; do not accuse
     }
     for (const specifier of [`${pkg}/package.json`, pkg]) {
       try {
-        req.resolve(specifier)
-        return true
+        req.resolve(specifier);
+        return true;
       } catch (e: any) {
-        if (!NOT_FOUND.has(e?.code)) return true
+        if (!NOT_FOUND.has(e?.code)) return true;
       }
     }
   }
-  return false
-}
+  return false;
+};
 
 type PackageManifest = {
-  dependencies?: Record<string, string>
-  devDependencies?: Record<string, string>
-}
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+};
 
 /**
  * Every wired addon must be installed, in the bucket matching how it is used.
@@ -694,66 +633,63 @@ type PackageManifest = {
  */
 export function validateRemoteAddonDependencies(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const { wireAddonDeclarations } = state.rpc
-  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
 
   // Local addons first, and independently of the manifest below: their check
   // asks the resolver, not `package.json`, so a project without a manifest (as
   // in some tests) must not skip it.
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (decl.remote) continue
-    const dirs = addonResolutionDirs(state.rootDir, decl.file)
-    if (isPackageResolvable(decl.package, dirs)) continue
+    if (decl.remote) continue;
+    const dirs = addonResolutionDirs(state.rootDir, decl.file);
+    if (isPackageResolvable(decl.package, dirs)) continue;
     logger.critical(
       ErrorCode.ADDON_NOT_INSTALLED,
-      `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but cannot be resolved from ${dirs.join(' or ')} — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of ${join(dirs[0], 'package.json')} and install, or remove the wireAddon call.`
-    )
+      `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but cannot be resolved from ${dirs.join(" or ")} — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of ${join(dirs[0], "package.json")} and install, or remove the wireAddon call.`,
+    );
   }
 
   // A remote addon belongs in the devDependencies of the package that wires
   // it, which in a workspace is not the root.
-  const manifests = new Map<string, PackageManifest | null>()
+  const manifests = new Map<string, PackageManifest | null>();
   const readManifest = (path: string): PackageManifest | null => {
-    if (manifests.has(path)) return manifests.get(path)!
-    let manifest: PackageManifest | null = null
+    if (manifests.has(path)) return manifests.get(path)!;
+    let manifest: PackageManifest | null = null;
     if (existsSync(path)) {
       try {
-        manifest = JSON.parse(readFileSync(path, 'utf-8'))
+        manifest = JSON.parse(readFileSync(path, "utf-8"));
       } catch (e: any) {
         logger.warn(
-          `Could not read ${path} to verify remote addon dependencies: ${e?.message ?? e}`
-        )
+          `Could not read ${path} to verify remote addon dependencies: ${e?.message ?? e}`,
+        );
       }
     }
-    manifests.set(path, manifest)
-    return manifest
-  }
+    manifests.set(path, manifest);
+    return manifest;
+  };
 
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) continue
-    const pkgJsonPath = join(
-      addonResolutionDirs(state.rootDir, decl.file)[0],
-      'package.json'
-    )
-    const pkgJson = readManifest(pkgJsonPath)
-    if (!pkgJson) continue // no manifest to check (e.g. some tests)
+    if (!decl.remote) continue;
+    const pkgJsonPath = join(addonResolutionDirs(state.rootDir, decl.file)[0], "package.json");
+    const pkgJson = readManifest(pkgJsonPath);
+    if (!pkgJson) continue; // no manifest to check (e.g. some tests)
 
-    const prodDeps = pkgJson.dependencies ?? {}
-    const devDeps = pkgJson.devDependencies ?? {}
-    if (decl.package in devDeps) continue // correct
+    const prodDeps = pkgJson.dependencies ?? {};
+    const devDeps = pkgJson.devDependencies ?? {};
+    if (decl.package in devDeps) continue; // correct
 
     if (decl.package in prodDeps) {
       logger.critical(
         ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
-        `Remote addon '${namespace}' ('${decl.package}') is a production dependency in ${pkgJsonPath}, but wireRemoteAddon consumes it for types only — its handlers run on the host. Move '${decl.package}' from "dependencies" to "devDependencies".`
-      )
+        `Remote addon '${namespace}' ('${decl.package}') is a production dependency in ${pkgJsonPath}, but wireRemoteAddon consumes it for types only — its handlers run on the host. Move '${decl.package}' from "dependencies" to "devDependencies".`,
+      );
     } else {
       logger.critical(
         ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
-        `Remote addon '${namespace}' ('${decl.package}') is wired with wireRemoteAddon but is not in the "devDependencies" of ${pkgJsonPath}. Add '${decl.package}' to "devDependencies" (types only).`
-      )
+        `Remote addon '${namespace}' ('${decl.package}') is wired with wireRemoteAddon but is not in the "devDependencies" of ${pkgJsonPath}. Add '${decl.package}' to "devDependencies" (types only).`,
+      );
     }
   }
 }
@@ -766,91 +702,89 @@ export function validateRemoteAddonDependencies(
  */
 export function validateRemoteAddonAuth(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const { wireAddonDeclarations } = state.rpc
-  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
 
-  const credentialNames = new Set(
-    state.credentials?.definitions.map((d) => d.name) ?? []
-  )
-  const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
+  const credentialNames = new Set(state.credentials?.definitions.map((d) => d.name) ?? []);
+  const secretNames = new Set(state.secrets.definitions.map((d) => d.name));
 
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) continue
+    if (!decl.remote) continue;
 
     if (decl.authCredentialId && !credentialNames.has(decl.authCredentialId)) {
       logger.critical(
         ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED,
-        `Remote addon '${namespace}' binds auth.credentialId '${decl.authCredentialId}', but no such credential is wired. Available credentials: ${Array.from(credentialNames).join(', ') || 'none'}`
-      )
+        `Remote addon '${namespace}' binds auth.credentialId '${decl.authCredentialId}', but no such credential is wired. Available credentials: ${Array.from(credentialNames).join(", ") || "none"}`,
+      );
     }
     if (decl.authSecretId && !secretNames.has(decl.authSecretId)) {
       logger.critical(
         ErrorCode.REMOTE_ADDON_AUTH_UNRESOLVED,
-        `Remote addon '${namespace}' binds auth.secretId '${decl.authSecretId}', but no such secret is wired. Available secrets: ${Array.from(secretNames).join(', ') || 'none'}`
-      )
+        `Remote addon '${namespace}' binds auth.secretId '${decl.authSecretId}', but no such secret is wired. Available secrets: ${Array.from(secretNames).join(", ") || "none"}`,
+      );
     }
   }
 }
 
 export function computeResolvedIOTypes(state: InspectorState): void {
-  const { functions } = state
+  const { functions } = state;
   for (const [pikkuFuncId, meta] of Object.entries(functions.meta)) {
-    const input = meta.inputs?.[0]
-    const output = meta.outputs?.[0]
+    const input = meta.inputs?.[0];
+    const output = meta.outputs?.[0];
 
-    let inputType = 'null'
+    let inputType = "null";
     if (input) {
       try {
-        inputType = functions.typesMap.getTypeMeta(input).uniqueName
+        inputType = functions.typesMap.getTypeMeta(input).uniqueName;
       } catch {
-        inputType = input
+        inputType = input;
       }
     }
 
-    let outputType = 'null'
+    let outputType = "null";
     if (output) {
       try {
-        outputType = functions.typesMap.getTypeMeta(output).uniqueName
+        outputType = functions.typesMap.getTypeMeta(output).uniqueName;
       } catch {
-        outputType = output
+        outputType = output;
       }
     }
 
-    state.resolvedIOTypes[pikkuFuncId] = { inputType, outputType }
+    state.resolvedIOTypes[pikkuFuncId] = { inputType, outputType };
 
-    if (meta.inputSchemaName && inputType !== 'null') {
-      meta.inputSchemaName = inputType
+    if (meta.inputSchemaName && inputType !== "null") {
+      meta.inputSchemaName = inputType;
     }
-    if (meta.outputSchemaName && outputType !== 'null') {
-      meta.outputSchemaName = outputType
+    if (meta.outputSchemaName && outputType !== "null") {
+      meta.outputSchemaName = outputType;
     }
     if (meta.inputs) {
       meta.inputs = meta.inputs.map((name) => {
         try {
-          return functions.typesMap.getTypeMeta(name).uniqueName
+          return functions.typesMap.getTypeMeta(name).uniqueName;
         } catch {
-          return name
+          return name;
         }
-      })
+      });
     }
     if (meta.outputs) {
       meta.outputs = meta.outputs.map((name) => {
         try {
-          return functions.typesMap.getTypeMeta(name).uniqueName
+          return functions.typesMap.getTypeMeta(name).uniqueName;
         } catch {
-          return name
+          return name;
         }
-      })
+      });
     }
   }
 }
 
 const serializeGroupMap = (
-  groupMap: Map<string, MiddlewareGroupMeta>
+  groupMap: Map<string, MiddlewareGroupMeta>,
 ): Record<string, MiddlewareGroupMeta> => {
-  const result: Record<string, MiddlewareGroupMeta> = {}
+  const result: Record<string, MiddlewareGroupMeta> = {};
   for (const [key, meta] of groupMap.entries()) {
     result[key] = {
       exportName: meta.exportName,
@@ -863,10 +797,10 @@ const serializeGroupMap = (
       ...(meta.additionalRegistrations && {
         additionalRegistrations: meta.additionalRegistrations,
       }),
-    }
+    };
   }
-  return result
-}
+  return result;
+};
 
 export function computeMiddlewareGroupsMeta(state: InspectorState): void {
   state.middlewareGroupsMeta = {
@@ -879,59 +813,56 @@ export function computeMiddlewareGroupsMeta(state: InspectorState): void {
       instances: state.channelMiddleware.instances,
       tagGroups: serializeGroupMap(state.channelMiddleware.tagMiddleware),
     },
-  }
+  };
 }
 
 export function computePermissionsGroupsMeta(state: InspectorState): void {
   state.permissionsGroupsMeta = {
     definitions: state.permissions.definitions,
-  }
+  };
 }
 
 const PRIMITIVE_TYPES = new Set([
-  'boolean',
-  'string',
-  'number',
-  'null',
-  'undefined',
-  'void',
-  'any',
-  'unknown',
-  'never',
-])
+  "boolean",
+  "string",
+  "number",
+  "null",
+  "undefined",
+  "void",
+  "any",
+  "unknown",
+  "never",
+]);
 
-export function computeRequiredSchemas(
-  state: InspectorState,
-  options: InspectorOptions
-): void {
-  const { functions, schemaLookup } = state
-  const schemasFromTypes = options.schemaConfig?.schemasFromTypes
+export function computeRequiredSchemas(state: InspectorState, options: InspectorOptions): void {
+  const { functions, schemaLookup } = state;
+  const schemasFromTypes = options.schemaConfig?.schemasFromTypes;
 
   state.requiredSchemas = new Set<string>([
     ...Object.values(functions.meta)
       .flatMap(({ inputs, outputs }) => {
-        const types: (string | undefined)[] = []
+        const types: (string | undefined)[] = [];
         if (inputs?.[0]) {
           try {
-            types.push(functions.typesMap.getUniqueName(inputs[0]))
+            types.push(functions.typesMap.getUniqueName(inputs[0]));
           } catch {
-            types.push(inputs[0])
+            types.push(inputs[0]);
           }
         }
         if (outputs?.[0]) {
           try {
-            types.push(functions.typesMap.getUniqueName(outputs[0]))
+            types.push(functions.typesMap.getUniqueName(outputs[0]));
           } catch {
-            types.push(outputs[0])
+            types.push(outputs[0]);
           }
         }
-        return types
+        return types;
       })
       .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...functions.typesMap.customTypes.keys(),
     ...(schemasFromTypes || []),
     ...Array.from(schemaLookup.keys()),
-  ])
+  ]);
 }
 
 /**
@@ -949,52 +880,49 @@ export function computeRequiredSchemas(
  * `--fail-on-error` without failing a dev server over a function nobody calls.
  */
 export function unresolvedSchemaReferences(state: InspectorState): string[] {
-  const { functions, schemas } = state
-  const available = new Set(Object.keys(schemas ?? {}))
-  const unresolved: string[] = []
+  const { functions, schemas } = state;
+  const available = new Set(Object.keys(schemas ?? {}));
+  const unresolved: string[] = [];
 
   const resolve = (typeName: string): string => {
     try {
-      return functions.typesMap.getUniqueName(typeName)
+      return functions.typesMap.getUniqueName(typeName);
     } catch {
-      return typeName
+      return typeName;
     }
-  }
+  };
 
   for (const [funcName, meta] of Object.entries(functions.meta)) {
     for (const [role, declared] of [
-      ['input', meta.inputs?.[0]],
-      ['output', meta.outputs?.[0]],
+      ["input", meta.inputs?.[0]],
+      ["output", meta.outputs?.[0]],
     ] as const) {
-      if (!declared || PRIMITIVE_TYPES.has(declared)) continue
-      const resolved = resolve(declared)
-      if (PRIMITIVE_TYPES.has(resolved) || available.has(resolved)) continue
-      unresolved.push(`${funcName}.${role} → '${resolved}'`)
+      if (!declared || PRIMITIVE_TYPES.has(declared)) continue;
+      const resolved = resolve(declared);
+      if (PRIMITIVE_TYPES.has(resolved) || available.has(resolved)) continue;
+      unresolved.push(`${funcName}.${role} → '${resolved}'`);
     }
   }
 
-  return unresolved
+  return unresolved;
 }
 
-export function validateSchemaReferences(
-  logger: InspectorLogger,
-  state: InspectorState
-): void {
-  const unresolved = unresolvedSchemaReferences(state)
+export function validateSchemaReferences(logger: InspectorLogger, state: InspectorState): void {
+  const unresolved = unresolvedSchemaReferences(state);
 
-  if (unresolved.length === 0) return
+  if (unresolved.length === 0) return;
 
   logger.diagnostic({
-    severity: 'error',
+    severity: "error",
     code: ErrorCode.SCHEMA_REFERENCE_UNRESOLVED,
     message:
-      `${unresolved.length} function contract${unresolved.length === 1 ? '' : 's'} ` +
-      `name${unresolved.length === 1 ? 's' : ''} a schema that was never generated, so ` +
-      `calling ${unresolved.length === 1 ? 'it' : 'them'} fails at runtime with ` +
-      `MissingSchemaError: ${unresolved.join(', ')}. ` +
+      `${unresolved.length} function contract${unresolved.length === 1 ? "" : "s"} ` +
+      `name${unresolved.length === 1 ? "s" : ""} a schema that was never generated, so ` +
+      `calling ${unresolved.length === 1 ? "it" : "them"} fails at runtime with ` +
+      `MissingSchemaError: ${unresolved.join(", ")}. ` +
       `The usual cause is a named type used as the function's input/output that ` +
       `is declared but not exported — export it, or inline the type at the call site.`,
-  })
+  });
 }
 
 /**
@@ -1003,30 +931,30 @@ export function validateSchemaReferences(
  */
 export function validateAgentModels(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  modelAliases: Record<string, string> = {}
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+  modelAliases: Record<string, string> = {},
 ): void {
   for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
-    const model = meta.model
+    const model = meta.model;
     if (!model) {
       logger.critical(
         ErrorCode.MISSING_MODEL,
-        `AI agent '${meta.name}' is missing the 'model' property.`
-      )
-      continue
+        `AI agent '${meta.name}' is missing the 'model' property.`,
+      );
+      continue;
     }
     // `hasOwn`, not a truthy lookup: every object literal inherits `toString`,
     // `constructor` and `__proto__`, so a bare model named after one of them
     // would read as a configured alias and pass a check nothing else repeats.
-    if (!model.includes('/') && !Object.hasOwn(modelAliases, model)) {
-      const known = Object.keys(modelAliases).sort()
+    if (!model.includes("/") && !Object.hasOwn(modelAliases, model)) {
+      const known = Object.keys(modelAliases).sort();
       logger.critical(
         ErrorCode.INVALID_MODEL,
         `AI agent '${meta.name}' uses model '${model}', which is neither provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4') nor an alias in the "models" table of pikku.config.json. ` +
           (known.length
-            ? `Known aliases: ${known.join(', ')}.`
-            : `No "models" aliases are configured.`)
-      )
+            ? `Known aliases: ${known.join(", ")}.`
+            : `No "models" aliases are configured.`),
+      );
     }
   }
 }
@@ -1044,23 +972,23 @@ export function validateAgentModels(
  */
 export function validateScenarioServices(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
-    if (!meta.scenario) continue
-    const funcMeta = state.functions.meta[meta.pikkuFuncId]
-    if (!funcMeta?.services) continue
+    if (!meta.scenario) continue;
+    const funcMeta = state.functions.meta[meta.pikkuFuncId];
+    if (!funcMeta?.services) continue;
     const disallowed = funcMeta.services.services.filter(
-      (svc) => svc !== 'logger' && svc !== 'config'
-    )
+      (svc) => svc !== "logger" && svc !== "config",
+    );
     if (disallowed.length > 0) {
       logger.critical(
         ErrorCode.SCENARIO_HAS_SERVICES,
-        `Scenario '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
+        `Scenario '${workflowName}' destructures services: ${disallowed.join(", ")}. ` +
           `Scenarios may only use 'logger'/'config' — drive everything else through ` +
           `actor steps (workflow.do(step, rpc, data, { actor: actors.x })) so the flow ` +
-          `runs against the target environment.`
-      )
+          `runs against the target environment.`,
+      );
     }
   }
 }
@@ -1076,11 +1004,11 @@ export function validateScenarioServices(
  */
 export const proseOpensWithActor = (prose: string, actor: string): boolean => {
   if (!actor) {
-    return false
+    return false;
   }
-  const escaped = actor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`^["'“‘\\s]*${escaped}(?:['’]s)?\\b`, 'i').test(prose)
-}
+  const escaped = actor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^["'“‘\\s]*${escaped}(?:['’]s)?\\b`, "i").test(prose);
+};
 
 /**
  * The prose that will actually render for one step, in the runtime's own
@@ -1093,18 +1021,16 @@ export const proseOpensWithActor = (prose: string, actor: string): boolean => {
  */
 const renderableProse = (
   step: ScenarioStepMeta,
-  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined
+  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined,
 ): string[] => {
-  const description = step.options?.description
+  const description = step.options?.description;
   if (description) {
-    return [step.stepName, description]
+    return [step.stepName, description];
   }
-  return [
-    step.stepName,
-    stepMeta?.scenarioStepTemplate,
-    stepMeta?.description,
-  ].filter((prose): prose is string => typeof prose === 'string')
-}
+  return [step.stepName, stepMeta?.scenarioStepTemplate, stepMeta?.description].filter(
+    (prose): prose is string => typeof prose === "string",
+  );
+};
 
 /**
  * A step's prose must not open by naming the actor it already runs as (PKU681).
@@ -1120,29 +1046,28 @@ const validateStepProse = (
   logger: InspectorLogger,
   workflowName: string,
   step: ScenarioStepMeta,
-  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined
+  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined,
 ): void => {
-  const actor = step.actor
+  const actor = step.actor;
   if (!actor) {
-    return
+    return;
   }
   const offender = renderableProse(step, stepMeta).find((prose) =>
-    proseOpensWithActor(prose, actor)
-  )
+    proseOpensWithActor(prose, actor),
+  );
   if (offender === undefined) {
-    return
+    return;
   }
   logger.critical(
     ErrorCode.SCENARIO_STEP_PROSE_NAMES_ACTOR,
     `Scenario '${workflowName}' names its actor in the step prose: '${offender}' runs as '${actor}'. ` +
       `The reporter already renders the actor as the subject, so this reads ` +
       `"${capitaliseFirst(step.phase)} ${actor} ${offender}". Drop the name and let ` +
-      `{ actor: actors.${actor} } supply it — the step reads as a bare third-person predicate.`
-  )
-}
+      `{ actor: actors.${actor} } supply it — the step reads as a bare third-person predicate.`,
+  );
+};
 
-const capitaliseFirst = (value: string): string =>
-  value.charAt(0).toUpperCase() + value.slice(1)
+const capitaliseFirst = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
 /**
  * Walk every scenario step, wherever it is nested, and validate the two things
@@ -1163,57 +1088,57 @@ const capitaliseFirst = (value: string): string =>
  */
 export function validateScenarioSteps(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const phasesSeen = new Set<string>()
+  const phasesSeen = new Set<string>();
 
   const visit = (workflowName: string, steps: WorkflowStepMeta[]): void => {
     for (const step of steps) {
-      if (step.type === 'scenarioStep') {
-        phasesSeen.add(step.phase)
+      if (step.type === "scenarioStep") {
+        phasesSeen.add(step.phase);
         if (step.stepFunc === DYNAMIC_SCENARIO_STEP_TARGET) {
           logger.critical(
             ErrorCode.SCENARIO_STEP_TARGET_NOT_STATIC,
             `Scenario '${workflowName}' calls step '${step.stepName}' with a target that isn't a string literal. ` +
               `A step target must be statically resolvable so it can be bundled, typed and drawn — ` +
-              `loop over data sets instead of computing the step name.`
-          )
-          continue
+              `loop over data sets instead of computing the step name.`,
+          );
+          continue;
         }
-        state.serviceAggregation.usedFunctions.add(step.stepFunc)
-        const stepMeta = state.functions.meta[step.stepFunc]
-        validateStepProse(logger, workflowName, step, stepMeta)
+        state.serviceAggregation.usedFunctions.add(step.stepFunc);
+        const stepMeta = state.functions.meta[step.stepFunc];
+        validateStepProse(logger, workflowName, step, stepMeta);
         if (stepMeta?.scenarioStepRequiresActor && !step.actor) {
-          const why = stepMeta.scenarioStepSurfaces?.includes('browser')
-            ? 'declares a browser binding'
-            : 'is driven by a persona'
+          const why = stepMeta.scenarioStepSurfaces?.includes("browser")
+            ? "declares a browser binding"
+            : "is driven by a persona";
           logger.critical(
             ErrorCode.SCENARIO_STEP_NEEDS_ACTOR,
             `Scenario '${workflowName}' calls step '${step.stepFunc}', which ${why}, without an actor. ` +
-              `Pass { actor: actors.<name> } so it runs as that persona.`
-          )
+              `Pass { actor: actors.<name> } so it runs as that persona.`,
+          );
         }
-        continue
+        continue;
       }
-      if (step.type === 'branch') {
-        for (const branch of step.branches) visit(workflowName, branch.steps)
-        if (step.elseSteps) visit(workflowName, step.elseSteps)
-      } else if (step.type === 'switch') {
+      if (step.type === "branch") {
+        for (const branch of step.branches) visit(workflowName, branch.steps);
+        if (step.elseSteps) visit(workflowName, step.elseSteps);
+      } else if (step.type === "switch") {
         for (const c of step.cases ?? []) {
-          if (c.steps) visit(workflowName, c.steps)
+          if (c.steps) visit(workflowName, c.steps);
         }
-        if (step.defaultSteps) visit(workflowName, step.defaultSteps)
-      } else if (step.type === 'fanout' && step.body) {
-        visit(workflowName, step.body as WorkflowStepMeta[])
-      } else if (step.type === 'parallel' && step.children) {
-        visit(workflowName, step.children as WorkflowStepMeta[])
+        if (step.defaultSteps) visit(workflowName, step.defaultSteps);
+      } else if (step.type === "fanout" && step.body) {
+        visit(workflowName, step.body as WorkflowStepMeta[]);
+      } else if (step.type === "parallel" && step.children) {
+        visit(workflowName, step.children as WorkflowStepMeta[]);
       }
     }
-  }
+  };
 
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
-    phasesSeen.clear()
-    visit(workflowName, meta.steps ?? [])
+    phasesSeen.clear();
+    visit(workflowName, meta.steps ?? []);
     // A scenario written as a step ladder but with no `then` proves only that
     // nothing threw. It is also invisible to witness coverage — it contributes
     // 0/0, so it can never lower the number — which makes an assertion-free
@@ -1221,13 +1146,13 @@ export function validateScenarioSteps(
     // `asserts` is the escape for a flow whose witness is an expectation helper
     // instead: those are inline steps and leave no phase behind, but a recorded
     // service call or a refusal is an assertion all the same.
-    if (phasesSeen.size > 0 && !phasesSeen.has('then') && !meta.asserts) {
+    if (phasesSeen.size > 0 && !phasesSeen.has("then") && !meta.asserts) {
       logger.critical(
         ErrorCode.SCENARIO_HAS_NO_ASSERTION,
-        `Scenario '${workflowName}' has ${[...phasesSeen].join('/')} steps but never asserts. ` +
+        `Scenario '${workflowName}' has ${[...phasesSeen].join("/")} steps but never asserts. ` +
           `Add a scenario.then(...) naming what the actor should now see — a flow with no 'then' ` +
-          `only proves nothing threw, and contributes nothing to witness coverage.`
-      )
+          `only proves nothing threw, and contributes nothing to witness coverage.`,
+      );
     }
   }
 }
@@ -1258,62 +1183,62 @@ export function validateScenarioSteps(
  */
 export function validateScenarioFeatures(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const features = state.workflows.featureFiles
+  const features = state.workflows.featureFiles;
   if (!features) {
-    return
+    return;
   }
 
-  const owned = new Set<string>()
+  const owned = new Set<string>();
   for (const feature of features.values()) {
     for (const mention of feature.mentions) {
-      owned.add(mention)
+      owned.add(mention);
     }
   }
 
-  const files = state.workflows.files
-  const unowned: string[] = []
+  const files = state.workflows.files;
+  const unowned: string[] = [];
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
     if (!(meta as { scenario?: boolean }).scenario) {
-      continue
+      continue;
     }
-    const exported = files?.get(workflowName)?.exportedName
+    const exported = files?.get(workflowName)?.exportedName;
     if (owned.has(workflowName) || (exported && owned.has(exported))) {
-      continue
+      continue;
     }
-    unowned.push(workflowName)
+    unowned.push(workflowName);
   }
 
   if (unowned.length === 0) {
-    return
+    return;
   }
 
   const unreadable = [...features.values()]
     .filter((feature) => feature.unnamedEntries > 0)
-    .map((feature) => feature.exportedName)
+    .map((feature) => feature.exportedName);
 
   if (unreadable.length > 0) {
     logger.diagnostic({
-      severity: 'warn',
+      severity: "warn",
       code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
       message:
-        `${unowned.map((name) => `'${name}'`).join(', ')} appear in no feature's \`scenarios\` array, ` +
-        `but ${unreadable.map((name) => `'${name}'`).join(', ')} build theirs with a spread or a call, so one of them may still be listed there. ` +
+        `${unowned.map((name) => `'${name}'`).join(", ")} appear in no feature's \`scenarios\` array, ` +
+        `but ${unreadable.map((name) => `'${name}'`).join(", ")} build theirs with a spread or a call, so one of them may still be listed there. ` +
         `List those scenarios literally and this becomes a definite answer either way.`,
-    })
-    return
+    });
+    return;
   }
 
   for (const name of unowned) {
     logger.diagnostic({
-      severity: 'error',
+      severity: "error",
       code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
       message:
         `Scenario '${name}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
         `a run stamps no feature onto its results, the console groups it under none, and a guide cannot cite it. ` +
         `Add it to a feature's \`scenarios\` array.`,
-    })
+    });
   }
 }
 
@@ -1323,34 +1248,31 @@ export function validateScenarioFeatures(
  * registers and codegen fails deep in type-checking with an opaque error. Fail
  * early with an actionable message pointing at `scaffold: { graph: true }`.
  */
-export function validateWorkflowGraphAddons(
-  logger: InspectorLogger,
-  state: InspectorState
-): void {
-  const addonGraphWired = Array.from(
-    state.rpc.wireAddonDeclarations.values()
-  ).some((decl) => decl.package === '@pikku/addon-graph')
+export function validateWorkflowGraphAddons(logger: InspectorLogger, state: InspectorState): void {
+  const addonGraphWired = Array.from(state.rpc.wireAddonDeclarations.values()).some(
+    (decl) => decl.package === "@pikku/addon-graph",
+  );
   if (addonGraphWired) {
-    return
+    return;
   }
 
   for (const [name, graph] of Object.entries(state.workflows.graphMeta)) {
     for (const node of Object.values(graph.nodes)) {
-      if (!('rpcName' in node) || typeof node.rpcName !== 'string') {
-        continue
+      if (!("rpcName" in node) || typeof node.rpcName !== "string") {
+        continue;
       }
-      if (!node.rpcName.startsWith('graph:')) {
-        continue
+      if (!node.rpcName.startsWith("graph:")) {
+        continue;
       }
       if (state.functions.meta[node.rpcName]) {
-        continue
+        continue;
       }
       logger.critical(
         ErrorCode.WORKFLOW_GRAPH_ADDON_NOT_WIRED,
         `Workflow graph '${name}' references '${node.rpcName}' but @pikku/addon-graph is not wired. ` +
           `Enable "scaffold": { "graph": true } in pikku.config.json (and install @pikku/addon-graph), ` +
-          `or wire it manually with wireAddon({ name: 'graph', package: '@pikku/addon-graph' }).`
-      )
+          `or wire it manually with wireAddon({ name: 'graph', package: '@pikku/addon-graph' }).`,
+      );
     }
   }
 }
@@ -1365,48 +1287,48 @@ export function validateWorkflowGraphAddons(
  */
 export function validateSchemaWiringSeparation(
   logger: InspectorLogger,
-  state: InspectorState
+  state: InspectorState,
 ): void {
   // Collect files that contain schemas
-  const schemaFiles = new Set<string>()
+  const schemaFiles = new Set<string>();
   for (const ref of state.schemaLookup.values()) {
-    schemaFiles.add(ref.sourceFile)
+    schemaFiles.add(ref.sourceFile);
   }
 
   // Collect files that contain wiring side-effects
-  const wiringFiles = new Set<string>()
+  const wiringFiles = new Set<string>();
 
   // HTTP route wirings
   for (const file of state.http.files) {
-    wiringFiles.add(file)
+    wiringFiles.add(file);
   }
 
   // Middleware wirings (addHTTPMiddleware calls). A group can be registered
   // from more than one file, and every one of them is a wiring file.
   const addGroupFiles = (groups: Map<string, MiddlewareGroupMeta>) => {
     for (const meta of groups.values()) {
-      wiringFiles.add(meta.sourceFile)
+      wiringFiles.add(meta.sourceFile);
       for (const registration of meta.additionalRegistrations ?? []) {
-        wiringFiles.add(registration.sourceFile)
+        wiringFiles.add(registration.sourceFile);
       }
     }
-  }
-  addGroupFiles(state.http.routeMiddleware)
-  addGroupFiles(state.middleware.tagMiddleware)
+  };
+  addGroupFiles(state.http.routeMiddleware);
+  addGroupFiles(state.middleware.tagMiddleware);
 
   // Check for overlap
   for (const file of schemaFiles) {
     if (wiringFiles.has(file)) {
       const schemas = Array.from(state.schemaLookup.entries())
         .filter(([, ref]) => ref.sourceFile === file)
-        .map(([name]) => name)
+        .map(([name]) => name);
 
       logger.critical(
         ErrorCode.SCHEMA_AND_WIRING_COLOCATED,
-        `File '${file}' contains both Zod schemas (${schemas.join(', ')}) and wiring calls (wireHTTPRoutes, addPermission, etc.). ` +
+        `File '${file}' contains both Zod schemas (${schemas.join(", ")}) and wiring calls (wireHTTPRoutes, addPermission, etc.). ` +
           `These must be in separate files because the CLI imports schema files at runtime, which triggers wiring side-effects that crash without server context. ` +
-          `Move the route/wiring definitions to a dedicated wiring file.`
-      )
+          `Move the route/wiring definitions to a dedicated wiring file.`,
+      );
     }
   }
 }
@@ -1422,40 +1344,40 @@ export function validateSchemaWiringSeparation(
 export function validateNoSecretAliasServices(
   logger: InspectorLogger,
   checker: ts.TypeChecker,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  if (!('typesLookup' in state)) {
-    return
+  if (!("typesLookup" in state)) {
+    return;
   }
   const singletonServicesType = resolveCoreType(
     state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
+    state.singletonServicesTypeImportMap,
+  );
   if (!singletonServicesType) {
-    return
+    return;
   }
-  const aliases = findSecretAliasServices(singletonServicesType, checker)
+  const aliases = findSecretAliasServices(singletonServicesType, checker);
   if (aliases.length === 0) {
-    return
+    return;
   }
 
   const report = (kind: string, id: string, services: string[]) => {
-    const used = services.filter((service) => aliases.includes(service))
+    const used = services.filter((service) => aliases.includes(service));
     if (used.length === 0) {
-      return
+      return;
     }
     logger.critical(
       ErrorCode.SECRET_SERVICE_ALIASED,
-      `${kind} '${id}' receives ${used.map((s) => `'${s}'`).join(', ')}, which ${used.length === 1 ? 'is' : 'are'} a SecretService under another name. ` +
-        `SecretService is confined to pikkuServices, pikkuWireServices, addon service factories and middleware — give a service the secret value when you construct it and expose only what the function needs.`
-    )
-  }
+      `${kind} '${id}' receives ${used.map((s) => `'${s}'`).join(", ")}, which ${used.length === 1 ? "is" : "are"} a SecretService under another name. ` +
+        `SecretService is confined to pikkuServices, pikkuWireServices, addon service factories and middleware — give a service the secret value when you construct it and expose only what the function needs.`,
+    );
+  };
 
   for (const [id, meta] of Object.entries(state.functions.meta)) {
-    report('Function', id, meta.services?.services ?? [])
+    report("Function", id, meta.services?.services ?? []);
   }
   for (const [id, def] of Object.entries(state.permissions.definitions)) {
-    report('Permission', id, def.services?.services ?? [])
+    report("Permission", id, def.services?.services ?? []);
   }
 }
 
@@ -1472,51 +1394,51 @@ export function validateNoSecretAliasServices(
  * without an author restating a shape the runtime already fixes.
  */
 export function registerDerivedOAuth2AppSecrets(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
   const derived = deriveOAuth2AppSecrets(
     state.credentials?.definitions ?? [],
-    state.secrets.definitions
-  )
-  state.secrets.definitions.push(...derived)
+    state.secrets.definitions,
+  );
+  state.secrets.definitions.push(...derived);
 }
 
 export function validateSecretUsage(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const declared = new Set(state.secrets.definitions.map((d) => d.secretId))
+  const declared = new Set(state.secrets.definitions.map((d) => d.secretId));
   for (const definition of state.secrets.definitions) {
     if (definition.oauth2?.tokenSecretId) {
-      declared.add(definition.oauth2.tokenSecretId)
+      declared.add(definition.oauth2.tokenSecretId);
     }
   }
   // auth-secrets.gen.ts declares it, but that file is written after the first
   // inspection of a fresh project, so its defineSecret is not seen yet.
-  if (state.auth?.definition) declared.add('BETTER_AUTH_SECRET')
+  if (state.auth?.definition) declared.add("BETTER_AUTH_SECRET");
 
   for (const [file, usage] of state.secrets.usage) {
-    const relativeFile = relative(state.rootDir, file)
-    const undeclared = usage.keys.filter((key) => !declared.has(key))
+    const relativeFile = relative(state.rootDir, file);
+    const undeclared = usage.keys.filter((key) => !declared.has(key));
     if (undeclared.length > 0) {
       logger.diagnostic({
-        severity: 'warn',
+        severity: "warn",
         code: ErrorCode.SECRET_NOT_DECLARED,
-        message: `${relativeFile} reads ${undeclared.map((k) => `'${k}'`).join(', ')}, which no defineSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it.`,
-      })
+        message: `${relativeFile} reads ${undeclared.map((k) => `'${k}'`).join(", ")}, which no defineSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it.`,
+      });
     }
     if (usage.dynamic.length > 0) {
       logger.diagnostic({
-        severity: 'warn',
+        severity: "warn",
         code: ErrorCode.SECRET_KEY_NOT_STATIC,
-        message: `${relativeFile} reads a secret with a non-literal key (${usage.dynamic.join(', ')}). The deployment cannot narrow its secret scope around a key it cannot see.`,
-      })
+        message: `${relativeFile} reads a secret with a non-literal key (${usage.dynamic.join(", ")}). The deployment cannot narrow its secret scope around a key it cannot see.`,
+      });
     }
   }
 }
 
 export function computeDiagnostics(state: InspectorState): void {
-  const diagnostics: InspectorDiagnostic[] = []
+  const diagnostics: InspectorDiagnostic[] = [];
 
   for (const [id, meta] of Object.entries(state.functions.meta)) {
     // Skip framework-synthesized functions: generated wrappers (auth.gen.ts's
@@ -1524,8 +1446,8 @@ export function computeDiagnostics(state: InspectorState): void {
     // bridges that reference addon functions (id `http:<method>:<route>`, no
     // source file). The user can't edit any of these, so a destructure lint
     // meant to nudge them about their own code must not fail the build over them.
-    if (!meta.sourceFile || meta.sourceFile.endsWith('.gen.ts')) {
-      continue
+    if (!meta.sourceFile || meta.sourceFile.endsWith(".gen.ts") || meta.functionType === "inline") {
+      continue;
     }
     if (meta.services && !meta.services.optimized) {
       diagnostics.push({
@@ -1533,7 +1455,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Function '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
         sourceFile: meta.pikkuFuncId,
         position: 0,
-      })
+      });
     }
     if (meta.wires && !meta.wires.optimized) {
       diagnostics.push({
@@ -1541,7 +1463,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Function '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
         sourceFile: meta.pikkuFuncId,
         position: 0,
-      })
+      });
     }
     if (state.functions.dynamicImportIds.has(id)) {
       diagnostics.push({
@@ -1549,7 +1471,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Function '${id}' performs a runtime dynamic 'import(...)' in its body. Move the import to the top of the module (static import) or into your services/wireServices setup — function bodies run on every invocation, so a dynamic import there adds latency and defeats bundling/tree-shaking.`,
         sourceFile: meta.pikkuFuncId,
         position: 0,
-      })
+      });
     }
   }
 
@@ -1560,7 +1482,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Middleware '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
         sourceFile: def.sourceFile,
         position: def.position,
-      })
+      });
     }
     if (def.wires && !def.wires.optimized) {
       diagnostics.push({
@@ -1568,7 +1490,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Middleware '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
         sourceFile: def.sourceFile,
         position: def.position,
-      })
+      });
     }
   }
 
@@ -1579,7 +1501,7 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Permission '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
         sourceFile: def.sourceFile,
         position: def.position,
-      })
+      });
     }
     if (def.wires && !def.wires.optimized) {
       diagnostics.push({
@@ -1587,11 +1509,11 @@ export function computeDiagnostics(state: InspectorState): void {
         message: `Permission '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
         sourceFile: def.sourceFile,
         position: def.position,
-      })
+      });
     }
   }
 
-  state.diagnostics = diagnostics
+  state.diagnostics = diagnostics;
 }
 
 /**
@@ -1603,33 +1525,31 @@ export function computeDiagnostics(state: InspectorState): void {
  */
 export function validateScopeReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const declared = new Set(
-    flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
-  )
+  const declared = new Set(flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id));
 
   for (const [funcName, meta] of Object.entries(state.functions.meta)) {
-    if (!meta.scopes?.length) continue
+    if (!meta.scopes?.length) continue;
 
     for (const scope of meta.scopes) {
       // A trailing wildcard grants a subtree; the node it hangs off must exist.
-      const declaredForm = scope.endsWith(':*') ? scope.slice(0, -2) : scope
+      const declaredForm = scope.endsWith(":*") ? scope.slice(0, -2) : scope;
 
-      if (scope === '*') {
+      if (scope === "*") {
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Function '${funcName}' requires the bare wildcard scope '*'. A function must require a specific scope — '*' is only meaningful as a grant.`
-        )
-        continue
+          `Function '${funcName}' requires the bare wildcard scope '*'. A function must require a specific scope — '*' is only meaningful as a grant.`,
+        );
+        continue;
       }
 
       if (!declared.has(declaredForm)) {
-        const available = Array.from(declared)
+        const available = Array.from(declared);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Function '${funcName}' requires scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(', ') || 'none'}`
-        )
+          `Function '${funcName}' requires scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(", ") || "none"}`,
+        );
       }
     }
   }
@@ -1653,60 +1573,60 @@ export function validateScopeReferences(
  */
 export function validateAgentToolReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  options: InspectorOptions = {}
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+  options: InspectorOptions = {},
 ): void {
-  const agents = Object.entries(state.agents.agentsMeta)
-  if (agents.length === 0) return
+  const agents = Object.entries(state.agents.agentsMeta);
+  if (agents.length === 0) return;
 
-  const { wireAddonDeclarations } = state.rpc
+  const { wireAddonDeclarations } = state.rpc;
 
   for (const [agentKey, agent] of agents) {
-    const where = agent.sourceFile ? ` (${agent.sourceFile})` : ''
+    const where = agent.sourceFile ? ` (${agent.sourceFile})` : "";
 
     for (const tool of agent.tools ?? []) {
       // A workflow reference is resolved against the workflow map, not here.
-      if (tool.startsWith('workflow:')) continue
+      if (tool.startsWith("workflow:")) continue;
 
-      const separator = tool.indexOf(':')
-      let meta: { description?: string; title?: string } | undefined
+      const separator = tool.indexOf(":");
+      let meta: { description?: string; title?: string } | undefined;
 
       if (separator === -1) {
-        const funcId = state.rpc.internalMeta[tool] ?? tool
-        meta = state.functions.meta[funcId]
+        const funcId = state.rpc.internalMeta[tool] ?? tool;
+        meta = state.functions.meta[funcId];
         if (!meta) {
           logger.critical(
             ErrorCode.AGENT_TOOL_NOT_FOUND,
-            `AI agent '${agentKey}'${where} references tool '${tool}', which is not a function in this project.`
-          )
-          continue
+            `AI agent '${agentKey}'${where} references tool '${tool}', which is not a function in this project.`,
+          );
+          continue;
         }
       } else {
-        const namespace = tool.slice(0, separator)
-        const funcName = tool.slice(separator + 1)
-        const addon = wireAddonDeclarations?.get(namespace)
+        const namespace = tool.slice(0, separator);
+        const funcName = tool.slice(separator + 1);
+        const addon = wireAddonDeclarations?.get(namespace);
         if (!addon) {
-          const known = Array.from(wireAddonDeclarations?.keys() ?? [])
+          const known = Array.from(wireAddonDeclarations?.keys() ?? []);
           logger.critical(
             ErrorCode.AGENT_TOOL_UNKNOWN_NAMESPACE,
             `AI agent '${agentKey}'${where} references tool '${tool}', but no addon is wired under the namespace '${namespace}'. ` +
-              `Wired namespaces: ${known.join(', ') || 'none'}.`
-          )
-          continue
+              `Wired namespaces: ${known.join(", ") || "none"}.`,
+          );
+          continue;
         }
 
         // An addon that has not been built yet contributed no metadata, which
         // is not the same as one whose function is missing.
-        const addonMeta = state.addonFunctions[namespace]
-        if (!addonMeta) continue
+        const addonMeta = state.addonFunctions[namespace];
+        if (!addonMeta) continue;
 
-        meta = addonMeta[funcName]
+        meta = addonMeta[funcName];
         if (!meta) {
           logger.critical(
             ErrorCode.AGENT_TOOL_NOT_FOUND,
-            `AI agent '${agentKey}'${where} references tool '${tool}', but addon '${namespace}' ('${addon.package}') exposes no function '${funcName}'.`
-          )
-          continue
+            `AI agent '${agentKey}'${where} references tool '${tool}', but addon '${namespace}' ('${addon.package}') exposes no function '${funcName}'.`,
+          );
+          continue;
         }
       }
 
@@ -1715,8 +1635,8 @@ export function validateAgentToolReferences(
           ErrorCode.AGENT_TOOL_MISSING_DESCRIPTION,
           `AI agent '${agentKey}'${where} uses tool '${tool}', which has no description. ` +
             `An agent tool's description is what the model is told it does; without one it is offered the tool under its own name. ` +
-            `Add a 'description' to '${tool}'${meta.title ? " (a 'title' does not count — it labels the tool, it does not explain it)" : ''}.`
-        )
+            `Add a 'description' to '${tool}'${meta.title ? " (a 'title' does not count — it labels the tool, it does not explain it)" : ""}.`,
+        );
       }
     }
   }
@@ -1731,19 +1651,19 @@ export function validateAgentToolReferences(
  */
 export function validateAgentScorerReferences(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  const known = Object.keys(state.scorers.scorersMeta)
+  const known = Object.keys(state.scorers.scorersMeta);
 
   for (const [agentKey, agent] of Object.entries(state.agents.agentsMeta)) {
-    const where = agent.sourceFile ? ` (${agent.sourceFile})` : ''
+    const where = agent.sourceFile ? ` (${agent.sourceFile})` : "";
     for (const scorer of agent.scorers ?? []) {
-      if (known.includes(scorer)) continue
+      if (known.includes(scorer)) continue;
       logger.critical(
         ErrorCode.AGENT_SCORER_NOT_FOUND,
         `AI agent '${agentKey}'${where} asks to be graded by scorer '${scorer}', which is not declared in this project. ` +
-          `Declared scorers: ${known.join(', ') || 'none'}.`
-      )
+          `Declared scorers: ${known.join(", ") || "none"}.`,
+      );
     }
   }
 }
@@ -1762,33 +1682,31 @@ export function validateAgentScorerReferences(
  */
 export function validateSystemRoleScopes(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
   if (!state.systemRoles.definitions.length) {
-    return
+    return;
   }
 
-  const declared = new Set(
-    flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id)
-  )
+  const declared = new Set(flattenScopeDefinitions(state.scopes.definitions).map((s) => s.id));
 
   for (const role of state.systemRoles.definitions) {
     for (const scope of role.scopes) {
-      if (scope === '*') {
+      if (scope === "*") {
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `System role '${role.name}' grants the bare wildcard scope '*'. Grant the roots it should cover instead — '*' hides what the role actually confers.`
-        )
-        continue
+          `System role '${role.name}' grants the bare wildcard scope '*'. Grant the roots it should cover instead — '*' hides what the role actually confers.`,
+        );
+        continue;
       }
 
-      const declaredForm = scope.endsWith(':*') ? scope.slice(0, -2) : scope
+      const declaredForm = scope.endsWith(":*") ? scope.slice(0, -2) : scope;
       if (!declared.has(declaredForm)) {
-        const available = Array.from(declared)
+        const available = Array.from(declared);
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `System role '${role.name}' grants scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(', ') || 'none'}`
-        )
+          `System role '${role.name}' grants scope '${scope}' which is not declared. Declare it with defineScope. Available scopes: ${available.join(", ") || "none"}`,
+        );
       }
     }
   }
@@ -1807,24 +1725,24 @@ export function validateSystemRoleScopes(
  */
 export function validatePersonaRoles(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
   if (!state.personas.definitions.length) {
-    return
+    return;
   }
 
-  const declared = new Set(state.systemRoles.definitions.map((r) => r.name))
+  const declared = new Set(state.systemRoles.definitions.map((r) => r.name));
 
   for (const persona of state.personas.definitions) {
     for (const role of persona.roles) {
       if (!declared.has(role)) {
-        const available = Array.from(declared).sort()
+        const available = Array.from(declared).sort();
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Persona '${persona.id}' holds role '${role}', which is not declared with defineSystemRole. ` +
             `A persona may only name a system role — a role composed in the console can be deleted, and the persona would go on claiming to test it. ` +
-            `Declared roles: ${available.join(', ') || 'none'}`
-        )
+            `Declared roles: ${available.join(", ") || "none"}`,
+        );
       }
     }
   }

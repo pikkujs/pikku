@@ -1,106 +1,119 @@
-import { test, describe } from 'node:test'
-import { strict as assert } from 'node:assert'
-import { computeDiagnostics } from './post-process.js'
-import type { InspectorState } from '../types.js'
-import { ErrorCode } from '../error-codes.js'
+import { test, describe } from "node:test";
+import { strict as assert } from "node:assert";
+import { computeDiagnostics } from "./post-process.js";
+import type { InspectorState } from "../types.js";
+import { ErrorCode } from "../error-codes.js";
 
 function stateWithFunctions(
-  meta: InspectorState['functions']['meta'],
-  dynamicImportIds: string[] = []
+  meta: InspectorState["functions"]["meta"],
+  dynamicImportIds: string[] = [],
 ): InspectorState {
   return {
     functions: { meta, dynamicImportIds: new Set(dynamicImportIds) },
     middleware: { definitions: {} },
     permissions: { definitions: {} },
-  } as unknown as InspectorState
+  } as unknown as InspectorState;
 }
 
-describe('computeDiagnostics', () => {
-  test('flags a user-authored function that does not destructure services', () => {
+describe("computeDiagnostics", () => {
+  test("flags a user-authored function that does not destructure services", () => {
     const state = stateWithFunctions({
       myFunc: {
-        pikkuFuncId: 'myFunc',
+        pikkuFuncId: "myFunc",
         inputSchemaName: null,
         outputSchemaName: null,
-        sourceFile: '/project/src/my-func.ts',
-        services: { optimized: false, services: ['kysely'] },
+        sourceFile: "/project/src/my-func.ts",
+        services: { optimized: false, services: ["kysely"] },
       },
-    })
-    computeDiagnostics(state)
-    assert.equal(state.diagnostics.length, 1)
-    assert.equal(state.diagnostics[0].code, ErrorCode.SERVICES_NOT_DESTRUCTURED)
-  })
+    });
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 1);
+    assert.equal(state.diagnostics[0].code, ErrorCode.SERVICES_NOT_DESTRUCTURED);
+  });
 
-  test('does NOT flag a generated .gen.ts function (user cannot edit it)', () => {
+  test("does NOT flag a generated .gen.ts function (user cannot edit it)", () => {
     const state = stateWithFunctions({
       cliRaw: {
-        pikkuFuncId: 'cliRaw',
+        pikkuFuncId: "cliRaw",
         inputSchemaName: null,
         outputSchemaName: null,
-        sourceFile: '/project/src/wirings/cli-channel.gen.ts',
-        services: { optimized: false, services: ['kysely'] },
+        sourceFile: "/project/src/wirings/cli-channel.gen.ts",
+        services: { optimized: false, services: ["kysely"] },
       },
       authHandler: {
-        pikkuFuncId: 'authHandler',
+        pikkuFuncId: "authHandler",
         inputSchemaName: null,
         outputSchemaName: null,
-        sourceFile: '/project/.pikku/auth.gen.ts',
-        wires: { optimized: false, wires: ['http'] },
+        sourceFile: "/project/.pikku/auth.gen.ts",
+        wires: { optimized: false, wires: ["http"] },
       },
-    })
-    computeDiagnostics(state)
-    assert.equal(state.diagnostics.length, 0)
-  })
+    });
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 0);
+  });
 
-  test('does NOT flag a synthetic route bridge with no source file', () => {
+  test("does NOT flag a synthetic route bridge with no source file", () => {
     const state = stateWithFunctions({
-      'http:get:/workflow-run/:runId/stream': {
-        pikkuFuncId: 'http:get:/workflow-run/:runId/stream',
+      "http:get:/workflow-run/:runId/stream": {
+        pikkuFuncId: "http:get:/workflow-run/:runId/stream",
         inputSchemaName: null,
         outputSchemaName: null,
         services: { optimized: false, services: [] },
       },
-    })
-    computeDiagnostics(state)
-    assert.equal(state.diagnostics.length, 0)
-  })
+    });
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 0);
+  });
 
-  test('flags a user-authored function that does a dynamic import in its body', () => {
+  test("does NOT flag the stub a wiring registers for the function it references", () => {
+    const state = stateWithFunctions({
+      "queue:fabric-audit": {
+        pikkuFuncId: "queue:fabric-audit",
+        functionType: "inline",
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sourceFile: "/project/src/scaffold/fabric/audit/fabric-audit.queue.ts",
+        services: { optimized: false, services: [] },
+      },
+    });
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 0);
+  });
+
+  test("flags a user-authored function that does a dynamic import in its body", () => {
     const state = stateWithFunctions(
       {
         greedy: {
-          pikkuFuncId: 'greedy',
+          pikkuFuncId: "greedy",
           inputSchemaName: null,
           outputSchemaName: null,
-          sourceFile: '/project/src/greedy.ts',
-          services: { optimized: true, services: ['logger'] },
+          sourceFile: "/project/src/greedy.ts",
+          services: { optimized: true, services: ["logger"] },
         },
       },
-      ['greedy']
-    )
-    computeDiagnostics(state)
+      ["greedy"],
+    );
+    computeDiagnostics(state);
     assert.equal(
-      state.diagnostics.filter(
-        (d) => d.code === ErrorCode.FUNCTION_DYNAMIC_IMPORT
-      ).length,
-      1
-    )
-  })
+      state.diagnostics.filter((d) => d.code === ErrorCode.FUNCTION_DYNAMIC_IMPORT).length,
+      1,
+    );
+  });
 
-  test('does NOT flag a dynamic import in a generated .gen.ts function', () => {
+  test("does NOT flag a dynamic import in a generated .gen.ts function", () => {
     const state = stateWithFunctions(
       {
         authHandler: {
-          pikkuFuncId: 'authHandler',
+          pikkuFuncId: "authHandler",
           inputSchemaName: null,
           outputSchemaName: null,
-          sourceFile: '/project/.pikku/auth.gen.ts',
+          sourceFile: "/project/.pikku/auth.gen.ts",
           services: { optimized: true, services: [] },
         },
       },
-      ['authHandler']
-    )
-    computeDiagnostics(state)
-    assert.equal(state.diagnostics.length, 0)
-  })
-})
+      ["authHandler"],
+    );
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 0);
+  });
+});
