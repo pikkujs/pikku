@@ -839,6 +839,19 @@ describe('analyzeDeployment - the remote job inbox lands on the work', () => {
     const unit = analyze().units.find((u) => u.name === 'run-remote-queue-job')
     assert.ok(unit?.services.some((s) => s.capability === 'database'))
   })
+
+  test('the inbox is bound to what its workers rpc.invoke', () => {
+    const state = stateWithRemoteJobInbox()
+    ;(state.functions.meta as any).nightlyReport.invokes = ['sendEmail']
+    const { units } = analyzeDeployment(state, {
+      projectId: 'test',
+      serverlessIncompatible: ['fileStore'],
+    })
+    const inbox = units.find((u) => u.name === 'run-remote-scheduled-job')
+    const target = inbox?.dispatch?.sendEmail
+    assert.ok(target && target !== inbox.name)
+    assert.ok(inbox.dependsOn.includes(target))
+  })
 })
 
 /**

@@ -799,6 +799,52 @@ export function analyzeDeployment(
     }
   }
 
+  // ── Step 6a: Remote job inbox units bundle the work they dispatch ──
+  // The inbox runs a worker in-process, so it needs the worker's code in its
+  // own bundle. Any server-target worker pulls the inbox to server, since a
+  // server unit can host a serverless-compatible function but not the reverse.
+  // Before Step 6b, so the calls those workers make are bound on the inbox.
+  const REMOTE_JOB_INBOX_SOURCES: Record<string, () => string[]> = {
+    runRemoteQueueJob: () =>
+      values(state.queueWorkers.meta).map((m) => m.pikkuFuncId),
+    runRemoteScheduledJob: () =>
+      values(state.scheduledTasks.meta).map((m) => m.pikkuFuncId),
+  }
+  for (const unit of units) {
+    if (unit.role !== 'function') continue
+    const source = REMOTE_JOB_INBOX_SOURCES[unit.functionIds[0] ?? '']
+    if (!source || unit.functionIds.length !== 1) continue
+
+    const workerIds = [...new Set(source())].filter(
+      (id) => id && functionsMeta[id]
+    )
+    if (workerIds.length === 0) continue
+
+    const targets = workerIds.map((id) =>
+      resolveDeployTarget(
+        functionsMeta[id]!,
+        serverlessIncompatible,
+        id,
+        defaultTarget
+      )
+    )
+    unit.target = targets.includes('server') ? 'server' : 'serverless'
+    unit.functionIds = [...unit.functionIds, ...workerIds]
+    for (const id of workerIds) {
+      for (const service of collectServicesForFunction(functionsMeta[id]!)) {
+        if (
+          !unit.services.some(
+            (s) =>
+              s.capability === service.capability &&
+              s.sourceServiceName === service.sourceServiceName
+          )
+        ) {
+          unit.services.push(service)
+        }
+      }
+    }
+  }
+
   // ── Step 6b: Bind units to the functions their bodies rpc.invoke ───
   // A call to a function bundled in another unit leaves the process through
   // the DeploymentService, which only knows the units named here. Grouped
@@ -901,52 +947,7 @@ export function analyzeDeployment(
     }
   }
 
-  // ── Step 9: Remote job inbox units bundle the work they dispatch ───
-  // The inbox runs a worker in-process, so it needs the worker's code in its
-  // own bundle. Any server-target worker pulls the inbox to server, since a
-  // server unit can host a serverless-compatible function but not the reverse.
-  const REMOTE_JOB_INBOX_SOURCES: Record<string, () => string[]> = {
-    runRemoteQueueJob: () =>
-      values(state.queueWorkers.meta).map((m) => m.pikkuFuncId),
-    runRemoteScheduledJob: () =>
-      values(state.scheduledTasks.meta).map((m) => m.pikkuFuncId),
-  }
-  for (const unit of units) {
-    if (unit.role !== 'function') continue
-    const source = REMOTE_JOB_INBOX_SOURCES[unit.functionIds[0] ?? '']
-    if (!source || unit.functionIds.length !== 1) continue
-
-    const workerIds = [...new Set(source())].filter(
-      (id) => id && functionsMeta[id]
-    )
-    if (workerIds.length === 0) continue
-
-    const targets = workerIds.map((id) =>
-      resolveDeployTarget(
-        functionsMeta[id]!,
-        serverlessIncompatible,
-        id,
-        defaultTarget
-      )
-    )
-    unit.target = targets.includes('server') ? 'server' : 'serverless'
-    unit.functionIds = [...unit.functionIds, ...workerIds]
-    for (const id of workerIds) {
-      for (const service of collectServicesForFunction(functionsMeta[id]!)) {
-        if (
-          !unit.services.some(
-            (s) =>
-              s.capability === service.capability &&
-              s.sourceServiceName === service.sourceServiceName
-          )
-        ) {
-          unit.services.push(service)
-        }
-      }
-    }
-  }
-
-  // ── Step 10: Units that start a workflow another unit runs ────────
+  // ── Step 9: Units that start a workflow another unit runs ─────────
   // `rpc.startWorkflow('x')` resolves x's meta in the calling process. On a
   // queued start that is all it needs: the run is created from the meta and
   // handed to x's orchestrator queue, whose unit holds the registration. A
