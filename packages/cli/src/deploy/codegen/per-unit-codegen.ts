@@ -203,9 +203,11 @@ export function collectFilterNames(
       // only — nodes reference step functions by string ID), not the step
       // function bodies; those stay in their own per-step units and are
       // reached via queue dispatch at runtime.
-      const usesWorkflowState = unit.services.some(
-        (s) => s.capability === 'workflow-state'
-      )
+      // A unit given `startedWorkflows` has workflow-state only to start
+      // those, so it gets their meta (below) rather than every workflow.
+      const usesWorkflowState =
+        !unit.startedWorkflows &&
+        unit.services.some((s) => s.capability === 'workflow-state')
       if (usesWorkflowState) {
         for (const wf of manifest.workflows) {
           names.add(wf.name)
@@ -269,7 +271,29 @@ export function collectFilterNames(
       break
   }
 
+  // Workflows this unit only starts. With workflow queues the start is queued
+  // and needs only the meta, which comes through `--workflowMeta` (see
+  // collectWorkflowMetaNames) together with the orchestrator queue's meta.
+  // Naming the orchestrator queue here would keep its worker, and with it the
+  // whole workflow. Without queues the start runs inline and needs everything.
+  if (!workflowQueues) {
+    for (const name of unit.startedWorkflows ?? []) names.add(name)
+  }
+
   return [...names]
+}
+
+/**
+ * Workflows whose meta — not registration — a unit needs: the ones it only
+ * starts, when the start is queued. `rpc.startWorkflow` then creates the run
+ * from the meta and the workflow's orchestrator unit runs it, so bundling the
+ * workflow function (and everything it imports) here would be dead weight.
+ */
+export function collectWorkflowMetaNames(
+  unit: DeploymentUnit,
+  workflowQueues: boolean
+): string[] {
+  return workflowQueues ? [...(unit.startedWorkflows ?? [])] : []
 }
 
 /**
@@ -328,6 +352,7 @@ export async function generatePerUnitCodegen(
       await mkdir(unitDir, { recursive: true })
 
       const namesArg = filterNames.join(',')
+      const workflowMetaNames = collectWorkflowMetaNames(unit, workflowQueues)
 
       try {
         await execFileAsync(
@@ -337,6 +362,9 @@ export async function generatePerUnitCodegen(
             'all',
             `--stateInput=${stateFilePath}`,
             `--names=${namesArg}`,
+            ...(workflowMetaNames.length > 0
+              ? [`--workflowMeta=${workflowMetaNames.join(',')}`]
+              : []),
             `--outDir=${unitPikkuDir}`,
             '--force-relative-imports',
             '--silent',

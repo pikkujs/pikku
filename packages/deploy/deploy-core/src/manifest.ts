@@ -96,6 +96,15 @@ export interface DeploymentUnit {
    * registered here as well as in its own gateway unit.
    */
   invokedAgents?: string[]
+  /**
+   * Workflows a function in this unit starts by literal name with
+   * `rpc.startWorkflow(...)`, when the unit is not already a full
+   * workflow-state unit. With workflow queues, per-unit codegen bundles only
+   * their meta: a queued start creates the run from it and hands the run to
+   * the workflow's orchestrator unit, which holds the registration. Without
+   * them the start runs inline, so the whole workflow is bundled.
+   */
+  startedWorkflows?: string[]
   /** SHA-256 of final bundled artifact (set by build pipeline) */
   bundleHash?: string
   /** Final bundle size in bytes (set by build pipeline) */

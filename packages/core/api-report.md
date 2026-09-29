@@ -682,6 +682,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionRuntimeMeta = {
@@ -4928,6 +4929,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionsMeta = Record<string, FunctionMeta>
@@ -5728,6 +5730,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionsMeta = Record<string, FunctionMeta>

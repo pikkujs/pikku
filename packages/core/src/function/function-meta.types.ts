@@ -154,6 +154,13 @@ export type FunctionMeta = FunctionRuntimeMeta &
       bodyStart: number
       /** 1-indexed last line of the handler body (verbose meta; coverage mapping) */
       bodyEnd: number
+      /**
+       * Workflow names this function's own body starts by literal name through
+       * `rpc.startWorkflow(...)`. The deploy planner bundles each one's meta
+       * into the function's unit, which is all a queued start needs. A call
+       * made from a helper the handler passes `rpc` to is not listed.
+       */
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 

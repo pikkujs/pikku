@@ -872,19 +872,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       )
     }
 
-    const registrations = pikkuState(packageName, 'workflows', 'registrations')
-    const workflow = registrations.get(resolved?.resolvedName ?? name)
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(name)
-    }
-
     if (!workflowMeta.graphHash) {
       throw new Error(`Missing workflow graphHash for '${name}'`)
     }
 
     const shouldInline =
       options?.inline || !getSingletonServices()?.queueService
+
+    // A queued run needs only the meta; the orchestrator's unit runs it.
+    const registrations = pikkuState(packageName, 'workflows', 'registrations')
+    if (shouldInline && !registrations.get(resolved?.resolvedName ?? name)) {
+      throw new WorkflowNotFoundError(name)
+    }
 
     const runId = await this.createRun(
       name,

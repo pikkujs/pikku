@@ -337,6 +337,11 @@ wireCLI({
             'Exclude functions by deploy target (comma-separated: serverless, server)',
           type: 'string[]',
         },
+        workflowMeta: {
+          description:
+            "Keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
+          type: 'string[]',
+        },
         forceRelativeImports: {
           description:
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',

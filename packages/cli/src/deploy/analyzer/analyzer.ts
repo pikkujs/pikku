@@ -854,6 +854,42 @@ export function analyzeDeployment(
     }
   }
 
+  // ── Step 10: Units that start a workflow another unit runs ────────
+  // `rpc.startWorkflow('x')` resolves x's meta in the calling process. On a
+  // queued start that is all it needs: the run is created from the meta and
+  // handed to x's orchestrator queue, whose unit holds the registration. A
+  // unit that already has workflow-state bundles every workflow already, so
+  // only the others are given `startedWorkflows` (meta only) and the services
+  // a start touches — the run store, and the queue it enqueues on.
+  const knownWorkflows = new Set(workflows.map((w) => w.name))
+  for (const unit of units) {
+    const started = [
+      ...new Set(
+        unit.functionIds.flatMap(
+          (id) => functionsMeta[id]?.startsWorkflows ?? []
+        )
+      ),
+    ]
+      .filter((name) => knownWorkflows.has(name))
+      .sort()
+    if (started.length === 0) continue
+    if (unit.services.some((s) => s.capability === 'workflow-state')) continue
+    unit.startedWorkflows = started
+    unit.services.push({
+      capability: 'workflow-state',
+      sourceServiceName: 'workflowService',
+    })
+    if (
+      workflowQueues &&
+      !unit.services.some((s) => s.capability === 'queue')
+    ) {
+      unit.services.push({
+        capability: 'queue',
+        sourceServiceName: 'queueService',
+      })
+    }
+  }
+
   // ── Secrets & Variables ────────────────────────────────────────────
   const readSecretIds = new Set<string>()
   const unresolvedSecretReads: string[] = []
