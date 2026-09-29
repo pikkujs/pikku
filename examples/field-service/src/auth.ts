@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
+  devSwitcherOn,
   pikkuActor,
   pikkuBan,
   pikkuFabric,
@@ -9,6 +10,7 @@ import { pikkuBetterAuth } from '#pikku/auth'
 import {
   personaConfigs,
   personaEnvironments,
+  personaList,
 } from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
@@ -40,6 +42,7 @@ export const auth = pikkuBetterAuth(
     variables,
     emailService,
     scopeService,
+    featureFlags,
     logger,
   }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
@@ -118,6 +121,12 @@ export const auth = pikkuBetterAuth(
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
+          // POST /api/auth/sign-in/persona { id } — the "Sign in as …"
+          // switcher. No credential: the same gate as listDevActors decides.
+          personaSignIn: {
+            personas: personaList,
+            allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),
+          },
         }),
         pikkuBan(),
         pikkuFabric({

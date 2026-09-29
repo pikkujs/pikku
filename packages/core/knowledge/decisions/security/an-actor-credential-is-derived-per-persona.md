@@ -26,9 +26,10 @@ rotating it invalidates every credential at once.
 
 This is what lets a holder be handed less than everything:
 
-- The browser switcher gets `VITE_DEV_ACTOR_SECRETS`, one credential per
-  declared persona. The root stays on the dev server, so a bundle can no longer
-  hold the thing that is entitled to every persona.
+- The browser switcher gets no credential at all. It used to be handed
+  `VITE_DEV_ACTOR_SECRETS`, one per persona; it now names a persona by id at
+  `/sign-in/persona`, which the server gates with `personaSignIn.allowed()`, so
+  a bundle holds nothing worth taking.
 - A run can be given `PIKKU_PERSONA_SECRETS` (`id=secret,…`, minted with
   `pikku persona secret`) instead of the root, and then it can sign in as those
   personas and no others. Asking for one outside the list throws naming the

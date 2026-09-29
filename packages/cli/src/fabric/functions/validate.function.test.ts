@@ -1646,6 +1646,9 @@ describe('pikku fabric validate', () => {
         assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
+        assert.match(finding!.fixHint, /listDevActors/)
+        assert.match(finding!.fixHint, /personaSignIn/)
+        assert.doesNotMatch(finding!.fixHint, /VITE_DEV_ACTOR/)
         assert.strictEqual(result.ok, false)
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -1683,8 +1686,8 @@ describe('pikku fabric validate', () => {
           'src/pages/LoginPage.tsx':
             "import { useDevActors } from '@pikku/react'\n" +
             'export const LoginPage = () => {\n' +
-            '  const { actors, signInAs } = useDevActors({ actors: undefined, secrets: undefined, apiUrl: "/api" })\n' +
-            '  return <>{actors.map((a) => <button key={a.key} onClick={() => signInAs(a.email)} />)}</>\n}\n',
+            '  const { actors, signInAs } = useDevActors({ list: listDevActors, apiUrl: "/api" })\n' +
+            '  return <>{actors.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
@@ -1692,6 +1695,28 @@ describe('pikku fabric validate', () => {
             (f) => f.id === 'app-missing-actor-quick-login-web'
           ),
           'useDevActors() is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a login screen calling signInAsPersona() → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            "import { signInAsPersona } from '@pikku/react'\n" +
+            'export const LoginPage = () =>\n' +
+            '  <button onClick={() => signInAsPersona({ apiUrl: "/api", id: "admin" })} />\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'signInAsPersona() is a valid quick-login fingerprint'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })

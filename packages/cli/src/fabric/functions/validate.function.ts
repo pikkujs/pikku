@@ -158,17 +158,18 @@ const LOGIN_FILE_PATTERN =
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
 //
-// Canonical implementation is now `<DevActorSwitcher>` from `@pikku/mantine/dev`
-// (built on `useDevActors` from `@pikku/react`), rendered from the login screen.
-// The hand-rolled shape the templates used to copy — a local component backed by
-// `signInAsActor()` → POST /auth/sign-in/actor — still passes: apps that predate
-// the package keep working, and the useDevActors call site is matched for apps
-// that want their own UI on the shared logic.
+// Canonical implementation is `<DevActorSwitcher>` from `@pikku/mantine/dev`
+// (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
+// it lists personas from the app's `listDevActors` and signs in by id through
+// POST /auth/sign-in/persona. A local component calling `signInAsPersona()`, and
+// the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
+// pass, so apps that predate the package keep working.
 const ACTOR_QUICK_LOGIN_PATTERNS = [
   /<\s*DevActorSwitcher\b/,
   /(?<!function\s)\bsignInAsActor\s*\(/,
+  /(?<!function\s)\bsignInAsPersona\s*\(/,
   /(?<!function\s)\buseDevActors\s*\(/,
-  /\/auth\/sign-in\/actor/,
+  /\/auth\/sign-in\/(?:actor|persona)/,
 ]
 
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
@@ -1830,20 +1831,23 @@ export async function runValidate(
             `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
             join(appPath, loginFiles[0]!),
             lines(
-              'Render the dev-only "Sign in as …" switcher from the login screen.',
+              'Render the "Sign in as …" switcher from the login screen.',
               `In ${loginFiles[0]}:`,
               "  import { DevActorSwitcher } from '@pikku/mantine/dev'",
               '  <DevActorSwitcher',
-              '    actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}',
-              '    secrets={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTOR_SECRETS : undefined}',
+              "    list={() => rpc.invoke('listDevActors', { app: appSlug })}",
               '    apiUrl={apiUrl()}',
               "    onSignedIn={() => navigate({ to: '/' })}",
               '  />',
-              'The sandbox dev server bakes both env vars from your declared personas;',
-              'neither is set in production, so the control renders null there.',
-              'VITE_DEV_ACTOR_SECRETS is one credential per persona, each accepted for',
-              'that persona only. Gate the reads on import.meta.env.DEV as above so no',
-              'credential reaches a production bundle. Next.js reads the NEXT_PUBLIC_* pair.',
+              'It needs two things on the server, both built from @pikku/better-auth:',
+              '  - an exposed listDevActors function returning',
+              '    { actors: listDevActors(personaList, app) }, or none when',
+              '    devSwitcherOn(featureFlags, optIn) is false;',
+              '  - pikkuActor({ personaSignIn: { personas: personaList,',
+              '    allowed: () => devSwitcherOn(featureFlags, optIn) } }).',
+              'No credential reaches the bundle: the switcher signs in by persona id.',
+              'It shows under `pikku dev`; a deployed stage shows it only when actor',
+              'sign-in is opted in and its devSwitcher flag is on.',
               'For custom UI, build on useDevActors() from @pikku/react instead.'
             )
           )

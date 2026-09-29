@@ -60,7 +60,6 @@ import { serverReadyLine } from '../../server/server-ready.js'
 import { clearDevAddress, writeDevAddress } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
-import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -91,15 +90,7 @@ export const dev = pikkuSessionlessFunc<
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )
-    await enableDevActorSignIn(logger, async () => {
-      const state = await getInspectorState(true, false, false, true)
-      return Object.values(
-        resolvePersonas(
-          state.personas?.definitions ?? [],
-          config.scenarios?.emailDomain
-        )
-      )
-    })
+    enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'

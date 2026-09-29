@@ -48,20 +48,19 @@ to ship one, since without it a reviewer is locked out of their own sandbox.
 ```tsx
 import { DevActorSwitcher } from '@pikku/mantine/dev'
 ;<DevActorSwitcher
-  actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}
-  secrets={
-    import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTOR_SECRETS : undefined
-  }
+  list={() => rpc.invoke('listDevActors', { app: appSlug })}
   apiUrl={apiUrl()}
   onSignedIn={() => navigate({ to: '/' })}
 />
 ```
 
-The sandbox dev server bakes both env vars from your declared personas;
-`VITE_DEV_ACTOR_SECRETS` is one credential per persona, each accepted for that
-persona's address only. Neither is set in production, so the control renders
-`null` there. Gate the reads on your bundler's dev flag as above so no
-credential reaches a production bundle.
+No credential reaches the bundle: it lists personas from the app's
+`listDevActors` function and signs in by persona id through
+`/auth/sign-in/persona`. Both are the server's call — build them from
+`listDevActors` and `devSwitcherOn` in `@pikku/better-auth` and pass
+`personaSignIn` to `pikkuActor`. Outside `pikku dev` the server offers nobody
+unless the stage opts into actor sign-in and turns its `devSwitcher` flag on, so
+the control renders `null` in production.
 
 It takes `onSignedIn` rather than depending on a router — every app lands
 somewhere different. For custom UI, build on `useDevActors()` from

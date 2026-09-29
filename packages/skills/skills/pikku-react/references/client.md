@@ -249,15 +249,11 @@ persona with no password, so the app can be reviewed as each kind of user.
 their own sandbox.
 
 ```tsx
-import { useDevActors } from '@pikku/react'
+import { useDevActors, usePikkuRPC } from '@pikku/react'
 
-const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
-  // Gate both reads on the bundler's dev flag so no credential can reach a
-  // production bundle. The sandbox dev server bakes them from your personas.
-  actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-  secrets: import.meta.env.DEV
-    ? import.meta.env.VITE_DEV_ACTOR_SECRETS
-    : undefined,
+const rpc = usePikkuRPC()
+const { actors, signInAs, pendingId, isPending, error } = useDevActors({
+  list: () => rpc.invoke('listDevActors', { app: appSlug }),
   apiUrl: apiUrl(),
   onSignedIn: () => navigate({ to: '/' }),
 })
@@ -267,21 +263,19 @@ const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
   `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
   `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
   and so must not export components Mantine has no counterpart for.
-- **`secrets` is `{ address: credential }`, not one shared value** — a
-  credential opens the one persona it was minted for (see
-  **pikku-auth**). `actors` is empty unless the host supplied both a list
-  and the credentials for it, and an actor with no credential is not offered, so
-  a production build renders nothing without you testing for it.
-- **It takes `onSignedIn` rather than a router**, and takes the env values rather
-  than reading them, because how env is spelled is a bundler fact
-  (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`).
-- The underlying `signInAsActor()` and `parseDevActors()` are exported too, for a
-  non-React caller. The endpoint only accepts rows flagged `actor: true`, so it
-  can never impersonate a real user — see **pikku-auth**.
+- **No credential reaches the bundle.** `list` calls the app's `listDevActors`
+  function and `signInAs(id)` posts only the persona id to
+  `/auth/sign-in/persona`. The server decides who is offered and who may sign
+  in, and offers nobody in production — see **pikku-scenario** for the two
+  server pieces.
+- **It takes `onSignedIn` rather than a router**, since every app lands
+  somewhere different.
+- `signInAsPersona()` is exported too, for a non-React caller. The endpoint only
+  signs in rows flagged `actor: true`, so it can never impersonate a real user —
+  see **pikku-auth**.
 
-Do not hand-write the `devActors()` / `signInAsActor()` pair per app; that
-copy-paste, including the `import.meta.env.DEV` gate, is exactly what this
-replaced.
+Do not hand-write the list-and-sign-in pair per app; that copy-paste is exactly
+what this replaced.
 
 ### Linking from a Mantine element: `renderRoot`, not `component`
 

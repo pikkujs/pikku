@@ -5,23 +5,18 @@
 //~ lang: tsx
 
 //~ steps:
-//~ The hook returns an empty actor list unless the host supplied BOTH the personas and
-//~ their credentials, so a production bundle renders nothing without you testing for it.
-//~ Gate the env reads on the dev flag anyway — that is what keeps a credential out of the
-//~ production bundle in the first place, and this is the second line of defence, not the
-//~ first.
+//~ The server decides who is offered: `listDevActors` returns nobody wherever the
+//~ switcher is off, and `pikkuActor({ personaSignIn })` refuses a sign-in behind the
+//~ same gate. Nothing about a persona but its id and label reaches the browser, so
+//~ there is no credential to keep out of the production bundle.
 // ===== FILE: src/components/dev-sign-in.tsx =====
-import { useDevActors } from '@pikku/react'
+import { useDevActors, usePikkuRPC } from '@pikku/react'
+import type { PikkuRPC } from '../../../../.pikku/pikku-rpc.gen'
 
 export const DevSignIn = () => {
-  const { actors, signInAs, pendingEmail, error } = useDevActors({
-    //~ Spelled for the bundler you are on. This package deliberately does not
-    //~ read env itself: `import.meta.env` under Vite, `process.env.NEXT_PUBLIC_*`
-    //~ under Next, and a package that guesses gets it wrong for half its users.
-    actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-    secrets: import.meta.env.DEV
-      ? import.meta.env.VITE_DEV_ACTOR_SECRETS
-      : undefined,
+  const rpc = usePikkuRPC<PikkuRPC>()
+  const { actors, signInAs, pendingId, error } = useDevActors({
+    list: () => rpc.invoke('listDevActors', {}),
     apiUrl: '/api',
     onSignedIn: () => {
       //~ A full reload rather than a router push. Everything on the page was
@@ -38,12 +33,13 @@ export const DevSignIn = () => {
       <h2>Sign in as…</h2>
       <ul>
         {actors.map((actor) => (
-          <li key={actor.email}>
+          <li key={actor.id}>
             <button
-              onClick={() => signInAs(actor.email)}
-              disabled={pendingEmail !== null}
+              onClick={() => signInAs(actor.id)}
+              disabled={pendingId !== null}
             >
-              {actor.name} — {actor.jobTitle}
+              {actor.name}
+              {actor.jobTitle ? ` — ${actor.jobTitle}` : ''}
             </button>
           </li>
         ))}

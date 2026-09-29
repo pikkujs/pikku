@@ -573,17 +573,13 @@ frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
 
 **Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
-yourself.** The dev script reads the personas, derives one credential per
-persona from `SCENARIO_ACTOR_SECRET`, and hands both to the frontend as
-`VITE_DEV_ACTORS` / `VITE_DEV_ACTOR_SECRETS`. Vite reads those once, at boot. A
-frontend started any other way — or restarted by hand later — has an empty
-actor list, and the switcher silently disappears from every page. If you do
-start the frontend on its own (say :3000 is taken by another project), you owe
-it three things: the two `VITE_DEV_*` values the dev script would have computed,
-and `VITE_API_PROXY` pointing at your API — the dev proxy defaults to
-`http://localhost:3000`, so beside another project's server your sign-ins go to
-_its_ API and come back `401 Invalid actor secret`, which reads like a bad
-credential rather than the wrong server.
+yourself.** The "Sign in as …" switcher asks the API for its personas at
+runtime, so the frontend needs nothing baked in — but it does need to reach
+_your_ API. If you start the frontend on its own (say :3000 is taken by another
+project), point `VITE_API_PROXY` at your API: the dev proxy defaults to
+`http://localhost:3000`, so beside another project's server the switcher lists
+_its_ personas, or none, which reads like a missing switcher rather than the
+wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
 CLI's `#!/usr/bin/env node` shebang hands the process to whatever Node is on

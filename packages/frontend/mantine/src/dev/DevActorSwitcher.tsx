@@ -2,20 +2,18 @@ import type { FC, CSSProperties } from 'react'
 import {
   asI18n,
   useDevActors,
-  type DevActor,
   type I18nString,
+  type UseDevActorsOptions,
 } from '@pikku/react'
 import { Button, Menu, Text } from '../core/index.js'
 
 export type DevActorSwitcherProps = {
-  /** Raw JSON actor list from the host's env, or an already-parsed list. */
-  actors: string | DevActor[] | undefined
   /**
-   * One credential per persona, keyed by address, from the host's env
-   * (`VITE_DEV_ACTOR_SECRETS`). Absent renders nothing, and an actor with no
-   * credential is not offered.
+   * Fetches the personas to offer — the app's `listDevActors` RPC, e.g.
+   * `() => rpc.invoke('listDevActors', { app })`. The server returns none
+   * wherever the switcher is off, and then this renders nothing.
    */
-  secrets: string | Record<string, string> | undefined
+  list: UseDevActorsOptions['list']
   /** API base, including the `/api` prefix if the app has one. */
   apiUrl: string
   /**
@@ -50,24 +48,23 @@ const CORNERS: Record<
  * own sandbox — which is why `pikku fabric validate` requires any frontend with
  * a login screen to ship one.
  *
- * Renders nothing when the host exposed no actors or no credentials, which is
- * every production build.
+ * No credential reaches the bundle: it lists personas from the server and signs
+ * in by persona id through `pikkuActor({ personaSignIn })`. Renders nothing
+ * when the server offers none, which is every production deployment.
  *
  * Strings here are passed through `asI18n` rather than a message catalogue: this
  * control never ships to an end user, so translating it would cost every
  * consuming app three keys for text only its own developers see.
  */
 export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
-  actors: rawActors,
-  secrets,
+  list,
   apiUrl,
   onSignedIn,
   label = asI18n('Sign in as …'),
   position = 'bottom-right',
 }) => {
-  const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
-    actors: rawActors,
-    secrets,
+  const { actors, signInAs, pendingId, isPending, error } = useDevActors({
+    list,
     apiUrl,
     onSignedIn,
   })
@@ -89,14 +86,12 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
         <Menu.Label>{asI18n('Scenario personas (dev only)')}</Menu.Label>
         {actors.map((actor) => (
           <Menu.Item
-            key={actor.key}
+            key={actor.id}
             disabled={isPending}
-            onClick={() => signInAs(actor.email)}
+            onClick={() => signInAs(actor.id)}
           >
             <Text size="sm" fw={500}>
-              {asI18n(
-                pendingEmail === actor.email ? `${actor.name} …` : actor.name
-              )}
+              {asI18n(pendingId === actor.id ? `${actor.name} …` : actor.name)}
             </Text>
             {actor.jobTitle ? (
               <Text size="xs" c="dimmed">

@@ -83,13 +83,38 @@ Declared actors are not only for automated runs. `signInPath` is Better Auth's
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The dev server bakes both halves into the frontend from the declared
-personas — the sandbox's, or the template's `bun run dev`, never `pikku dev`: `VITE_DEV_ACTORS` (the JSON actor list) and `VITE_DEV_ACTOR_SECRETS`
-(`{ email: credential }`, one per persona — `SCENARIO_ACTOR_SECRET` itself never
-goes in a bundle; see **pikku-auth**). Neither var is set in a production
-build, so the control renders nothing there — but gate the reads on your
-bundler's dev flag anyway (`import.meta.env.DEV ? … : undefined`) so no
-credential reaches a production bundle in the first place.
+The switcher holds no credential. It asks the app's `listDevActors` function
+for the personas to offer and signs in by posting only a persona id to
+`/auth/sign-in/persona`; the server resolves the address. Two server pieces,
+both built from `@pikku/better-auth`:
+
+```ts
+// an exposed, sessionless function
+export const listDevActors = pikkuSessionlessFunc({
+  expose: true,
+  input: z.object({ app: z.string().optional() }),
+  output: ListDevActorsOutput,
+  func: async ({ variables, featureFlags }, { app }) => {
+    const optIn = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
+    if (!(await devSwitcherOn(featureFlags, optIn))) return { actors: [] }
+    return { actors: listDevActors(personaList, app) }
+  },
+})
+
+// in the auth config
+pikkuActor({
+  secret: SCENARIO_ACTOR_SECRET,
+  allowSignIn: ALLOW_ACTOR_SIGN_IN,
+  personaSignIn: {
+    personas: personaList,
+    allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),
+  },
+})
+```
+
+`devSwitcherOn` is always true under `pikku dev`. A deployed stage needs actor
+sign-in opted in **and** its `devSwitcher` feature flag on; production never
+has the opt-in, so it lists nobody and refuses every persona sign-in.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
 `<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
@@ -98,52 +123,17 @@ one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them
 errors:
 
-- **The frontend was not started by the dev script.** The two `VITE_DEV_*` vars
-  are computed by `bun run dev` and read by vite once, at boot. A bare `vite dev`
-  — including one restarted by hand — has an empty list and renders nothing.
-- **`SCENARIO_ACTOR_SECRET` is not in `.env`.** No root secret, no per-persona
-  credentials, and the switcher filters out every actor it cannot sign in.
+- **`listDevActors` returns nobody.** On a deployed stage that is the gate
+  doing its job — check the opt-in and the `devSwitcher` flag. Locally, check
+  the personas declare an `email` (via `scenarios.emailDomain`) and are not
+  `runnable: false`.
+- **The function is not exposed, or the frontend calls another API.** A dev
+  proxy (`VITE_API_PROXY`, default `http://localhost:3000`) that points at
+  another project's API lists that project's personas, or none.
 - **It is not mounted on the page you are looking at.** The template mounts it
   on the login screen. A public homepage that replaces the `/` → `/app`
   redirect needs its own `<DevActorSwitcher />` in the public layout.
 
-When the switcher is there but signing in fails with `401 Invalid actor
-secret`, check which server answered before checking the secret: a frontend
-whose dev proxy (`VITE_API_PROXY`, default `http://localhost:3000`) points at
-another project's API sends the sign-in there.
-
-**A runner of your own that starts vite has to bake them itself**, from the
-generated persona meta (`<outDir>/workflow/personas.gen.json`, which already
-carries the derived `email`):
-
-```js
-const personas = Object.values(JSON.parse(readFileSync(personasPath, 'utf8')))
-
-env.VITE_DEV_ACTORS = JSON.stringify(
-  personas.map(({ id, email, name, jobTitle }) => ({
-    key: id,
-    email,
-    name,
-    jobTitle: jobTitle ?? '',
-  }))
-)
-env.VITE_DEV_ACTOR_SECRETS = JSON.stringify(
-  Object.fromEntries(
-    await Promise.all(
-      personas.map(async ({ email }) => [
-        email,
-        await deriveActorSecret(env.SCENARIO_ACTOR_SECRET, email),
-      ])
-    )
-  )
-)
-```
-
-**Set `SCENARIO_ACTOR_SECRET` yourself**, at least 32 characters, in the
-environment both processes read. Left unset, `pikku dev` mints an ephemeral root
-for its own run that a separately spawned vite cannot see, so the two derive
-from different roots: the switcher renders every persona and each click is
-refused, which reads as a broken login rather than missing configuration. On a
-brand-new project the persona file does not exist until the first `pikku dev`
-codegen, after vite has baked an empty list — watch it and restart the frontend
-when it changes.
+When the switcher lists personas but every click 404s, the auth config is
+missing `personaSignIn`; a 401 means its `allowed()` disagrees with the gate
+`listDevActors` used — pass both the same `devSwitcherOn` call.
