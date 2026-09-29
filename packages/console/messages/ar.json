@@ -1008,5 +1008,17 @@
   "webhook_source_secret_badge_missing": "غير محفوظ",
   "webhook_source_secret_stored": "محفوظ. يتم التحقق من كل رسالة للتأكد من أنها جاءت فعلًا من {source}.",
   "webhook_source_secret_missing": "لم يُحفظ بعد. حتى يُحفظ، لا يستطيع تطبيقك التأكد من أن الرسائل جاءت فعلًا من {source}.",
-  "webhook_source_secret_open": "فتح بيانات الاعتماد"
+  "webhook_source_secret_open": "فتح بيانات الاعتماد",
+  "webhook_source_registration": "التسجيل لدى المزوّد",
+  "webhook_source_registration_badge_pending": "لم يُعدّ بعد",
+  "webhook_source_registration_badge_registered": "مسجّل",
+  "webhook_source_registration_badge_manual": "يحتاج إليك",
+  "webhook_source_registration_badge_failed": "فشل",
+  "webhook_source_registration_pending": "سيُعدّ {source} تلقائيًا في النشر التالي.",
+  "webhook_source_registration_registered": "يعرف {source} أين يرسل أحداثه.",
+  "webhook_source_registration_manual": "لا يمكن إعداد {source} تلقائيًا. اتبع الخطوات أدناه مرة واحدة.",
+  "webhook_source_registration_failed": "فشل إعداد {source}. ستُعاد المحاولة في النشر التالي.",
+  "webhook_source_orphan_badge": "لم يعد في تطبيقك",
+  "webhook_source_orphan_body": "قد يظل {source} يرسل أحداثًا إلى هنا. أزِل الخطاف في {source} ثم أكّد.",
+  "webhook_source_orphan_forget": "لقد أزلته"
 }

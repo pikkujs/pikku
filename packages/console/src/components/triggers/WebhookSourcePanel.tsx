@@ -13,6 +13,11 @@ import {
   type WebhookSourcePair,
 } from '../../lib/webhook-source'
 import { toEnglishName } from '../../lib/strings'
+import {
+  registrationState,
+  useTriggerSources,
+  type RegistrationState,
+} from '../../hooks/useTriggerSources'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SectionLabel } from '../ui/SectionLabel'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -69,6 +74,54 @@ const SecretStatus: React.FC<{ source: string; name: string }> = ({
           )}
         </Stack>
       )}
+    </Box>
+  )
+}
+
+const REGISTRATION_TONE = {
+  pending: 'neutral',
+  registered: 'good',
+  manual: 'warn',
+  failed: 'bad',
+} as const satisfies Record<RegistrationState, string>
+
+const Registration: React.FC<{ source: string; name: string }> = ({
+  source,
+  name,
+}) => {
+  const { data: rows, isError } = useTriggerSources()
+  if (isError || !rows) return null
+  const row = rows.find((r) => r.name === name)
+  const state = registrationState(row)
+  const badge = {
+    pending: m.webhook_source_registration_badge_pending,
+    registered: m.webhook_source_registration_badge_registered,
+    manual: m.webhook_source_registration_badge_manual,
+    failed: m.webhook_source_registration_badge_failed,
+  }[state]()
+  const text = {
+    pending: m.webhook_source_registration_pending,
+    registered: m.webhook_source_registration_registered,
+    manual: m.webhook_source_registration_manual,
+    failed: m.webhook_source_registration_failed,
+  }[state]({ source })
+
+  return (
+    <Box data-testid={`webhook-source-registration-${state}`}>
+      <SectionLabel>{m.webhook_source_registration()}</SectionLabel>
+      <Stack gap={4}>
+        <Group gap="xs">
+          <StatusBadge tone={REGISTRATION_TONE[state]} size="sm">
+            {badge}
+          </StatusBadge>
+        </Group>
+        <Text size="sm">{text}</Text>
+        {row?.detail && (state === 'manual' || state === 'failed') && (
+          <Text size="sm" c="dimmed">
+            {asI18n(row.detail)}
+          </Text>
+        )}
+      </Stack>
     </Box>
   )
 }
@@ -172,6 +225,8 @@ export const WebhookSourceConfiguration: React.FC<{
           </Stack>
         )}
       </Box>
+
+      <Registration source={sourceName} name={source} />
 
       {secretDeclared && <SecretStatus source={sourceName} name={secretName} />}
     </Stack>

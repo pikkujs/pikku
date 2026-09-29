@@ -1008,5 +1008,17 @@
   "webhook_source_secret_badge_missing": "未保存",
   "webhook_source_secret_stored": "已保存。每条消息都会被检查，确认它确实来自 {source}。",
   "webhook_source_secret_missing": "尚未保存。在保存之前，你的应用无法确认消息确实来自 {source}。",
-  "webhook_source_secret_open": "打开凭据"
+  "webhook_source_secret_open": "打开凭据",
+  "webhook_source_registration": "提供方注册",
+  "webhook_source_registration_badge_pending": "尚未设置",
+  "webhook_source_registration_badge_registered": "已注册",
+  "webhook_source_registration_badge_manual": "需要你处理",
+  "webhook_source_registration_badge_failed": "失败",
+  "webhook_source_registration_pending": "{source} 将在下次部署时自动设置。",
+  "webhook_source_registration_registered": "{source} 知道将事件发送到哪里。",
+  "webhook_source_registration_manual": "{source} 无法自动设置。请按以下步骤操作一次。",
+  "webhook_source_registration_failed": "设置 {source} 失败。将在下次部署时重试。",
+  "webhook_source_orphan_badge": "已不在你的应用中",
+  "webhook_source_orphan_body": "{source} 可能仍在向这里发送事件。请在 {source} 中删除该 webhook，然后确认。",
+  "webhook_source_orphan_forget": "我已删除"
 }
