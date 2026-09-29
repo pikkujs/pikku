@@ -1008,5 +1008,17 @@
   "webhook_source_secret_badge_missing": "Nicht gespeichert",
   "webhook_source_secret_stored": "Gespeichert. Jede Nachricht wird geprüft, ob sie wirklich von {source} stammt.",
   "webhook_source_secret_missing": "Noch nicht gespeichert. Bis dahin kann deine App nicht prüfen, ob Nachrichten wirklich von {source} stammen.",
-  "webhook_source_secret_open": "Zugangsdaten öffnen"
+  "webhook_source_secret_open": "Zugangsdaten öffnen",
+  "webhook_source_registration": "Beim Anbieter registriert",
+  "webhook_source_registration_badge_pending": "Noch nicht eingerichtet",
+  "webhook_source_registration_badge_registered": "Registriert",
+  "webhook_source_registration_badge_manual": "Braucht dich",
+  "webhook_source_registration_badge_failed": "Fehlgeschlagen",
+  "webhook_source_registration_pending": "{source} wird beim nächsten Deploy automatisch eingerichtet.",
+  "webhook_source_registration_registered": "{source} weiß, wohin es seine Ereignisse schicken soll.",
+  "webhook_source_registration_manual": "{source} kann nicht automatisch eingerichtet werden. Folge einmal den Schritten unten.",
+  "webhook_source_registration_failed": "Die Einrichtung von {source} ist fehlgeschlagen. Sie wird beim nächsten Deploy wiederholt.",
+  "webhook_source_orphan_badge": "Nicht mehr in deiner App",
+  "webhook_source_orphan_body": "{source} schickt womöglich noch Ereignisse hierher. Entferne den Webhook in {source} und bestätige dann.",
+  "webhook_source_orphan_forget": "Ich habe ihn entfernt"
 }

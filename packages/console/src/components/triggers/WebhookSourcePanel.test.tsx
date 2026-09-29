@@ -38,8 +38,13 @@ const stripe = {
   setup: 'stripeSetup',
 }
 
-const render = (node: React.ReactNode, secretSaved?: boolean) => {
+const render = (
+  node: React.ReactNode,
+  secretSaved?: boolean,
+  sources?: Record<string, unknown>[]
+) => {
   const client = new QueryClient()
+  if (sources) client.setQueryData(['trigger-sources'], sources)
   if (secretSaved !== undefined)
     client.setQueryData(
       ['credential-global-status', 'stripeWebhookSecret'],
@@ -95,6 +100,39 @@ describe('WebhookSourceConfiguration', () => {
     const html = render(panel(), true)
     assert.match(text(html), /Signing secret Saved/)
     assert.doesNotMatch(html, /href="\/credentials"/)
+  })
+
+  test('registration is hidden until the app reports it', () => {
+    assert.doesNotMatch(render(panel()), /webhook-source-registration/)
+  })
+
+  test('a source with no stored row is set up on the next deploy', () => {
+    const html = render(panel(), undefined, [])
+    assert.match(html, /webhook-source-registration-pending/)
+    assert.match(text(html), /Not set up yet/)
+  })
+
+  test('a registered source reads as registered', () => {
+    const row = {
+      name: 'stripe',
+      declared: true,
+      status: 'registered',
+      detail: null,
+    }
+    const html = render(panel(), undefined, [row])
+    assert.match(html, /webhook-source-registration-registered/)
+  })
+
+  test('a failed registration shows the provider detail', () => {
+    const row = {
+      name: 'stripe',
+      declared: true,
+      status: 'failed',
+      detail: 'HTTP 401 from Stripe',
+    }
+    const html = render(panel(), undefined, [row])
+    assert.match(html, /webhook-source-registration-failed/)
+    assert.match(text(html), /HTTP 401 from Stripe/)
   })
 
   test('a missing signing secret says so and links to credentials', () => {
