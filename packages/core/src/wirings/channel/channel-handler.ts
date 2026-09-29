@@ -68,7 +68,8 @@ export const processMessageHandlers = (
   services: CoreServices,
   channelConfig: CoreChannel<any, any>,
   channelHandler: PikkuChannelHandler,
-  userSession?: SessionService<CoreUserSession>
+  userSession?: SessionService<CoreUserSession>,
+  wireServices?: Record<string, unknown>
 ) => {
   const logger = services.logger
   const requiresSession = channelConfig.auth !== false
@@ -136,6 +137,7 @@ export const processMessageHandlers = (
 
     return await runPikkuFunc('channel', cacheKey, pikkuFuncId, {
       singletonServices: services,
+      wireServices,
       data: () => data,
       inheritedMiddleware,
       wireMiddleware,

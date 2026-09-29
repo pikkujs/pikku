@@ -30,6 +30,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   data,
   channelMiddlewareMeta,
   userSession,
+  wireServices,
 }: {
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMessageMeta
@@ -44,6 +45,8 @@ export const runChannelLifecycleWithMiddleware = async ({
    * just connected.
    */
   userSession?: PikkuSessionService<any>
+  /** The connection's wire services, reused rather than rebuilt per call. */
+  wireServices?: Record<string, unknown>
 }): Promise<unknown> => {
   const lifecycleMiddleware =
     typeof lifecycleConfig === 'object' && 'middleware' in lifecycleConfig
@@ -81,6 +84,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   const runLifecycle = async () => {
     return await runPikkuFunc('channel', channelConfig.name, meta.pikkuFuncId, {
       singletonServices: services,
+      wireServices,
       data: () => data,
       wire,
       sessionService: userSession,
