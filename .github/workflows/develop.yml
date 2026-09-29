@@ -70,6 +70,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - name: Check every changeset is a patch
+        run: node scripts/check-changesets-are-patch.mjs
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
