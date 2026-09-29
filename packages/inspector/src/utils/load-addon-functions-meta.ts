@@ -1,8 +1,12 @@
 import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
-import { createRequire } from 'module'
 import { join, dirname, parse, relative } from 'path'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import {
+  addonResolutionDirs,
+  createAddonResolver,
+  type AddonResolver,
+} from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
 import type {
   ExportedChannelContractsMeta,
@@ -141,47 +145,6 @@ const resolveAddonMeta = (
     }
   }
   return null
-}
-
-type AddonResolver = { resolve: (id: string) => string }
-
-const nearestPackageDir = (file: string): string | null => {
-  const root = parse(file).root
-  let dir = dirname(file)
-  while (dir && dir !== root) {
-    if (existsSync(join(dir, 'package.json'))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
-  }
-  return null
-}
-
-/**
- * An addon is installed wherever the package that calls `wireAddon` lists it,
- * which in a workspace is usually not the repo root. Resolve from the declaring
- * package first, as its code does at runtime, then from the root.
- */
-const addonResolutionDirs = (rootDir: string, declFile?: string): string[] => {
-  const declDir = declFile ? nearestPackageDir(declFile) : null
-  return declDir && declDir !== rootDir ? [declDir, rootDir] : [rootDir]
-}
-
-const createAddonResolver = (dirs: string[]): AddonResolver => {
-  const requires = dirs.map((dir) => createRequire(join(dir, 'package.json')))
-  return {
-    resolve: (id: string) => {
-      let lastError: unknown
-      for (const req of requires) {
-        try {
-          return req.resolve(id)
-        } catch (e) {
-          lastError = e
-        }
-      }
-      throw lastError
-    },
-  }
 }
 
 const findInstalledPackageDir = (

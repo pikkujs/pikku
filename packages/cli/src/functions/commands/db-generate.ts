@@ -24,7 +24,7 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
 
     const state = await getInspectorState()
     const addons = [...state.rpc.wireAddonDeclarations.values()].map(
-      ({ package: pkg, remote }) => ({ package: pkg, remote })
+      ({ package: pkg, remote, file }) => ({ package: pkg, remote, file })
     )
 
     const { upToDate, written } = await generateMigrations(

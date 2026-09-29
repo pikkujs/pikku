@@ -989,8 +989,12 @@ test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', a
 
 describe('the addon schema channel', () => {
   /** Install a package into the fixture that publishes the given schema. */
-  const publishAddon = (pkg: string, artifact: SchemaArtifact) => {
-    const dir = join(root, 'node_modules', pkg)
+  const publishAddon = (
+    pkg: string,
+    artifact: SchemaArtifact,
+    into: string = root
+  ) => {
+    const dir = join(into, 'node_modules', pkg)
     mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
     writeFileSync(
       join(dir, 'package.json'),
@@ -1060,6 +1064,30 @@ describe('the addon schema channel', () => {
     )
     assert.equal(sources.length, 1)
     assert.equal(sources[0]!.name, 'addon-labels')
+    assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
+  })
+
+  test('an addon installed only in the workspace package that wires it is found', async () => {
+    const member = join(root, 'packages', 'functions')
+    mkdirSync(join(member, 'src'), { recursive: true })
+    writeFileSync(
+      join(member, 'package.json'),
+      JSON.stringify({ name: 'functions' })
+    )
+    publishAddon('addon-member-labels', labels, member)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [
+        {
+          package: 'addon-member-labels',
+          file: join(member, 'src', 'addons.wiring.ts'),
+        },
+      ],
+      silent
+    )
+    assert.equal(sources.length, 1)
     assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
   })
 

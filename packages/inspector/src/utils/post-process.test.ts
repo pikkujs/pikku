@@ -601,6 +601,7 @@ const makeRemoteState = (
     remote?: boolean
     authCredentialId?: string
     authSecretId?: string
+    file?: string
   },
   declared: { credentials?: string[]; secrets?: string[] } = {}
 ): Omit<InspectorState, 'typesLookup'> =>
@@ -758,6 +759,122 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
       assert.deepEqual(criticals, [])
     } finally {
       rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('validateRemoteAddonDependencies — a workspace package that wires the addon', () => {
+  // Bun links a workspace dependency only into the package that declares it,
+  // so the repo root's node_modules and package.json know nothing about it.
+  const makeWorkspace = (member: {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }) => {
+    const root = mkdtempSync(join(tmpdir(), 'pikku-addon-ws-'))
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] })
+    )
+    const memberDir = join(root, 'packages', 'functions')
+    mkdirSync(join(memberDir, 'src'), { recursive: true })
+    writeFileSync(
+      join(memberDir, 'package.json'),
+      JSON.stringify({ name: 'functions', ...member })
+    )
+    return {
+      root,
+      memberDir,
+      file: join(memberDir, 'src', 'addons.wiring.ts'),
+    }
+  }
+
+  const installInto = (dir: string, name: string) => {
+    const pkgDir = join(dir, 'node_modules', ...name.split('/'))
+    mkdirSync(pkgDir, { recursive: true })
+    writeFileSync(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name, version: '1.0.0' })
+    )
+  }
+
+  test('an addon installed only in the declaring package resolves', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      dependencies: { '@addon/local': 'workspace:*' },
+    })
+    try {
+      installInto(ws.memberDir, '@addon/local')
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, { package: '@addon/local', file: ws.file })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('an addon installed nowhere names the declaring package to add it to', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({})
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, { package: '@addon/local', file: ws.file })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(criticals[0]!.code, ErrorCode.ADDON_NOT_INSTALLED)
+      assert.match(criticals[0]!.message, /packages\/functions\/package\.json/)
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('a remote addon is judged against the declaring package’s devDependencies', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      devDependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+    })
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          file: ws.file,
+        })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('a remote addon in the declaring package’s dependencies is flagged there', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      dependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+    })
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          file: ws.file,
+        })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
+      assert.match(
+        criticals[0]!.message,
+        /production dependency in .*packages\/functions\/package\.json/
+      )
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
     }
   })
 })

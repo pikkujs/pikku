@@ -340,6 +340,14 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
 
+In a workspace, add the addon to the dependencies of the package whose file
+calls `wireAddon`, not the repo root. Codegen resolves an addon from the
+package that wires it first and the project root second, the way that
+package's own imports resolve at runtime, and a remote addon's
+`devDependencies` check reads that same package's manifest. If codegen reports
+PKU340, the dependency is missing from the package its message names — do not
+add it at the root to paper over it. `verifiers/addon-workspace` is that layout.
+
 If the addon ships tables, `pikku db generate` then writes one migration per
 addon — named after the package, carrying the addon's own SQL — after Better
 Auth's and the runtime's, so an addon table may reference `user` or a runtime
