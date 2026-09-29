@@ -29,7 +29,7 @@ runs:
         bun-version: 1.4.0
     - name: Download build output
       if: ${{ inputs.download-build == 'true' }}
-      uses: actions/download-artifact@v8
+      uses: ./.github/actions/download-tar
       with:
         name: build-output
     # A dependency whose postinstall downloads a release binary (serverless,
