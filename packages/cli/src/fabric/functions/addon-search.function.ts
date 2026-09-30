@@ -19,7 +19,9 @@ export const FabricAddonSearchOutputSchema = z.object({
   packages: z.array(PackageEntrySchema),
   apis: z.array(OpenApiEntrySchema),
 })
-export type FabricAddonSearchOutput = z.infer<typeof FabricAddonSearchOutputSchema>
+export type FabricAddonSearchOutput = z.infer<
+  typeof FabricAddonSearchOutputSchema
+>
 
 /**
  * Search both registry catalogues for an external API worth wiring.
@@ -36,7 +38,10 @@ export const FabricAddonSearch = pikkuSessionlessFunc({
   input: FabricAddonSearchInput,
   output: FabricAddonSearchOutputSchema,
   func: async (_services, { query, limit, apiUrl: apiUrlOverride }) => {
-    const { apiUrl } = await resolveApiContext({ apiUrlOverride })
+    const { apiUrl } = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
     // Both catalogues are public reads, so a failure in one is not a reason to
     // withhold the other: a published hit is the answer the caller wanted, and
     // an OpenAPI outage would otherwise hide it behind an unrelated error.
@@ -54,13 +59,15 @@ export function renderAddonSearch(
 ): void {
   if (result.packages.length === 0 && result.apis.length === 0) {
     console.log(
-      '\nNothing in either catalogue. Save the API\'s own OpenAPI spec and generate ' +
+      "\nNothing in either catalogue. Save the API's own OpenAPI spec and generate " +
         'an addon from that, or write the integration by hand.\n'
     )
     return
   }
   if (result.packages.length > 0) {
-    console.log(`\n${added('Published addons')} ${dim('— already built and typed')}`)
+    console.log(
+      `\n${added('Published addons')} ${dim('— already built and typed')}`
+    )
     for (const p of result.packages) {
       const id = p.id ?? p.name
       console.log(`  ${id}${p.version ? dim(`@${p.version}`) : ''}`)
@@ -73,7 +80,9 @@ export function renderAddonSearch(
       `\n${dim('OpenAPI specs')} ${dim('— generate an addon from these only if nothing above fits')}`
     )
     for (const a of result.apis) {
-      const ops = a.totalOperations ? dim(` (${a.totalOperations} operations)`) : ''
+      const ops = a.totalOperations
+        ? dim(` (${a.totalOperations} operations)`)
+        : ''
       console.log(`  ${a.name}${ops}`)
       if (a.title) console.log(`    ${dim(a.title)}`)
     }

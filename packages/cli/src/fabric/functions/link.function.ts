@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { basename } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { resolveApiContext, writeProjectConfig } from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import {
   addRemote,
@@ -10,6 +10,7 @@ import {
   hasCommits,
   hasRemote,
   isWorkingTreeClean,
+  branchFromHead,
   pushWithCredential,
   removeRemote,
 } from '../../utils/git.js'
@@ -45,7 +46,7 @@ const isGithubUrl = (url: string): boolean => /github\.com/i.test(url)
 
 export const FabricLink = pikkuSessionlessFunc({
   description:
-    'Register the current git repo as a fabric project and queue an initial deploy.',
+    'Register the current git repo as a fabric project and queue an initial deploy. The repo is the link: nothing is written to it.',
   input: FabricLinkInput,
   output: FabricLinkOutput,
   func: async (
@@ -56,6 +57,13 @@ export const FabricLink = pikkuSessionlessFunc({
     if (!ctx.token) {
       throw new FabricPreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
+      )
+    }
+    // A second project on the same repo would make every later command unable
+    // to tell which one this checkout means.
+    if (ctx.project?.source === 'remote') {
+      throw new FabricPreconditionError(
+        `Already linked: ${ctx.project.detail} is the repo of ${ctx.project.name ?? ctx.project.projectId}.\nRun \`pikku fabric config\` to see it, or \`pikku fabric deploy\` to ship it.`
       )
     }
 
@@ -81,6 +89,10 @@ export const FabricLink = pikkuSessionlessFunc({
         'Deployment blocked: uncommitted changes detected.\nCommit and push your changes before deploying.'
       )
     }
+    // Refused before anything is provisioned: a detached HEAD would otherwise
+    // push a remote branch literally named `HEAD`, and the safety check below
+    // would fail with a "no upstream" message that hides the cause.
+    branchFromHead(await currentBranch())
 
     // Resolved here for the same reason, since `--gitea` reaches `createRemote`
     // below: a misspelt organization must not cost the user a repository they
@@ -90,8 +102,6 @@ export const FabricLink = pikkuSessionlessFunc({
     const remoteUrl = (await hasRemote())
       ? await adoptExistingRemote({ github, gitea })
       : await createRemote({ rpc, github, gitea, repoName })
-
-    const safety = await assertDeploySafety()
 
     // Only check GitHub App installation for github.com repos.
     // Gitea (local dev) and other hosts use shared tokens — no App needed.
@@ -134,13 +144,11 @@ export const FabricLink = pikkuSessionlessFunc({
       ...(organizationId ? { organizationId } : {}),
     })
 
-    await writeProjectConfig(process.cwd(), {
-      projectId: project.projectId,
-      ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
-    })
     console.log(
       `[fabric] linked ${project.projectSlug} projectId=${project.projectId}`
     )
+
+    const safety = await assertDeploySafety()
 
     const deploy = await rpc.invoke('deployByStageKind', {
       projectId: project.projectId,

@@ -42,7 +42,10 @@ export const FabricPublish = pikkuSessionlessFunc({
       )
     }
 
-    const ctx = await resolveApiContext({ apiUrlOverride })
+    const ctx = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
     if (!ctx.token)
       throw new FabricPreconditionError(
         'Not logged in. Run `pikku fabric login` first.'

@@ -1,6 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|shot|done`: waiting for work without polling, asking instead of guessing, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a repo that has a pikkufabric.config.json. DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
+description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|shot|done`: waiting for work without polling, asking instead of guessing, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout linked to a Fabric project (`pikku fabric config` shows one). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
 installGroups: [fabric]
 ---
 
@@ -10,7 +10,7 @@ Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
 Empty the queue without making them regret filing.
 
-Run every command from the checkout: the project comes from `pikkufabric.config.json`.
+Run every command from the checkout: the project comes from its git remote (`pikku fabric config` shows which).
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
 ## Which stage
@@ -37,12 +37,12 @@ something changed. `next` does the waiting and exits only when there is work.
 
 2. When it exits, read the exit code:
 
-   | code | meaning | do |
-   | --- | --- | --- |
-   | 0 | work printed (claimed, and/or `Answered`) | work it, then step 3 |
-   | 2 | `--timeout`/`--once` found nothing | stop, or restart `next` |
-   | 3 | session refused | tell the user to run `pikku fabric login`; stop |
-   | 1 | anything else (bad `--stage`, fabric down for minutes) | report the message; stop |
+   | code | meaning                                                | do                                              |
+   | ---- | ------------------------------------------------------ | ----------------------------------------------- |
+   | 0    | work printed (claimed, and/or `Answered`)              | work it, then step 3                            |
+   | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `next`                         |
+   | 3    | session refused                                        | tell the user to run `pikku fabric login`; stop |
+   | 1    | anything else (bad `--stage`, fabric down for minutes) | report the message; stop                        |
 
 3. For each item: `show` → fix → commit → `done`, or `ask` and move on. Then start
    `next` again, in the background.
@@ -67,7 +67,7 @@ For held items, run `next --claim` rather than retrying. The lease is 30 minutes
 3. **The circled elements**: a testid (greps straight to a component, it is the i18n
    key), a source anchor, a CSS path.
 4. **The source anchor**, `src/routes/app.orders.tsx:42 as of a91c4e2`, is where the JSX
-   was at *that* commit. Find today's equivalent; never edit line 42 because it said 42.
+   was at _that_ commit. Find today's equivalent; never edit line 42 because it said 42.
 
 ## When to ask
 

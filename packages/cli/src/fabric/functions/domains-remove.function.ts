@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { findProjectConfig, resolveApiContext } from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 
@@ -24,16 +24,16 @@ export const FabricDomainsRemove = pikkuSessionlessFunc({
         'Not logged in. Run `pikku fabric login` first.'
       )
 
-    const local = await findProjectConfig()
-    if (!local)
+    const projectId = ctx.projectId
+    if (!projectId)
       throw new FabricPreconditionError(
-        'No fabric.config.json found. Run `pikku fabric link` first.'
+        'No fabric project linked. Run `pikku fabric link` first.'
       )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
     const stagesResult = await rpc.invoke('listStages', {
-      projectId: local.config.projectId,
+      projectId,
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
     if (!production)

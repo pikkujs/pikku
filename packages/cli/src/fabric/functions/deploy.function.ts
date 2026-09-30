@@ -3,7 +3,11 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
-import { currentBranch, resolveRef } from '../../utils/git.js'
+import {
+  branchFromHead,
+  currentBranch,
+  resolveRef,
+} from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
@@ -152,7 +156,11 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
   const inferred = !production && !branch
   const targetBranch = production
     ? 'main'
-    : (branch ?? branchFromHead(await currentBranch()))
+    : (branch ??
+      branchFromHead(
+        await currentBranch(),
+        'Check out a branch, or name the target: `pikku fabric deploy apply <branch>`.'
+      ))
   const safety = await assertNamedBranchDeploySafety(targetBranch)
   const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
   return {
@@ -196,15 +204,6 @@ const EXIT_BY_OUTCOME: Record<ApplyOutput['outcome'], number> = {
  * a branch that does not exist locally. Naming the real problem here is the
  * difference between "check out a branch" and a puzzle.
  */
-export const branchFromHead = (head: string): string => {
-  if (head === 'HEAD' || head === '') {
-    throw new FabricPreconditionError(
-      'Deployment blocked: HEAD is detached, so there is no current branch to deploy.\nCheck out a branch, or name the target: `pikku fabric deploy apply <branch>`.'
-    )
-  }
-  return head
-}
-
 export const FabricDeployApply = pikkuSessionlessFunc({
   description:
     'Build + deploy a named branch or production (main), or attach to an existing deployment.',

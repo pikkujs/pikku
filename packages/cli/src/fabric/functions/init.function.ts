@@ -1,11 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import {
-  findProjectConfig,
-  isLinkedProjectId,
-  resolveApiContext,
-  writeProjectConfig,
-} from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { resolveOrganizationId } from '../lib/organization.js'
@@ -22,19 +17,17 @@ export const FabricInitInput = z.object({
 export const FabricInitOutput = z.object({
   projectId: z.string(),
   projectSlug: z.string(),
-  path: z.string(),
 })
 
 /**
  * Adopt an existing repo as a fabric project. Calls `importProject` on
- * fabric-api which inserts the project + stage rows synchronously, then
- * writes `fabric.config.json` next to `pikku.config.json` so subsequent
- * `pikku fabric deploy / secretsSet / rollback` commands resolve the link
- * automatically.
+ * fabric-api which inserts the project + stage rows synchronously. Nothing is
+ * written locally: any clone of that repo resolves the project from its git
+ * remote, so `pikku fabric deploy / secretsSet / rollback` find it unaided.
  */
 export const FabricInit = pikkuSessionlessFunc({
   description:
-    'Adopt an existing repo as a fabric project (writes fabric.config.json).',
+    'Adopt an existing repo as a fabric project. Clones of it are linked through their git remote.',
   input: FabricInitInput,
   output: FabricInitOutput,
   func: async (
@@ -47,10 +40,14 @@ export const FabricInit = pikkuSessionlessFunc({
         'Not logged in. Run `pikku fabric login` first.'
       )
 
-    const existing = await findProjectConfig()
-    if (existing && isLinkedProjectId(existing.config.projectId) && !force) {
+    // A remote link cannot be forced past: a second project on the same repo
+    // is exactly the ambiguity every later command refuses to guess through.
+    const existing = ctx.project
+    if (existing && (existing.source === 'remote' || !force)) {
       throw new FabricPreconditionError(
-        `Already linked: ${existing.config.projectId} at ${existing.path}. Pass --force to replace.`
+        `Already linked: ${existing.projectId} (${existing.detail}).${
+          existing.source === 'remote' ? '' : ' Pass --force to replace.'
+        }`
       )
     }
 
@@ -64,18 +61,11 @@ export const FabricInit = pikkuSessionlessFunc({
       ...(organizationId ? { organizationId } : {}),
     })
 
-    const path = await writeProjectConfig(process.cwd(), {
-      projectId: result.projectId,
-      ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
-    })
-    console.log(
-      `[fabric] imported ${result.projectSlug} (${result.projectId}) → ${path}`
-    )
+    console.log(`[fabric] imported ${result.projectSlug} (${result.projectId})`)
     console.log(`[fabric] main stage: ${result.mainStageId}`)
     return {
       projectId: result.projectId,
       projectSlug: result.projectSlug,
-      path,
     }
   },
 })

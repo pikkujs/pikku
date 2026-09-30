@@ -16,7 +16,10 @@ export async function changesContext(
   apiUrlOverride: string | undefined,
   projectIdOverride?: string
 ): Promise<{ rpc: PikkuRPC; projectId: string | null }> {
-  const ctx = await resolveApiContext({ apiUrlOverride })
+  const ctx = await resolveApiContext({
+    apiUrlOverride,
+    resolveProject: !projectIdOverride,
+  })
   if (!ctx.token)
     throw new FabricPreconditionError(
       'Not logged in. Run `pikku fabric login` first.'

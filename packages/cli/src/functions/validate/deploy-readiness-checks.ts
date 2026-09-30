@@ -55,18 +55,6 @@ const isOlder = (a: Semver, b: Semver): boolean => {
 }
 
 /**
- * The legacy name for pikkufabric.config.json.
- *
- * Renamed once the config stopped being fabric-the-repo's own file and became
- * the thing a deployed project hands the platform. The build container looks
- * for the new name only, so a project still carrying the old one deploys as if
- * it had never been linked: no frontends, no production branch, and a failure
- * whose message ("pikkufabric.config.json not found in repository root") names
- * a file the author believes they already wrote.
- */
-const LEGACY_CONFIG_NAME = 'fabric.config.json'
-
-/**
  * Packages a hoist can pick the wrong copy of.
  *
  * Distinct from the physical-copy check next door, which is about peer
@@ -129,24 +117,6 @@ export const runDeployReadinessChecks = async (
   root: string
 ): Promise<ValidateFinding[]> => {
   const { findings, e, w } = collect()
-
-  // ── the config under its retired name ──────────────────────────────────
-  const legacyPath = join(root, LEGACY_CONFIG_NAME)
-  if (
-    existsSync(legacyPath) &&
-    !existsSync(join(root, 'pikkufabric.config.json'))
-  ) {
-    e(
-      'fabric-config-legacy-name',
-      `${LEGACY_CONFIG_NAME} is the retired name for pikkufabric.config.json — the build container looks for the new name only, so this project deploys as an unlinked one and aborts with "pikkufabric.config.json not found in repository root"`,
-      legacyPath,
-      lines(
-        'Rename it, keeping the file in git history:',
-        `  git mv ${LEGACY_CONFIG_NAME} pikkufabric.config.json`,
-        'The contents are unchanged — only the filename moved.'
-      )
-    )
-  }
 
   const rootPkgPath = join(root, 'package.json')
   const rootPkg = await readJsonSafe<Manifest>(rootPkgPath)

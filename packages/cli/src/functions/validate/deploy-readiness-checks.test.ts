@@ -24,31 +24,6 @@ const project = async (pkg: Record<string, unknown> = {}) => {
 const ids = (findings: { id: string }[]) => findings.map((f) => f.id)
 
 describe('deploy readiness checks', () => {
-  test('flags the config under its retired name', async () => {
-    const root = await project()
-    await write(root, 'fabric.config.json', '{"projectId":"abc"}')
-
-    const findings = await runDeployReadinessChecks(root)
-    assert.deepEqual(ids(findings), ['fabric-config-legacy-name'])
-    assert.equal(findings[0].severity, 'error')
-  })
-
-  test('says nothing when only the current name is present', async () => {
-    const root = await project()
-    await write(root, 'pikkufabric.config.json', '{"projectId":"abc"}')
-
-    assert.deepEqual(await runDeployReadinessChecks(root), [])
-  })
-
-  test('says nothing when both names are present', async () => {
-    // Mid-rename, or a deliberate shim — the deploy finds what it needs.
-    const root = await project()
-    await write(root, 'fabric.config.json', '{"projectId":"abc"}')
-    await write(root, 'pikkufabric.config.json', '{"projectId":"abc"}')
-
-    assert.deepEqual(await runDeployReadinessChecks(root), [])
-  })
-
   test('flags an override pinning @pikku/core below the declared spec', async () => {
     const root = await project({
       dependencies: { '@pikku/core': '0.12.118' },
