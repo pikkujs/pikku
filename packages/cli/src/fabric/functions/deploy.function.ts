@@ -250,7 +250,7 @@ export async function guardMigrationHistory(
   )
 }
 
-async function applyDeploy(
+export async function applyDeploy(
   input: DeployInput,
   started: { deploymentId?: string }
 ): Promise<ApplyOutput> {

@@ -342,12 +342,13 @@ async function checkMigrationsAgainstBase(
   ).catch(() => ({ ok: false as const }))
   if (!cmp.ok) {
     const wanted = 'unresolvedBase' in cmp ? cmp.unresolvedBase : undefined
+    const reason = 'reason' in cmp ? cmp.reason : undefined
     if (deployTarget) {
       return [
         {
           id: 'migration-base-unresolved',
           severity: 'error',
-          message: `migrations could not be compared against ${wanted ?? DEFAULT_BASES.join(' or ')} — refusing to deploy "${deployTarget}" unchecked`,
+          message: `migrations could not be compared against ${reason ?? wanted ?? DEFAULT_BASES.join(' or ')} — refusing to deploy "${deployTarget}" unchecked`,
           path: migrationsDir,
           fixHint:
             'Fetch the base (`git fetch origin main`) or pass a ref that exists to --migrations-base. In CI use a full clone (fetch-depth: 0).',
@@ -359,7 +360,9 @@ async function checkMigrationsAgainstBase(
       {
         id: 'migration-base-unresolved',
         severity: 'info',
-        message: `migration base "${wanted}" does not resolve — migrations were not compared against it`,
+        message: reason
+          ? `${reason} — migrations were not compared against it`
+          : `migration base "${wanted}" does not resolve — migrations were not compared against it`,
         path: migrationsDir,
         fixHint:
           'Fetch the ref (`git fetch origin main`) or pass a ref that exists to --migrations-base. In CI use a full clone (fetch-depth: 0).',

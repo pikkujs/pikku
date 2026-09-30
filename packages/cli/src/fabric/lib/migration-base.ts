@@ -15,7 +15,7 @@ import { git, isGitRepo } from '../../utils/git.js'
 
 export const MIGRATIONS_BASE_ENV = 'PIKKU_MIGRATIONS_BASE'
 
-export const DEFAULT_BASES = ['origin/main', 'main']
+export const DEFAULT_BASES = ['origin/main', 'main', 'origin/master', 'master']
 
 export interface MigrationBaseChange {
   kind: 'modified' | 'deleted' | 'renamed'
@@ -35,6 +35,9 @@ export interface MigrationBaseResult {
 // `git()` trims stdout, so trailing whitespace is not compared.
 const norm = (s: string): string => s.replace(/\r\n/g, '\n').trim()
 
+// A rename that also edits the file has no content twin, but keeps its number.
+const numberOf = (file: string): string | undefined => /^\d+/.exec(file)?.[0]
+
 /** Pure comparison, split out so it is testable without git. */
 export function diffMigrationSets(
   base: Map<string, string>,
@@ -51,9 +54,15 @@ export function diffMigrationSets(
       const twin = newFiles.find(
         (f) => !claimed.has(f) && norm(current.get(f)!) === norm(content)
       )
-      if (twin) {
-        claimed.add(twin)
-        changes.push({ kind: 'renamed', file, renamedTo: twin })
+      const sameNumber = numberOf(file)
+        ? newFiles.find(
+            (f) => !claimed.has(f) && numberOf(f) === numberOf(file)
+          )
+        : undefined
+      const target = twin ?? sameNumber
+      if (target) {
+        claimed.add(target)
+        changes.push({ kind: 'renamed', file, renamedTo: target })
       } else {
         changes.push({ kind: 'deleted', file })
       }
@@ -85,7 +94,7 @@ export async function compareMigrationsWithBase(
   explicitBase?: string
 ): Promise<
   | { ok: true; result: MigrationBaseResult }
-  | { ok: false; unresolvedBase?: string }
+  | { ok: false; unresolvedBase?: string; reason?: string }
 > {
   if (!(await isGitRepo(root))) return { ok: false }
   const wanted = explicitBase || process.env[MIGRATIONS_BASE_ENV] || undefined
@@ -104,7 +113,13 @@ export async function compareMigrationsWithBase(
   try {
     base = await git(['merge-base', 'HEAD', baseName], root)
   } catch {
-    // unrelated histories or no HEAD yet: compare with the ref itself
+    // Comparing with the base tip instead would call a migration added to the
+    // base after this branch left it "deleted", so decline rather than guess.
+    return {
+      ok: false,
+      unresolvedBase: baseName,
+      reason: `${baseName} shares no history with HEAD (shallow clone?)`,
+    }
   }
 
   // Paths are given relative to `root` (`./`), so a project below the

@@ -98,7 +98,7 @@ so an edit never reaches a database that already applied it. Two guards enforce
 this:
 
 - `pikku fabric validate` reports `migration-modified-after-base-*` (error) for
-  any `db/<engine>/*.sql` that exists on the base ref (default `origin/main`,
+  any `db/<engine>/*.sql` that exists on the base ref (default `origin/main`, else `main`, `origin/master`, `master`,
   compared at the branch's merge-base; override with `--migrations-base <ref>`
   or `PIKKU_MIGRATIONS_BASE`) but was modified, deleted or renamed in the working
   tree. New files are fine. It is skipped outside a git repo or with no base ref.
