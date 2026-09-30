@@ -364,6 +364,11 @@ export type PikkuFrontendInput = {
   /** Who the app is for, in their own word. */
   serves?: string
   personas?: string[]
+  /**
+   * A value for each dynamic route segment (`$postId` → `postId`), so a tool
+   * that visits every route — Fabric's route coverage — can build a real URL.
+   */
+  routeParams?: Record<string, string>
   planSlug?: string
   /**
    * Serve `dist` from the pikku server's own origin, so the UI and the API
@@ -517,12 +522,15 @@ export type PikkuCLIInput = {
   /** Directory containing email templates, locales, partials, and theme.json. */
   emailTemplatesDir?: string
 
-  /**
-   * The Fabric project this checkout belongs to. Optional: without it the CLI
-   * finds the project from the git remote and writes the id here, uncommitted.
-   * `FABRIC_PROJECT_ID` overrides it.
-   */
-  projectId?: string
+  /** Settings for deploying this project on Pikku Fabric. */
+  fabric?: {
+    /**
+     * The Fabric project this checkout belongs to. Optional: without it the
+     * CLI finds the project from the git remote and writes the id here,
+     * uncommitted. `FABRIC_PROJECT_ID` overrides it.
+     */
+    projectId?: string
+  }
 
   /**
    * Every frontend in the project, by name — the one list of apps. An entry

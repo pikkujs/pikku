@@ -203,7 +203,26 @@ tried:
    one with `FABRIC_PROJECT_ID=<projectId>`.
 
 `pikku fabric config` prints which project, api url and login the current
-checkout resolves to, and where each came from. `pikku fabric link` creates
+checkout resolves to, and where each came from, and the project's settings.
+The settings Fabric needs that `pikku.config.json` does not describe are stored
+on the project, not in a file, and set with `key=value` arguments:
+
+```bash
+pikku fabric config showcase.name="Watering Log" showcase.tags=voice,realtime
+pikku fabric config guide.docs=docs/guide guide.theme.primaryColor=teal
+pikku fabric config scenarios.env.STRIPE_MODE=test   # the scenario run only
+pikku fabric config showcase.tint=                   # an empty value clears it
+```
+
+The keys are `showcase.name` (≤60), `showcase.description` (≤160),
+`showcase.tags` (comma-separated, ≤6, from Fabric's fixed list),
+`showcase.tint` (`#rrggbb`), `guide.docs`, `guide.theme.primaryColor`,
+`guide.theme.fontFamily`, `guide.theme.headingFontFamily` and
+`scenarios.env.<NAME>`. Every assignment is checked before any is applied, so a
+refused one changes nothing. Whether the project appears on the public
+showcase is Fabric's decision, not a setting.
+
+`pikku fabric link` creates
 `origin` (with `--gitea`) if there is none, imports the project, writes
 `projectId`, and queues the first deploy; it commits and pushes nothing. A
 custom production domain is set with `pikku fabric domains add`. Production

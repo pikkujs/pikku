@@ -537,8 +537,9 @@ export const fabricCommands = defineCLICommands({
   config: pikkuCLICommand({
     func: FabricConfig,
     render: renderConfig,
+    parameters: '[assignments...]',
     description:
-      'Show what this checkout resolves to — project (from the git remote), api url, frontends',
+      'Show what this checkout resolves to — project, api url, frontends, settings — or change project settings: `pikku fabric config showcase.name="My app" showcase.tags=voice,realtime` (an empty value clears a key)',
     options: {
       apiUrl: { description: 'Override the fabric-api URL for this call' },
     },
