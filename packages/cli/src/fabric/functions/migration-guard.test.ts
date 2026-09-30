@@ -17,7 +17,7 @@ type Ledger = {
 // The deploy guard reads ~/.fabric/auth.json and the stage ledger, so HOME is
 // disposable and the ledger is whatever the test sets.
 process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
-const API_URL = 'http://fabric.test'
+const API_URL = 'https://fabric.test'
 process.env.FABRIC_API_URL = API_URL
 process.env.FABRIC_PROJECT_ID = '11111111-2222-3333-4444-555555555555'
 let ledger: Ledger | Error = []
