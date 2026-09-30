@@ -43,54 +43,48 @@ const queueBinding: PlatformServiceContributor = {
   emit: () => [`  services.queue = env.QUEUE`],
 }
 
-for (const runtime of ['node', 'bun'] as const) {
-  describe(`StandaloneProviderAdapter contributors (${runtime})`, () => {
-    test('without contributors the entry has no platform services block', () => {
-      const source = new StandaloneProviderAdapter({
-        runtime,
-      }).generateEntrySource(ctx)
+describe(`StandaloneProviderAdapter contributors`, () => {
+  test('without contributors the entry has no platform services block', () => {
+    const source = new StandaloneProviderAdapter({}).generateEntrySource(ctx)
 
-      assert.doesNotMatch(source, /createPlatformServices/)
-      assert.doesNotMatch(source, /platformServices/)
-    })
-
-    test('contributor imports, lines and the spread are all emitted', () => {
-      const source = new StandaloneProviderAdapter({
-        runtime,
-        contributors: [kysely, browser],
-      }).generateEntrySource(ctx)
-
-      assert.match(source, /import { Kysely } from 'kysely'/)
-      assert.match(source, /import { Browser } from '\.\/browser\.js'/)
-      assert.match(
-        source,
-        /const createPlatformServices = async \(env: Record<string, string \| undefined>\): Promise<Record<string, unknown>> => \{/
-      )
-      assert.match(
-        source,
-        /if \(env\.DATABASE_URL\) services\.kysely = new Kysely\(\{\}\)/
-      )
-      assert.match(source, /services\.browser = new Browser\(env, logger\)/)
-      assert.match(
-        source,
-        /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>\)/
-      )
-      assert.match(
-        source,
-        /eventHub,\n    \.\.\.platformServices,\n  \}\)/,
-        'contributed services must be spread last so they override the defaults'
-      )
-    })
-
-    test('a contributor that needs cloudflare bindings is refused up front', () => {
-      assert.throws(
-        () =>
-          new StandaloneProviderAdapter({
-            runtime,
-            contributors: [kysely, queueBinding],
-          }),
-        /standalone adapter only provides env bindings; unsupported contributors: queue-binding \(requires cloudflare\)/
-      )
-    })
+    assert.doesNotMatch(source, /createPlatformServices/)
+    assert.doesNotMatch(source, /platformServices/)
   })
-}
+
+  test('contributor imports, lines and the spread are all emitted', () => {
+    const source = new StandaloneProviderAdapter({
+      contributors: [kysely, browser],
+    }).generateEntrySource(ctx)
+
+    assert.match(source, /import { Kysely } from 'kysely'/)
+    assert.match(source, /import { Browser } from '\.\/browser\.js'/)
+    assert.match(
+      source,
+      /const createPlatformServices = async \(env: Record<string, string \| undefined>\): Promise<Record<string, unknown>> => \{/
+    )
+    assert.match(
+      source,
+      /if \(env\.DATABASE_URL\) services\.kysely = new Kysely\(\{\}\)/
+    )
+    assert.match(source, /services\.browser = new Browser\(env, logger\)/)
+    assert.match(
+      source,
+      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>\)/
+    )
+    assert.match(
+      source,
+      /eventHub,\n    \.\.\.platformServices,\n  \}\)/,
+      'contributed services must be spread last so they override the defaults'
+    )
+  })
+
+  test('a contributor that needs cloudflare bindings is refused up front', () => {
+    assert.throws(
+      () =>
+        new StandaloneProviderAdapter({
+          contributors: [kysely, queueBinding],
+        }),
+      /standalone adapter only provides env bindings; unsupported contributors: queue-binding \(requires cloudflare\)/
+    )
+  })
+})

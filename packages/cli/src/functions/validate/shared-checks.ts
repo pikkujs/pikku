@@ -7,6 +7,11 @@ import { runPersonaChecks, type ValidateFinding } from './persona-checks.js'
 import { runAuthPluginChecks } from './auth-plugin-checks.js'
 import { runScenarioFileChecks } from './scenario-file-checks.js'
 import {
+  projectWiresAgents,
+  projectWiresMcp,
+  runRequiredDepsChecks,
+} from './required-deps-checks.js'
+import {
   projectWiresChannels,
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
@@ -1039,6 +1044,17 @@ export async function runSharedProjectChecks(
         root,
         typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
       ),
+      resolve: (specifier) => resolveFromProject(root, specifier),
+    })
+  )
+
+  const outDirName =
+    typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+  findings.push(
+    ...runRequiredDepsChecks({
+      root,
+      wiresMcp: await projectWiresMcp(root, outDirName),
+      wiresAgents: await projectWiresAgents(root, outDirName),
       resolve: (specifier) => resolveFromProject(root, specifier),
     })
   )

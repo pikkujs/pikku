@@ -17,7 +17,7 @@ npm install -D @pikku/deploy-standalone
 
 ```bash
 npx pikku deploy --provider standalone          # node bundle
-npx pikku deploy --provider standalone --runtime bun
+npx pikku deploy --provider standalone
 ```
 
 ## Docs

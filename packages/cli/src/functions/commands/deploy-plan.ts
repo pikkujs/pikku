@@ -60,7 +60,6 @@ export const deployPlan = pikkuSessionlessFunc<
   {
     resultFile?: string
     provider?: string
-    runtime?: string
     debugArtifacts?: boolean
   },
   void
@@ -70,7 +69,6 @@ export const deployPlan = pikkuSessionlessFunc<
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
     const provider = await resolveProvider(config, data?.provider, {
-      runtime: data?.runtime,
       projectDir,
     })
 
