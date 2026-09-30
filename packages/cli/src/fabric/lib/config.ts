@@ -42,6 +42,37 @@ export async function writeAuthFile(file: AuthFile): Promise<void> {
 
 export type ApiUrlSource = 'flag' | 'env' | 'login' | 'default'
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+
+const SOURCE_LABEL: Record<ApiUrlSource, string> = {
+  flag: 'the --api-url flag',
+  env: 'FABRIC_API_URL',
+  login: 'your last login',
+  default: 'the default',
+}
+
+/**
+ * The bearer token goes to whatever URL resolves, so a plain-http one sends it
+ * in cleartext. Loopback is exempt: that is local dev, and nothing leaves the
+ * machine.
+ */
+export function assertSecureApiUrl(apiUrl: string, source: ApiUrlSource): void {
+  let url: URL
+  try {
+    url = new URL(apiUrl)
+  } catch {
+    throw new Error(
+      `Invalid fabric api url "${apiUrl}" (from ${SOURCE_LABEL[source]})`
+    )
+  }
+  if (url.protocol === 'https:') return
+  if (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname)) return
+  throw new Error(
+    `Refusing to use fabric api url "${apiUrl}" (from ${SOURCE_LABEL[source]}): ` +
+      `it would send your token unencrypted. Use https, or http only for localhost.`
+  )
+}
+
 export interface ResolvedApiContext {
   apiUrl: string
   apiUrlSource: ApiUrlSource
@@ -82,6 +113,7 @@ export async function resolveApiContext(
       : auth.defaultApiUrl
         ? [auth.defaultApiUrl, 'login']
         : [DEFAULT_API_URL, 'default']
+  assertSecureApiUrl(apiUrl, apiUrlSource)
   const token = auth.tokens[apiUrl] ?? null
 
   const project =
