@@ -950,6 +950,14 @@ const _getPikkuCLIConfig = async (
     if (!result.servicesFile) {
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')
     }
+    // The services a local CLI entrypoint boots on top of the app's own, beside
+    // the services file whose requirements gate them.
+    if (!result.localServicesFile) {
+      result.localServicesFile = join(
+        result.outDir,
+        'pikku-local-services.gen.ts'
+      )
+    }
 
     // Middleware
     if (!result.middlewareFile) {

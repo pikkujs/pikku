@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { pathToFileURL } from 'url'
 import { register } from 'tsx/esm/api'
 
@@ -76,4 +76,28 @@ export async function loadUserModule(
 ): Promise<Record<string, any>> {
   ensureTsxRegistered()
   return importUserPath(filePath)
+}
+
+/**
+ * Load `createLocalServices` from the project's generated
+ * `pikku-local-services.gen.{ts,js}` — the services `pikku serve` and
+ * `pikku dev` boot the app on top of, shared with its generated local CLI.
+ *
+ * Loaded from the project rather than bundled with the CLI, so the file
+ * resolves `@pikku/core` and `@pikku/kysely` from the same place the app does.
+ */
+export async function loadCreateLocalServices(
+  rootDir: string,
+  localServicesFile: string
+): Promise<(...args: any[]) => Promise<Record<string, any>>> {
+  const tsPath = resolve(rootDir, localServicesFile)
+  const jsPath = tsPath.replace(/\.ts$/, '.js')
+  const path = [tsPath, jsPath].find((candidate) => existsSync(candidate))
+  if (!path) {
+    throw new Error(
+      `${localServicesFile} was not found. It is written by codegen — run 'pikku all' and start again.`
+    )
+  }
+  const { createLocalServices } = await loadUserModule(path)
+  return createLocalServices
 }

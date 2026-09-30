@@ -3,7 +3,12 @@ import type { Config } from '../../../../types/application-types.js'
 import { DIRECT_EXECUTION_GUARD } from './serialize-cli-entrypoint-guard.js'
 
 /**
- * Serializes the local (in-program) CLI bootstrap code
+ * Serializes the local (in-program) CLI bootstrap code.
+ *
+ * The app's createSingletonServices is handed the services
+ * `pikku-local-services.gen.ts` assembles — the set `pikku serve` injects — so a
+ * command run here sees the same database-backed services a request to the dev
+ * server does, rather than whatever the factory falls back to on its own.
  */
 export function serializeLocalCLIBootstrap(
   programName: string,
@@ -36,6 +41,11 @@ export function serializeLocalCLIBootstrap(
         config.packageMappings
       )
     : null
+  const localServicesPath = getFileImportRelativePath(
+    bootstrapFile,
+    config.localServicesFile,
+    config.packageMappings
+  )
   const cliBootstrapPath = getFileImportRelativePath(
     bootstrapFile,
     config.bootstrapFile,
@@ -46,6 +56,7 @@ export function serializeLocalCLIBootstrap(
 import { executeCLI, CLIError, formatCLIError, wantsStackTrace } from '@pikku/core/cli'
 ${pikkuConfigFactory ? `import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'` : ''}
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
+import { createLocalServices } from '${localServicesPath}'
 ${wireServicesFactory ? `import { ${wireServicesFactory.variable} as createWireServices } from '${wireServicesPath}'` : ''}
 import '${cliBootstrapPath}'
 
@@ -55,7 +66,8 @@ export async function ${capitalizedName}CLI(args: string[]): Promise<void> {
       programName: '${programName}',
       args: args || process.argv.slice(2),
 ${pikkuConfigFactory ? '      createConfig,' : ''}
-      createSingletonServices,
+      createSingletonServices: async (config) =>
+        createSingletonServices(config, await createLocalServices(config)),
 ${wireServicesFactory ? '      createWireServices,' : ''}
     })
   } catch (error) {

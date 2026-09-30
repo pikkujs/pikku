@@ -204,6 +204,10 @@ export interface PikkuCLICoreOutputFiles {
   // Services
   servicesFile: string
 
+  // Services a local CLI entrypoint boots on top of the app's own, the way
+  // `pikku serve` injects them into createSingletonServices
+  localServicesFile: string
+
   // Middleware
   middlewareFile: string
   middlewareGroupsMetaJsonFile: string
