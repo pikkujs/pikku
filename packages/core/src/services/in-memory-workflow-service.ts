@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import { isExpectedError } from '../errors/error-handler.js'
 import { isStepLeaseLive } from '../wirings/workflow/workflow-constants.js'
+import { WorkflowStepSupersededError } from '../wirings/workflow/workflow-errors.js'
 import type { SerializedError } from '../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
@@ -216,39 +217,54 @@ export class InMemoryWorkflowService
     }
   }
 
-  protected async setStepResultImpl(
-    stepId: string,
-    result: any
-  ): Promise<void> {
+  /**
+   * The live step `stepId` names, when `attempt` still owns it. A retry is a
+   * new step with its own id, so a superseded attempt's id no longer names a
+   * live step at all.
+   */
+  private ownedStep(stepId: string, attempt?: number): StepState | undefined {
+    let live: StepState | undefined
     for (const step of this.steps.values()) {
       if (step.stepId === stepId) {
-        step.status = 'succeeded'
-        step.result = result
-        step.succeededAt = new Date()
-        step.updatedAt = new Date()
+        live = step
         break
       }
     }
+    if (attempt !== undefined && live?.attemptCount !== attempt) {
+      throw new WorkflowStepSupersededError(stepId, attempt)
+    }
+    return live
+  }
+
+  protected async setStepResultImpl(
+    stepId: string,
+    result: any,
+    attempt?: number
+  ): Promise<void> {
+    const step = this.ownedStep(stepId, attempt)
+    if (!step) return
+    step.status = 'succeeded'
+    step.result = result
+    step.succeededAt = new Date()
+    step.updatedAt = new Date()
   }
 
   protected async setStepErrorImpl(
     stepId: string,
-    error: Error
+    error: Error,
+    attempt?: number
   ): Promise<void> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.status = 'failed'
-        step.error = {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          expected: isExpectedError(error),
-        }
-        step.failedAt = new Date()
-        step.updatedAt = new Date()
-        break
-      }
+    const step = this.ownedStep(stepId, attempt)
+    if (!step) return
+    step.status = 'failed'
+    step.error = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      expected: isExpectedError(error),
     }
+    step.failedAt = new Date()
+    step.updatedAt = new Date()
   }
 
   protected async setStepChildRunIdImpl(
@@ -507,16 +523,20 @@ export class InMemoryWorkflowService
     return steps
   }
 
-  async getStepInstances(
-    runId: string
-  ): Promise<
-    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  async getStepInstances(runId: string): Promise<
+    Array<{
+      stepName: string
+      status: StepStatus
+      fromStepName?: string
+      leaseExpiresAt?: Date
+    }>
   > {
     const prefix = `${runId}:`
     const instances: Array<{
       stepName: string
       status: StepStatus
       fromStepName?: string
+      leaseExpiresAt?: Date
     }> = []
     for (const [key, step] of this.steps.entries()) {
       if (!key.startsWith(prefix)) continue
@@ -524,6 +544,7 @@ export class InMemoryWorkflowService
         stepName: key.substring(prefix.length),
         status: step.status,
         fromStepName: step.fromStepName,
+        leaseExpiresAt: step.leaseExpiresAt,
       })
     }
     return instances

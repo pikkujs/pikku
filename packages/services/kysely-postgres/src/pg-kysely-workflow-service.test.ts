@@ -22,6 +22,7 @@ import {
 } from '@pikku/kysely'
 import { pikkuState } from '@pikku/core/state'
 import { RPCNotFoundError } from '@pikku/core/rpc'
+import { defineServiceTests } from '@pikku/core/testing'
 
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 import { pgNowMs } from './pg-now-ms.js'
@@ -617,4 +618,29 @@ describe('a step lease on Postgres', () => {
     assert.deepEqual(held, [], 'a step under a live lease is still in flight')
     assert.deepEqual(lapsed, [runId], 'a step with no worker on it is not')
   })
+})
+
+defineServiceTests({
+  name: 'PGlite',
+  services: {
+    workflowFencing: async () => {
+      const fenced = createDb()
+      await applyPikkuSchemas(fenced, [workflowSchema])
+      const service = new PgKyselyWorkflowService(fenced, {
+        wireQueues: false,
+      } as any)
+      await service.init()
+      return {
+        service,
+        lapseLease: async (runId, stepName) => {
+          await fenced
+            .updateTable('workflowStep')
+            .set({ leaseExpiresAt: sql<number>`${pgNowMs()} - 60000` })
+            .where('workflowRunId', '=', runId)
+            .where('stepName', '=', stepName)
+            .execute()
+        },
+      }
+    },
+  },
 })

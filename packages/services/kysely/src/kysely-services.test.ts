@@ -112,6 +112,21 @@ function registerTests(
         await s.init()
         return s
       },
+      workflowFencing: async () => {
+        const service = new KyselyWorkflowService(getDb())
+        await service.init()
+        return {
+          service,
+          lapseLease: async (runId, stepName) => {
+            await getDb()
+              .updateTable('workflowStep')
+              .set({ leaseExpiresAt: 1 })
+              .where('workflowRunId', '=', runId)
+              .where('stepName', '=', stepName)
+              .execute()
+          },
+        }
+      },
       workflowRunService: async () => new KyselyWorkflowRunService(getDb()),
       deploymentService: async () => {
         const s = new KyselyDeploymentService(
