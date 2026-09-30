@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { git, isGitRepo } from './git.js'
+import { git, isGitRepo } from '../../utils/git.js'
 
 /**
  * Compares the migration files in the working tree with a base ref, so a
