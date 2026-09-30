@@ -332,11 +332,6 @@ export const fabricCommands = defineCLICommands({
           timeout: {
             description: 'Seconds to wait for the deployment (default 900)',
           },
-          skipMigrationCheck: {
-            description:
-              'Deploy even though the migration history checks fail (edited, deleted or renamed applied migrations, numbering gaps). Dangerous: the stage database will not match the migrations',
-            default: false,
-          },
           migrationsBase: {
             description:
               'Git ref whose migrations are frozen for the migration check (default origin/main)',

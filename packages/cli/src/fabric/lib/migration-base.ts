@@ -15,7 +15,7 @@ import { git, isGitRepo } from '../../utils/git.js'
 
 export const MIGRATIONS_BASE_ENV = 'PIKKU_MIGRATIONS_BASE'
 
-const DEFAULT_BASES = ['origin/main', 'main']
+export const DEFAULT_BASES = ['origin/main', 'main']
 
 export interface MigrationBaseChange {
   kind: 'modified' | 'deleted' | 'renamed'
@@ -74,8 +74,9 @@ async function resolves(ref: string, cwd: string): Promise<boolean> {
 }
 
 /**
- * Returns null when there is nothing to compare against (not a git repo, no
- * base ref, base has no migrations dir). Never throws for git problems.
+ * Returns `ok: false` when the comparison could not be made (not a git repo,
+ * no base ref, the base tree unreadable); a base with no migrations dir
+ * compares clean. Never throws for git problems.
  * `explicitBase` set but unresolvable is reported by `unresolvedBase`.
  */
 export async function compareMigrationsWithBase(
@@ -125,7 +126,9 @@ export async function compareMigrationsWithBase(
       // unreadable blob: leave it out rather than guess
     }
   }
-  if (baseFiles.size === 0) return { ok: false }
+  if (baseFiles.size === 0) {
+    return { ok: true, result: { base, baseName, changes: [] } }
+  }
 
   const current = new Map<string, string>()
   for (const f of (await readdir(migrationsDir)).filter((f) =>

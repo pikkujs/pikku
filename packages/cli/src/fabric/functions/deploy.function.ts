@@ -42,7 +42,6 @@ export const FabricDeployInput = z.object({
   detach: z.boolean().optional(),
   autoApprove: z.boolean().optional(),
   allowDestructive: z.boolean().optional(),
-  skipMigrationCheck: z.boolean().optional(),
   migrationsBase: z.string().optional(),
   timeout: z.number().optional(),
   json: z.boolean().optional(),
@@ -228,20 +227,19 @@ export const FabricDeployApply = pikkuSessionlessFunc({
 /**
  * Refuses to create a deployment while the migration history is broken: a
  * stage would run the migrations that exist and silently skip the ones that
- * were edited, so it ends up with a schema no migration describes.
+ * were edited, so it ends up with a schema no migration describes. Checked
+ * against the stage being deployed and against main, since a branch stage can
+ * be reset at will but main's history reaches production. There is no
+ * override, and a check that cannot run refuses too.
  */
-export async function guardMigrationHistory(input: DeployInput): Promise<void> {
-  if (input.skipMigrationCheck) {
-    console.error(
-      '\u26a0  --skip-migration-check: deploying WITHOUT checking migration history.\n' +
-        '   Edited, deleted or renamed applied migrations will not reach the stage database,\n' +
-        '   and the app may be deployed against a schema it was not written for.'
-    )
-    return
-  }
+export async function guardMigrationHistory(
+  input: DeployInput,
+  targetBranch: string
+): Promise<void> {
   const { findings } = await runValidate(process.cwd(), {
     skipTypecheck: true,
     migrationsBase: input.migrationsBase,
+    deployTarget: targetBranch,
   })
   const errors = migrationHistoryErrors(findings)
   if (errors.length === 0) return
@@ -251,7 +249,7 @@ export async function guardMigrationHistory(input: DeployInput): Promise<void> {
       ...errors.map((f) => `  - [${f.id}] ${f.message}`),
       '',
       'Applied migrations are forward-only: restore the original file and add a NEW migration.',
-      'Run `pikku fabric validate` for fix hints, or pass --skip-migration-check to override (not recommended).',
+      'Run `pikku fabric validate` for fix hints.',
     ].join('\n')
   )
 }
@@ -310,7 +308,7 @@ async function applyDeploy(
     ref = resolved
     rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-    await guardMigrationHistory(input)
+    await guardMigrationHistory(input, targetBranch)
 
     // An inferred target is said out loud before anything is built. Under -y
     // there is no confirmation prompt to name it, and a deploy that never
