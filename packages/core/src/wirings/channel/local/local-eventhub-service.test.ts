@@ -2,6 +2,7 @@ import * as assert from 'assert'
 import { test } from 'node:test'
 import type { PikkuChannelHandler } from '../channel.types.js'
 import { LocalEventHubService } from './local-eventhub-service.js'
+import { defineEventHubServiceTests } from '../../../testing/service-tests/event-hub-service-tests.js'
 
 class MockChannelHandler implements PikkuChannelHandler {
   private channelId: string
@@ -75,3 +76,8 @@ test('LocalEventHubService: clean up empty topics on channel close', () => {
 
   assert.strictEqual(eventHub['subscriptions'].has('topic1'), false)
 })
+
+defineEventHubServiceTests(
+  'LocalEventHubService',
+  () => new LocalEventHubService()
+)
