@@ -7,9 +7,6 @@ import {
   getRelativeTimeOffsetFromNow,
 } from './time-utils'
 
-const approxEqual = (a: number, b: number, delta: number = 10): boolean =>
-  Math.abs(a - b) <= delta
-
 describe('Time Utils', () => {
   const offsetCases: Array<{ input: RelativeTimeInput; expected: number }> = [
     { input: { value: 1, unit: 'second' }, expected: 1000 },
@@ -33,24 +30,23 @@ describe('Time Utils', () => {
   })
 
   describe('getRelativeTimeOffsetFromNow', () => {
-    test('returns a Date ~1 minute in the future', () => {
-      const now = Date.now()
+    // Bracket the call rather than compare to one Date.now() with a tolerance:
+    // on a loaded runner the clock can move past any fixed tolerance between
+    // the test's read and the function's own.
+    test('returns a Date 1 minute in the future', () => {
+      const before = Date.now()
       const result = getRelativeTimeOffsetFromNow({ value: 1, unit: 'minute' })
-      const delta = result.getTime() - now
-      assert.ok(
-        approxEqual(delta, 60000),
-        `Expected ~60000ms ahead, got ${delta}ms`
-      )
+      const after = Date.now()
+      assert.ok(result.getTime() >= before + 60000)
+      assert.ok(result.getTime() <= after + 60000)
     })
 
-    test('returns a Date ~2 hours in the past', () => {
-      const now = Date.now()
+    test('returns a Date 2 hours in the past', () => {
+      const before = Date.now()
       const result = getRelativeTimeOffsetFromNow({ value: -2, unit: 'hour' })
-      const delta = now - result.getTime()
-      assert.ok(
-        approxEqual(delta, 7200000),
-        `Expected ~7200000ms ago, got ${delta}ms`
-      )
+      const after = Date.now()
+      assert.ok(result.getTime() >= before - 7200000)
+      assert.ok(result.getTime() <= after - 7200000)
     })
   })
 })
