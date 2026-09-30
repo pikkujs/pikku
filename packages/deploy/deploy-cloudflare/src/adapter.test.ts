@@ -98,20 +98,13 @@ const inboxUnit = {
 const inboxCtx = { ...(ctx as object), unit: inboxUnit } as never
 
 describe('CloudflareProviderAdapter remote job inbox', () => {
-  test('the container entry mounts the runtime inbox by default', () => {
+  test('the container entry runs on the bun server and mounts no runtime inbox', () => {
     const source = new CloudflareProviderAdapter().generateServerEntrySource(
       ctx
     )
 
-    assert.match(source, /dispatchJobs: true/)
-  })
-
-  test('the container entry stands down where the unit wires the inbox', () => {
-    const source = new CloudflareProviderAdapter().generateServerEntrySource(
-      inboxCtx
-    )
-
-    assert.match(source, /dispatchJobs: false/)
+    assert.match(source, /from '@pikku\/bun-server'/)
+    assert.doesNotMatch(source, /node-http-server|dispatchJobs/)
   })
 
   test('httpQueueJobs stands down where the unit wires the inbox', () => {

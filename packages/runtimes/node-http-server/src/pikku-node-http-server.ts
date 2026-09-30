@@ -7,12 +7,6 @@ import {
 import { createReadStream } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { normalize, resolve } from 'node:path'
-import {
-  createHmac,
-  randomBytes,
-  randomUUID,
-  timingSafeEqual,
-} from 'node:crypto'
 
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
 
@@ -29,12 +23,6 @@ import {
   type RunHTTPWiringOptions,
 } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
-import {
-  runQueueJob,
-  type QueueJob,
-  type QueueJobStatus,
-} from '@pikku/core/queue'
-import { runScheduledTask } from '@pikku/core/scheduler'
 
 import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'
@@ -127,26 +115,6 @@ export type PikkuNodeHTTPServerOptions = {
    * none of them.
    */
   mcpAuth?: MCPAuthOptions
-  /**
-   * Mount the in-stack dispatch routes `POST /__pikku/queue-job` and
-   * `POST /__pikku/scheduler-job` so a trusted dispatcher can deliver queue
-   * jobs and scheduled tasks to a server (container) target that has no
-   * platform queue/cron binding of its own. Mirrors the CF handler's
-   * `httpQueueJobs`. Off by default.
-   *
-   * Unlike a CF WfP namespace script, a container usually HAS a public
-   * hostname — so `dispatchSecret` is required for these routes to serve
-   * anyone at all. Without it every dispatch request is rejected.
-   */
-  dispatchJobs?: boolean
-  /**
-   * Shared secret required in the `x-pikku-dispatch` header on the dispatch
-   * routes (when `dispatchJobs` is on). The dispatcher attaches it; public
-   * callers don't have it. When unset, the routes reject every caller and a
-   * warning is logged at startup — the same fail-closed contract the
-   * cloudflare runtime's `PIKKU_DISPATCH_SECRET` already has.
-   */
-  dispatchSecret?: string
   /**
    * The JWTService that signed the content service's URLs. Signed asset reads
    * are verified with it, so it must be the very same service `LocalContent`
@@ -248,11 +216,6 @@ export class PikkuNodeHTTPServer {
       await this.options.configureServer(this.server)
     }
     logRegisterRoutes(this.logger)
-    if (this.options.dispatchJobs && !this.options.dispatchSecret) {
-      this.logger.warn(
-        'pikku-node-http-server: dispatch routes (/__pikku/queue-job, /__pikku/scheduler-job) are mounted WITHOUT a dispatchSecret — every dispatch request will be rejected. Set dispatchSecret to the value the dispatcher sends in the x-pikku-dispatch header.'
-      )
-    }
     await this.initMCP()
   }
 
@@ -332,116 +295,6 @@ export class PikkuNodeHTTPServer {
     return this.mcpMounts.find((mount) => mount.ownsPath(pathname))
   }
 
-  /**
-   * Fails closed: an unset `dispatchSecret` rejects every caller, matching
-   * `@pikku/cloudflare`'s `isDispatchAuthorized`. The comparison runs over
-   * HMACs taken under a key generated freshly per call, so the digests that
-   * actually get compared are fixed-width and unpredictable — that leaks
-   * neither the secret's bytes nor its length, which a length check before
-   * `timingSafeEqual` would.
-   */
-  private isDispatchAuthorized(req: IncomingMessage): boolean {
-    const expected = this.options.dispatchSecret
-    if (!expected) {
-      return false
-    }
-    const provided = req.headers['x-pikku-dispatch']
-    if (typeof provided !== 'string') {
-      return false
-    }
-    const key = randomBytes(32)
-    return timingSafeEqual(
-      createHmac('sha256', key).update(provided).digest(),
-      createHmac('sha256', key).update(expected).digest()
-    )
-  }
-
-  /**
-   * Handle the in-stack dispatch routes. Mirrors the CF handler's
-   * `/__pikku/queue-job` + `/__pikku/scheduler-job` contract so the same
-   * fabric dispatcher path reaches a container target. Status codes match the
-   * worker: 204 = ack, 422 = ack-no-retry (missing meta / discarded), 503 =
-   * retry (transient/thrown), 401 = bad/missing dispatch secret.
-   */
-  private async handleDispatchJob(
-    req: IncomingMessage,
-    res: ServerResponse
-  ): Promise<void> {
-    if (!this.isDispatchAuthorized(req)) {
-      res.writeHead(401, { 'content-type': 'application/json' })
-      res.end('{"ok":false,"error":"unauthorized"}')
-      return
-    }
-
-    let body: any
-    try {
-      const chunks: Buffer[] = []
-      for await (const chunk of req) chunks.push(chunk as Buffer)
-      body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
-    } catch {
-      res.writeHead(400, { 'content-type': 'application/json' })
-      res.end('{"ok":false,"error":"invalid json body"}')
-      return
-    }
-
-    try {
-      if (req.url === '/__pikku/scheduler-job') {
-        const traceId = `cron-${randomUUID()}`
-        await runScheduledTask({ name: body.taskName, traceId })
-        res.writeHead(204)
-        res.end()
-        return
-      }
-
-      // queue-job. Resolve the registered queue name (the dispatcher may send a
-      // stage-prefixed name) by longest-suffix match against the queue meta.
-      const queueMeta = pikkuState(null, 'queue', 'meta') as Record<
-        string,
-        unknown
-      >
-      const queueName = queueMeta[body.queueName]
-        ? body.queueName
-        : (Object.keys(queueMeta)
-            .filter((k) => String(body.queueName).endsWith(k))
-            .sort((a, b) => b.length - a.length)[0] ?? body.queueName)
-      const id = body.jobId ?? body.traceId ?? randomUUID()
-      const job: QueueJob = {
-        queueName,
-        data: body.data,
-        id,
-        status: async () => 'active' as QueueJobStatus,
-        metadata: () => ({
-          processedAt: new Date(),
-          attemptsMade: 0,
-          maxAttempts: undefined,
-          result: undefined,
-          progress: 0,
-          createdAt: new Date(),
-          completedAt: undefined,
-          failedAt: undefined,
-          error: undefined,
-        }),
-        waitForCompletion: async () => {
-          throw new Error('dispatch jobs do not support waitForCompletion')
-        },
-      }
-      await runQueueJob({ job, traceId: body.traceId })
-      res.writeHead(204)
-      res.end()
-    } catch (e: unknown) {
-      const errorName = (e as Error)?.name ?? 'Error'
-      const message = (e as Error)?.message ?? String(e)
-      const noRetry =
-        errorName === 'QueueJobDiscardedError' ||
-        errorName === 'PikkuMissingMetaError'
-      this.logger.error(
-        `pikku-node-http-server: dispatch ${req.url} failed — ${errorName}: ${message}`
-      )
-      res.writeHead(noRetry ? 422 : 503, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ ok: false, errorName, message }))
-    }
-  }
-
   private handleRequest = async (
     req: IncomingMessage,
     res: ServerResponse
@@ -451,16 +304,6 @@ export class PikkuNodeHTTPServer {
       if (healthPath && req.url === healthPath) {
         res.writeHead(200, { 'content-type': 'application/json' })
         res.end('{"ok":true}')
-        return
-      }
-
-      if (
-        this.options.dispatchJobs &&
-        req.method === 'POST' &&
-        (req.url === '/__pikku/queue-job' ||
-          req.url === '/__pikku/scheduler-job')
-      ) {
-        await this.handleDispatchJob(req, res)
         return
       }
 

@@ -9,12 +9,11 @@
  *
  * Two runtimes, selected via `--runtime`:
  *
- * - `node` (default): uses `@pikku/node-http-server` (pure JS, node:http) —
- *   the same server `pikku dev` and the container deploy entry use, so all
- *   three share one HTTP path. Ships `bundle.js`; run with `node bundle.js`.
- * - `bun`: uses `@pikku/bun-server` (Bun.serve, native WebSockets) and
- *   compiles the bundle into a single self-contained executable via
+ * - `bun` (default): uses `@pikku/bun-server` (Bun.serve, native WebSockets)
+ *   and compiles the bundle into a single self-contained executable via
  *   `bun build --compile`. No runtime needed on the target host.
+ * - `node`: uses `@pikku/node-http-server` (pure JS, node:http). Ships
+ *   `bundle.js`; run with `node bundle.js`.
  */
 import type {
   BindingSource,
@@ -384,7 +383,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
-    this.runtime = options.runtime ?? 'node'
+    this.runtime = options.runtime ?? 'bun'
     this.desktop = options.desktop ?? Boolean(options.desktopUrl)
     this.projectDir = options.projectDir
     this.desktopIdentifier = options.desktopIdentifier

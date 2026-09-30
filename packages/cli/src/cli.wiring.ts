@@ -1256,8 +1256,8 @@ wireCLI({
             },
             runtime: {
               description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
+                'Server runtime for the standalone provider: bun (compiled executable, default) or node (bundle.js)',
+              default: 'bun',
             },
             resultFile: {
               description:
@@ -1276,8 +1276,8 @@ wireCLI({
             },
             runtime: {
               description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
+                'Server runtime for the standalone provider: bun (compiled executable, default) or node (bundle.js)',
+              default: 'bun',
             },
             desktop: {
               description:

@@ -274,7 +274,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
-      `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
+      `import { PikkuBunServer } from '@pikku/bun-server'`,
       `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
@@ -301,10 +301,9 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
-      `  const server = new PikkuNodeHTTPServer(`,
+      `  const server = new PikkuBunServer(`,
       `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
       `    singletonServices.logger,`,
-      `    { dispatchJobs: ${!unitWiresRemoteJobInbox(ctx.unit)}, dispatchSecret: process.env.PIKKU_DISPATCH_SECRET },`,
       `  )`,
       `  server.enableExitOnSignals()`,
       `  await server.init()`,
