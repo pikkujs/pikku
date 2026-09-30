@@ -2,11 +2,14 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import {
   FabricAuthError,
+  HELD_MARGIN_MS,
   MAX_CONSECUTIVE_FAILURES,
+  SAFETY_POLL_MS,
   waitForNext,
   type NextOptions,
 } from './changes-next.js'
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { ChangeEvents } from './changes-events.js'
 
 const NOW = Date.parse('2026-09-29T12:00:00Z')
 
@@ -100,7 +103,7 @@ describe('waitForNext', () => {
     assert.strictEqual(calls.length, 1)
   })
 
-  test('asks the server for pickup-only work on the named stage', async () => {
+  test('asks for held items too, so it can see when they become claimable', async () => {
     const { rpc, calls } = fakeRpc([{ changes: [change()], groups: [] }])
     await waitForNext(
       rpc,
@@ -108,7 +111,7 @@ describe('waitForNext', () => {
       fakeClock().clock
     )
     const list = calls[0]!.data
-    assert.strictEqual(list.pickupOnly, true)
+    assert.strictEqual(list.pickupOnly, false)
     assert.strictEqual(list.stageId, 'stage_dev')
     assert.strictEqual(list.route, '/checkout')
     assert.deepStrictEqual(list.status, ['open', 'claimed'])
@@ -122,6 +125,32 @@ describe('waitForNext', () => {
     const { clock, sleeps } = fakeClock()
     const result = await waitForNext(rpc, options(), clock)
     assert.strictEqual(result.outcome, 'ready')
+    assert.deepStrictEqual(sleeps, [15_000])
+  })
+
+  test('sleeps only until the soonest held item becomes claimable', async () => {
+    const heldUntil = new Date(NOW + 4_000).toISOString()
+    const { rpc } = fakeRpc([
+      { changes: [change({ held: true, heldUntil })], groups: [] },
+      { changes: [change({ held: false, heldUntil: null })], groups: [] },
+    ])
+    const { clock, sleeps } = fakeClock()
+    const result = await waitForNext(rpc, options(), clock)
+    assert.strictEqual(result.outcome, 'ready')
+    assert.deepStrictEqual(sleeps, [4_000 + HELD_MARGIN_MS])
+  })
+
+  test('a lease ending later than the interval does not stretch the sleep', async () => {
+    const heldUntil = new Date(NOW + 10 * 60_000).toISOString()
+    const { rpc } = fakeRpc([
+      {
+        changes: [change({ status: 'claimed', groupId: 'grp_1', heldUntil })],
+        groups: [group()],
+      },
+      { changes: [change()], groups: [] },
+    ])
+    const { clock, sleeps } = fakeClock()
+    await waitForNext(rpc, options(), clock)
     assert.deepStrictEqual(sleeps, [15_000])
   })
 
@@ -313,6 +342,82 @@ describe('waitForNext', () => {
         /bad stage/
       )
       assert.strictEqual(calls.length, 1)
+    })
+  })
+
+  describe('change events', () => {
+    const fakeEvents = (live: boolean) => {
+      let wake: () => void = () => {}
+      const events: ChangeEvents & { fire: () => void; closed: boolean } = {
+        live,
+        closed: false,
+        next: () => new Promise<void>((resolve) => (wake = resolve)),
+        close() {
+          this.closed = true
+        },
+        fire: () => wake(),
+      }
+      return events
+    }
+
+    const stalledClock = () => {
+      const sleeps: number[] = []
+      return {
+        sleeps,
+        clock: {
+          now: () => NOW,
+          sleep: (ms: number, signal?: AbortSignal) => {
+            sleeps.push(ms)
+            return new Promise<void>((resolve) =>
+              signal?.addEventListener('abort', () => resolve(), { once: true })
+            )
+          },
+        },
+      }
+    }
+
+    test('an event wakes it early and it re-reads the list', async () => {
+      const { rpc, calls } = fakeRpc([
+        empty,
+        { changes: [change()], groups: [] },
+      ])
+      const { clock, sleeps } = stalledClock()
+      const events = fakeEvents(true)
+      const waiting = waitForNext(rpc, options(), clock, () => {}, events)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      events.fire()
+      const result = await waiting
+      assert.strictEqual(result.outcome, 'ready')
+      assert.strictEqual(
+        calls.filter((call) => call.name === 'listChanges').length,
+        2
+      )
+      assert.deepStrictEqual(sleeps, [SAFETY_POLL_MS])
+    })
+
+    test('while subscribed it still polls, on the slow safety interval', async () => {
+      const { rpc } = fakeRpc([empty, { changes: [change()], groups: [] }])
+      const { clock, sleeps } = fakeClock()
+      await waitForNext(rpc, options(), clock, () => {}, fakeEvents(true))
+      assert.deepStrictEqual(sleeps, [SAFETY_POLL_MS])
+    })
+
+    test('a held item still wakes it before the safety poll', async () => {
+      const heldUntil = new Date(NOW + 30_000).toISOString()
+      const { rpc } = fakeRpc([
+        { changes: [change({ held: true, heldUntil })], groups: [] },
+        { changes: [change()], groups: [] },
+      ])
+      const { clock, sleeps } = fakeClock()
+      await waitForNext(rpc, options(), clock, () => {}, fakeEvents(true))
+      assert.deepStrictEqual(sleeps, [30_000 + HELD_MARGIN_MS])
+    })
+
+    test('with the stream down it falls back to the poll interval', async () => {
+      const { rpc } = fakeRpc([empty, { changes: [change()], groups: [] }])
+      const { clock, sleeps } = fakeClock()
+      await waitForNext(rpc, options(), clock, () => {}, fakeEvents(false))
+      assert.deepStrictEqual(sleeps, [15_000])
     })
   })
 })

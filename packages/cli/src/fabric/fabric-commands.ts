@@ -100,6 +100,10 @@ import {
   renderChangesShot,
 } from './functions/changes-shot.function.js'
 import {
+  FabricChangesReply,
+  renderChangesReply,
+} from './functions/changes-reply.function.js'
+import {
   FabricChangesDone,
   renderChangesDone,
 } from './functions/changes-done.function.js'
@@ -643,7 +647,7 @@ export const fabricCommands = defineCLICommands({
   },
   changes: {
     description:
-      'The todo list filed from inside a deployed stage: read what is open, file what was decided elsewhere, claim a batch, ask what you need to know, and tick items off',
+      'The todo list filed from inside a deployed stage: read what is open, file what was decided elsewhere, claim a batch, ask what you need to know, reply without asking, and tick items off',
     subcommands: {
       list: pikkuCLICommand({
         func: FabricChangesList,
@@ -824,6 +828,32 @@ export const fabricCommands = defineCLICommands({
             type: 'string[]',
           },
           authorName: { description: 'Who is asking, e.g. claude-code' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      reply: pikkuCLICommand({
+        func: FabricChangesReply,
+        render: renderChangesReply,
+        parameters: '<changeId>',
+        description:
+          'Say something on an item’s thread without asking (which parks it) or closing it (done --note) — e.g. why you are not doing it, or what it is blocked on',
+        options: {
+          message: {
+            description: 'What to say, in the filer’s vocabulary',
+            short: 'm',
+          },
+          image: {
+            description:
+              'Path to a screenshot to attach as evidence, e.g. what you saw when you could not reproduce it',
+          },
+          imageLabel: {
+            description: 'What to call the screenshot (default “screenshot”)',
+          },
+          contentType: {
+            description:
+              'image/png, image/jpeg or image/webp (inferred from --image)',
+          },
+          authorName: { description: 'Who is replying, e.g. claude-code' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),

@@ -9,6 +9,8 @@ import { namedBranch, renderChangesDone } from './changes-done.function.js'
 import { renderChangesList } from './changes-list.function.js'
 import { renderChangesShot } from './changes-shot.function.js'
 import { renderChangesShow } from './changes-show.function.js'
+import { renderChangesReply } from './changes-reply.function.js'
+import { clockTime } from '../lib/changes.js'
 
 /**
  * The renderers print RPC-provided text to a terminal, so what they write is
@@ -205,6 +207,28 @@ describe('changes list', () => {
     assert.ok(out.includes('Grouped totals  #99  Ship it'))
   })
 
+  test('a held item says when it becomes claimable', () => {
+    const at = new Date(Date.now() + 45_000)
+    const out = printed(() =>
+      renderChangesList(null, {
+        changes: [change({ held: true, heldUntil: at.toISOString() })],
+        groups: [],
+      } as never)
+    )
+    assert.ok(out.includes(`claimable at ${clockTime(at)}`))
+  })
+
+  test('an older fabric without heldUntil still says held', () => {
+    const out = printed(() =>
+      renderChangesList(null, {
+        changes: [change({ held: true })],
+        groups: [],
+      } as never)
+    )
+    assert.ok(out.includes('held'))
+    assert.ok(!out.includes('claimable at'))
+  })
+
   test('says so plainly when there is nothing open', () => {
     const out = printed(() =>
       renderChangesList(null, { changes: [], groups: [] } as never)
@@ -257,5 +281,35 @@ describe('changes show', () => {
     assert.ok(!out.includes('\x1b[2J'))
     assert.ok(!out.includes('\x1b]0;'))
     assert.ok(out.includes('Totals[2J]0;owned'))
+  })
+})
+
+describe('changes show, held', () => {
+  test('says when the item becomes claimable', () => {
+    const at = new Date(Date.now() + 20 * 60_000)
+    const out = printed(() =>
+      renderChangesShow(null, {
+        change: change({ status: 'claimed', heldUntil: at.toISOString() }),
+        thread: [],
+        stageUrl: null,
+      } as never)
+    )
+    assert.ok(out.includes(`(claimable at ${clockTime(at)})`))
+  })
+})
+
+describe('changes reply', () => {
+  test('says the status is untouched, and neutralizes the echo', () => {
+    const out = printed(() =>
+      renderChangesReply(null, {
+        message: {
+          body: HOSTILE,
+          attachments: [{ kind: 'evidence', label: HOSTILE }],
+        },
+      } as never)
+    )
+    assert.ok(out.includes('keeps its status'))
+    assert.ok(!out.includes('\x1b[2J'))
+    assert.ok(out.includes('[evidence]'))
   })
 })

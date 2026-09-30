@@ -3,10 +3,10 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import {
+  changeRef,
   changesContext,
   imageContentType,
   type ImageContentType,
-  resolveChangeId,
 } from '../lib/changes.js'
 import { dim, safe } from '../lib/output.js'
 import type { AttachChangeShotOutput } from '../sdk/rpc-map.gen.d.js'
@@ -56,9 +56,8 @@ export const FabricChangesShot = pikkuSessionlessFunc({
     }
 
     const { rpc, projectId } = await changesContext(input.apiUrl)
-    const changeId = await resolveChangeId(rpc, projectId, input.changeId)
     return await rpc.invoke('attachChangeShot', {
-      changeId,
+      ...changeRef(projectId, input.changeId),
       label: input.label,
       kind: input.kind ?? 'option',
       contentType: contentType ?? 'image/png',

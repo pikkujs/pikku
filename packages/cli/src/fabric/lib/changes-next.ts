@@ -5,6 +5,7 @@ import type {
 } from '../sdk/rpc-map.gen.d.js'
 import { FabricPreconditionError } from './errors.js'
 import { httpStatus } from './changes.js'
+import type { ChangeEvents } from './changes-events.js'
 
 type Change = ListChangesOutput['changes'][number]
 type Group = ListChangesOutput['groups'][number]
@@ -26,7 +27,8 @@ export interface NextOptions {
 
 export interface Clock {
   now: () => number
-  sleep: (ms: number) => Promise<void>
+  /** Resolves after `ms`, or as soon as `signal` aborts. */
+  sleep: (ms: number, signal?: AbortSignal) => Promise<void>
 }
 
 export interface NextResult {
@@ -41,6 +43,10 @@ export class FabricAuthError extends FabricPreconditionError {}
 
 export const MAX_CONSECUTIVE_FAILURES = 8
 const MAX_BACKOFF_MS = 60_000
+/** How often to re-read the list anyway while events are arriving. */
+export const SAFETY_POLL_MS = 3 * 60_000
+/** Past `heldUntil`, so the next read finds the item claimable rather than just short. */
+export const HELD_MARGIN_MS = 1_000
 
 const liveLease = (group: Group | undefined, now: number): boolean =>
   !!group?.claimedBy &&
@@ -85,6 +91,25 @@ export function awaitingReview(
 }
 
 /**
+ * The soonest moment an item that is still waiting — in its hold window, or
+ * inside another group's lease — becomes claimable. A server that predates
+ * `heldUntil` leaves it undefined, and this answers null.
+ */
+export function soonestClaimable(
+  { changes }: ListChangesOutput,
+  now: number
+): number | null {
+  let soonest: number | null = null
+  for (const change of changes) {
+    if (change.status !== 'open' && change.status !== 'claimed') continue
+    if (!change.heldUntil) continue
+    const at = new Date(change.heldUntil).getTime()
+    if (at > now && (soonest === null || at < soonest)) soonest = at
+  }
+  return soonest
+}
+
+/**
  * An answer is waiting when the person spoke last. Once the agent replies or
  * closes the item it stops counting, so an item left alone after reading the
  * answer cannot wake `next` forever.
@@ -121,22 +146,29 @@ export const backoffMs = (failures: number, intervalMs: number): number =>
 
 /**
  * Block until there is something to do, then hand it back — optionally already
- * claimed. Polling, because fabric-api publishes nothing when a change is filed
- * or answered; one `listChanges` per interval, narrowed server-side to the
- * statuses that can become work.
+ * claimed. Each pass is one `listChanges`, narrowed server-side to the statuses
+ * that can become work, and the list is the only truth.
+ *
+ * Between passes it sleeps until the first of: a change event (when `events`
+ * is connected), the moment the soonest held item becomes claimable, or the
+ * poll interval — `intervalMs` while there is no event stream, the slow
+ * `SAFETY_POLL_MS` while there is one.
  */
 export async function waitForNext(
   rpc: PikkuRPC,
   options: NextOptions,
   clock: Clock,
-  log: (line: string) => void = () => {}
+  log: (line: string) => void = () => {},
+  events: ChangeEvents | null = null
 ): Promise<NextResult> {
   const deadline =
     options.timeoutMs === null ? null : clock.now() + options.timeoutMs
   let failures = 0
 
   for (;;) {
-    let wait = options.intervalMs
+    let wait = events?.live
+      ? Math.max(options.intervalMs, SAFETY_POLL_MS)
+      : options.intervalMs
     try {
       const list = await rpc.invoke('listChanges', {
         projectId: options.projectId,
@@ -145,11 +177,15 @@ export async function waitForNext(
         status: options.claimedBy
           ? ['open', 'claimed', 'in_progress']
           : ['open', 'claimed'],
-        pickupOnly: true,
+        pickupOnly: false,
         includeDone: false,
         limit: 200,
       })
       failures = 0
+
+      const soonest = soonestClaimable(list, clock.now())
+      if (soonest !== null)
+        wait = Math.min(wait, soonest - clock.now() + HELD_MARGIN_MS)
 
       const changes = claimable(list, clock.now())
       const answers = await answered(
@@ -205,7 +241,12 @@ export async function waitForNext(
       if (left <= 0) return timedOut()
       wait = Math.min(wait, left)
     }
-    await clock.sleep(wait)
+    const done = new AbortController()
+    await Promise.race([
+      clock.sleep(wait, done.signal),
+      ...(events ? [events.next()] : []),
+    ])
+    done.abort()
   }
 }
 

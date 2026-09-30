@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import {
   age,
   changesContext,
+  clockTime,
   remaining,
   requireProjectId,
 } from '../lib/changes.js'
@@ -58,7 +59,11 @@ type Group = ListChangesOutput['groups'][number]
 const line = (change: Change): void => {
   const flags = [
     statusColor(change.status),
-    change.held ? dim('held') : null,
+    change.heldUntil
+      ? dim(`claimable at ${clockTime(change.heldUntil)}`)
+      : change.held
+        ? dim('held')
+        : null,
     change.route ? safe(change.route) : null,
   ]
     .filter(Boolean)

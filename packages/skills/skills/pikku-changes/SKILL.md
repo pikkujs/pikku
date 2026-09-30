@@ -1,6 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|shot|done`: waiting for work without polling, asking instead of guessing, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout linked to a Fabric project (`pikku fabric config` shows one). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
+description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout linked to a Fabric project (`pikku fabric config` shows one). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
 installGroups: [fabric]
 ---
 
@@ -33,7 +33,9 @@ something changed. `next` does the waiting and exits only when there is work.
    It waits out the grace window (a just-filed item is held about a minute so a batch
    being typed arrives together), claims what is ready as one group, prints it, and
    exits. It also wakes when someone answers a question you asked under that
-   `--claimed-by`.
+   `--claimed-by`. It is woken by fabric's change events the moment an item is filed
+   or answered, and sleeps exactly until a held item becomes claimable; when the event
+   stream is unavailable it falls back to checking every `--interval` seconds.
 
 2. When it exits, read the exit code:
 
@@ -44,8 +46,8 @@ something changed. `next` does the waiting and exits only when there is work.
    | 3    | session refused                                        | tell the user to run `pikku fabric login`; stop |
    | 1    | anything else (bad `--stage`, fabric down for minutes) | report the message; stop                        |
 
-3. For each item: `show` → fix → commit → `done`, or `ask` and move on. Then start
-   `next` again, in the background.
+3. For each item: `show` → fix → commit → `done`; or `ask` and move on; or `reply`
+   saying why you are leaving it. Then start `next` again, in the background.
 
 Without `--claim` it only reports what is claimable; claim it yourself:
 
@@ -53,8 +55,10 @@ Without `--claim` it only reports what is claimable; claim it yourself:
 pikku fabric changes claim --change-ids 3,4 --title "Checkout pass" --claimed-by claude-code
 ```
 
-A `claim` refused with a 409 says per item why (held, claimed by someone else, done).
-For held items, run `next --claim` rather than retrying. The lease is 30 minutes
+A `claim` refused with a 409 says per item why — held for the filer, inside another
+group's lease, done — and when a held or leased item is **claimable at** (a local
+`HH:MM`; `list` and `show` print the same). An item inside someone else's live lease
+cannot be taken. For held items, run `next --claim` rather than retrying. The lease is 30 minutes
 (`--lease-minutes`); an abandoned claim returns to the queue by itself.
 
 ## Reading an item
@@ -97,6 +101,24 @@ pikku fabric changes shot --change-id 3 --label "Bigger" --kind option --image a
 
 `--kind evidence` is a picture that proves something, shown inline.
 
+## Replying without asking
+
+`ask` is for a decision you need from them: it parks the item as needing an answer.
+`done` closes it. Everything else you have to say goes in a `reply`, which leaves the
+item's status exactly where it was:
+
+- you are not doing it, and why ("the copy comes from the CMS, not the app");
+- it is blocked on something that is not a question ("needs STRIPE_KEY set on the stage");
+- you could not reproduce it — attach what you saw.
+
+```bash
+pikku fabric changes reply 3 --message "Cannot reproduce on develop @ a91c4e2 — this is what I see." \
+  --image seen.png --image-label "develop @ a91c4e2" --author-name claude-code
+```
+
+Never `ask` a question you do not need answered just to leave a note, and never
+`done --note` an item you did not do — both tell the filer the wrong thing.
+
 ## Committing
 
 One item, one commit — `done` records one sha, and that is what a human reverts. The
@@ -117,7 +139,7 @@ pikku fabric changes done --change-id 7 --note "What you did, for whoever reads 
 ```
 
 Branch and commit default to the checkout you are in — run it there, never type a sha.
-An item you decided not to do is not `done`: say why in the thread and leave it for a
+An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 
 Writes need the `changes:project:write` scope; `list`, `show` and `next` without
