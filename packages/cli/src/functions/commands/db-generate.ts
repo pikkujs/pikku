@@ -51,8 +51,13 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       return
     }
 
-    for (const { source, file, needsBackfill } of written) {
+    for (const { source, file, needsBackfill, orphaned } of written) {
       logger.info(`db generate: wrote ${file} for ${source}`)
+      for (const column of orphaned) {
+        logger.warn(
+          `  ${column} is required but ${source} no longer writes it — the migration drops or relaxes it so inserts stop failing.`
+        )
+      }
       for (const column of needsBackfill) {
         logger.warn(
           `  ${column} is NOT NULL with no default — decide what existing rows get before applying.`

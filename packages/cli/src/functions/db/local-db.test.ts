@@ -1326,6 +1326,96 @@ test('db generate adds only the columns a partially covered source is missing', 
   assert.match(body, /-- REVIEW: owner is NOT NULL with no default/)
 })
 
+test('db generate drops a required column its source stopped writing, indexes first', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+
+  // What Better Auth 1.7.0–1.7.2 left behind: a column the source wrote once and
+  // has since dropped from its schema. NOT NULL with no default, so every insert
+  // fails, yet "already covered" — nothing is missing.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-issuer.sql'),
+    `ALTER TABLE todos ADD COLUMN issuer TEXT;
+CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
+`
+  )
+  const dir = join(root, 'node_modules', 'addon-auth')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
+  )
+  const column = (name: string, type: string, notNull: boolean, pk = false) => ({
+    name,
+    type,
+    notNull,
+    pk,
+    defaultValue: null,
+  })
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      sqlite: {
+        sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL);',
+        tables: {
+          todos: [
+            column('id', 'INTEGER', true, true),
+            column('title', 'TEXT', true),
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  // A nullable orphan is harmless and must be left alone.
+  const untouched = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-auth' }]
+  )
+  assert.equal(
+    untouched.written.find((w) => w.source === 'addon-auth'),
+    undefined,
+    'a nullable column nothing writes breaks no insert'
+  )
+
+  // Now the shipped shape: required, no default. ADD COLUMN cannot say that on
+  // SQLite, so the migration rebuilds the table the way an old generator did.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-issuer.sql'),
+    `CREATE TABLE todos_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  issuer TEXT NOT NULL
+);
+INSERT INTO todos_new (id, title, done, issuer) SELECT id, title, done, '' FROM todos;
+DROP TABLE todos;
+ALTER TABLE todos_new RENAME TO todos;
+CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
+`
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-auth' }]
+  )
+  const migration = written.find((w) => w.source === 'addon-auth')
+  assert.ok(migration, 'the orphaned column got a migration')
+  assert.deepEqual(migration.orphaned, ['todos.issuer'])
+  const body = readFileSync(migration.file, 'utf8')
+  assert.match(body, /DROP INDEX todos_issuer_title_uidx;\nALTER TABLE todos DROP COLUMN issuer;/)
+
+  // And it applies: the column is gone and an insert that never names it works.
+  await migrateAndCodegen(resolved)
+  const drift = await driftOf(resolved)
+  assert.equal(drift.inSync, true)
+})
+
 test('a partially covered source creates a referenced table before the one referencing it', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
 
