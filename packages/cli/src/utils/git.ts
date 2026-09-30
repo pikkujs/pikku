@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
+import { FabricPreconditionError } from '../fabric/lib/errors.js'
 
 /**
  * Local git probes for the deploy safety checks (clean tree, HEAD == remote,
@@ -78,6 +79,25 @@ export function git(
 
 export async function currentBranch(cwd?: string): Promise<string> {
   return git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd)
+}
+
+/**
+ * The branch to push/deploy, refusing a detached HEAD by name.
+ *
+ * `rev-parse --abbrev-ref HEAD` answers the literal `HEAD` when detached, which
+ * would otherwise travel on as a branch name — a remote branch literally named
+ * `HEAD`, or "local branch HEAD does not exist" from the deploy.
+ */
+export const branchFromHead = (
+  head: string,
+  hint = 'Check out a branch, and try again.'
+): string => {
+  if (head === 'HEAD' || head === '') {
+    throw new FabricPreconditionError(
+      `Deployment blocked: HEAD is detached, so there is no current branch to deploy.\n${hint}`
+    )
+  }
+  return head
 }
 
 /**

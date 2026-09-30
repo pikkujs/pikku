@@ -35,7 +35,10 @@ export const FabricAddonGet = pikkuSessionlessFunc({
   input: FabricAddonGetInput,
   output: FabricAddonGetOutputSchema,
   func: async (_services, { name, apiUrl: apiUrlOverride }) => {
-    const { apiUrl } = await resolveApiContext({ apiUrlOverride })
+    const { apiUrl } = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
     const [pkg, api] = await Promise.all([
       getPackage(apiUrl, name).catch(() => null),
       getOpenApi(apiUrl, name).catch(() => null),
@@ -44,7 +47,10 @@ export const FabricAddonGet = pikkuSessionlessFunc({
   },
 })
 
-export function renderAddonGet(_s: unknown, result: FabricAddonGetOutput): void {
+export function renderAddonGet(
+  _s: unknown,
+  result: FabricAddonGetOutput
+): void {
   if (!result.package && !result.api) {
     console.log(
       `\n${removed('Not in the registry.')} ` +

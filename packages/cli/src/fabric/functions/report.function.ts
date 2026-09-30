@@ -72,7 +72,7 @@ const askOnTerminal = async (): Promise<ReportAnswer | null> => {
 
 /** Oldest first, stopping at the first refusal; what is left stays held. */
 const sendHeld = async (held: HeldFinding[]) => {
-  const { apiUrl } = await resolveApiContext()
+  const { apiUrl } = await resolveApiContext({ resolveProject: false })
   const rpc = findingRPC(apiUrl)
   let sent = 0
   for (const entry of held) {

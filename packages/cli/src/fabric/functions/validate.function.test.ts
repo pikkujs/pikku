@@ -3,11 +3,18 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import {
+
+// The link findings depend on whether there is a session, so HOME points at a
+// disposable directory before anything reads ~/.fabric/auth.json.
+process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-validate-home-'))
+delete process.env.FABRIC_API_URL
+delete process.env.FABRIC_PROJECT_ID
+const { writeAuthFile, DEFAULT_API_URL } = await import('../lib/config.js')
+const {
   runValidate,
   renderValidate,
-  runValidate as runLiveValidate,
-} from './validate.function.js'
+  runValidate: runLiveValidate,
+} = await import('./validate.function.js')
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -28,9 +35,6 @@ async function writeFrontends(root: string, frontends: unknown) {
 }
 
 async function makeValidProject(root: string) {
-  await writeJson(join(root, 'pikkufabric.config.json'), {
-    projectId: 'proj-abc123',
-  })
   await writeJson(join(root, 'pikku.config.json'), {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
@@ -182,15 +186,9 @@ describe('pikku fabric validate', () => {
       const result = await runValidate(tmp)
       assert.strictEqual(result.ok, false)
       const ids = result.findings.map((f) => f.id)
-      assert.ok(ids.includes('fabric-config-missing'), 'fabric-config-missing')
       assert.ok(ids.includes('pikku-config-missing'), 'pikku-config-missing')
       assert.ok(ids.includes('root-package-missing'), 'root-package-missing')
       assert.ok(ids.includes('functions-pkg-missing'), 'functions-pkg-missing')
-      // fabric-config-missing is info, not error — ok=false is from other checks
-      const fabricFinding = result.findings.find(
-        (f) => f.id === 'fabric-config-missing'
-      )
-      assert.strictEqual(fabricFinding?.severity, 'info')
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -279,58 +277,33 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  describe('pikkufabric.config.json', () => {
-    test('missing pikkufabric.config.json → info (not blocking)', async () => {
+  describe('fabric project link', () => {
+    test('logged out, the link is not checked', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'pikkufabric.config.json'), { force: true })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true) // info only — validate works without fabric config
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-missing'
-        )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
+        await writeAuthFile({ tokens: {} })
+        const ids = (await runValidate(tmp)).findings.map((f) => f.id)
+        assert.ok(!ids.includes('fabric-project-not-linked'))
+        assert.ok(!ids.includes('fabric-project-unresolved'))
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
     })
 
-    test('missing projectId → info (not blocking)', async () => {
+    test('logged in with no matching remote → info (not blocking)', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {}) // no projectId
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true)
-        const ids = result.findings.map((f) => f.id)
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-no-project-id'
-        )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
-        assert.ok(!ids.includes('fabric-config-missing'))
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
-    test('placeholder projectId "__PROJECT_ID__" → info (not blocking)', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: '__PROJECT_ID__',
-        })
+        await writeAuthFile({ tokens: { [DEFAULT_API_URL]: 'tok' } })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true)
         const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-placeholder-project-id'
+          (f) => f.id === 'fabric-project-not-linked'
         )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
+        assert.strictEqual(finding?.severity, 'info')
       } finally {
+        await writeAuthFile({ tokens: {} })
         await rm(tmp, { recursive: true, force: true })
       }
     })

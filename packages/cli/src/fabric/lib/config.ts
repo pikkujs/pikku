@@ -2,32 +2,14 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
-import { FabricPreconditionError } from './errors.js'
+import { getFabricRPC } from './http.js'
+import {
+  resolveLinkedProject,
+  type LinkedProject,
+  type ProjectSource,
+} from './project-link.js'
 
-const DEFAULT_API_URL = 'https://api.pikkufabric.com'
-
-/**
- * `pikkufabric.config.json` lives next to `pikku.config.json` in the project
- * root. Pins the project link (id, default api url) and the production domain.
- * The apps it deploys are `frontends` in `pikku.config.json`. Discovered by
- * walking up from cwd until found.
- */
-export interface ProjectConfig {
-  projectId: string
-  apiUrl?: string
-  production?: FabricProductionConfig
-}
-
-/**
- * Production custom domain config. Production always maps to `main`; if
- * `domain` is set, fabric expects users to CNAME `<slug>.<domain>` and
- * `api.<domain>` at the matching `*.pikkufabric.app` hostnames. If absent,
- * production lives only on the platform-managed `*.pikkufabric.app`
- * hostnames.
- */
-export interface FabricProductionConfig {
-  domain?: string
-}
+export const DEFAULT_API_URL = 'https://api.pikkufabric.com'
 
 /**
  * `~/.fabric/auth.json` keys auth tokens by api-url so a single user can
@@ -35,91 +17,14 @@ export interface FabricProductionConfig {
  */
 export interface AuthFile {
   tokens: Record<string, string>
+  /**
+   * The api-url of the last `login`. This is what keeps a login against a
+   * local or staging fabric the default for the commands that follow it.
+   */
+  defaultApiUrl?: string
 }
 
-const projectConfigName = 'pikkufabric.config.json'
 const authFilePath = join(homedir(), '.fabric', 'auth.json')
-
-export async function findProjectConfig(
-  startDir = process.cwd()
-): Promise<{ path: string; config: ProjectConfig } | null> {
-  let dir = startDir
-  while (true) {
-    const candidate = join(dir, projectConfigName)
-    if (existsSync(candidate)) {
-      const raw = await readFile(candidate, 'utf8')
-      return { path: candidate, config: JSON.parse(raw) as ProjectConfig }
-    }
-    const parent = dirname(dir)
-    if (parent === dir) return null
-    dir = parent
-  }
-}
-
-/**
- * Templates ship `pikkufabric.config.json` with a `__PROJECT_ID__` placeholder
- * so the file's shape is visible before the repo is linked. A placeholder is
- * not a link: without this, `fabric init` on a fresh scaffold reports
- * "Already linked: __PROJECT_ID__" and every other command sends the
- * placeholder to the API as if it were a real id.
- */
-export function isLinkedProjectId(projectId?: string | null): boolean {
-  if (!projectId) return false
-  return !/^__.*__$/.test(projectId)
-}
-
-/**
- * Merge into the existing config rather than replacing it. `link` and `init`
- * only know the projectId, so a plain write silently deleted every other key —
- * `production` among them. Unknown keys are preserved too; nothing here has
- * any business dropping config it does not understand.
- */
-export async function writeProjectConfig(
-  cwd: string,
-  config: Partial<ProjectConfig> & { projectId: string }
-): Promise<string> {
-  const path = join(cwd, projectConfigName)
-  let existing: Record<string, unknown> = {}
-  if (existsSync(path)) {
-    // A read that fails for any reason other than the file's contents —
-    // permissions, a transient I/O error — tells us nothing about what the file
-    // holds. Rewriting it then is the exact clobber this function exists to
-    // prevent, so refuse the write instead.
-    let raw: string
-    try {
-      raw = await readFile(path, 'utf8')
-    } catch (error: any) {
-      throw new FabricPreconditionError(
-        `Cannot read ${projectConfigName} at ${path} (${error.message}) — refusing to overwrite it`
-      )
-    }
-    try {
-      const parsed = JSON.parse(raw) as unknown
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        existing = parsed as Record<string, unknown>
-      } else {
-        // Valid JSON that is not an object holds nothing we can merge, but it is
-        // still the user's file — say so rather than dropping it silently.
-        console.warn(
-          `[fabric] ${projectConfigName} is not a JSON object — rewriting it`
-        )
-      }
-    } catch (error: any) {
-      // An unparseable config is not a reason to lose the link; warn and start
-      // fresh rather than throwing away the command the user just ran.
-      console.warn(
-        `[fabric] ${projectConfigName} is not valid JSON (${error.message}) — rewriting it`
-      )
-    }
-  }
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(
-    path,
-    JSON.stringify({ ...existing, ...config }, null, 2) + '\n',
-    'utf8'
-  )
-  return path
-}
 
 export async function readAuthFile(): Promise<AuthFile> {
   if (!existsSync(authFilePath)) return { tokens: {} }
@@ -135,36 +40,63 @@ export async function writeAuthFile(file: AuthFile): Promise<void> {
   })
 }
 
+export type ApiUrlSource = 'flag' | 'env' | 'login' | 'default'
+
 export interface ResolvedApiContext {
   apiUrl: string
+  apiUrlSource: ApiUrlSource
   token: string | null
   projectId: string | null
+  /** How `projectId` was found; null when it was not looked up or not found. */
+  project: LinkedProject | null
 }
 
+export type { LinkedProject, ProjectSource }
+
 /**
- * Stitch together the api-url + auth token from the standard sources:
+ * Stitch together the api-url, auth token and linked project.
+ *
+ * api-url, first that answers:
  *   1. explicit override (e.g. --api-url flag)
- *   2. pikkufabric.config.json apiUrl
- *   3. FABRIC_API_URL env var
+ *   2. FABRIC_API_URL env var
+ *   3. the api-url of the last `login`
  *   4. hardcoded default
  *
- * Token comes from ~/.fabric/auth.json keyed by the resolved api-url.
+ * Token comes from ~/.fabric/auth.json keyed by the resolved api-url. The
+ * project is resolved by `resolveLinkedProject` — env, then the git
+ * remote — and only when there is a token to ask fabric with.
+ * `resolveProject: false` skips it for commands that never use it.
  */
 export async function resolveApiContext(
-  opts: { apiUrlOverride?: string; startDir?: string } = {}
+  opts: {
+    apiUrlOverride?: string
+    startDir?: string
+    resolveProject?: boolean
+  } = {}
 ): Promise<ResolvedApiContext> {
-  const projectFile = await findProjectConfig(opts.startDir)
-  const apiUrl =
-    opts.apiUrlOverride ??
-    projectFile?.config.apiUrl ??
-    process.env.FABRIC_API_URL ??
-    DEFAULT_API_URL
   const auth = await readAuthFile()
+  const [apiUrl, apiUrlSource]: [string, ApiUrlSource] = opts.apiUrlOverride
+    ? [opts.apiUrlOverride, 'flag']
+    : process.env.FABRIC_API_URL
+      ? [process.env.FABRIC_API_URL, 'env']
+      : auth.defaultApiUrl
+        ? [auth.defaultApiUrl, 'login']
+        : [DEFAULT_API_URL, 'default']
+  const token = auth.tokens[apiUrl] ?? null
+
+  const project =
+    opts.resolveProject === false
+      ? null
+      : await resolveLinkedProject({
+          rpc: token ? getFabricRPC({ apiUrl, token }) : null,
+          cwd: opts.startDir,
+        })
+
   return {
     apiUrl,
-    token: auth.tokens[apiUrl] ?? null,
-    projectId: isLinkedProjectId(projectFile?.config.projectId)
-      ? projectFile!.config.projectId
-      : null,
+    apiUrlSource,
+    token,
+    projectId: project?.projectId ?? null,
+    project,
   }
 }

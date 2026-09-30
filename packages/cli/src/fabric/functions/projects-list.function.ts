@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { findProjectConfig, resolveApiContext } from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
+import { matchRemoteProjects } from '../lib/project-link.js'
+import { readConfigProjectId } from '../lib/project-id.js'
 import { getFabricRPC } from '../lib/http.js'
 import { dim } from '../lib/output.js'
 import { FabricPreconditionError } from '../lib/errors.js'
@@ -26,7 +28,7 @@ export const FabricProjectsListOutput = z.object({
 
 /**
  * The only fabric command that does not need a linked project, which is the
- * point of it: a checkout whose config still holds `__PROJECT_ID__` can run
+ * point of it: a checkout whose remote matches no project — or two — can run
  * nothing else, and `fabric init` cannot recover the id either — it creates,
  * so against an existing project it fails with a 409 that carries no id.
  */
@@ -35,7 +37,10 @@ export const FabricProjectsList = pikkuSessionlessFunc({
   input: FabricProjectsListInput,
   output: FabricProjectsListOutput,
   func: async (_services, { apiUrl: apiUrlOverride }) => {
-    const ctx = await resolveApiContext({ apiUrlOverride })
+    const ctx = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
     if (!ctx.token)
       throw new FabricPreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
@@ -44,13 +49,26 @@ export const FabricProjectsList = pikkuSessionlessFunc({
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const { projects } = await rpc.invoke('fabricCliProjects', {})
 
-    const local = await findProjectConfig()
-    const linkedId = local?.config.projectId
+    // Every project on the matched remote is marked, not just one: when two
+    // share a repo this is the listing that has to show the user both.
+    const fromEnv = process.env.FABRIC_PROJECT_ID?.trim()
+    const fromConfig = fromEnv ? null : await readConfigProjectId()
+    const [match] =
+      fromEnv || fromConfig ? [] : await matchRemoteProjects(projects)
+    const linkedIds = new Set(
+      fromEnv
+        ? [fromEnv]
+        : fromConfig
+          ? [fromConfig.projectId]
+          : match
+            ? match.matches.map((project) => project.projectId)
+            : []
+    )
 
     return {
       projects: projects.map((project) => ({
         ...project,
-        linked: linkedId !== undefined && project.projectId === linkedId,
+        linked: linkedIds.has(project.projectId),
       })),
     }
   },

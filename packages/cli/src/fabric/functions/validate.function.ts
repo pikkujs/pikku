@@ -15,7 +15,6 @@ import {
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
-import { isGitRepo, isTracked } from '../../utils/git.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
@@ -48,7 +47,7 @@ export const FabricValidateOutput = z.object({
 async function findProjectRoot(startDir: string): Promise<string> {
   let dir = startDir
   while (true) {
-    if (existsSync(join(dir, 'pikkufabric.config.json'))) {
+    if (existsSync(join(dir, 'pikku.config.json'))) {
       return dir
     }
     if (existsSync(join(dir, 'package.json'))) {
@@ -445,81 +444,39 @@ export async function runValidate(
     }
   }
 
-  // ── pikkufabric.config.json ────────────────────────────────────────────
-  // Not required to run validate — downgraded to info so any pikku project
-  // can be checked for compatibility before it is linked to a fabric account.
-  const fabricConfigPath = join(root, 'pikkufabric.config.json')
-  const fabricConfig =
-    await readJsonSafe<Record<string, unknown>>(fabricConfigPath)
-  if (!fabricConfig) {
+  // ── fabric project link ────────────────────────────────────────────────
+  // Info, never an error: any pikku project can be validated before it is
+  // linked. The link is the git remote, so it can only be checked with a
+  // session; logged out, validate stays silent rather than guess.
+  const link = await resolveApiContext({ startDir: root }).then(
+    (ctx) => ({ ctx, error: null }),
+    (error: unknown) => ({
+      ctx: null,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  )
+  if (link.error) {
     info(
-      'fabric-config-missing',
-      'pikkufabric.config.json not found — project has not been linked to fabric yet',
-      fabricConfigPath,
-      lines(
-        'Recommended fix:',
-        '1. Run `pikku fabric link` if you already have a Fabric project.',
-        '2. If you only want to scaffold the file, create:',
-        '{',
-        '  "projectId": "__PROJECT_ID__"',
-        '}',
-        '3. Replace `__PROJECT_ID__` later with the real Fabric project id.'
-      )
+      'fabric-project-unresolved',
+      `could not tell which fabric project this repo is — ${link.error.split('\n')[0]}`,
+      root,
+      link.error
     )
-  } else if (!fabricConfig.projectId) {
+  } else if (link.ctx?.token && !link.ctx.project) {
     info(
-      'fabric-config-no-project-id',
-      'pikkufabric.config.json is missing "projectId"',
-      fabricConfigPath,
+      'fabric-project-not-linked',
+      'no fabric project has this repo as its git remote — project has not been linked to fabric yet',
+      root,
       lines(
-        'Edit `pikkufabric.config.json` and add:',
-        '{',
-        '  "projectId": "<your-project-id>"',
-        '}',
-        'If you do not know the id yet, run `pikku fabric link`.'
-      )
-    )
-  } else if (
-    (await isGitRepo(root)) &&
-    !(await isTracked('pikkufabric.config.json', root))
-  ) {
-    // An error, unlike the three states around it. Those describe a project
-    // that has not been linked yet, which is a legitimate thing to validate.
-    // This one is a project that *is* linked and still cannot deploy: the build
-    // container clones the repository, so a config that exists only in the
-    // working tree is absent the moment it matters. Locally everything passes;
-    // remotely the deploy aborts with "pikkufabric.config.json not found in
-    // repository root". Nothing downstream of here can detect that, which is
-    // why it is caught at the one point that can.
-    e(
-      'fabric-config-untracked',
-      'pikkufabric.config.json is not committed — deploy clones the repository, so the build container will not see it and aborts with "pikkufabric.config.json not found in repository root"',
-      fabricConfigPath,
-      lines(
-        'Commit the file:',
-        '  git add pikkufabric.config.json && git commit -m "chore: link to fabric"',
-        'Then check it is not being excluded:',
-        '  git check-ignore -v pikkufabric.config.json',
-        'A .gitignore rule such as `*.config.json` or a broad `*.json` will swallow it.'
-      )
-    )
-  } else if (fabricConfig.projectId === '__PROJECT_ID__') {
-    info(
-      'fabric-config-placeholder-project-id',
-      'pikkufabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
-      fabricConfigPath,
-      lines(
-        'The file exists but still contains the placeholder project id.',
-        'Run `pikku fabric link` to replace it automatically, or edit the file and set:',
-        '"projectId": "<real-project-id>"'
+        'Run `pikku fabric link` to create the project from this repo.',
+        'If the project already exists under a different remote, set FABRIC_PROJECT_ID=<projectId> (see `pikku fabric projects`).'
       )
     )
   }
 
   // ── deploy-only failure classes ────────────────────────────────────────
-  // Everything in here passed locally and failed on a build host: the config
-  // under its retired name, an override pinning @pikku/* below what the project asks for, a
-  // lockfile holding two versions of a package the deploy's hoist will pick one
+  // Everything in here passed locally and failed on a build host: an override
+  // pinning @pikku/* below what the project asks for, a lockfile holding two versions of a package the deploy's hoist will pick one
   // of, and paraglide flags written in a vite config the container never reads.
   findings.push(...(await runDeployReadinessChecks(root)))
 
@@ -1403,7 +1360,7 @@ export async function runValidate(
   }
 
   // ── declared frontends ────────────────────────────────────────────────
-  // pikkufabric.config.json is unvalidated JSON, so every field below is a
+  // pikku.config.json is unvalidated JSON, so every field below is a
   // claim, not a guarantee: a null entry or a non-string cwd used to throw on
   // property access and take down the whole validation run — the one thing that
   // was supposed to report the broken config. Shape-check the entries once here
@@ -2360,17 +2317,12 @@ export const renderValidate = (
   if (ok) {
     console.log()
     // "can be linked" is not "will deploy", and conflating them is how a green
-    // validate is followed straight by a failed deploy. The three
-    // fabric-config findings are info on purpose — an unlinked project is
-    // still worth validating — but reporting unqualified success while the
-    // build container is guaranteed to abort on a missing config is the part
-    // that misleads. So the success line says which of the two it earned.
+    // validate is followed straight by a failed deploy. The link findings are
+    // info on purpose — an unlinked project is still worth validating — but
+    // reporting unqualified success for a project nothing can deploy is the
+    // part that misleads. So the success line says which of the two it earned.
     const notLinked = findings.find((f) =>
-      [
-        'fabric-config-missing',
-        'fabric-config-no-project-id',
-        'fabric-config-placeholder-project-id',
-      ].includes(f.id)
+      ['fabric-project-not-linked', 'fabric-project-unresolved'].includes(f.id)
     )
     if (notLinked) {
       console.log(

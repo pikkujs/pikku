@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { branchFromHead, renderDeployApply } from './deploy.function.js'
+import { renderDeployApply } from './deploy.function.js'
+import { branchFromHead } from '../../utils/git.js'
 
 describe('branchFromHead', () => {
   test('takes the checked-out branch as the deploy target', () => {

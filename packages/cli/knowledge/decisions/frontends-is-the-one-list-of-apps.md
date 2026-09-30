@@ -21,8 +21,8 @@ tags: [config, frontends, fabric]
 
 There used to be two lists that did not know about each other. `frontend:
 { dir, urlPrefix, spaFallback }` in `pikku.config.json` was the single built
-directory `pikku serve` and `pikku deploy` mounted. `frontends` in
-`pikkufabric.config.json` was the set of apps Fabric builds and deploys, and
+directory `pikku serve` and `pikku deploy` mounted. A separate
+Fabric-only file held the set of apps Fabric builds and deploys, and
 `pikku new app` wrote there when that file existed. A project with two apps
 could only tell the server about one of them, and a native app had no entry to
 hang off at all.
@@ -42,9 +42,8 @@ Now there is one list, in the OSS config:
 - `primary`, `deploy`, `kind`, `dev`, `serves`, `personas` keep the meaning
   Fabric and `pikku app new` already gave them.
 
-**What this rules out:** `frontends` in `pikkufabric.config.json`. That file
-keeps what only Fabric needs — the project link and the production domain —
-and Fabric's validate, smoke and build container read the app list from
+**What this rules out:** a `frontends` list in any Fabric-only file.
+Fabric's validate, smoke and build container read the app list from
 `pikku.config.json` like everything else. A second home would let two files
 claim the same app with different `cwd`s, which is exactly the drift one list
 exists to prevent.

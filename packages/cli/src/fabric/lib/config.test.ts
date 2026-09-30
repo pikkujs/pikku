@@ -1,153 +1,83 @@
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile, chmod } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { writeProjectConfig } from './config.js'
 
-const configName = 'pikkufabric.config.json'
+// `authFilePath` is fixed when config.js loads, so HOME has to point somewhere
+// disposable first — otherwise these tests read the developer's own login.
+const home = await mkdtemp(join(tmpdir(), 'pikku-fabric-home-'))
+process.env.HOME = home
+const { resolveApiContext, writeAuthFile, DEFAULT_API_URL } =
+  await import('./config.js')
 
-async function makeTmp() {
-  return mkdtemp(join(tmpdir(), 'pikku-fabric-config-'))
-}
+const makeTmp = () => mkdtemp(join(tmpdir(), 'pikku-fabric-config-'))
 
-async function readConfig(root: string): Promise<Record<string, unknown>> {
-  return JSON.parse(await readFile(join(root, configName), 'utf8'))
-}
-
-/** Swallow the warn a rewrite prints so the test output stays readable. */
-async function withoutWarnings<T>(fn: () => Promise<T>): Promise<T> {
-  const warn = console.warn
-  console.warn = () => {}
-  try {
-    return await fn()
-  } finally {
-    console.warn = warn
-  }
-}
-
-describe('writeProjectConfig', () => {
-  test('preserves production and unknown keys when relinking', async () => {
-    const tmp = await makeTmp()
-    try {
-      await writeFile(
-        join(tmp, configName),
-        JSON.stringify({
-          projectId: 'proj-old',
-          apiUrl: 'https://api.example.com',
-          production: { domain: 'example.com' },
-          somethingWeDoNotUnderstand: { keep: true },
-        }),
-        'utf8'
-      )
-
-      await writeProjectConfig(tmp, { projectId: 'proj-new' })
-
-      const config = await readConfig(tmp)
-      assert.equal(config.projectId, 'proj-new')
-      assert.equal(config.apiUrl, 'https://api.example.com')
-      assert.deepEqual(config.production, { domain: 'example.com' })
-      assert.deepEqual(config.somethingWeDoNotUnderstand, { keep: true })
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
+describe('resolveApiContext', () => {
+  const savedEnv = { ...process.env }
+  beforeEach(async () => {
+    delete process.env.FABRIC_API_URL
+    delete process.env.FABRIC_PROJECT_ID
+    await writeAuthFile({ tokens: {} })
+  })
+  afterEach(() => {
+    process.env = { ...savedEnv, HOME: home }
   })
 
-  test('applies a partial update without dropping the other keys', async () => {
-    const tmp = await makeTmp()
-    try {
-      await writeFile(
-        join(tmp, configName),
-        JSON.stringify({
-          projectId: 'proj-abc',
-          apiUrl: 'https://api.example.com',
-          production: { domain: 'example.com' },
-        }),
-        'utf8'
-      )
-
-      await writeProjectConfig(tmp, {
-        projectId: 'proj-abc',
-        apiUrl: 'http://localhost:4002',
-      })
-
-      const config = await readConfig(tmp)
-      assert.equal(config.apiUrl, 'http://localhost:4002')
-      assert.deepEqual(config.production, { domain: 'example.com' })
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
+  test('falls back to the default api url', async () => {
+    const ctx = await resolveApiContext({
+      startDir: await makeTmp(),
+      resolveProject: false,
+    })
+    assert.equal(ctx.apiUrl, DEFAULT_API_URL)
+    assert.equal(ctx.apiUrlSource, 'default')
+    assert.equal(ctx.token, null)
   })
 
-  test('writes a fresh config when none exists', async () => {
-    const tmp = await makeTmp()
-    try {
-      const path = await writeProjectConfig(tmp, { projectId: 'proj-abc' })
-      assert.equal(path, join(tmp, configName))
-      assert.deepEqual(await readConfig(tmp), { projectId: 'proj-abc' })
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
+  test('the last login beats the default but not FABRIC_API_URL', async () => {
+    await writeAuthFile({
+      tokens: { 'http://local:4002': 'tok' },
+      defaultApiUrl: 'http://local:4002',
+    })
+    const dir = await makeTmp()
+
+    const fromLogin = await resolveApiContext({
+      startDir: dir,
+      resolveProject: false,
+    })
+    assert.equal(fromLogin.apiUrl, 'http://local:4002')
+    assert.equal(fromLogin.apiUrlSource, 'login')
+    assert.equal(fromLogin.token, 'tok')
+
+    process.env.FABRIC_API_URL = 'http://env:4002'
+    const fromEnv = await resolveApiContext({
+      startDir: dir,
+      resolveProject: false,
+    })
+    assert.equal(fromEnv.apiUrlSource, 'env')
+    assert.equal(fromEnv.token, null)
   })
 
-  test('rewrites an unparseable config rather than failing the link', async () => {
-    const tmp = await makeTmp()
-    try {
-      await writeFile(join(tmp, configName), '{ not json', 'utf8')
+  test('the flag beats env', async () => {
+    const dir = await makeTmp()
+    process.env.FABRIC_API_URL = 'http://env:4002'
 
-      await withoutWarnings(() =>
-        writeProjectConfig(tmp, { projectId: 'proj-abc' })
-      )
-
-      assert.deepEqual(await readConfig(tmp), { projectId: 'proj-abc' })
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
+    const fromFlag = await resolveApiContext({
+      startDir: dir,
+      apiUrlOverride: 'http://flag:4002',
+      resolveProject: false,
+    })
+    assert.equal(fromFlag.apiUrl, 'http://flag:4002')
+    assert.equal(fromFlag.apiUrlSource, 'flag')
   })
 
-  test('rewrites valid JSON that is not an object', async () => {
-    const tmp = await makeTmp()
-    try {
-      await writeFile(join(tmp, configName), '["not", "a", "config"]', 'utf8')
-
-      await withoutWarnings(() =>
-        writeProjectConfig(tmp, { projectId: 'proj-abc' })
-      )
-
-      assert.deepEqual(await readConfig(tmp), { projectId: 'proj-abc' })
-    } finally {
-      await rm(tmp, { recursive: true, force: true })
-    }
-  })
-
-  test('refuses to overwrite a config it could not read', async (t) => {
-    if (process.getuid?.() === 0) {
-      t.skip('root ignores file permissions')
-      return
-    }
-    const tmp = await makeTmp()
-    const path = join(tmp, configName)
-    try {
-      const original = JSON.stringify({
-        projectId: 'proj-abc',
-        production: { domain: 'example.com' },
-      })
-      await writeFile(path, original, 'utf8')
-      await chmod(path, 0o000)
-
-      await assert.rejects(
-        writeProjectConfig(tmp, { projectId: 'proj-new' }),
-        /refusing to overwrite/
-      )
-
-      await chmod(path, 0o600)
-      assert.equal(await readFile(path, 'utf8'), original)
-    } finally {
-      await chmod(path, 0o600).catch((error) => {
-        // Only affects cleanup of a temp dir we remove next; note it and move on.
-        console.warn(`[test] could not restore ${path} mode: ${error.message}`)
-      })
-      await rm(tmp, { recursive: true, force: true })
-    }
+  test('resolveProject: false leaves the project unresolved', async () => {
+    const dir = await makeTmp()
+    const ctx = await resolveApiContext({
+      startDir: dir,
+      resolveProject: false,
+    })
+    assert.equal(ctx.projectId, null)
+    assert.equal(ctx.project, null)
   })
 })

@@ -46,6 +46,7 @@ import {
   renderDeployAuto,
 } from './functions/deploy-auto.function.js'
 import { FabricStatus, renderStatus } from './functions/status.function.js'
+import { FabricConfig, renderConfig } from './functions/config.function.js'
 import {
   FabricProjectsList,
   renderProjectsList,
@@ -190,7 +191,8 @@ export const fabricCommands = defineCLICommands({
           'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       force: {
-        description: 'Replace existing fabric.config.json',
+        description:
+          'Replace a link from FABRIC_PROJECT_ID (a git-remote link cannot be replaced)',
         default: false,
       },
       apiUrl: { description: 'Override the fabric-api URL for this call' },
@@ -220,7 +222,7 @@ export const fabricCommands = defineCLICommands({
           'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       apiUrl: {
-        description: 'Override the fabric-api URL stored in fabric.config.json',
+        description: 'Override the fabric-api URL for this call',
       },
     },
   }),
@@ -548,6 +550,16 @@ export const fabricCommands = defineCLICommands({
     func: FabricStatus,
     render: renderStatus,
     description: 'Show the linked project status (active + in-flight deploy)',
+  }),
+  config: pikkuCLICommand({
+    func: FabricConfig,
+    render: renderConfig,
+    parameters: '[assignments...]',
+    description:
+      'Show what this checkout resolves to — project, api url, frontends, settings — or change project settings: `pikku fabric config showcase.name="My app" showcase.tags=voice,realtime` (an empty value clears a key)',
+    options: {
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
+    },
   }),
   projects: pikkuCLICommand({
     func: FabricProjectsList,

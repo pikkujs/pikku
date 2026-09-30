@@ -255,7 +255,7 @@ describe('bundled skills corpus', () => {
     // not happen is one migrating back in as a skill moves out of Fabric.
     //
     // `pikku fabric <verb>` is the real OSS command and stays, as does
-    // `pikkufabric.config.json`, the `fabric-theme` tool named as Fabric's, and
+    // the `fabric-theme` tool named as Fabric's, and
     // prose about the platform — only a bare `fabric ` + verb is a hit.
     const offenders: string[] = []
     for (const skill of await readSkills()) {
