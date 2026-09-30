@@ -941,6 +941,8 @@ export type PikkuCLIInput = {
 
 export type PikkuCLIConfig = PikkuCLIInput & {
   configFile?: string
+  /** Path to pikku.config.json, from the global `--config` / `-c` flag. */
+  config?: string
   tags?: string[]
   wires?: string[]
   excludeWires?: string[]

@@ -193,9 +193,9 @@ export const createConfig: CreateConfig<
   // it behaves the same inside a project; it just does not demand one.
   const configFree = CONFIG_FREE_COMMANDS.has(commandPath.join('.'))
   const cliConfig = configFree
-    ? ((await tryGetPikkuCLIConfig(logger, data.configFile, [], data.outDir)) ??
+    ? ((await tryGetPikkuCLIConfig(logger, data.config, [], data.outDir)) ??
       ({} as PikkuCLIConfig))
-    : await getPikkuCLIConfig(logger, data.configFile, [], true, data.outDir)
+    : await getPikkuCLIConfig(logger, data.config, [], true, data.outDir)
 
   // Load inspector state from file if stateInput is provided
   let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
