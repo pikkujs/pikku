@@ -34,6 +34,10 @@ import {
   renderDeployList,
 } from './functions/deploy-list.function.js'
 import {
+  FabricDeployLogs,
+  renderDeployLogs,
+} from './functions/deploy-logs.function.js'
+import {
   FabricDeployUnits,
   renderDeployUnits,
 } from './functions/deploy-units.function.js'
@@ -330,6 +334,19 @@ export const fabricCommands = defineCLICommands({
         description: 'List recent deployments for a branch',
         options: {
           branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+      logs: pikkuCLICommand({
+        parameters: '<deploymentId>',
+        func: FabricDeployLogs,
+        render: renderDeployLogs,
+        description:
+          "Print a deployment's build log (last lines by default; --full for all of it)",
+        options: {
+          tail: {
+            description: 'Number of trailing lines to show (default 100)',
+          },
+          full: { description: 'Print the whole log', default: false },
         },
       }),
       units: pikkuCLICommand({
