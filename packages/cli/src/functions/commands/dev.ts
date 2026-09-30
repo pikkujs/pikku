@@ -48,6 +48,7 @@ import { clearDevAddress, writeDevAddress } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { servedFrontend } from '../../utils/frontend.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -425,7 +426,7 @@ export const dev = pikkuSessionlessFunc<
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own
     // dev server owns dev; it proxies its API calls back to this port.
-    if (config.frontend) {
+    if (servedFrontend(config.frontends)) {
       logger.info(
         `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${boundPort}`
       )

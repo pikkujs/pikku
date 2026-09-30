@@ -40,6 +40,8 @@ jobs:
         run: node --test scripts/merged-worktrees.test.mjs
       - name: Test the live-AI e2e gate
         run: node --test scripts/ai-e2e-gate.test.mjs
+      - name: Test the native apps gate
+        run: node --test scripts/native-gate.test.mjs
       - name: Check peer dependency ranges agree across the monorepo
         run: node scripts/check-peer-dependency-consistency.mjs
       - name: Check every verifier runs in the full suite
@@ -244,3 +246,246 @@ jobs:
           # — which needs a base URL paired with the key and disables agents
           # without one.
           OPENAI_BASE_URL: https://openrouter.ai/api/v1
+
+  # The native apps: e2e/packages/web built once into a dist, then packaged by
+  # Tauri on each platform from that one artifact — the flow a project follows
+  # to ship its frontend as an app. Each smoke test launches the package against
+  # a live e2e server and waits for the app to record `native_opened` there
+  # (scripts/native-smoke.mjs). Gated like the live AI scenarios, since Rust,
+  # Gradle, an emulator and a simulator are half an hour of runners.
+  native-gate:
+    name: Native apps gate
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: decide
+        run: node scripts/native-gate.mjs >> "$GITHUB_OUTPUT"
+        env:
+          AFTER_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
+
+  native-web:
+    name: Native web dist
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, native-gate]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      # `.env.native` points the build at http://localhost:4077, where each
+      # smoke job runs the e2e server.
+      - name: Build the web app for the native shell
+        working-directory: e2e/packages/web
+        run: bun run build:native
+      # Nothing native is committed: the Tauri project is written here from the
+      # `native` entry in e2e/pikku.config.json, then given the full icon set,
+      # exactly as `pikku app native init`'s next steps tell a user to.
+      - name: Create the native project
+        working-directory: e2e
+        run: npx pikku app native init web
+      - name: Generate the icon set
+        working-directory: e2e/packages/web
+        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-web-dist
+          path: |
+            e2e/packages/web/dist-native
+            e2e/packages/web/src-tauri
+          if-no-files-found: error
+          retention-days: 7
+
+  native-desktop:
+    name: Native desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
+    continue-on-error: ${{ matrix.optional == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+            bundles: deb,appimage
+            smoke: true
+          - name: macos
+            os: macos-latest
+            bundles: app,dmg
+            smoke: true
+          # Runs but may fail: it has not yet passed end to end — see
+          # knowledge/projects/pikku/status/native-apps-1908.md.
+          - name: windows
+            os: windows-latest
+            bundles: nsis,msi
+            smoke: true
+            optional: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-web-dist
+          path: e2e/packages/web
+      - name: Install the WebKitGTK toolchain
+        if: ${{ matrix.name == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Package the app
+        working-directory: e2e/packages/web
+        shell: bash
+        run: npx --yes @tauri-apps/cli@2 build --bundles ${{ matrix.bundles }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.name }}
+          path: e2e/packages/web/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 7
+      - if: ${{ matrix.smoke }}
+        uses: ./.github/actions/setup
+      - if: ${{ matrix.smoke }}
+        uses: ./.github/actions/e2e-backend
+      - name: Launch the app and wait for it to call home
+        if: ${{ matrix.smoke }}
+        working-directory: e2e/packages/web
+        shell: bash
+        run: |
+          case "${{ matrix.name }}" in
+            linux) xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            windows) src-tauri/target/release/web-app.exe > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            *) src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+          esac
+          node ../../../scripts/native-smoke.mjs http://localhost:4077 120 || { cat "$RUNNER_TEMP/app.log"; exit 1; }
+
+  native-android:
+    name: Native Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-web-dist
+          path: e2e/packages/web
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # gen/android is generated here rather than committed: the e2e app has no
+      # manifest, signing or icon changes of its own, and a fresh `init` on every
+      # run is what proves the generated project still initialises. A debug
+      # build is signed with the debug key, so the APK installs on any phone
+      # that allows sideloading, and permits the cleartext localhost API.
+      - name: Build a debug APK (arm64 phones + x86_64 emulator)
+        working-directory: e2e/packages/web
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          npx --yes @tauri-apps/cli@2 android init --ci
+          npx --yes @tauri-apps/cli@2 android build --apk --debug --target aarch64 --target x86_64
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          echo "APK=$PWD/$apk" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-android
+          path: ${{ env.APK }}
+          if-no-files-found: error
+          retention-days: 7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-backend
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # `adb reverse` makes the emulator's localhost:4077 the runner's, so the
+      # APK built for localhost reaches the e2e server unchanged.
+      - name: Install, launch and wait for it to call home
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb reverse tcp:4077 tcp:4077
+            adb install -r "$APK"
+            adb shell monkey -p dev.pikku.e2e -c android.intent.category.LAUNCHER 1
+            node scripts/native-smoke.mjs http://localhost:4077 180 || (adb logcat -d | tail -200; exit 1)
+
+  # Unsigned, for the simulator only: a build that installs on a phone needs an
+  # Apple Developer team, which this repository does not have. What it proves is
+  # that the generated project initialises, compiles and runs on iOS.
+  native-ios:
+    name: Native iOS (simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-web-dist
+          path: e2e/packages/web
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Build for the simulator
+        working-directory: e2e/packages/web
+        run: |
+          npx --yes @tauri-apps/cli@2 ios init --ci
+          npx --yes @tauri-apps/cli@2 ios build --debug --target aarch64-sim --no-sign
+          app=$(find src-tauri/gen/apple -name '*.app' -type d -path '*iphonesimulator*' | head -1)
+          [ -n "$app" ] || app=$(find src-tauri/gen/apple -name '*.app' -type d | head -1)
+          echo "IOS_APP=$PWD/$app" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-ios-simulator
+          path: ${{ env.IOS_APP }}
+          if-no-files-found: error
+          retention-days: 7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-backend
+      # The simulator shares the Mac's network, so localhost:4077 is the server.
+      - name: Install, launch and wait for it to call home
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl install "$udid" "$IOS_APP"
+          xcrun simctl launch "$udid" dev.pikku.e2e
+          node scripts/native-smoke.mjs http://localhost:4077 180

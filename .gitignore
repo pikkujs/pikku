@@ -185,3 +185,9 @@ verifiers/addon-openapi/generated/
 # The fullstack verifier ships a hand-written frontend rather than a built one,
 # so this browser script is source despite the *.js rule above.
 !verifiers/fullstack/web/app.js
+
+# The e2e app's native shell is built from scratch on every run, as a new
+# project would be: the develop native jobs write src-tauri with `pikku app
+# native init` from pikku.config.json, and dist-native is `build:native` output.
+e2e/packages/web/dist-native/
+e2e/packages/web/src-tauri/

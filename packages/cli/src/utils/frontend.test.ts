@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 
-import { assertFrontendBuilt } from './frontend.js'
+import {
+  assertFrontendBuilt,
+  nativeSidecars,
+  servedFrontend,
+} from './frontend.js'
 
 describe('assertFrontendBuilt', () => {
   const tempDirs: string[] = []
@@ -45,5 +49,53 @@ describe('assertFrontendBuilt', () => {
     await mkdir(join(dir, 'assets'), { recursive: true })
 
     await assert.rejects(() => assertFrontendBuilt(dir), /never builds it/)
+  })
+})
+
+describe('servedFrontend', () => {
+  test('picks the frontend that sets serve', () => {
+    assert.deepEqual(
+      servedFrontend({
+        admin: { cwd: '/p/admin', dist: '/p/admin/dist' },
+        web: {
+          cwd: '/p/web',
+          dist: '/p/web/dist',
+          serve: { urlPrefix: '/', spaFallback: true },
+        },
+      }),
+      { name: 'web', dir: '/p/web/dist', urlPrefix: '/', spaFallback: true }
+    )
+  })
+
+  test('is undefined when nothing is served', () => {
+    assert.equal(
+      servedFrontend({ web: { cwd: '/p/web', dist: '/p/web/dist' } }),
+      undefined
+    )
+    assert.equal(servedFrontend(undefined), undefined)
+  })
+})
+
+describe('nativeSidecars', () => {
+  test('lists the native projects that bundle the server, and only those', () => {
+    assert.deepEqual(
+      nativeSidecars({
+        desk: {
+          cwd: '/p/desk',
+          dist: '/p/desk/dist',
+          native: {
+            identifier: 'com.acme.desk',
+            platforms: ['desktop'],
+            bundleServer: true,
+          },
+        },
+        phone: {
+          cwd: '/p/phone',
+          dist: '/p/phone/dist',
+          native: { identifier: 'com.acme.phone', platforms: ['android'] },
+        },
+      }),
+      [{ name: 'desk', dir: '/p/desk/src-tauri' }]
+    )
   })
 })

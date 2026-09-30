@@ -435,21 +435,11 @@ const rustcHostOutput = async (): Promise<string | undefined> => {
 export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
   /**
-   * Generate a desktop shell (Tauri) around the compiled binary. Requires the
-   * `bun` runtime — the shell ships the binary as a sidecar, and only that
-   * runtime produces one. A shell pointed at {@link desktopUrl} ships no binary
-   * and so has no such requirement.
+   * Native projects to install the compiled server into as their sidecar —
+   * every frontend whose `native.bundleServer` is set. Only the `bun` runtime
+   * produces a binary to install; the CLI fills this in from the config.
    */
-  desktop?: boolean
-  /** Project root. The shell crate is written to `<projectDir>/src-tauri`. */
-  projectDir?: string
-  /** Bundle identifier for the shell. Derived from the app name when absent. */
-  desktopIdentifier?: string
-  /**
-   * An already-deployed server for the shell to open, instead of bundling one.
-   * The window is a webview onto that origin and nothing else is shipped.
-   */
-  desktopUrl?: string
+  nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
   contributors?: PlatformServiceContributor[]
 }
 
@@ -473,19 +463,13 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly singleUnit = true
   readonly runtime: StandaloneRuntime
   readonly bundlesSqliteLibrary: boolean
-  readonly desktop: boolean
-  readonly projectDir?: string
-  readonly desktopIdentifier?: string
-  readonly desktopUrl?: string
+  readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
     this.bundlesSqliteLibrary = this.runtime === 'bun'
-    this.desktop = options.desktop ?? Boolean(options.desktopUrl)
-    this.projectDir = options.projectDir
-    this.desktopIdentifier = options.desktopIdentifier
-    this.desktopUrl = options.desktopUrl
+    this.nativeSidecars = options.nativeSidecars ?? []
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -790,31 +774,17 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }) {
     const { buildDir, logger } = options
 
-    // Checked before anything expensive runs: a `--desktop` deploy that cannot
-    // produce a shell should say so now, not after a bun compile.
-    if (this.desktop) {
-      if (!this.desktopUrl && this.runtime !== 'bun') {
-        return {
-          success: false,
-          errors: [
-            {
-              step: 'desktop',
-              error: `A desktop shell ships the server as a sidecar binary, which only the bun runtime produces. Re-run with --runtime bun (got '${this.runtime}').`,
-            },
-          ],
-        }
-      }
-      if (!this.projectDir) {
-        return {
-          success: false,
-          errors: [
-            {
-              step: 'desktop',
-              error:
-                'No project directory was supplied, so there is nowhere to write src-tauri/.',
-            },
-          ],
-        }
+    // Checked before anything expensive runs: an app that ships the server
+    // cannot be given one by a runtime that compiles no binary.
+    if (this.nativeSidecars.length > 0 && this.runtime !== 'bun') {
+      return {
+        success: false,
+        errors: [
+          {
+            step: 'native',
+            error: `${this.nativeSidecars.map((app) => app.name).join(', ')} ${this.nativeSidecars.length === 1 ? 'sets' : 'set'} native.bundleServer, which ships the server as a sidecar binary — only the bun runtime produces one. Re-run with --runtime bun (got '${this.runtime}').`,
+          },
+        ],
       }
     }
 
@@ -929,51 +899,29 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       }
     }
 
-    // --- 2c. desktop: wrap the server in a shell, or point one at a remote ---
+    // --- 2c. native apps that ship this server as their sidecar ---
     let targetTriple: string | undefined
-    if (this.desktop && this.projectDir) {
-      const { generateTauriShell, tauriBundleIdentifier } =
-        await import('./tauri/generate.js')
+    if (this.nativeSidecars.length > 0) {
       const { hostTargetTriple } = await import('./tauri/target-triple.js')
-      const { renderTauriNextSteps } = await import('./tauri/next-steps.js')
+      const { installSidecar } = await import('./tauri/project.js')
       try {
-        const rustcVersionVerbose = await rustcHostOutput()
-        targetTriple = hostTargetTriple({ rustcVersionVerbose })
-        const shell = await generateTauriShell({
-          projectDir: this.projectDir,
-          appName,
-          identifier: this.desktopIdentifier ?? tauriBundleIdentifier(appName),
-          targetTriple,
-          ...(this.desktopUrl
-            ? { remoteUrl: this.desktopUrl }
-            : { binaryPath: join(outDir, appName) }),
+        targetTriple = hostTargetTriple({
+          rustcVersionVerbose: await rustcHostOutput(),
         })
-        logger.info(`Desktop shell: ${shell.dir} (${shell.targetTriple})`)
-        if (shell.written.length) {
-          logger.info(`  wrote ${shell.written.join(', ')}`)
-        }
-        if (shell.preserved.length) {
-          logger.info(
-            `  kept your edits, not regenerated: ${shell.preserved.join(', ')}`
-          )
-        }
-        if (shell.sidecar) {
-          logger.info(`  sidecar: binaries/${shell.sidecar.fileName}`)
-        } else {
-          logger.info(`  window opens: ${this.desktopUrl}`)
-        }
-        for (const line of renderTauriNextSteps({
-          shellDir: shell.dir,
-          hasRust: rustcVersionVerbose !== undefined,
-        })) {
-          logger.info(line)
+        for (const app of this.nativeSidecars) {
+          const sidecar = await installSidecar({
+            dir: app.dir,
+            binaryPath: join(outDir, appName),
+            targetTriple,
+          })
+          logger.info(`Native app ${app.name}: sidecar ${sidecar.path}`)
         }
       } catch (e: unknown) {
         return {
           success: false,
           errors: [
             {
-              step: 'desktop',
+              step: 'native',
               error: e instanceof Error ? e.message : String(e),
             },
           ],

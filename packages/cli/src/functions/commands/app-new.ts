@@ -22,22 +22,14 @@ import {
   type Frontend,
 } from '../../utils/app-scaffold.js'
 import {
-  PikkuNewAppInput,
-  PikkuNewAppOutputSchema,
-  type PikkuNewAppOutput,
-} from './new-app.schemas.js'
+  PikkuAppNewInput,
+  PikkuAppNewOutputSchema,
+  type PikkuAppNewOutput,
+} from './app-new.schemas.js'
 
 const DEFAULT_TEMPLATE = 'gh:pikkujs/starter-template/apps/app'
 
-const CONFIG_FILES = ['pikkufabric.config.json', 'pikku.config.json']
-
-function findConfig(repoDir: string): string | null {
-  for (const name of CONFIG_FILES) {
-    const path = join(repoDir, name)
-    if (existsSync(path)) return path
-  }
-  return null
-}
+const CONFIG_FILE = 'pikku.config.json'
 
 /**
  * Add a frontend, scaffolded from the starter template.
@@ -59,13 +51,13 @@ function findConfig(repoDir: string): string | null {
  * Serving the new app (a reverse proxy, a supervisor, a dev runner) belongs
  * to whatever is hosting it.
  */
-export const pikkuNewApp = pikkuSessionlessFunc({
+export const pikkuAppNew = pikkuSessionlessFunc({
   description: 'Add a frontend, scaffolded from the starter template.',
-  input: PikkuNewAppInput,
-  output: PikkuNewAppOutputSchema,
+  input: PikkuAppNewInput,
+  output: PikkuAppNewOutputSchema,
   func: async (_services, input) => {
     const repoDir = process.cwd()
-    const refuse = (refusal: string): PikkuNewAppOutput => ({
+    const refuse = (refusal: string): PikkuAppNewOutput => ({
       slug: input.slug,
       path: '',
       port: 0,
@@ -98,10 +90,10 @@ export const pikkuNewApp = pikkuSessionlessFunc({
           'not exist yet.'
       )
 
-    const configPath = findConfig(repoDir)
-    if (!configPath)
+    const configPath = join(repoDir, CONFIG_FILE)
+    if (!existsSync(configPath))
       return refuse(
-        `no ${CONFIG_FILES.join(' or ')} in ${repoDir}. This command edits the file that ` +
+        `no ${CONFIG_FILE} in ${repoDir}. This command edits the file that ` +
           'says what apps exist, so it has to be run from the project root.'
       )
 
@@ -220,7 +212,7 @@ export const pikkuNewApp = pikkuSessionlessFunc({
   },
 })
 
-export function renderNewApp(_s: unknown, result: PikkuNewAppOutput): void {
+export function renderAppNew(_s: unknown, result: PikkuAppNewOutput): void {
   if (result.refusal) {
     console.log(`\n❌ App not created — ${result.refusal}\n`)
     process.exitCode = 1

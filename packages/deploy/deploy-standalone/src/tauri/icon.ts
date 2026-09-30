@@ -60,3 +60,29 @@ export const renderPlaceholderIcon = (size: number): Buffer => {
     chunk('IEND', Buffer.alloc(0)),
   ])
 }
+
+/**
+ * The same placeholder as a Windows icon. The Windows bundler refuses to
+ * package without a `.ico`, and an ICO may carry a PNG as its image, so this is
+ * the PNG behind a one-entry directory. ICO sizes stop at 256, written as 0.
+ */
+export const renderPlaceholderIco = (size: number): Buffer => {
+  if (size > 256) {
+    throw new Error(`An .ico image is at most 256 pixels, got ${size}`)
+  }
+  const png = renderPlaceholderIcon(size)
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0)
+  header.writeUInt16LE(1, 2)
+  header.writeUInt16LE(1, 4)
+  const entry = Buffer.alloc(16)
+  entry.writeUInt8(size === 256 ? 0 : size, 0)
+  entry.writeUInt8(size === 256 ? 0 : size, 1)
+  entry.writeUInt8(0, 2)
+  entry.writeUInt8(0, 3)
+  entry.writeUInt16LE(1, 4)
+  entry.writeUInt16LE(32, 6)
+  entry.writeUInt32LE(png.length, 8)
+  entry.writeUInt32LE(header.length + entry.length, 12)
+  return Buffer.concat([header, entry, png])
+}

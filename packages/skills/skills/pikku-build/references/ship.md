@@ -108,6 +108,14 @@ workspace). Serve each behind its own hostname, and put the API behind `/api` on
 prefix, everything else under `/api/*` reaches the pikku server unprefixed. Get
 this wrong and sign-in fails on one app only, which is a miserable thing to debug.
 
+To serve one frontend from the pikku server's own origin instead — one binary,
+one hostname, first-party cookies — give its `frontends` entry `"serve": {}`
+(`urlPrefix` defaults to `/`, `spaFallback` to true). `pikku serve`, `pikku dev`
+and a standalone deploy then mount its built `dist`. Pikku never builds it, so
+build the frontend first. Only one entry may set `serve`.
+
+To ship an app as a desktop or Android app, read `references/native-app.md`.
+
 Before shipping, run the full gate:
 
 ```sh
@@ -129,7 +137,7 @@ out of.** The server-side pass proves the functions; it renders nothing. The
 pages are client-rendered, so a component that throws still returns HTTP 200
 with an empty shell — the same trap §6 warns about, and the release gate is
 exactly where it gets shipped past. Run the browser pass, and run it **for every
-environment in `pikkufabric.config.json`**, not just the first:
+environment in `pikku.config.json`**, not just the first:
 
 ```sh
 bunx --bun pikku scenario run local --spawn --run browser
@@ -150,9 +158,11 @@ every save — but run it.
 Everything above is open source. This is the contract that keeps
 `pikku fabric init` a one-command import later, instead of a migration.
 
-- **`pikkufabric.config.json` describes reality.** Every app has an entry with
-  the right `cwd`, `port`, `kind` and `dev.command`; exactly one is `primary`;
-  `serves` and `personas` name real personas from the personas section. Leave `projectId` as
+- **`frontends` in `pikku.config.json` describes reality.** Every app has an
+  entry with the right `cwd`, `kind` and `dev` (`command`, `port`); exactly one
+  is `primary`; `serves` and `personas` name real personas from the personas
+  section.
+- **`pikkufabric.config.json` holds only the link.** Leave `projectId` as
   `__PROJECT_ID__` — that placeholder means "unlinked", and linking the project
   writes the real one. Do not invent a value to make it look configured.
 - **One `definePersonas` call**, every persona reachable through exactly one

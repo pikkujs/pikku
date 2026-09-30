@@ -13,3 +13,7 @@
 # report is regenerated. Without the driver registered, git falls back to an
 # ordinary conflict, which is annoying rather than wrong.
 packages/core/api-report.md  merge=api-report linguist-generated
+
+# Bun writes its lockfile with LF. Checked out with CRLF — git's default on
+# Windows — every install rewrites it, and CI's setup refuses a changed lockfile.
+bun.lock  text eol=lf

@@ -1,15 +1,16 @@
 ---
 type: decision
 title: Deploy consumes a built frontend, it does not build one
-description: pikku reads an already-built client directory named by the frontend config key; running the frontend's build command is the project's job
+description: pikku reads an already-built client directory named by a frontends entry; running the frontend's build command is the project's job
 tags: [frontend, deploy, standalone, cli]
 ---
 
 # Deploy consumes a built frontend, it does not build one
 
-`frontend` in `pikku.config.json` names a **directory of built output** —
-`{ dir: './web/dist', urlPrefix: '/', spaFallback: true }` — not a project to
-build. `pikku deploy` reads that directory. It does not run `vite build`, does
+A `frontends` entry in `pikku.config.json` names a **directory of built
+output** — `dist`, relative to the frontend's `cwd` — not a build to run. The
+entry that sets `serve` (`{ "cwd": "web", "dist": "dist", "serve": {} }`) is
+the one a server mounts. `pikku deploy` reads that directory. It does not run `vite build`, does
 not shell out to a package manager, and fails with a plain error if the
 directory is absent rather than trying to produce it.
 
@@ -29,5 +30,10 @@ sequence is fixed: **frontend build → manifest generation → server bundle �
 enumerated, so there is no arrangement in which pikku could usefully build it
 later.
 
-**What this rules out:** a `frontend.build` command in the config, and any
+The same rule is what makes native builds portable. `tauri build` reads the
+same `dist`, so CI can build the frontend once, upload `dist/` as an artifact,
+and run `tauri build` on a runner per platform without any of them rebuilding
+the UI.
+
+**What this rules out:** a build command in a `frontends` entry, and any
 deploy step that invokes a package manager on the user's behalf.

@@ -3,7 +3,7 @@
 Read this when the split you recorded in Phase 2 is "separate apps" and you have
 reached the milestone that needs the second one. **Not before.** Cloning
 `apps/app` materialises a directory of copied screens; doing it during planning
-leaves `pikkufabric.config.json` pointing at an app nobody has designed yet.
+leaves `frontends` in `pikku.config.json` pointing at an app nobody has designed yet.
 
 If the split is "one app with paths", you never need this file — add route
 segments under `/app` and give each audience its own entries in `useNavItems()`.
@@ -66,14 +66,15 @@ second is the one that catches a `permissions` field nobody wired.
 ## The second app
 
 ```bash
-pikku new app admin --serves staff --personas manager,mechanic
+pikku app new admin --serves staff --personas manager,mechanic
 ```
 
 One command does every step this section used to list by hand: it fetches
 `pikkujs/starter-template`'s `apps/app`, re-points its `package.json` at the
 new name, its own dev/preview port and its own `--tsBuildInfoFile`, stamps
 `app: '<slug>'` onto each named persona in `definePersonas({…})`, adds the
-`frontends` entry, and re-runs `bun install`.
+`frontends` entry to `pikku.config.json`, and re-runs `bun install`. `pikku app
+list` shows every app afterwards.
 
 **It scaffolds from the starter template, not from the app you already have.**
 Copying the working app drags its screens, routes and nav into an audience that
@@ -119,10 +120,14 @@ It stops after `bun install`. Serving the new app — a reverse proxy, a
 supervisor, a dev runner, a deploy target — belongs to whatever is hosting it.
 On a plain checkout, `bun --filter @project/<slug> dev` is enough.
 
+Packaging it as a desktop or Android app is a separate step, on the same
+`frontends` entry: `pikku app native init <slug>`. See
+`references/native-app.md`.
+
 ### Scenarios across the two apps
 
-`pikku new app` stamps `app: '<slug>'` onto each persona it is given, and that
-field — not the `personas` array in `pikkufabric.config.json` — is what
+`pikku app new` stamps `app: '<slug>'` onto each persona it is given, and that
+field — not the `personas` array on the `frontends` entry — is what
 `@pikku/playwright` resolves a persona's base url from at sign-in. A persona
 with no `app` lands on the fallback frontend, which is the other app's screens
 with the right session on them.

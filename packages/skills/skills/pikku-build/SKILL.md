@@ -44,7 +44,8 @@ plus more effort" — it is App plus a deliberate surface checklist, so read the
 base first and follow it in full rather than blending the two into one plan.
 
 The supporting references belong to whichever mode sends you to them:
-`references/multi-app.md` (a second frontend), `references/design.md` (showing
+`references/multi-app.md` (a second frontend), `references/native-app.md`
+(shipping an app as a desktop or Android app), `references/design.md` (showing
 a picture of the screens first, committing to a design direction, and judging
 whether the screens realise it — read before the first screen is built, not
 after the last), `references/theming.md`
@@ -139,7 +140,7 @@ generated functions through `ref()`.
 - **Print the links whenever the stack comes up, and in every hand-over.** Full,
   clickable URLs, with the ports taken from what `bun run dev` actually printed:
   - **App** — the frontend's URL (`http://localhost:7104` in the template; each
-    frontend in `pikkufabric.config.json` has its own port)
+    frontend in `frontends` in `pikku.config.json` has its own port)
   - **API** — `http://localhost:3000`
   - **Console** — `http://localhost:3000/console`, plus a deep link to each
     page that shows what this turn produced (the paths are below)

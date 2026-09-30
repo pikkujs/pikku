@@ -27,7 +27,7 @@ async function withoutWarnings<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 describe('writeProjectConfig', () => {
-  test('preserves frontends, production and unknown keys when relinking', async () => {
+  test('preserves production and unknown keys when relinking', async () => {
     const tmp = await makeTmp()
     try {
       await writeFile(
@@ -35,7 +35,6 @@ describe('writeProjectConfig', () => {
         JSON.stringify({
           projectId: 'proj-old',
           apiUrl: 'https://api.example.com',
-          frontends: { app: { cwd: 'apps/app', kind: 'ssr' } },
           production: { domain: 'example.com' },
           somethingWeDoNotUnderstand: { keep: true },
         }),
@@ -47,9 +46,6 @@ describe('writeProjectConfig', () => {
       const config = await readConfig(tmp)
       assert.equal(config.projectId, 'proj-new')
       assert.equal(config.apiUrl, 'https://api.example.com')
-      assert.deepEqual(config.frontends, {
-        app: { cwd: 'apps/app', kind: 'ssr' },
-      })
       assert.deepEqual(config.production, { domain: 'example.com' })
       assert.deepEqual(config.somethingWeDoNotUnderstand, { keep: true })
     } finally {
@@ -65,7 +61,7 @@ describe('writeProjectConfig', () => {
         JSON.stringify({
           projectId: 'proj-abc',
           apiUrl: 'https://api.example.com',
-          frontends: { app: { cwd: 'apps/app' } },
+          production: { domain: 'example.com' },
         }),
         'utf8'
       )
@@ -77,7 +73,7 @@ describe('writeProjectConfig', () => {
 
       const config = await readConfig(tmp)
       assert.equal(config.apiUrl, 'http://localhost:4002')
-      assert.deepEqual(config.frontends, { app: { cwd: 'apps/app' } })
+      assert.deepEqual(config.production, { domain: 'example.com' })
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -134,7 +130,7 @@ describe('writeProjectConfig', () => {
     try {
       const original = JSON.stringify({
         projectId: 'proj-abc',
-        frontends: { app: { cwd: 'apps/app' } },
+        production: { domain: 'example.com' },
       })
       await writeFile(path, original, 'utf8')
       await chmod(path, 0o000)

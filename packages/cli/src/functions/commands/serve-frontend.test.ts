@@ -33,6 +33,7 @@ describe('resolveFrontendMount', () => {
 
     assert.deepEqual(
       await resolveFrontendMount({
+        name: 'web',
         dir,
         urlPrefix: '/',
         spaFallback: true,
@@ -45,6 +46,7 @@ describe('resolveFrontendMount', () => {
     const dir = await builtFrontend()
 
     const mount = await resolveFrontendMount({
+      name: 'web',
       dir,
       urlPrefix: '/app',
       spaFallback: false,
@@ -62,7 +64,12 @@ describe('resolveFrontendMount', () => {
     const dir = join(root, 'dist')
 
     await assert.rejects(
-      resolveFrontendMount({ dir, urlPrefix: '/', spaFallback: true }),
+      resolveFrontendMount({
+        name: 'web',
+        dir,
+        urlPrefix: '/',
+        spaFallback: true,
+      }),
       (e: unknown) =>
         e instanceof Error &&
         e.message.includes(dir) &&
@@ -77,7 +84,12 @@ describe('resolveFrontendMount', () => {
     await mkdir(dir, { recursive: true })
 
     await assert.rejects(
-      resolveFrontendMount({ dir, urlPrefix: '/', spaFallback: true })
+      resolveFrontendMount({
+        name: 'web',
+        dir,
+        urlPrefix: '/',
+        spaFallback: true,
+      })
     )
   })
 })

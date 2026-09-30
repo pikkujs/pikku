@@ -1417,15 +1417,19 @@ export async function runValidate(
   let hasMantineFrontend = false
   /** every syntactically valid cwd, including ones whose directory is missing */
   const declaredCwdList: string[] = []
-  const rawFrontends = fabricConfig?.frontends
+  // `frontends` lives in pikku.config.json: an app is a pikku concept, not a
+  // Fabric one, and `pikku app` reads and writes it there.
+  const appsConfigPath = join(root, 'pikku.config.json')
+  const appsConfig = await readJsonSafe<Record<string, unknown>>(appsConfigPath)
+  const rawFrontends = appsConfig?.frontends
   if (
     rawFrontends !== undefined &&
     (!rawFrontends || typeof rawFrontends !== 'object')
   ) {
     e(
       'frontends-invalid',
-      'pikkufabric.config.json "frontends" is not an object — no frontend will be built or type-checked',
-      fabricConfigPath,
+      'pikku.config.json "frontends" is not an object — no frontend will be built or type-checked',
+      appsConfigPath,
       `Set "frontends" to an object keyed by slug: { "app": { "cwd": "apps/app", "kind": "ssr" } }`
     )
   } else if (rawFrontends) {
@@ -1435,8 +1439,8 @@ export async function runValidate(
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
         e(
           `frontend-entry-invalid-${slug}`,
-          `pikkufabric.config.json frontend "${slug}" is not an object`,
-          fabricConfigPath,
+          `pikku.config.json frontend "${slug}" is not an object`,
+          appsConfigPath,
           `Give "${slug}" an object value: { "cwd": "apps/${slug}", "kind": "ssr" }`
         )
         continue
@@ -1445,8 +1449,8 @@ export async function runValidate(
       if (typeof cwd !== 'string' || cwd.trim() === '') {
         e(
           `frontend-cwd-invalid-${slug}`,
-          `pikkufabric.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
-          fabricConfigPath,
+          `pikku.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
+          appsConfigPath,
           `Set "cwd" to the app directory, e.g. { "${slug}": { "cwd": "apps/${slug}" } }`
         )
         continue
@@ -1566,7 +1570,7 @@ export async function runValidate(
     }
   }
 
-  // ── apps/ vs fabric.config.json frontends ─────────────────────────────
+  // ── apps/ vs pikku.config.json frontends ─────────────────────────────
   const appsDir = join(root, 'apps')
 
   if (existsSync(appsDir)) {
@@ -1580,7 +1584,7 @@ export async function runValidate(
       /* ignore */
     }
 
-    const declaredCwds = fabricConfig ? new Set(declaredCwdList) : null
+    const declaredCwds = appsConfig ? new Set(declaredCwdList) : null
 
     for (const name of appEntries) {
       const appPath = join(appsDir, name)
@@ -1589,9 +1593,9 @@ export async function runValidate(
       if (declaredCwds && !declaredCwds.has(cwd)) {
         w(
           `app-not-declared-${name}`,
-          `apps/${name} is not declared in fabric.config.json frontends`,
+          `apps/${name} is not declared in pikku.config.json frontends`,
           appPath,
-          `Add an entry to fabric.config.json: { "frontends": { "${name}": { "cwd": "${cwd}", "kind": "ssr" } } }`
+          `Add an entry to pikku.config.json, or run \`pikku app new ${name}\`: { "frontends": { "${name}": { "cwd": "${cwd}", "kind": "ssr" } } }`
         )
       }
 

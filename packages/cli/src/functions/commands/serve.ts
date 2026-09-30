@@ -28,6 +28,7 @@ import { registerScenarioInstrumentation } from '../wirings/scenarios/register-s
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { resolveFrontendMount } from './serve-frontend.js'
+import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
@@ -180,8 +181,9 @@ export const serve = pikkuSessionlessFunc<
         'Console app not found. Please rebuild @pikku/cli with the console app bundled.'
       )
     }
-    const frontendMount = config.frontend
-      ? await resolveFrontendMount(config.frontend)
+    const frontend = servedFrontend(config.frontends)
+    const frontendMount = frontend
+      ? await resolveFrontendMount(frontend)
       : undefined
     // The console goes first so a frontend mounted at `/` cannot claim
     // `/console` before the console's own mount is offered the request, and

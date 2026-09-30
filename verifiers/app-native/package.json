@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/verifiers-app-native",
+  "type": "module",
+  "private": true,
+  "description": "Checks that `pikku app native` writes, maintains and checks a Tauri project per frontend, and refuses what it cannot build",
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-app-native.ts"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24"
+  }
+}

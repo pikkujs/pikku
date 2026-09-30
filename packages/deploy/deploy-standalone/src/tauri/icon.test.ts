@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { inflateSync } from 'node:zlib'
 
-import { renderPlaceholderIcon } from './icon.js'
+import { renderPlaceholderIco, renderPlaceholderIcon } from './icon.js'
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
 
@@ -59,5 +59,24 @@ describe('the placeholder icon a generated shell ships with', () => {
 
   it('is deterministic, so regenerating never churns the file', () => {
     assert.ok(renderPlaceholderIcon(64).equals(renderPlaceholderIcon(64)))
+  })
+})
+
+describe('the placeholder .ico the Windows bundler needs', () => {
+  it('is an icon directory with one entry that holds the PNG', () => {
+    const ico = renderPlaceholderIco(256)
+    assert.equal(ico.readUInt16LE(0), 0, 'reserved')
+    assert.equal(ico.readUInt16LE(2), 1, 'type 1 is an icon, not a cursor')
+    assert.equal(ico.readUInt16LE(4), 1, 'one image')
+    assert.equal(ico.readUInt8(6), 0, '256 is written as 0')
+    const length = ico.readUInt32LE(14)
+    const offset = ico.readUInt32LE(18)
+    assert.equal(offset, 22)
+    assert.equal(offset + length, ico.length)
+    assert.ok(ico.subarray(offset, offset + 8).equals(PNG_SIGNATURE))
+  })
+
+  it('refuses a size an .ico cannot state', () => {
+    assert.throws(() => renderPlaceholderIco(512), /at most 256/)
   })
 })

@@ -335,7 +335,7 @@ Cloning `apps/app` materialises a folder of copied screens, so it belongs to the
 milestone that first needs the second app, not to planning.
 
 When you get there, read `references/multi-app.md`. It carries the clone, the
-`package.json` edits, the `pikkufabric.config.json` frontends map, the dev-runner
+`package.json` edits, the `frontends` map in `pikku.config.json`, the dev-runner
 change that otherwise silently never starts your second app, the per-frontend
 scenario environments, and how sessions behave across two origins.
 
@@ -568,7 +568,7 @@ Then run it:
 bun run prebuild && bun run dev
 ```
 
-That starts the API on :3000 and every frontend in `pikkufabric.config.json`. A
+That starts the API on :3000 and every frontend in `frontends`. A
 frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
 
