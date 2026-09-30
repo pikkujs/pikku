@@ -6,7 +6,15 @@ import type {
 import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { PikkuMissingMetaError } from '../../errors/errors.js'
+import {
+  PikkuMissingMetaError,
+  UnauthorizedError,
+} from '../../errors/errors.js'
+import {
+  timingSafeStringEqual,
+  verifyHmacSignature,
+  verifyPublicKeySignature,
+} from '../../utils/hmac.js'
 import type {
   DeclaredTriggerSource,
   TriggerSourceRow,
@@ -23,6 +31,7 @@ import type {
   WebhookSourceMeta,
   WebhookSourceState,
   WebhookTeardownResult,
+  WebhookVerify,
 } from './webhook-source.types.js'
 
 const LIFECYCLE = ['receive', 'check', 'setup', 'teardown'] as const
@@ -38,6 +47,11 @@ export const wireTriggerWebhookSource = <
       `[pikku] Skipping webhook source '${source.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
     return
+  }
+  if (source.verify && !source.credential) {
+    throw new Error(
+      `Webhook source '${source.name}' declares 'verify' without the 'credential' that holds its secret`
+    )
   }
   const sources = pikkuState(null, 'trigger', 'webhookSources')
   if (sources.has(source.name)) {
@@ -106,6 +120,65 @@ const readRequest = async (http: PikkuHTTP | undefined) => {
   } satisfies WebhookRequest
 }
 
+const signedWith = async (
+  verify: WebhookVerify,
+  request: WebhookRequest,
+  secret: string,
+  services: CoreSingletonServices
+): Promise<boolean> => {
+  if (typeof verify === 'function') {
+    return await verify(request, secret, services)
+  }
+  const header = (name: string, prefix = '') => {
+    const value = request.headers[name.toLowerCase()]
+    return value?.startsWith(prefix) ? value.slice(prefix.length) : undefined
+  }
+  if ('hmac' in verify) {
+    const { header: name, prefix, algorithm, encoding, secretEncoding } =
+      verify.hmac
+    return verifyHmacSignature(
+      secret,
+      header(name, prefix),
+      algorithm,
+      request.body,
+      encoding,
+      secretEncoding
+    )
+  }
+  if ('token' in verify) {
+    const token = header(verify.token.header, verify.token.prefix)
+    return !!token && timingSafeStringEqual(token, secret)
+  }
+  const { header: name, ...options } = verify.publicKey
+  return verifyPublicKeySignature(secret, header(name), request.body, options)
+}
+
+/**
+ * Whether the request was checked against the source's signing secret. Throws
+ * when it was checked and failed. A source without `verify` checks in its own
+ * `receive`, and a request without a body has nothing signed to check.
+ */
+const verifyRequest = async (
+  source: CoreTriggerWebhookSource | undefined,
+  request: WebhookRequest,
+  services: CoreSingletonServices
+): Promise<boolean> => {
+  if (!source?.verify) return true
+  if (request.body.length === 0) return false
+  const secret = await services.credentialService?.get<string>(
+    source.credential!
+  )
+  if (typeof secret !== 'string' || !secret) {
+    throw new UnauthorizedError(
+      `The ${source.name} webhook source has no signing secret`
+    )
+  }
+  if (!(await signedWith(source.verify, request, secret, services))) {
+    throw new UnauthorizedError(`Invalid ${source.name} webhook signature`)
+  }
+  return true
+}
+
 const validateEvents = async (
   source: CoreTriggerWebhookSource | undefined,
   events: TriggerEvent[],
@@ -148,6 +221,7 @@ export const receiveWebhookSourceRequest = async (
   }
   const source = pikkuState(null, 'trigger', 'webhookSources').get(sourceName)
   const request = await readRequest(wire.http)
+  const verified = await verifyRequest(source, request, singletonServices)
 
   const result: WebhookReceiveResult = meta.receive
     ? await runSourceStep<WebhookReceiveResult>(
@@ -176,6 +250,11 @@ export const receiveWebhookSourceRequest = async (
           ? body
           : JSON.stringify(body)
     return new Response(text, { status, headers })
+  }
+  if (!verified && result.events.length > 0) {
+    throw new UnauthorizedError(
+      `The ${sourceName} webhook source received events in an unsigned request`
+    )
   }
 
   const triggers = pikkuState(null, 'trigger', 'meta')

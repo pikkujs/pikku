@@ -1,6 +1,8 @@
 import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createHmac } from 'node:crypto'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { CoreTriggerWebhookSource } from './webhook-source.types.js'
 import {
   dispatchWebhookSourceJob,
   receiveWebhookSourceRequest,
@@ -204,6 +206,181 @@ describe('receiveWebhookSourceRequest', () => {
     assert.deepEqual(result, { received: 1 })
     assert.equal(queued.length, 1)
     assert.equal(queued[0]!.jobId, 'shop:paid:evt_1')
+  })
+})
+
+describe('receiveWebhookSourceRequest with verify', () => {
+  const rawWire = (
+    body: string,
+    headers: Record<string, string> = {},
+    method = 'post'
+  ) => {
+    const bytes = new TextEncoder().encode(body)
+    return {
+      http: {
+        request: {
+          arrayBuffer: async () => bytes.buffer,
+          headers: () => headers,
+          method: () => method,
+          path: () => '/webhooks/shop',
+          query: () => ({}),
+        },
+      } as any,
+    }
+  }
+
+  const withSecret = async (secret: string | null) => {
+    const credentialService = new LocalCredentialService()
+    if (secret) await credentialService.set('shopSecret', secret)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      credentialService,
+      incomingWebhookService: new IncomingWebhookService(queueService),
+    } as never)
+  }
+
+  const body = JSON.stringify({ amount: 5 })
+  const signature = createHmac('sha256', 'shh').update(body).digest('hex')
+
+  const wireShop = (verify: CoreTriggerWebhookSource['verify']) => {
+    setWebhookSourceMeta({ name: 'shop' })
+    wireTriggerWebhookSource({ name: 'shop', credential: 'shopSecret', verify })
+    wireTriggerMeta('shop', () => {})
+  }
+
+  const hmac = {
+    hmac: {
+      header: 'X-Shop-Signature',
+      prefix: 'sha256=',
+      algorithm: 'sha256',
+      encoding: 'hex',
+    },
+  } as const
+
+  test('queues a request whose signature matches', async () => {
+    await withSecret('shh')
+    wireShop(hmac)
+
+    const result = await receiveWebhookSourceRequest(
+      'shop',
+      rawWire(body, { 'x-shop-signature': `sha256=${signature}` })
+    )
+
+    assert.deepEqual(result, { received: 1 })
+  })
+
+  test('refuses a wrong signature before receive runs', async () => {
+    await withSecret('shh')
+    setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
+    let received = false
+    registerFunction('shop:receive', () => {
+      received = true
+      return { events: [] }
+    })
+    wireTriggerWebhookSource({
+      name: 'shop',
+      credential: 'shopSecret',
+      verify: hmac,
+    })
+
+    await assert.rejects(
+      receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-signature': 'sha256=forged' })
+      ),
+      /Invalid shop webhook signature/
+    )
+    assert.equal(received, false)
+    assert.equal(queued.length, 0)
+  })
+
+  test('refuses every request while the credential is not set', async () => {
+    await withSecret(null)
+    wireShop(hmac)
+
+    await assert.rejects(
+      receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-signature': `sha256=${signature}` })
+      ),
+      /has no signing secret/
+    )
+  })
+
+  test('compares a token header with the secret', async () => {
+    await withSecret('shh')
+    wireShop({ token: { header: 'x-shop-token' } })
+
+    assert.deepEqual(
+      await receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-token': 'shh' })
+      ),
+      { received: 1 }
+    )
+    await assert.rejects(
+      receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-token': 'nope' })
+      ),
+      /Invalid shop webhook signature/
+    )
+  })
+
+  test('hands a function the request, the secret and the services', async () => {
+    await withSecret('shh')
+    wireShop((request, secret, services) => {
+      assert.equal(new TextDecoder().decode(request.body), body)
+      assert.ok(services.credentialService)
+      return request.headers['x-shop-ts'] === '1' && secret === 'shh'
+    })
+
+    assert.deepEqual(
+      await receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-ts': '1' })
+      ),
+      { received: 1 }
+    )
+  })
+
+  test('lets an unsigned request without a body be answered, never dispatched', async () => {
+    await withSecret('shh')
+    setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
+    wireTriggerMeta('shop', () => {})
+    let answer: 'respond' | 'events' = 'respond'
+    registerFunction('shop:receive', () =>
+      answer === 'respond'
+        ? { respond: { status: 200 } }
+        : { events: [{ name: '', data: {} }] }
+    )
+    wireTriggerWebhookSource({
+      name: 'shop',
+      credential: 'shopSecret',
+      verify: hmac,
+    })
+
+    const probe = await receiveWebhookSourceRequest(
+      'shop',
+      rawWire('', {}, 'head')
+    )
+    assert.ok(probe instanceof Response)
+    assert.equal(probe.status, 200)
+
+    answer = 'events'
+    await assert.rejects(
+      receiveWebhookSourceRequest('shop', rawWire('', {}, 'head')),
+      /unsigned request/
+    )
+    assert.equal(queued.length, 0)
+  })
+
+  test('refuses verify without a credential when wired', () => {
+    setWebhookSourceMeta({ name: 'shop' })
+    assert.throws(
+      () => wireTriggerWebhookSource({ name: 'shop', verify: hmac }),
+      /without the 'credential'/
+    )
   })
 })
 
