@@ -307,7 +307,7 @@ singleton a 403 that leaves no platform user behind.
 
 ```typescript
 pikkuDelegatedAuth({
-  authenticate: async ({ email, password, apiKey }) => upstream.login(...),
+  authenticate: async ({ login, email, password, apiKey }) => upstream.login(...),
   storeCredential: (userId, identity) =>
     credentialService.set('acme', identity.credential, userId),
   defaultRole: 'member',
@@ -318,7 +318,10 @@ pikkuDelegatedAuth({
 ```
 
 `POST /sign-in/delegated` forwards the credentials the user already has to
-`authenticate`. On success it JIT-provisions a real user row (email-keyed and
+`authenticate`. The body takes `email`, `login` or `username` with `password`
+(or `apiKey`); whichever identifier was sent reaches `authenticate` as
+`credentials.login`, and `email` as well when it was one. Upstreams that sign in
+with a username — most ERPs — need nothing more. On success it JIT-provisions a real user row (email-keyed and
 `emailVerified` — the upstream just verified them), links it via an `account`
 row (`providerId: 'delegated'`, `accountId: externalId`), persists the upstream
 token **before** minting the session, and returns a normal session cookie.
@@ -332,6 +335,18 @@ a warning and the user still gets in.
 
 `storeCredential` failing, by contrast, **fails the sign-in**: every proxied
 call would be dead anyway.
+
+An upstream user with no email gets one made up from the login, and the
+identity says so with `syntheticEmail: true`. A made-up address never links to
+an existing user row, so it cannot take over someone else's account.
+
+For an addon generated from an OpenAPI spec, none of this is written by hand:
+`pikku new addon --openapi … --auth-config <file>` generates
+`authenticate<Name>Upstream` in the addon and wires this plugin, the stored
+credential and the actor credentials into `src/auth.ts`. The config format is
+in the `pikku-build` skill's `references/openapi.md`. When the upstream later
+refuses the stored token, the addon throws `CredentialRejectedError` (403,
+`reauth: 'sign-in'`): the UI shows the sign-in again.
 
 #### `pikkuFabric()` — control-plane operator sign-in
 
@@ -485,10 +500,9 @@ value for the address being signed in as and compares, so a credential minted
 for one persona is refused for every other, and the root itself is never a valid
 credential. A root under 32 characters refuses the endpoint outright rather than
 deriving weak credentials from it (the server log names the problem; the client
-is not told which). Callers rarely derive by hand — `pikku dev` mints one per
-persona into `VITE_DEV_ACTOR_SECRETS` for the browser switcher, `pikku persona
-secret <id>` mints them for a run, and the two `PersonaSignIn` implementations
-derive on the fly.
+is not told which). Callers rarely derive by hand — `pikku persona secret <id>`
+mints them for a run, and the two `PersonaSignIn` implementations derive on the
+fly. The browser switcher holds none: it signs in through `/sign-in/persona`.
 
 **Which command is running decides whether it works, not whether a secret is
 set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
@@ -544,9 +558,11 @@ actor`. So the secret cannot take over a **real user's** account — the blast
   paragraph above. The comparison is constant-time and length-hiding, so a wrong
   credential leaks neither the length nor a prefix of the right one.
 
-This is the endpoint `pikku scenario` signs its actors in through, and the one
-the frontend dev switcher posts to — see `pikku-scenario` for declaring the
-actors and `pikku-react` for `useDevActors()`.
+This is the endpoint `pikku scenario` signs its actors in through. The frontend
+switcher does not use it: it lists from `/sign-in/personas` and posts a persona
+id to `/sign-in/persona`, both served by
+`pikkuActor({ personaSignIn: { personas, featureFlags } })` with no credential — see
+`pikku-scenario` for the setup and `pikku-react` for `useDevActors()`.
 
 ### Provisioning personas
 

@@ -1,5 +1,13 @@
-import React, { useMemo } from 'react'
-import { Text, Badge, Group, UnstyledButton } from '@pikku/mantine/core'
+import React, { useCallback, useMemo, useState } from 'react'
+import {
+  Badge,
+  Box,
+  Chip,
+  Group,
+  SegmentedControl,
+  Stack,
+  Text,
+} from '@pikku/mantine/core'
 import { FunctionSquare } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -8,7 +16,16 @@ import { usePanelContext } from '../../context/PanelContext'
 import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
-import { funcWrapperDefs } from '../ui/badge-defs'
+import { SectionCard } from '../ui/SectionCard'
+import classes from '../ui/console.module.css'
+import {
+  KIND_ORDER,
+  kindLabel,
+  kindOf,
+  reachLabel,
+  type FunctionKind,
+} from './functionLabels'
+import { StatusBadge, type StatusTone } from '../ui/StatusBadge'
 import {
   useFilteredFunctions,
   useFunctionsMeta,
@@ -40,12 +57,17 @@ export interface FunctionTestData {
   scenarios: FunctionTestScenario[]
 }
 
-const TEST_STATUS_COLOR: Record<FunctionTestData['status'], string> = {
-  covered: 'green',
-  partial: 'yellow',
-  uncovered: 'red',
-  unknown: 'gray',
+const TEST_TONE: Record<FunctionTestData['status'], StatusTone> = {
+  covered: 'good',
+  partial: 'warn',
+  uncovered: 'bad',
+  unknown: 'neutral',
 }
+
+type KindFilter = 'all' | FunctionKind
+type Attention = 'none' | 'untested'
+
+const funcIdOf = (func: any): string => func.pikkuFuncName || func.pikkuFuncId
 
 export interface FunctionsListPanelProps {
   /** Filters by id, display name, summary and description. */
@@ -55,6 +77,8 @@ export interface FunctionsListPanelProps {
   extraColumns?: FunctionExtraColumn[]
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
+  search?: React.ReactNode
+  actions?: React.ReactNode
 }
 
 /**
@@ -71,12 +95,21 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
   extraColumns = [],
   testsByFunction,
   emptyHero,
+  search,
+  actions,
 }) => {
   useLocale()
-  const { openFunction } = usePanelContext()
+  const { openFunction, activePanel } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
   const { data: rawFunctions } = useFunctionsMeta()
-  const functions = useFilteredFunctions(
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all')
+  const [attention, setAttention] = useState<Attention>('none')
+  const visibleTotal = useFilteredFunctions(
+    rawFunctions,
+    '',
+    showPikkuFunctions
+  ).length
+  const searched = useFilteredFunctions(
     rawFunctions,
     searchQuery,
     showPikkuFunctions
@@ -89,191 +122,262 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
   usePanelUrl({
     type: 'function',
     items: allFunctions,
-    getId: (func: any) => func.pikkuFuncName || func.pikkuFuncId,
+    getId: funcIdOf,
     open: openFunction,
   })
 
-  const hasTestsColumn = useMemo(
-    () => !!testsByFunction || functions.some((func: any) => !!func.tests),
-    [functions, testsByFunction]
+  const testsOf = useCallback(
+    (func: any): FunctionTestData | undefined =>
+      func.tests ?? testsByFunction?.[funcIdOf(func)],
+    [testsByFunction]
   )
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'name',
-        header: 'Name',
-        maxWidth: 350,
-        render: (func: any) => {
-          const funcId = func.pikkuFuncName || func.pikkuFuncId
-          const englishName = func.displayName || toEnglishName(funcId)
-          const description = func.summary || func.description
-          return (
-            <>
-              <Text fw={500} truncate>
-                {asI18n(englishName)}
-              </Text>
-              <Text size="xs" c="dimmed" truncate ff="monospace">
-                {asI18n(`${funcId}${description ? ` · ${description}` : ''}`)}
-              </Text>
-            </>
-          )
-        },
-      },
-      {
-        key: 'version',
-        header: 'Version',
-        width: 80,
-        render: (func: any) => (
-          <Text size="sm" ff="monospace" c="var(--app-text-dim)">
-            {asI18n(func.version != null ? `v${func.version}` : '—')}
-          </Text>
-        ),
-      },
-      {
-        key: 'type',
-        header: 'Type',
-        width: 140,
-        render: (func: any) => {
-          const wrapperDef = funcWrapperDefs[func.funcWrapper]
-          return wrapperDef ? (
-            <Badge size="sm" variant="light" color="gray" tt="none">
-              {asI18n(wrapperDef.label)}
-            </Badge>
-          ) : null
-        },
-      },
-      {
-        key: 'auth',
-        header: 'Auth',
-        width: 60,
-        render: (func: any) => {
-          const hasAuth = func.sessionless !== true
-          return (
-            <Text
-              size="sm"
-              ff="monospace"
-              c={hasAuth ? '#86efac' : 'var(--app-text-dim)'}
-            >
-              {asI18n(hasAuth ? 'Auth' : '—')}
-            </Text>
-          )
-        },
-      },
-      {
-        key: 'wirings',
-        header: 'Wirings',
-        width: 80,
-        render: (func: any) => {
-          const funcId = func.pikkuFuncName || func.pikkuFuncId
-          const usedBy = functionUsedBy.get(funcId)
-          const count = usedBy
-            ? usedBy.transports.length + usedBy.jobs.length
-            : 0
-          return (
-            <Text
-              size="sm"
-              ff="monospace"
-              c={count > 0 ? 'var(--app-violet)' : 'var(--app-text-dim)'}
-            >
-              {asI18n(count > 0 ? String(count) : '—')}
-            </Text>
-          )
-        },
-      },
-      ...(hasTestsColumn
-        ? [
+  const reachOf = useCallback(
+    (func: any): string[] => {
+      const usedBy = functionUsedBy.get(funcIdOf(func))
+      const wired = usedBy
+        ? [...usedBy.transports, ...usedBy.jobs].map((w: any) => w.type)
+        : []
+      return [...new Set([...(func.expose ? ['app'] : []), ...wired])]
+    },
+    [functionUsedBy]
+  )
+
+  const hasTests = searched.some((func) => !!testsOf(func))
+  const hasVersions = searched.some((func) => func.version != null)
+
+  const kindCounts = useMemo(() => {
+    const counts = new Map<FunctionKind, number>()
+    for (const func of searched) {
+      const kind = kindOf(func)
+      counts.set(kind, (counts.get(kind) ?? 0) + 1)
+    }
+    return counts
+  }, [searched])
+
+  const untested = (func: any) => {
+    const tests = testsOf(func)
+    return (
+      !tests || tests.status === 'uncovered' || tests.scenarios.length === 0
+    )
+  }
+
+  const ofKind = searched.filter(
+    (func) => kindFilter === 'all' || kindOf(func) === kindFilter
+  )
+  const untestedCount = hasTests ? ofKind.filter(untested).length : 0
+  const activeAttention: Attention =
+    attention === 'untested' && untestedCount > 0 ? attention : 'none'
+  const functions =
+    activeAttention === 'untested' ? ofKind.filter(untested) : ofKind
+
+  const kindOptions = KIND_ORDER.filter((kind) => kindCounts.has(kind))
+
+  const toolbar = (
+    <Group gap="sm" wrap="wrap">
+      {kindOptions.length > 1 && (
+        <SegmentedControl
+          size="sm"
+          withItemsBorders={false}
+          bg="transparent"
+          bd="1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
+          classNames={{
+            root: classes.segmentedQuiet,
+            label: classes.segmentedLabel,
+          }}
+          value={kindFilter}
+          onChange={(value) => setKindFilter(value as KindFilter)}
+          data={[
             {
-              key: 'tests',
-              header: 'Tests',
-              width: 180,
-              render: (func: any) => {
-                const funcId = func.pikkuFuncName || func.pikkuFuncId
-                const tests = func.tests ?? testsByFunction?.[funcId]
-                if (!tests) {
-                  return (
-                    <UnstyledButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        openFunction(funcId, func)
-                      }}
-                    >
-                      <Badge size="sm" variant="light" color="gray">
-                        {asI18n('unknown')}
-                      </Badge>
-                    </UnstyledButton>
-                  )
-                }
-
-                const status = tests.status as FunctionTestData['status']
-                const ratioLabel =
-                  tests.status === 'covered'
-                    ? `${tests.coveredLines}/${tests.totalLines}`
-                    : tests.status === 'unknown'
-                      ? 'unknown'
-                      : `${Math.round(tests.ratio * 100)}%`
-
-                return (
-                  <UnstyledButton
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      openFunction(funcId, { ...func, tests })
-                    }}
-                    style={{ display: 'block', textAlign: 'left' }}
-                  >
-                    <Group gap={6} wrap="nowrap">
-                      <Badge
-                        size="sm"
-                        variant="light"
-                        color={TEST_STATUS_COLOR[status]}
-                      >
-                        {asI18n(ratioLabel)}
-                      </Badge>
-                      <Text size="xs" c="dimmed">
-                        {asI18n(
-                          tests.scenarios.length === 0
-                            ? 'No tests'
-                            : `${tests.scenarios.length} linked`
-                        )}
-                      </Text>
-                    </Group>
-                  </UnstyledButton>
-                )
-              },
+              value: 'all',
+              label: m.functions_filter_all({ count: searched.length }),
             },
-          ]
-        : []),
-      ...extraColumns.map((col) => ({
-        key: col.label,
-        header: col.label,
-        width: col.width,
-        align: col.align,
-        render: (func: any) =>
-          col.render(func.pikkuFuncName || func.pikkuFuncId),
-      })),
-    ],
-    [
-      functionUsedBy,
-      extraColumns,
-      hasTestsColumn,
-      openFunction,
-      testsByFunction,
-    ]
+            ...kindOptions.map((kind) => ({
+              value: kind,
+              label: asI18n(`${kindLabel(kind)} ${kindCounts.get(kind)}`),
+            })),
+          ]}
+        />
+      )}
+      {untestedCount > 0 && (
+        <Chip
+          size="xs"
+          color="red"
+          checked={activeAttention === 'untested'}
+          onChange={(on) => setAttention(on ? 'untested' : 'none')}
+        >
+          {m.functions_filter_untested({ count: untestedCount })}
+        </Chip>
+      )}
+    </Group>
   )
 
-  return (
+  const columns = [
+    {
+      key: 'name',
+      header: m.functions_col_function(),
+      width: '100%',
+      maxWidth: 0,
+      render: (func: any) => {
+        const funcId = funcIdOf(func)
+        return (
+          <>
+            <Text size="sm" fw={600} truncate>
+              {asI18n(func.displayName || toEnglishName(funcId))}
+            </Text>
+            <Text size="xs" ff="monospace" c="dimmed" truncate>
+              {asI18n(funcId)}
+            </Text>
+          </>
+        )
+      },
+    },
+    {
+      key: 'access',
+      header: m.functions_col_access(),
+      width: 130,
+      render: (func: any) =>
+        func.sessionless === true ? (
+          <StatusBadge tone="neutral" size="lg" dot={false}>
+            {m.functions_access_anyone()}
+          </StatusBadge>
+        ) : (
+          <StatusBadge tone="info" size="lg" dot={false}>
+            {m.functions_access_signed_in()}
+          </StatusBadge>
+        ),
+    },
+    {
+      key: 'reach',
+      header: m.functions_col_reach(),
+      width: 200,
+      render: (func: any) => {
+        const reach = reachOf(func)
+        return reach.length === 0 ? (
+          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+            {m.functions_reach_none()}
+          </Text>
+        ) : (
+          <Group gap={4} wrap="wrap">
+            {reach.map((type) => (
+              <Badge
+                key={type}
+                size="md"
+                variant="default"
+                radius="sm"
+                c="dimmed"
+                fw={500}
+                bd="1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
+              >
+                {reachLabel(type)}
+              </Badge>
+            ))}
+          </Group>
+        )
+      },
+    },
+    ...(hasTests
+      ? [
+          {
+            key: 'tests',
+            header: m.functions_col_tests(),
+            width: 120,
+            render: (func: any) => {
+              const tests = testsOf(func)
+              if (!tests || tests.status === 'unknown') {
+                return (
+                  <StatusBadge tone="neutral" size="lg">
+                    {m.functions_tests_none()}
+                  </StatusBadge>
+                )
+              }
+              return (
+                <StatusBadge tone={TEST_TONE[tests.status]} size="lg">
+                  {asI18n(
+                    tests.status === 'covered'
+                      ? `${tests.coveredLines}/${tests.totalLines}`
+                      : `${Math.round(tests.ratio * 100)}%`
+                  )}
+                </StatusBadge>
+              )
+            },
+          },
+        ]
+      : []),
+    {
+      key: 'kind',
+      header: m.functions_col_kind(),
+      width: 110,
+      render: (func: any) => (
+        <Text size="sm" c="dimmed">
+          {kindLabel(kindOf(func))}
+        </Text>
+      ),
+    },
+    ...(hasVersions
+      ? [
+          {
+            key: 'version',
+            header: m.functions_col_version(),
+            width: 80,
+            render: (func: any) => (
+              <Text size="xs" ff="monospace" c="dimmed">
+                {asI18n(func.version != null ? `v${func.version}` : '—')}
+              </Text>
+            ),
+          },
+        ]
+      : []),
+    ...extraColumns.map((col) => ({
+      key: col.label,
+      header: col.label,
+      width: col.width,
+      align: col.align,
+      render: (func: any) => col.render(funcIdOf(func)),
+    })),
+  ]
+
+  const table = (
     <TableListPage
       title="Functions"
       icon={FunctionSquare}
       docsHref="https://pikku.dev/docs/core-features/functions"
       data={functions}
       columns={columns}
-      getKey={(func) => func.pikkuFuncName || func.pikkuFuncId}
-      onRowClick={(func) =>
-        openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
-      }
+      getKey={funcIdOf}
+      onRowClick={(func) => openFunction(funcIdOf(func), func)}
+      isSelected={(func) => activePanel === `function-${funcIdOf(func)}`}
       emptyMessage={m.functions_empty_message()}
       emptyHero={emptyHero}
+      framed
+      compact
     />
+  )
+
+  if (allFunctions.length === 0) return table
+
+  return (
+    <SectionCard
+      fill
+      title={m.functions_card_title()}
+      subtitle={m.functions_count({ count: visibleTotal })}
+      blurb={m.functions_card_blurb()}
+      right={actions}
+      testId="functions-card"
+    >
+      <Stack gap="sm" mt="md" style={{ flex: 1, minHeight: 0 }}>
+        <Group gap="sm" wrap="wrap" align="center">
+          <Box style={{ flex: 1, minWidth: 220 }}>{search}</Box>
+          {toolbar}
+        </Group>
+        {table}
+        <Text size="xs" c="dimmed">
+          {m.functions_showing({
+            shown: functions.length,
+            total: visibleTotal,
+          })}
+        </Text>
+      </Stack>
+    </SectionCard>
   )
 }

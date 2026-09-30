@@ -100,7 +100,7 @@ after(async () => {
 })
 
 describe('a browser on the served origin', () => {
-  test('renders the page pikku serves from frontend.dir', async () => {
+  test('renders the page pikku serves from the served frontend dist', async () => {
     await page.goto(origin)
     assert.equal(await page.getByTestId('heading').textContent(), 'Notes')
   })

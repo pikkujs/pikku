@@ -140,3 +140,58 @@ describe('service extraction resolves core types by declaration, not by name', (
     assert.deepEqual(state.serviceAggregation.allWireServices, [])
   })
 })
+
+describe('functions that read no wire service are marked singletonServicesOnly', () => {
+  const withFunctions = (
+    functions: Record<string, { optimized: boolean; services: string[] }>
+  ) => {
+    const state = stateWithCoreTypes(
+      CONVENTIONAL,
+      'SingletonServices',
+      'Services'
+    )
+    for (const [id, services] of Object.entries(functions)) {
+      state.functions.meta[id] = { pikkuFuncId: id, services } as any
+    }
+    aggregateRequiredServices(state)
+    return state.functions.meta
+  }
+
+  test('only singleton services destructured', () => {
+    const meta = withFunctions({
+      reads: { optimized: true, services: ['logger', 'kysely'] },
+      none: { optimized: true, services: [] },
+    })
+    assert.equal(meta.reads!.singletonServicesOnly, true)
+    assert.equal(meta.none!.singletonServicesOnly, true)
+  })
+
+  test('a wire service destructured is not marked', () => {
+    const meta = withFunctions({
+      wire: { optimized: true, services: ['logger', 'http'] },
+    })
+    assert.equal(meta.wire!.singletonServicesOnly, undefined)
+  })
+
+  test('services taken whole is not marked', () => {
+    const meta = withFunctions({
+      whole: { optimized: false, services: [] },
+    })
+    assert.equal(meta.whole!.singletonServicesOnly, undefined)
+  })
+
+  test('an unresolved Services type marks nothing', () => {
+    const state = stateWithCoreTypes(
+      CONVENTIONAL,
+      'SingletonServices',
+      'Services'
+    )
+    state.wireServicesTypeImportMap = new Map()
+    state.functions.meta.reads = {
+      pikkuFuncId: 'reads',
+      services: { optimized: true, services: ['logger'] },
+    } as any
+    aggregateRequiredServices(state)
+    assert.equal(state.functions.meta.reads!.singletonServicesOnly, undefined)
+  })
+})

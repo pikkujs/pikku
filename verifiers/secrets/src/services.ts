@@ -1,6 +1,7 @@
 import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import {
   ConsoleLogger,
+  LocalCredentialService,
   LocalSecretService,
   LocalVariablesService,
 } from '@pikku/core/services'
@@ -25,6 +26,7 @@ export const createSingletonServices = pikkuServices(
       logger,
       variables,
       schema,
+      credentialService: new LocalCredentialService(),
     }
   }
 )

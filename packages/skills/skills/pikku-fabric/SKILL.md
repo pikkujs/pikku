@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `pikkufabric.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -186,47 +186,70 @@ packages/functions/
 apps/app/              # Frontend(s)
 db/sqlite/             # Plain .sql migrations, numbered, gap-free (project root)
 db/sqlite-dev-seed.sql # Dev-only test data, applied by `pikku db reset`
-pikku.config.json      # Pikku + deploy config (project root)
-pikkufabric.config.json # Fabric project link + frontends (project root)
+pikku.config.json      # Pikku + deploy config, and the frontends (project root)
 ```
 
-## `pikkufabric.config.json`
+## How a checkout is linked to its Fabric project
 
-Links the repo to a Fabric project and declares its frontends:
+`fabric.projectId` in `pikku.config.json` names the project. It is optional. Order
+tried:
+
+1. `FABRIC_PROJECT_ID` env var — CI and scripts.
+2. `fabric.projectId` in `pikku.config.json`.
+3. The git remote, matched against Fabric's projects. The id found is written
+   into `pikku.config.json` so the lookup happens once. It is never committed
+   for you; commit it or not. A deploy ignores a `pikku.config.json` whose only
+   change is `fabric.projectId`. If two projects share one repo the CLI refuses; pick
+   one with `FABRIC_PROJECT_ID=<projectId>`.
+
+`pikku fabric config` prints which project, api url and login the current
+checkout resolves to, and where each came from, and the project's settings.
+The settings Fabric needs that `pikku.config.json` does not describe are stored
+on the project, not in a file, and set with `key=value` arguments:
+
+```bash
+pikku fabric config showcase.name="Watering Log" showcase.tags=voice,realtime
+pikku fabric config guide.docs=docs/guide guide.theme.primaryColor=teal
+pikku fabric config scenarios.env.STRIPE_MODE=test   # the scenario run only
+pikku fabric config showcase.tint=                   # an empty value clears it
+```
+
+The keys are `showcase.name` (≤60), `showcase.description` (≤160),
+`showcase.tags` (comma-separated, ≤6, from Fabric's fixed list),
+`showcase.tint` (`#rrggbb`), `guide.docs`, `guide.theme.primaryColor`,
+`guide.theme.fontFamily`, `guide.theme.headingFontFamily` and
+`scenarios.env.<NAME>`. Every assignment is checked before any is applied, so a
+refused one changes nothing. Whether the project appears on the public
+showcase is Fabric's decision, not a setting.
+
+`pikku fabric link` creates
+`origin` (with `--gitea`) if there is none, imports the project, writes
+`projectId`, and queues the first deploy; it commits and pushes nothing. A
+custom production domain is set with `pikku fabric domains add`. Production
+always maps to `main`; without a domain it lives on the platform
+`*.pikkufabric.app` hostnames.
+
+The apps are the `frontends` in `pikku.config.json`,
+the same list `pikku serve`, `pikku app` and native builds read, and
+`pikku fabric validate` and `smoke` read them from there:
 
 ```json
-{
-  "projectId": "my-project-id",
-  "production": {
-    "domain": "example.com"
-  },
-  "frontends": {
-    "app": {
-      "cwd": "apps/app",
-      "primary": true,
-      "deploy": true,
-      "kind": "ssr",
-      "dev": {
-        "command": ["yarn", "dev"],
-        "port": 7105,
-        "healthPath": "/"
-      }
+"frontends": {
+  "app": {
+    "cwd": "apps/app",
+    "primary": true,
+    "deploy": true,
+    "kind": "ssr",
+    "dev": {
+      "command": ["yarn", "dev"],
+      "port": 7105,
+      "healthPath": "/"
     }
   }
 }
 ```
 
-- `projectId`: written by `pikku fabric init` / `link`. Templates ship the
-  `__PROJECT_ID__` placeholder — that is _not_ a link, and the CLI treats it as
-  unlinked.
-- `production.domain`: optional custom domain. Production always maps to `main`;
-  without a domain it lives on the platform `*.pikkufabric.app` hostnames.
-- `frontends`: each entry declares a frontend app with its dev command and port
-
-Several CLI messages call this file `fabric.config.json` — `fabric init --force`,
-`fabric link --apiUrl`, and the `domains` commands' "No fabric.config.json found".
-The file the CLI actually reads and writes is `pikkufabric.config.json`; don't
-create the shorter name to satisfy an error message.
+Each `frontends` entry declares a frontend app with its dev command and port.
 
 ## RPC is the default transport
 
@@ -376,6 +399,12 @@ returns 0, which tells you nothing about whether it worked:
 | 3    | the deployment is blocked and nothing the CLI can do will unblock it    |
 | 4    | the wait hit `--timeout` with the deployment still in flight            |
 
+On a failure or timeout, `apply` prints the tail of the builder's own log (and
+carries `buildLog` / `imageBuildLog` on the `--json` result). Read it before
+touching code: `fabric logs` serves the running stage, not the build. When the
+builder recorded nothing, the CLI says so — that is usually fabric-side, so run
+`pikku fabric smoke` before assuming the project is broken.
+
 Fabric parks every deploy at a gate after the plan phase (`status: suspended`).
 Why it parked is the whole story, and it is `statusReason`, not `status`:
 
@@ -424,14 +453,29 @@ repo, and if it is installed with "selected repositories" this one must be in
 the selection. There is no CLI flag that works around a missing installation:
 `init` returns "Connect the GitHub account '<owner>'". Send the user to install
 it, or create the project in the console instead (which provisions a Fabric-hosted
-git repo you push to) and write the returned `projectId` into
-`pikkufabric.config.json` yourself.
+git repo you push to) and clone it — the remote links the checkout, or put
+the id in `fabric.projectId` in `pikku.config.json`.
 
 Deploy refuses to run unless the target branch equals its upstream — the guard
 compares `main` against `main@{upstream}`. So the remote you pushed to must be
 the one the branch tracks; a stale `origin` left over from scaffolding blocks
 the deploy with "local HEAD … ≠ remote …" even though your code is pushed.
 `git branch --set-upstream-to=<remote>/main main` before deploying.
+
+### The first user on a deployed stage
+
+When sign-up is off, the first account has to come from outside the app.
+`pikku fabric user add <email>` is the CLI form of the console's Add user:
+
+```bash
+pikku fabric user add ada@example.com --name Ada          # prompts; blank generates one
+pikku fabric user add ada@example.com --password '<pw>' -b staging
+```
+
+It mints a short-lived operator token for the stage and calls the stage's own
+`admin:createUser`, so the stage must wire `@pikku/addon-admin` as `admin` —
+a 404 is refused by name and nothing is created. A generated password is printed
+once; one you passed is never echoed. With no TTY, pass `--password` or pipe it.
 
 ## Versioning
 
@@ -456,17 +500,16 @@ reviewer has no seed password, so without the control they are locked out of the
 app they were asked to look at.
 
 Satisfy it with `<DevActorSwitcher />` from `@pikku/mantine/dev`, or with your
-own UI built on `useDevActors()` from `@pikku/react` — validate accepts either
-call site as evidence, so custom rendering passes. See **pikku-react** for the
-props and **pikku-scenario** for where the actor list comes from.
+own UI built on `useDevActors()` or `signInAsPersona()` from `@pikku/react` —
+validate accepts any of those call sites as evidence, so custom rendering
+passes. Either way the server needs `personaSignIn` on `pikkuActor`; see
+**pikku-scenario** for it and **pikku-react** for the props.
 
 The validator also accepts the shapes that predate the package — a hand-rolled
 `signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
 not fail the build. **Treat that as a grace period, not the target: migrate those
-to `<DevActorSwitcher />`.** The hand-copied version is exactly the duplication
-the package exists to remove, and the copies drift — the ones that prompted this
-had already diverged on the `import.meta.env.DEV` gate that keeps the shared
-secret out of production bundles.
+to `<DevActorSwitcher />`.** They put a per-persona credential in the frontend
+bundle, which the persona endpoint exists to avoid.
 
 Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
 endpoint with a different purpose — one fixed admin, not the declared personas —
@@ -500,7 +543,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
 4. **Replace `process.env` calls**: plain config becomes `defineVariable` + `variables.get()`, anything sensitive becomes `defineSecret` + `secrets.getSecret()`.
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles` — plus `metaLocale` if the team does not work in English, which is the language every `description`, `title` and step `template` is then authored in.
-6. **Add `pikkufabric.config.json`** at project root with `projectId`, `production.domain`, and `frontends` (production is always `main`, so there is no `production.branch`).
+6. **Declare the apps** as `frontends` in `pikku.config.json`. There is no fabric config file; `projectId` is optional; without it the CLI finds the project from the git remote.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
 8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.
 

@@ -15,6 +15,7 @@ import {
   projectWiresChannels,
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
+import { blankComments } from '../../fabric/lib/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
 
@@ -66,10 +67,93 @@ export type SharedCheckResult = {
  * `pikku-config-missing` for a file that is right there — the one message
  * guaranteed to send you looking in the wrong place.
  */
+/**
+ * Comments and trailing commas out, string literals untouched.
+ *
+ * `tsconfig.json` is JSONC by definition -- TypeScript documents comments in it
+ * and real projects use them -- so a strict `JSON.parse` rejects a file the
+ * compiler itself accepts, and validate fails on a config that is not wrong.
+ */
+const stripJsonc = (text: string): string => {
+  const out: string[] = []
+  let inString = false
+  let quote = ''
+  // Where a comma sits that nothing but whitespace and comments have followed,
+  // so it can still turn out to be a trailing one. Cleared by the first real
+  // character after it. Tracked during the scan rather than swept up afterwards
+  // with a regular expression, which cannot tell `{"a": ",}"}` — a comma inside
+  // a string — from a comma before a brace.
+  let pendingComma: number | null = null
+
+  const push = (ch: string) => {
+    out.push(ch)
+    return out.length - 1
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!
+    const next = text[i + 1]
+    if (inString) {
+      push(ch)
+      if (ch === '\\') {
+        push(next ?? '')
+        i++
+      } else if (ch === quote) {
+        inString = false
+      }
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      inString = true
+      quote = ch
+      pendingComma = null
+      push(ch)
+      continue
+    }
+    if (ch === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') i++
+      push('\n')
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      const opened = i
+      i += 2
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++
+      if (i >= text.length) {
+        // Everything after it would otherwise be dropped in silence, so a file
+        // whose tail is missing parses as though it were complete.
+        throw new SyntaxError(
+          `Unterminated block comment at position ${opened}`
+        )
+      }
+      i++
+      // A space, not nothing: `{"value": 1/*x*/2}` is two tokens, and closing
+      // the gap makes it the number 12.
+      push(' ')
+      continue
+    }
+    if (ch === ',') {
+      pendingComma = push(ch)
+      continue
+    }
+    if ((ch === '}' || ch === ']') && pendingComma !== null) {
+      out[pendingComma] = ''
+      pendingComma = null
+      push(ch)
+      continue
+    }
+    if (!/\s/.test(ch)) {
+      pendingComma = null
+    }
+    push(ch)
+  }
+  return out.join('')
+}
+
 export async function readJsonSafe<T>(path: string): Promise<T | null> {
   if (!existsSync(path)) return null
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
+    return JSON.parse(stripJsonc(await readFile(path, 'utf8'))) as T
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     throw new Error(`Invalid JSON in ${path}: ${message}`)
@@ -206,6 +290,143 @@ export const staticStubbedImports = (
 }
 
 /**
+ * The index just past the backtick opening a `sql` tagged template, given the
+ * offset immediately after the tag name — or -1 when what follows is not one.
+ *
+ * The tag is routinely written with an explicit row type, and those type
+ * arguments nest:
+ *
+ *   sql<Record<string, unknown>>`select ...`
+ *
+ * which is exactly the form the production bug took. Scanning the angle
+ * brackets rather than pattern-matching them is what keeps a nested generic
+ * from ending the tag early.
+ */
+const openingBacktick = (source: string, from: number): number => {
+  let i = from
+  const skipSpace = () => {
+    while (i < source.length && /\s/.test(source[i]!)) i++
+  }
+  skipSpace()
+  if (source[i] === '<') {
+    let depth = 0
+    while (i < source.length) {
+      const c = source[i]
+      if (c === '<') depth++
+      else if (c === '>') {
+        depth--
+        if (depth === 0) {
+          i++
+          break
+        }
+      } else if (c === '`') return -1
+      i++
+    }
+    if (depth !== 0) return -1
+    skipSpace()
+  }
+  return source[i] === '`' ? i + 1 : -1
+}
+
+/**
+ * Every double-quoted identifier inside a raw `sql` template that is not
+ * snake_case.
+ *
+ * Kysely is constructed with `new CamelCasePlugin()`, which rewrites the
+ * identifiers the *query builder* produces — `.orderBy('createdAt')` is emitted
+ * as `"created_at"` — and maps result rows back to camelCase. It does not touch
+ * the text inside a raw sql`...` template, so
+ *
+ *   sql`select * from "user" order by "createdAt" desc`
+ *
+ * reaches SQLite verbatim and fails with `no such column: createdAt` against a
+ * pikku-generated snake_case schema. The plugin still camelCases the rows it
+ * never gets, so the result-handling code around the query reads as correct and
+ * only the query itself is wrong — which is how this shipped and 500'd a
+ * console page in production.
+ *
+ * Single quotes delimit a string *literal* in SQL and double quotes an
+ * *identifier*, so a double-quoted token holding an uppercase letter is the
+ * signal: `'inProgress'` is a value and is left alone. Comments must already be
+ * blanked, `${...}` interpolations are TypeScript rather than SQL, and `""` is
+ * an escaped quote inside an identifier — none of the three are scanned.
+ *
+ * Only the tagged-template form is matched. `sql.raw(someString)` takes a value
+ * that is usually not a literal at the call site, so there is nothing static to
+ * read; it is deliberately not handled.
+ */
+export const nonSnakeCaseSqlIdentifiers = (code: string): string[] => {
+  const source = blankComments(code)
+  const found: string[] = []
+  // Not preceded by an identifier character or a dot, so `mySql` and
+  // `db.sql` are not read as the kysely `sql` tag.
+  const tags = source.matchAll(/(?<![\w$.])sql\b/g)
+  for (const tag of tags) {
+    let i = openingBacktick(source, tag.index! + tag[0]!.length)
+    // Not a tagged template — a bare `sql` reference, an import, a call.
+    if (i < 0) continue
+    while (i < source.length) {
+      const ch = source[i]
+      if (ch === '\\') {
+        i += 2
+        continue
+      }
+      if (ch === '`') break
+      if (ch === '$' && source[i + 1] === '{') {
+        // TypeScript, not SQL. Skip to the matching brace.
+        let depth = 1
+        i += 2
+        while (i < source.length && depth > 0) {
+          const c = source[i]
+          if (c === '\\') i += 2
+          else if (c === '{') (depth++, i++)
+          else if (c === '}') (depth--, i++)
+          else i++
+        }
+        continue
+      }
+      if (ch === "'") {
+        // A SQL string literal. `''` is an escaped quote within it.
+        i++
+        while (i < source.length) {
+          if (source[i] === "'") {
+            if (source[i + 1] === "'") {
+              i += 2
+              continue
+            }
+            i++
+            break
+          }
+          i++
+        }
+        continue
+      }
+      if (ch === '"') {
+        i++
+        let identifier = ''
+        while (i < source.length) {
+          if (source[i] === '"') {
+            if (source[i + 1] === '"') {
+              identifier += '"'
+              i += 2
+              continue
+            }
+            i++
+            break
+          }
+          identifier += source[i]
+          i++
+        }
+        if (/[A-Z]/.test(identifier)) found.push(identifier)
+        continue
+      }
+      i++
+    }
+  }
+  return found
+}
+
+/**
  * The text of every source file that configures better-auth, concatenated.
  *
  * Narrowed to files mentioning `betterAuth` so a `modelName` belonging to some
@@ -230,6 +451,75 @@ const readAuthConfigText = async (srcDir: string): Promise<string> => {
   return texts
     .filter((t): t is string => Boolean(t) && /betterAuth/.test(t!))
     .join('\n')
+}
+
+/**
+ * Every source file under `srcDir` holding a raw sql template with a
+ * non-snake_case identifier, paired with the identifiers it holds.
+ */
+const rawSqlIdentifierOffenders = async (
+  srcDir: string
+): Promise<Array<{ file: string; identifiers: string[] }>> => {
+  if (!existsSync(srcDir)) return []
+  let entries: string[]
+  try {
+    entries = (await readdir(srcDir, { recursive: true })).filter(
+      (f): f is string =>
+        typeof f === 'string' &&
+        f.endsWith('.ts') &&
+        !f.includes('node_modules')
+    )
+  } catch {
+    return []
+  }
+  const offenders: Array<{ file: string; identifiers: string[] }> = []
+  await Promise.all(
+    entries.map(async (f) => {
+      const path = join(srcDir, f)
+      const text = await readTextSafe(path)
+      if (!text || !/\bsql\b/.test(text)) return
+      const identifiers = nonSnakeCaseSqlIdentifiers(text)
+      if (identifiers.length > 0) offenders.push({ file: path, identifiers })
+    })
+  )
+  return offenders.sort((a, b) => a.file.localeCompare(b.file))
+}
+
+/**
+ * A `wireAddon` call naming the admin addon. One level of nested braces is
+ * allowed for an options object; the package specifier must appear inside the
+ * same call.
+ */
+export const WIRES_ADMIN_ADDON =
+  /wireAddon\s*\(\s*\{(?:[^{}]|\{[^{}]*\})*?@pikku\/addon-admin/
+
+/**
+ * Whether any source file actually wires `@pikku/addon-admin`.
+ *
+ * Matched against the `wireAddon({ ... })` call itself, over comment-blanked
+ * text: the scaffolded console wiring carries a comment naming this package to
+ * explain why it is NOT the console's scope root, and a per-file search for the
+ * two words reports every app that copied that comment as already wired.
+ */
+const wiresAdminAddon = async (srcDir: string): Promise<boolean> => {
+  if (!existsSync(srcDir)) return false
+  let entries: string[]
+  try {
+    entries = (await readdir(srcDir, { recursive: true })).filter(
+      (f): f is string =>
+        typeof f === 'string' &&
+        f.endsWith('.ts') &&
+        !f.includes('node_modules')
+    )
+  } catch {
+    return false
+  }
+  const texts = await Promise.all(
+    entries.map((f) => readTextSafe(join(srcDir, f)))
+  )
+  return texts.some(
+    (t) => Boolean(t) && WIRES_ADMIN_ADDON.test(blankComments(t!))
+  )
 }
 
 /**
@@ -542,6 +832,40 @@ export async function runSharedProjectChecks(
     // appear nowhere else in pikku or in any template — it never fired against a
     // real app, and would have been wrong for every one of them if it had.
     const authEnabled = await hasAuthSessionMiddleware(fnDir)
+
+    // Administering an application — the user directory, banning, roles and
+    // scope grants, the audit trail — is expected of every pikku app out of the
+    // box, and is what the console's Users and Scopes pages call. It arrives as
+    // `@pikku/addon-admin`, not as application code: an app that has not wired
+    // it exposes no `admin:*` RPC, so those pages have nothing to talk to and a
+    // Fabric operator signs in holding a grant that reaches nothing.
+    //
+    // Gated on better-auth being wired because `admin:users:*` reads and writes
+    // through its adapter — an app with no auth has no directory to administer.
+    if (authEnabled && !(await wiresAdminAddon(join(fnDir, 'src')))) {
+      e(
+        'admin-addon-not-wired',
+        '@pikku/addon-admin is not wired — the app exposes no admin:* RPCs, so the console Users and Scopes pages have nothing to call',
+        join(fnDir, 'src'),
+        lines(
+          'Install it and wire it once, anywhere under packages/functions/src:',
+          '',
+          "import { wireAddon } from '#pikku/addon'",
+          '',
+          'wireAddon({',
+          "  name: 'admin',",
+          "  package: '@pikku/addon-admin',",
+          '  globalCredentials:',
+          "    'administering credentials means setting and clearing any of them, for any user, so it cannot be scoped to a declared set',",
+          '})',
+          '',
+          'The functions are each gated on their own `admin:*` scope, so registering a',
+          'ScopeService in createSingletonServices is what makes those grants land —',
+          'without one nobody, including the Fabric operator, holds anything.',
+          'Banning additionally needs better-auth wired with `pikkuBan()`.'
+        )
+      )
+    }
     const configText = await readTextSafe(join(fnDir, 'src', 'config.ts'))
     const missingAuthTables: string[] = []
     if (existsSync(migrationsDir)) {
@@ -619,6 +943,31 @@ export async function runSharedProjectChecks(
           `Add a migration under db/${dbEngine}/ that creates the better-auth core schema:`,
           '  user, session, account, verification',
           'The pikku-auth skill generates one for the dialect you are on.'
+        )
+      )
+    }
+
+    // ── raw sql identifiers ──────────────────────────────────────────────
+    for (const { file, identifiers } of await rawSqlIdentifierOffenders(
+      join(fnDir, 'src')
+    )) {
+      const quoted = [...new Set(identifiers)].map((id) => `"${id}"`).join(', ')
+      e(
+        'raw-sql-camel-case-identifier',
+        `Raw sql template quotes a non-snake_case identifier: ${quoted} — CamelCasePlugin does not rewrite raw sql templates, so this reaches the database verbatim and fails with "no such column"`,
+        file,
+        lines(
+          'CamelCasePlugin rewrites only the identifiers the query builder produces:',
+          '  .orderBy(\'createdAt\')  ->  order by "created_at"',
+          'The text inside a sql`...` template is sent as written, while the plugin',
+          'still maps the rows back to camelCase — so the result handling around the',
+          'query looks correct and only the read fails.',
+          '',
+          'Either write the identifier the way the schema spells it:',
+          '  sql`select * from "user" order by "created_at" desc`',
+          '',
+          'or, better, go through the query builder and let the plugin translate:',
+          "  db.selectFrom('user').selectAll().orderBy('createdAt', 'desc')"
         )
       )
     }

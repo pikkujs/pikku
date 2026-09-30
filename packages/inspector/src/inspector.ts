@@ -12,6 +12,7 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import { createSourceFileCacheHost } from './source-file-cache.js'
 import { createNestedProjectFilter } from './utils/nested-project-filter.js'
+import { toProgramPath } from './utils/program-path.js'
 import {
   aggregateRequiredServices,
   stampAuthHandlerServices,
@@ -47,6 +48,7 @@ import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/state'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
+import { validateWebhookSourceTriggers } from './add/add-trigger.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import {
   finalizeWorkflowHelperTypes,
@@ -128,6 +130,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     triggers: {
       meta: {},
       sourceMeta: {},
+      webhookSourceMeta: {},
       files: new Set(),
     },
     scheduledTasks: {
@@ -366,7 +369,9 @@ export const inspect = async (
   )
 
   // Use provided rootDir or infer from source files
-  const rootDir = options.rootDir || findCommonAncestor(normalizedRouteFiles)
+  const rootDir = toProgramPath(
+    options.rootDir || findCommonAncestor(normalizedRouteFiles)
+  )
 
   const startSourceFiles = performance.now()
   // node_modules under rootDir (e.g. a locally-installed addon) is a
@@ -458,6 +463,8 @@ export const inspect = async (
     logger.debug(
       `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(0)}ms`
     )
+
+    validateWebhookSourceTriggers(logger, state)
 
     resolveLatestVersions(state, logger)
 

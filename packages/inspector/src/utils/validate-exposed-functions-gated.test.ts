@@ -125,6 +125,21 @@ describe('validateExposedFunctionsGated', () => {
       assert.ok(warning())
     })
 
+    test('is silent when it declares itself public with auth: false', () => {
+      // A published catalogue or a health check is open on purpose. Writing
+      // `auth: false` is the author saying so; the function that merely never
+      // mentioned auth is the one this warning exists for.
+      run(stateWith({ getCatalogue: ungatedFunction({ auth: false }) }))
+
+      assert.equal(warning(), undefined)
+    })
+
+    test('still warns when auth is left out', () => {
+      run(stateWith({ credentialGet: ungatedFunction({ auth: undefined }) }))
+
+      assert.ok(warning())
+    })
+
     test('is silent when it declares scopes', () => {
       run(stateWith({ credentialGet: ungatedFunction({ scopes: ['admin'] }) }))
 

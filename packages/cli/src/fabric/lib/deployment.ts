@@ -113,6 +113,17 @@ export interface DeploymentStatus {
   hostname: string | null
   missingSecrets: MissingConfigEntry[]
   missingVariables: MissingConfigEntry[]
+  /**
+   * Why a build failed, when the builder got far enough to say. This is often the
+   * ONLY record of the cause: a failed deployment has an empty manifest and plan,
+   * `statusReason` is null for anything that is not a gate, and `fabric logs`
+   * serves the running stage rather than the build. Dropping these here left the
+   * CLI reporting `failed in 248s` and nothing else, which reads as "your project
+   * is broken" even when the log says the build host was unreachable.
+   */
+  buildLog: string | null
+  imageBuildLog: string | null
+  imageBuildStatus: string | null
 }
 
 export async function readDeploymentStatus(
@@ -127,6 +138,9 @@ export async function readDeploymentStatus(
     hostname: s.hostname,
     missingSecrets: s.missingSecrets,
     missingVariables: s.missingVariables,
+    buildLog: s.buildLog ?? null,
+    imageBuildLog: s.imageBuildLog ?? null,
+    imageBuildStatus: s.imageBuildStatus ?? null,
   }
 }
 
@@ -336,6 +350,9 @@ export interface WaitResult {
   reason: BlockedReason | null
   missingSecrets: MissingConfigEntry[]
   missingVariables: MissingConfigEntry[]
+  /** The builder's own account of a failure. See {@link DeploymentStatus}. */
+  buildLog: string | null
+  imageBuildLog: string | null
   approved: boolean
   elapsedMs: number
 }
@@ -354,6 +371,15 @@ const RESUME_GRACE_MS = 30_000
 
 const defaultSleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+export function isTransientError(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status
+  if (typeof status === 'number') return status >= 500 || status === 429
+  return (
+    error instanceof TypeError ||
+    typeof (error as { code?: unknown } | null)?.code === 'string'
+  )
+}
 
 export async function waitForDeployment({
   rpc,
@@ -385,11 +411,28 @@ export async function waitForDeployment({
     reason,
     missingSecrets: status.missingSecrets,
     missingVariables: status.missingVariables,
+    buildLog: status.buildLog,
+    imageBuildLog: status.imageBuildLog,
     approved,
     elapsedMs: elapsed(),
   })
 
-  let latest = await readDeploymentStatus(rpc, deploymentId)
+  const retrying = async <T>(call: () => Promise<T>): Promise<T> => {
+    let backoff = 2_000
+    while (true) {
+      try {
+        return await call()
+      } catch (error) {
+        const remaining = timeoutMs - elapsed()
+        if (!isTransientError(error) || remaining <= 0) throw error
+        await sleep(Math.min(backoff, remaining))
+        backoff = Math.min(backoff * 1.5, 10_000)
+      }
+    }
+  }
+  const read = () => retrying(() => readDeploymentStatus(rpc, deploymentId))
+
+  let latest = await read()
 
   while (true) {
     if (latest.status !== lastStatus) {
@@ -430,12 +473,23 @@ export async function waitForDeployment({
         if (!(await approve(latest))) {
           return settle(latest, 'blocked', reason)
         }
-        await approveDeployment(rpc, deploymentId)
+        let retried = false
+        await retrying(async () => {
+          try {
+            return await approveDeployment(rpc, deploymentId)
+          } catch (error) {
+            if (retried && (error as { status?: unknown }).status === 409) {
+              return true
+            }
+            retried = true
+            throw error
+          }
+        })
         approved = true
         approvedAt = elapsed()
         onEvent({ event: 'approved', deploymentId })
         delay = 2_000
-        latest = await readDeploymentStatus(rpc, deploymentId)
+        latest = await read()
         continue
       }
     }
@@ -444,7 +498,7 @@ export async function waitForDeployment({
     if (remaining <= 0) return settle(latest, 'timeout', null)
     await sleep(Math.min(delay, remaining))
     delay = Math.min(delay * 1.5, 10_000)
-    latest = await readDeploymentStatus(rpc, deploymentId)
+    latest = await read()
   }
 }
 
@@ -488,7 +542,8 @@ export function reconcileDeployedRef({
       'A deployment already parked for this branch was attached to rather than a new one being cut,',
       'so continuing would deploy a different commit than the one named.',
       `Inspect it with \`pikku fabric deploy list --json\`, then either publish it deliberately with`,
-      `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\` or dismiss it and re-run.`,
+      `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\`, wait for it to finish,`,
+      `or dismiss it from the stage in the Fabric console and re-run.`,
     ].join('\n')
   )
 }

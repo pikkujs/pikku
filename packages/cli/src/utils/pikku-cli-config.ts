@@ -89,7 +89,7 @@ async function findConfigFile(): Promise<string> {
   const configFile = await findConfigFileOrNull()
   if (!configFile) {
     throw new PikkuCLIConfigError(
-      'No Pikku config file (pikku.config.ts, .js or .json) found in this directory or any parent up to the repository root.\nRun this from inside a pikku project, or create one with `pikku init`.'
+      `No pikku.config.json in ${process.cwd()} or any directory above it. Run this from inside a pikku project, create one with \`pikku init\`, or pass --config <path>.`
     )
   }
   return configFile
@@ -165,37 +165,61 @@ export const normalizeMetaLocale = (metaLocale: unknown): string => {
 }
 
 /**
- * Fill in the mount defaults and make `dir` absolute.
+ * Make each frontend's paths absolute and fill in the `serve` defaults.
  *
  * The trailing slash is stripped because a mount matches with
  * `pathname === prefix || pathname.startsWith(prefix + '/')`, under which a
  * stored `/app/` matches nothing at all — a frontend that silently never
  * appears rather than an error anyone can act on.
  */
-export const resolveFrontendConfig = (
-  frontend: NonNullable<PikkuCLIInput['frontend']>,
+export const resolveFrontends = (
+  frontends: NonNullable<PikkuCLIInput['frontends']>,
   configDir: string
-): NonNullable<PikkuCLIConfig['frontend']> => {
-  if (!frontend.dir) {
-    throw new PikkuCLIConfigError(
-      `frontend.dir is required — it names the directory your frontend's build already wrote, since pikku serves that output rather than building it`
-    )
+): NonNullable<PikkuCLIConfig['frontends']> => {
+  const resolved: NonNullable<PikkuCLIConfig['frontends']> = {}
+  const served: string[] = []
+
+  for (const [name, frontend] of Object.entries(frontends)) {
+    if (!frontend || typeof frontend.cwd !== 'string' || !frontend.cwd) {
+      throw new PikkuCLIConfigError(
+        `frontends.${name}.cwd is required — it names the frontend's project directory, where its package.json is`
+      )
+    }
+    const cwd = isAbsolute(frontend.cwd)
+      ? frontend.cwd
+      : join(configDir, frontend.cwd)
+    const dist = frontend.dist ?? 'dist'
+
+    const { serve, ...rest } = frontend
+    let resolvedServe: { urlPrefix: string; spaFallback: boolean } | undefined
+    if (serve) {
+      const urlPrefix = serve.urlPrefix ?? '/'
+      if (!urlPrefix.startsWith('/')) {
+        throw new PikkuCLIConfigError(
+          `frontends.${name}.serve.urlPrefix must start with "/" — got "${urlPrefix}"`
+        )
+      }
+      resolvedServe = {
+        urlPrefix: urlPrefix === '/' ? '/' : urlPrefix.replace(/\/+$/, ''),
+        spaFallback: serve.spaFallback ?? true,
+      }
+      served.push(name)
+    }
+
+    resolved[name] = {
+      ...rest,
+      cwd,
+      dist: isAbsolute(dist) ? dist : join(cwd, dist),
+      ...(resolvedServe ? { serve: resolvedServe } : {}),
+    }
   }
 
-  const urlPrefix = frontend.urlPrefix ?? '/'
-  if (!urlPrefix.startsWith('/')) {
+  if (served.length > 1) {
     throw new PikkuCLIConfigError(
-      `frontend.urlPrefix must start with "/" — got "${urlPrefix}"`
+      `frontends ${served.join(' and ')} both set "serve", but a pikku server serves one frontend — a standalone build embeds a single directory. Keep "serve" on the one the server should show.`
     )
   }
-
-  return {
-    dir: isAbsolute(frontend.dir)
-      ? frontend.dir
-      : join(configDir, frontend.dir),
-    urlPrefix: urlPrefix === '/' ? '/' : urlPrefix.replace(/\/+$/, ''),
-    spaFallback: frontend.spaFallback ?? true,
-  }
+  return resolved
 }
 
 /**
@@ -950,6 +974,14 @@ const _getPikkuCLIConfig = async (
     if (!result.servicesFile) {
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')
     }
+    // The services a local CLI entrypoint boots on top of the app's own, beside
+    // the services file whose requirements gate them.
+    if (!result.localServicesFile) {
+      result.localServicesFile = join(
+        result.outDir,
+        'pikku-local-services.gen.ts'
+      )
+    }
 
     // Middleware
     if (!result.middlewareFile) {
@@ -1213,6 +1245,44 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    const webhooksDir = join(result.outDir, 'webhooks')
+    if (!result.outgoingWebhooksFile) {
+      result.outgoingWebhooksFile = join(
+        webhooksDir,
+        'pikku-outgoing-webhooks.gen.ts'
+      )
+    }
+    if (!result.outgoingWebhooksMetaJsonFile) {
+      result.outgoingWebhooksMetaJsonFile = join(
+        webhooksDir,
+        'pikku-outgoing-webhooks-meta.gen.json'
+      )
+    }
+    if (!result.webhookSourcesFile) {
+      result.webhookSourcesFile = join(
+        webhooksDir,
+        'pikku-webhook-sources.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesLifecycleFile) {
+      result.webhookSourcesLifecycleFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-lifecycle.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesMetaFile) {
+      result.webhookSourcesMetaFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-meta.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesMetaJsonFile) {
+      result.webhookSourcesMetaJsonFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-meta.gen.json'
+      )
+    }
+
     result.globalHTTPPrefix = result.globalHTTPPrefix
       ? result.globalHTTPPrefix.replace(/\/+$/, '')
       : ''
@@ -1251,8 +1321,8 @@ const _getPikkuCLIConfig = async (
       }
     }
 
-    if (result.frontend) {
-      result.frontend = resolveFrontendConfig(result.frontend, result.configDir)
+    if (result.frontends) {
+      result.frontends = resolveFrontends(result.frontends, result.configDir)
     }
 
     if (result.emailTemplatesDir && !isAbsolute(result.emailTemplatesDir)) {
@@ -1270,6 +1340,7 @@ const _getPikkuCLIConfig = async (
       result.authTypesFile = join(result.configDir, result.authTypesFile)
     }
 
+    result.tsconfig ??= 'tsconfig.json'
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }

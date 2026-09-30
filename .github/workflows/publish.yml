@@ -1,6 +1,6 @@
 name: Publish
 
-# Publishing is split out of `main.yml` because the two want opposite
+# Publishing is split out of `full.yml` because the two want opposite
 # concurrency. CI is latest-wins: a new push to main should discard the run
 # before it and give feedback on the newest tree. A publish must never be
 # discarded — `cancel-in-progress` killed the `Create Release Pull Request or
@@ -14,7 +14,7 @@ name: Publish
 # to finish instead of interrupting it.
 on:
   workflow_run:
-    workflows: ['Release']
+    workflows: ['Full Suite']
     types: [completed]
     branches: [main]
 
@@ -23,59 +23,58 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # `workflow_run` reports the conclusion of the WHOLE `Release` run, and that
-  # run carries the verifier and template matrices too — ~100 jobs `main.yml`
-  # deliberately does not gate a publish on ("they no longer stand between a
-  # merge and the registry"). Keying the publish on the run conclusion put them
-  # back in front of npm through the back door: one red
-  # `Verifiers (deploy-standalone, …)` and the Version Packages PR never opens,
-  # silently, because a skipped job reads as a green workflow.
-  #
-  # So resolve the five protecting jobs by name instead. The `workflow_run`
-  # payload carries no per-job results, hence the jobs API. A name that matches
-  # nothing counts as a failure: renaming a job in `main.yml` must close this
-  # gate loudly rather than open it.
+  # Full Suite is the whole of CI on main — validate, lint, build, unit, e2e,
+  # verifiers, templates, examples — so a publish needs the run to have
+  # succeeded, nothing less. A Version Packages commit skips every Full Suite
+  # job (it only bumps versions), so its run reads green whatever the code is;
+  # for that commit the result of the commit below it is what counts.
   gate:
     name: Gate
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'cancelled'
+    timeout-minutes: 100
     permissions:
       actions: read
     outputs:
       ok: ${{ steps.gate.outputs.ok }}
     steps:
-      - name: Check the jobs that protect a publish
+      - name: Require Full Suite to have passed
         id: gate
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
-          gh api --paginate \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
-            --jq '.jobs[] | [.name, (.conclusion // "pending")] | @tsv' > jobs.tsv
-
-          ok=true
-          for name in 'Validate Package Deps' 'Lint & Format' 'Build' 'Unit Tests' 'E2E Standard'; do
-            # Last occurrence wins so a re-run of a single job is what counts.
-            conclusion=$(awk -F'\t' -v n="$name" '$1==n {c=$2} END {print (c=="" ? "missing" : c)}' jobs.tsv)
-            if [ "$conclusion" = success ]; then
-              echo "- \`$name\`: success" >> "$GITHUB_STEP_SUMMARY"
-            else
-              ok=false
-              echo "::error::publish gate job '$name' is '$conclusion'"
-              echo "- \`$name\`: **$conclusion**" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-
-          if [ "$ok" = true ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Publishing." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Not publishing** — a job that protects the registry did not pass." >> "$GITHUB_STEP_SUMMARY"
+          sha=$HEAD_SHA
+          conclusion=$CONCLUSION
+          if [[ "$HEAD_MESSAGE" == "Version Packages"* ]]; then
+            while :; do
+              sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq '.parents[0].sha')
+              message=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq '.commit.message')
+              [[ "$message" == "Version Packages"* ]] || break
+            done
+            echo "Waiting for Full Suite on ${sha}"
+            conclusion=missing
+            for _ in $(seq 1 90); do
+              conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full.yml/runs?branch=main&per_page=50" \
+                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")][0] | if . == null then \"missing\" else (.conclusion // \"pending\") end")
+              case "$conclusion" in
+                missing|pending) sleep 60 ;;
+                *) break ;;
+              esac
+            done
           fi
-          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
+          if [ "$conclusion" = success ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "Full Suite on \`${sha:0:9}\`: success. Publishing." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Full Suite on ${sha} is '$conclusion'"
+            echo "Full Suite on \`${sha:0:9}\`: **$conclusion**. **Not publishing.**" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   publish:
     name: Publish
@@ -103,7 +102,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
       # `download-build: false` because there is no `build-output` artifact to
-      # download: it is uploaded by the `Build` job of the *Release* run, and a
+      # download: it is uploaded by the `Build` job of the *Full Suite* run, and a
       # `workflow_run` job can only reach its own run's artifacts. `bun run release`
       # below rebuilds every package from source anyway (`build:packages` →
       # `pikku` → `build:addons` → `build:console`), which is also where
@@ -203,6 +202,7 @@ jobs:
     name: Sync Templates
     runs-on: ubuntu-latest
     needs: publish
+    if: needs.publish.outputs.published == 'true'
     environment: sync-templates-approval
     strategy:
       fail-fast: false

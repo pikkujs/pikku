@@ -16,6 +16,7 @@ const identityFor = (
 ): UpstreamIdentity => ({
   externalId: 'bb2-1',
   email: 'Jane@Corp.com',
+  syntheticEmail: false,
   name: 'Jane Doe',
   role: 'Manager',
   credential: { token: 'jwt-1', expiresAt: 4102444800 },
@@ -294,6 +295,95 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
 
     const missing = await signInDelegated(auth, { email: 'jane@corp.com' })
     assert.equal(missing.status, 400)
+  })
+
+  test('login and username reach authenticate as the identifier, email stays unset', async () => {
+    const seen: Array<Record<string, unknown>> = []
+    for (const field of ['login', 'username'] as const) {
+      const db: Record<string, any[]> = { user: [], session: [], account: [] }
+      const { auth, stored } = makeAuth(db, {
+        authenticate: async (credentials) => {
+          seen.push({ ...credentials })
+          return credentials.login === 'dan' && credentials.password === 'pw'
+            ? identityFor({
+                externalId: '7',
+                email: 'dan@erp.example.com',
+                syntheticEmail: true,
+              })
+            : null
+        },
+      })
+
+      const res = await signInDelegated(auth, {
+        [field]: 'dan',
+        password: 'pw',
+      })
+      assert.equal(res.status, 200)
+      assert.equal(db.user![0].email, 'dan@erp.example.com')
+      assert.equal(stored.length, 1)
+    }
+    assert.deepEqual(
+      seen.map((c) => [c.login, c.email]),
+      [
+        ['dan', undefined],
+        ['dan', undefined],
+      ]
+    )
+  })
+
+  test('email still works and is passed as both email and login', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    let seen: Record<string, unknown> | undefined
+    const { auth } = makeAuth(db, {
+      authenticate: async (credentials) => {
+        seen = { ...credentials }
+        return identityFor()
+      },
+    })
+
+    const res = await signInDelegated(auth, {
+      email: 'jane@corp.com',
+      password: 'hunter2',
+    })
+    assert.equal(res.status, 200)
+    assert.equal(seen?.login, 'jane@corp.com')
+    assert.equal(seen?.email, 'jane@corp.com')
+  })
+
+  test('a synthetic email never claims an existing user row', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { auth } = makeAuth(db, {
+      authenticate: async () =>
+        identityFor({
+          externalId: '7',
+          email: 'jane@corp.com',
+          syntheticEmail: true,
+        }),
+    })
+    await auth.api.signUpEmail({
+      body: { email: 'jane@corp.com', password: 'password123', name: 'Jane' },
+    })
+
+    const res = await signInDelegated(auth, { login: 'jane', password: 'x' })
+    assert.equal(res.status, 401)
+    assert.equal(
+      db.account!.some((a) => a.providerId === DELEGATED_PROVIDER_ID),
+      false
+    )
+  })
+
+  test('an authenticator that omits syntheticEmail never claims an existing user row', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { auth } = makeAuth(db, {
+      authenticate: async () =>
+        identityFor({ email: 'jane@corp.com', syntheticEmail: undefined }),
+    })
+    await auth.api.signUpEmail({
+      body: { email: 'jane@corp.com', password: 'password123', name: 'Jane' },
+    })
+
+    const res = await signInDelegated(auth, { login: 'jane', password: 'x' })
+    assert.equal(res.status, 401)
   })
 
   test('mapRole and defaultRole shape the granted role', async () => {

@@ -65,6 +65,10 @@ it to your project's service, session and middleware types; the `@pikku/core/*`
 export is the unbound generic. **Both compile.** Importing from core costs you
 exactly the typing that makes the wiring worth having, silently.
 
+`pikku validate` reports it as the `coreImport` lint rule, an error by default,
+naming the `#pikku` leaf to use instead. `@pikku/core/services` is the one
+subpath it exempts — the service implementations bootstrap picks.
+
 | Wiring | Import from |
 | --- | --- |
 | `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes` | `#pikku/http` |

@@ -8,11 +8,8 @@ import {
   resolveActorSignIn,
 } from '@pikku/better-auth'
 
-import { deriveActorSecret, verifyActorSecret } from '@pikku/core/services'
-
 import {
   ACTOR_SECRET_ENV,
-  DEV_ACTOR_SECRETS_ENV,
   VITE_ACTOR_SECRET_ENV,
   disableDevActorSignIn,
   enableDevActorSignIn,
@@ -36,13 +33,8 @@ const clearEnv = () => {
   delete process.env[ACTOR_SIGN_IN_OPT_IN_ENV]
   delete process.env[ACTOR_SECRET_ENV]
   delete process.env[VITE_ACTOR_SECRET_ENV]
-  delete process.env[DEV_ACTOR_SECRETS_ENV]
+  delete process.env.VITE_DEV_ACTOR_SECRETS
 }
-
-const declaredPersonas = async () => [
-  { id: 'admin', email: 'admin@actors.example' },
-  { id: 'client', email: 'client@actors.example' },
-]
 
 describe('pikku dev enabling actor sign-in', () => {
   beforeEach(clearEnv)
@@ -112,75 +104,18 @@ describe('pikku dev enabling actor sign-in', () => {
     assert.match(logger.lines.warn.join('\n'), /different values/)
   })
 
-  test('hands the switcher one credential per declared persona, never the root', async () => {
-    const logger = recordingLogger()
-    await enableDevActorSignIn(logger as any, declaredPersonas)
+  test('puts no persona credential in the frontend env', async () => {
+    await enableDevActorSignIn(recordingLogger() as any)
 
-    const root = process.env[ACTOR_SECRET_ENV]!
-    const credentials = JSON.parse(process.env[DEV_ACTOR_SECRETS_ENV]!)
-    assert.deepEqual(Object.keys(credentials).sort(), [
-      'admin@actors.example',
-      'client@actors.example',
-    ])
-    for (const [email, secret] of Object.entries(credentials)) {
-      assert.notEqual(secret, root)
-      assert.equal(await verifyActorSecret(root, email, secret as string), true)
-    }
+    assert.equal(process.env.VITE_DEV_ACTOR_SECRETS, undefined)
   })
 
-  test("a persona's credential is refused for any other persona", async () => {
-    await enableDevActorSignIn(recordingLogger() as any, declaredPersonas)
-
-    const root = process.env[ACTOR_SECRET_ENV]!
-    const credentials = JSON.parse(process.env[DEV_ACTOR_SECRETS_ENV]!)
-    assert.equal(
-      await verifyActorSecret(
-        root,
-        'client@actors.example',
-        credentials['admin@actors.example']
-      ),
-      false
-    )
-  })
-
-  test('a root too short to derive from mints nothing and says why', async () => {
+  test('a root too short to derive from says why', async () => {
     process.env[ACTOR_SECRET_ENV] = 'too-short'
     const logger = recordingLogger()
-    await enableDevActorSignIn(logger as any, declaredPersonas)
+    await enableDevActorSignIn(logger as any)
 
-    assert.equal(process.env[DEV_ACTOR_SECRETS_ENV], undefined)
     assert.match(logger.lines.warn.join('\n'), /shorter than 32 characters/)
-  })
-
-  test('a project declaring no personas leaves the switcher empty', async () => {
-    await enableDevActorSignIn(recordingLogger() as any, async () => [])
-
-    assert.equal(process.env[DEV_ACTOR_SECRETS_ENV], undefined)
-  })
-
-  test('a failure to resolve personas is reported, not swallowed', async () => {
-    const logger = recordingLogger()
-    await enableDevActorSignIn(logger as any, async () => {
-      throw new Error('inspector state is unreadable')
-    })
-
-    assert.equal(process.env[DEV_ACTOR_SECRETS_ENV], undefined)
-    assert.match(logger.lines.warn.join('\n'), /inspector state is unreadable/)
-    assert.equal(resolveActorSignIn().enabled, true)
-  })
-
-  test('the credential the dev server mints is the one the server derives', async () => {
-    process.env[ACTOR_SECRET_ENV] = 'a-root-secret-long-enough-to-derive-from'
-    await enableDevActorSignIn(recordingLogger() as any, declaredPersonas)
-
-    const credentials = JSON.parse(process.env[DEV_ACTOR_SECRETS_ENV]!)
-    assert.equal(
-      credentials['admin@actors.example'],
-      await deriveActorSecret(
-        'a-root-secret-long-enough-to-derive-from',
-        'admin@actors.example'
-      )
-    )
   })
 })
 

@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import {
+  getArrayPropertyValue,
   getPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
@@ -13,8 +14,14 @@ import { ensureInlineWiringFunction } from '../utils/ensure-function-metadata.js
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
+import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 
 import { ErrorCode } from '../error-codes.js'
+import type { WebhookSourceMeta } from '@pikku/core/trigger'
+import { webhookSecretCredentialName } from '@pikku/core/trigger'
+
+const WEBHOOK_SOURCE_STEPS = ['receive', 'check', 'setup', 'teardown'] as const
+
 export const addTrigger: AddWiring = (
   logger,
   node,
@@ -38,6 +45,8 @@ export const addTrigger: AddWiring = (
     addWireTrigger(logger, node, checker, state, firstArg)
   } else if (expression.text === 'wireTriggerSource') {
     addWireTriggerSource(logger, node, checker, state, options, firstArg)
+  } else if (expression.text === 'wireTriggerWebhookSource') {
+    addWireTriggerWebhookSource(logger, node, checker, state, firstArg)
   }
 }
 
@@ -162,4 +171,152 @@ const addWireTriggerSource: (
   }
 
   state.triggers.files.add(node.getSourceFile().fileName)
+}
+
+const refTarget = (initializer: ts.Expression): string | null => {
+  if (
+    !ts.isCallExpression(initializer) ||
+    !ts.isIdentifier(initializer.expression) ||
+    initializer.expression.text !== 'ref'
+  ) {
+    return null
+  }
+  const [target] = initializer.arguments
+  return target && ts.isStringLiteral(target) && target.text.includes(':')
+    ? target.text
+    : null
+}
+
+const addWireTriggerWebhookSource: (
+  logger: Parameters<AddWiring>[0],
+  node: ts.CallExpression,
+  checker: Parameters<AddWiring>[2],
+  state: Parameters<AddWiring>[3],
+  firstArg: ts.Expression | undefined
+) => void = (logger, node, checker, state, firstArg) => {
+  if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) {
+    return
+  }
+  const obj = firstArg
+  const name = getPropertyValue(obj, 'name') as string | null
+  if (!name) {
+    logger.critical(
+      ErrorCode.MISSING_NAME,
+      `wireTriggerWebhookSource in ${node.getSourceFile().fileName} needs 'name' as a string literal.`
+    )
+    return
+  }
+
+  const method =
+    getArrayPropertyValue(obj, 'method') ??
+    (getPropertyValue(obj, 'method') as string | null) ??
+    'post'
+  const route =
+    (getPropertyValue(obj, 'route') as string | null) ?? `/webhooks/${name}`
+
+  const eventsInitializer = getPropertyAssignmentInitializer(
+    obj,
+    'events',
+    false,
+    checker
+  )
+  const events = eventsInitializer
+    ? checker
+        .getTypeAtLocation(eventsInitializer)
+        .getProperties()
+        .map((property) => property.getName())
+        .sort()
+    : []
+
+  const steps: Partial<Record<(typeof WEBHOOK_SOURCE_STEPS)[number], string>> =
+    {}
+  for (const step of WEBHOOK_SOURCE_STEPS) {
+    const initializer = getPropertyAssignmentInitializer(
+      obj,
+      step,
+      true,
+      checker
+    )
+    if (!initializer) continue
+
+    const target = refTarget(initializer)
+    if (target) {
+      if (!resolveFunctionMeta(state, target)) {
+        logger.warn(
+          `Webhook source '${name}': addon function metadata for '${target}' is not available yet.`
+        )
+      }
+      steps[step] = target
+      state.serviceAggregation.usedFunctions.add(target)
+      continue
+    }
+
+    const extracted = extractFunctionName(initializer, checker, state.rootDir)
+    let pikkuFuncId = extracted.pikkuFuncId
+    if (pikkuFuncId.startsWith('__temp_')) {
+      pikkuFuncId = makeContextBasedId('trigger-webhook', name, step)
+    }
+    ensureInlineWiringFunction(
+      state,
+      pikkuFuncId,
+      `${name}:${step}`,
+      initializer,
+      checker,
+      extracted.isHelper
+    )
+    const meta = state.functions.meta[pikkuFuncId]
+    if (meta && meta.sessionless === undefined) meta.sessionless = true
+    steps[step] = pikkuFuncId
+    state.serviceAggregation.usedFunctions.add(pikkuFuncId)
+  }
+
+  const meta: WebhookSourceMeta = {
+    name,
+    method: method as WebhookSourceMeta['method'],
+    route,
+    events,
+    ...steps,
+  }
+  state.triggers.webhookSourceMeta[name] = meta
+  state.triggers.files.add(node.getSourceFile().fileName)
+
+  if (!getPropertyAssignmentInitializer(obj, 'verify', false, checker)) return
+  const sourceFile = node.getSourceFile().fileName
+  const credential =
+    (getPropertyValue(obj, 'credential') as string | null) ??
+    webhookSecretCredentialName(name)
+  state.credentials.files.add(sourceFile)
+  state.credentials.definitions.push({
+    name: credential,
+    displayName: `${name} webhook secret`,
+    description:
+      (getPropertyValue(obj, 'credentialDescription') as string | null) ??
+      undefined,
+    type: 'singleton',
+    schema: { type: 'string' },
+    sourceFile,
+  })
+}
+
+/**
+ * A trigger named `<source>:<event>` must name an event its webhook source
+ * declares, or it would never fire.
+ */
+export const validateWebhookSourceTriggers = (
+  logger: Parameters<AddWiring>[0],
+  state: Parameters<AddWiring>[3]
+) => {
+  const sources = state.triggers.webhookSourceMeta
+  for (const trigger of Object.keys(state.triggers.meta)) {
+    const colon = trigger.indexOf(':')
+    if (colon === -1) continue
+    const source = sources[trigger.slice(0, colon)]
+    if (!source || source.events.length === 0) continue
+    const event = trigger.slice(colon + 1)
+    if (!source.events.includes(event)) {
+      logger.error(
+        `Trigger '${trigger}' listens for '${event}', which webhook source '${source.name}' does not declare. Declared: ${source.events.join(', ')}.`
+      )
+    }
+  }
 }

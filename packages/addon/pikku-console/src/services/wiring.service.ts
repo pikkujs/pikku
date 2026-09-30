@@ -6,6 +6,7 @@ import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
 import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
 import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
+import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -226,6 +227,17 @@ export interface TriggerSourceMeta {
   description?: string
 }
 
+export interface WebhookSourceMeta {
+  name: string
+  method: string | string[]
+  route: string
+  events: string[]
+  receive?: string
+  check?: string
+  setup?: string
+  teardown?: string
+}
+
 export interface MetaCounts {
   functions: number
   workflows: number
@@ -243,6 +255,7 @@ export interface MetaCounts {
   emails: number
   secrets: number
   variables: number
+  outgoingWebhooks: number
   featureFlags: number
   analyticsEvents: number
 }
@@ -281,6 +294,7 @@ export interface PikkuMetaState {
   features: FeaturesMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
+  webhookSourceMeta: Record<string, WebhookSourceMeta>
   middlewareGroupsMeta: MiddlewareGroupsMeta
   permissionsGroupsMeta: PermissionsGroupsMeta
   agentsMeta: AgentsMeta
@@ -288,6 +302,7 @@ export interface PikkuMetaState {
   secretsMeta: Record<string, unknown>
   credentialsMeta: Record<string, unknown>
   variablesMeta: Record<string, unknown>
+  outgoingWebhooksMeta: OutgoingWebhooksMeta
 }
 
 export interface AllMeta extends PikkuMetaState {
@@ -324,6 +339,7 @@ export class WiringService {
       features,
       triggerMeta,
       triggerSourceMeta,
+      webhookSourceMeta,
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,
@@ -331,6 +347,7 @@ export class WiringService {
       secretsMeta,
       credentialsMeta,
       variablesMeta,
+      outgoingWebhooksMeta,
     ] = await Promise.all([
       this.metaService.getFunctionsMeta(),
       this.metaService.getHttpMeta(),
@@ -349,6 +366,7 @@ export class WiringService {
       this.metaService.getFeaturesMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
+      this.metaService.getWebhookSourcesMeta(),
       this.metaService.getMiddlewareGroupsMeta(),
       this.metaService.getPermissionsGroupsMeta(),
       this.metaService.getAgentsMeta(),
@@ -356,6 +374,7 @@ export class WiringService {
       this.metaService.getSecretsMeta(),
       this.metaService.getCredentialsMeta(),
       this.metaService.getVariablesMeta(),
+      this.metaService.getOutgoingWebhooksMeta(),
     ])
 
     const httpMeta = Object.entries(httpMetaRaw || {}).flatMap(
@@ -597,6 +616,7 @@ export class WiringService {
       emails: Object.keys(emailsMeta.templates ?? {}).length,
       secrets: Object.keys(secretsMeta).length,
       variables: Object.keys(variablesMeta).length,
+      outgoingWebhooks: Object.keys(outgoingWebhooksMeta).length,
       featureFlags: Object.keys(featureFlags).length,
       analyticsEvents: Object.keys(analyticsEvents).length,
     }
@@ -621,6 +641,7 @@ export class WiringService {
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:
         triggerSourceMeta as unknown as AllMeta['triggerSourceMeta'],
+      webhookSourceMeta,
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,
@@ -628,6 +649,7 @@ export class WiringService {
       secretsMeta,
       credentialsMeta,
       variablesMeta,
+      outgoingWebhooksMeta,
       functionUsedBy,
       counts,
     }

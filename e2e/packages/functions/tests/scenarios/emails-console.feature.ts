@@ -24,19 +24,13 @@ export const emailTemplateGridScenario = pikkuScenario<void, { listed: true }>({
     await scenario.given(
       'opens the emails page',
       'opensConsolePage',
-      { path: EMAILS_PAGE },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees the page title',
-      'seesText',
-      { text: 'Email Templates' },
+      { path: EMAILS_PAGE, waitFor: { testId: 'emails-hero' } },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the hello-world template',
-      'seesText',
-      { text: TEMPLATE },
+      'seesTestId',
+      { testId: `email-row-${TEMPLATE}` },
       { actor: actors.admin }
     )
 
@@ -48,9 +42,9 @@ export const emailTemplateLocalesScenario = pikkuScenario<
   void,
   { counted: true }
 >({
-  title: 'An email template card shows its locale count',
+  title: 'An email template previews in each of its locales',
   description:
-    'The hello-world template is translated twice and the card says so',
+    'The hello-world template is translated twice and the preview offers both',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -62,13 +56,25 @@ export const emailTemplateLocalesScenario = pikkuScenario<
     await scenario.given(
       'opens the emails page',
       'opensConsolePage',
-      { path: EMAILS_PAGE },
+      { path: EMAILS_PAGE, waitFor: { testId: 'emails-hero' } },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the hello-world template',
+      'clicksTestId',
+      { testId: `email-row-${TEMPLATE}` },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the locale count',
-      'seesText',
-      { text: '2 locales' },
+      'previews it in English',
+      'selectsSegment',
+      { value: 'en' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'previews it in German',
+      'selectsSegment',
+      { value: 'de' },
       { actor: actors.admin }
     )
 
@@ -81,7 +87,7 @@ export const emailTemplateDetailScenario = pikkuScenario<
   { opened: true }
 >({
   title: 'Clicking an email template opens its detail view',
-  description: 'The detail view offers to render the template',
+  description: 'The detail view renders a preview of the template',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -99,19 +105,19 @@ export const emailTemplateDetailScenario = pikkuScenario<
     await scenario.when(
       'opens the hello-world template',
       'clicksTestId',
-      { testId: `entity-card-${TEMPLATE}` },
+      { testId: `email-row-${TEMPLATE}` },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the template name',
-      'seesText',
-      { text: TEMPLATE },
+      'sees the template',
+      'seesTestId',
+      { testId: 'emails-detail-hero' },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the render control',
-      'seesText',
-      { text: 'Render' },
+      'sees the rendered preview',
+      'seesTestId',
+      { testId: 'emails-preview-frame' },
       { actor: actors.admin }
     )
 

@@ -1,6 +1,9 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { collectFilterNames } from './per-unit-codegen.js'
+import {
+  collectFilterNames,
+  collectWorkflowMetaNames,
+} from './per-unit-codegen.js'
 import type { InspectorState } from '@pikku/inspector'
 import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 
@@ -167,7 +170,9 @@ describe('collectFilterNames - the channel a CLI program is served over', () => 
   })
 
   test('the program name joins the filter', () => {
-    assert.ok(names(cliChannelUnit(['cli', 'seminarhof'])).includes('seminarhof'))
+    assert.ok(
+      names(cliChannelUnit(['cli', 'seminarhof'])).includes('seminarhof')
+    )
   })
 
   test('the channel and its own wirings are still there', () => {
@@ -193,5 +198,66 @@ describe('collectFilterNames - the channel a CLI program is served over', () => 
 
   test('a cli tag naming no known program adds nothing', () => {
     assert.ok(!names(cliChannelUnit(['cli', 'ghost'])).includes('ghost'))
+  })
+})
+
+describe('collectFilterNames - workflows a unit only starts', () => {
+  const manifest = {
+    agents: [],
+    channels: [],
+    mcpEndpoints: [],
+    workflows: [
+      {
+        name: 'candidateLifecycle',
+        pikkuFuncId: 'candidateLifecycle',
+        orchestratorUnit: 'wf-candidate-lifecycle',
+        steps: [{ functionId: 'sendReminder' }],
+      },
+      {
+        name: 'other',
+        pikkuFuncId: 'other',
+        orchestratorUnit: 'wf-other',
+        steps: [],
+      },
+    ],
+    units: [],
+  } as unknown as DeploymentManifest
+
+  const starter = (): DeploymentUnit => ({
+    ...callingUnit(),
+    services: [
+      { capability: 'workflow-state', sourceServiceName: 'workflowService' },
+      { capability: 'queue', sourceServiceName: 'queueService' },
+    ],
+    startedWorkflows: ['candidateLifecycle'],
+  })
+
+  test('only the started workflow goes to --workflowMeta', () => {
+    assert.deepEqual(collectWorkflowMetaNames(starter(), true), [
+      'candidateLifecycle',
+    ])
+  })
+
+  test('neither the workflow, its orchestrator worker, its steps nor other workflows join the filter', () => {
+    const names = collectFilterNames(starter(), manifest, inspectorState, true)
+    assert.deepEqual(names, ['askTheHouse'])
+    assert.ok(!names.includes('wf-orchestrator-candidate-lifecycle'))
+    assert.ok(!names.includes('candidateLifecycle'))
+    assert.ok(!names.includes('wf-step-send-reminder'))
+    assert.ok(!names.includes('other'))
+  })
+
+  test('without workflow queues the start runs inline, so the whole workflow is bundled', () => {
+    const names = collectFilterNames(starter(), manifest, inspectorState, false)
+    assert.deepEqual(names, ['askTheHouse', 'candidateLifecycle'])
+    assert.deepEqual(collectWorkflowMetaNames(starter(), false), [])
+  })
+
+  test('a full workflow-state unit still gets every workflow', () => {
+    const unit = { ...starter(), startedWorkflows: undefined }
+    const names = collectFilterNames(unit, manifest, inspectorState, true)
+    assert.ok(names.includes('candidateLifecycle'))
+    assert.ok(names.includes('other'))
+    assert.deepEqual(collectWorkflowMetaNames(unit, true), [])
   })
 })

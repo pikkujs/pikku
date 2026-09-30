@@ -36,10 +36,11 @@ export type FunctionRuntimeMeta = {
   featureFlag?: string
   expose?: boolean
   /**
-   * A sessionless function's own `auth: true`. `sessionless` carries the
-   * baseline — a `pikkuFunc` always requires a session — and this carries the
-   * tightening a `pikkuSessionlessFunc` applies to itself. Both are needed to
-   * know whether a function is gated without running it.
+   * A sessionless function's own `auth`, as written. `sessionless` carries the
+   * baseline — a `pikkuFunc` always requires a session — and this carries what
+   * a `pikkuSessionlessFunc` declares about itself: `true` requires a session,
+   * `false` says it is public on purpose, absent says nothing. All three are
+   * needed to know whether an exposed function is gated without running it.
    */
   auth?: boolean
   /**
@@ -115,6 +116,13 @@ export type FunctionRuntimeMeta = {
   audit?: {
     durability: AuditDurability
   }
+  /**
+   * Set by the inspector when every service the function destructures is a
+   * singleton, so the runner skips `createWireServices` for it. Absent means
+   * the function reads a wire service, takes `services` whole, or the app's
+   * `Services` type did not resolve — in each case the wire services are built.
+   */
+  singletonServicesOnly?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
@@ -140,12 +148,26 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      /**
+       * RPC names this function's own body calls by literal name through
+       * `rpc.invoke(...)` / `rpc.remote(...)`. The deploy planner binds the
+       * function's unit to each callee's unit from this; a call with a computed
+       * name is not listed, and is warned about instead.
+       */
+      invokes: string[]
       /** File containing the handler body when it differs from sourceFile (imported handlers) */
       bodySourceFile?: string
       /** 1-indexed first line of the handler body (verbose meta; coverage mapping) */
       bodyStart: number
       /** 1-indexed last line of the handler body (verbose meta; coverage mapping) */
       bodyEnd: number
+      /**
+       * Workflow names this function's own body starts by literal name through
+       * `rpc.startWorkflow(...)`. The deploy planner bundles each one's meta
+       * into the function's unit, which is all a queued start needs. A call
+       * made from a helper the handler passes `rpc` to is not listed.
+       */
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 

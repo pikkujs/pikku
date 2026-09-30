@@ -1,5 +1,79 @@
 # @pikku/addon-admin
 
+## 0.12.10
+
+### Patch Changes
+
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/better-auth@0.12.50
+
+## 0.12.9
+
+### Patch Changes
+
+- 35a0bb6: `admin:flagList` lists a declared flag the store holds no row for, as live and unbacked, instead of leaving it off the board.
+
+## 0.12.8
+
+### Patch Changes
+
+- 658f047: A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+  - @pikku/better-auth@0.12.49
+
+## 0.12.7
+
+### Patch Changes
+
+- 4a9dcd2: `admin:listUsers` now pages, counts and can carry roles.
+
+  `ListUsersInput` gains `offset` and `includeRoles`; `ListUsersOutput` gains `total`, and each `User` gains `roles` and `fields`. `total` is how many users match `search`, which is what a pager counts against — `users.length` never was, because it is capped by `limit`.
+
+  ```typescript
+  const { users, total } = await rpc.invoke('admin:listUsers', {
+    search: 'example.com',
+    limit: 50,
+    offset: 50,
+    includeRoles: true,
+  })
+  ```
+
+  Paging only means something over a stable order, so the query now sorts newest first rather than however the database felt like returning rows.
+
+  Synthetic principals — the platform credential owner, Fabric service users, scenario actors — are excluded by the query instead of dropped from the page afterwards. Filtering after the fact broke both halves of paging: `limit` had already counted the rows it then discarded, so a page came back short, and `offset` skipped synthetic rows as though they were people, so the same person could appear on two pages or on none.
+
+  `includeRoles` is refused without `admin:scopes:read`. `admin:users:list` says who may see the directory; it does not say who may see what each of those users can do.
+
+  `ScopeService` gains `listRolesForUsers(userIds)`, implemented in `@pikku/kysely`. It answers for every id asked for — an empty array for a user holding no roles, so a caller cannot read a missing key as "holds nothing" — and chunks its `in` list to stay inside the bound-parameter cap. A page of users used to cost one query per row, which on a database reached over the network is a round trip per row.
+
+  ```typescript
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
+  ```
+
+  Anything implementing `ScopeService` outside this repository has to add it.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
 ## 0.12.6
 
 ### Patch Changes

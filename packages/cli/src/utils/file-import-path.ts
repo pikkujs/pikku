@@ -1,4 +1,46 @@
-import { relative, dirname, resolve } from 'path'
+import { existsSync, readFileSync } from 'fs'
+import { relative, dirname, join, posix, resolve } from 'path'
+
+const toPosix = (nativePath: string): string => nativePath.replace(/\\/g, '/')
+
+/**
+ * A type declared in a built package's `.d.ts` is imported through the
+ * `exports` entry whose index sits in the same directory: `@pikku/core/trigger`
+ * for `dist/wirings/trigger/webhook-source.types.d.ts`. A path into `dist/` is
+ * not exported, so a consumer cannot resolve it.
+ */
+const exportedSubpath = (to: string): string | undefined => {
+  if (!to.endsWith('.d.ts')) return undefined
+  const file = resolve(to)
+  for (let dir = dirname(file); dir !== dirname(dir); dir = dirname(dir)) {
+    const packageJson = join(dir, 'package.json')
+    if (!existsSync(packageJson)) continue
+    const { name, exports } = JSON.parse(readFileSync(packageJson, 'utf-8'))
+    if (!name || !exports || typeof exports !== 'object') return undefined
+    const fileDir = toPosix(relative(dir, dirname(file)))
+    // Condition keys at the top level (`{ "import": ... }`) describe `.` alone.
+    const subpaths = Object.keys(exports).some((key) => key.startsWith('.'))
+      ? exports
+      : { '.': exports }
+    for (const [subpath, entry] of Object.entries<any>(subpaths)) {
+      if (subpath !== '.' && !subpath.startsWith('./')) continue
+      const target =
+        typeof entry === 'string'
+          ? entry
+          : (entry?.types ?? entry?.import ?? entry?.default)
+      if (
+        typeof target === 'string' &&
+        !subpath.includes('*') &&
+        /\/index\.(d\.ts|js)$/.test(target) &&
+        posix.dirname(posix.normalize(target)) === fileDir
+      ) {
+        return `${name}${subpath.slice(1)}`
+      }
+    }
+    return undefined
+  }
+  return undefined
+}
 
 export const getFileImportRelativePath = (
   from: string,
@@ -19,19 +61,22 @@ export const getFileImportRelativePath = (
     return to
   }
 
-  let filePath = relative(dirname(from), to)
+  const exported = exportedSubpath(to)
+  if (exported) return exported
+
+  // An import specifier is always forward-slashed: `..\\src\\update.ts` from
+  // Windows' path.relative would read `\\u` as a unicode escape.
+  let filePath = toPosix(relative(dirname(from), to))
   if (!/^\.+\//.test(filePath)) {
     filePath = `./${filePath}`
   }
 
-  const posixPath = filePath.replace(/\\/g, '/')
-
-  if (posixPath.includes('node_modules/')) {
+  if (filePath.includes('node_modules/')) {
     // An isolated store (bun's node_modules/.bun, pnpm's node_modules/.pnpm)
     // nests a second node_modules inside the first, so the package specifier
     // follows the last separator rather than the first.
-    const nodeModulesIndex = posixPath.lastIndexOf('node_modules/')
-    filePath = posixPath.substring(nodeModulesIndex + 'node_modules/'.length)
+    const nodeModulesIndex = filePath.lastIndexOf('node_modules/')
+    filePath = filePath.substring(nodeModulesIndex + 'node_modules/'.length)
 
     if (filePath.startsWith('@types/')) {
       filePath = filePath.substring('@types/'.length)
@@ -53,8 +98,8 @@ export const getFileImportRelativePath = (
     return filePath
   }
 
-  const absolutePath = resolve(dirname(from), to)
-  const fromAbsolutePath = resolve(dirname(from))
+  const absolutePath = toPosix(resolve(dirname(from), to))
+  const fromAbsolutePath = toPosix(resolve(dirname(from)))
 
   // Check if both files are in the same package directory
   // If so, skip packageMappings to use relative paths

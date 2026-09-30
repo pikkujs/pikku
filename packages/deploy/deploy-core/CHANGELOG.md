@@ -1,5 +1,22 @@
 # @pikku/deploy
 
+## 0.12.13
+
+### Patch Changes
+
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+## 0.12.12
+
+### Patch Changes
+
+- 1fe79bc: SQLite extensions now load under bun on macOS. Bun there opens Apple's SQLite, which is built without extension loading, so the CLI points bun at Homebrew's libsqlite3 (`brew install sqlite`) as it starts, or at the one `PIKKU_SQLITE_LIBRARY` names; without one it warns and carries on without extensions. A bun standalone build on macOS embeds that libsqlite3 and opens its database with it, and fails if the build machine has none. Linux is unchanged: bun there brings a SQLite that loads extensions, and node uses `node:sqlite` everywhere.
+- 1fe79bc: A standalone build of a SQLite app now ships its `db.sqliteExtensions` (sqlite-vec's vec0 by default) inside the artifact, so a migration or query that uses them works in production the way it does under `pikku dev`. The node bundle loads them from `sqlite-extensions/` beside itself; a compiled bun binary embeds them and writes them out under `$PIKKU_DATA_DIR/.pikku-sqlite-extensions/` on start. The libraries are the build machine's, so an extension that cannot be resolved there fails the build; `[]` builds without them.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` take an `extensions` list of library paths to load into the connection.
+
 ## 0.12.11
 
 ### Patch Changes

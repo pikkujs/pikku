@@ -1,4 +1,8 @@
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+  WebhookSourcesMeta,
+} from '@pikku/core/trigger'
 
 export const serializeTriggerMeta = (triggerMeta: TriggerMeta) => {
   return triggerMeta
@@ -56,4 +60,27 @@ export const serializeTriggerSourceMetaTS = (
     "pikkuState(null, 'trigger', 'sourceMeta', metaData as TriggerSourceMeta)"
   )
   return serializedOutput.join('\n')
+}
+
+export const serializeWebhookSourceMetaTS = (
+  meta: WebhookSourcesMeta,
+  jsonImportPath: string,
+  supportsImportAttributes: boolean
+) => {
+  const importStatement = supportsImportAttributes
+    ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+    : `import metaData from '${jsonImportPath}'`
+
+  const names = Object.keys(meta)
+  return [
+    "import { pikkuState } from '@pikku/core/state'",
+    "import { WebhookSourcesMeta } from '@pikku/core/trigger'",
+    importStatement,
+    '',
+    "pikkuState(null, 'trigger', 'webhookSourceMeta', metaData as WebhookSourcesMeta)",
+    '',
+    ...(names.length > 0
+      ? [`export type WebhookSourceNames = '${names.join("' | '")}'`]
+      : []),
+  ].join('\n')
 }

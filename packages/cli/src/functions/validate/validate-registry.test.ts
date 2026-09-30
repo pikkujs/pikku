@@ -57,6 +57,7 @@ describe('validation planning', () => {
       await writeAddon(tmp, '.')
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
         'addon-package:.',
+        'core-import:.',
         'pikku-barrel:.',
         'workspace-exports:.',
       ])
@@ -73,6 +74,7 @@ describe('validation planning', () => {
       await write(tmp, 'packages/functions/package.json', '{"name":"fns"}')
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
         'app-project:.',
+        'core-import:.',
         'pikku-barrel:.',
         'workspace-exports:.',
       ])
@@ -98,6 +100,9 @@ describe('validation planning', () => {
         'addon-package:p/one',
         'addon-package:p/two',
         'app-project:.',
+        'core-import:.',
+        'core-import:p/one',
+        'core-import:p/two',
         'pikku-barrel:.',
         'pikku-barrel:p/one',
         'pikku-barrel:p/two',
@@ -118,6 +123,7 @@ describe('validation planning', () => {
         JSON.stringify({ name: 'x', private: true, files: ['dist', '.pikku'] })
       )
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
+        'core-import:.',
         'pikku-barrel:.',
         'workspace-exports:.',
       ])

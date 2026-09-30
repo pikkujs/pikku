@@ -5,29 +5,30 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3060 observable things**: 994 exported names, plus
-2066 members on the classes and interfaces among them, reachable
-through 55 entry points.
+**3186 observable things**: 1060 exported names, plus
+2126 members on the classes and interfaces among them, reachable
+through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 436 |
-| `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 49 | 49 | 152 |
+| `./services` | 175 | 143 | 464 |
+| `./virtual-user` | 66 | 66 | 215 |
+| `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
-| `./agent` | 50 | 48 | 81 |
+| `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 23 | 20 | 77 |
+| `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
-| `./errors` | 50 | 50 | 22 |
+| `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
+| `./trigger` | 40 | 40 | 11 |
+| `./services/local-meta` | 22 | 2 | 42 |
 | `./mcp` | 25 | 25 | 17 |
-| `./services/local-meta` | 22 | 2 | 40 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
@@ -39,10 +40,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
-| `./trigger` | 8 | 8 | 11 |
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./hmac` | 9 | 9 | 8 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
@@ -54,6 +55,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./role` | 9 | 9 | 0 |
 | `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
+| `./webhook` | 7 | 7 | 1 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
@@ -66,7 +68,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node` | 3 | 3 | 0 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
-| `./hmac` | 2 | 2 | 0 |
 | `./remote` | 1 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
@@ -111,6 +112,9 @@ export type PikkuWire<
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
+  getCredential: GetCredential<TypedCredentials>
+  getCredentials: () =>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
@@ -145,9 +149,6 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: GetCredential<TypedCredentials>
-  getCredentials: () =>
-    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -215,6 +216,9 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   credentialService?: CredentialService
   emailService?: EmailService
   webhookService?: WebhookService
+  incomingWebhookService?: IncomingWebhookService
+  triggerSourceStore?: TriggerSourceStore
+  leaseService?: LeaseService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -256,12 +260,17 @@ export type CreateWireServices<
   services: SingletonServices,
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
-export type GetCredential<TCredentials = Record<string, unknown>> = {
-  <K extends keyof TCredentials & string>(
-    name: K
-  ): TCredentials[K] | null | Promise<TCredentials[K] | null>
-  <T = unknown>(name: string): T | null | Promise<T | null>
-}
+export type GetCredential<TCredentials = Record<string, unknown>> =
+  string extends keyof TCredentials
+    ? <T = unknown>(
+        name: string
+      ) => NoInfer<T> | null | Promise<NoInfer<T> | null>
+    : {
+        <K extends keyof TCredentials & string>(
+          name: K
+        ): TCredentials[K] | null | Promise<TCredentials[K] | null>
+        <T = unknown>(name: string): T | null | Promise<T | null>
+      }
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
@@ -271,9 +280,9 @@ export interface PikkuPackageState {
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
   queue: { registrations: Map<string, CoreQueueWorker>; meta: QueueWorkersMeta }
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
-  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
+  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta; webhookSources: Map<string, CoreTriggerWebhookSource>; webhookSourceMeta: WebhookSourcesMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -297,6 +306,9 @@ export type PikkuWire<
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
+  getCredential: GetCredential<TypedCredentials>
+  getCredentials: () =>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
@@ -331,9 +343,6 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: GetCredential<TypedCredentials>
-  getCredentials: () =>
-    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -370,6 +379,7 @@ export interface SecurityAuditIssue {
   cwe: string[]
   cvssScore: number | null
   recommendedVersion: string | null
+  dependencyType?: SecurityDependencyType
 }
 export interface SecurityAuditReport {
   schemaVersion: number
@@ -396,7 +406,9 @@ export interface SecurityAuditUpdate {
   current: string
   latest: string
   level: SecurityUpdateLevel
+  dependencyType?: SecurityDependencyType
 }
+export type SecurityDependencyType = 'prod' | 'dev'
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
 export type ServerLifecycle<
@@ -673,9 +685,11 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionRuntimeMeta = {
@@ -705,6 +719,7 @@ export type FunctionRuntimeMeta = {
   audit?: {
     durability: AuditDurability
   }
+  singletonServicesOnly?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
@@ -749,7 +764,7 @@ export abstract class PikkuRequest<In = any> {
   constructor(data: In)
   public async data(): Promise<In>
 }
-runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
+runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, wireServices: providedWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; wireServices?: Record<string, unknown> | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
 ```
 
 ## ./channel
@@ -1676,7 +1691,7 @@ export class ScenarioNoWitness extends PikkuError {
 }
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -1685,6 +1700,9 @@ export interface ScenarioResult {
   scenarioName?: string
   feature?: string
   featureId?: string
+  title?: string
+  description?: string
+  actors?: string[]
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1693,6 +1711,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   surface: string
   selection?: ScenarioRunSelection
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -1723,6 +1742,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -1731,6 +1751,11 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioRunVersion {
+  commit: string
+  dirty?: boolean
+  attempt: number
 }
 export interface ScenarioScreenshotOptions {
   showcase?: boolean
@@ -2508,7 +2533,7 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   personas: ScaffoldPersonas
@@ -2520,6 +2545,9 @@ export interface WriteVirtualUserScheduleParams {
   minIntervalMs?: number
   maxIntervalMs?: number
   nextRunAt?: string
+  config?: { nodeEnv?: string }
+  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environment?: string
 }
 ```
 
@@ -2922,6 +2950,34 @@ export interface CoreTrigger<PikkuFunctionConfig = any> {
   description?: string
   tags?: string[]
 }
+export type CoreTriggerWebhookSource<
+  Events extends Record<string, StandardSchemaV1> = Record<
+    string,
+    StandardSchemaV1
+  >,
+> = {
+  name: string
+  method?: WebhookSourceMethod | WebhookSourceMethod[]
+  route?: string
+  events?: Events
+  credential?: string
+  credentialDescription?: string
+  verify?: WebhookVerify
+  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
+  check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
+  setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
+  teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>
+}
+declaredTriggerSources: (address?: LifecycleInput | undefined) => DeclaredTriggerSource[]
+disableTriggerSource: ({ singletonServices, ...input }: SwitchInput) => Promise<WebhookSourceOutcome>
+dispatchWebhookSourceJob: (job: WebhookSourceJob) => Promise<void>
+enableTriggerSource: ({ singletonServices, ...input }: SwitchInput) => Promise<WebhookSourceOutcome>
+export type OrphanedWebhookRegistration = {
+  source: string
+  url: string
+  label: string
+}
+PIKKU_INCOMING_WEBHOOK_QUEUE_NAME: "pikku-incoming-webhooks"
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers: Map<string, TriggerInstance>
   abstract start(): Promise<void>
@@ -2931,13 +2987,126 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown) => Promise<void>): Promise<TriggerInstance>
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
 }
+receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<Response | { received: number; }>
+reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+reconcileWebhookRegistrations: ({ registrations, singletonServices, ...input }: LifecycleInput & { registrations: WebhookRegistrations; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<{ registrations: WebhookRegistrations; outcomes: WebhookSourceOutcome[]; orphans: OrphanedWebhookRegistration[]; }>
+runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+subscribedWebhookEvents: (source: string) => string[]
+teardownTriggerSources: ({ names, singletonServices, ...input }: LifecycleInput & { names: string[]; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+export type TriggerEvent<Name extends string = string, Data = unknown> = {
+  name: Name
+  id?: string
+  data: Data
+}
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 export type TriggerSourceMeta = Record<
   string,
   { name: string; pikkuFuncId: string; packageName?: string }
 >
+export type WebhookCheckResult =
+  | { status: 'ok' }
+  | { status: 'missing' }
+  | { status: 'drifted'; reason: string }
+export type WebhookLifecycleInput = {
+  url: string
+  label: string
+  events: string[]
+  previous?: WebhookSourceState
+}
+export type WebhookReceiveResult =
+  | { events: TriggerEvent[] }
+  | {
+      respond: {
+        status: number
+        body?: unknown
+        headers?: Record<string, string>
+      }
+    }
+export type WebhookRegistration = {
+  url: string
+  events: string[]
+  status: WebhookSourceOutcome['status']
+  state?: WebhookSourceState
+  credentials?: Record<string, unknown>
+}
+export type WebhookRegistrations = Record<string, WebhookRegistration>
+export type WebhookRequest = {
+  body: Uint8Array
+  headers: Record<string, string>
+  method: string
+  url: string
+  query: Record<string, string>
+}
+webhookSecretCredentialName: (source: string) => string
+export type WebhookSetupResult =
+  | {
+      status: 'created' | 'updated' | 'unchanged'
+      state?: WebhookSourceState
+    }
+  | { status: 'manual'; instructions: string }
+export type WebhookSourceJob = {
+  source: string
+  event: TriggerEvent
+  receiptId?: string
+}
+export type WebhookSourceMeta = {
+  name: string
+  method: WebhookSourceMethod | WebhookSourceMethod[]
+  route: string
+  events: string[]
+  receive?: string
+  check?: string
+  setup?: string
+  teardown?: string
+}
+export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
+export type WebhookSourceOutcome = {
+  source: string
+  url: string
+  status:
+    | WebhookCheckResult['status']
+    | WebhookSetupResult['status']
+    | WebhookTeardownResult['status']
+    | 'skipped'
+    | 'failed'
+  reason?: string
+  state?: WebhookSourceState
+  instructions?: string
+  error?: string
+}
+export type WebhookSourcesMeta = Record<string, WebhookSourceMeta>
+export type WebhookSourceState = Record<string, unknown>
+export type WebhookTeardownInput = {
+  label: string
+  previous?: WebhookSourceState
+}
+export type WebhookTeardownResult = { status: 'deleted' | 'absent' }
+export type WebhookVerify<Services = any> =
+  | {
+      hmac: {
+        header: string
+        prefix?: string
+        algorithm: HmacAlgorithm
+        encoding: 'hex' | 'base64'
+        secretEncoding?: SecretEncoding
+      }
+    }
+  | { token: { header: string; prefix?: string } }
+  | {
+      publicKey: {
+        header: string
+        algorithm?: string
+        dsaEncoding?: 'der' | 'ieee-p1363'
+      }
+    }
+  | ((
+      request: WebhookRequest,
+      secret: string,
+      services: Services
+    ) => boolean | Promise<boolean>)
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
+wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
 ```
 
 ## ./rpc
@@ -3272,6 +3441,13 @@ export interface AgentMessage {
   createdAt: Date
 }
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export type AgentRPCFactory = (
+  wire: PikkuRawWire,
+  options: AgentRPCOptions
+) => PikkuRPC['agent']
+export type AgentRPCOptions = {
+  sessionService?: SessionService<CoreUserSession>
+}
 export interface AgentRunRow {
   runId: string
   agentName: string
@@ -4232,6 +4408,7 @@ export type OAuth2CredentialConfig = {
   authorizationUrl: string
   tokenUrl: string
   scopes: string[]
+  scopeSeparator?: string
   pkce?: boolean
   additionalParams?: Record<string, string>
 }
@@ -4281,6 +4458,44 @@ export type VariableDefinitions = VariableDefinitionMeta[]
 export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 ```
 
+## ./webhook
+
+```ts
+export type CoreOutgoingWebhook<
+  Event extends string = string,
+  Payload extends StandardSchemaV1 = StandardSchemaV1,
+> = {
+  event: Event
+  title: string
+  description?: string
+  payload: Payload
+}
+defineOutgoingWebhook: <const Event extends string, Payload extends StandardSchemaV1>(webhook: CoreOutgoingWebhook<Event, Payload>) => CoreOutgoingWebhook<Event, Payload>
+export type OutgoingWebhookDataFor<TMap, Input> = Input extends {
+  event: infer Event
+}
+  ? Event extends keyof TMap
+    ? { data: Safe<TMap[Event]> }
+    : unknown
+  : unknown
+export type OutgoingWebhookMeta = {
+  event: string
+  title: string
+  description?: string
+  payload?: Record<string, string>
+  exportedName?: string
+  sourceFile?: string
+}
+export type OutgoingWebhookPayloadOf<W> =
+  W extends CoreOutgoingWebhook<string, infer S>
+    ? StandardSchemaV1.InferInput<S>
+    : never
+export type OutgoingWebhooksMeta = Record<string, OutgoingWebhookMeta>
+export interface TypedWebhookService< TMap = Record<string, unknown>, > extends Omit<WebhookService, 'send'> {
+  send<const T extends SendWebhookInput>(input: Safe<T> & OutgoingWebhookDataFor<TMap, T>): Promise<SendWebhookResult>
+}
+```
+
 ## ./oauth2
 
 ```ts
@@ -4310,6 +4525,10 @@ export class AIProviderNotConfiguredError extends PikkuError {
 export class BadGatewayError extends PikkuError {}
 export class BadRequestError extends PikkuError {}
 export class ConflictError extends PikkuError {}
+export class CredentialRejectedError extends PikkuError {
+  public payload: { error: 'credential_rejected'; credentialName: string; reauth: 'sign-in' | 'connect' }
+  constructor(credentialName: string, reauth: 'sign-in' | 'connect', message?: string)
+}
 export interface ErrorDetails {
   status: number
   message: string
@@ -4621,6 +4840,12 @@ export interface CredentialService {
   getUsersWithCredential(name: string): Promise<string[]>
   getAllUsers(): Promise<string[]>
 }
+export type DeclaredTriggerSource = {
+  name: string
+  kind: TriggerSourceKind
+  baseUrl?: string
+  labelPrefix?: string
+}
 DEFAULT_WEBHOOK_RETRIES: 3
 export interface DeploymentConfig {
   deploymentId: string
@@ -4757,9 +4982,11 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionsMeta = Record<string, FunctionMeta>
@@ -4784,6 +5011,29 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
+holdLease: <T>(leases: LeaseService, key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs?: number) => Promise<T>
+export type IncomingWebhookAttempt = {
+  trigger: string
+  error?: string
+}
+export type IncomingWebhookReceiptRecord = {
+  receiptId: string
+  source: string
+  providerEventId: string | null
+  event: string
+  status: 'pending' | 'delivered' | 'failed'
+  attempts: number
+  lastError: string | null
+  createdAt: Date
+  deliveredAt: Date | null
+}
+export class IncomingWebhookService {
+  constructor(protected queueService: QueueService, protected retries: number = DEFAULT_WEBHOOK_RETRIES)
+  public async accept({ source, events, }: { source: string; request: WebhookRequest; events: TriggerEvent[] }): Promise<number>
+  protected async enqueue(job: WebhookSourceJob): Promise<string>
+  public async recordAttempt(_receiptId: string, _attempt: IncomingWebhookAttempt): Promise<void>
+  public async listReceipts(_opts?: { source?: string; limit?: number }): Promise<IncomingWebhookReceiptRecord[]>
+}
 export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
@@ -4793,6 +5043,13 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
+}
+export class InMemoryLeaseService implements LeaseService {
+  constructor(private now: () => number = Date.now)
+  async acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  async refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  async release(lease: Lease): Promise<void>
+  async get(key: string): Promise<Lease | null>
 }
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
@@ -4806,6 +5063,14 @@ export class InMemorySessionStore< UserSession extends CoreUserSession = CoreUse
 }
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void>
+}
+export class InMemoryTriggerSourceStore implements TriggerSourceStore {
+  async syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
+  async listTriggerSources(): Promise<{ name: string; kind: "webhook"; baseUrl: string | null; labelPrefix: string | null; declared: boolean; enabled: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedAt: string | null; }[]>
+  async getTriggerSource(name: string): Promise<{ name: string; kind: "webhook"; baseUrl: string | null; labelPrefix: string | null; declared: boolean; enabled: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedAt: string | null; } | null>
+  async recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
+  async setTriggerSourceEnabled(name: string, enabled: boolean): Promise<void>
+  async deleteTriggerSource(name: string): Promise<void>
 }
 export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
   constructor(options: WorkflowQueueOptions = {})
@@ -4859,6 +5124,24 @@ export class JsonConsoleLogger implements Logger {
 export interface JWTService {
   encode: <T extends any>(expiresIn: RelativeTimeInput, payload: T) => Promise<string>
   decode: <T>(hash: string, invalidHashError?: Error, debug?: boolean) => Promise<T>
+}
+export type Lease = {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+export class LeaseLostError extends Error {
+  constructor(public readonly key: string)
+}
+export interface LeaseService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  release(lease: Lease): Promise<void>
+  get(key: string): Promise<Lease | null>
+}
+export class LeaseTakenError extends Error {
+  constructor(public readonly key: string)
 }
 export class LocalCredentialService implements CredentialService {
   async get<T = unknown>(name: string, userId?: string): Promise<T | null>
@@ -4945,6 +5228,8 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5260,6 +5545,32 @@ export interface TriggerService {
   start(): Promise<void>
   stop(): Promise<void>
 }
+export type TriggerSourceKind = 'webhook'
+export type TriggerSourceResult = {
+  status: string
+  state?: WebhookSourceState | null
+  detail?: string | null
+}
+export type TriggerSourceRow = Required<
+  Pick<DeclaredTriggerSource, 'name' | 'kind'>
+> & {
+  baseUrl: string | null
+  labelPrefix: string | null
+  declared: boolean
+  enabled: boolean
+  status: string | null
+  state: WebhookSourceState | null
+  detail: string | null
+  updatedAt: string | null
+}
+export interface TriggerSourceStore {
+  syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
+  listTriggerSources(): Promise<TriggerSourceRow[]>
+  getTriggerSource(name: string): Promise<TriggerSourceRow | null>
+  recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
+  setTriggerSourceEnabled(name: string, enabled: boolean): Promise<void>
+  deleteTriggerSource(name: string): Promise<void>
+}
 export class TypedCredentialService< TMap = Record<string, unknown>, > implements CredentialService {
   constructor(private credentials: CredentialService, private credentialsMeta: Record<string, CredentialMetaInfo>)
   async get<K extends keyof TMap & string>(name: K, userId?: string): Promise<TMap[K] | null>
@@ -5506,9 +5817,11 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
+      startsWorkflows: string[]
     } & CommonWireMeta
   >
 export type FunctionsMeta = Record<string, FunctionMeta>
@@ -5553,6 +5866,8 @@ export class LocalMetaService implements MetaService {
   async getSecretsMeta(): Promise<SecretDefinitionsMeta>
   async getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   async getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  async getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  async getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   async getEmailMeta(): Promise<EmailsMeta>
   async getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   async getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5594,6 +5909,8 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5840,8 +6157,24 @@ wrapDEK: (kek: CryptoKey, plaintextDEK: string) => Promise<WrappedValue>
 ## ./hmac
 
 ```ts
+export type HmacAlgorithm = 'sha1' | 'sha256' | 'sha512'
+hmacDigest: (secret: string, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => string
 hmacSha256Hex: (secret: string, payload: string) => string
+export type SecretEncoding = 'utf8' | 'hex' | 'base64'
 timingSafeStringEqual: (a: string, b: string) => boolean
+verifyHmacSignature: (secret: string, signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => boolean
+verifyPublicKeySignature: (publicKey: string, signature: string | undefined, payload: WebhookPayload, options?: { algorithm?: string | undefined; dsaEncoding?: "der" | "ieee-p1363" | undefined; }) => boolean
+export type WebhookPayload = string | Uint8Array
+export class WebhookSigningSecret {
+  constructor(private readonly provider: string, private readonly secret: SecretSource)
+  static fromCredential(provider: string, credentials: CredentialService | undefined, name: string): WebhookSigningSecret
+  get configured(): boolean
+  async load(): Promise<WebhookSigningSecret>
+  hmac(algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): string
+  verifyHmac(signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): void
+  verifyToken(token: string | undefined): void
+  verifyPublicKey(signature: string | undefined, payload: WebhookPayload, options: { algorithm?: string; dsaEncoding?: 'der' | 'ieee-p1363' } = {}): void
+}
 ```
 
 ## ./state
@@ -5861,9 +6194,9 @@ export interface PikkuPackageState {
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
   queue: { registrations: Map<string, CoreQueueWorker>; meta: QueueWorkersMeta }
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
-  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
+  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta; webhookSources: Map<string, CoreTriggerWebhookSource>; webhookSourceMeta: WebhookSourcesMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -5995,7 +6328,7 @@ clearPikkuRuntimeState: () => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService> }
 }
 ```
 

@@ -1,3 +1,215 @@
+## 0.12.98
+
+### Patch Changes
+
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
+- Updated dependencies [d327fa5]
+- Updated dependencies [942ebdd]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+
+## 0.12.97
+
+### Patch Changes
+
+- 26dbfc0: A `func` written inline in a `wireCLI` command now registers its function metadata under `cli:<program>:<command path>`, with `sessionless` taken from the helper it was built with. Before, the command pointed at an id nothing had registered. An inline channel `onMessage` still fails the build with the named "No function metadata found" error, and a test now pins that.
+- 2dcc651: The inspector finds a project's source on Windows: its root directory is compared with TypeScript's forward-slash file names, not the backslash path `path.resolve` returns.
+- Updated dependencies [58cccc1]
+- Updated dependencies [a26c60e]
+  - @pikku/core@0.12.131
+
+## 0.12.96
+
+### Patch Changes
+
+- dfcd351: The deploy planner now binds a unit to the units of the functions its functions call with `rpc.invoke('name')` / `rpc.remote('name')`. Before, a caller and callee split into different units (e.g. a no-service function in `svc-base` calling a DB function in `svc-kysely`) got no service binding and failed on the deployed stage with "No service binding for function". The inspector records literal RPC names per function as `invokes` (single, double or substitution-free template quotes; `rpc!`, `wire.rpc`) and warns on a computed name, which the planner cannot see (#1883).
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+- f817f1c: Schema generation no longer re-walks every source file for each type. ts-json-schema-generator looks each root type up by name by scanning the whole program, so a project with 677 types scanned it 677 times. The inspector now builds that name index once per program. On the e2e project, TS schema generation drops from 8.7s to 0.1s and a cold `pikku all` from 38s to 8s, with identical output.
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+
+## 0.12.95
+
+### Patch Changes
+
+- 6ecf80e: Stop the services-destructure lint (PKU410) firing on the stub a wiring registers for its function. Since inline functions carry a source file, a queue worker wired to a named function failed the build with a critical PKU410 even though that function destructures its services.
+- 2612a67: The services-destructure lint also skips the `helper` wiring functions `ensureFunctionMetadata` synthesizes, alongside the `inline` ones it already skips, and a test pins that an inline wiring function that records a source file is not flagged.
+
+## 0.12.94
+
+### Patch Changes
+
+- 4323bcf: Inline wiring functions now record their source file, so `pikku release` leaves scaffold-injected ones out of the API surface.
+
+## 0.12.93
+
+### Patch Changes
+
+- 658f047: A function whose services are all singletons no longer builds wire services, so an addon's credential-bound wire factory does not run for, or fail, a webhook `receive` step that needs no connection. The inspector decides this from the `Services` type and records it as `singletonServicesOnly` on the function's runtime meta; the runner only reads the flag.
+- 658f047: Webhook signing secrets live in the credential store. `WebhookSigningSecret.fromCredential(provider, credentialService, name)` reads the secret per delivery via `load()`, so a `setup` step (or a handshake) that stores a new one with `credentialService.set` takes effect without a deploy.
+
+  Breaking: `setup` no longer returns `secret`, `wireTriggerWebhookSource` no longer takes `secret`, lifecycle outcomes drop `secretName`/`secret`, and `pikku webhooks setup` drops `--secretsOut`.
+
+- 658f047: A webhook source's `method` may be a list, mounting one route per method, for providers that verify the URL with a GET and deliver events with a POST (WhatsApp, Strava, Onfleet, Mailchimp), or a HEAD (Trello, Mandrill, SurveyMonkey).
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+
+## 0.12.92
+
+### Patch Changes
+
+- f84e173: An addon wired from a workspace package now resolves from that package. The installed-addon check (PKU340), the remote addon `devDependencies` check and `pikku db generate`'s addon schemas all looked only at the project root, so an addon declared where it is wired — the only place bun links it — failed codegen unless it was also declared at the root.
+- Updated dependencies [f02585e]
+- Updated dependencies [5586749]
+  - @pikku/core@0.12.127
+
+## 0.12.91
+
+### Patch Changes
+
+- 5e93f30: Add `defineOutgoingWebhook({ event, title, description?, payload })` in `@pikku/core/webhook`. The CLI collects every exported declaration into `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` and `pikku-outgoing-webhooks.gen.ts`, which exports `OutgoingWebhooksMap`, `TypedWebhookService` and `typedWebhookService(service)`: `send` checks `data` against the declared payload for a declared event and accepts any other event unchanged. `MetaService.getOutgoingWebhooksMeta()` and the console addon's `outgoingWebhooksMeta` serve the declarations.
+- 5e93f30: Add `wireTriggerWebhookSource({ name, method?, route?, secret?, events, receive?, check?, setup?, teardown? })` in `#pikku/trigger`. Each source becomes a `POST /webhooks/<name>` route whose events are validated against their schemas and queued on `pikku-incoming-webhooks` through `IncomingWebhookService`; a generated worker runs the matching `wireTrigger({ name: '<source>:<event>' })` and the queue retries it on failure. `pikku webhooks status | setup | teardown --url --labelPrefix [--previous]` registers the routes with the provider and prints one JSON line per source.
+
+  `KyselyIncomingWebhookService` (with the `incoming-webhook` schema) records a receipt per event, drops a provider's redelivery of an event it already accepted, and keeps each dispatch's attempts and last error. `pikku dev` and `pikku serve` use it when a Kysely database is configured.
+
+- Updated dependencies [5e93f30]
+- Updated dependencies [5e93f30]
+  - @pikku/core@0.12.125
+
+## 0.12.90
+
+### Patch Changes
+
+- 4e05a10: Print the TypeScript text for a Zod schema directly, dropping `zod-to-ts`.
+
+  `processZodSchema` built a TypeScript AST only to print it straight back to a
+  string. `zodToTypeText` walks Zod's own definitions instead, which removes
+  `zod-to-ts`, `ts.createPrinter`, `ts.EmitHint` and `ts.createSourceFile` from
+  the Zod path — it no longer touches the compiler API at all. `@pikku/cli`
+  declared `zod-to-ts` without importing it; that is dropped too.
+
+  A defaulted field is now optional in the generated type. `processZodSchema`
+  already strips defaulted fields out of the JSON Schema's `required`, so the two
+  halves of the same contract disagreed: the validator accepted a payload that
+  omitted the field, while the type said a caller had to pass it.
+
+- Updated dependencies [1394385]
+  - @pikku/core@0.12.124
+
+## 0.12.89
+
+### Patch Changes
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+- Updated dependencies [50b59a3]
+- Updated dependencies [2b946e9]
+- Updated dependencies [bc488cf]
+  - @pikku/core@0.12.123
+
+## 0.12.88
+
+### Patch Changes
+
+- 55ab4d1: An addon's metadata now resolves from the package that calls `wireAddon`, as well as from the repo root, so a workspace addon listed only in `packages/functions` loads. When it still cannot be found, the warning names the package, the directories tried and the fix: add the dependency and install, or build the addon if it is installed but has no generated metadata.
+- f6c1dd6: A fresh project with Better Auth no longer gets PKU951 for `BETTER_AUTH_SECRET` on its first `pikku all`. The secret is declared by the generated `auth-secrets.gen.ts`, which did not exist yet when the first inspection ran.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 86c2f1d: `pikku dev` keeps stored credentials in the dev database, so connected accounts and delegated sign-ins survive a restart. The key comes from `PIKKU_DEV_CREDENTIALS_KEY`, or is generated once into `.pikku-runtime/dev-credentials.key`. A project that declares a credential now gets the credential tables in its generated migration; without them dev falls back to the in-memory store and says so once.
+- da9b931: An inline `input`/`output` schema (PKU489) is now an `error` diagnostic instead of a critical one, so `pikku dev` keeps running. The function is validated against its TypeScript type until the schema is extracted to an exported variable; `--fail-on-error` still blocks it.
+- Updated dependencies [e84abd0]
+  - @pikku/core@0.12.121
+
+## 0.12.87
+
+### Patch Changes
+
+- a95179a: An AI agent's `providerOptions` now reaches the generated metadata.
+
+  The inspector read `model`, `temperature`, `maxSteps` and `toolChoice` off an agent declaration but never `providerOptions`, so `agentsMeta` always showed an agent with no provider configuration — even though the type says it carries one. Runs were unaffected, since the runner takes the value from the live agent object, which is exactly why the gap went unnoticed by everything except what reads the compiled meta: the console's agent view and `infra.json`.
+
+  The value is read as an object literal of strings, numbers, booleans, arrays and nested objects, all-or-nothing. A computed one is reported as `PKU156` rather than silently dropped.
+
+- 145b32b: Generated type aliases are deterministic
+
+  A type name that collided across files got a `Math.random()` suffix, so every
+  `pikku all` emitted different names into `pikku-agent-map.gen.d.ts` and
+  `pikku-workflow-map.gen.d.ts`. Those files sit in the schema generator's
+  dependency closure, so rewriting them invalidated the schema cache partway
+  through the same run and forced a full `ts-json-schema-generator` pass each
+  time. The suffix now comes from the declaring file's path.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
 ## 0.12.86
 
 ### Patch Changes

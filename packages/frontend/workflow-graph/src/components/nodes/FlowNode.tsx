@@ -176,7 +176,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         )}
 
         <Box style={{ verticalAlign: 'middle', color: iconColor }}>
-          <Icon size={50} />
+          <Icon size={Math.round(size * 0.6)} />
         </Box>
 
         {showBorder && (

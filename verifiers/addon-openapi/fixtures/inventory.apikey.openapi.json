@@ -1,0 +1,67 @@
+{
+  "openapi": "3.0.1",
+  "info": { "title": "Inventory", "version": "1.0.0" },
+  "servers": [{ "url": "https://api.inventory.example.com" }, { "url": "https://sandbox.inventory.example.com" }],
+  "components": {
+    "securitySchemes": {
+      "apiKeyHeader": { "type": "apiKey", "in": "header", "name": "X-API-Key" }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "required": ["sku"],
+        "properties": {
+          "sku": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "location": { "type": "string", "nullable": true },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  },
+  "security": [{ "apiKeyHeader": [] }],
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "tags": ["items"],
+        "responses": {
+          "200": { "description": "Items", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } } }
+        }
+      },
+      "post": {
+        "operationId": "createItem",
+        "tags": ["items"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }
+        }
+      }
+    },
+    "/items/{sku}": {
+      "get": {
+        "operationId": "getItem",
+        "tags": ["items"],
+        "parameters": [{ "name": "sku", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "Unknown sku" }
+        }
+      },
+      "patch": {
+        "operationId": "adjustItem",
+        "tags": ["items"],
+        "parameters": [{ "name": "sku", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/x-www-form-urlencoded": { "schema": { "type": "object", "properties": { "delta": { "type": "integer" } } } } } },
+        "responses": { "200": { "description": "Adjusted" } }
+      }
+    },
+    "/export": {
+      "get": {
+        "operationId": "exportCsv",
+        "tags": ["reports"],
+        "responses": { "200": { "description": "CSV", "content": { "text/csv": { "schema": { "type": "string" } } } } }
+      }
+    }
+  }
+}

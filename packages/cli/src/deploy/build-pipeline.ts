@@ -11,12 +11,13 @@ import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
 
-import { analyzeDeployment } from './analyzer/index.js'
+import { analyzeDeployment, unroutedHttpWirings } from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
-import type { DeploymentManifest } from '@pikku/deploy'
+import type { DeploymentManifest, HttpRouteInfo } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
+import { stageSqliteExtensions } from './sqlite-extension-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
@@ -46,6 +47,7 @@ export interface BuildPipelineResult {
   bundled: BundleResult[]
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
+  unroutedWirings: HttpRouteInfo[]
 }
 
 /**
@@ -60,16 +62,34 @@ export class PikkuDeployBuildFailedError extends PikkuError {}
  * when every unit was generated and bundled.
  */
 export function describeBuildFailure(
-  result: Pick<BuildPipelineResult, 'bundleErrors' | 'codegenErrors'>
+  result: Pick<
+    BuildPipelineResult,
+    'bundleErrors' | 'codegenErrors' | 'unroutedWirings'
+  >
 ): string | null {
   const failures = [
     ...result.codegenErrors.map((e) => `codegen ${e.unitName}: ${e.error}`),
     ...result.bundleErrors.map((e) => `bundle ${e.unitName}: ${e.error}`),
   ]
-  if (failures.length === 0) {
+  const unrouted = result.unroutedWirings ?? []
+  if (failures.length === 0 && unrouted.length === 0) {
     return null
   }
-  return `Deploy build failed — ${failures.length} unit(s) did not build:\n  ${failures.join('\n  ')}`
+  const parts: string[] = []
+  if (failures.length > 0) {
+    parts.push(
+      `Deploy build failed — ${failures.length} unit(s) did not build:\n  ${failures.join('\n  ')}`
+    )
+  }
+  if (unrouted.length > 0) {
+    parts.push(
+      `Deploy build failed — ${unrouted.length} route(s) reached no unit and would 404 once deployed:\n  ` +
+        unrouted
+          .map((r) => `${r.method} ${r.route} (func ${r.pikkuFuncId})`)
+          .join('\n  ')
+    )
+  }
+  return parts.join('\n\n')
 }
 
 const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'
@@ -186,9 +206,17 @@ export async function resolveStandaloneDb(
   pikkuDir: string,
   unitDir: string,
   srcDirectories: string[],
-  logger: BuildLogger
+  logger: BuildLogger,
+  sqliteExtensions?: string[],
+  { withSqliteLibrary = false }: { withSqliteLibrary?: boolean } = {}
 ): Promise<
-  { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined
+  | {
+      engine: 'sqlite' | 'postgres'
+      coercionImportPath?: string
+      sqliteExtensions?: string[]
+      sqliteLibrary?: string
+    }
+  | undefined
 > {
   const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
   const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
@@ -227,15 +255,34 @@ export async function resolveStandaloneDb(
     })
   }
 
+  const { extensions, library } =
+    engine === 'sqlite'
+      ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions, {
+          withLibrary: withSqliteLibrary,
+        })
+      : { extensions: [], library: undefined }
+  if (extensions.length > 0) {
+    logger.info(`SQLite extensions: ${extensions.join(', ')}`)
+  }
+  if (library) logger.info(`SQLite library: ${library}`)
+  const staged = {
+    ...(extensions.length > 0 ? { sqliteExtensions: extensions } : {}),
+    ...(library ? { sqliteLibrary: library } : {}),
+  }
+
   // Absent for an app that annotates no columns, which is a database with
   // nothing to coerce rather than a reason to hand the app no database.
   const coercionFile = join(pikkuDir, 'db', 'coercion.gen.ts')
-  if (!existsSync(coercionFile)) return { engine }
+  if (!existsSync(coercionFile)) return { engine, ...staged }
 
   let rel = relative(unitDir, coercionFile).replace(/\\/g, '/')
   if (!rel.startsWith('.')) rel = `./${rel}`
 
-  return { engine, coercionImportPath: rel.replace(/\.ts$/, '.js') }
+  return {
+    engine,
+    coercionImportPath: rel.replace(/\.ts$/, '.js'),
+    ...staged,
+  }
 }
 
 /**
@@ -277,8 +324,8 @@ export async function runBuildPipeline(options: {
     state: InspectorState
   ) => unknown
   /**
-   * A built frontend to ship with the bundle, from the project's `frontend`
-   * config. Single-unit builds only — a decomposed deployment has no one unit
+   * A built frontend to ship with the bundle — the one `frontends` entry that sets `serve`.
+   * Single-unit builds only — a decomposed deployment has no one unit
    * that owns the origin the UI would be served from.
    */
   frontend?: {
@@ -293,6 +340,12 @@ export async function runBuildPipeline(options: {
    * which database a standalone artifact has to open.
    */
   srcDirectories?: string[]
+  /**
+   * `db.sqliteExtensions` from pikku.config.json: the loadable extensions a
+   * SQLite standalone ships and opens its database with. Defaults apply when
+   * absent.
+   */
+  sqliteExtensions?: string[]
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   /** Overrides the provider's own choice when set. See PikkuCLIConfig. */
@@ -325,6 +378,10 @@ export async function runBuildPipeline(options: {
     globalHTTPPrefix: options.globalHTTPPrefix,
     workflowQueues,
   })
+
+  const unroutedWirings = provider.singleUnit
+    ? []
+    : unroutedHttpWirings(inspectorState.http.meta, manifest.units)
 
   let bundled: BundleResult[] = []
   let bundleErrors: Array<{ unitName: string; error: string }> = []
@@ -383,7 +440,9 @@ export async function runBuildPipeline(options: {
         pikkuDir,
         unitDir,
         options.srcDirectories ?? ['src'],
-        logger
+        logger,
+        options.sqliteExtensions,
+        { withSqliteLibrary: provider.bundlesSqliteLibrary }
       ),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
@@ -442,6 +501,7 @@ export async function runBuildPipeline(options: {
         bundled: [],
         bundleErrors: [],
         codegenErrors: [],
+        unroutedWirings,
       }
     }
 
@@ -475,6 +535,9 @@ export async function runBuildPipeline(options: {
       const forcedBy = [
         ...new Set(serverUnits.flatMap((u) => u.targetForcedBy ?? [])),
       ]
+      const startedWorkflows = [
+        ...new Set(serverUnits.flatMap((u) => u.startedWorkflows ?? [])),
+      ].sort()
 
       // Create a merged server unit with all server function IDs
       const mergedServerUnit: DeploymentManifest['units'][0] = {
@@ -487,6 +550,7 @@ export async function runBuildPipeline(options: {
         handlers: serverUnits.flatMap((u) => u.handlers),
         tags: [],
         ...(forcedBy.length > 0 && { targetForcedBy: forcedBy }),
+        ...(startedWorkflows.length > 0 && { startedWorkflows }),
       }
 
       // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)
@@ -536,6 +600,15 @@ export async function runBuildPipeline(options: {
             )
           ),
         ].filter((dep) => dep !== unit.name)
+        if (unit.dispatch) {
+          const dispatch: Record<string, string> = {}
+          for (const [rpcName, target] of Object.entries(unit.dispatch)) {
+            const merged = mergedNames.has(target) ? serverUnitName : target
+            if (merged !== unit.name) dispatch[rpcName] = merged
+          }
+          unit.dispatch =
+            Object.keys(dispatch).length > 0 ? dispatch : undefined
+        }
       }
 
       logger.info(
@@ -737,5 +810,6 @@ export async function runBuildPipeline(options: {
     bundled,
     bundleErrors,
     codegenErrors,
+    unroutedWirings,
   }
 }

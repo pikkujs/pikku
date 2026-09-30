@@ -81,4 +81,18 @@ describe('serializeCredentialsTypes', () => {
   test('an addon file registers nothing, its package file already does', () => {
     assert.doesNotMatch(serialize(credential('Stripe')), /pikkuState/)
   })
+
+  test('types a string-schema credential as a string', () => {
+    assert.match(
+      serialize([
+        {
+          name: 'githubWebhookSecret',
+          displayName: 'github webhook secret',
+          type: 'singleton',
+          schema: { type: 'string' },
+        },
+      ]),
+      /'githubWebhookSecret': string/
+    )
+  })
 })

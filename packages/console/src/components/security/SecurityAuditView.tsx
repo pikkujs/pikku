@@ -63,6 +63,8 @@ const defaultUpgradeAction: RenderUpgradeAction = ({ deps, prompt }) => {
 const issueKey = (issue: SecurityAuditIssue, idx: number) =>
   `${issue.package}@${issue.advisoryId || issue.url || idx}`
 
+const isDev = (issue: SecurityAuditIssue) => issue.dependencyType === 'dev'
+
 export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
   report,
   lens,
@@ -98,7 +100,7 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
   }, [deps])
   const counts = useMemo(() => {
     const c = emptyCounts()
-    report.issues.forEach((i) => c[i.severity]++)
+    report.issues.filter((i) => !isDev(i)).forEach((i) => c[i.severity]++)
     return c
   }, [report])
 
@@ -127,10 +129,25 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
     i.cwe.some((c) => c.toLowerCase().includes(ql))
 
   const filteredIssues = report.issues.filter(issueMatch)
+  const devIssues = filteredIssues.filter(isDev)
+  const devTotal = report.issues.filter(isDev).length
   const grouped = SEV_ORDER.map((sev) => ({
     sev,
-    items: filteredIssues.filter((i) => i.severity === sev),
+    items: filteredIssues.filter((i) => i.severity === sev && !isDev(i)),
   })).filter((g) => g.items.length > 0)
+  const renderFindings = (items: SecurityAuditIssue[]) =>
+    items.map((issue, idx) => {
+      const key = issueKey(issue, idx)
+      return (
+        <FindingItem
+          key={key}
+          itemValue={key}
+          issue={issue}
+          latest={latestOf.get(issue.package)}
+          renderUpgrade={renderUpgradeFor}
+        />
+      )
+    })
 
   const depsShown = deps.filter(
     (d) =>
@@ -173,8 +190,15 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
               {m.security_audited_by({ tool: report.tool })}
             </Text>
             <Text span size="sm" c="dimmed" ff="monospace">
-              {m.security_advisories_count({ count: report.issues.length })}
+              {m.security_advisories_count({
+                count: report.issues.length - devTotal,
+              })}
             </Text>
+            {devTotal > 0 && (
+              <Text span size="sm" c="dimmed" ff="monospace">
+                {m.security_dev_only_count({ count: devTotal })}
+              </Text>
+            )}
             <Text span size="sm" c="dimmed" ff="monospace">
               {m.security_packages_affected({
                 affected,
@@ -198,10 +222,13 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
       </Paper>
 
       {lens === 'issues' ? (
-        grouped.length === 0 ? (
+        grouped.length === 0 && devIssues.length === 0 ? (
           <CleanState label={m.security_no_match_issues()} />
         ) : (
           <Stack gap="xl">
+            {grouped.length === 0 && (
+              <CleanState label={m.security_no_prod_issues()} />
+            )}
             {grouped.map(({ sev, items }) => (
               <Stack key={sev} gap="xs">
                 <Group gap={8} align="center">
@@ -218,21 +245,41 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
                   chevronPosition="right"
                   radius="md"
                 >
-                  {items.map((issue, idx) => {
-                    const key = issueKey(issue, idx)
-                    return (
-                      <FindingItem
-                        key={key}
-                        itemValue={key}
-                        issue={issue}
-                        latest={latestOf.get(issue.package)}
-                        renderUpgrade={renderUpgradeFor}
-                      />
-                    )
-                  })}
+                  {renderFindings(items)}
                 </Accordion>
               </Stack>
             ))}
+            {devIssues.length > 0 && (
+              <Accordion
+                variant="contained"
+                radius="md"
+                data-testid="security-dev-only"
+              >
+                <Accordion.Item value="dev-only">
+                  <Accordion.Control>
+                    <Stack gap={2}>
+                      <Text span fw={700} size="sm">
+                        {m.security_dev_only_title({
+                          count: devIssues.length,
+                        })}
+                      </Text>
+                      <Text span size="xs" c="dimmed">
+                        {m.security_dev_only_hint()}
+                      </Text>
+                    </Stack>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <Accordion
+                      variant="separated"
+                      chevronPosition="right"
+                      radius="md"
+                    >
+                      {renderFindings(devIssues)}
+                    </Accordion>
+                  </Accordion.Panel>
+                </Accordion.Item>
+              </Accordion>
+            )}
           </Stack>
         )
       ) : (

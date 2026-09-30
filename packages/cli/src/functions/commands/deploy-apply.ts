@@ -13,6 +13,7 @@ import {
   describeBuildFailure,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
+import { nativeSidecars, servedFrontend } from '../../utils/frontend.js'
 
 // A bundler reads anything not starting with `./` or `../` as a bare package
 // specifier, and a path into a dot-directory (`.pikku/...`) starts with a dot
@@ -298,10 +299,9 @@ export async function resolveProvider(
   },
   providerName?: string,
   options?: {
-    desktop?: boolean
+    runtime?: string
     projectDir?: string
-    desktopIdentifier?: string
-    desktopUrl?: string
+    nativeSidecars?: Array<{ name: string; dir: string }>
   }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
@@ -429,8 +429,7 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
-    desktop?: boolean
-    desktopUrl?: string
+    runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -438,14 +437,10 @@ export const deployApply = pikkuSessionlessFunc<
 >({
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
-    // A url on its own is a request for a shell — asking for both flags would
-    // only leave `--desktop-url` alone as a silent no-op.
-    const desktopUrl = data?.desktopUrl ?? config.deploy?.desktop?.url
     const provider = await resolveProvider(config, data?.provider, {
-      desktop: data?.desktop || Boolean(desktopUrl),
+      runtime: data?.runtime,
       projectDir,
-      desktopIdentifier: config.deploy?.desktop?.identifier,
-      desktopUrl,
+      nativeSidecars: nativeSidecars(config.frontends),
     })
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile
@@ -488,15 +483,27 @@ export const deployApply = pikkuSessionlessFunc<
       mangleIdentifiers: config.deploy?.mangleIdentifiers,
       globalHTTPPrefix: config.globalHTTPPrefix,
       getEntryContext,
-      frontend: config.frontend,
+      frontend: servedFrontend(config.frontends),
       outDir: config.outDir,
       srcDirectories: config.srcDirectories,
+      sqliteExtensions: config.db?.sqliteExtensions,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
       bundler,
     })
 
     if (buildResult.manifest.units.length === 0) {
+      const buildFailure = describeBuildFailure(buildResult)
+      if (buildFailure) {
+        await writeResultFile(resultFile, {
+          success: false,
+          errors: buildResult.unroutedWirings.map((r) => ({
+            step: 'route',
+            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+          })),
+        })
+        throw new PikkuDeployBuildFailedError(buildFailure)
+      }
       logger.info('No deployment units found. Nothing to deploy.')
       await writeResultFile(resultFile, {
         success: true,
@@ -511,10 +518,16 @@ export const deployApply = pikkuSessionlessFunc<
     if (buildFailure) {
       await writeResultFile(resultFile, {
         success: false,
-        errors: buildResult.bundleErrors.map((e) => ({
-          step: 'bundle',
-          error: `${e.unitName}: ${e.error}`,
-        })),
+        errors: [
+          ...buildResult.bundleErrors.map((e) => ({
+            step: 'bundle',
+            error: `${e.unitName}: ${e.error}`,
+          })),
+          ...buildResult.unroutedWirings.map((r) => ({
+            step: 'route',
+            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+          })),
+        ],
         codegenErrors: buildResult.codegenErrors,
       })
       throw new PikkuDeployBuildFailedError(buildFailure)

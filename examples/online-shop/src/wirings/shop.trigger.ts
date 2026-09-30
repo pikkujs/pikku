@@ -1,9 +1,13 @@
 import {
   wireTrigger,
   wireTriggerSource,
+  wireTriggerWebhookSource,
 } from '#pikku/trigger/pikku-trigger-types.gen.js'
 import { wireScheduler } from '#pikku/scheduler'
-import { onLowStock } from '../functions/on-low-stock.function.js'
+import {
+  LowStockPayload,
+  onLowStock,
+} from '../functions/on-low-stock.function.js'
 import { sweepLowStock } from '../functions/sweep-low-stock.function.js'
 import { warehouseStockFeed } from '../functions/warehouse-stock-feed.function.js'
 
@@ -47,3 +51,32 @@ wireTriggerSource({
   input: { threshold: 5 },
 })
 // @snippet end wireTriggerSource
+
+// @snippet start wireTriggerWebhookSource
+/**
+ * The same alert, pushed by the warehouse over a webhook instead of held open
+ * as a subscription. Pikku mounts `POST /webhooks/warehouse`, validates each
+ * event against `events`, and queues it for the trigger named
+ * `warehouse:<event>`, so the warehouse is answered at once and a failing
+ * handler is retried by the queue rather than by the sender.
+ *
+ * `receive` turns the raw request into events. A real provider signs its body:
+ * verify that here, through a service, before trusting it. Addons such as
+ * Stripe export a `receive` that does, used as `receive: ref('stripe:…')`.
+ */
+wireTriggerWebhookSource({
+  name: 'warehouse',
+  events: { 'stock.low': LowStockPayload },
+  receive: {
+    func: async (_services, { body }) => {
+      const event = JSON.parse(new TextDecoder().decode(body))
+      return { events: [{ name: event.type, id: event.id, data: event.data }] }
+    },
+  },
+})
+
+wireTrigger({
+  name: 'warehouse:stock.low',
+  func: onLowStock,
+})
+// @snippet end wireTriggerWebhookSource

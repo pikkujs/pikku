@@ -321,18 +321,25 @@ const withOriginal = (
   Component: any,
   from: 'value' | 'checked' = 'value',
   part = 'input'
-) =>
-  forwardRef<any, any>(({ original, styles, ...props }, ref) => {
-    const modified = modifiedStyles(props[from], original, part)
-    const merged =
-      !modified.styles || typeof styles === 'function'
-        ? styles
-        : {
-            ...styles,
-            [part]: { ...(styles as any)?.[part], ...modified.styles[part] },
-          }
-    return createElement(Component, { ...props, ref, styles: merged })
-  })
+) => {
+  const Wrapped: any = forwardRef<any, any>(
+    ({ original, styles, ...props }, ref) => {
+      const modified = modifiedStyles(props[from], original, part)
+      const merged =
+        !modified.styles || typeof styles === 'function'
+          ? styles
+          : {
+              ...styles,
+              [part]: { ...(styles as any)?.[part], ...modified.styles[part] },
+            }
+      return createElement(Component, { ...props, ref, styles: merged })
+    }
+  )
+  for (const key of Object.keys(Component)) {
+    if (!(key in Wrapped)) Wrapped[key] = Component[key]
+  }
+  return Wrapped
+}
 
 export const TextInput = withOriginal(MantineTextInput) as OverrideFactory<
   TextInputFactory,

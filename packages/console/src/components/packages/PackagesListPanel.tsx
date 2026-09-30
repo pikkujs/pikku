@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
-import { Group, TextInput, SegmentedControl } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Search } from 'lucide-react'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { ListPageHeader } from '../layout/PageLayout'
+import type { ShellHeaderFilter } from '../ui/shellHeaderShared'
 import { AddonsList } from './AddonsList'
 import { ApisList } from './ApisList'
 import type { AddonFilter } from './packageMeta'
@@ -35,72 +34,61 @@ export const PackagesListPanel: React.FC<PackagesListPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   useLocale()
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (value: PackagesTab) => {
     setSearchQuery('')
-    if (browse) browse.setTab(value as PackagesTab)
-    else setOwnTab(value as PackagesTab)
+    if (browse) browse.setTab(value)
+    else setOwnTab(value)
   }
 
-  const mainTabs = [
-    { value: 'addons', label: m.packages_tab_addons() },
-    { value: 'apis', label: m.packages_tab_apis() },
-  ]
-  const addonFilters = [
-    { value: 'all', label: m.packages_filter_all() },
-    { value: 'official', label: m.packages_filter_official() },
-    { value: 'installed', label: m.packages_filter_installed() },
-  ]
+  const headerFilters: ShellHeaderFilter[] =
+    tab === 'addons'
+      ? [
+          {
+            key: 'show',
+            label: m.integrations_filter_label(),
+            value: filter,
+            priority: 2,
+            onChange: (value) => setFilter(value as AddonFilter),
+            options: [
+              { value: 'all', label: m.integrations_show_all() },
+              { value: 'official', label: m.integrations_made_by_fabric() },
+              { value: 'installed', label: m.integrations_in_app_title() },
+            ],
+          },
+        ]
+      : []
 
   return (
     <ResizablePanelLayout
+      surface="cards"
       header={
-        <ListPageHeader
-          title={m.packages_title()}
-          description={m.packages_description()}
-          docsHref="https://pikku.dev/docs/external-packages"
-          filters={
-            <Group gap="sm" wrap="nowrap">
-              <TextInput
-                data-testid="packages-search"
-                placeholder={
-                  tab === 'apis'
-                    ? m.packages_search_apis_placeholder()
-                    : m.packages_search_addons_placeholder()
-                }
-                leftSection={<Search size={14} />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="xs"
-                style={{ width: 240 }}
-              />
-              {tab === 'addons' && (
-                <SegmentedControl
-                  size="xs"
-                  value={filter}
-                  onChange={(v) => setFilter(v as AddonFilter)}
-                  data={addonFilters}
-                />
-              )}
-              <SegmentedControl
-                size="xs"
-                value={tab}
-                onChange={handleTabChange}
-                data={mainTabs}
-              />
-            </Group>
-          }
+        <ListPageHeader<PackagesTab>
+          title={m.integrations_title()}
+          description={m.integrations_description()}
+          selection={{
+            ariaLabel: m.integrations_kind_label(),
+            value: tab,
+            onChange: handleTabChange,
+            options: [
+              { value: 'addons', label: m.integrations_tab_services() },
+              { value: 'apis', label: m.integrations_tab_apis() },
+            ],
+          }}
+          headerFilters={headerFilters}
         />
       }
     >
       {tab === 'apis' ? (
         <ApisList
           searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
           category={browse?.category}
           onCategoryChange={browse?.setCategory}
         />
       ) : (
         <AddonsList
           searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
           filter={filter}
           onSelect={onSelect}
           category={browse?.category}

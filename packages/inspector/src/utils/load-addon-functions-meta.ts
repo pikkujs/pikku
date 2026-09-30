@@ -1,9 +1,14 @@
 import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
-import { createRequire } from 'module'
-import { join, dirname } from 'path'
+import { join, dirname, parse, relative } from 'path'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import {
+  addonResolutionDirs,
+  createAddonResolver,
+  type AddonResolver,
+} from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
+import type { WebhookSourceMeta, WebhookSourcesMeta } from '@pikku/core/trigger'
 import type {
   ExportedChannelContractsMeta,
   ExportedHTTPRouteConfigMeta,
@@ -129,7 +134,7 @@ const applyPackageToChannelContracts = (
  * not to run it.
  */
 const resolveAddonMeta = (
-  require: NodeRequire,
+  require: AddonResolver,
   packageName: string,
   baseName: string
 ): string | null => {
@@ -141,6 +146,49 @@ const resolveAddonMeta = (
     }
   }
   return null
+}
+
+const findInstalledPackageDir = (
+  dirs: string[],
+  packageName: string
+): string | null => {
+  for (const start of dirs) {
+    const root = parse(start).root
+    let dir = start
+    while (dir) {
+      const candidate = join(dir, 'node_modules', packageName)
+      if (existsSync(join(candidate, 'package.json'))) return candidate
+      if (dir === root) break
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+  }
+  return null
+}
+
+export const describeMissingAddonMeta = (
+  namespace: string,
+  packageName: string,
+  dirs: string[],
+  declFile?: string
+): string => {
+  const caller = declFile
+    ? relative(dirs[dirs.length - 1], declFile) || declFile
+    : undefined
+  const declaredIn = caller ? ` (declared in ${caller})` : ''
+  const packageDir = findInstalledPackageDir(dirs, packageName)
+  if (!packageDir) {
+    const declaringPackage = dirs[0]
+    return (
+      `wireAddon('${namespace}')${declaredIn} names ${packageName}, which is not installed where it can be resolved — tried ${dirs.join(', ')}. ` +
+      `Add "${packageName}": "workspace:*" (or a version) to the dependencies of ${join(declaringPackage, 'package.json')} and run install.`
+    )
+  }
+  return (
+    `wireAddon('${namespace}')${declaredIn}: ${packageName} is installed at ${packageDir} but has not been built — ` +
+    `its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in ${packageDir}.`
+  )
 }
 
 /**
@@ -182,6 +230,35 @@ const registerAddonTypes = (
 }
 
 /**
+ * The webhook sources an addon declares, as the app mounts them. The source is
+ * named after the addon's namespace, so two instances of one addon get a
+ * route each; an addon declaring several suffixes each with its own name.
+ * Every source starts off: the app turns one on at runtime.
+ */
+export const namespaceAddonWebhookSources = (
+  sources: WebhookSourcesMeta,
+  namespace: string
+): WebhookSourcesMeta => {
+  const declared = Object.values(sources)
+  const namespaced: WebhookSourcesMeta = {}
+  for (const source of declared) {
+    const name =
+      declared.length === 1 ? namespace : `${namespace}-${source.name}`
+    const meta: WebhookSourceMeta = {
+      ...source,
+      name,
+      route: `/webhooks/${name}`,
+    }
+    for (const step of ['receive', 'check', 'setup', 'teardown'] as const) {
+      const funcId = source[step]
+      if (funcId && !funcId.includes(':')) meta[step] = `${namespace}:${funcId}`
+    }
+    namespaced[name] = meta
+  }
+  return namespaced
+}
+
+/**
  * After the setup sweep discovers wireAddon() declarations, load each addon
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
@@ -193,13 +270,13 @@ export async function loadAddonFunctionsMeta(
   const { wireAddonDeclarations } = state.rpc
   if (wireAddonDeclarations.size === 0) return
 
-  const require = createRequire(join(state.rootDir, 'package.json'))
-
   for (const [namespace, decl] of wireAddonDeclarations) {
     // Remote addons (wireRemoteAddon) ship as a devDependency: types only.
     // Their functions, secrets, variables, schemas and services live on the
     // HOST that runs them — never load or require any of that here.
     if (decl.remote) continue
+    const dirs = addonResolutionDirs(state.rootDir, decl.file)
+    const require = createAddonResolver(dirs)
     try {
       // Verbose first. `description` is one of the fields stripped from the
       // minimal copy, and it is what an addon's function is offered to a model
@@ -210,7 +287,12 @@ export async function loadAddonFunctionsMeta(
         decl.package,
         'function/pikku-functions-meta'
       )
-      if (!metaPath) throw new Error('no function metadata')
+      if (!metaPath) {
+        logger.warn(
+          describeMissingAddonMeta(namespace, decl.package, dirs, decl.file)
+        )
+        continue
+      }
       const raw = await readFile(metaPath, 'utf-8')
       const meta = JSON.parse(raw)
       state.addonFunctions[namespace] = meta
@@ -450,6 +532,31 @@ export async function loadAddonFunctionsMeta(
       }
 
       try {
+        const webhookSourcesPath = require.resolve(
+          `${decl.package}/.pikku/webhooks/pikku-webhook-sources-meta.gen.json`
+        )
+        const sources = namespaceAddonWebhookSources(
+          JSON.parse(await readFile(webhookSourcesPath, 'utf-8')),
+          namespace
+        )
+        for (const [name, source] of Object.entries(sources)) {
+          if (state.triggers.webhookSourceMeta[name]) continue
+          state.triggers.webhookSourceMeta[name] = source
+          for (const step of [
+            'receive',
+            'check',
+            'setup',
+            'teardown',
+          ] as const) {
+            const funcId = source[step]
+            if (funcId) state.serviceAggregation.usedFunctions.add(funcId)
+          }
+        }
+      } catch {
+        // No addon webhook sources
+      }
+
+      try {
         const httpContractsPath = require.resolve(
           `${decl.package}/.pikku/http/pikku-http-contracts-meta.gen.json`
         )
@@ -516,11 +623,12 @@ export async function loadAddonSchemas(
   const { wireAddonDeclarations } = state.rpc
   if (wireAddonDeclarations.size === 0) return
 
-  const require = createRequire(join(state.rootDir, 'package.json'))
-
   for (const [namespace, decl] of wireAddonDeclarations) {
     // Remote addons carry no local schemas — their funcs run on the host.
     if (decl.remote) continue
+    const require = createAddonResolver(
+      addonResolutionDirs(state.rootDir, decl.file)
+    )
     try {
       const metaPath = require.resolve(
         `${decl.package}/.pikku/function/pikku-functions-meta.gen.json`
@@ -540,6 +648,12 @@ export async function loadAddonSchemas(
         // No schemas directory — that's fine
       }
     } catch (error: any) {
+      if (
+        error?.code === 'MODULE_NOT_FOUND' ||
+        error?.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED'
+      ) {
+        continue
+      }
       logger.warn(
         `Failed to load addon schemas for '${namespace}' (${decl.package}): ${error.message}`
       )

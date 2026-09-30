@@ -9,6 +9,7 @@ import { pikkuBetterAuth } from '#pikku/auth'
 import {
   personaConfigs,
   personaEnvironments,
+  personaList,
 } from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
@@ -40,6 +41,7 @@ export const auth = pikkuBetterAuth(
     variables,
     emailService,
     scopeService,
+    featureFlags,
     logger,
   }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
@@ -115,10 +117,18 @@ export const auth = pikkuBetterAuth(
       // afterStart: that hook only ever runs under `pikku dev` and `pikku serve`,
       // so a deployed stage would provision nobody.
       plugins: [
+        // @snippet start personaSignIn
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
+          // The "Sign in as …" switcher: GET /api/auth/sign-in/personas lists,
+          // POST /api/auth/sign-in/persona { id } signs in. No credential.
+          personaSignIn: {
+            personas: personaList,
+            featureFlags,
+          },
         }),
+        // @snippet end personaSignIn
         pikkuBan(),
         pikkuFabric({
           publicKey: FABRIC_AUTH_PUBLIC_KEY,

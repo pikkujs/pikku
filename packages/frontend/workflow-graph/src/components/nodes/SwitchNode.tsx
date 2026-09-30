@@ -29,21 +29,6 @@ export const SwitchNode: React.FC<GraphNodeProps<SwitchNodeData>> = ({
     return null
   }, [graphHighlight, id])
 
-  const outputHandles = React.useMemo(() => {
-    const handles = []
-
-    if (data.cases && data.cases.length > 0) {
-      data.cases.forEach((caseItem) => {
-        handles.push({ id: `case-${caseItem.value}`, label: caseItem.value })
-      })
-    }
-
-    handles.push({ id: 'default', label: 'default' })
-    handles.push({ id: 'after', label: 'after' })
-
-    return handles
-  }, [data.cases])
-
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'switch')
   }, [id, openWorkflowStep])
@@ -53,10 +38,10 @@ export const SwitchNode: React.FC<GraphNodeProps<SwitchNodeData>> = ({
       icon={GitCompare}
       colorKey={data.colorKey}
       hasInput={true}
-      outputHandles={outputHandles}
+      outputHandles={[{ id: 'out' }]}
       size={80}
-      label="Switch"
-      subtitle={data.stepName}
+      label={data.expression ?? 'Switch'}
+      subtitle="switch"
       onClick={handleClick}
       showBorder={false}
       highlightType={highlightType}

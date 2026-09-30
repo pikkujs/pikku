@@ -1,36 +1,116 @@
-import React from 'react'
-import { Center, Stack, Text } from '@pikku/mantine/core'
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  Avatar,
+  Card,
+  Code,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
-import { VirtualUserNavigator } from './VirtualUserNavigator'
+import { VirtualUserList } from './VirtualUserList'
 import { VirtualUserDocument } from './VirtualUserDocument'
+import { VirtualUserVisit } from './VirtualUserVisit'
+import { VirtualUserAvatar } from './VirtualUserAvatar'
 import { useVirtualUsers } from '../../hooks/useVirtualUsers'
+import { useRecentVirtualUserRuns } from '../../hooks/useVirtualUserRuns'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { PageIntro } from '../ui/PageIntro'
+import { CardsPage } from '../ui/CardsPage'
+import { useDeveloperDetails } from '../../hooks/useDeveloperDetails'
+import { lastTries, type VirtualUserRunRow } from './run-summary'
 
 const EXAMPLE =
   "definePersonas({ shopper: { name: 'Shopper', disposition: 'careless', goals: [...] } })"
 
-/**
- * The virtual users screen: who is declared, what each one would do if it were
- * run, what happened when they were, and whether any of them keeps going on its
- * own.
- *
- * The reading half is built from declarations alone and needs nothing wired.
- * The rest needs a store, and says so rather than failing: an application with
- * no `virtualUserRunStore` has no runs, and one with no
- * `virtualUserScheduleStore` has no cadences, which are true answers.
- *
- * Both of the controls here spend money, which is why neither is a plain
- * button. Running acts once, with whoever clicked it watching. A cadence keeps
- * acting with nobody there, so it is off until somebody turns it on and every
- * field is shown against what the persona declares.
- */
-export const VirtualUsersWorkspace: React.FC = () => {
+const Empty: React.FC = () => {
+  const { shown: developerDetails } = useDeveloperDetails()
+  return (
+    <CardsPage>
+      <Card px={48} py={40}>
+        <Stack gap="lg" align="center" data-testid="virtual-users-empty">
+          <Avatar.Group>
+            <VirtualUserAvatar name="A" disposition="realistic" size={44} />
+            <VirtualUserAvatar name="B" disposition="careless" size={44} />
+            <VirtualUserAvatar name="C" disposition="newcomer" size={44} />
+          </Avatar.Group>
+          <Stack gap={6} align="center">
+            <Title order={1} ta="center" maw={640}>
+              {m.virtual_users_empty_heading()}
+            </Title>
+            <Text c="dimmed" ta="center" maw={640}>
+              {m.virtual_users_empty_body()}
+            </Text>
+          </Stack>
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+            <Paper variant="inset" px="md" py="sm">
+              <Stack gap={4}>
+                <Text size="sm" fw={600}>
+                  {m.virtual_users_benefit_people_title()}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {m.virtual_users_benefit_people()}
+                </Text>
+              </Stack>
+            </Paper>
+            <Paper variant="inset" px="md" py="sm">
+              <Stack gap={4}>
+                <Text size="sm" fw={600}>
+                  {m.virtual_users_benefit_safe_title()}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {m.virtual_users_benefit_safe()}
+                </Text>
+              </Stack>
+            </Paper>
+            <Paper variant="inset" px="md" py="sm">
+              <Stack gap={4}>
+                <Text size="sm" fw={600}>
+                  {m.virtual_users_benefit_report_title()}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {m.virtual_users_benefit_report()}
+                </Text>
+              </Stack>
+            </Paper>
+          </SimpleGrid>
+          <Text size="sm" ta="center" maw={640}>
+            {m.virtual_users_empty_start()}
+          </Text>
+          {developerDetails && <Code block>{asI18n(EXAMPLE)}</Code>}
+        </Stack>
+      </Card>
+    </CardsPage>
+  )
+}
+
+export const VirtualUsersWorkspace: React.FC<{ production?: boolean }> = ({
+  production,
+}) => {
   const { users, selected, setSelectedId, loading } = useVirtualUsers()
+  const { data, error } = useRecentVirtualUserRuns()
   const dismiss = usePageOptionsDismiss()
+  const [visit, setVisit] = useState<VirtualUserRunRow>()
+
+  const tries = useMemo(
+    () => lastTries((data ?? []) as VirtualUserRunRow[]),
+    [data]
+  )
+
+  useEffect(() => setVisit(undefined), [selected?.id])
+
+  const select = (id: string) => {
+    setSelectedId(id)
+    dismiss()
+  }
+
+  const hasUsers = !loading && users.length > 0
 
   return (
     <ResizablePanelLayout
@@ -38,43 +118,72 @@ export const VirtualUsersWorkspace: React.FC = () => {
         <ListPageHeader
           title={m.nav_virtual_users()}
           description={m.virtual_users_page_description()}
-          docsHref="https://pikku.dev/docs/wiring/workflows"
+          developerDetails
         />
       }
-      leftDrawerLabel={m.pane_virtual_users()}
       leftDrawer={
-        loading ? null : (
-          <VirtualUserNavigator
+        hasUsers ? (
+          <VirtualUserList
             users={users}
+            tries={tries}
             selectedId={selected?.id}
-            onSelect={(id) => {
-              setSelectedId(id)
-              dismiss()
-            }}
+            onSelect={select}
           />
-        )
+        ) : undefined
       }
+      leftDrawerLabel={m.pane_virtual_users()}
+      leftDrawerWidth={300}
       hidePanel
+      surface="cards"
     >
       {loading ? (
         <ConsoleLoading />
-      ) : selected ? (
-        <VirtualUserDocument user={selected} />
+      ) : users.length === 0 ? (
+        <Empty />
       ) : (
-        <Center p="xl">
-          <Stack gap="xs" align="center" style={{ maxWidth: '60ch' }}>
-            <Text size="sm" fw={600}>
-              {m.virtual_users_empty_title()}
+        <CardsPage>
+          <PageIntro
+            storageKey="virtual-users"
+            eyebrow={m.virtual_users_intro_eyebrow()}
+            title={m.virtual_users_intro_title()}
+            body={m.virtual_users_intro_body()}
+            steps={[
+              {
+                title: m.virtual_users_intro_meet_title(),
+                body: m.virtual_users_intro_meet(),
+              },
+              {
+                title: m.virtual_users_intro_send_title(),
+                body: m.virtual_users_intro_send(),
+              },
+              {
+                title: m.virtual_users_intro_read_title(),
+                body: m.virtual_users_intro_read(),
+              },
+            ]}
+            dismissLabel={m.virtual_users_intro_dismiss()}
+          />
+          {error && (
+            <Text size="xs" c="red">
+              {asI18n(error instanceof Error ? error.message : String(error))}
             </Text>
-            <Text size="sm" c="dimmed" ta="center">
-              {m.virtual_users_empty_description()}
-            </Text>
-            {/* Code, not copy — it is the same in every locale. */}
-            <Text size="sm" ff="monospace" c="dimmed" ta="center">
-              {asI18n(EXAMPLE)}
-            </Text>
-          </Stack>
-        </Center>
+          )}
+          {selected &&
+            (visit ? (
+              <VirtualUserVisit
+                user={selected}
+                run={visit}
+                onBack={() => setVisit(undefined)}
+              />
+            ) : (
+              <VirtualUserDocument
+                user={selected}
+                tried={tries.get(selected.id)}
+                onOpenVisit={setVisit}
+                production={production}
+              />
+            ))}
+        </CardsPage>
       )}
     </ResizablePanelLayout>
   )

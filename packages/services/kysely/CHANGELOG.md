@@ -1,3 +1,97 @@
+## 0.13.32
+
+### Patch Changes
+
+- 942ebdd: Add `LeaseService`: named leases shared by every process on the same store. A lease is not a mutex: a holder that stalls past its expiry loses the key without knowing, so whatever the body writes to should check the lease's `token` and refuse an older one. `acquire` never blocks and answers `null` while someone else holds the key; a lease lapses on its own if its holder dies; and each lease carries a `token` that rises every time the key changes hands, so a stale holder cannot refresh or release its successor's lease. `holdLease` refreshes the lease while its body runs, hands the body an `AbortSignal` that fires the moment the lease is lost, and throws `LeaseLostError` once the body finishes if the lease lapsed or changed hands meanwhile, so a caller never takes that result as produced under the lease.
+
+  Ships as `InMemoryLeaseService`, `PgKyselyLeaseService` (`@pikku/kysely-postgres`), `MySQLKyselyLeaseService` (`@pikku/kysely-mysql`) and `KyselyLeaseService` (SQLite), all on `pikku_lease`. The Postgres and MySQL services judge every lease by the database's clock, so a worker whose clock runs fast cannot take a live lease or stretch its own; `KyselyLeaseService` reads the process clock and is for a single-host SQLite app. `pikku db generate` writes the table for any project that reaches `leaseService`.
+
+  `RedisLeaseService` (`@pikku/redis`) keeps each lease in a hash Redis expires itself, with every check-and-set in one Lua script that reads Redis's `TIME`, so it too judges leases by the server's clock; its token counter outlives release, so the next holder always gets a higher token.
+
+- Updated dependencies [d327fa5]
+- Updated dependencies [942ebdd]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+
+## 0.13.31
+
+### Patch Changes
+
+- 01c0209: `@pikku/kysely` re-exports `Kysely`, `PostgresDialect` and `CamelCasePlugin` from its own copy of kysely. The local-services codegen writes these imports into a project, so it now opens and types the database with the same kysely copy the generated services were built against, instead of a second copy the project may resolve on its own.
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+
+## 0.13.30
+
+### Patch Changes
+
+- 658f047: A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+
+## 0.13.29
+
+### Patch Changes
+
+- 5e93f30: Add `wireTriggerWebhookSource({ name, method?, route?, secret?, events, receive?, check?, setup?, teardown? })` in `#pikku/trigger`. Each source becomes a `POST /webhooks/<name>` route whose events are validated against their schemas and queued on `pikku-incoming-webhooks` through `IncomingWebhookService`; a generated worker runs the matching `wireTrigger({ name: '<source>:<event>' })` and the queue retries it on failure. `pikku webhooks status | setup | teardown --url --labelPrefix [--previous]` registers the routes with the provider and prints one JSON line per source.
+
+  `KyselyIncomingWebhookService` (with the `incoming-webhook` schema) records a receipt per event, drops a provider's redelivery of an event it already accepted, and keeps each dispatch's attempts and last error. `pikku dev` and `pikku serve` use it when a Kysely database is configured.
+
+- Updated dependencies [5e93f30]
+- Updated dependencies [5e93f30]
+  - @pikku/core@0.12.125
+
+## 0.13.28
+
+### Patch Changes
+
+- 4a9dcd2: `admin:listUsers` now pages, counts and can carry roles.
+
+  `ListUsersInput` gains `offset` and `includeRoles`; `ListUsersOutput` gains `total`, and each `User` gains `roles` and `fields`. `total` is how many users match `search`, which is what a pager counts against — `users.length` never was, because it is capped by `limit`.
+
+  ```typescript
+  const { users, total } = await rpc.invoke('admin:listUsers', {
+    search: 'example.com',
+    limit: 50,
+    offset: 50,
+    includeRoles: true,
+  })
+  ```
+
+  Paging only means something over a stable order, so the query now sorts newest first rather than however the database felt like returning rows.
+
+  Synthetic principals — the platform credential owner, Fabric service users, scenario actors — are excluded by the query instead of dropped from the page afterwards. Filtering after the fact broke both halves of paging: `limit` had already counted the rows it then discarded, so a page came back short, and `offset` skipped synthetic rows as though they were people, so the same person could appear on two pages or on none.
+
+  `includeRoles` is refused without `admin:scopes:read`. `admin:users:list` says who may see the directory; it does not say who may see what each of those users can do.
+
+  `ScopeService` gains `listRolesForUsers(userIds)`, implemented in `@pikku/kysely`. It answers for every id asked for — an empty array for a user holding no roles, so a caller cannot read a missing key as "holds nothing" — and chunks its `in` list to stay inside the bound-parameter cap. A page of users used to cost one query per row, which on a database reached over the network is a round trip per row.
+
+  ```typescript
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
+  ```
+
+  Anything implementing `ScopeService` outside this repository has to add it.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
 ## 0.13.27
 
 ### Patch Changes

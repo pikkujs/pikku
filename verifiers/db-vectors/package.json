@@ -1,0 +1,36 @@
+{
+  "name": "@pikku/verifiers-db-vectors",
+  "type": "module",
+  "private": true,
+  "description": "Vector search on both embedded databases: `pikku db migrate` creates a pgvector table in PGlite and a sqlite-vec table in SQLite (under node and under bun), and a standalone artifact — node bundle and compiled bun binary — migrates and answers a nearest-neighbour query with the extension it ships",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "kysely": "^0.29.5"
+  },
+  "devDependencies": {
+    "@pikku/bun-server": "workspace:*",
+    "@pikku/cli": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/kysely-bun-sqlite": "workspace:*",
+    "@pikku/kysely-node-sqlite": "workspace:*",
+    "@pikku/node-http-server": "workspace:*",
+    "@pikku/schedule": "workspace:*",
+    "@pikku/ws": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12",
+    "ws": "^8.21.3"
+  },
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-db-vectors.ts"
+  }
+}

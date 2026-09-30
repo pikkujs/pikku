@@ -1,3 +1,4 @@
+import { normalize } from './meta-diff.js'
 import { diffSchema, type SchemaChange } from './schema-diff.js'
 import type { Surface, WiringCategory } from './surface.js'
 
@@ -19,6 +20,8 @@ export interface SurfaceChange {
   id: string
   status: ChangeStatus
   breaking: boolean
+  /** The entry was added by the platform rather than written in the app. */
+  platform: boolean
   reasons: string[]
 }
 
@@ -82,6 +85,7 @@ function diffFunctions(
         id,
         status: 'removed',
         breaking: !superseded,
+        platform: previous.platform === true,
         reasons: [
           superseded
             ? `no longer in the source, but v${previous.version} is still published in versions.pikku.json`
@@ -98,6 +102,7 @@ function diffFunctions(
         id,
         status: 'added',
         breaking: false,
+        platform: current.platform === true,
         reasons: [
           priorVersions.length > 0
             ? `new version of ${current.key} (previously v${priorVersions.join(', v')})`
@@ -164,6 +169,7 @@ function diffFunctions(
         id,
         status: 'modified',
         breaking,
+        platform: current.platform === true,
         reasons,
       })
     }
@@ -174,6 +180,11 @@ const authRequired = (meta: unknown): boolean =>
   !!meta &&
   typeof meta === 'object' &&
   (meta as { auth?: boolean }).auth === true
+
+const isPlatform = (meta: unknown): boolean =>
+  !!meta &&
+  typeof meta === 'object' &&
+  (meta as { platform?: boolean }).platform === true
 
 function diffWirings(
   before: Surface,
@@ -200,6 +211,7 @@ function diffWirings(
           id,
           status: 'removed',
           breaking: true,
+          platform: isPlatform(previous[id]),
           reasons: [`${category} wiring removed`],
         })
       } else if (!inBefore && inAfter) {
@@ -208,9 +220,13 @@ function diffWirings(
           id,
           status: 'added',
           breaking: false,
+          platform: isPlatform(current[id]),
           reasons: [`${category} wiring added`],
         })
-      } else if (JSON.stringify(previous[id]) !== JSON.stringify(current[id])) {
+      } else if (
+        JSON.stringify(normalize(previous[id])) !==
+        JSON.stringify(normalize(current[id]))
+      ) {
         // Requiring a session on something that did not is the one wiring-level
         // change that shuts out existing callers outright.
         const closed = !authRequired(previous[id]) && authRequired(current[id])
@@ -219,6 +235,7 @@ function diffWirings(
           id,
           status: 'modified',
           breaking: closed,
+          platform: isPlatform(current[id]),
           reasons: [
             closed
               ? `${category} wiring now requires authentication`

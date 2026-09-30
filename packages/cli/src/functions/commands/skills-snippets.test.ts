@@ -7,7 +7,10 @@ import { SKILL_SNIPPETS, collectSnippets } from '@pikku/skills'
 const here = dirname(fileURLToPath(import.meta.url))
 // packages/cli/src/functions/commands -> the repo root
 const repoRoot = join(here, '..', '..', '..', '..', '..')
-const snippetSource = join(repoRoot, 'examples', 'online-shop')
+// Earlier sources win a name collision, matching scripts/embed.ts.
+const snippetSources = ['online-shop', 'field-service'].map((name) =>
+  join(repoRoot, 'examples', name)
+)
 
 /**
  * The code a skill shows is embedded at build time from an example project's
@@ -16,8 +19,13 @@ const snippetSource = join(repoRoot, 'examples', 'online-shop')
  * stops compiling fails the example's own build, which is the other half.
  */
 describe('the snippets embedded in the skills', () => {
-  test('are the regions the example project defines right now', async () => {
-    const collected = await collectSnippets(snippetSource)
+  test('are the regions the example projects define right now', async () => {
+    const collected = new Map<string, string>()
+    for (const source of snippetSources) {
+      for (const [name, body] of await collectSnippets(source)) {
+        if (!collected.has(name)) collected.set(name, body)
+      }
+    }
     const sorted = (entries: Iterable<[string, string]>) =>
       Object.fromEntries([...entries].sort(([a], [b]) => a.localeCompare(b)))
 

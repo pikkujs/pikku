@@ -27,19 +27,45 @@ const withFrontend = {
 } as never
 
 describe('StandaloneProviderAdapter frontend serving', () => {
+  test('a node entry without a frontend mounts nothing', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(baseContext)
+
+    assert.doesNotMatch(source, /staticMounts/)
+  })
+
   test('a bun entry without a frontend imports no asset manifest', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      baseContext
-    )
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(baseContext)
 
     assert.doesNotMatch(source, /frontend-assets/)
     assert.doesNotMatch(source, /staticMounts/)
   })
 
-  test('a bun entry serves the frontend from the embedded asset map', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withFrontend
+  test('a node entry serves the frontend from a directory beside the bundle', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withFrontend)
+
+    assert.match(source, /staticMounts/)
+    assert.match(
+      source,
+      /import\.meta\.url/,
+      'the directory must be resolved from the running bundle, not the build machine'
     )
+    assert.doesNotMatch(
+      source,
+      /assets:/,
+      'node reads the copied directory rather than an embed map'
+    )
+  })
+
+  test('a bun entry serves the frontend from the embedded asset map', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withFrontend)
 
     assert.match(source, /from '\.\/frontend-assets\.gen\.js'/)
     assert.match(source, /assets:/)
@@ -51,7 +77,9 @@ describe('StandaloneProviderAdapter frontend serving', () => {
   })
 
   test('the mount carries the configured prefix and fallback', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource({
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource({
       ...(baseContext as object),
       frontend: { urlPrefix: '/app', spaFallback: false },
     } as never)
@@ -63,9 +91,19 @@ describe('StandaloneProviderAdapter frontend serving', () => {
   test('bun externalises the asset manifest so esbuild never parses it', () => {
     // esbuild rejects `with { type: 'file' }` outright; the manifest has to
     // survive to the `bun build --compile` step untouched.
-    const externals = new StandaloneProviderAdapter({}).getExternals()
+    const externals = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).getExternals()
 
     assert.ok(externals.includes('./frontend-assets.gen.js'))
+  })
+
+  test('the node runtime has no manifest to externalise', () => {
+    const externals = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).getExternals()
+
+    assert.ok(!externals.includes('./frontend-assets.gen.js'))
   })
 })
 
@@ -102,14 +140,13 @@ describe('StandaloneProviderAdapter deploy output', () => {
   const silentLogger = { info: () => {}, error: () => {} }
 
   test('ships the frontend beside the bundle', async () => {
-    // The compile step reads the copy in the distributable, so the frontend has
-    // to land there, not just in the build directory.
+    // The node entry resolves its mount directory relative to itself, so the
+    // copy has to land in the distributable, not just in the build directory.
     const { buildDir, outDir } = await builtUnit({ withFrontend: true })
 
-    const result = await new StandaloneProviderAdapter({}).deploy({
-      buildDir,
-      logger: silentLogger,
-    })
+    const result = await new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).deploy({ buildDir, logger: silentLogger })
 
     assert.equal(result.success, true)
     assert.equal(
@@ -124,7 +161,7 @@ describe('StandaloneProviderAdapter deploy output', () => {
     // precisely so it would still be a real file at this point.
     const { buildDir, outDir } = await builtUnit({ withFrontend: true })
 
-    await new StandaloneProviderAdapter().deploy({
+    await new StandaloneProviderAdapter({ runtime: 'node' }).deploy({
       buildDir,
       logger: silentLogger,
     })
@@ -138,14 +175,36 @@ describe('StandaloneProviderAdapter deploy output', () => {
   test('a project without a frontend copies nothing extra', async () => {
     const { buildDir, outDir } = await builtUnit({ withFrontend: false })
 
-    const result = await new StandaloneProviderAdapter({}).deploy({
-      buildDir,
-      logger: silentLogger,
-    })
+    const result = await new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).deploy({ buildDir, logger: silentLogger })
 
     assert.equal(result.success, true)
     assert.equal(existsSync(join(outDir, 'frontend')), false)
     assert.equal(existsSync(join(outDir, 'frontend-assets.gen.js')), false)
+    assert.equal(existsSync(join(outDir, 'db')), false)
+  })
+
+  test('ships the migrations beside the bundle', async () => {
+    // `db migrate` looks for them next to the bundle (or the bun binary, which
+    // is compiled into the same directory); a copy left only in the build
+    // directory made the artifact report "already up to date" on an empty db.
+    const { buildDir, outDir } = await builtUnit({ withFrontend: false })
+    await mkdir(join(buildDir, 'app', 'db', 'sqlite'), { recursive: true })
+    await writeFile(
+      join(buildDir, 'app', 'db', 'sqlite', '0001_init.sql'),
+      'create table t (id integer);'
+    )
+
+    await new StandaloneProviderAdapter({ runtime: 'node' }).deploy({
+      buildDir,
+      logger: silentLogger,
+    })
+
+    assert.equal(
+      await readFile(join(outDir, 'db', 'sqlite', '0001_init.sql'), 'utf-8'),
+      'create table t (id integer);'
+    )
   })
 })
 
@@ -196,111 +255,144 @@ const withSqliteNoCoercion = {
   db: { engine: 'sqlite' as const },
 } as never
 
-describe(`StandaloneProviderAdapter postgres wiring`, () => {
-  test('the connection is opened from DATABASE_URL', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter postgres wiring (${runtime})`, () => {
+    test('the connection is opened from DATABASE_URL', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
 
-    assert.match(
-      source,
-      /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
-    )
-    assert.match(source, /process\.env\.DATABASE_URL/)
+      assert.match(
+        source,
+        /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
+      )
+      assert.match(source, /process\.env\.DATABASE_URL/)
+    })
+
+    test('a missing DATABASE_URL fails by name rather than by driver error', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(source, /needs DATABASE_URL set/)
+    })
+
+    test('postgres brings none of the sqlite file handling with it', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // PIKKU_DATA_DIR describes where a bundled database file lives. A
+      // postgres build has no file, and demanding the variable anyway would
+      // refuse to boot over a directory it never reads.
+      assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
+      assert.doesNotMatch(source, /PIKKU_DATABASE_FILE/)
+      assert.doesNotMatch(source, /SqliteKysely/)
+    })
+
+    test('the connection is handed to the services factory, opened first', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(
+        source,
+        /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/
+      )
+      assert.ok(
+        source.indexOf('new PikkuKysely') <
+          source.indexOf('createSingletonServices(config')
+      )
+    })
+
+    test('the coercion map is applied to the postgres connection too', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // The map comes from db/annotations.ts, not from the dialect: an
+      // annotated column needs coercing whichever database holds it.
+      assert.match(source, /withPlugin\(\s*createCoercionPlugin/)
+    })
+
+    test('an app with no coercion map still gets a database', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgresNoCoercion)
+
+      // Nothing to coerce is a database with no annotated columns, not a
+      // reason to boot the app with no connection at all.
+      assert.match(source, /new PikkuKysely/)
+      assert.doesNotMatch(source, /createCoercionPlugin/)
+      assert.match(source, /\n    kysely,/)
+    })
+
+    test('sqlite with no coercion map still gets a database', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withSqliteNoCoercion)
+
+      assert.match(source, /SqliteKysely/)
+      assert.doesNotMatch(source, /createCoercionPlugin/)
+      assert.match(source, /\n    kysely,/)
+    })
+
+    test('the pool is closed on shutdown, after the server has stopped', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // A pool closed in beforeStop would be gone while the app's own stop
+      // hook and the draining server are still entitled to query it.
+      assert.match(
+        source,
+        /afterStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/
+      )
+      assert.doesNotMatch(
+        source,
+        /beforeStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/
+      )
+    })
+
+    test('a sqlite build closes no pool', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withDb)
+
+      assert.doesNotMatch(source, /__pikkuPg/)
+    })
   })
-
-  test('a missing DATABASE_URL fails by name rather than by driver error', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
-
-    assert.match(source, /needs DATABASE_URL set/)
-  })
-
-  test('postgres brings none of the sqlite file handling with it', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
-
-    // PIKKU_DATA_DIR describes where a bundled database file lives. A
-    // postgres build has no file, and demanding the variable anyway would
-    // refuse to boot over a directory it never reads.
-    assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
-    assert.doesNotMatch(source, /PIKKU_DATABASE_FILE/)
-    assert.doesNotMatch(source, /SqliteKysely/)
-  })
-
-  test('the connection is handed to the services factory, opened first', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
-
-    assert.match(
-      source,
-      /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/
-    )
-    assert.ok(
-      source.indexOf('new PikkuKysely') <
-        source.indexOf('createSingletonServices(config')
-    )
-  })
-
-  test('the coercion map is applied to the postgres connection too', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
-
-    // The map comes from db/annotations.ts, not from the dialect: an
-    // annotated column needs coercing whichever database holds it.
-    assert.match(source, /withPlugin\(\s*createCoercionPlugin/)
-  })
-
-  test('an app with no coercion map still gets a database', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgresNoCoercion
-    )
-
-    // Nothing to coerce is a database with no annotated columns, not a
-    // reason to boot the app with no connection at all.
-    assert.match(source, /new PikkuKysely/)
-    assert.doesNotMatch(source, /createCoercionPlugin/)
-    assert.match(source, /\n    kysely,/)
-  })
-
-  test('sqlite with no coercion map still gets a database', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withSqliteNoCoercion
-    )
-
-    assert.match(source, /SqliteKysely/)
-    assert.doesNotMatch(source, /createCoercionPlugin/)
-    assert.match(source, /\n    kysely,/)
-  })
-
-  test('the pool is closed on shutdown, after the server has stopped', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withPostgres
-    )
-
-    // A pool closed in beforeStop would be gone while the app's own stop
-    // hook and the draining server are still entitled to query it.
-    assert.match(source, /afterStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/)
-    assert.doesNotMatch(
-      source,
-      /beforeStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/
-    )
-  })
-
-  test('a sqlite build closes no pool', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
-
-    assert.doesNotMatch(source, /__pikkuPg/)
-  })
-})
+}
 
 describe('StandaloneProviderAdapter database wiring', () => {
+  test('a node entry without a database opens none', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(baseContext)
+
+    assert.doesNotMatch(source, /createNodeSqliteKysely/)
+    assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
+  })
+
+  test('a node entry hands the connection to the services factory', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(source, /createNodeSqliteKysely/)
+    // The whole point: app code receives `kysely` the way a hosted runtime
+    // would give it, rather than the factory finding nothing there.
+    assert.match(
+      source,
+      /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/,
+      'kysely must be passed into the services factory, not merely constructed'
+    )
+  })
+
   test('the connection is opened before the services that need it', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.ok(
       source.indexOf('createNodeSqliteKysely') <
@@ -310,7 +402,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('the generated coercion map is applied to the connection', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.match(source, /from '\.\.\/\.\.\/\.pikku\/db\/coercion\.gen\.js'/)
     // Without it a `date` column reads back as a string and a `bool` as 0/1,
@@ -322,7 +416,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('the database file lives outside the release directory', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.match(source, /PIKKU_DATA_DIR/)
     // A path derived from the bundle's own location would be swapped out —
@@ -334,7 +430,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('an explicit database file overrides the data directory', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     // `pikku db migrate` has to open the same file this does; without an
     // override the two can only agree by coincidence.
@@ -349,7 +447,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('the data directory is used when nothing overrides it', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.equal(
       chooseDatabaseFile(source, { PIKKU_DATA_DIR: '/var/lib/pikku' }),
@@ -358,7 +458,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('a missing data directory fails by name', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.throws(
       () => chooseDatabaseFile(source, {}),
@@ -368,7 +470,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('the directory is created rather than required to exist', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
 
     assert.match(
       source,
@@ -377,7 +481,9 @@ describe('StandaloneProviderAdapter database wiring', () => {
   })
 
   test('a database and a frontend do not fight over their path aliases', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource({
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource({
       ...(baseContext as object),
       frontend: { urlPrefix: '/', spaFallback: true },
       db: {
@@ -393,13 +499,16 @@ describe('StandaloneProviderAdapter database wiring', () => {
       bound.length,
       `each path helper must bind a distinct name, got ${bound.join(', ')}`
     )
+    assert.match(source, /__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath/)
     assert.match(source, /__pikkuJoin\(__pikkuRequireDataDir\(\)/)
   })
 })
 
-describe('StandaloneProviderAdapter sqlite driver', () => {
+describe('StandaloneProviderAdapter database wiring (bun)', () => {
   test('a bun entry opens SQLite through the bun driver', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
 
     // node:sqlite is not available inside a compiled bun binary, so reaching
     // for the node factory here produces an artifact that cannot start.
@@ -408,7 +517,9 @@ describe('StandaloneProviderAdapter sqlite driver', () => {
   })
 
   test('a bun entry hands the connection to the services factory', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
 
     assert.match(
       source,
@@ -417,16 +528,18 @@ describe('StandaloneProviderAdapter sqlite driver', () => {
   })
 
   test('a bun entry defines the data-dir helper it calls', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(withDb)
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
 
     // Calling it without defining it is a ReferenceError at first boot.
     assert.match(source, /function __pikkuRequireDataDir\(\)/)
   })
 
   test('a bun entry without a database opens none', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      baseContext
-    )
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(baseContext)
 
     assert.doesNotMatch(source, /createBunSqliteKysely/)
     assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
@@ -438,184 +551,360 @@ const withLifecycle = {
   lifecycle: { importPath: './lifecycle.js', variable: 'lifecycle' },
 } as never
 
-describe(`StandaloneProviderAdapter server lifecycle`, () => {
-  test('an app that declares no lifecycle gets no hook calls', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      baseContext
-    )
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter server lifecycle (${runtime})`, () => {
+    test('an app that declares no lifecycle gets no hook calls', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(baseContext)
 
-    assert.doesNotMatch(source, /__pikkuLifecycle/)
-    assert.match(source, /server\.enableExitOnSignals\(\)/)
-  })
+      assert.doesNotMatch(source, /__pikkuLifecycle/)
+      assert.match(source, /server\.enableExitOnSignals\(\)/)
+    })
 
-  test('the lifecycle is imported under a reserved name', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
+    test('the lifecycle is imported under a reserved name', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
 
-    assert.match(
-      source,
-      /import \{ lifecycle as __pikkuLifecycle \} from '\.\/lifecycle\.js'/
-    )
-  })
-
-  test('beforeStart runs after init and before the port opens', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
-
-    const init = source.indexOf('await server.init()')
-    const before = source.indexOf('__pikkuLifecycle?.beforeStart?.')
-    const start = source.indexOf('await server.start()')
-
-    assert.ok(init !== -1 && before !== -1 && start !== -1)
-    assert.ok(
-      init < before && before < start,
-      'work a hook must finish before the first request has to run before the port opens'
-    )
-  })
-
-  test('afterStart runs once the server is listening', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
-
-    assert.ok(
-      source.indexOf('await server.start()') <
-        source.indexOf('__pikkuLifecycle?.afterStart?.')
-    )
-  })
-
-  test('the hooks are handed the services the app was built with', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
-
-    for (const hook of [
-      'beforeStart',
-      'afterStart',
-      'beforeStop',
-      'afterStop',
-    ]) {
       assert.match(
         source,
-        new RegExp(
-          `__pikkuLifecycle\\?\\.${hook}\\?\\.\\(singletonServices\\)`
-        ),
-        `${hook} must receive singletonServices`
+        /import \{ lifecycle as __pikkuLifecycle \} from '\.\/lifecycle\.js'/
       )
-    }
+    })
+
+    test('beforeStart runs after init and before the port opens', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      const init = source.indexOf('await server.init()')
+      const before = source.indexOf('__pikkuLifecycle?.beforeStart?.')
+      const start = source.indexOf('await server.start()')
+
+      assert.ok(init !== -1 && before !== -1 && start !== -1)
+      assert.ok(
+        init < before && before < start,
+        'work a hook must finish before the first request has to run before the port opens'
+      )
+    })
+
+    test('afterStart runs once the server is listening', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.ok(
+        source.indexOf('await server.start()') <
+          source.indexOf('__pikkuLifecycle?.afterStart?.')
+      )
+    })
+
+    test('the hooks are handed the services the app was built with', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      for (const hook of [
+        'beforeStart',
+        'afterStart',
+        'beforeStop',
+        'afterStop',
+      ]) {
+        assert.match(
+          source,
+          new RegExp(
+            `__pikkuLifecycle\\?\\.${hook}\\?\\.\\(singletonServices\\)`
+          ),
+          `${hook} must receive singletonServices`
+        )
+      }
+    })
+
+    test('the stop hooks are given to the signal handler that owns shutdown', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.match(
+        source,
+        /server\.enableExitOnSignals\(\{ beforeStop:/,
+        'a separate signal listener would race the server teardown'
+      )
+    })
+
+    test('the lifecycle import is optional and never emitted twice', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.equal(
+        source.split('as __pikkuLifecycle').length - 1,
+        1,
+        'a duplicate binding would not compile'
+      )
+    })
   })
+}
 
-  test('the stop hooks are given to the signal handler that owns shutdown', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter command line (${runtime})`, () => {
+    const generate = (ctx: unknown) =>
+      new StandaloneProviderAdapter({ runtime }).generateEntrySource(
+        ctx as never
+      )
 
+    test('argv is parsed before the config factory or the database', () => {
+      const source = generate(withDb)
+
+      assert.ok(
+        source.indexOf('parseStandaloneCommand') <
+          source.indexOf('async function main()'),
+        'version and help have to answer on a machine where neither works yet'
+      )
+      assert.match(
+        source,
+        /if \(__pikkuCommand\.kind === 'exit'\) process\.exit/
+      )
+    })
+
+    test('the version reported is the project’s own', () => {
+      assert.match(
+        generate({ ...(withDb as object), version: '4.5.6' }),
+        /version: '4\.5\.6'/
+      )
+      assert.match(generate(withDb), /version: 'unknown'/)
+    })
+
+    test('a command runs against the database the app itself opened', () => {
+      const source = generate(withDb)
+
+      assert.ok(
+        source.indexOf('const kysely =') <
+          source.indexOf('await runStandaloneCommand('),
+        'the database is opened first so a migration cannot target another one'
+      )
+      assert.match(source, /databaseFile: __pikkuDbFile,/)
+    })
+
+    test('a completed command returns before a port is bound', () => {
+      const source = generate(withDb)
+      const dispatch = source.indexOf('await runStandaloneCommand(')
+
+      assert.ok(dispatch < source.indexOf('createSingletonServices(config'))
+      assert.match(source, /=== 'done'\) \{\n {4}return\n {2}\}/)
+    })
+
+    test('a postgres build closes its pool before the process ends', () => {
+      assert.match(
+        generate(withPostgres),
+        /=== 'done'\) \{\n {4}await __pikkuPg\.close\(\)\n {4}return\n {2}\}/
+      )
+    })
+
+    test('the postgres command target is handed the live connection', () => {
+      assert.match(generate(withPostgres), /sql: __pikkuPg\.sql,/)
+    })
+
+    test('migrations are read from the engine directory the build wrote', () => {
+      assert.match(
+        generate(withDb),
+        /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'sqlite'\)\)/
+      )
+      assert.match(
+        generate(withPostgres),
+        /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'postgres'\)\)/
+      )
+    })
+
+    test('a build with no database announces none and answers no db command', () => {
+      const source = generate(baseContext)
+
+      assert.match(source, /hasDb: false,/)
+      assert.doesNotMatch(source, /engine:/)
+      assert.doesNotMatch(source, /runStandaloneCommand/)
+      assert.match(
+        source,
+        /if \(__pikkuCommand\.kind !== 'serve'\) process\.exit\(0\)/
+      )
+    })
+  })
+}
+
+describe('StandaloneProviderAdapter migrations path per runtime', () => {
+  test('a node bundle reads them from its own directory', () => {
     assert.match(
-      source,
-      /server\.enableExitOnSignals\(\{ beforeStop:/,
-      'a separate signal listener would race the server teardown'
+      new StandaloneProviderAdapter({ runtime: 'node' }).generateEntrySource(
+        withDb
+      ),
+      /resolveMigrationsDir\(__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath\(import\.meta\.url\)\), 'db', 'sqlite'\)\)/
     )
   })
 
-  test('the lifecycle import is optional and never emitted twice', () => {
-    const source = new StandaloneProviderAdapter({}).generateEntrySource(
-      withLifecycle
-    )
-
-    assert.equal(
-      source.split('as __pikkuLifecycle').length - 1,
-      1,
-      'a duplicate binding would not compile'
-    )
-  })
-})
-
-describe(`StandaloneProviderAdapter command line`, () => {
-  const generate = (ctx: unknown) =>
-    new StandaloneProviderAdapter().generateEntrySource(ctx as never)
-
-  test('argv is parsed before the config factory or the database', () => {
-    const source = generate(withDb)
-
-    assert.ok(
-      source.indexOf('parseStandaloneCommand') <
-        source.indexOf('async function main()'),
-      'version and help have to answer on a machine where neither works yet'
-    )
-    assert.match(source, /if \(__pikkuCommand\.kind === 'exit'\) process\.exit/)
-  })
-
-  test('the version reported is the project’s own', () => {
-    assert.match(
-      generate({ ...(withDb as object), version: '4.5.6' }),
-      /version: '4\.5\.6'/
-    )
-    assert.match(generate(withDb), /version: 'unknown'/)
-  })
-
-  test('a command runs against the database the app itself opened', () => {
-    const source = generate(withDb)
-
-    assert.ok(
-      source.indexOf('const kysely =') <
-        source.indexOf('await runStandaloneCommand('),
-      'the database is opened first so a migration cannot target another one'
-    )
-    assert.match(source, /databaseFile: __pikkuDbFile,/)
-  })
-
-  test('a completed command returns before a port is bound', () => {
-    const source = generate(withDb)
-    const dispatch = source.indexOf('await runStandaloneCommand(')
-
-    assert.ok(dispatch < source.indexOf('createSingletonServices(config'))
-    assert.match(source, /=== 'done'\) \{\n {4}return\n {2}\}/)
-  })
-
-  test('a postgres build closes its pool before the process ends', () => {
-    assert.match(
-      generate(withPostgres),
-      /=== 'done'\) \{\n {4}await __pikkuPg\.close\(\)\n {4}return\n {2}\}/
-    )
-  })
-
-  test('the postgres command target is handed the live connection', () => {
-    assert.match(generate(withPostgres), /sql: __pikkuPg\.sql,/)
-  })
-
-  test('migrations are read from the engine directory the build wrote', () => {
-    assert.match(
-      generate(withDb),
-      /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'sqlite'\)\)/
-    )
-    assert.match(
-      generate(withPostgres),
-      /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'postgres'\)\)/
-    )
-  })
-
-  test('a build with no database announces none and answers no db command', () => {
-    const source = generate(baseContext)
-
-    assert.match(source, /hasDb: false,/)
-    assert.doesNotMatch(source, /engine:/)
-    assert.doesNotMatch(source, /runStandaloneCommand/)
-    assert.match(
-      source,
-      /if \(__pikkuCommand\.kind !== 'serve'\) process\.exit\(0\)/
-    )
-  })
-})
-
-describe('StandaloneProviderAdapter migrations path', () => {
   test('a compiled bun binary reads them beside the executable', () => {
     // import.meta.url points inside the embedded filesystem, which holds no
     // migrations — the operator unpacked them next to the binary instead.
     assert.match(
-      new StandaloneProviderAdapter().generateEntrySource(withDb),
+      new StandaloneProviderAdapter({ runtime: 'bun' }).generateEntrySource(
+        withDb
+      ),
       /resolveMigrationsDir\(__pikkuJoin\(__pikkuDirname\(process\.execPath\), 'db', 'sqlite'\)\)/
     )
   })
 })
+
+describe('StandaloneProviderAdapter SQLite extensions', () => {
+  const withVec = {
+    ...(baseContext as object),
+    db: { engine: 'sqlite', sqliteExtensions: ['vec0.dylib'] },
+  } as never
+  const generate = (runtime: 'node' | 'bun', ctx: never) =>
+    new StandaloneProviderAdapter({ runtime }).generateEntrySource(ctx)
+
+  test('a node build loads the libraries shipped beside the bundle', () => {
+    const source = generate('node', withVec)
+
+    assert.match(
+      source,
+      /const __pikkuSqliteExtensions = \['vec0\.dylib'\]\.map\(\(name\) =>\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath\(import\.meta\.url\)\), 'sqlite-extensions', name\)/
+    )
+    assert.match(source, /extensions: __pikkuSqliteExtensions,/)
+    assert.doesNotMatch(source, /sqlite-extensions\.gen/)
+  })
+
+  test('a bun build writes its embedded copies out beside the database', () => {
+    const source = generate('bun', withVec)
+
+    assert.match(
+      source,
+      /import \{ sqliteExtensions as __pikkuEmbeddedSqliteExtensions \} from '\.\/sqlite-extensions\.gen\.js'/
+    )
+    assert.match(
+      source,
+      /import \{[^}]*materializeEmbeddedFiles[^}]*\} from '@pikku\/deploy-standalone\/runtime'/
+    )
+    assert.match(
+      source,
+      /materializeEmbeddedFiles\(\n\s+__pikkuEmbeddedSqliteExtensions,\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuDbFile\), '\.pikku-sqlite-extensions'\)/
+    )
+    assert.match(source, /extensions: __pikkuSqliteExtensions,/)
+  })
+
+  test('db migrate and backup open the database with the same extensions', () => {
+    for (const runtime of ['node', 'bun'] as const) {
+      assert.match(
+        generate(runtime, withVec),
+        /databaseFile: __pikkuDbFile, extensions: __pikkuSqliteExtensions,/
+      )
+    }
+  })
+
+  test('the extensions are bound before the database is opened', () => {
+    for (const runtime of ['node', 'bun'] as const) {
+      const source = generate(runtime, withVec)
+      assert.ok(
+        source.indexOf('const __pikkuSqliteExtensions') <
+          source.indexOf('const kysely =')
+      )
+    }
+  })
+
+  test('a build with none loads nothing', () => {
+    const plain = {
+      ...(baseContext as object),
+      db: { engine: 'sqlite' },
+    } as never
+    for (const runtime of ['node', 'bun'] as const) {
+      const source = generate(runtime, plain)
+      assert.doesNotMatch(source, /__pikkuSqliteExtensions/)
+      assert.doesNotMatch(source, /materializeEmbeddedFiles/)
+    }
+  })
+
+  test('the bun manifest stays out of esbuild', () => {
+    assert.ok(
+      new StandaloneProviderAdapter({ runtime: 'bun' })
+        .getExternals()
+        .includes('./sqlite-extensions.gen.js')
+    )
+  })
+
+  test('only a bun build asks for a SQLite library to carry', () => {
+    assert.equal(
+      new StandaloneProviderAdapter({ runtime: 'bun' }).bundlesSqliteLibrary,
+      true
+    )
+    assert.equal(
+      new StandaloneProviderAdapter({ runtime: 'node' }).bundlesSqliteLibrary,
+      false
+    )
+  })
+
+  test('a bun build points bun at its libsqlite3 before opening anything', () => {
+    // bun takes a library only before its first open, and then never again.
+    const withLibrary = {
+      ...(baseContext as object),
+      db: {
+        engine: 'sqlite',
+        sqliteExtensions: ['vec0.dylib'],
+        sqliteLibrary: 'libsqlite3.3.53.4.dylib',
+      },
+    } as never
+    const source = generate('bun', withLibrary)
+
+    assert.match(
+      source,
+      /import \{ sqliteLibrary as __pikkuEmbeddedSqliteLibrary \} from '\.\/sqlite-extensions\.gen\.js'/
+    )
+    assert.match(
+      source,
+      /import \{ Database as __pikkuBunDatabase \} from 'bun:sqlite'/
+    )
+    assert.match(
+      source,
+      /materializeEmbeddedFiles\(\n\s+\[__pikkuEmbeddedSqliteLibrary\],\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuDbFile\), '\.pikku-sqlite-extensions'\)/
+    )
+    const swap = source.indexOf('__pikkuBunDatabase.setCustomSQLite(')
+    assert.ok(swap > 0)
+    assert.ok(swap < source.indexOf('const __pikkuSqliteExtensions'))
+    assert.ok(swap < source.indexOf('const kysely ='))
+  })
+
+  test('a library with no extensions is still swapped in', () => {
+    const libraryOnly = {
+      ...(baseContext as object),
+      db: { engine: 'sqlite', sqliteLibrary: 'libsqlite3.dylib' },
+    } as never
+    const source = generate('bun', libraryOnly)
+
+    assert.match(source, /__pikkuBunDatabase\.setCustomSQLite\(/)
+    assert.match(
+      source,
+      /import \{[^}]*materializeEmbeddedFiles[^}]*\} from '@pikku\/deploy-standalone\/runtime'/
+    )
+    assert.doesNotMatch(source, /__pikkuSqliteExtensions/)
+  })
+})
+
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter trigger source store (${runtime})`, () => {
+    test('an app with a database gets the Kysely store, falling back to memory', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(source, /new KyselyTriggerSourceStore\(kysely\)/)
+      assert.match(source, /new InMemoryTriggerSourceStore\(\)/)
+      assert.match(source, /\n\s+triggerSourceStore,\n/)
+    })
+
+    test('an app without a database gets the in-memory store', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(baseContext)
+
+      assert.match(source, /new InMemoryTriggerSourceStore\(\)/)
+      assert.doesNotMatch(source, /KyselyTriggerSourceStore/)
+    })
+  })
+}

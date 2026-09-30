@@ -5,7 +5,11 @@ import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+  WebhookSourcesMeta,
+} from '@pikku/core/trigger'
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type {
@@ -292,6 +296,12 @@ export type InspectorFilters = {
   // Sourced from `pikku.config.json` → `deploy.defaultTarget`. Used only
   // when deploy filters are set. Defaults to 'serverless'.
   defaultTarget?: 'serverless' | 'server'
+  // Workflows whose meta is kept without their registration: enough for
+  // `rpc.startWorkflow(name)` to create a run and hand it to the orchestrator
+  // queue, without bundling the workflow function. Used by per-unit deploy
+  // codegen for units that start a workflow another unit runs. A workflow also
+  // matched by `names` keeps its registration.
+  workflowMeta?: string[]
 }
 
 export type AddonConfig = {
@@ -593,6 +603,14 @@ export interface InspectorState {
      *  inspector cannot read off the declaration. */
     props?: Record<string, Record<string, string>>
   }>
+  outgoingWebhooks?: Array<{
+    file: string
+    variable: string
+    event: string
+    title: string
+    description?: string
+    payload?: Record<string, string>
+  }>
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType
@@ -617,6 +635,7 @@ export interface InspectorState {
   triggers: {
     meta: TriggerMeta
     sourceMeta: TriggerSourceMeta
+    webhookSourceMeta: WebhookSourcesMeta
     files: Set<string>
   }
   scheduledTasks: {

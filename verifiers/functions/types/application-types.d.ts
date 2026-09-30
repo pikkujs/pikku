@@ -23,4 +23,6 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   queueService?: QueueService
 }
 
-export interface Services extends CoreServices<SingletonServices> {}
+export interface Services extends CoreServices<SingletonServices> {
+  requestStamp: { id: string }
+}

@@ -167,3 +167,85 @@ describe('loadSurface', () => {
     )
   })
 })
+
+describe('readSurface — platform plumbing', () => {
+  test('scaffold and generated sources are marked as platform', () => {
+    const dir = join(root, 'platform', '.pikku')
+    writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
+      getUser: { pikkuFuncId: 'getUser' },
+      relayChangeRequest: { pikkuFuncId: 'relayChangeRequest' },
+    })
+    writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
+      getUser: { sourceFile: '/app/src/users.function.ts' },
+      relayChangeRequest: {
+        sourceFile: '/app/src/scaffold/fabric/changes/relay.function.ts',
+      },
+    })
+    writeJson(join(dir, 'http', 'pikku-http-wirings-meta.gen.json'), {
+      get: {
+        '/users/:id': {
+          pikkuFuncId: 'getUser',
+          sourceFile: '/app/src/users.http.ts',
+        },
+        '/api/auth': {
+          pikkuFuncId: 'auth',
+          sourceFile: '/app/pikku/auth/auth.gen.ts',
+        },
+      },
+      post: {
+        '/changes': {
+          pikkuFuncId: 'relayChangeRequest',
+          sourceFile: '/app/src/scaffold/fabric/changes/changes.http.ts',
+        },
+      },
+    })
+    writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
+      audit: {
+        pikkuFuncId: 'audit',
+        sourceFile: '/app/src/scaffold/fabric/audit/audit.queue.ts',
+      },
+    })
+
+    const surface = readSurface(dir)
+    const platformIds = (entries: Record<string, unknown>) =>
+      Object.entries(entries)
+        .filter(([, v]) => (v as { platform?: boolean }).platform === true)
+        .map(([k]) => k)
+        .sort()
+    assert.deepEqual(platformIds(surface.functions), ['relayChangeRequest'])
+    assert.deepEqual(platformIds(surface.wirings.http!), [
+      'GET /api/auth',
+      'POST /changes',
+    ])
+    assert.deepEqual(platformIds(surface.wirings.queue!), ['audit'])
+    assert.equal(surface.functions.getUser!.platform, undefined)
+  })
+
+  test('a wiring with no sourceFile is platform when its function is', () => {
+    const dir = join(root, 'platform-queue', '.pikku')
+    writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
+      'queue:fabric-audit': { pikkuFuncId: 'queue:fabric-audit' },
+      sendEmail: { pikkuFuncId: 'sendEmail' },
+    })
+    writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
+      'queue:fabric-audit': {
+        sourceFile: '/app/src/scaffold/fabric/audit/fabric-audit.queue.ts',
+      },
+      sendEmail: { sourceFile: '/app/src/email.function.ts' },
+    })
+    writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
+      'fabric-audit': {
+        pikkuFuncId: 'queue:fabric-audit',
+        name: 'fabric-audit',
+      },
+      emails: { pikkuFuncId: 'sendEmail', name: 'emails' },
+    })
+
+    const queue = readSurface(dir).wirings.queue as Record<
+      string,
+      { platform?: boolean }
+    >
+    assert.equal(queue['fabric-audit']!.platform, true)
+    assert.equal(queue.emails!.platform, undefined)
+  })
+})

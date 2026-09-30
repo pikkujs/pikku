@@ -3,6 +3,7 @@ import { join } from 'path'
 import { parseVersionedId } from '@pikku/core/utils'
 import type { VersionManifest } from '@pikku/inspector'
 import {
+  normalize,
   readMetaSnapshot,
   type MetaDiffCategoryName,
   type MetaSnapshot,
@@ -28,6 +29,8 @@ export interface SurfaceFunction {
   inputSchemaName: string | null
   outputSchemaName: string | null
   contractHash?: string
+  /** Added by the platform (scaffold or generated source), not written in the app. */
+  platform?: true
 }
 
 export interface Surface {
@@ -56,6 +59,60 @@ interface FunctionMetaEntry {
 }
 
 const SCHEMA_SUFFIX = '.schema.json'
+
+/** Scaffold output and generated files are added by the platform, not written in the app. */
+export function isPlatformSource(sourceFile: string): boolean {
+  return (
+    /(^|[\\/])scaffold[\\/]/.test(sourceFile) ||
+    /\.gen\.[cm]?[jt]s$/.test(sourceFile)
+  )
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
+function markPlatform(
+  entries: Record<string, unknown>,
+  platform: Set<string>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(entries)) {
+    if (!isRecord(value)) {
+      out[key] = value
+    } else if (
+      typeof value.pikkuFuncId === 'string' ||
+      typeof value.sourceFile === 'string'
+    ) {
+      const isPlatform =
+        (typeof value.pikkuFuncId === 'string' &&
+          platform.has(value.pikkuFuncId)) ||
+        (typeof value.sourceFile === 'string' &&
+          isPlatformSource(value.sourceFile))
+      out[key] = isPlatform ? { ...value, platform: true } : value
+    } else {
+      out[key] = markPlatform(value, platform)
+    }
+  }
+  return out
+}
+
+function platformFunctionIds(pikkuDir: string): Set<string> {
+  const verbose = readJsonFile(
+    join(pikkuDir, 'function', 'pikku-functions-meta-verbose.gen.json')
+  )
+  const ids = new Set<string>()
+  if (!isRecord(verbose)) return ids
+  for (const [id, meta] of Object.entries(verbose)) {
+    if (
+      isRecord(meta) &&
+      typeof meta.sourceFile === 'string' &&
+      isPlatformSource(meta.sourceFile)
+    ) {
+      ids.add(id)
+    }
+  }
+  return ids
+}
 
 function readJsonFile(path: string): unknown {
   try {
@@ -108,6 +165,7 @@ export function readSurface(
 
   const functions: Record<string, SurfaceFunction> = {}
   const wanted = new Set<string>()
+  const platform = platformFunctionIds(pikkuDir)
 
   for (const [id, raw] of Object.entries(snapshot.functions ?? {})) {
     const meta = (raw ?? {}) as FunctionMetaEntry
@@ -124,14 +182,19 @@ export function readSurface(
       inputSchemaName,
       outputSchemaName,
       contractHash: meta.contractHash,
+      ...(platform.has(id) ? { platform: true } : {}),
     }
   }
 
   const wirings: Surface['wirings'] = {}
   for (const [category, entries] of Object.entries(snapshot)) {
     if (category === 'functions' || !entries) continue
-    if (Object.keys(entries).length === 0) continue
-    wirings[category as WiringCategory] = entries
+    const own = markPlatform(entries as Record<string, unknown>, platform)
+    if (Object.keys(own).length === 0) continue
+    wirings[category as WiringCategory] = normalize(own) as Record<
+      string,
+      unknown
+    >
   }
 
   return {
@@ -151,7 +214,7 @@ function assertSurface(value: unknown, source: string): Surface {
   const surface = value as Partial<Surface>
   if (typeof surface.functions !== 'object' || surface.functions === null) {
     throw new Error(
-      `Baseline at ${source} is not a surface snapshot (no "functions" map). Produce one with \`pikku semver --emit\`.`
+      `Baseline at ${source} is not a surface snapshot (no "functions" map). Produce one with \`pikku release snapshot\`.`
     )
   }
   if (

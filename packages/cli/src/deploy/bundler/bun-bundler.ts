@@ -130,8 +130,14 @@ function createBunResolvePlugin(opts: {
     setup(build) {
       build.onResolve({ filter }, (args) => {
         let path = args.path
-        // Relative / absolute → let Bun resolve natively.
-        if (path.startsWith('.') || path.startsWith('/')) return
+        // Relative / absolute → let Bun resolve natively, unless declared
+        // external (a manifest a later `bun build --compile` step fills in).
+        if (path.startsWith('.') || path.startsWith('/')) {
+          if (externalMatchers.some((m) => m(path))) {
+            return { path, external: true }
+          }
+          return
+        }
         // Builtin alias (e.g. crypto → node:crypto).
         if (aliases && aliases[path]) path = aliases[path]
         // Dead/stubbed modules → empty module.

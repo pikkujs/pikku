@@ -21,6 +21,7 @@ import {
   resolveExternalVersions,
   generateMinimalPackageJson,
 } from './dep-extractor.js'
+import { findNativeAddons, nativeAddonBundleError } from './native-addon.js'
 import type {
   DeploymentUnit,
   DeploymentManifest,
@@ -176,6 +177,27 @@ export abstract class BaseBundler implements Bundler {
     return { results, errors }
   }
 
+  /**
+   * A serverless compile, with a native addon reported as one. Without this the
+   * failure is the addon's wrapper failing to resolve `node:*`, which names
+   * neither the package nor the reason — see `native-addon.ts`.
+   */
+  private async compileForServerless(
+    input: CompileInput
+  ): Promise<CompileResult> {
+    try {
+      return await this.compile(input)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const hits = await findNativeAddons(message)
+      if (hits.length === 0) throw error
+      throw new Error(
+        `${nativeAddonBundleError(input.unitName, hits)}\n\n${message}`,
+        { cause: error }
+      )
+    }
+  }
+
   private async bundleUnit(
     unit: DeploymentUnit,
     entryPath: string,
@@ -216,12 +238,15 @@ export abstract class BaseBundler implements Bundler {
     // three so CJS builtins resolve and native-addon loaders find their .node
     // files. Skipped when the provider opts out via `noRequireShim` (e.g. CF
     // Workers — `import.meta.url` is undefined there, so the shim crashes).
+    // The banner is raw text esbuild never renames around, so its imports carry
+    // names no generated entry uses: the standalone entry imports `dirname` as
+    // `__pikkuDirname`, and without mangling (bun) the two collided.
     const bannerJs =
       format === 'esm' && platform === 'node' && !options.noRequireShim
-        ? `import { createRequire as __pikkuCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'; import { dirname as __pikkuDirname } from 'node:path'; const require = __pikkuCreateRequire(import.meta.url); const __filename = __pikkuFileURLToPath(import.meta.url); const __dirname = __pikkuDirname(__filename);`
+        ? `import { createRequire as __pikkuBannerCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuBannerFileURLToPath } from 'node:url'; import { dirname as __pikkuBannerDirname } from 'node:path'; const require = __pikkuBannerCreateRequire(import.meta.url); const __filename = __pikkuBannerFileURLToPath(import.meta.url); const __dirname = __pikkuBannerDirname(__filename);`
         : undefined
 
-    const { externalPackages, metafileJson } = await this.compile({
+    const compileInput: CompileInput = {
       unitName: unit.name,
       entryPath,
       bundlePath,
@@ -236,7 +261,11 @@ export abstract class BaseBundler implements Bundler {
       emitMetafile,
       deadPatterns,
       mangleIdentifiers: options.mangleIdentifiers !== false,
-    })
+    }
+    const { externalPackages, metafileJson } =
+      platform === 'node'
+        ? await this.compile(compileInput)
+        : await this.compileForServerless(compileInput)
 
     // Metafile is large (~1.6MB/unit) and never needed at runtime — only
     // persisted for debugging.

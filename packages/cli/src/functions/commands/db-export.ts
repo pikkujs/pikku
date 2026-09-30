@@ -18,7 +18,8 @@ export const dbExport = pikkuSessionlessFunc<{}, void>({
     const { file, dialects } = await writeSchemaArtifact(
       config.rootDir,
       config.outDir,
-      config.db?.pgliteExtensions
+      config.db?.pgliteExtensions,
+      config.db?.sqliteExtensions
     )
 
     if (dialects.length === 0) {

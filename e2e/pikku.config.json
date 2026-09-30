@@ -65,5 +65,22 @@
   },
   "allow": {
     "complexWorkflows": true
+  },
+  "frontends": {
+    "web": {
+      "cwd": "packages/web",
+      "dist": "dist-native",
+      "kind": "spa",
+      "native": {
+        "identifier": "dev.pikku.e2e",
+        "productName": "Pikku E2E",
+        "platforms": [
+          "desktop",
+          "android",
+          "ios"
+        ],
+        "plugins": []
+      }
+    }
   }
 }

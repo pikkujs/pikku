@@ -1,10 +1,11 @@
 import React from 'react'
-import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { WebhooksListPanel } from '../components/webhooks/WebhooksListPanel'
+import { CardsPage } from '../components/ui/CardsPage'
+import { WebhooksCards } from '../components/webhooks/WebhooksCards'
 
 export const WebhooksPage: React.FC = () => {
   useLocale()
@@ -12,18 +13,13 @@ export const WebhooksPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
-        header={
-          <ListPageHeader
-            title={asI18n('Webhooks')}
-            description={asI18n(
-              'Outgoing webhook deliveries and their attempt history'
-            )}
-          />
-        }
+        header={<ListPageHeader title={m.webhooks_title()} />}
         hidePanel
+        surface="cards"
       >
-        <WebhooksListPanel />
+        <CardsPage>
+          <WebhooksCards />
+        </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

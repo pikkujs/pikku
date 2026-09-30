@@ -293,7 +293,10 @@ const kysely = createNodeSqliteKysely<DB>({
 import { createSQLiteKysely } from '@pikku/kysely-sqlite'
 
 // Pikku's own tables — returns Kysely<KyselyPikkuDB>, not your DB
-const pikkuDb = createSQLiteKysely(database: SqliteDatabase | (() => Promise<SqliteDatabase>))
+const pikkuDb = createSQLiteKysely(
+  database: SqliteDatabase | (() => Promise<SqliteDatabase>),
+  { plugins: [] } // layered ahead of the always-last SerializePlugin
+)
 ```
 
 These two are not interchangeable. `createSQLiteKysely` is typed to

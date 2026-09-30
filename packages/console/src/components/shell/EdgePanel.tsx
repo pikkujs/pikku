@@ -4,9 +4,12 @@ import { ConsoleChromeContext } from '../../context/ConsoleChromeContext'
 import { usePanelInset, type PanelSide } from '../../context/PanelInsetProvider'
 import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
+import { ShellHeaderSlotContext } from '../ui/ShellHeaderSlot'
 
 /** One card gutter, matching --app-card-gutter in shell/card.module.css. */
 export const CARD_GUTTER = 8
+
+export const PAGE_PANEL_SLOT = 'data-page-panel-slot'
 
 /**
  * A surface pinned to one edge of the content column, BESIDE the page rather
@@ -38,39 +41,54 @@ export function EdgePanel({
   const id = useId()
   const { reserve } = usePanelInset()
   const isMobile = usePhone()
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  const inSlot = !!target?.hasAttribute(PAGE_PANEL_SLOT)
+
   // The panel's card gutter overlaps the page's, so reserve one gutter less.
   useEffect(() => {
-    reserve(id, opened && !isMobile ? width - CARD_GUTTER : null, side)
+    reserve(
+      id,
+      opened && !isMobile && !inSlot ? width - CARD_GUTTER : null,
+      side
+    )
     return () => reserve(id, null, side)
-  }, [id, opened, width, isMobile, side, reserve])
+  }, [id, opened, width, isMobile, side, reserve, inSlot])
 
   // The portal root is mounted by the layout, so it only exists after the first
   // paint — resolve it in an effect rather than during render.
-  const [target, setTarget] = useState<HTMLElement | null>(null)
   useEffect(() => {
+    const slot =
+      side === 'end' && !isMobile
+        ? document.querySelector<HTMLElement>(`[${PAGE_PANEL_SLOT}]`)
+        : null
     setTarget(
-      document.querySelector<HTMLElement>('#console-content-portal-root')
+      slot ??
+        document.querySelector<HTMLElement>('#console-content-portal-root')
     )
-  }, [opened])
+  }, [opened, side, isMobile])
 
   if (!opened) return null
 
   const panel = (
     <div
       className={classes.chromePanel}
-      style={{
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        [side === 'end' ? 'insetInlineEnd' : 'insetInlineStart']: 0,
-        width: isMobile ? '100%' : width,
-        maxWidth: '100%',
-        display: 'flex',
-        // The portal root is pointer-events:none so the page stays clickable
-        // around the panel; the panel itself takes its clicks back.
-        pointerEvents: 'auto',
-        zIndex: 3,
-      }}
+      style={
+        inSlot
+          ? { width, display: 'flex', flexDirection: 'column', minHeight: 0 }
+          : {
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              [side === 'end' ? 'insetInlineEnd' : 'insetInlineStart']: 0,
+              width: isMobile ? '100%' : width,
+              maxWidth: '100%',
+              display: 'flex',
+              // The portal root is pointer-events:none so the page stays clickable
+              // around the panel; the panel itself takes its clicks back.
+              pointerEvents: 'auto',
+              zIndex: 3,
+            }
+      }
       role={role}
       data-testid={testId}
     >
@@ -79,7 +97,9 @@ export function EdgePanel({
           chrome — where a card is deliberately not drawn because one already
           surrounds it — and render as a flush block on the canvas. */}
       <ConsoleChromeContext.Provider value="self">
-        {children}
+        <ShellHeaderSlotContext.Provider value={null}>
+          {children}
+        </ShellHeaderSlotContext.Provider>
       </ConsoleChromeContext.Provider>
     </div>
   )

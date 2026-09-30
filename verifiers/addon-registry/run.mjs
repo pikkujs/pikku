@@ -16,6 +16,7 @@
  *       + write pikku-addons.json                         (add: provenance)
  *   4. pikku all + tsc --noEmit in the consumer
  *   5. invoke consumeHello → rpc.invoke('ext:hello') and assert the result
+ *   6. POST /webhooks/ext → the addon's receive → the consumer's ext:ping.sent
  */
 import { execFileSync } from 'node:child_process'
 import {
@@ -114,6 +115,9 @@ run(
 
 // 5. Runtime invoke — prove the installed addon actually runs over RPC
 run('consumer: runtime invoke', TSX, ['src/start.ts'], consumerDir)
+
+// 6. The addon's webhook source, mounted by the consumer at /webhooks/ext
+run('consumer: addon webhook source', TSX, ['src/webhook.ts'], consumerDir)
 
 // Cleanup the artifact (keep addons/ install + symlink for debugging)
 rmSync(tgzPath, { force: true })

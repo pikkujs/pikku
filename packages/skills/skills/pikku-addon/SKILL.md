@@ -340,6 +340,14 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
 
+In a workspace, add the addon to the dependencies of the package whose file
+calls `wireAddon`, not the repo root. Codegen resolves an addon from the
+package that wires it first and the project root second, the way that
+package's own imports resolve at runtime, and a remote addon's
+`devDependencies` check reads that same package's manifest. If codegen reports
+PKU340, the dependency is missing from the package its message names — do not
+add it at the root to paper over it. `verifiers/addon-workspace` is that layout.
+
 If the addon ships tables, `pikku db generate` then writes one migration per
 addon — named after the package, carrying the addon's own SQL — after Better
 Auth's and the runtime's, so an addon table may reference `user` or a runtime
@@ -358,6 +366,36 @@ export const myFunc = pikkuFunc({
   },
 })
 ```
+
+### Wrap an addon function only to reshape it
+
+A screen that shows the addon's data as the addon returns it calls the addon
+function itself: name it in `wireAddon({ expose: ['listTodos'], auth: true })`
+and the frontend calls `rpc.invoke('todos:listTodos', …)` (over HTTP,
+`POST /rpc/todos:listTodos` with `{ "data": … }`), still behind the session.
+Use `ref('todos:listTodos')` on an HTTP or MCP wiring only when the addon needs
+a route of its own. Don't write an app function that calls `rpc.invoke` and
+returns the result unchanged: it's a second name and a second schema for the
+same thing, and it drifts. `expose: true` exposes only what the addon itself
+declared `expose: true` — an OpenAPI-generated addon declares none, so list
+the names.
+
+Write your own function when the app needs the data narrowed, typed, or
+combined (a flag the upstream sends as `"0"`, a total summed from several
+calls, one field out of fifty), or when the app adds a permission of its own.
+`wireAddon`'s `scopes` gate every function in the addon at once, and a wiring
+carries middleware, not permissions, so a rule on one addon function lives in
+the `permissions` of an app function that calls it. An addon called with the
+user's own credential is already limited upstream to what that user may do, so
+a data-aware `pikkuPermission` repeating that check (may they read *this*
+invoice?) adds nothing. A session-only `pikkuAuth` (a role, a tier) is still
+worth it: it can be checked before any input exists, so the functions a user
+can't call drop out of the tools an MCP client, an agent or a workflow is
+offered, instead of failing upstream when called. Name it for what the screen means
+(`getMyProfile`), not after the upstream operation (`usersRetrieveInfo`), and
+give it an `output:` schema of only what the app uses. For an OpenAPI-generated
+addon this matters more: its outputs mirror the upstream's loose, oversized
+payloads, and the wrapper is where they become the app's own shape.
 
 ### Wire to HTTP
 

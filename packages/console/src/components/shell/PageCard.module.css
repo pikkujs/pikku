@@ -20,6 +20,12 @@
   overflow: hidden;
 }
 
+.card:has([data-page-surface='cards']) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 /* A page that cards itself can end up INSIDE the card its shell already put it
    in. Flatten the inner one so it reads as that card's content instead of a
    second card with its own gutter, shadow and radius. */
@@ -127,4 +133,76 @@
    Inline style, hence !important. */
 .body > * {
   min-height: auto !important;
+}
+
+.canvasHeader {
+  composes: headerBand;
+  margin-bottom: var(--app-card-gutter);
+}
+
+.pageRow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--app-card-gutter);
+}
+
+.pageRow > .card {
+  min-width: 0;
+}
+
+.panelSlot {
+  flex-shrink: 0;
+  display: flex;
+  gap: var(--app-card-gutter);
+  align-items: stretch;
+  min-height: 0;
+}
+
+.panelSlot:empty {
+  display: none;
+}
+
+.panelSlot > * {
+  min-height: 0;
+}
+
+.panelSlot .pageStack {
+  padding: 0;
+}
+
+
+.hostedStack {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.hostedRow {
+  composes: pageRow;
+  padding: var(--console-body-gutter);
+  gap: var(--mantine-spacing-md);
+}
+
+.hostedStack > .canvasHeader {
+  margin-bottom: 0;
+}
+
+.card .hostedCard {
+  background: var(--app-panel-bg-raised);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-shadow-panel);
+}
+
+.pageRow:has(> .card [data-page-surface='cards']) {
+  gap: 0;
+  padding-bottom: var(--console-body-gutter);
+}
+
+.pageRow:has(> .card [data-page-surface='cards']) > .panelSlot {
+  padding-top: var(--console-body-gutter);
+  padding-inline-end: var(--console-body-gutter);
 }

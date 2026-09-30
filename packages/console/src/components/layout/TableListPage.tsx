@@ -7,6 +7,7 @@ import {
   Table,
   Center,
   Loader,
+  Paper,
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
@@ -67,6 +68,9 @@ interface TableListPageProps<T> {
   hasMore?: boolean
   /** A fetch is already in flight; suppresses re-triggering and shows a spinner. */
   loadingMore?: boolean
+  framed?: boolean
+  compact?: boolean
+  isSelected?: (item: T) => boolean
 }
 
 export const TableListPage = <T,>({
@@ -91,9 +95,13 @@ export const TableListPage = <T,>({
   onLoadMore,
   hasMore = false,
   loadingMore = false,
+  framed = false,
+  compact = false,
+  isSelected,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
-  const surfaceClass = useListSurfaceClass()
+  const chromeSurfaceClass = useListSurfaceClass()
+  const surfaceClass = framed ? classes.listSurfaceFramed : chromeSurfaceClass
   useLocale()
   const [internalSearch, setInternalSearch] = useState('')
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -151,8 +159,9 @@ export const TableListPage = <T,>({
     )
   }
 
+  const Surface = framed ? Paper : Box
   return (
-    <Box className={surfaceClass}>
+    <Surface className={surfaceClass} withBorder={framed || undefined}>
       <Stack gap={0} className={classes.flexColumn}>
         {description && (
           <Box
@@ -202,6 +211,7 @@ export const TableListPage = <T,>({
             <Table
               data-testid="data-table"
               highlightOnHover={!!onRowClick}
+              verticalSpacing={compact ? 6 : undefined}
               withRowBorders
               className={classes.tableLastRowBorder}
             >
@@ -214,8 +224,10 @@ export const TableListPage = <T,>({
                       pr={i === columns.length - 1 ? 'md' : undefined}
                       ta={col.align}
                       style={{
-                        ...(col.width ? { width: col.width } : {}),
-                        ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),
+                        ...(col.width != null ? { width: col.width } : {}),
+                        ...(col.maxWidth != null
+                          ? { maxWidth: col.maxWidth }
+                          : {}),
                       }}
                     >
                       {col.header}
@@ -229,8 +241,16 @@ export const TableListPage = <T,>({
                     key={getKey(item, index)}
                     {...getRowProps?.(item, index)}
                     data-interactive={onRowClick ? 'true' : 'false'}
-                    className={onRowClick ? classes.clickableText : undefined}
-                    style={{ height: '3.75rem' }}
+                    className={
+                      [
+                        onRowClick ? classes.clickableText : '',
+                        isSelected?.(item) ? classes.selectedRow : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
+                    aria-selected={isSelected ? isSelected(item) : undefined}
+                    style={compact ? undefined : { height: '3.75rem' }}
                     tabIndex={onRowClick ? 0 : undefined}
                     onClick={onRowClick ? () => onRowClick(item) : undefined}
                     onKeyDown={
@@ -251,8 +271,10 @@ export const TableListPage = <T,>({
                         pr={i === columns.length - 1 ? 'md' : undefined}
                         ta={col.align}
                         style={{
-                          ...(col.width ? { width: col.width } : {}),
-                          ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),
+                          ...(col.width != null ? { width: col.width } : {}),
+                          ...(col.maxWidth != null
+                            ? { maxWidth: col.maxWidth }
+                            : {}),
                         }}
                       >
                         {col.render(item, index)}
@@ -274,6 +296,6 @@ export const TableListPage = <T,>({
           </Box>
         )}
       </Stack>
-    </Box>
+    </Surface>
   )
 }

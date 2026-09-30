@@ -1,3 +1,113 @@
+## 0.12.94
+
+### Patch Changes
+
+- 5bce779: The console shows webhook trigger sources. A trigger named `<source>:<event>` now pairs with its `wireTriggerWebhookSource` instead of reading as having nothing to listen to, and its row says which event it listens to and where it is received. Opening it shows the source's address, accepted request types, declared events, which lifecycle steps (receive, check, setup, teardown) it has, and whether its `<source>WebhookSecret` signing secret is saved, with a link to Credentials when it is not. `console:getAllMeta` now returns `webhookSourceMeta`.
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/react@0.12.13
+  - @pikku/mantine@0.12.16
+  - @pikku/better-auth@0.12.50
+
+## 0.12.93
+
+### Patch Changes
+
+- 79b15b3: Feature switch panel redesigned: status card, "Who sees it" rows, "Chosen by hand" list with a collapsed add form, and a For developers section.
+
+## 0.12.92
+
+### Patch Changes
+
+- fc07038: Feature flags page uses the card layout: switches grouped by state in plain words, the ones needing a look first, raw names under For developers
+- Updated dependencies [e8d6374]
+  - @pikku/mantine@0.12.15
+
+## 0.12.91
+
+### Patch Changes
+
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- Updated dependencies [f02585e]
+- Updated dependencies [5586749]
+- Updated dependencies [5586749]
+  - @pikku/core@0.12.127
+  - @pikku/workflow-graph@0.12.2
+
+## 0.12.90
+
+### Patch Changes
+
+- 44da33f: Card-based pages for credentials, agents, scorers, workflows, channels, gateways, schedules, queues, triggers and runtime: a summary card, grouped section cards and a For developers strip per card. Queues show done and failed jobs, schedules show their last run, and scenarios show the CLI command that runs them.
+- 44da33f: A feature's result bar draws a cell per scenario, so the bar says how many as well as how it went
+- 44da33f: PageOptionsProvider accepts a host's own page-options state, so an embedding app's bottom sheet receives the console's rails
+- 44da33f: PageOptionsPortal renders in place instead of throwing when the host mounts no PageOptionsProvider
+- 44da33f: The footage sits in a rail beside the scenario it belongs to, resting as a poster frame
+- 44da33f: Scenario runs open one scenario at a time, with its recording driven by the step ladder
+- 44da33f: A scenario run records which version of the suite it ran against — the commit, and which attempt against that commit it is
+- 44da33f: A scenario's rule no longer carries its status — the mark beside the title says it once
+- 44da33f: Clicking a scenario step opens its details again — the merged scenarios surface seeks the recording but had stopped opening the panel — and a shell header filter can name a test id, which the bar stamps on the chip and on each of its options while leaving its off-screen measuring copy unmarked
+- 44da33f: Clicking a scenario step seeks the recording to it instead of opening the step panel, and the ladder is joined to the run by order so the times it seeks to are the ones the run recorded
+- 44da33f: The scenarios screen and the runs screen are one surface: the declared suite is the document and a run is a lens over it. A scenario is filed as `running` the moment it starts, so a console watching a run in progress can tell what is on screen now from what is still waiting, and the run snapshots each scenario's title, description and cast so the record reads as prose.
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+  - @pikku/react-layout-panel@0.1.2
+  - @pikku/core@0.12.126
+
+## 0.12.89
+
+### Patch Changes
+
+- 894e57a: The console's knowledge page keeps the open note in `?id=`, so a note or a milestone plan can be linked to. For example, `/console/knowledge?id=milestones/01-foo.plan.json` opens that milestone with its plan. `pikku knowledge plan set`, `show` and `progress` print that link, and add it to their JSON output as `consoleUrl`. The link uses the running `pikku dev` server's address when there is one, and `http://localhost:3000` otherwise.
+- 1d819ea: `VirtualUsersWorkspace` takes a `production` flag. When set, Run now is disabled for every persona whose disposition is not accountable, and a schedule with such a disposition cannot be turned on or saved while on, each with a line saying why, instead of offering what the server can only refuse. Turning a schedule off is always allowed.
+- Updated dependencies [2f317d0]
+- Updated dependencies [0210e96]
+- Updated dependencies [e84abd0]
+- Updated dependencies [5442d94]
+  - @pikku/better-auth@0.12.47
+  - @pikku/core@0.12.121
+
+## 0.12.88
+
+### Patch Changes
+
+- 0619423: The console's scenarios page leaves out a feature that opted out of
+  documentation, and its knowledge page stops counting orphans as issues to fix.
+
+  `pikkuFeature({ document: false })` was honoured by `pikku scenario guide` but
+  ignored by `buildScenarioDocs`, so a feature that said it was not documentation
+  still rendered as a page — and the scenarios it named left the ungrouped
+  bucket. The flag now means the same thing in both: the feature is left out and
+  the scenarios it names read as ungrouped.
+
+  `pikku knowledge validate` reports orphans — code no note describes — at `info`,
+  keeps them outside `ok` and prints them as their own summary. The console piped
+  every finding into one "N issues" row, so a clean base was offered a list of
+  work it did not have. The row now counts only what the gate would fail on.
+
+- b84ba3c: Make every console screen nameable by a test
+
+  Two gaps, same shape. `AdminUsersPage` and `AuditPage` carried no data-testid in
+  any state, so a scenario could not tell "the audit trail is quiet" from "the
+  audit screen failed to render"; `admin-users` and `audit-page` now sit on their
+  page roots, which is the only thing nameable before it is known whether there is
+  any data.
+
+  And a screen whose search is built in the header's `filters` slot got no testid,
+  while one that passes the `search` prop has carried `page-search` all along —
+  the same control, nameable on some screens and not others depending on how the
+  header was assembled. Eight pages now agree with the rest.
+
+- Updated dependencies [e85f07e]
+- Updated dependencies [67c707a]
+  - @pikku/core@0.12.119
+  - @pikku/better-auth@0.12.46
+
 ## 0.12.87
 
 ### Patch Changes

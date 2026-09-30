@@ -7,9 +7,14 @@ tags: [tauri, desktop, standalone, bun]
 
 # The desktop shell runs the server as a sidecar, not embedded
 
-`pikku deploy apply --provider standalone --runtime bun --desktop` generates a
-`src-tauri/` crate that ships the compiled binary as an `externalBin`, spawns it
-at launch, and opens a window at `http://127.0.0.1:<port>`. The server serves
+A frontend whose config says `"native": { "bundleServer": true, … }` gets a
+`src-tauri/` crate — written by `pikku app native init <name> --bundle-server` —
+that ships the compiled binary as an `externalBin`, spawns it at launch, and
+opens a window at `http://127.0.0.1:<port>`. `pikku deploy apply --provider
+standalone --runtime bun` compiles the server and installs it into the
+`binaries/` directory of every such frontend; the config asks for the sidecar,
+not a flag on deploy, and any other runtime is refused because only bun
+compiles to a single file. The server serves
 both the API and the built frontend, so **the UI and the API share one real HTTP
 origin**.
 
@@ -21,13 +26,17 @@ OAuth redirects have nowhere valid to land. Pointing the webview at the server's
 own origin means none of that is true — the app is the same app it is on the
 web, and no auth code knows it is running on a desktop.
 
-The user never writes Rust. `main.rs`, `tauri.conf.json`, `Cargo.toml`,
-`build.rs`, a placeholder icon and a placeholder frontend directory are all
-generated, with the product name and bundle identifier taken from the project
-rather than hardcoded. Regenerating is idempotent, and a file the user has since
-edited is left alone and reported rather than overwritten — the generator
-records a hash of what it wrote, which is the only way to tell "unchanged since
-we wrote it" from "the user has taken this over".
+The user need not write Rust. `lib.rs`, `main.rs`, `tauri.conf.json`,
+`Cargo.toml`, `build.rs`, a placeholder icon and a placeholder `ui/` page are
+all generated, with the product name and identifier taken from the frontend's
+`native` entry. The project is committed and becomes the user's to edit; which
+files pikku keeps rewriting afterwards is the CLI's _pikku owns named files and
+marked regions of a native project_. (The first generator recorded a hash of
+what it wrote and skipped any file that no longer matched — safe, but it meant a
+touched `main.rs` could never gain a plugin, which is why it was replaced.)
+
+The sidecar is desktop-only. A phone cannot spawn a bundled server binary, so
+`bundleServer` with an Android or iOS platform is refused at generate time.
 
 Two supporting rules fall out of running a real server process:
 

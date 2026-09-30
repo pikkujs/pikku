@@ -15,6 +15,7 @@ import {
   parseBunAudit,
   parseBunOutdated,
   pikkuAudit,
+  prodPackages,
   semverLevel,
   summarise,
 } from './audit.js'
@@ -40,6 +41,32 @@ const BUN_OUTDATED_TABLE = `bun outdated v1.3.14 (0d9b296a)
 |----------|---------|--------|--------|
 | minimist | 1.2.0   | 1.2.0  | 1.2.8  |
 |----------------------------------|
+`
+
+const BUN_LOCK = `{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "app",
+      "dependencies": { "lodash": "4.17.20", "better-auth": "^1.0.0" },
+      "devDependencies": { "qs": "^6.0.0" },
+    },
+    "apps/web": {
+      "name": "web",
+      "dependencies": { "@tanstack/react-start": "^1.0.0" },
+    },
+  },
+  "packages": {
+    "lodash": ["lodash@4.17.20", "", {}, "sha512-x"],
+    "better-auth": ["better-auth@1.0.0", "", { "dependencies": { "axios": "^0.21.0" }, "peerDependencies": { "@tanstack/react-start": "*", "vite": "*" } }, "sha512-x"],
+    "axios": ["axios@0.21.0", "", {}, "sha512-x"],
+    "@tanstack/react-start": ["@tanstack/react-start@1.0.0", "", { "dependencies": { "@tanstack/start-plugin-core": "1.0.0" } }, "sha512-x"],
+    "@tanstack/start-plugin-core": ["@tanstack/start-plugin-core@1.0.0", "", { "dependencies": { "minimist": "1.2.0" } }, "sha512-x"],
+    "vite": ["vite@6.0.0", "", { "dependencies": { "minimist": "1.2.0" } }, "sha512-x"],
+    "minimist": ["minimist@1.2.0", "", {}, "sha512-x"],
+    "qs": ["qs@6.0.0", "", {}, "sha512-x"],
+  }
+}
 `
 
 describe('parseBunAudit', () => {
@@ -162,7 +189,12 @@ describe('parseBunOutdated', () => {
         latest: '8.4.3',
         level: 'patch',
       },
-      { package: 'kysely', current: '0.28.9', latest: '0.29.0', level: 'minor' },
+      {
+        package: 'kysely',
+        current: '0.28.9',
+        latest: '0.29.0',
+        level: 'minor',
+      },
       { package: 'react', current: '19.2.0', latest: '19.2.1', level: 'patch' },
     ])
   })
@@ -368,6 +400,25 @@ describe('summarise', () => {
   })
 })
 
+describe('prodPackages', () => {
+  test('follows runtime dependencies from every workspace', () => {
+    const prod = prodPackages(BUN_LOCK)
+    for (const pkg of [
+      'lodash',
+      'better-auth',
+      'axios',
+      '@tanstack/react-start',
+    ])
+      assert.ok(prod.has(pkg), pkg)
+  })
+
+  test('stops at build tools and peers, and skips devDependencies', () => {
+    const prod = prodPackages(BUN_LOCK)
+    for (const pkg of ['@tanstack/start-plugin-core', 'vite', 'minimist', 'qs'])
+      assert.ok(!prod.has(pkg), pkg)
+  })
+})
+
 describe('pikku audit', () => {
   // A `bun` on PATH that replays recorded output. The command shells out to
   // whatever `bun` resolves to, so this exercises the real spawn/parse/write
@@ -423,6 +474,32 @@ describe('pikku audit', () => {
     assert.equal(report.summary.high, 2)
     assert.equal(report.issues[0]!.severity, 'critical')
     assert.equal(report.note, undefined)
+  })
+
+  test('tags each advisory and update prod or dev from bun.lock', async () => {
+    const { root, bin, outDir } = projectWith(
+      `#!/bin/sh\nif [ "$1" = "outdated" ]; then cat <<'TABLE'\n${BUN_OUTDATED_TABLE}\nTABLE\nelse cat <<'JSON'\n${BUN_AUDIT_JSON}\nJSON\nfi\n`
+    )
+    writeFileSync(join(root, 'bun.lock'), BUN_LOCK)
+    const report = await run(root, outDir, bin, { outdated: true })
+
+    const typeOf = (pkg: string) =>
+      new Set(
+        [...report.issues, ...report.updates]
+          .filter((x) => x.package === pkg)
+          .map((x) => x.dependencyType)
+      )
+    assert.deepEqual(typeOf('lodash'), new Set(['prod']))
+    assert.deepEqual(typeOf('axios'), new Set(['prod']))
+    assert.deepEqual(typeOf('minimist'), new Set(['dev']))
+  })
+
+  test('leaves dependencyType unset when bun.lock cannot be read', async () => {
+    const { root, bin, outDir } = projectWith(
+      `#!/bin/sh\ncat <<'JSON'\n${BUN_AUDIT_JSON}\nJSON\n`
+    )
+    const report = await run(root, outDir, bin)
+    assert.ok(report.issues.every((i) => i.dependencyType === undefined))
   })
 
   test('leaves updates alone unless --outdated is passed', async () => {

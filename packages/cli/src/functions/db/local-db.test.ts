@@ -9,7 +9,8 @@ import {
   existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { sql } from 'kysely'
 
 import {
@@ -549,6 +550,60 @@ CREATE TABLE docs (
   }
 })
 
+test('pgvector is available to the local PGlite database without a declaration', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE passages (
+  id SERIAL PRIMARY KEY,
+  embedding vector(3) NOT NULL
+);
+CREATE INDEX passages_embedding_idx ON passages USING hnsw (embedding vector_cosine_ops);
+`,
+    devSeedSql: '',
+  })
+
+  const resolved = resolveDb({}, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const kysely = await createKysely<{ passages: { id: number } }>(resolved)
+  try {
+    await sql`insert into passages (embedding) values ('[1,0,0]'), ('[0,1,0]')`.execute(
+      kysely
+    )
+    const { rows } = await sql<{ id: number }>`
+      select id from passages order by embedding <=> '[0.9,0.1,0]' limit 1`.execute(
+      kysely
+    )
+    assert.deepEqual(rows, [{ id: 1 }])
+  } finally {
+    await kysely.destroy()
+  }
+})
+
+test('the bundled pgvector is built for the PGlite the CLI runs', () => {
+  // A PGlite extension is WASM compiled against one PGlite build, and
+  // pglite-pgvector says which with an exact peer range. A caret on either
+  // dependency lets them drift apart, which fails at boot or not at all.
+  const require = createRequire(import.meta.url)
+  // Walked up to rather than required: neither package exports its
+  // package.json, and a dist/ folder may hold a stub one of its own.
+  const packageJsonOf = (name: string) => {
+    for (let dir = dirname(require.resolve(name)); ; dir = dirname(dir)) {
+      if (dir === dirname(dir)) throw new Error(`no package.json for ${name}`)
+      const file = join(dir, 'package.json')
+      if (!existsSync(file)) continue
+      const pkg = JSON.parse(readFileSync(file, 'utf8'))
+      if (pkg.name === name) return pkg
+    }
+  }
+  const pglite = packageJsonOf('@electric-sql/pglite')
+  const pgvector = packageJsonOf('@electric-sql/pglite-pgvector')
+  assert.equal(
+    pgvector.peerDependencies['@electric-sql/pglite'],
+    pglite.version
+  )
+})
+
 test('an undeclared extension fails with guidance rather than a bare Postgres error', async () => {
   usePostgresProject({
     migrationSql: `CREATE EXTENSION IF NOT EXISTS hstore;\n`,
@@ -598,6 +653,127 @@ test('a module that exports no PGlite extension is rejected by name', async () =
     (error: Error) => {
       assert.match(error.message, /not-an-extension\.mjs/)
       assert.match(error.message, /no PGlite extension/)
+      return true
+    }
+  )
+})
+
+/**
+ * Whether this runtime can load a SQLite extension at all. Bun on macOS links
+ * Apple's SQLite, which cannot, so each vec0 test below only runs where its
+ * half of the behaviour applies.
+ */
+const sqliteLoadsExtensions = await (async () => {
+  const { getLoadablePath } = createRequire(import.meta.url)('sqlite-vec')
+  try {
+    const runtime = await loadSqliteRuntime()
+    runtime.open(':memory:', { extensions: [getLoadablePath()] }).close()
+    return true
+  } catch {
+    return false
+  }
+})()
+
+const VEC0_MIGRATION = `CREATE VIRTUAL TABLE passage_vectors USING vec0(
+  embedding float[3] distance_metric=cosine
+);
+`
+
+test('resolveDb loads sqlite-vec by default, and db.sqliteExtensions replaces it', () => {
+  const byDefault = resolveDb({}, root, root) as ResolvedSqliteDb
+  assert.deepEqual(byDefault.sqliteExtensions, ['sqlite-vec'])
+  assert.equal(byDefault.sqliteExtensionsDeclared, false)
+
+  const none = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: [],
+  }) as ResolvedSqliteDb
+  assert.deepEqual(none.sqliteExtensions, [])
+  assert.equal(none.sqliteExtensionsDeclared, true)
+})
+
+test(
+  'sqlite-vec is available to the sqlite database without a declaration',
+  { skip: !sqliteLoadsExtensions && 'this SQLite cannot load extensions' },
+  async () => {
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-vectors.sql'),
+      VEC0_MIGRATION
+    )
+    const resolved = resolveDb({}, root, root)!
+    const { codegen } = await migrateAndCodegen(resolved)
+    // vec0's own storage tables are not the project's to type.
+    assert.deepEqual(
+      codegen.tables.filter((t) => t.startsWith('passage_vectors')),
+      ['passage_vectors']
+    )
+
+    const db = await createKysely<any>(resolved)
+    try {
+      await sql`insert into passage_vectors (rowid, embedding) values
+        (1, '[1,0,0]'), (2, '[0,1,0]')`.execute(db)
+      const { rows } = await sql<{ rowid: number }>`
+        select rowid from passage_vectors
+        where embedding match '[0.9,0.1,0]' and k = 1`.execute(db)
+      assert.deepEqual(
+        rows.map((r) => r.rowid),
+        [1]
+      )
+    } finally {
+      await db.destroy()
+    }
+  }
+)
+
+test(
+  'a runtime that cannot load sqlite-vec skips it, and says so when a migration needs it',
+  { skip: sqliteLoadsExtensions && 'this SQLite loads extensions' },
+  async () => {
+    const resolved = resolveDb({}, root, root)!
+    // Everything that does not need the extension still works.
+    await migrateAndCodegen(resolved, { scratch: true })
+
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-vectors.sql'),
+      VEC0_MIGRATION
+    )
+    await assert.rejects(
+      migrateAndCodegen(resolved, { scratch: true }),
+      (error: Error) => {
+        assert.match(error.message, /no such module: vec0/)
+        assert.match(
+          error.message,
+          /loaded by default, but could not be loaded here/
+        )
+        return true
+      }
+    )
+  }
+)
+
+test('a vec0 migration with sqlite-vec opted out says to add it back', async () => {
+  writeFileSync(join(root, 'db', 'sqlite', '0002-vectors.sql'), VEC0_MIGRATION)
+  const resolved = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: [],
+  })!
+  await assert.rejects(
+    migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /no such module: vec0/)
+      assert.match(error.message, /Add 'sqlite-vec' to it/)
+      return true
+    }
+  )
+})
+
+test('an unresolvable declared SQLite extension fails rather than being skipped', async () => {
+  const resolved = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: ['@not-installed/sqlite-nothing'],
+  })!
+  await assert.rejects(
+    migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /db\.sqliteExtensions could not be loaded/)
+      assert.match(error.message, /could not be resolved/)
       return true
     }
   )
@@ -813,8 +989,12 @@ test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', a
 
 describe('the addon schema channel', () => {
   /** Install a package into the fixture that publishes the given schema. */
-  const publishAddon = (pkg: string, artifact: SchemaArtifact) => {
-    const dir = join(root, 'node_modules', pkg)
+  const publishAddon = (
+    pkg: string,
+    artifact: SchemaArtifact,
+    into: string = root
+  ) => {
+    const dir = join(into, 'node_modules', pkg)
     mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
     writeFileSync(
       join(dir, 'package.json'),
@@ -884,6 +1064,30 @@ describe('the addon schema channel', () => {
     )
     assert.equal(sources.length, 1)
     assert.equal(sources[0]!.name, 'addon-labels')
+    assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
+  })
+
+  test('an addon installed only in the workspace package that wires it is found', async () => {
+    const member = join(root, 'packages', 'functions')
+    mkdirSync(join(member, 'src'), { recursive: true })
+    writeFileSync(
+      join(member, 'package.json'),
+      JSON.stringify({ name: 'functions' })
+    )
+    publishAddon('addon-member-labels', labels, member)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [
+        {
+          package: 'addon-member-labels',
+          file: join(member, 'src', 'addons.wiring.ts'),
+        },
+      ],
+      silent
+    )
+    assert.equal(sources.length, 1)
     assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
   })
 
@@ -1122,6 +1326,96 @@ test('db generate adds only the columns a partially covered source is missing', 
   assert.match(body, /-- REVIEW: owner is NOT NULL with no default/)
 })
 
+test('db generate drops a required column its source stopped writing, indexes first', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+
+  // What Better Auth 1.7.0–1.7.2 left behind: a column the source wrote once and
+  // has since dropped from its schema. NOT NULL with no default, so every insert
+  // fails, yet "already covered" — nothing is missing.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-issuer.sql'),
+    `ALTER TABLE todos ADD COLUMN issuer TEXT;
+CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
+`
+  )
+  const dir = join(root, 'node_modules', 'addon-auth')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
+  )
+  const column = (name: string, type: string, notNull: boolean, pk = false) => ({
+    name,
+    type,
+    notNull,
+    pk,
+    defaultValue: null,
+  })
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      sqlite: {
+        sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL);',
+        tables: {
+          todos: [
+            column('id', 'INTEGER', true, true),
+            column('title', 'TEXT', true),
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  // A nullable orphan is harmless and must be left alone.
+  const untouched = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-auth' }]
+  )
+  assert.equal(
+    untouched.written.find((w) => w.source === 'addon-auth'),
+    undefined,
+    'a nullable column nothing writes breaks no insert'
+  )
+
+  // Now the shipped shape: required, no default. ADD COLUMN cannot say that on
+  // SQLite, so the migration rebuilds the table the way an old generator did.
+  writeFileSync(
+    join(root, 'db', 'sqlite', '0002-issuer.sql'),
+    `CREATE TABLE todos_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  issuer TEXT NOT NULL
+);
+INSERT INTO todos_new (id, title, done, issuer) SELECT id, title, done, '' FROM todos;
+DROP TABLE todos;
+ALTER TABLE todos_new RENAME TO todos;
+CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
+`
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-auth' }]
+  )
+  const migration = written.find((w) => w.source === 'addon-auth')
+  assert.ok(migration, 'the orphaned column got a migration')
+  assert.deepEqual(migration.orphaned, ['todos.issuer'])
+  const body = readFileSync(migration.file, 'utf8')
+  assert.match(body, /DROP INDEX todos_issuer_title_uidx;\nALTER TABLE todos DROP COLUMN issuer;/)
+
+  // And it applies: the column is gone and an insert that never names it works.
+  await migrateAndCodegen(resolved)
+  const drift = await driftOf(resolved)
+  assert.equal(drift.inSync, true)
+})
+
 test('a partially covered source creates a referenced table before the one referencing it', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
 
@@ -1333,7 +1627,7 @@ test('the same holds on postgres', async () => {
   assert.doesNotMatch(body, /REVIEW/)
   assert.match(
     body,
-    /ALTER TABLE person ADD COLUMN two_factor_enabled INTEGER;/
+    /ALTER TABLE "person" ADD COLUMN "two_factor_enabled" INTEGER;/
   )
 
   await migrateAndCodegen(resolved)
@@ -1571,13 +1865,70 @@ CREATE TABLE app.workflow_step (
 
   // The column the covered table is missing, as an alteration of the table in
   // `app` — not of whatever `workflow_step` resolves to.
-  assert.match(body, /ALTER TABLE "app"\.workflow_step ADD COLUMN/)
+  assert.match(body, /ALTER TABLE "app"\."workflow_step" ADD COLUMN/)
   assert.doesNotMatch(
     body,
-    /ALTER TABLE workflow_step /,
+    /ALTER TABLE "?workflow_step"? /,
     'an unqualified ALTER would land in whichever schema search_path finds'
   )
 
   // And the tables it does create wholesale are qualified as well.
   assert.match(body, /create table "app"\./i)
+})
+
+test('db generate quotes the table and column of a postgres ALTER, so a reserved word applies', async () => {
+  usePostgresProject({
+    migrationSql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY);\n',
+  })
+  const resolved = resolveDb({}, root, root)!
+
+  const dir = join(root, 'node_modules', 'addon-actor')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-actor', version: '1.0.0' })
+  )
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      postgres: {
+        sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, actor BOOLEAN DEFAULT FALSE);',
+        tables: {
+          user: [
+            {
+              name: 'id',
+              type: 'text',
+              notNull: true,
+              pk: true,
+              defaultValue: null,
+            },
+            {
+              name: 'actor',
+              type: 'boolean',
+              notNull: false,
+              pk: false,
+              defaultValue: 'false',
+            },
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-actor' }]
+  )
+
+  const migration = written.find((w) => w.source === 'addon-actor')
+  assert.ok(migration, 'the missing column was written')
+  const body = readFileSync(migration.file, 'utf8')
+  assert.match(
+    body,
+    /ALTER TABLE "user" ADD COLUMN "actor" boolean DEFAULT false;/
+  )
+  assert.doesNotMatch(body, /ALTER TABLE user /)
 })

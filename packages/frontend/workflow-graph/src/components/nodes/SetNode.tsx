@@ -9,6 +9,7 @@ import { useGraphHighlight } from '../../context/GraphHostContext'
 interface SetNodeData {
   colorKey: string
   variable?: string
+  source?: string
   stepName?: string
 }
 
@@ -39,8 +40,8 @@ export const SetNode: React.FC<GraphNodeProps<SetNodeData>> = ({
       hasInput={true}
       outputHandles={[{ id: 'default', label: '' }]}
       size={80}
-      label="Set"
-      subtitle={data.stepName}
+      label={data.variable ?? 'Set'}
+      subtitle={data.source ? `= ${data.source}` : data.stepName}
       onClick={handleClick}
       showBorder={false}
       highlightType={highlightType}
@@ -61,6 +62,9 @@ export const getSetNodeConfig = (
     data: {
       colorKey: 'workflow',
       variable: step.variable,
+      source:
+        step.expression ??
+        (step.value !== undefined ? JSON.stringify(step.value) : undefined),
       stepName: step.stepName,
       nodeType: 'flow',
     },

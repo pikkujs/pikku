@@ -11,6 +11,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
+import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import {
@@ -38,6 +39,12 @@ import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
+import {
+  DEFAULT_SQLITE_EXTENSIONS,
+  explainMissingSqliteExtension,
+  openSqlite,
+  type SqliteExtensionContext,
+} from './sqlite/sqlite-extensions.js'
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
@@ -67,7 +74,8 @@ interface ResolvedDbBase {
   defaultSchema?: string
 }
 
-export interface ResolvedSqliteDb extends ResolvedDbBase {
+export interface ResolvedSqliteDb
+  extends ResolvedDbBase, SqliteExtensionContext {
   dialect: 'sqlite'
   dbFile: string
   runtimeDir: string
@@ -129,7 +137,12 @@ export function resolveDb(
   outDir: string,
   runtimeDir?: string,
   dbConfig?:
-    | { schema?: string; defaultSchema?: string; pgliteExtensions?: string[] }
+    | {
+        schema?: string
+        defaultSchema?: string
+        pgliteExtensions?: string[]
+        sqliteExtensions?: string[]
+      }
     | string
 ): ResolvedDb | null {
   // The parameter took a bare schema string before `defaultSchema` existed;
@@ -203,6 +216,7 @@ export function resolveDb(
       dbFile: resolveAgainst(rootDir, sqliteDb),
       runtimeDir: resolvedRuntimeDir,
       devSeedFile: resolveAgainst(rootDir, 'db/sqlite-dev-seed.sql'),
+      ...sqliteExtensionContext(rootDir, dbConfig),
       ...base('db/sqlite'),
     }
   }
@@ -221,6 +235,19 @@ export function resolveDb(
   }
 
   return null
+}
+
+function sqliteExtensionContext(
+  rootDir: string,
+  dbConfig: Parameters<typeof resolveDb>[4]
+): SqliteExtensionContext {
+  const declared =
+    typeof dbConfig === 'string' ? undefined : dbConfig?.sqliteExtensions
+  return {
+    rootDir,
+    sqliteExtensions: declared ?? DEFAULT_SQLITE_EXTENSIONS,
+    sqliteExtensionsDeclared: declared !== undefined,
+  }
 }
 
 function resolveAgainst(root: string, p: string): string {
@@ -415,12 +442,19 @@ async function createEmbeddedPostgres(
 ): Promise<PGlite> {
   embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
 
-  const [{ PGlite }, { pgcrypto }, wasm, declared] = await Promise.all([
-    import('@electric-sql/pglite'),
-    import('@electric-sql/pglite/contrib/pgcrypto'),
-    embeddedPostgresWasm,
-    loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
-  ])
+  // pgvector is loaded whether or not the project declares it: retrieval over
+  // embeddings is common enough that `CREATE EXTENSION vector` should just work,
+  // and loading it costs nothing measurable until a migration creates it. The
+  // CLI pins it to the exact PGlite it was built for (see package.json); a
+  // project that declares its own copy in `pgliteExtensions` overrides this one.
+  const [{ PGlite }, { pgcrypto }, { vector }, wasm, declared] =
+    await Promise.all([
+      import('@electric-sql/pglite'),
+      import('@electric-sql/pglite/contrib/pgcrypto'),
+      import('@electric-sql/pglite-pgvector'),
+      embeddedPostgresWasm,
+      loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
+    ])
 
   // PGlite runs Postgres as an Emscripten module, and Emscripten's exit handler
   // writes the WASM program's status straight to `process.exitCode` — booting a
@@ -434,6 +468,7 @@ async function createEmbeddedPostgres(
     ...wasm,
     extensions: {
       pgcrypto,
+      vector,
       ...declared,
     },
   })
@@ -463,10 +498,10 @@ function explainMissingExtension(error: unknown, declared: string[]): unknown {
   return new Error(
     `The embedded PGlite database has no '${name}' extension. ` +
       `The CLI migrates a PGlite shadow database to type and diff your schema, ` +
-      `so every extension your migrations use has to be declared as ` +
+      `so every extension your migrations use, other than pgcrypto and vector ` +
+      `(pgvector), which are always loaded, has to be declared as ` +
       `db.pgliteExtensions in pikku.config.json — e.g. "db": { "pgliteExtensions": ["${name}"] } ` +
-      `for a PGlite contrib extension, or the package that publishes it ` +
-      `('@electric-sql/pglite-pgvector' for pgvector).` +
+      `for a PGlite contrib extension, or the package that publishes it.` +
       (declared.length > 0
         ? ` Currently declared: ${declared.join(', ')}.`
         : ''),
@@ -560,14 +595,20 @@ export async function migrateAndCodegen(
   )
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
     if (!options.scratch) {
       mkdirSync(dirname(resolved.dbFile), { recursive: true })
     }
-    const db = runtime.open(options.scratch ? ':memory:' : resolved.dbFile)
+    const db = await openSqlite(
+      resolved,
+      options.scratch ? ':memory:' : resolved.dbFile
+    )
     try {
       const executor = new SqliteMigrationExecutor(db)
-      migrateResult = await migrate(executor, resolved.migrationsDir)
+      try {
+        migrateResult = await migrate(executor, resolved.migrationsDir)
+      } catch (error) {
+        throw explainMissingSqliteExtension(error, resolved)
+      }
       const introspector = new SqliteIntrospector(db)
       codegenResult = await generateSchemaTypes(introspector, {
         outFile: resolved.schemaFile,
@@ -662,10 +703,11 @@ export async function devSeed(resolved: ResolvedDb): Promise<DevSeedResult> {
   }
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       return runDevSeed(db, resolved.devSeedFile)
+    } catch (error) {
+      throw explainMissingSqliteExtension(error, resolved)
     } finally {
       db.close()
     }
@@ -865,9 +907,8 @@ export async function createKysely<DB>(
 
   if (resolved.dialect === 'sqlite') {
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
-    const runtime = await loadSqliteRuntime()
     return createSqliteKysely<DB>({
-      db: runtime.open(resolved.dbFile),
+      db: await openSqlite(resolved, resolved.dbFile),
       camelCase: resolved.camelCase,
       plugins,
     })
@@ -948,6 +989,38 @@ function diffSchemas(
     if (missing.length) missingColumns.push({ table, columns: missing })
   }
   return { missingTables, missingColumns }
+}
+
+/**
+ * Columns the migrations gave a table that its source no longer declares, and
+ * that no insert can satisfy: NOT NULL, no default, not a key. The source wrote
+ * them once (Better Auth 1.7.0–1.7.2 required `account.issuer`; 1.7.3 stopped
+ * writing it), so they are in the covered schema, and every insert into the table
+ * fails until they are relaxed. `diffSchemas` cannot see this — it only looks for
+ * what is missing — so a source that is otherwise "already covered" stays broken.
+ */
+function orphanedRequiredColumns(
+  desired: SchemaMap,
+  actual: SchemaMap,
+  schema?: string
+): { table: string; columns: ColumnInfo[] }[] {
+  const orphans: { table: string; columns: ColumnInfo[] }[] = []
+  for (const [table, cols] of desired) {
+    const actualCols = schema
+      ? actual.get(qualifiedTableKey(schema, table))
+      : (actual.get(table) ?? schemaQualifiedMatch(actual, table))
+    if (!actualCols) continue
+    const columns = [...actualCols.values()].filter(
+      (c) =>
+        !cols.has(c.name) &&
+        c.notNull &&
+        c.defaultValue === null &&
+        !c.pk &&
+        !c.generated
+    )
+    if (columns.length) orphans.push({ table, columns })
+  }
+  return orphans
 }
 
 /**
@@ -1263,8 +1336,7 @@ export async function introspectSchema(
   resolved: ResolvedDb
 ): Promise<SchemaMap> {
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       return await introspectorToMap(new SqliteIntrospector(db))
     } finally {
@@ -1282,14 +1354,52 @@ export async function introspectSchema(
   })
 }
 
-async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
-  const runtime = await loadSqliteRuntime()
-  const db = runtime.open(':memory:')
+async function coveredSqliteSchema(
+  migrationsDir: string,
+  context: SqliteExtensionContext,
+  indexes?: Map<string, string[]>
+): Promise<SchemaMap> {
+  const db = await openSqlite(context, ':memory:')
   try {
-    await migrate(new SqliteMigrationExecutor(db), migrationsDir)
-    return await introspectorToMap(new SqliteIntrospector(db))
+    try {
+      await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+    } catch (error) {
+      throw explainMissingSqliteExtension(error, context)
+    }
+    const map = await introspectorToMap(new SqliteIntrospector(db))
+    if (indexes) collectSqliteColumnIndexes(db, map, indexes)
+    return map
   } finally {
     db.close()
+  }
+}
+
+/**
+ * Which explicit indexes cover each column, keyed `table.column`. SQLite refuses
+ * to drop a column an index names, so the migration that drops one has to drop
+ * those first. Only `CREATE INDEX` ones (origin `c`): a column with a UNIQUE or
+ * PRIMARY KEY constraint cannot be dropped at all, and is left alone.
+ */
+function collectSqliteColumnIndexes(
+  db: { prepare(sql: string): { all(): unknown[] } },
+  schema: SchemaMap,
+  out: Map<string, string[]>
+): void {
+  for (const table of schema.keys()) {
+    const list = db
+      .prepare(`PRAGMA index_list(${JSON.stringify(table)})`)
+      .all() as { name: string; origin: string }[]
+    for (const index of list) {
+      if (index.origin !== 'c') continue
+      const info = db
+        .prepare(`PRAGMA index_info(${JSON.stringify(index.name)})`)
+        .all() as { name: string | null }[]
+      for (const col of info) {
+        if (!col.name) continue
+        const key = `${table}.${col.name}`
+        out.set(key, [...(out.get(key) ?? []), index.name])
+      }
+    }
   }
 }
 
@@ -1350,7 +1460,7 @@ export async function computeSchemaDrift(
 ): Promise<SchemaDriftResult> {
   const covered =
     resolved.dialect === 'sqlite'
-      ? await coveredSqliteSchema(resolved.migrationsDir)
+      ? await coveredSqliteSchema(resolved.migrationsDir, resolved)
       : await coveredPostgresSchema(resolved.migrationsDir, resolved)
   const actual = await introspectSchema(resolved)
 
@@ -1424,9 +1534,8 @@ export async function baseline(
   if (!drift.inSync) return { status: 'behind', drift }
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       const recorded = await baselineMigrations(
         new SqliteMigrationExecutor(db),
@@ -1567,6 +1676,8 @@ export interface AddonDeclaration {
    * database. Its tables are not this project's to create.
    */
   remote?: boolean
+  /** Absolute path of the file that wires it; resolution starts from its package. */
+  file?: string
 }
 
 const serializeSchemaMap = (tables: SchemaMap): Record<string, ColumnInfo[]> =>
@@ -1605,7 +1716,8 @@ const concatMigrations = (migrationsDir: string): string =>
  */
 export async function exportSchema(
   rootDir: string,
-  pgliteExtensions: string[] = []
+  pgliteExtensions: string[] = [],
+  sqliteExtensions?: string[]
 ): Promise<SchemaArtifact> {
   const artifact: SchemaArtifact = {}
 
@@ -1613,7 +1725,12 @@ export async function exportSchema(
   if (existsSync(sqliteDir)) {
     artifact.sqlite = {
       sql: concatMigrations(sqliteDir),
-      tables: serializeSchemaMap(await coveredSqliteSchema(sqliteDir)),
+      tables: serializeSchemaMap(
+        await coveredSqliteSchema(
+          sqliteDir,
+          sqliteExtensionContext(rootDir, { sqliteExtensions })
+        )
+      ),
     }
   }
 
@@ -1641,9 +1758,14 @@ export async function exportSchema(
 export async function writeSchemaArtifact(
   rootDir: string,
   outDir: string,
-  pgliteExtensions?: string[]
+  pgliteExtensions?: string[],
+  sqliteExtensions?: string[]
 ): Promise<{ file: string; dialects: string[] }> {
-  const artifact = await exportSchema(rootDir, pgliteExtensions)
+  const artifact = await exportSchema(
+    rootDir,
+    pgliteExtensions,
+    sqliteExtensions
+  )
   const file = join(outDir, 'db', 'pikku-db-meta.gen.json')
   mkdirSync(dirname(file), { recursive: true })
   writeFileSync(file, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
@@ -1660,10 +1782,7 @@ export async function writeSchemaArtifact(
  * that creates nothing, and the schema silently drifts from what the addon's
  * own functions expect.
  */
-function readSchemaArtifact(
-  artifactPath: string,
-  pkg: string
-): SchemaArtifact {
+function readSchemaArtifact(artifactPath: string, pkg: string): SchemaArtifact {
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(artifactPath, 'utf8'))
@@ -1720,7 +1839,6 @@ export async function addonSchemaSources(
 ): Promise<SchemaSource[]> {
   if (addons.length === 0) return []
 
-  const require = createRequire(join(rootDir, 'package.json'))
   const sources: SchemaSource[] = []
   const seen = new Set<string>()
 
@@ -1730,7 +1848,9 @@ export async function addonSchemaSources(
 
     let artifactPath: string
     try {
-      artifactPath = require.resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
+      artifactPath = createAddonResolver(
+        addonResolutionDirs(rootDir, addon.file)
+      ).resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
     } catch {
       // Every addon publishes this file, and one with no tables publishes an
       // empty one. Absence is therefore never "contributes nothing" — it is a
@@ -1740,7 +1860,7 @@ export async function addonSchemaSources(
       throw new Error(
         `The '${addon.package}' addon does not publish ${ADDON_DB_ARTIFACT}, so ` +
           'there is no way to tell whether it ships tables. Build it with a ' +
-          "current CLI (`pikku all` writes the file, empty when there are no " +
+          'current CLI (`pikku all` writes the file, empty when there are no ' +
           'tables), and make sure the package exports and packs it:\n' +
           `  "exports": { "./${ADDON_DB_ARTIFACT}": "./dist/.pikku/addon/db/pikku-db-meta.gen.json" }\n` +
           '  "files": ["dist"]'
@@ -1839,14 +1959,15 @@ export async function schemaSources(
  */
 function addColumnStatements(
   table: string,
-  columns: ColumnInfo[]
+  columns: ColumnInfo[],
+  quote: (name: string) => string
 ): { sql: string[]; needsBackfill: string[] } {
   const sql: string[] = []
   const needsBackfill: string[] = []
 
   for (const column of columns) {
     const parts = [
-      `ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`,
+      `ALTER TABLE ${table} ADD COLUMN ${quote(column.name)} ${column.type}`,
     ]
     if (column.defaultValue !== null) {
       parts.push(`DEFAULT ${column.defaultValue}`)
@@ -1868,11 +1989,54 @@ function addColumnStatements(
   return { sql, needsBackfill }
 }
 
+/**
+ * The statements that stop an orphaned required column failing every insert.
+ *
+ * PostgreSQL relaxes it — the column and what it holds stay, only the constraint
+ * goes. SQLite cannot change a column's constraints, so it is dropped, indexes
+ * first (SQLite refuses to drop a column an index still names).
+ */
+function orphanedColumnStatements(
+  dialect: 'sqlite' | 'postgres',
+  qualified: string,
+  table: string,
+  columns: ColumnInfo[],
+  columnIndexes: Map<string, string[]>,
+  quote: (name: string) => string
+): string[] {
+  const statements: string[] = []
+  for (const column of columns) {
+    const note =
+      `-- ${table}.${column.name} is NOT NULL with no default, and its source no longer\n` +
+      `-- declares it, so nothing inserts it and every insert into ${table} fails.\n`
+    if (dialect === 'postgres') {
+      statements.push(
+        `${note}ALTER TABLE ${qualified} ALTER COLUMN ${quote(column.name)} DROP NOT NULL;`
+      )
+      continue
+    }
+    const indexes = columnIndexes.get(`${table}.${column.name}`) ?? []
+    statements.push(
+      note +
+        [
+          ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
+          `ALTER TABLE ${qualified} DROP COLUMN ${quote(column.name)};`,
+        ].join('\n')
+    )
+  }
+  return statements
+}
+
 export interface GeneratedMigration {
   source: string
   file: string
   /** Columns the migration adds that need a backfill decision before it is applied. */
   needsBackfill: string[]
+  /**
+   * Columns the migration drops or relaxes because the source no longer writes
+   * them and they were NOT NULL with no default, so every insert failed.
+   */
+  orphaned: string[]
 }
 
 export interface GenerateResult {
@@ -1923,9 +2087,14 @@ export async function generateMigrations(
   for (const source of sources) {
     // Re-read after each write: a migration just written for an earlier source
     // is part of what the next one is compared against.
+    const columnIndexes = new Map<string, string[]>()
     const covered =
       resolved.dialect === 'sqlite'
-        ? await coveredSqliteSchema(resolved.migrationsDir)
+        ? await coveredSqliteSchema(
+            resolved.migrationsDir,
+            resolved,
+            columnIndexes
+          )
         : await coveredPostgresSchema(resolved.migrationsDir, resolved)
 
     const { missingTables, missingColumns } = diffSchemas(
@@ -1933,7 +2102,16 @@ export async function generateMigrations(
       covered,
       source.schema
     )
-    if (missingTables.length === 0 && missingColumns.length === 0) {
+    const orphans = orphanedRequiredColumns(
+      source.desired.tables,
+      covered,
+      source.schema
+    )
+    if (
+      missingTables.length === 0 &&
+      missingColumns.length === 0 &&
+      orphans.length === 0
+    ) {
       result.upToDate.push(source.name)
       continue
     }
@@ -1952,6 +2130,7 @@ export async function generateMigrations(
 
     let body: string
     let needsBackfill: string[] = []
+    const orphaned: string[] = []
 
     // The source's own SQL is already qualified when it can be; the delta below
     // is written here from bare introspected names, so it has to be qualified
@@ -1960,14 +2139,21 @@ export async function generateMigrations(
     // through the schema builder and is quoted there. `db.schema: "App"` left
     // raw folds to `app`, so the delta would alter a table in a schema the
     // runtime never uses.
+    const quote =
+      resolved.dialect === 'postgres' ? quoteIdentifier : (name: string) => name
     const qualify = (table: string) =>
-      source.schema ? `${quoteIdentifier(source.schema)}.${table}` : table
+      source.schema
+        ? `${quoteIdentifier(source.schema)}.${quote(table)}`
+        : quote(table)
 
     if (!partial) {
       body = source.desired.sql
     } else {
       const statements: string[] = []
-      for (const table of tablesInSourceOrder(source.desired.sql, missingTables)) {
+      for (const table of tablesInSourceOrder(
+        source.desired.sql,
+        missingTables
+      )) {
         // A wholly new table is the first-time case in miniature: nothing to
         // diff against, and the source's own SQL already says exactly how to
         // build it. Rendering the column map instead would drop the primary
@@ -1987,7 +2173,8 @@ export async function generateMigrations(
             `CREATE TABLE ${qualify(table)} (\n` +
             [...(columns?.values() ?? [])]
               .map(
-                (c) => `  ${c.name} ${c.type}${c.notNull ? ' NOT NULL' : ''}`
+                (c) =>
+                  `  ${quote(c.name)} ${c.type}${c.notNull ? ' NOT NULL' : ''}`
               )
               .join(',\n') +
             '\n);'
@@ -1997,9 +2184,21 @@ export async function generateMigrations(
         const infos = columns
           .map((name) => source.desired.tables.get(table)?.get(name))
           .filter((c): c is ColumnInfo => c !== undefined)
-        const added = addColumnStatements(qualify(table), infos)
+        const added = addColumnStatements(qualify(table), infos, quote)
         statements.push(...added.sql)
         needsBackfill.push(...added.needsBackfill)
+      }
+      for (const { table, columns } of orphans) {
+        const dropped = orphanedColumnStatements(
+          resolved.dialect,
+          qualify(table),
+          table,
+          columns,
+          columnIndexes,
+          quote
+        )
+        statements.push(...dropped)
+        orphaned.push(...columns.map((c) => `${table}.${c.name}`))
       }
       body = statements.join('\n\n')
     }
@@ -2009,7 +2208,7 @@ export async function generateMigrations(
       `-- Generated by \`pikku db generate\` from ${source.origin}.\n` +
       '-- Re-run the command after changing that source.\n\n'
     writeFileSync(file, header + body + '\n', 'utf8')
-    result.written.push({ source: source.name, file, needsBackfill })
+    result.written.push({ source: source.name, file, needsBackfill, orphaned })
   }
 
   return result

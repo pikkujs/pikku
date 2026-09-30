@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Box, Button, Center, Loader } from '@pikku/mantine/core'
+import { Box, Button } from '@pikku/mantine/core'
 import { useLocation } from '../../router'
 import { NavList, type NavListProps } from '../nav/NavList'
 import { PikkuMetaProvider, usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -15,6 +15,7 @@ import { MobileSheet } from '../shell/MobileSheet'
 import { MobileTabBar } from '../shell/MobileTabBar'
 import { ConsoleNavDock } from '../nav-dock/ConsoleNavDock'
 import { usePhone } from '../../lib/breakpoints'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface AppLayoutProps {
   children: React.ReactNode
@@ -50,9 +51,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, nav }) => {
   // swaps under the screen when it arrives.
   if (initialLoading) {
     return (
-      <Center h="100vh">
-        <Loader size="lg" />
-      </Center>
+      <ConsoleLoading h="100vh" />
     )
   }
 

@@ -46,6 +46,7 @@ behind the interface.
 | `PikkuWorkflowService`, `WorkflowRunService` | Redis, MongoDB | `@pikku/redis`, `@pikku/mongodb` |
 | `SessionStore`, `AgentRunService`, `DeploymentService` | Redis, MongoDB | `@pikku/redis`, `@pikku/mongodb` |
 | `AgentStorageService`, `AgentRunStateService` | MongoDB **only** | `@pikku/mongodb` |
+| `LeaseService` | `RedisLeaseService` | `@pikku/redis` |
 
 SQL is the third option for every store interface in that table —
 `KyselyChannelStore`, `KyselyWorkflowService`, `KyselySecretService` and friends

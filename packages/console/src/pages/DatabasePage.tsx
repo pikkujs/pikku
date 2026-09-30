@@ -3,15 +3,13 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import {
   Box,
-  Center,
   ActionIcon,
-  Loader,
   Text,
   Group,
   Tooltip,
   SegmentedControl,
   TextInput,
-  useMantineColorScheme,
+  useMantineColorScheme
 } from '@pikku/mantine/core'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -50,6 +48,7 @@ import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import classes from '../components/ui/console.module.css'
 import 'reactflow/dist/style.css'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -651,9 +650,7 @@ function DatabaseCanvas({
 
   if (loading || (layouting && nodes.length === 0)) {
     return (
-      <Center h="60vh">
-        <Loader size="sm" />
-      </Center>
+      <ConsoleLoading h="60vh" />
     )
   }
 

@@ -6,6 +6,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
+import { ShellHeaderSlotContext } from '../ui/ShellHeaderSlot'
 import {
   PanelChrome,
   SidePanel,
@@ -57,29 +58,31 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({
   }
 
   return (
-    <PanelChrome hideRootTitle={hideRootTitle} hideClose={hideClose}>
-      <Box style={{ height: '100%' }}>
-        {children.map((child) =>
-          child.selfContained ? (
-            <Box key={child.id} style={{ height: '100%' }}>
-              {child.content}
-            </Box>
-          ) : (
-            <SidePanel key={child.id}>
-              <SidePanelHeader
-                title={asI18n(activePanelData.title)}
-                onBack={activePanelData.history.length > 0 ? goBack : undefined}
-                onClose={() => closePanel(activePanel!)}
-              />
-              <SidePanelContent>
-                <Stack gap="xl" px="md">
-                  {child.content}
-                </Stack>
-              </SidePanelContent>
-            </SidePanel>
-          )
-        )}
-      </Box>
-    </PanelChrome>
+    <ShellHeaderSlotContext.Provider value={null}>
+      <PanelChrome hideRootTitle={hideRootTitle} hideClose={hideClose}>
+        <Box style={{ height: '100%' }}>
+          {children.map((child) =>
+            child.selfContained ? (
+              <Box key={child.id} style={{ height: '100%' }}>
+                {child.content}
+              </Box>
+            ) : (
+              <SidePanel key={child.id}>
+                <SidePanelHeader
+                  title={asI18n(activePanelData.title)}
+                  onBack={activePanelData.history.length > 0 ? goBack : undefined}
+                  onClose={() => closePanel(activePanel!)}
+                />
+                <SidePanelContent>
+                  <Stack gap="xl" px="md">
+                    {child.content}
+                  </Stack>
+                </SidePanelContent>
+              </SidePanel>
+            )
+          )}
+        </Box>
+      </PanelChrome>
+    </ShellHeaderSlotContext.Provider>
   )
 }

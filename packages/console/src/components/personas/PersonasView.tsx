@@ -9,7 +9,6 @@ import { SubjectRow } from './SubjectRow'
 import { usePanelContext } from '../../context/PanelContext'
 import type { PersonaEntry } from './persona-types'
 import type { SubjectEntry } from './subject-types'
-import classes from './personas.module.css'
 
 const PERSONAS_DOCS = 'https://pikku.dev/docs/wiring/personas'
 
@@ -45,17 +44,17 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
 
   if (loading) {
     return (
-      <Stack gap={8} p="md">
-        <Skeleton height={62} radius={10} />
-        <Skeleton height={62} radius={10} />
-        <Skeleton height={62} radius={10} />
+      <Stack gap="xs">
+        <Skeleton height={96} radius="md" />
+        <Skeleton height={96} radius="md" />
+        <Skeleton height={96} radius="md" />
       </Stack>
     )
   }
 
   if (personas.length === 0 && subjects.length === 0) {
     return query ? (
-      <Text size="sm" c="dimmed" p="md" data-testid="personas-no-matches">
+      <Text size="sm" c="dimmed" data-testid="personas-no-matches">
         {m.personas_no_matches({ query })}
       </Text>
     ) : (
@@ -69,7 +68,7 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
   }
 
   return (
-    <Stack gap={8} className={classes.list}>
+    <Stack gap="xs">
       {personas.map((persona) => (
         <PersonaRow
           key={persona.key}

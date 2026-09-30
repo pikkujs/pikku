@@ -34,7 +34,7 @@ export interface PageAction {
   onSelect: () => void
 }
 
-interface PageOptionsContextValue {
+export interface PageOptionsContextValue {
   /** Whether the page currently on screen registered an options rail. */
   hasOptions: boolean
   setHasOptions: (has: boolean) => void
@@ -56,10 +56,18 @@ interface PageOptionsContextValue {
 
 const PageOptionsContext = createContext<PageOptionsContextValue | null>(null)
 
+/**
+ * `value` hands the whole context to a host that already runs this chrome —
+ * a console embedded in another product has its own bottom sheet and tab bar,
+ * and two independent copies of this state would portal our rails into a sheet
+ * nobody opens.
+ */
 export function PageOptionsProvider({
   children,
+  value: injected,
 }: {
   children: React.ReactNode
+  value?: PageOptionsContextValue
 }) {
   const [hasOptions, setHasOptions] = useState(false)
   const [label, setLabel] = useState<I18nString | null>(null)
@@ -84,7 +92,7 @@ export function PageOptionsProvider({
   )
 
   return (
-    <PageOptionsContext.Provider value={value}>
+    <PageOptionsContext.Provider value={injected ?? value}>
       {children}
     </PageOptionsContext.Provider>
   )
@@ -95,6 +103,17 @@ export function usePageOptions(): PageOptionsContextValue {
   if (!ctx)
     throw new Error('usePageOptions must be used inside PageOptionsProvider')
   return ctx
+}
+
+/**
+ * The same context where a host might not have mounted the provider at all.
+ *
+ * A host that brings its own chrome (a console embedded in another product)
+ * renders our layouts without our AppLayout, so every phone-path surface has to
+ * survive its absence — the same reason usePageOptionsDismiss is a no-op there.
+ */
+export function useOptionalPageOptions(): PageOptionsContextValue | null {
+  return useContext(PageOptionsContext)
 }
 
 /**

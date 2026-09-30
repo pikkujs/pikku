@@ -24,6 +24,7 @@ const makeMetaService = (
   getFeaturesMeta: async () => ({}),
   getTriggerMeta: async () => ({}),
   getTriggerSourceMeta: async () => ({}),
+  getWebhookSourcesMeta: async () => ({}),
   getMiddlewareGroupsMeta: async () => ({}),
   getPermissionsGroupsMeta: async () => ({}),
   getAgentsMeta: async () => ({}),
@@ -40,6 +41,9 @@ const makeMetaService = (
   getSecretsMeta: async () => ({}),
   getCredentialsMeta: async () => ({}),
   getVariablesMeta: async () => ({}),
+  getOutgoingWebhooksMeta: async () => ({
+    'order.paid': { event: 'order.paid', title: 'Order paid' },
+  }),
   getServicesMeta: async () => ({}),
   getEmailTemplateAssets: async () => ({
     theme: {},
@@ -81,5 +85,31 @@ describe('WiringService.readAllMeta', () => {
     const result = await service.readAllMeta()
 
     assert.equal(result.counts.emails, 0)
+  })
+
+  test('returns declared webhooks and counts them', async () => {
+    const service = new WiringService(makeMetaService() as never)
+    const result = await service.readAllMeta()
+
+    assert.equal(result.outgoingWebhooksMeta['order.paid']?.title, 'Order paid')
+    assert.equal(result.counts.outgoingWebhooks, 1)
+  })
+
+  test('returns declared webhook sources', async () => {
+    const metaService = makeMetaService({
+      getWebhookSourcesMeta: async () => ({
+        shop: {
+          name: 'shop',
+          method: 'post',
+          route: '/webhooks/shop',
+          events: ['order.paid'],
+        },
+      }),
+    })
+    const service = new WiringService(metaService as never)
+    const result = await service.readAllMeta()
+
+    assert.equal(result.webhookSourceMeta.shop?.route, '/webhooks/shop')
+    assert.deepEqual(result.webhookSourceMeta.shop?.events, ['order.paid'])
   })
 })

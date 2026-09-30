@@ -168,6 +168,10 @@ verifiers/db-schema/.pikku-runtime/
 # at. Committing it would freeze a copy that nothing reads.
 verifiers/workflows/db/
 
+# The addon-openapi verifier scaffolds each spec into its own Pikku project
+# here, wiping and regenerating them on every run.
+verifiers/addon-openapi/generated/
+
 # This repo's OWN OKF knowledge bundle: untracked on purpose. It holds commercial
 # strategy, open security findings and memories from unrelated repos, and
 # pikkujs/pikku is public.
@@ -181,3 +185,9 @@ verifiers/workflows/db/
 # The fullstack verifier ships a hand-written frontend rather than a built one,
 # so this browser script is source despite the *.js rule above.
 !verifiers/fullstack/web/app.js
+
+# The e2e app's native shell is built from scratch on every run, as a new
+# project would be: the develop native jobs write src-tauri with `pikku app
+# native init` from pikku.config.json, and dist-native is `build:native` output.
+e2e/packages/web/dist-native/
+e2e/packages/web/src-tauri/

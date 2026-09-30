@@ -4,23 +4,49 @@ import {
   Anchor,
   Badge,
   Box,
+  Button,
+  Card,
+  Collapse,
+  Divider,
   Group,
+  Paper,
+  Progress,
+  ScrollArea,
+  SimpleGrid,
   Stack,
   Text,
+  ThemeIcon,
+  Title,
+  Tooltip,
   UnstyledButton,
 } from '@pikku/mantine/core'
-import { ChevronRight } from 'lucide-react'
-import { asI18n, type I18nNode } from '@pikku/react'
+import {
+  CheckCircle2,
+  ChevronRight,
+  Circle,
+  Clock,
+  DollarSign,
+  Play,
+  ShieldCheck,
+} from 'lucide-react'
+import { asI18n, type I18nNode, type I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import { plural } from '@/i18n/plural'
 import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 import type { VirtualUserDoc } from './virtual-user-model'
-import { VirtualUserRuns } from './VirtualUserRuns'
 import { VirtualUserSchedule } from './VirtualUserSchedule'
-import styles from './virtual-users.module.css'
-import { appColorVars } from '@pikku/mantine/theme'
+import { VirtualUserVisits } from './VirtualUserVisits'
+import { DispositionBadge, VirtualUserAvatar } from './VirtualUserAvatar'
+import { frequencyWord } from './disposition-labels'
+import { useDeveloperDetails } from '../../hooks/useDeveloperDetails'
+import { useStartVirtualUserRun } from '../../hooks/useVirtualUserRuns'
+import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
+import { SectionCard } from '../ui/SectionCard'
+import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevCode, DevField, DevFields, DevMono } from '../ui/DevDetail'
+import type { PersonaLastTry, VirtualUserRunRow } from './run-summary'
 
-/** One line saying what this disposition is, in a person's terms. */
-const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => unknown> = {
+const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => I18nString> = {
   realistic: m.virtual_users_disposition_realistic,
   careless: m.virtual_users_disposition_careless,
   newcomer: m.virtual_users_disposition_newcomer,
@@ -30,633 +56,683 @@ const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => unknown> = {
   accountable: m.virtual_users_disposition_accountable,
 }
 
+const TASKS_SHOWN = 5
+const AREAS_SHOWN = 4
+
 const percent = (weight: number, total: number) =>
   total === 0 ? 0 : Math.round((weight / total) * 100)
 
-/**
- * How many intents are listed before the rest are folded away. Enough to see
- * the kind of thing this user is after, few enough that the sections below it
- * are still on the same screen.
- */
-const INTENTS_SHOWN = 6
-
-type ReachFigure = 'offered' | 'mutations' | 'inferred'
-
-const Section: React.FC<{
-  title: ReturnType<typeof m.virtual_users_behaviour>
-  children: React.ReactNode
-  testId?: string
-}> = ({ title, children, testId }) => (
-  <Stack gap="sm" data-testid={testId}>
-    <Text
-      size="xs"
-      fw={600}
-      tt="uppercase"
-      c="dimmed"
-      className={styles.sectionTitle}
-      style={{ letterSpacing: '0.06em' }}
-    >
-      {title}
-    </Text>
-    {children}
-  </Stack>
+const Fact: React.FC<{
+  icon: React.ReactNode
+  title: I18nNode
+  children: I18nNode
+}> = ({ icon, title, children }) => (
+  <Paper variant="inset" px={14} py={12}>
+    <Group gap={10} wrap="nowrap" align="flex-start">
+      <ThemeIcon variant="transparent" color="blue" c="blue" size="sm">
+        {icon}
+      </ThemeIcon>
+      <Stack gap={2}>
+        <Text size="sm" fw={600}>
+          {title}
+        </Text>
+        <Text size="xs" c="dimmed" lh={1.4}>
+          {children}
+        </Text>
+      </Stack>
+    </Group>
+  </Paper>
 )
 
-/**
- * A number with its meaning under it — the reach figures read as a row of these.
- *
- * Given the endpoints it counts, the number becomes the way to see them. A
- * figure nobody can open is a figure nobody can check, and "71 offered" is
- * only worth printing if you can find out which 71.
- */
-const Figure: React.FC<{
-  value: number
+const Trait: React.FC<{
   label: I18nNode
-  names?: string[]
-  open?: boolean
-  onToggle?: () => void
-}> = ({ value, label, names, open, onToggle }) => {
-  const body = (
-    <Stack gap={2} style={{ minWidth: 96 }}>
-      <Text size="xl" fw={700} className={styles.figure}>
-        {asI18n(String(value))}
-      </Text>
-      <Text size="xs" c="dimmed">
-        {label}
+  explain: I18nNode
+  value: number
+}> = ({ label, explain, value }) => (
+  <Paper variant="inset" px="md" py={14}>
+    <Stack gap={12}>
+      <Tooltip
+        label={explain}
+        multiline
+        w={260}
+        position="top-start"
+        events={{ hover: true, focus: true, touch: true }}
+      >
+        <Text
+          size="sm"
+          tabIndex={0}
+          style={{
+            alignSelf: 'flex-start',
+            cursor: 'help',
+            textDecoration: 'underline dotted',
+            textUnderlineOffset: 4,
+          }}
+        >
+          {label}
+        </Text>
+      </Tooltip>
+      <Progress value={Math.max(value, 2)} size="sm" />
+      <Text size="sm">
+        {frequencyWord(value)}
+        <Text span size="xs" c="dimmed" ml={4}>
+          {asI18n(`· ${value}%`)}
+        </Text>
       </Text>
     </Stack>
-  )
-  if (!names?.length || !onToggle) return body
-  return (
-    <UnstyledButton
-      onClick={onToggle}
-      className={styles.figureButton}
-      data-open={open || undefined}
-      aria-expanded={open}
-    >
-      {body}
-    </UnstyledButton>
-  )
-}
+  </Paper>
+)
 
-/**
- * The endpoints behind a figure, each linking to where it is documented.
- *
- * The functions list filters on text, so the link carries the name as its
- * search — the same thing you would have typed, without having to remember it.
- */
+const Area: React.FC<{ children: I18nNode; count: number }> = ({
+  children,
+  count,
+}) => (
+  <Badge
+    size="lg"
+    variant="filled"
+    color="gray"
+    rightSection={
+      <Text span inherit c="dimmed" fw={500}>
+        {asI18n(String(count))}
+      </Text>
+    }
+  >
+    {children}
+  </Badge>
+)
+
 const EndpointNames: React.FC<{ names: string[] }> = ({ names }) => {
   const Link = useLink()
   return (
-    <Box className={styles.nameList} data-testid="reach-names">
-      <Group gap={6}>
-        {names.map((name) => (
-          <Anchor
-            key={name}
-            component={Link}
-            to={`/functions?search=${encodeURIComponent(name)}`}
-            size="xs"
-            ff="monospace"
-            underline="hover"
-            c="dimmed"
-          >
-            {asI18n(name)}
+    <Group gap={12} wrap="nowrap" align="stretch" data-testid="reach-names">
+      <Divider orientation="vertical" />
+      <ScrollArea.Autosize mah={220} style={{ flex: 1 }}>
+        <Group gap={6} py={4}>
+          {names.map((name) => (
+            <Anchor
+              key={name}
+              component={Link}
+              to={`/functions?search=${encodeURIComponent(name)}`}
+              size="xs"
+              ff="monospace"
+              underline="hover"
+              c="dimmed"
+            >
+              {asI18n(name)}
+            </Anchor>
+          ))}
+        </Group>
+      </ScrollArea.Autosize>
+    </Group>
+  )
+}
+
+const Tasks: React.FC<{ user: VirtualUserDoc }> = ({ user }) => {
+  const [all, setAll] = React.useState(false)
+  const [openTask, setOpenTask] = React.useState<string>()
+  const { shown: developerDetails } = useDeveloperDetails()
+  const Link = useLink()
+  const { intents, wants } = user
+  const areasShown = wants.byFeature.slice(0, AREAS_SHOWN)
+  const rest = wants.byFeature.slice(AREAS_SHOWN)
+  const tasks = plural(
+    wants.intents,
+    m.virtual_users_tasks_one,
+    m.virtual_users_tasks_other
+  )
+  const areas = plural(
+    Math.max(wants.features, 1),
+    m.virtual_users_areas_one,
+    m.virtual_users_areas_other
+  )
+
+  return (
+    <Paper variant="inset" px="md" py={14} data-testid="virtual-user-tasks">
+      <Stack gap={12}>
+        <Group justify="space-between" gap={12}>
+          <Text fw={600}>
+            {user.goals.length > 0
+              ? m.virtual_users_tasks_plus_head({ tasks })
+              : m.virtual_users_tasks_from_head({ tasks })}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {m.virtual_users_tasks_across({ areas })}
+          </Text>
+        </Group>
+        <Text size="sm" c="dimmed">
+          {m.virtual_users_tasks_note({ name: user.name })}
+          <Anchor component={Link} to="/scenarios" size="sm" ml={4}>
+            {m.virtual_users_see_stories()}
           </Anchor>
+        </Text>
+        {areasShown.length > 0 && (
+          <Group gap={8}>
+            {areasShown.map((area) => (
+              <Area key={area.name} count={area.count}>
+                {asI18n(area.name)}
+              </Area>
+            ))}
+            {rest.length > 0 && (
+              <Area count={rest.reduce((sum, area) => sum + area.count, 0)}>
+                {plural(
+                  rest.length,
+                  m.virtual_users_more_areas_one,
+                  m.virtual_users_more_areas_other
+                )}
+              </Area>
+            )}
+          </Group>
+        )}
+        <Stack gap={0}>
+          {(all ? intents : intents.slice(0, TASKS_SHOWN)).map(
+            (intent, index) => {
+              const open = openTask === intent.id
+              const steps = intent.steps ?? []
+              const canOpen =
+                developerDetails && (steps.length > 0 || !!intent.description)
+              return (
+                <Box key={intent.id}>
+                  {index > 0 && <Divider />}
+                  <UnstyledButton
+                    disabled={!canOpen}
+                    onClick={() => setOpenTask(open ? undefined : intent.id)}
+                    w="100%"
+                    py={10}
+                    style={{ cursor: canOpen ? undefined : 'default' }}
+                    data-testid={`intent-${intent.id}`}
+                  >
+                    <Group justify="space-between" wrap="nowrap" gap={12}>
+                      <Group gap={6} wrap="nowrap">
+                        {canOpen && (
+                          <ChevronRight
+                            size={13}
+                            style={{
+                              transform: open ? 'rotate(90deg)' : undefined,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <Text size="sm">{asI18n(intent.title)}</Text>
+                      </Group>
+                      {user.featureByIntent[intent.id] && (
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                          lineClamp={1}
+                          maw={220}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {asI18n(user.featureByIntent[intent.id])}
+                        </Text>
+                      )}
+                    </Group>
+                  </UnstyledButton>
+                  <Collapse expanded={open}>
+                    <Group
+                      gap={12}
+                      wrap="nowrap"
+                      align="stretch"
+                      ml={19}
+                      pb={10}
+                    >
+                      <Divider orientation="vertical" />
+                      <Stack gap={2}>
+                        {intent.description && (
+                          <Text size="sm" c="dimmed">
+                            {asI18n(intent.description)}
+                          </Text>
+                        )}
+                        {steps.map((step, stepIndex) => (
+                          <Text key={stepIndex} size="sm" c="dimmed">
+                            {asI18n(step)}
+                          </Text>
+                        ))}
+                      </Stack>
+                    </Group>
+                  </Collapse>
+                </Box>
+              )
+            }
+          )}
+        </Stack>
+        {intents.length > TASKS_SHOWN && (
+          <Box>
+            <Anchor
+              component="button"
+              size="sm"
+              fw={500}
+              onClick={() => setAll(!all)}
+              data-testid="virtual-user-intents-toggle"
+            >
+              {all
+                ? m.virtual_users_intents_show_fewer()
+                : m.virtual_users_show_all_tasks({ count: intents.length })}
+            </Anchor>
+          </Box>
+        )}
+      </Stack>
+    </Paper>
+  )
+}
+
+const REACH_CHANGE = 'blue'
+const REACH_LOOK = 'cyan.8'
+const REACH_OFF = 'gray.7'
+
+const reachSentence = ({ reach, profile }: VirtualUserDoc) => {
+  const off = reach.total - reach.offered
+  return reach.showsEverything
+    ? m.virtual_users_reach_inverted({ total: reach.total })
+    : profile.readOnly
+      ? m.virtual_users_reach_read_only({
+          offered: reach.offered,
+          total: reach.total,
+        })
+      : off === 0
+        ? m.virtual_users_reach_everything({
+            total: reach.total,
+            mutations: reach.mutations,
+          })
+        : m.virtual_users_reach_some({
+            offered: reach.offered,
+            total: reach.total,
+            off,
+          })
+}
+
+const Reach: React.FC<{ user: VirtualUserDoc }> = ({ user }) => {
+  const { reach } = user
+  const look = reach.offered - reach.mutations
+  const off = reach.total - reach.offered
+  const parts = [
+    {
+      value: reach.mutations,
+      color: REACH_CHANGE,
+      label: m.virtual_users_count_change(),
+    },
+    { value: look, color: REACH_LOOK, label: m.virtual_users_count_look() },
+    { value: off, color: REACH_OFF, label: m.virtual_users_count_off() },
+  ]
+  return (
+    <>
+      <Progress.Root size={14}>
+        {parts.map((part, index) => (
+          <Progress.Section
+            key={index}
+            value={reach.total === 0 ? 0 : (part.value / reach.total) * 100}
+            color={part.color}
+          />
+        ))}
+      </Progress.Root>
+      <Group gap={20}>
+        {parts.map((part, index) => (
+          <Group key={index} gap={8} wrap="nowrap">
+            <Text span c={part.color} lh={0}>
+              <Circle size={8} fill="currentColor" />
+            </Text>
+            <Text size="sm" c="dimmed">
+              {asI18n(`${part.value} `)}
+              {part.label}
+            </Text>
+          </Group>
         ))}
       </Group>
-    </Box>
-  )
-}
-
-/**
- * A feature is named by a sentence often enough that a legend of six of them
- * is three lines of prose. Cut to a phrase — the bar carries the proportion,
- * and the full name is one row away in the list underneath.
- */
-const shortFeature = (name: string) =>
-  name.length > 22 ? `${name.slice(0, 21).trimEnd()}…` : name
-
-/** How this user's intents spread over the features that claim them. */
-const FeatureSpread: React.FC<{
-  byFeature: { name: string; count: number }[]
-  total: number
-}> = ({ byFeature, total }) => {
-  if (!byFeature.length) return null
-  const shown = byFeature.slice(0, 4)
-  return (
-    <Stack gap={6} data-testid="virtual-user-feature-spread">
-      <Box className={styles.spreadBar}>
-        {byFeature.map((feature, index) => (
-          <Box
-            key={feature.name}
-            className={styles.spreadSegment}
-            style={{
-              flexGrow: feature.count,
-              // Fading rather than a new hue per feature: the ranking is the
-              // information, and six colours would imply six meanings.
-              opacity: Math.max(0.25, 1 - index * 0.13),
-            }}
-          />
-        ))}
-        {total > byFeature.reduce((sum, f) => sum + f.count, 0) && (
-          <Box
-            className={styles.spreadRest}
-            style={{
-              flexGrow: total - byFeature.reduce((sum, f) => sum + f.count, 0),
-            }}
-          />
-        )}
-      </Box>
-      <Text size="xs" c="dimmed" ff="monospace">
-        {asI18n(
-          shown.map((f) => `${shortFeature(f.name)} ${f.count}`).join(' · ') +
-            (byFeature.length > shown.length
-              ? ` · +${byFeature.length - shown.length} more`
-              : '')
-        )}
+      <Text size="sm" c="dimmed">
+        {user.roles.length > 0
+          ? m.virtual_users_role_line({ roles: user.roles.join(', ') })
+          : m.virtual_users_role_none()}
       </Text>
-    </Stack>
+    </>
   )
 }
 
-type VirtualUserDocumentProps = {
-  user: VirtualUserDoc
-  /** The environment name used in the example command. */
-  environment?: string
-}
+type NameList = 'offered' | 'mutations' | 'inferred'
 
-/**
- * One virtual user, read as a dossier: who they are, how they behave, what they
- * want, what they can reach and when they stop.
- *
- * Every figure on this page comes from the same functions the runner uses, so
- * what is shown here is the run's actual input rather than a description of it.
- */
-export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
-  user,
-  environment = 'staging',
-}) => {
+const DeveloperDetails: React.FC<{
+  user: VirtualUserDoc
+  environment: string
+}> = ({ user, environment }) => {
+  const [names, setNames] = React.useState<NameList>()
   const { profile, reach } = user
   const moveTotal =
     profile.moves.continue +
     profile.moves.suspend +
     profile.moves.resume +
     profile.moves.abandon
+  const toggle = (list: NameList) => setNames(names === list ? undefined : list)
+
+  return (
+    <ForDevelopers
+      label={m.virtual_users_dev_title()}
+      hint={m.virtual_users_dev_hint()}
+      testId="virtual-user-dev"
+    >
+      <Stack gap="md">
+        <DevFields>
+          <DevField label={m.virtual_users_dev_key()} value={user.id} />
+          <DevField label={m.virtual_users_dev_disposition()} value={user.disposition} />
+          <DevField label={m.virtual_users_dev_moves()}>
+            <Text size="sm" ff="monospace">
+              {m.virtual_users_moves({
+                continue: percent(profile.moves.continue, moveTotal),
+                suspend: percent(profile.moves.suspend, moveTotal),
+                resume: percent(profile.moves.resume, moveTotal),
+                abandon: percent(profile.moves.abandon, moveTotal),
+              })}
+            </Text>
+            {user.tunedDials.length > 0 && (
+              <Text size="xs" c="dimmed">
+                {m.virtual_users_tuned({ dials: user.tunedDials.join(', ') })}
+              </Text>
+            )}
+          </DevField>
+          <DevField label={m.virtual_users_dev_roles()} value={user.roles.join(', ') || undefined} />
+          <DevField label={m.virtual_users_dev_scopes()} value={user.scopes.join(', ') || undefined} />
+          {user.persona.email && (
+            <DevField label={m.virtual_users_dev_email()} value={user.persona.email} />
+          )}
+          <DevField label={m.virtual_users_dev_where()}>
+            {user.environments ? (
+              <DevMono value={user.environments.join(', ')} />
+            ) : (
+              <Text size="sm">{m.virtual_users_environments_default()}</Text>
+            )}
+          </DevField>
+          {user.fixtures && user.fixtures.length > 0 && (
+            <DevField label={m.virtual_users_fixtures()} value={user.fixtures.join(', ')} />
+          )}
+          {user.tags.length > 0 && (
+            <DevField label={m.virtual_users_dev_tags()} value={user.tags.join(', ')} />
+          )}
+          <DevField label={m.virtual_users_dev_budget()}>
+            <Text size="sm">{m.virtual_users_budget_default()}</Text>
+          </DevField>
+          <DevField label={m.virtual_users_dev_endpoints()}>
+            <Group gap={12}>
+              <Anchor
+                component="button"
+                size="sm"
+                onClick={() => toggle('offered')}
+              >
+                {m.virtual_users_dev_endpoints_value({
+                  offered: reach.offered,
+                  mutations: reach.mutations,
+                })}
+              </Anchor>
+              {reach.mutations > 0 && (
+                <Anchor
+                  component="button"
+                  size="sm"
+                  onClick={() => toggle('mutations')}
+                >
+                  {m.virtual_users_count_change()}
+                </Anchor>
+              )}
+            </Group>
+          </DevField>
+        </DevFields>
+        {names === 'offered' && <EndpointNames names={reach.offeredNames} />}
+        {names === 'mutations' && <EndpointNames names={reach.mutationNames} />}
+        <DevCode
+          label={m.virtual_users_dev_run()}
+          code={`pikku persona run ${environment} ${user.id}`}
+        />
+        <DevCode
+          label={m.virtual_users_dev_sync()}
+          code={`pikku persona sync ${environment}`}
+        />
+        {reach.inferred > 0 && (
+          <Box>
+            <Anchor
+              component="button"
+              size="sm"
+              c="dimmed"
+              onClick={() => toggle('inferred')}
+              data-testid="virtual-user-inferred"
+            >
+              {m.virtual_users_inferred({ count: reach.inferred })}
+            </Anchor>
+            {names === 'inferred' && (
+              <EndpointNames names={reach.inferredNames} />
+            )}
+          </Box>
+        )}
+      </Stack>
+    </ForDevelopers>
+  )
+}
+
+type VirtualUserDocumentProps = {
+  user: VirtualUserDoc
+  tried?: PersonaLastTry
+  onOpenVisit: (run: VirtualUserRunRow) => void
+  environment?: string
+  production?: boolean
+}
+
+export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
+  user,
+  tried,
+  onOpenVisit,
+  environment = 'staging',
+  production,
+}) => {
+  const { profile } = user
+  const start = useStartVirtualUserRun(user.id)
+  const refused = virtualUserRunRefused(user.disposition, production)
+  const moveTotal =
+    profile.moves.continue +
+    profile.moves.suspend +
+    profile.moves.resume +
+    profile.moves.abandon
   const hasSomethingToWant = user.goals.length > 0 || user.intents.length > 0
+  const visiting = tried?.running ?? false
 
-  const [openIntent, setOpenIntent] = React.useState<string>()
-  const [allIntents, setAllIntents] = React.useState(false)
-  const [openReach, setOpenReach] = React.useState<ReachFigure>()
-  const visibleIntents = allIntents
-    ? user.intents
-    : user.intents.slice(0, INTENTS_SHOWN)
-
-  // Picking a different user should start you at the top of their dossier. The
-  // panel scrolls rather than the page, so without this you land partway down
-  // someone else's intents, at whatever offset you left the last one at.
   const top = React.useRef<HTMLDivElement>(null)
+  const shownId = React.useRef(user.id)
   React.useEffect(() => {
+    if (shownId.current === user.id) return
+    shownId.current = user.id
     top.current?.scrollIntoView({ block: 'start' })
-    setOpenIntent(undefined)
-    setAllIntents(false)
-    setOpenReach(undefined)
   }, [user.id])
 
   return (
-    <Box
-      ref={top}
-      data-testid={`virtual-user-document-${user.id}`}
-      style={{ maxWidth: 860, padding: '28px 32px 64px' }}
-    >
-      <Stack gap="xl">
-        <Stack gap={8}>
-          <Group gap={8} align="center">
-            <Text fw={700} size="xl" style={{ lineHeight: 1.25 }}>
-              {asI18n(user.name)}
-            </Text>
-            <Badge size="sm" variant="light" radius="sm" tt="none">
-              {asI18n(user.disposition)}
-            </Badge>
-            {user.tags.map((tag) => (
-              <Badge
-                key={tag}
-                size="sm"
-                variant="outline"
-                radius="sm"
-                tt="none"
-                color="gray"
-              >
-                {asI18n(tag)}
-              </Badge>
-            ))}
-          </Group>
-          {user.description && (
-            <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-              {asI18n(user.description)}
-            </Text>
-          )}
-          <Group gap={6} align="baseline">
-            <Text size="sm" c="dimmed">
-              {m.virtual_users_signs_in_as()}
-            </Text>
-            <Text size="sm" fw={600}>
-              {asI18n(user.persona.name)}
-            </Text>
+    <Stack ref={top} gap={16} data-testid={`virtual-user-document-${user.id}`}>
+      <Card>
+        <Group gap={18} wrap="nowrap" align="flex-start">
+          <VirtualUserAvatar
+            name={user.name}
+            disposition={user.disposition}
+            size={64}
+          />
+          <Stack gap={4} miw={0}>
+            <Group gap={10} align="center">
+              <Title order={1}>{asI18n(user.name)}</Title>
+              <DispositionBadge disposition={user.disposition} />
+            </Group>
             {user.persona.jobTitle && (
-              <Text size="sm" c="dimmed">
-                {asI18n(`· ${user.persona.jobTitle}`)}
+              <Text c="dimmed">{asI18n(user.persona.jobTitle)}</Text>
+            )}
+            {user.description && (
+              <Text size="sm" c="dimmed" maw={640}>
+                {asI18n(user.description)}
               </Text>
             )}
-            {user.persona.email && (
-              <Text size="sm" c="dimmed" ff="monospace">
-                {asI18n(`· ${user.persona.email}`)}
-              </Text>
-            )}
-          </Group>
-          {user.persona.personality && (
-            <Text size="sm" c="dimmed" fs="italic" style={{ maxWidth: '68ch' }}>
-              {asI18n(user.persona.personality)}
-            </Text>
-          )}
-        </Stack>
+          </Stack>
+        </Group>
 
-        <Section
-          title={m.virtual_users_behaviour()}
-          testId="virtual-user-behaviour"
-        >
-          <Text size="sm" style={{ maxWidth: '68ch' }}>
-            {DISPOSITION_BLURB[user.disposition]() as never}
-          </Text>
-          {/*
-            Everything below is the merged profile, so without this a tuned user
-            reads as a stock one whose numbers quietly contradict the blurb
-            above it.
-          */}
-          {user.tunedDials.length > 0 && (
-            <Text size="xs" c="dimmed" data-testid="virtual-user-tuned">
-              {m.virtual_users_tuned({ dials: user.tunedDials.join(', ') })}
+        {visiting && (
+          <Stack gap={2} data-testid="virtual-user-visiting">
+            <Text fw={600} c="blue">
+              {m.virtual_users_visiting_title({ name: user.name })}
             </Text>
-          )}
-          <Text size="sm" ff="monospace" c="dimmed">
-            {m.virtual_users_moves({
-              continue: percent(profile.moves.continue, moveTotal),
-              suspend: percent(profile.moves.suspend, moveTotal),
-              resume: percent(profile.moves.resume, moveTotal),
-              abandon: percent(profile.moves.abandon, moveTotal),
-            })}
+            <Text size="sm" c="dimmed">
+              {m.virtual_users_visiting_body()}
+            </Text>
+          </Stack>
+        )}
+        <Group gap="sm" data-help="try">
+          <Button
+            size="lg"
+            leftSection={<Play size={16} fill="currentColor" />}
+            loading={start.isPending}
+            disabled={visiting || refused}
+            onClick={() => start.mutate(undefined)}
+            data-testid="virtual-user-run-now"
+          >
+            {m.virtual_users_send({ name: user.name })}
+          </Button>
+          <Button
+            size="lg"
+            variant="default"
+            fw={500}
+            onClick={() =>
+              document
+                .getElementById('virtual-user-schedule')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          >
+            {m.virtual_users_schedule_open()}
+          </Button>
+        </Group>
+        {refused && (
+          <Text size="sm" c="dimmed" data-testid="virtual-user-run-refused">
+            {m.virtual_users_runs_production_only()}
           </Text>
-          <Stack gap={4}>
-            {profile.reReadRate > 0 && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_dial_reread({
-                  percent: Math.round(profile.reReadRate * 100),
-                })}
-              </Text>
+        )}
+        {start.error && (
+          <Text size="sm" c="red">
+            {asI18n(
+              start.error instanceof Error
+                ? start.error.message
+                : String(start.error)
             )}
-            {profile.repeatRate > 0 && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_dial_repeat({
-                  percent: Math.round(profile.repeatRate * 100),
-                })}
-              </Text>
+          </Text>
+        )}
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing={12}>
+          <Fact
+            icon={<ShieldCheck size={20} />}
+            title={m.virtual_users_fact_safe_title()}
+          >
+            {m.virtual_users_fact_safe()}
+          </Fact>
+          <Fact
+            icon={<Clock size={20} />}
+            title={m.virtual_users_fact_time_title()}
+          >
+            {m.virtual_users_fact_time()}
+          </Fact>
+          <Fact
+            icon={<DollarSign size={20} />}
+            title={m.virtual_users_fact_cost_title()}
+          >
+            {m.virtual_users_fact_cost()}
+          </Fact>
+        </SimpleGrid>
+      </Card>
+
+      <SectionCard
+        title={m.virtual_users_behaves({ name: user.name })}
+        blurb={DISPOSITION_BLURB[user.disposition]()}
+        testId="virtual-user-behaviour"
+      >
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing={16}>
+          <Trait
+            label={m.virtual_users_trait_sticks()}
+            explain={m.virtual_users_trait_sticks_explain()}
+            value={percent(profile.moves.continue, moveTotal)}
+          />
+          <Trait
+            label={m.virtual_users_trait_checks()}
+            explain={m.virtual_users_trait_checks_explain()}
+            value={Math.round(profile.reReadRate * 100)}
+          />
+          <Trait
+            label={m.virtual_users_trait_twice()}
+            explain={m.virtual_users_trait_twice_explain()}
+            value={Math.round(profile.repeatRate * 100)}
+          />
+        </SimpleGrid>
+        {(profile.readOnly ||
+          profile.emptyMemory ||
+          profile.invertedOracle) && (
+          <Group gap={8}>
+            {profile.readOnly && (
+              <Badge size="lg" variant="filled" color="gray">
+                {m.virtual_users_flag_read_only()}
+              </Badge>
             )}
             {profile.emptyMemory && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_dial_empty_memory()}
-              </Text>
-            )}
-            {profile.readOnly && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_dial_read_only()}
-              </Text>
+              <Badge size="lg" variant="filled" color="gray">
+                {m.virtual_users_flag_empty_memory()}
+              </Badge>
             )}
             {profile.invertedOracle && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_dial_inverted()}
-              </Text>
+              <Badge size="lg" variant="filled" color="gray">
+                {m.virtual_users_flag_inverted()}
+              </Badge>
             )}
-          </Stack>
-        </Section>
-
-        <Section title={m.virtual_users_wants()} testId="virtual-user-wants">
-          {!hasSomethingToWant && (
-            <Text
-              size="sm"
-              style={{ color: appColorVars.amber }}
-              data-testid="virtual-user-no-wants"
-            >
-              {m.virtual_users_nothing_to_want({ actor: user.persona.key })}
-            </Text>
-          )}
-
-          {user.goals.length > 0 && (
-            <Stack gap={4}>
-              <Text size="sm" fw={600}>
-                {m.virtual_users_goals()}
-              </Text>
-              {user.goals.map((goal) => (
-                <Text key={goal} size="sm">
-                  {asI18n(`· ${goal}`)}
-                </Text>
-              ))}
-            </Stack>
-          )}
-
-          {user.intents.length > 0 && (
-            <Stack gap="md">
-              <Stack gap={6}>
-                <Text size="sm" ff="monospace">
-                  {m.virtual_users_wants_summary({
-                    intents: user.wants.intents,
-                    features: user.wants.features,
-                    steps: user.wants.steps,
-                  })}
-                </Text>
-                <FeatureSpread
-                  byFeature={user.wants.byFeature}
-                  total={user.wants.intents}
-                />
-              </Stack>
-
-              <Text size="sm" fw={600}>
-                {m.virtual_users_intents({ actor: user.persona.key })}
-              </Text>
-              <Stack gap={0}>
-                {visibleIntents.map((intent) => {
-                  const open = openIntent === intent.id
-                  return (
-                    <Stack
-                      key={intent.id}
-                      gap={4}
-                      data-testid={`intent-${intent.id}`}
-                    >
-                      <UnstyledButton
-                        className={styles.intentRow}
-                        data-open={open || undefined}
-                        aria-expanded={open}
-                        onClick={() =>
-                          setOpenIntent(open ? undefined : intent.id)
-                        }
-                      >
-                        <Group gap={8} wrap="nowrap" align="baseline">
-                          <ChevronRight
-                            size={13}
-                            className={styles.intentChevron}
-                            data-open={open || undefined}
-                          />
-                          <Text size="sm" fw={500} style={{ flex: 1 }}>
-                            {asI18n(intent.title)}
-                          </Text>
-                          <Text
-                            size="xs"
-                            c="dimmed"
-                            className={styles.intentFeature}
-                            // The truncated name in full, for the hover.
-                            title={asI18n(
-                              user.featureByIntent[intent.id] ?? ''
-                            )}
-                          >
-                            {asI18n(
-                              user.featureByIntent[intent.id] ??
-                                (m.virtual_users_intent_no_feature() as never)
-                            )}
-                          </Text>
-                          {intent.steps && intent.steps.length > 0 && (
-                            <Text size="xs" c="dimmed" ff="monospace">
-                              {m.virtual_users_intent_steps({
-                                count: intent.steps.length,
-                              })}
-                            </Text>
-                          )}
-                        </Group>
-                      </UnstyledButton>
-                      {open && (
-                        <Stack gap={4} pb="sm" pl={21}>
-                          {intent.description && (
-                            <Text
-                              size="sm"
-                              c="dimmed"
-                              style={{ maxWidth: '68ch' }}
-                            >
-                              {asI18n(intent.description)}
-                            </Text>
-                          )}
-                          {intent.steps && intent.steps.length > 0 && (
-                            <Stack gap={2} className={styles.intentSteps}>
-                              {intent.steps.map((step, index) => (
-                                <Text key={index} size="sm" c="dimmed">
-                                  {asI18n(step)}
-                                </Text>
-                              ))}
-                            </Stack>
-                          )}
-                        </Stack>
-                      )}
-                    </Stack>
-                  )
-                })}
-              </Stack>
-              {user.intents.length > INTENTS_SHOWN && (
-                <UnstyledButton
-                  onClick={() => setAllIntents(!allIntents)}
-                  data-testid="virtual-user-intents-toggle"
-                >
-                  <Text size="xs" c="dimmed" td="underline">
-                    {allIntents
-                      ? m.virtual_users_intents_show_fewer()
-                      : m.virtual_users_intents_show_all({
-                          count: user.intents.length,
-                        })}
-                  </Text>
-                </UnstyledButton>
-              )}
-              <Text
-                size="xs"
-                c="dimmed"
-                fs="italic"
-                style={{ maxWidth: '68ch' }}
-              >
-                {m.virtual_users_intents_note()}
-              </Text>
-            </Stack>
-          )}
-        </Section>
-
-        <Section title={m.virtual_users_reach()} testId="virtual-user-reach">
-          <Group gap="xl" align="flex-start">
-            <Figure
-              value={reach.offered}
-              label={m.virtual_users_offered({ total: reach.total })}
-              names={reach.offeredNames}
-              open={openReach === 'offered'}
-              onToggle={() =>
-                setOpenReach(openReach === 'offered' ? undefined : 'offered')
-              }
-            />
-            <Figure
-              value={reach.mutations}
-              label={m.virtual_users_mutations_offered()}
-              names={reach.mutationNames}
-              open={openReach === 'mutations'}
-              onToggle={() =>
-                setOpenReach(
-                  openReach === 'mutations' ? undefined : 'mutations'
-                )
-              }
-            />
           </Group>
-          {openReach === 'offered' && (
-            <EndpointNames names={reach.offeredNames} />
-          )}
-          {openReach === 'mutations' && (
-            <EndpointNames names={reach.mutationNames} />
-          )}
-          {!openReach && reach.offeredNames.length > 0 && (
-            <Text size="xs" c="dimmed">
-              {m.virtual_users_reach_open()}
-            </Text>
-          )}
-          <Stack gap={4}>
-            {reach.showsEverything && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_shows_everything()}
-              </Text>
-            )}
-            {reach.withheldByApproval > 0 && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_withheld_approval({
-                  count: reach.withheldByApproval,
-                })}
-              </Text>
-            )}
-            {reach.withheldByScopes > 0 && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_withheld_grants({
-                  count: reach.withheldByScopes,
-                })}
-              </Text>
-            )}
-            {reach.withheldByReadOnly > 0 && (
-              <Text size="sm" c="dimmed">
-                {m.virtual_users_withheld_readonly({
-                  count: reach.withheldByReadOnly,
-                })}
-              </Text>
-            )}
-            {reach.inferred > 0 && (
-              <UnstyledButton
-                onClick={() =>
-                  setOpenReach(
-                    openReach === 'inferred' ? undefined : 'inferred'
-                  )
-                }
-                aria-expanded={openReach === 'inferred'}
-                data-testid="virtual-user-inferred"
-              >
-                <Text size="sm" c="dimmed" td="underline">
-                  {m.virtual_users_inferred({ count: reach.inferred })}
-                </Text>
-              </UnstyledButton>
-            )}
-            {openReach === 'inferred' && (
-              <EndpointNames names={reach.inferredNames} />
-            )}
-          </Stack>
-          {user.roles.length > 0 && (
-            <Group gap={6}>
-              <Text size="sm" fw={600}>
-                {m.virtual_users_grants()}
-              </Text>
-              {user.roles.map((role) => (
-                <Badge
-                  key={role}
-                  size="xs"
-                  variant="light"
-                  radius="sm"
-                  tt="none"
-                >
-                  {asI18n(role)}
-                </Badge>
-              ))}
-            </Group>
-          )}
-          {user.fixtures && user.fixtures.length > 0 && (
-            <Group gap={6}>
-              <Text size="sm" fw={600}>
-                {m.virtual_users_fixtures()}
-              </Text>
-              {user.fixtures.map((fixture) => (
-                <Text key={fixture} size="sm" ff="monospace" c="dimmed">
-                  {asI18n(fixture)}
-                </Text>
-              ))}
-            </Group>
-          )}
-        </Section>
+        )}
+      </SectionCard>
 
-        <Section title={m.virtual_users_stops()} testId="virtual-user-stops">
-          {/*
-            Nothing to show per declaration: how much you will spend today is
-            not a fact about this person, so the budget is a run flag. What the
-            engine does when nobody passes one is the only stable answer here.
-          */}
-          <Text size="sm" c="dimmed">
-            {m.virtual_users_budget_default()}
+      <SectionCard
+        title={m.virtual_users_will_try({ name: user.name })}
+        blurb={user.goals.length > 0 ? m.virtual_users_own_words() : undefined}
+        testId="virtual-user-wants"
+      >
+        {!hasSomethingToWant && (
+          <Text c="orange" data-testid="virtual-user-no-wants">
+            {m.virtual_users_nothing_to_want({ actor: user.name })}
           </Text>
-        </Section>
-
-        <Section
-          title={m.virtual_users_environments()}
-          testId="virtual-user-environments"
-        >
-          {user.environments ? (
-            <Group gap={6}>
-              {user.environments.map((name) => (
-                <Badge
-                  key={name}
-                  size="xs"
-                  variant="light"
-                  radius="sm"
-                  tt="none"
+        )}
+        {user.goals.length > 0 && (
+          <Stack gap={12}>
+            {user.goals.map((goal) => (
+              <Group key={goal} gap={10} wrap="nowrap" align="flex-start">
+                <ThemeIcon
+                  variant="transparent"
+                  color="green"
+                  c="green"
+                  size="sm"
                 >
-                  {asI18n(name)}
-                </Badge>
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-              {m.virtual_users_environments_default()}
-            </Text>
-          )}
-        </Section>
+                  <CheckCircle2 size={18} />
+                </ThemeIcon>
+                <Text>{m.virtual_users_quoted({ goal })}</Text>
+              </Group>
+            ))}
+          </Stack>
+        )}
+        {user.intents.length > 0 && <Tasks user={user} />}
+      </SectionCard>
 
+      <SectionCard
+        title={m.virtual_users_allowed({ name: user.name })}
+        blurb={reachSentence(user)}
+        testId="virtual-user-reach"
+      >
+        <Reach user={user} />
+      </SectionCard>
+
+      <SectionCard
+        title={m.virtual_users_visits()}
+        testId="virtual-user-visits-section"
+        help="visits"
+      >
         <VirtualUserSchedule
           persona={user.id}
+          name={user.name}
           declaredDisposition={user.disposition}
           declaredGoals={user.goals}
+          production={production}
         />
+        <VirtualUserVisits
+          persona={user.id}
+          name={user.name}
+          onOpen={onOpenVisit}
+        />
+      </SectionCard>
 
-        <VirtualUserRuns persona={user.id} />
-
-        <Section title={m.virtual_users_run()} testId="virtual-user-run">
-          <Text size="sm" ff="monospace" className={styles.command}>
-            {asI18n(`pikku persona run ${environment} ${user.id}`)}
-          </Text>
-          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-            {m.virtual_users_run_note()}
-          </Text>
-          {/*
-            The account is not a by-product of a run: a persona doing the job in
-            production has to be provisioned before anybody signs in as them.
-          */}
-          <Text size="sm" ff="monospace" className={styles.command}>
-            {asI18n(`pikku persona sync ${environment}`)}
-          </Text>
-          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-            {m.virtual_users_sync_note()}
-          </Text>
-        </Section>
-      </Stack>
-    </Box>
+      <DeveloperDetails user={user} environment={environment} />
+    </Stack>
   )
 }

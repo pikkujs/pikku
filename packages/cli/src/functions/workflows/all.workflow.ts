@@ -10,6 +10,7 @@ import {
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
+import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -83,10 +84,23 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
 
+    const needsBootstrap = !existsSync(config.outDir)
+    const dbTypes = await ensureDbTypes(
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir,
+      config.db
+    )
+    if (dbTypes === 'stubbed') {
+      logger.warn(
+        'db/schema.gen.ts could not be generated from the migrations; wrote an empty DB until `pikku db migrate` runs'
+      )
+    }
+
     const allImports: string[] = []
     let functionTypesFileExists = true
 
-    if (!existsSync(config.outDir)) {
+    if (needsBootstrap) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
       // Every `getInspectorState` step below discards its result on purpose. A
       // step's return value is stored as the step result and stays reachable for
@@ -163,11 +177,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuVariableDefinitionTypes',
         null
       )
-      if (!config.addon) {
-        await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
-          bootstrap: true,
-        })
-      }
+      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
+        bootstrap: true,
+      })
       // Before the re-inspect, not after: the inspector builds its own TS
       // program, and every user file reaches the wirings through
       // `#pikku/<leaf>`. Without the indexes those specifiers do not resolve,
@@ -252,9 +264,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    if (!config.addon) {
-      await workflow.do('CLI types', 'pikkuCLITypes', null)
-    }
+    await workflow.do('CLI types', 'pikkuCLITypes', null)
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
@@ -316,6 +326,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Flags', 'pikkuFlags', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
       workflow.do('Variables', 'pikkuVariables', null),
+      workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
     ])
 
@@ -366,6 +377,20 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
+    // The function types were written from the setup-only inspection, which
+    // never visits `defineCredential`, so they fell back to an untyped
+    // CredentialsMap. Now that the credentials leaf exists, point them at it.
+    if (
+      config.credentialsFile &&
+      stateAfterScaffold.credentials?.definitions.length
+    ) {
+      await workflow.do(
+        'Function types (credentials)',
+        'pikkuFunctionTypesSplit',
+        {}
+      )
+    }
+
     // The generated credentials file registers the project's own credential
     // meta into pikku state, which is what lets `wire.getCredential` resolve a
     // credential the app declares rather than one an addon brought with it.
@@ -393,11 +418,17 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     let remoteRPC = false
     let webhook = false
+    let webhookSources = false
     let remoteJobs = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
       webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
+      webhookSources = await workflow.do(
+        'Webhook sources',
+        'pikkuWebhookSources',
+        null
+      )
       remoteJobs = await workflow.do('Remote jobs', 'pikkuRemoteJobs', null)
       if (workflows) {
         workflowRoutes = await workflow.do(
@@ -427,6 +458,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflows ||
       remoteRPC ||
       webhook ||
+      webhookSources ||
       remoteJobs ||
       workflowRoutes ||
       unresolvedSchemas
@@ -474,6 +506,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         allImports.push(
           config.triggersWiringMetaFile,
           config.triggerSourcesMetaFile,
+          config.webhookSourcesMetaFile,
           config.triggersWiringFile
         )
       }
@@ -483,6 +516,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('HTTP', 'pikkuCommandHTTP', null),
         workflow.do('Channels', 'pikkuCommandChannels', null),
         workflow.do('CLI', 'pikkuCLI', null),
+        workflow.do('Webhook sources', 'pikkuWebhookSources', null),
       ])
 
       // Written on every build, empty when the addon has no tables: the
@@ -491,7 +525,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await writeSchemaArtifact(
         config.rootDir,
         config.outDir,
-        config.db?.pgliteExtensions
+        config.db?.pgliteExtensions,
+        config.db?.sqliteExtensions
       )
     }
 

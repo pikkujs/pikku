@@ -32,7 +32,7 @@ export const FabricLLMKey = pikkuSessionlessFunc({
       )
     }
 
-    const ctx = await resolveApiContext()
+    const ctx = await resolveApiContext({ resolveProject: false })
     if (!ctx.token) {
       throw new UnauthorizedError(
         'Not logged in. Run `pikku fabric login` first.'

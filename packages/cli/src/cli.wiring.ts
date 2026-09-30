@@ -20,6 +20,11 @@ import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
+import {
+  webhooksSetup,
+  webhooksStatus,
+  webhooksTeardown,
+} from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
@@ -32,6 +37,16 @@ import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
+import {
+  pikkuReleaseDiff,
+  pikkuReleaseInit,
+  pikkuReleasePrepare,
+  pikkuReleaseSnapshot,
+} from './functions/commands/release.js'
+import {
+  renderReleaseInit,
+  renderReleasePrepare,
+} from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
   examplesAdd,
@@ -87,6 +102,19 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
+import {
+  appList,
+  appNativeAdd,
+  appNativeCheck,
+  appNativeInit,
+  appNativeUpgrade,
+} from './functions/commands/app.js'
+import {
+  renderAppList,
+  renderAppNativeCheck,
+  renderAppNativeWrite,
+} from './functions/app/render.js'
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import { doc, renderDoc } from './functions/commands/doc.js'
 import {
@@ -321,6 +349,11 @@ wireCLI({
             'Exclude functions by deploy target (comma-separated: serverless, server)',
           type: 'string[]',
         },
+        workflowMeta: {
+          description:
+            "Keep these workflows' meta without their registration, for a deploy unit that only starts them (comma-separated)",
+          type: 'string[]',
+        },
         forceRelativeImports: {
           description:
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
@@ -390,15 +423,14 @@ wireCLI({
       func: pikkuSemver,
       render: renderSemver,
       description:
-        "Derive the release semver by comparing this build's surface against a deployed one; writes .pikku/changes.gen.json",
+        'Deprecated: use `pikku release diff` or `pikku release snapshot`',
       options: {
         against: {
           description:
             'Baseline to compare against: a .pikku directory, a snapshot file, or a snapshot URL',
         },
         emit: {
-          description:
-            "Produce this build's surface snapshot instead of comparing — publish it to serve as a baseline. Pair with --out; without it the snapshot goes to stdout after the CLI banner",
+          description: 'Same as `pikku release snapshot`',
           default: false,
         },
         out: {
@@ -411,6 +443,72 @@ wireCLI({
         },
       },
     }),
+    release: {
+      description:
+        'Version and changelog releases from the API surface, for trunk to ship to production',
+      subcommands: {
+        diff: pikkuCLICommand({
+          func: pikkuReleaseDiff,
+          render: renderSemver,
+          description:
+            "Compare this build's surface against the last release and report the semver it owes; writes .pikku/changes.gen.json",
+          options: {
+            against: {
+              description:
+                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+            },
+            out: {
+              description:
+                'Where to write the changes (defaults to .pikku/changes.gen.json)',
+            },
+            failOn: {
+              description:
+                'Exit non-zero when the verdict is at or above this level: major, minor or patch',
+            },
+          },
+        }),
+        snapshot: pikkuCLICommand({
+          func: pikkuReleaseSnapshot,
+          render: renderSemver,
+          description:
+            "Write this build's surface snapshot, the baseline a later diff compares against",
+          options: {
+            out: {
+              description:
+                'Where to write the snapshot (defaults to stdout, after the CLI banner)',
+            },
+          },
+        }),
+        init: pikkuCLICommand({
+          func: pikkuReleaseInit,
+          render: renderReleaseInit,
+          description:
+            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+          options: {
+            force: {
+              description: 'Overwrite an existing surface.pikku.json',
+              default: false,
+            },
+          },
+        }),
+        prepare: pikkuCLICommand({
+          func: pikkuReleasePrepare,
+          render: renderReleasePrepare,
+          description:
+            'Bump package.json and write the changelog and snapshot for the next release; commits and pushes nothing',
+          options: {
+            dryRun: {
+              description: 'Work out the release without writing anything',
+              default: false,
+            },
+            goLive: {
+              description: 'Release 1.0.0: the app is live and 0.x is over',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     watch: pikkuCLICommand({
       func: watch,
       description: 'Watch for file changes and regenerate automatically',
@@ -540,6 +638,68 @@ wireCLI({
           func: pikkuEmails,
           description:
             'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+      },
+    },
+    webhooks: {
+      description: 'Register webhook sources with their providers',
+      subcommands: {
+        status: pikkuCLICommand({
+          func: webhooksStatus,
+          description:
+            'Check each webhook source at its provider, printing one JSON line per source: ok, missing or drifted',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
+        }),
+        setup: pikkuCLICommand({
+          func: webhooksSetup,
+          description:
+            'Create or update each webhook source at its provider where its check is not ok, printing one JSON line per source',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
+        }),
+        teardown: pikkuCLICommand({
+          func: webhooksTeardown,
+          description:
+            'Remove each webhook source from its provider, printing one JSON line per source',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
         }),
       },
     },
@@ -1065,6 +1225,103 @@ wireCLI({
         }),
       },
     },
+    app: {
+      description:
+        'The apps in `frontends`: create one, list them, and package one as a desktop or mobile app',
+      subcommands: {
+        new: pikkuCLICommand({
+          func: pikkuAppNew,
+          render: renderAppNew,
+          description:
+            'Add a frontend from the starter template, for a group the first app is not for',
+          parameters: '<slug>',
+          options: {
+            serves: {
+              description:
+                'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
+            },
+            personas: {
+              description:
+                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+            },
+            template: {
+              description:
+                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/starter-template/apps/app)',
+            },
+            primary: {
+              description: 'Make this the primary frontend',
+              default: false,
+            },
+            install: {
+              description: 'Run `bun install` afterwards',
+              default: true,
+            },
+          },
+        }),
+        list: pikkuCLICommand({
+          func: appList,
+          render: renderAppList,
+          description: 'List every app, where it lives and what it ships as',
+        }),
+        native: {
+          description:
+            "Package an app as a desktop, Android or iOS app — the Tauri project in the app's src-tauri/",
+          subcommands: {
+            init: pikkuCLICommand({
+              func: appNativeInit,
+              render: renderAppNativeWrite,
+              description:
+                "Create the app's native project, or re-apply its config to one that exists",
+              parameters: '<name>',
+              options: {
+                desktop: { description: 'Build for macOS, Windows and Linux' },
+                android: { description: 'Build for Android' },
+                ios: { description: 'Build for iOS' },
+                identifier: {
+                  description:
+                    'Bundle id and Android package name, e.g. com.acme.shop — permanent once released (default: com.<npm scope>.<name>)',
+                },
+                productName: {
+                  description: 'The name people see (default: the app name)',
+                },
+                url: {
+                  description:
+                    'Open a deployed server instead of bundling the frontend — nothing is packaged',
+                },
+                bundleServer: {
+                  description:
+                    'Ship the compiled pikku server inside the app as a sidecar. Desktop only; installed by `pikku deploy apply --provider standalone --runtime bun`',
+                },
+                plugins: {
+                  description:
+                    'Comma-separated native plugins: biometric, haptics, barcode-scanner, nfc, geolocation, notification, dialog, clipboard-manager, os, store',
+                },
+              },
+            }),
+            add: pikkuCLICommand({
+              func: appNativeAdd,
+              render: renderAppNativeWrite,
+              description: 'Add native plugins to an app',
+              parameters: '<name> [plugins...]',
+            }),
+            upgrade: pikkuCLICommand({
+              func: appNativeUpgrade,
+              render: renderAppNativeWrite,
+              description:
+                "Rewrite pikku's files in the native project from the config; yours are left alone",
+              parameters: '<name>',
+            }),
+            check: pikkuCLICommand({
+              func: appNativeCheck,
+              render: renderAppNativeCheck,
+              description:
+                'Check native projects against the config, and apps against each other',
+              parameters: '[name]',
+            }),
+          },
+        },
+      },
+    },
     new: {
       description: 'Scaffold new functions and wirings',
       subcommands: {
@@ -1155,7 +1412,11 @@ wireCLI({
             },
             credential: {
               description:
-                'Include per-user credential wiring (apikey, bearer, or oauth2)',
+                'Per-user credential type (apikey, bearer, basic, or oauth2); with --openapi it defaults to what the spec declares',
+            },
+            auth: {
+              description:
+                'With --openapi: user (default — each user connects their own credential), shared (one secret behind every user), or none (public API)',
             },
             test: {
               description: 'Include test harness (default: true)',
@@ -1163,7 +1424,27 @@ wireCLI({
             },
             openapi: {
               description:
-                'Path to OpenAPI YAML/JSON spec to generate functions from',
+                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from',
+            },
+            openapiHeader: {
+              description:
+                'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
+            },
+            tags: {
+              description:
+                'With --openapi: keep only operations with these tags',
+            },
+            include: {
+              description:
+                'With --openapi: keep only operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            exclude: {
+              description:
+                'With --openapi: drop operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            install: {
+              description:
+                'With --openapi inside an app: add the addon to the app — dependencies, wireAddon, auth wiring, base URL (default: on inside an app)',
             },
             authConfig: {
               description:
@@ -1254,6 +1535,11 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
+            runtime: {
+              description:
+                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
+              default: 'node',
+            },
             resultFile: {
               description:
                 'Write structured JSON plan result to this file path',
@@ -1269,14 +1555,10 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            desktop: {
+            runtime: {
               description:
-                'Also generate a desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone.',
-              default: false,
-            },
-            desktopUrl: {
-              description:
-                'Point the desktop shell at an already-deployed server instead of bundling one. Implies --desktop; nothing is shipped with the app.',
+                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
+              default: 'node',
             },
             fromPlan: {
               description:

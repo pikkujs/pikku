@@ -12,8 +12,21 @@ import {
   Radio,
   Search,
   Wrench,
+  MessageCircle,
+  Users,
+  ShoppingBag,
+  Cloud,
+  Image,
+  Type,
+  FileText,
+  Phone,
+  Landmark,
+  LifeBuoy,
+  Shield,
+  ClipboardList,
 } from 'lucide-react'
 import type { PackageMeta } from './packageMeta'
+import { categoryJob } from './addonJobs'
 
 export interface CategoryMeta {
   icon: ComponentType<{ size?: number }>
@@ -23,6 +36,25 @@ export interface CategoryMeta {
 const CATEGORY_META: Record<string, CategoryMeta> = {
   auth: { icon: KeyRound, color: 'violet' },
   payments: { icon: CreditCard, color: 'green' },
+  payment: { icon: CreditCard, color: 'green' },
+  financial: { icon: Landmark, color: 'green' },
+  messaging: { icon: MessageCircle, color: 'teal' },
+  telecom: { icon: Phone, color: 'teal' },
+  machine_learning: { icon: Bot, color: 'orange' },
+  customer_relation: { icon: Users, color: 'pink' },
+  support: { icon: LifeBuoy, color: 'pink' },
+  ecommerce: { icon: ShoppingBag, color: 'lime' },
+  cloud: { icon: Cloud, color: 'indigo' },
+  hosting: { icon: Cloud, color: 'indigo' },
+  media: { icon: Image, color: 'grape' },
+  text: { icon: Type, color: 'gray' },
+  forms: { icon: FileText, color: 'cyan' },
+  monitoring: { icon: Activity, color: 'red' },
+  security: { icon: Shield, color: 'violet' },
+  project_management: { icon: ClipboardList, color: 'blue' },
+  collaboration: { icon: Users, color: 'blue' },
+  tools: { icon: Wrench, color: 'gray' },
+  developer_tools: { icon: Wrench, color: 'gray' },
   database: { icon: Database, color: 'blue' },
   agents: { icon: Bot, color: 'orange' },
   ai: { icon: Bot, color: 'orange' },
@@ -47,6 +79,8 @@ export function getCategoryMeta(category: string | undefined): CategoryMeta {
 }
 
 export function prettyCategory(category: string): string {
+  const job = categoryJob(category)
+  if (job) return job
   return category.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 

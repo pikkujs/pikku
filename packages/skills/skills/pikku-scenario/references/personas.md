@@ -5,7 +5,7 @@ A **persona** is a person your product is for; an **actor** is one body that sig
 - Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.
 - Never write an email address: each is derived from the persona id and `scenarios.emailDomain`, and a hand-written one signs in as somebody who was never created.
 - `roles` is typechecked against `defineSystemRole`; an undeclared role is a build error.
-- A person who is only ever acted *upon* — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
+- A person who is only ever acted _upon_ — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
 - A persona holds only what is true of that kind of person for the app's whole lifetime (`name`, `jobTitle`, `description`, `personality`, `roles`, `goals`, `disposition`). What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
 
 ## Declaring personas in TypeScript
@@ -50,6 +50,32 @@ A project that never declares a persona keeps working: a scenario that names no 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
 
+## Actors that call a third-party API
+
+An addon generated from an upstream API (Dolibarr, a CRM, a calendar) calls it
+with the signed-in user's own credential. An actor has none until one is stored
+for it, so every step that reaches the addon fails with `No <X> session`. Give
+the `actor` plugin a `credentials` option, and each actor carries its upstream
+credential into every session:
+
+- `names: ['dolibarr']` — the credentials to carry
+- `store: (name, value, userId) => credentialService.set(name, value, userId)`
+- `remove: (name, userId) => credentialService.delete(name, userId)`
+
+At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` —
+`dan` + `dolibarr` is `ACTOR_CREDENTIAL_DAN_DOLIBARR` — and stores it with
+`credentialService.set` for that actor. A bare value is stored as `{ token }`
+(what a delegated or bearer credential holds); a JSON object is stored as-is,
+e.g. `{"apiKey":"…"}` for an API-key credential. Unset means the actor has no
+upstream credential: `remove` drops one stored at an earlier sign-in.
+
+- **Values live in `.env` (or CI secrets), never in `personas.ts` or code.**
+  Use a dedicated upstream test account per persona, not a real person's.
+- `read` defaults to `process.env`; a Worker passes `(key) => variables.get(key)`.
+- A malformed JSON value refuses the sign-in with a 500 that names the variable.
+- A delegated token expires upstream like any other; re-signing the actor
+  in re-stores whatever the variable holds now.
+
 ## The same actors sign a human in
 
 Declared actors are not only for automated runs. `signInPath` is Better Auth's
@@ -57,13 +83,17 @@ Declared actors are not only for automated runs. `signInPath` is Better Auth's
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The sandbox dev server bakes both halves into the frontend from the declared
-personas: `VITE_DEV_ACTORS` (the JSON actor list) and `VITE_DEV_ACTOR_SECRETS`
-(`{ email: credential }`, one per persona — `SCENARIO_ACTOR_SECRET` itself never
-goes in a bundle; see **pikku-auth**). Neither var is set in a production
-build, so the control renders nothing there — but gate the reads on your
-bundler's dev flag anyway (`import.meta.env.DEV ? … : undefined`) so no
-credential reaches a production bundle in the first place.
+The switcher holds no credential. It lists personas from
+`/auth/sign-in/personas` and signs in by posting only a persona id to
+`/auth/sign-in/persona`; the server resolves the address. One server piece
+serves both, in the auth config:
+
+```ts snippet:personaSignIn
+```
+
+It is always open under `pikku dev`. A deployed stage needs actor
+sign-in opted in **and** its `devSwitcher` feature flag on; production never
+has the opt-in, so it lists nobody and refuses every persona sign-in.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
 `<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
@@ -72,16 +102,16 @@ one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them
 errors:
 
-- **The frontend was not started by the dev script.** The two `VITE_DEV_*` vars
-  are computed by `bun run dev` and read by vite once, at boot. A bare `vite dev`
-  — including one restarted by hand — has an empty list and renders nothing.
-- **`SCENARIO_ACTOR_SECRET` is not in `.env`.** No root secret, no per-persona
-  credentials, and the switcher filters out every actor it cannot sign in.
+- **The list is empty.** On a deployed stage that is the gate
+  doing its job — check the opt-in and the `devSwitcher` flag. Locally, check
+  the personas declare an `email` (via `scenarios.emailDomain`) and are not
+  `runnable: false`.
+- **`personaSignIn` is missing, or the frontend calls another API.** A dev
+  proxy (`VITE_API_PROXY`, default `http://localhost:3000`) that points at
+  another project's API lists that project's personas, or none.
 - **It is not mounted on the page you are looking at.** The template mounts it
   on the login screen. A public homepage that replaces the `/` → `/app`
   redirect needs its own `<DevActorSwitcher />` in the public layout.
 
-When the switcher is there but signing in fails with `401 Invalid actor
-secret`, check which server answered before checking the secret: a frontend
-whose dev proxy (`VITE_API_PROXY`, default `http://localhost:3000`) points at
-another project's API sends the sign-in there.
+When the switcher lists personas but a click 404s, that persona has no `email`
+or is `runnable: false`.

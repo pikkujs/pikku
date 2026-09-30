@@ -259,13 +259,13 @@ Do not push without explicit confirmation. Do not merge.
 When pikku itself is what cost you time — a wrong generated type, a check that
 passed when it should not, a skill that misled you — file it with `pikku fabric
 report`. The `pikku-report` skill owns the ladder, the two kinds, the JSON-on-
-stdin form and the local spool; read it before filing.
+stdin form and asking the user at hand-over; read it before filing.
 
-Reporting at all is permitted here (see **Hard constraints**) and is the one
-network call a build may make. Nothing is written to the repo. Never patch pikku
+Filing is permitted here (see **Hard constraints**), and sending what was filed
+is the one network call a build may make, once the user agrees. Nothing is
+written to the repo. Never patch pikku
 itself — not `node_modules`, not a linked checkout — work around it in the app,
 report it, and let the fix happen once.
-
 
 ## Hard constraints
 

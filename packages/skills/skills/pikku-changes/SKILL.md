@@ -1,172 +1,146 @@
 ---
 name: pikku-changes
-description: 'Work a project''s changes queue — the todo list someone filed by walking a deployed stage. Covers `pikku fabric changes list|claim|show|ask|shot|done`, when to ask a question instead of guessing, and how to offer options as images. TRIGGER when: the user says "work the changes", "pick up the changes queue", names a change by its #number, or you are otherwise idle in a repo that has a pikkufabric.config.json. DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
+description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout linked to a Fabric project (`pikku fabric config` shows one). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
 installGroups: [fabric]
 ---
 
 # Working a changes queue
 
-Someone walked the deployed app and circled twenty things. Each one is a row with their
-words, a picture of what they were looking at, and the elements the circle enclosed. You
-have the repo and the app running locally. Your job is to empty the queue without making
-them regret filing.
+Someone walked the deployed app and circled things. Each item is their words, a
+screenshot of what they saw, and the elements the circle enclosed. You have the repo.
+Empty the queue without making them regret filing.
+
+Run every command from the checkout: the project comes from its git remote (`pikku fabric config` shows which).
+`--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
+
+## Which stage
+
+The queue is per project. "Against develop" or a pasted stage URL narrows it:
+`--stage` takes a branch, the stage URL (as filed, path optional) or a stage id. With
+no stage named, work the whole project. An unknown name prints the stages there are.
 
 ## The loop
 
-Every argument is a flag; nothing is positional. `--json` works on any of them. The
-project comes from the local `pikkufabric.config.json`, so `--project-id` is only needed
-when you are not in the checkout.
+**Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
+something changed. `next` does the waiting and exits only when there is work.
+
+1. Start `next` as a **background** command, and stop there until it exits:
+
+   ```bash
+   pikku fabric changes next --stage develop --claim --claimed-by claude-code
+   ```
+
+   It waits out the grace window (a just-filed item is held about a minute so a batch
+   being typed arrives together), claims what is ready as one group, prints it, and
+   exits. It also wakes when someone answers a question you asked under that
+   `--claimed-by`. It is woken by fabric's change events the moment an item is filed
+   or answered, and sleeps exactly until a held item becomes claimable; when the event
+   stream is unavailable it falls back to checking every `--interval` seconds.
+
+2. When it exits, read the exit code:
+
+   | code | meaning                                                | do                                              |
+   | ---- | ------------------------------------------------------ | ----------------------------------------------- |
+   | 0    | work printed (claimed, and/or `Answered`)              | work it, then step 3                            |
+   | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `next`                         |
+   | 3    | session refused                                        | tell the user to run `pikku fabric login`; stop |
+   | 1    | anything else (bad `--stage`, fabric down for minutes) | report the message; stop                        |
+
+3. For each item: `show` → fix → commit → `done`; or `ask` and move on; or `reply`
+   saying why you are leaving it. Then start `next` again, in the background.
+
+Without `--claim` it only reports what is claimable; claim it yourself:
 
 ```bash
-pikku fabric changes list --pickup-only --json
-pikku fabric changes claim --change-ids <id>,<id> --title "Checkout pass" --claimed-by claude-code
-pikku fabric changes show --change-id <id>
-pikku fabric changes ask --change-id <id> --question "…" --option "…" --option "…" --author-name claude-code
-pikku fabric changes shot --change-id <id> --label "Bigger" --kind option --image a.png
-pikku fabric changes done --change-id <id> --note "What you did"
+pikku fabric changes claim --change-ids 3,4 --title "Checkout pass" --claimed-by claude-code
 ```
 
-`list --pickup-only` is the one a harness wants: it skips items still inside the grace
-window, so a batch someone is mid-way through typing is picked up together rather than item
-by item as it lands.
-
-Deciding what belongs together is yours: `claim` with `--change-ids` and no `--group-id`
-forms the group. Claim an existing one with `--group-id`.
-
-Claim before working. The lease expires (30 minutes by default, `--lease-minutes` to
-change it), so an abandoned claim returns to the queue rather than parking the work
-forever — but a second harness picking up something you are halfway through is the failure
-this prevents.
+A `claim` refused with a 409 says per item why — held for the filer, inside another
+group's lease, done — and when a held or leased item is **claimable at** (a local
+`HH:MM`; `list` and `show` print the same). An item inside someone else's live lease
+cannot be taken. For held items, run `next --claim` rather than retrying. The lease is 30 minutes
+(`--lease-minutes`); an abandoned claim returns to the queue by itself.
 
 ## Reading an item
 
-`show` gives you four things, in descending order of trustworthiness:
+`pikku fabric changes show 3` gives, most trustworthy first:
 
 1. **Their words.** The title and body are the requirement. Everything else is evidence.
-2. **The screenshot.** What they actually saw, at their width, with their data. When the
-   other addresses disagree with the picture, the picture is right.
-3. **The circled elements** — a testid, a source anchor, a CSS path. The testid greps
-   straight to a component because it is the i18n message key.
-4. **The source anchor**, printed as `src/routes/app.orders.tsx:42 as of a91c4e2`. That line
-   number is where the JSX was **at that commit**. Read it as a starting point and find
-   today's equivalent; never edit line 42 of today's file because the anchor said 42.
-
-Resolution is a guess and the panel says so. If the circle and the anchor point at
-different things, believe the circle.
+2. **The screenshot.** What they saw, at their width, with their data. When the other
+   addresses disagree with the picture, the picture is right.
+3. **The circled elements**: a testid (greps straight to a component, it is the i18n
+   key), a source anchor, a CSS path.
+4. **The source anchor**, `src/routes/app.orders.tsx:42 as of a91c4e2`, is where the JSX
+   was at _that_ commit. Find today's equivalent; never edit line 42 because it said 42.
 
 ## When to ask
 
-Ask when the item admits more than one reasonable implementation and you would be **picking
-for them**. Do not ask to confirm something the item already says.
+Ask when the item admits more than one reasonable implementation and you would be
+picking for them — "make the total stand out" (bigger? bolder? moved?), anything that
+changes stored data, what an existing user sees, or what something costs. Do not ask
+what the item already says, or implementation choices that are yours.
 
-Ask:
-- "Make the total stand out" — bigger, bolder, coloured, or moved above the fold?
-- "This should be faster" — is it the spinner, the request, or the number of steps?
-- Anything that changes what data is stored, what an existing user sees, or what something costs.
-
-Do not ask:
-- "Should I use flexbox or grid?" — that is yours.
-- "Do you want me to fix the typo?" — they filed it; fix it.
-- "Can you confirm you want the button blue?" — they said blue.
-
-A question costs them a context switch, not typing. That is the budget you are spending.
-
-## What a good question looks like
-
-One decision. Their vocabulary, not the codebase's. And the choices in `--option`, not in
-the sentence.
-
-> **Bad:** "How would you like me to handle the ambiguity in the checkout total component's
-> emphasis requirement?"
->
-> **Good:** `--question "Make the total stand out — which way?"`
-> `--option "Bigger" --option "Move it above the delivery line"`
-
-**A choice written into the prose is not a choice.** Every `--option` becomes a button in
-the panel and the console, and clicking one records the answer; a question that says
-"(a) build it, (b) leave existing bookings, (c) hold" makes them re-type in free text what
-they should have been able to click, and leaves you parsing prose to find out which one
-they meant. If you can enumerate them in the sentence, you can pass them as flags.
-
-Pass them even when there are only two, and even when one is "hold until I check" — that
-last one is a real option and it is the one most often left off. The filer can always
-choose "say something else", so the list constrains nothing.
-
-Batch per group. Three questions about one checkout flow go out together; three separate
-asks about the same screen is three interruptions for one context switch.
-
-Then **park it**. `ask` flips the item to `needs_answer` and you move to the next item. Do
-not sit waiting — pick answers up on your next `show`, and bound your polling so an
-unanswered item does not spin forever.
-
-## When to show instead of ask
-
-If the answer is visual and you can build it, build all of them and attach images:
+One decision, in their vocabulary, with the choices as `--option` flags — each becomes
+a button. Include "hold until I check" when it is real. Batch questions per group.
 
 ```bash
-pikku fabric changes shot --change-id <id> --label "Bigger" --kind option --image a.png
-pikku fabric changes shot --change-id <id> --label "Above the line" --kind option --image b.png
+pikku fabric changes ask --change-id 3 --question "Make the total stand out — which way?" \
+  --option "Bigger" --option "Move it above the delivery line" --author-name claude-code
 ```
 
-The panel turns a set of `option` attachments into a pick-one they open full-screen, and
-picking one writes the choice into the thread. Capture every variant in **one pass at one
-width**, including the baseline — variants shot at different sizes are not comparable, and
-comparing is the whole point.
+Then **park it** and move on. The answer wakes `next` (same `--claimed-by`); it prints
+under `Answered`, and `show` has the reply.
 
-`--kind evidence` is the other use: a picture that proves something, rendered inline rather
-than as a choice.
+If the answer is visual and you can build it, build each variant, screenshot all of
+them in one pass at one width (baseline included), and attach them — the panel turns
+`--kind option` shots into a pick-one:
+
+```bash
+pikku fabric changes shot --change-id 3 --label "Bigger" --kind option --image a.png
+```
+
+`--kind evidence` is a picture that proves something, shown inline.
+
+## Replying without asking
+
+`ask` is for a decision you need from them: it parks the item as needing an answer.
+`done` closes it. Everything else you have to say goes in a `reply`, which leaves the
+item's status exactly where it was:
+
+- you are not doing it, and why ("the copy comes from the CMS, not the app");
+- it is blocked on something that is not a question ("needs STRIPE_KEY set on the stage");
+- you could not reproduce it — attach what you saw.
+
+```bash
+pikku fabric changes reply 3 --message "Cannot reproduce on develop @ a91c4e2 — this is what I see." \
+  --image seen.png --image-label "develop @ a91c4e2" --author-name claude-code
+```
+
+Never `ask` a question you do not need answered just to leave a note, and never
+`done --note` an item you did not do — both tell the filer the wrong thing.
 
 ## Committing
 
-One item, one commit. `done` records a single `head_commit`, and that sha is what a human
-reverts when they change their mind — so an item folded in with three others cannot be
-undone without taking the other three with it. Land unrelated work separately.
-
-The subject carries the short id the way a GitHub issue number does, and the uuid goes in a
-trailer so `git log --grep` has an exact handle:
+One item, one commit — `done` records one sha, and that is what a human reverts. The
+subject carries the short id; the uuid goes in a trailer:
 
 ```
-feat(login): #4 make the sign-in heading brown
+fix(booking): #7 stop the date picker closing on the first click
 
 Change-Id: 0f3c8a12-9b44-4d2e-8f01-27c6a1d9e5b3
 ```
 
-Both ids come from `show`. The type and scope are the usual conventional-commit ones —
-`feat`, `fix`, `style`, `refactor` — with the scope naming the screen or area they were
-looking at, not the file you edited.
-
-More:
-
-```
-fix(booking): #7 stop the date picker closing on the first click
-style(nav): #12 tighten the spacing around the logo
-```
-
-Reverting one later is then:
-
-```bash
-git revert $(git log --grep="Change-Id: <uuid>" --format=%H -1)
-```
+Scope names the screen they were looking at, not the file you edited.
 
 ## Finishing
 
-`done` records the branch and commit that closed it, which is what strikes the item through
-on the page it was filed on and tells them where the fix landed. Both default to the
-checkout you are standing in, so run it from there and let it read git:
-
 ```bash
-pikku fabric changes done --change-id <id> \
-  --note "What you did, for whoever reads the thread later"
+pikku fabric changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-`--branch` and `--head-commit` override them, for the case where the fix landed somewhere
-other than where you are. Never type a sha by hand — one that does not exist points the
-filer at nothing.
+Branch and commit default to the checkout you are in — run it there, never type a sha.
+An item you decided not to do is not `done`: `reply` with why and leave it for a
+human to dismiss.
 
-An item you decided not to do is not `done`. Say why in the thread and leave it for a human
-to dismiss.
-
-## Scope
-
-Writes need the `changes:project:write` scope on your bearer. `list` and `show` are reads.
-The project comes from the local `pikkufabric.config.json`, so run these from the checkout.
+Writes need the `changes:project:write` scope; `list`, `show` and `next` without
+`--claim` are reads.

@@ -98,6 +98,7 @@ export const PersonaDetail: React.FC<PersonaDetailProps> = ({
             </Badge>
             {persona.disposition && (
               <Badge
+                data-testid={`persona-disposition-${persona.key}`}
                 variant="light"
                 color="cyan"
                 radius="sm"

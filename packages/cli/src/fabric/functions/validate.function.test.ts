@@ -3,11 +3,18 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import {
+
+// The link findings depend on whether there is a session, so HOME points at a
+// disposable directory before anything reads ~/.fabric/auth.json.
+process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-validate-home-'))
+delete process.env.FABRIC_API_URL
+delete process.env.FABRIC_PROJECT_ID
+const { writeAuthFile, DEFAULT_API_URL } = await import('../lib/config.js')
+const {
   runValidate,
   renderValidate,
-  runValidate as runLiveValidate,
-} from './validate.function.js'
+  runValidate: runLiveValidate,
+} = await import('./validate.function.js')
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -17,10 +24,17 @@ async function writeJson(path: string, data: unknown) {
   await writeFile(path, JSON.stringify(data, null, 2), 'utf8')
 }
 
+async function writeFrontends(root: string, frontends: unknown) {
+  const path = join(root, 'pikku.config.json')
+  const config = JSON.parse(await readFile(path, 'utf8'))
+  await writeFile(
+    path,
+    JSON.stringify({ ...config, frontends }, null, 2),
+    'utf8'
+  )
+}
+
 async function makeValidProject(root: string) {
-  await writeJson(join(root, 'pikkufabric.config.json'), {
-    projectId: 'proj-abc123',
-  })
   await writeJson(join(root, 'pikku.config.json'), {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
@@ -172,15 +186,9 @@ describe('pikku fabric validate', () => {
       const result = await runValidate(tmp)
       assert.strictEqual(result.ok, false)
       const ids = result.findings.map((f) => f.id)
-      assert.ok(ids.includes('fabric-config-missing'), 'fabric-config-missing')
       assert.ok(ids.includes('pikku-config-missing'), 'pikku-config-missing')
       assert.ok(ids.includes('root-package-missing'), 'root-package-missing')
       assert.ok(ids.includes('functions-pkg-missing'), 'functions-pkg-missing')
-      // fabric-config-missing is info, not error — ok=false is from other checks
-      const fabricFinding = result.findings.find(
-        (f) => f.id === 'fabric-config-missing'
-      )
-      assert.strictEqual(fabricFinding?.severity, 'info')
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -269,58 +277,33 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  describe('pikkufabric.config.json', () => {
-    test('missing pikkufabric.config.json → info (not blocking)', async () => {
+  describe('fabric project link', () => {
+    test('logged out, the link is not checked', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'pikkufabric.config.json'), { force: true })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true) // info only — validate works without fabric config
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-missing'
-        )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
+        await writeAuthFile({ tokens: {} })
+        const ids = (await runValidate(tmp)).findings.map((f) => f.id)
+        assert.ok(!ids.includes('fabric-project-not-linked'))
+        assert.ok(!ids.includes('fabric-project-unresolved'))
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
     })
 
-    test('missing projectId → info (not blocking)', async () => {
+    test('logged in with no matching remote → info (not blocking)', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {}) // no projectId
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true)
-        const ids = result.findings.map((f) => f.id)
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-no-project-id'
-        )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
-        assert.ok(!ids.includes('fabric-config-missing'))
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
-    test('placeholder projectId "__PROJECT_ID__" → info (not blocking)', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: '__PROJECT_ID__',
-        })
+        await writeAuthFile({ tokens: { [DEFAULT_API_URL]: 'tok' } })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true)
         const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-placeholder-project-id'
+          (f) => f.id === 'fabric-project-not-linked'
         )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
+        assert.strictEqual(finding?.severity, 'info')
       } finally {
+        await writeAuthFile({ tokens: {} })
         await rm(tmp, { recursive: true, force: true })
       }
     })
@@ -1501,7 +1484,7 @@ describe('pikku fabric validate', () => {
   })
 
   describe('apps/ frontend checks', () => {
-    test('app not declared in pikkufabric.config.json frontends → warn', async () => {
+    test('app not declared in pikku.config.json frontends → warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1520,15 +1503,12 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('pikkufabric.config.json frontend cwd does not exist → error', async () => {
+    test('pikku.config.json frontend cwd does not exist → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await mkdir(join(tmp, 'apps'), { recursive: true })
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: 'proj-abc123',
-          frontends: { web: { cwd: './apps/web', kind: 'ssr' } },
-        })
+        await writeFrontends(tmp, { web: { cwd: './apps/web', kind: 'ssr' } })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
         const finding = result.findings.find(
@@ -1565,10 +1545,7 @@ describe('pikku fabric validate', () => {
           name: 'web',
           dependencies: {},
         })
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: 'proj-abc123',
-          frontends: { web: { cwd: 'apps/web', kind: 'ssr' } },
-        })
+        await writeFrontends(tmp, { web: { cwd: 'apps/web', kind: 'ssr' } })
         const result = await runValidate(tmp)
         assert.ok(
           result.findings.some((f) => f.id === 'app-missing-functions-sdk-web'),
@@ -1646,6 +1623,9 @@ describe('pikku fabric validate', () => {
         assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
+        assert.match(finding!.fixHint, /featureFlags/)
+        assert.match(finding!.fixHint, /personaSignIn/)
+        assert.doesNotMatch(finding!.fixHint, /VITE_DEV_ACTOR/)
         assert.strictEqual(result.ok, false)
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -1683,8 +1663,8 @@ describe('pikku fabric validate', () => {
           'src/pages/LoginPage.tsx':
             "import { useDevActors } from '@pikku/react'\n" +
             'export const LoginPage = () => {\n' +
-            '  const { actors, signInAs } = useDevActors({ actors: undefined, secrets: undefined, apiUrl: "/api" })\n' +
-            '  return <>{actors.map((a) => <button key={a.key} onClick={() => signInAs(a.email)} />)}</>\n}\n',
+            '  const { actors, signInAs } = useDevActors({ apiUrl: "/api" })\n' +
+            '  return <>{actors.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
@@ -1692,6 +1672,28 @@ describe('pikku fabric validate', () => {
             (f) => f.id === 'app-missing-actor-quick-login-web'
           ),
           'useDevActors() is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a login screen calling signInAsPersona() → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            "import { signInAsPersona } from '@pikku/react'\n" +
+            'export const LoginPage = () =>\n' +
+            '  <button onClick={() => signInAsPersona({ apiUrl: "/api", id: "admin" })} />\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-actor-quick-login-web'
+          ),
+          'signInAsPersona() is a valid quick-login fingerprint'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -2311,13 +2313,10 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
 })
 
 describe('declared frontends + type-check (live validate.function)', () => {
-  // pikkufabric.config.json is unvalidated JSON — validate has to survive
+  // pikku.config.json is unvalidated JSON — validate has to survive
   // whatever is in it and report the problem, not crash on a property access.
   const declareFrontends = async (root: string, frontends: unknown) => {
-    await writeJson(join(root, 'pikkufabric.config.json'), {
-      projectId: 'proj-abc123',
-      frontends,
-    })
+    await writeFrontends(root, frontends)
   }
 
   const findingIds = (findings: Array<{ id: string }>) =>
@@ -2441,10 +2440,7 @@ describe('declared frontends + type-check (live validate.function)', () => {
 
 describe('deployed frontend API base (live validate.function)', () => {
   const declareWeb = async (root: string, deploy = true) => {
-    await writeJson(join(root, 'pikkufabric.config.json'), {
-      projectId: 'proj-abc123',
-      frontends: { web: { cwd: 'apps/web', deploy } },
-    })
+    await writeFrontends(root, { web: { cwd: 'apps/web', deploy } })
   }
 
   const writeApiLib = async (root: string, source: string) => {
@@ -3159,7 +3155,7 @@ describe('the generated coercion map', () => {
   const withCoercions = `export const coercionMap = {
   "assessment": {
     "created_at": "date",
-    "admin_rights": "boolean"
+    "admin_rights": "bool"
   }
 } as const
 `
@@ -3198,6 +3194,24 @@ describe('the generated coercion map', () => {
       assert.ok(
         !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
         'expected no finding once the plugin is wired'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is an error when the only declared kind is bool', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n  "assessment": {\n    "admin_rights": "bool"\n  }\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected coercion-map-not-wired for a bool-only map'
       )
     } finally {
       await rm(tmp, { recursive: true, force: true })

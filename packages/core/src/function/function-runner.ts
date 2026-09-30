@@ -6,7 +6,7 @@ import {
 } from '../wirings/channel/channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
-import { pikkuState } from '../pikku-state.js'
+import { getCreateWireServices, pikkuState } from '../pikku-state.js'
 import {
   applyDefaultsFromSchema,
   coerceTopLevelDataFromSchema,
@@ -128,6 +128,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   {
     singletonServices,
     createWireServices,
+    wireServices: providedWireServices,
     data,
     auth: wiringAuth,
     inheritedMiddleware,
@@ -143,6 +144,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
+    /**
+     * Wire services the caller already built and still owns, such as a
+     * channel's per-connection set. Used as-is and never closed here.
+     */
+    wireServices?: Record<string, unknown>
     data: () => Promise<In> | In
     auth?: boolean
     inheritedMiddleware?: MiddlewareMetadata[]
@@ -201,6 +207,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
       ]
       if (funcMeta) {
         funcPackageName = addonTarget.packageName
+        // A `ref('ns:fn')` the app wired arrives with no instance, because the
+        // wiring is the app's. Without adopting the one the namespace resolves
+        // to, the function runs with the addon's declared secrets alone — the
+        // consuming app's `secretOverrides` and grants silently do not apply,
+        // and the app's own global middleware, running inside that scope, is
+        // denied secrets it owns.
+        addonInstance = addonInstance ?? addonTarget.instance
       }
     }
   }
@@ -222,13 +235,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
       )
     : singletonServices
 
-  let resolvedCreateWireServices = createWireServices
-  if (funcPackageName) {
-    const factories = pikkuState(funcPackageName, 'package', 'factories')
-    if (factories?.createWireServices) {
-      resolvedCreateWireServices = factories.createWireServices
-    }
-  }
+  // knowledge: decisions/internals/the-runner-resolves-wire-services-itself.md
+  const packageCreateWireServices = funcPackageName
+    ? pikkuState(funcPackageName, 'package', 'factories')?.createWireServices
+    : undefined
+  const reusedWireServices = packageCreateWireServices
+    ? undefined
+    : providedWireServices
+  const resolvedCreateWireServices =
+    packageCreateWireServices ?? createWireServices ?? getCreateWireServices()
 
   const allChannelMiddleware = combineChannelMiddleware(wireType, wireId, {
     wireInheritedChannelMiddleware: inheritedChannelMiddleware,
@@ -450,13 +465,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
     let invocationAuditLog: AuditLog | undefined
     let invocationAnalytics: AnalyticsLog | undefined
     try {
-      wireServices = (await resolvedCreateWireServices?.(
-        resolvedSingletonServices,
-        invocationWire
-      )) as Record<string, unknown> | undefined
+      if (!funcMeta.singletonServicesOnly && !reusedWireServices) {
+        wireServices = (await resolvedCreateWireServices?.(
+          resolvedSingletonServices,
+          invocationWire
+        )) as Record<string, unknown> | undefined
+      }
+      const invocationWireServices = funcMeta.singletonServicesOnly
+        ? undefined
+        : (reusedWireServices ?? wireServices)
       let services =
-        wireServices && Object.keys(wireServices).length > 0
-          ? { ...resolvedSingletonServices, ...wireServices }
+        invocationWireServices && Object.keys(invocationWireServices).length > 0
+          ? { ...resolvedSingletonServices, ...invocationWireServices }
           : resolvedSingletonServices
       // knowledge: decisions/internals/core-function-runner-restores-the-wire-fields-it-overwrites.md
       if (
@@ -494,7 +514,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       Object.defineProperty(invocationWire, 'rpc', {
         get() {
           const rpc = rpcService.getContextRPCService(
-            services,
+            resolvedSingletonServices,
             invocationWire,
             { sessionService },
             0,

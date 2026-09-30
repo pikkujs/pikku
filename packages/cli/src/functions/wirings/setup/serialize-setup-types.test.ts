@@ -2,7 +2,11 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { serializeSetupTypes } from './serialize-setup-types.js'
 
-const emit = (configTypeName?: string, allowShadowedServices?: string[]) =>
+const emit = (
+  configTypeName?: string,
+  allowShadowedServices?: string[],
+  options?: { addon?: boolean }
+) =>
   serializeSetupTypes(
     '../function/pikku-function-types.gen.js',
     configTypeName
@@ -10,7 +14,8 @@ const emit = (configTypeName?: string, allowShadowedServices?: string[]) =>
       : '// Config type not found, will use fallback',
     configTypeName,
     "import type { RequiredSingletonServices, RequiredWireServices } from '../pikku-services.gen.js'",
-    allowShadowedServices
+    allowShadowedServices,
+    options
   )
 
 describe('serializeSetupTypes', () => {
@@ -80,5 +85,28 @@ describe('serializeSetupTypes', () => {
       emit('Config'),
       /__pikkuState\(null, 'package', 'factories', \{ \.\.\.factories, createWireServices: func as any \}\)/
     )
+  })
+
+  // The hooks are the fourth thing bootstrap declares once, and `pikku dev` and
+  // `pikku serve` are what run them — so a project imports the definer from the
+  // same barrel as the other three, typed to its own services.
+  test('carries the server lifecycle for an application', () => {
+    const content = emit('Config')
+
+    assert.match(content, /export const pikkuServerLifecycle\b/)
+    assert.match(
+      content,
+      /import \{ CreateWireServices, ServerLifecycle \} from '@pikku\/core\/types'/
+    )
+    assert.match(content, /ServerLifecycle<RequiredSingletonServices>/)
+  })
+
+  // An addon does not own a server, so a lifecycle exported from one would be
+  // documented, importable, and never run.
+  test('an addon has no lifecycle to declare', () => {
+    const content = emit('Config', undefined, { addon: true })
+
+    assert.doesNotMatch(content, /pikkuServerLifecycle/)
+    assert.doesNotMatch(content, /ServerLifecycle/)
   })
 })

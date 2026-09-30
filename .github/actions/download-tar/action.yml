@@ -1,0 +1,17 @@
+name: Download tar artifact
+description: Download an artifact holding one tar file, and unpack it into the workspace.
+
+inputs:
+  name:
+    description: Artifact name. The artifact holds <name>.tar.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.name }}
+    - name: Unpack ${{ inputs.name }}
+      shell: bash
+      run: tar xf "${{ inputs.name }}.tar" && rm "${{ inputs.name }}.tar"

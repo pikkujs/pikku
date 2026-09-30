@@ -1,11 +1,20 @@
 ---
 type: decision
 title: A remote desktop shell bundles nothing
-description: --desktop-url produces a window onto an already-deployed server — no sidecar, no binary, no bun requirement — with the window declared in tauri.conf.json rather than opened from Rust
+description: Superseded — --desktop-url produced a window onto an already-deployed server — no sidecar, no binary, no bun requirement — with the window declared in tauri.conf.json rather than opened from Rust
 tags: [tauri, desktop, standalone, remote]
 ---
 
 # A remote desktop shell bundles nothing
+
+**Superseded by the CLI's _a native app belongs to a frontend_**: a window onto
+a deployed server is now `url` mode of `pikku app native init <name> --url …`,
+one of three modes rather than the only alternative to a sidecar, and bundling
+the frontend into the shell is the default. `--desktop-url` is gone. `url` mode
+also no longer declares the window's `url` in `tauri.conf.json`; it sets
+`build.frontendDist` to the URL, which Tauri 2 loads as the window's content.
+What is below still explains why `url` mode exists and keeps the origin
+guarantees the bundled mode gives up.
 
 `pikku deploy apply --desktop-url https://app.example.com` generates the same
 `src-tauri/` crate as the sidecar shell, minus everything that exists to run a

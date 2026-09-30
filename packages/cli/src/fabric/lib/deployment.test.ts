@@ -7,6 +7,7 @@ import {
   destructiveMigrations,
   isApprovable,
   missingConfigHints,
+  readDeploymentStatus,
   reconcileDeployedRef,
   stateLabel,
   waitForDeployment,
@@ -16,9 +17,11 @@ import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 type StatusRow = {
   status: string
+  error?: unknown
   statusReason?: string | null
   missingSecrets?: { name: string }[]
   missingVariables?: { name: string }[]
+  buildLog?: string | null
 }
 
 function fakeRpc(script: StatusRow[]) {
@@ -29,6 +32,7 @@ function fakeRpc(script: StatusRow[]) {
       calls.push(name)
       if (name === 'getDeploymentStatus') {
         const row = script[Math.min(index++, script.length - 1)]!
+        if (row.error) throw row.error
         return {
           status: row.status,
           statusReason: row.statusReason ?? null,
@@ -37,6 +41,9 @@ function fakeRpc(script: StatusRow[]) {
           hostname: row.status === 'active' ? 'app.example.com' : null,
           dispatchNamespace: null,
           manifest: {},
+          buildLog: row.buildLog ?? null,
+          imageBuildLog: null,
+          imageBuildStatus: null,
           missingSecrets: (row.missingSecrets ?? []).map((s) => ({
             ...s,
             displayName: null,
@@ -200,6 +207,74 @@ describe('waitForDeployment', () => {
     assert.strictEqual(result.outcome, 'succeeded')
     assert.strictEqual(result.hostname, 'app.example.com')
     assert.deepStrictEqual(events, ['status', 'status', 'status', 'status'])
+  })
+
+  test('a 502 or a dropped connection mid-poll is retried, not fatal', async () => {
+    const badGateway = Object.assign(new Error('Bad Gateway'), { status: 502 })
+    const { result, calls } = await run(
+      [
+        { status: 'suspended', statusReason: 'awaiting_approval' },
+        { status: 'x', error: badGateway },
+        { status: 'x', error: new TypeError('fetch failed') },
+        { status: 'active' },
+      ],
+      { approve: async () => true }
+    )
+    assert.strictEqual(result.outcome, 'succeeded')
+    assert.strictEqual(result.approved, true)
+    assert.ok(calls.includes('applyDeployment'))
+  })
+
+  test('an approve whose 502 hid a success is not re-refused', async () => {
+    const { rpc, calls } = fakeRpc([
+      { status: 'suspended', statusReason: 'awaiting_approval' },
+      { status: 'active' },
+    ])
+    const replies = [
+      Object.assign(new Error('Bad Gateway'), { status: 502 }),
+      Object.assign(new Error('Conflict'), { status: 409 }),
+    ]
+    const invoke = rpc.invoke.bind(rpc)
+    ;(rpc as { invoke: unknown }).invoke = async (
+      name: string,
+      data: unknown
+    ) => {
+      if (name === 'applyDeployment' && replies.length) {
+        calls.push(name)
+        throw replies.shift()
+      }
+      return invoke(name as never, data as never)
+    }
+    const { now, sleep } = fakeClock()
+    const result = await waitForDeployment({
+      rpc,
+      deploymentId: 'dep-1',
+      timeoutMs: 900_000,
+      approve: async () => true,
+      onEvent: () => {},
+      sleep,
+      now,
+    })
+    assert.strictEqual(result.outcome, 'succeeded')
+    assert.strictEqual(calls.filter((c) => c === 'applyDeployment').length, 2)
+  })
+
+  test('a 4xx is not retried', async () => {
+    const forbidden = Object.assign(new Error('Forbidden'), { status: 403 })
+    await assert.rejects(
+      run([{ status: 'queued' }, { status: 'x', error: forbidden }]),
+      /Forbidden/
+    )
+  })
+
+  test('a server that stays down gives up at the timeout', async () => {
+    const down = Object.assign(new Error('Bad Gateway'), { status: 502 })
+    await assert.rejects(
+      run([{ status: 'queued' }, { status: 'x', error: down }], {
+        timeoutMs: 60_000,
+      }),
+      /Bad Gateway/
+    )
   })
 
   test('a terminal failure ends the wait immediately', async () => {
@@ -513,5 +588,42 @@ describe('reconcileDeployedRef', () => {
       deploymentId: 'dep-1',
     })
     assert.strictEqual(ref, requested)
+  })
+})
+
+describe('the builder’s own account of a failure', () => {
+  test('is carried off the RPC rather than dropped at the boundary', async () => {
+    const { rpc } = fakeRpc([
+      { status: 'failed', buildLog: 'Build host unreachable, retrying' },
+    ])
+    const status = await readDeploymentStatus(rpc, 'dep-1')
+    assert.equal(status.buildLog, 'Build host unreachable, retrying')
+  })
+
+  test('reaches the caller that waited, which is where it is printed', async () => {
+    // A failed deployment has an empty manifest and plan and a null
+    // statusReason, so this log is routinely the ONLY record of why. Losing it
+    // left `failed in 248s` as the whole report — which reads as a broken
+    // project even when the cause was fabric-side.
+    const { rpc } = fakeRpc([
+      { status: 'failed', buildLog: 'Build host unreachable, retrying' },
+    ])
+    const result = await waitForDeployment({
+      rpc,
+      deploymentId: 'dep-1',
+      timeoutMs: 1_000,
+      approve: async () => false,
+      onEvent: () => {},
+      sleep: async () => {},
+    })
+    assert.equal(result.outcome, 'failed')
+    assert.equal(result.buildLog, 'Build host unreachable, retrying')
+  })
+
+  test('is null, not undefined, when the builder recorded nothing', async () => {
+    const { rpc } = fakeRpc([{ status: 'failed' }])
+    const status = await readDeploymentStatus(rpc, 'dep-1')
+    assert.equal(status.buildLog, null)
+    assert.equal(status.imageBuildLog, null)
   })
 })

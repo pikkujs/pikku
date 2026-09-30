@@ -161,7 +161,11 @@ describe('data-driven scenarios', () => {
     const feature = deployments()
     const row = feature.scenarios[0]!
     feature.scenarios = [row, { ...row }]
-    const rendered = renderGuidePage(page(), new Map([[feature.id, feature]]), '')
+    const rendered = renderGuidePage(
+      page(),
+      new Map([[feature.id, feature]]),
+      ''
+    )
     for (const shot of row.screenshots) {
       assert.equal(rendered.split(shot.path).length - 1, 1)
     }
@@ -174,7 +178,11 @@ describe('data-driven scenarios', () => {
       row,
       { ...row, screenshots: [{ id: 'z', path: 'shipping/9.png' }] },
     ]
-    const rendered = renderGuidePage(page(), new Map([[feature.id, feature]]), '')
+    const rendered = renderGuidePage(
+      page(),
+      new Map([[feature.id, feature]]),
+      ''
+    )
     assert.ok(rendered.includes('shipping/9.png'))
     for (const shot of row.screenshots) {
       assert.ok(rendered.includes(shot.path))
@@ -229,9 +237,7 @@ describe('lock', () => {
       scenarios: [],
     }
     const features = [deployments(), billing]
-    const lock = parseGuideLock(
-      renderGuideLock(features, ['deployments'])
-    )
+    const lock = parseGuideLock(renderGuideLock(features, ['deployments']))
     const withBilling = checkGuideCoverage(
       features,
       [page(cite('billing'))],
@@ -286,7 +292,7 @@ describe('emit', () => {
     assert.ok(film < still)
   })
 
-  test("a recording is a figure, so the page stays free of HTML", () => {
+  test('a recording is a figure, so the page stays free of HTML', () => {
     const feature = deployments()
     feature.scenarios[0]!.videos = [
       { id: 'deploy-film', actor: 'yasser', path: 'shipping/run.webm' },
@@ -296,8 +302,41 @@ describe('emit', () => {
       new Map([['deployments', feature]]),
       ''
     )
-    assert.match(markdown, /!\[Shipping a change — yasser\]\(shipping\/run\.webm\)/)
+    assert.match(markdown, /!\[Shipping a change\]\(shipping\/run\.webm\)/)
     assert.doesNotMatch(markdown, /<video|<details/)
+  })
+
+  test('a recording is captioned with its actor only when there are several', () => {
+    const feature = deployments()
+    feature.scenarios[0]!.videos = [
+      { id: 'a', actor: 'yasser', path: 'shipping/yasser.webm' },
+      { id: 'b', actor: 'reviewer', path: 'shipping/reviewer.webm' },
+    ]
+    const markdown = renderGuidePage(
+      page(),
+      new Map([['deployments', feature]]),
+      ''
+    )
+    assert.match(markdown, /!\[Shipping a change — yasser\]/)
+    assert.match(markdown, /!\[Shipping a change — reviewer\]/)
+  })
+
+  test('a showcase shot leads the recording, and other stills follow it', () => {
+    const feature = deployments()
+    feature.scenarios[0]!.screenshots = [
+      { id: 'step', name: 'A step', path: 'shipping/1.png' },
+      { id: 'hero', name: 'The hero', path: 'shipping/2.png', showcase: true },
+    ]
+    feature.scenarios[0]!.videos = [{ id: 'film', path: 'shipping/run.webm' }]
+    const markdown = renderGuidePage(
+      page(),
+      new Map([['deployments', feature]]),
+      ''
+    )
+    const hero = markdown.indexOf('shipping/2.png')
+    const film = markdown.indexOf('shipping/run.webm')
+    const step = markdown.indexOf('shipping/1.png')
+    assert.ok(hero > -1 && hero < film && film < step)
   })
 
   test('a feature with only a recording is not figureless', () => {
@@ -357,7 +396,11 @@ describe('emit', () => {
     assert.match(markdown, /sidebar_position: 3/)
     assert.match(markdown, /draft: false/)
     assert.equal(
-      renderGuidePage(parseGuidePage('product/deployments.md', markdown), features(), ''),
+      renderGuidePage(
+        parseGuidePage('product/deployments.md', markdown),
+        features(),
+        ''
+      ),
       markdown
     )
   })
@@ -443,6 +486,103 @@ describe('emit', () => {
   })
 })
 
+describe('a marker narrowed to one scenario', () => {
+  const twoScenarios = (): GuideFeature => {
+    const feature = deployments()
+    feature.scenarios.push({
+      name: 'rollBackScenario',
+      title: 'Rolling back',
+      steps: [guideStep('When yasser rolls back')],
+      screenshots: [
+        { id: 'rollback', name: 'Rolling back', path: 'rollback/1.png' },
+      ],
+    })
+    return feature
+  }
+  const narrowed = (id: string, scenario: string) =>
+    `<!-- pikku:guide feature=${id} scenario=${scenario} -->\n<!-- /pikku:guide -->`
+  const sections = () =>
+    parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\n## Ship\n\n${narrowed('deployments', 'shipAChangeScenario')}\n\n## Roll back\n\n${narrowed('deployments', 'rollBackScenario')}\n`
+    )
+
+  test('each block shows its own scenario, under its own section', () => {
+    const markdown = renderGuidePage(
+      sections(),
+      new Map([['deployments', twoScenarios()]]),
+      ''
+    )
+    const ship = markdown.indexOf('## Ship')
+    const shipShot = markdown.indexOf('shipping/2.png')
+    const back = markdown.indexOf('## Roll back')
+    const backShot = markdown.indexOf('rollback/1.png')
+    assert.ok(ship < shipShot && shipShot < back && back < backShot)
+    assert.equal(markdown.split('shipping/2.png').length, 2)
+    assert.equal(markdown.split('rollback/1.png').length, 2)
+  })
+
+  test('the marker keeps the scenario it names', () => {
+    const markdown = renderGuidePage(
+      sections(),
+      new Map([['deployments', twoScenarios()]]),
+      ''
+    )
+    assert.match(
+      markdown,
+      /<!-- pikku:guide feature=deployments scenario=rollBackScenario -->/
+    )
+  })
+
+  test('a rebuild rewrites each block in place', () => {
+    const features = new Map([['deployments', twoScenarios()]])
+    const once = renderGuidePage(sections(), features, '')
+    const twice = renderGuidePage(
+      parseGuidePage('product/deployments.md', once),
+      features,
+      ''
+    )
+    assert.equal(twice, once)
+  })
+
+  test('it still counts as citing the feature', () => {
+    const coverage = checkGuideCoverage([twoScenarios()], [sections()])
+    assert.deepEqual(coverage.cited, ['deployments'])
+    assert.deepEqual(coverage.missing, [])
+    assert.deepEqual(coverage.unknownScenarios, [])
+  })
+
+  test('a scenario the feature does not register is named with the ones it does', () => {
+    const typo = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\n${narrowed('deployments', 'shipScenario')}\n`
+    )
+    const coverage = checkGuideCoverage([twoScenarios()], [typo])
+    assert.deepEqual(coverage.unknownScenarios, [
+      {
+        path: 'product/deployments.md',
+        featureId: 'deployments',
+        scenario: 'shipScenario',
+        known: ['shipAChangeScenario', 'rollBackScenario'],
+      },
+    ])
+  })
+
+  test('a feature-wide block beside a narrowed one keeps every figure', () => {
+    const both = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\n${narrowed('deployments', 'rollBackScenario')}\n\n${cite('deployments')}\n`
+    )
+    const markdown = renderGuidePage(
+      both,
+      new Map([['deployments', twoScenarios()]]),
+      ''
+    )
+    assert.equal(markdown.split('rollback/1.png').length, 3)
+    assert.equal(markdown.split('shipping/2.png').length, 2)
+  })
+})
+
 describe('parsing', () => {
   test('a source with no frontmatter is refused by name', () => {
     assert.throws(
@@ -489,5 +629,101 @@ describe('steps', () => {
 
   test('a sentence with no keyword keeps its words', () => {
     assert.deepEqual(guideStep('  some step  '), { sentence: 'some step' })
+  })
+})
+
+describe('a narrowed citation checks its own scenario for figures', () => {
+  const twoScenarios = (): GuideFeature => ({
+    id: 'tours',
+    name: 'Tours',
+    description: '',
+    document: true,
+    scenarios: [
+      {
+        name: 'hasFigure',
+        title: 'Has a figure',
+        description: '',
+        steps: [],
+        screenshots: [{ id: 'a', name: 'a', path: 'a.png' }],
+      },
+      {
+        name: 'noFigure',
+        title: 'Has none',
+        description: '',
+        steps: [],
+        screenshots: [],
+      },
+    ],
+  })
+
+  test('a cited scenario with no figure is reported even when the feature has one', () => {
+    const p = parseGuidePage(
+      'product/tours.md',
+      '---\ntitle: Tours\n---\n<!-- pikku:guide feature=tours scenario=noFigure -->\n<!-- /pikku:guide -->\n'
+    )
+    const coverage = checkGuideCoverage([twoScenarios()], [p])
+    assert.deepEqual(coverage.figureless, [
+      { path: 'product/tours.md', featureId: 'tours', scenario: 'noFigure' },
+    ])
+  })
+})
+
+describe('a repeated marker refreshes every occurrence', () => {
+  test('both regions render the same figure', () => {
+    const p = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\n\n${cite('deployments')}\n\nBetween.\n\n${cite('deployments')}\n`
+    )
+    const rendered = renderGuidePage(
+      p,
+      new Map([['deployments', deployments()]]),
+      ''
+    )
+    assert.equal(rendered.split('shipping/2.png').length - 1, 2)
+  })
+})
+
+describe('data-driven rows keep the scenario figure order', () => {
+  const dataDriven = (): GuideFeature => ({
+    id: 'tours',
+    name: 'Tours',
+    description: '',
+    document: true,
+    scenarios: [
+      {
+        name: 'tourScenario',
+        title: 'A tour',
+        description: '',
+        steps: [],
+        screenshots: [{ id: 'r1-still', name: 'Row one still', path: 'r1.png' }],
+      },
+      {
+        name: 'tourScenario',
+        title: 'A tour',
+        description: '',
+        steps: [],
+        screenshots: [
+          { id: 'r2-show', name: 'Row two showcase', path: 'r2.png', showcase: true },
+        ],
+      },
+    ],
+  })
+
+  test('a later row showcase leads an earlier row still', () => {
+    const p = parseGuidePage(
+      'product/tours.md',
+      `---\ntitle: Tours\n---\n${cite('tours')}\n`
+    )
+    const rendered = renderGuidePage(
+      p,
+      new Map([['tours', dataDriven()]]),
+      ''
+    )
+    const showcase = rendered.indexOf('r2.png')
+    const still = rendered.indexOf('r1.png')
+    assert.ok(
+      showcase >= 0 && still >= 0 && showcase < still,
+      `showcase should come before the still:\n${rendered}`
+    )
   })
 })

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import {
+  changeRef,
   changesContext,
   imageContentType,
   type ImageContentType,
@@ -54,9 +55,9 @@ export const FabricChangesShot = pikkuSessionlessFunc({
       imageBase64 = (await readFile(input.image)).toString('base64')
     }
 
-    const { rpc } = await changesContext(input.apiUrl)
+    const { rpc, projectId } = await changesContext(input.apiUrl)
     return await rpc.invoke('attachChangeShot', {
-      changeId: input.changeId,
+      ...changeRef(projectId, input.changeId),
       label: input.label,
       kind: input.kind ?? 'option',
       contentType: contentType ?? 'image/png',

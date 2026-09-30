@@ -107,7 +107,10 @@ export const FabricAdd = pikkuSessionlessFunc({
   input: FabricAddInput,
   output: FabricAddOutput,
   func: async (_services, { id, dir, apiUrl: apiUrlOverride }) => {
-    const ctx = await resolveApiContext({ apiUrlOverride })
+    const ctx = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
 
     // 1. resolve a presigned download URL (public read)
     const metaRes = await fetch(

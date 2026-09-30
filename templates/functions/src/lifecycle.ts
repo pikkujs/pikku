@@ -1,5 +1,4 @@
-import { pikkuServerLifecycle } from '@pikku/core/utils'
-import type { SingletonServices } from '../types/application-types.js'
+import { pikkuServerLifecycle } from '#pikku/setup'
 
 /**
  * Server lifecycle hooks, run by `pikku dev` and `pikku serve`.
@@ -17,7 +16,7 @@ import type { SingletonServices } from '../types/application-types.js'
  * Runtimes that own their own entrypoint (Express, Fastify, uWS, Lambda,
  * Cloudflare, Next.js) do not run these hooks — do that work in start.ts.
  */
-export const lifecycle = pikkuServerLifecycle<SingletonServices>({
+export const lifecycle = pikkuServerLifecycle({
   afterStart: async ({ logger }) => {
     logger.info('Todo server ready')
   },

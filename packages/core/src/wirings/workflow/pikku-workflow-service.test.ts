@@ -578,6 +578,15 @@ describe('pikku-workflow-service suspend', () => {
     run = await ws.getRun(runId)
     assert.equal(run?.status, 'suspended')
     assert.equal(run?.error?.message, 'Awaiting approval')
+    assert.equal(
+      (await ws.getStepState(runId, '__workflow_suspend:Building')).status,
+      'succeeded'
+    )
+    assert.equal(
+      (await ws.getStepState(runId, '__workflow_suspend:Awaiting approval'))
+        .status,
+      'running'
+    )
 
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})
@@ -798,7 +807,7 @@ describe('pikku-workflow-service approval', () => {
       async (_services, _data, { workflow }) => {
         const decision = await workflow.approval('Approve invoice', {
           schema: approvalDecisionSchema,
-          expiry: '10ms',
+          expiry: '200ms',
         })
         return { decision }
       }
@@ -812,7 +821,9 @@ describe('pikku-workflow-service approval', () => {
       (error: unknown) => error instanceof WorkflowSuspendedException
     )
 
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    // Long enough that a loaded runner still suspends before the approval
+    // lapses; the first run expiring it outright never suspends at all.
+    await new Promise((resolve) => setTimeout(resolve, 250))
 
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})

@@ -31,7 +31,7 @@ import {
   getInitialInspectorState,
   ErrorCode,
 } from '@pikku/inspector'
-import { glob } from 'tinyglobby'
+import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
@@ -112,22 +112,33 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * `skills install` writes agent skills into a repo that has no pikku.config.json
  * yet — that is the whole point of it — so it cannot require one to start, and
  * `doc` answers from the surface shipped inside the CLI rather than the project.
- * `fabric report` files a finding about pikku itself: a scaffold that never
+ * `fabric report` sends a report about pikku itself: a scaffold that never
  * produced a config, or a command run from the wrong directory, is exactly the
- * kind of thing worth reporting, so demanding a config would refuse the finding
+ * kind of thing worth reporting, so demanding a config would refuse the report
  * at the moment it is most worth having.
+ * `fabric login` runs before there is a project to be inside, and `fabric
+ * changes` reads a queue over the fabric API, resolving its project from the
+ * git remote or `--project-id` — a harness emptying that queue is
+ * often not sitting in the checkout it is about to edit.
  */
-const CONFIG_FREE_COMMANDS = new Set([
+export const CONFIG_FREE_COMMANDS = new Set([
   'new.addon',
   'skills',
   'skills.list',
   'skills.install',
   'doc',
+  'fabric.login',
   'fabric.report',
-  'fabric.findings',
-  'fabric.findings.list',
-  'fabric.findings.flush',
-  'fabric.findings.clear',
+  'fabric.changes',
+  'fabric.changes.list',
+  'fabric.changes.next',
+  'fabric.changes.show',
+  'fabric.changes.file',
+  'fabric.changes.claim',
+  'fabric.changes.ask',
+  'fabric.changes.shot',
+  'fabric.changes.reply',
+  'fabric.changes.done',
 ])
 
 export const createConfig: CreateConfig<
@@ -183,9 +194,9 @@ export const createConfig: CreateConfig<
   // it behaves the same inside a project; it just does not demand one.
   const configFree = CONFIG_FREE_COMMANDS.has(commandPath.join('.'))
   const cliConfig = configFree
-    ? ((await tryGetPikkuCLIConfig(logger, data.configFile, [], data.outDir)) ??
+    ? ((await tryGetPikkuCLIConfig(logger, data.config, [], data.outDir)) ??
       ({} as PikkuCLIConfig))
-    : await getPikkuCLIConfig(logger, data.configFile, [], true, data.outDir)
+    : await getPikkuCLIConfig(logger, data.config, [], true, data.outDir)
 
   // Load inspector state from file if stateInput is provided
   let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
@@ -314,21 +325,17 @@ export const createSingletonServices: CreateSingletonServices<
       (unfilteredStateIsSetupOnly && !setupOnly && !preloadedInspectorState)
     ) {
       // Run inspector WITHOUT filters to get full state
-      const wiringFiles = (
-        await Promise.all(
-          srcDirectories.map((dir) =>
-            glob(`${path.join(rootDir, dir)}/**/*.ts`, {
-              ignore: config.ignoreFiles || [],
-              absolute: true,
-            })
-          )
-        )
-      ).flat()
+      const wiringFiles = await findSourceFiles(
+        rootDir,
+        srcDirectories,
+        config.ignoreFiles || []
+      )
 
       const scaffoldFiles = [
         config.consoleFunctionsFile,
         config.remoteRpcWorkersFile,
         config.webhookWorkersFile,
+        config.webhookSourcesFile,
         config.remoteJobsFile,
         config.workflowRoutesFile,
         config.publicRpcFile,

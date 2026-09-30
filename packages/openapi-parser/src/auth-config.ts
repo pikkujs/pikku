@@ -8,12 +8,17 @@ import { readFile } from 'fs/promises'
 import { z } from 'zod'
 
 export const DelegatedClaimsSchema = z.object({
-  /** Where identity claims live: the decoded login-JWT payload, or the login response body. */
-  source: z.enum(['jwt', 'response']),
-  /** Dot-path to the stable upstream user id (e.g. 'user._id'). */
-  externalId: z.string(),
-  email: z.string(),
-  /** One dot-path, or several joined with a space (e.g. first + last name). */
+  /**
+   * Where identity claims live: the decoded login-JWT payload, the login
+   * response body, or the `identity` lookup's response. Defaults to
+   * `identity` when an identity lookup is configured, else `response`.
+   */
+  source: z.enum(['jwt', 'response', 'identity']).optional(),
+  /** Dot-path to the stable upstream user id (e.g. 'user._id'). Defaults to the sign-in login. */
+  externalId: z.string().optional(),
+  /** Dot-path to the email; when missing or empty, `emailTemplate` builds one. */
+  email: z.string().optional(),
+  /** One dot-path, or several joined with a space (e.g. first + last name). Defaults to the login. */
   name: z.union([z.string(), z.array(z.string())]).optional(),
   role: z.string().optional(),
   tenantId: z.string().optional(),
@@ -23,17 +28,46 @@ export const DelegatedLoginSchema = z.object({
   /** Spec-relative path of the login operation (e.g. '/users/login'). */
   loginPath: z.string(),
   loginMethod: z.string().default('post'),
-  /** Which credential fields the login accepts. email/password go in the JSON body; apiKey in a header. */
+  /**
+   * Which credentials the sign-in form collects. `login` is a username or
+   * email, `email` an email address, `apiKey` a key sent in `apiKeyHeader`.
+   */
   credentials: z
-    .array(z.enum(['email', 'password', 'apiKey']))
+    .array(z.enum(['login', 'email', 'password', 'apiKey']))
     .default(['email', 'password']),
+  /**
+   * Upstream field name for each credential, e.g. `{ "login": "username" }`.
+   * Unmapped credentials keep their own name.
+   */
+  fields: z
+    .partialRecord(z.enum(['login', 'email', 'password']), z.string())
+    .optional(),
+  /** How the login fields travel: a JSON body, a form body, or the query string. */
+  encoding: z.enum(['json', 'form', 'query']).default('json'),
   /** Header carrying the apiKey when 'apiKey' is a supported credential. */
   apiKeyHeader: z.string().default('x-api-key'),
   /** Dot-path to the token in the login response (e.g. 'token'). */
   tokenPath: z.string(),
   /** Dot-path to an epoch-seconds expiry in the response; defaults to the JWT `exp` claim when source is jwt. */
   expiresAtPath: z.string().optional(),
-  claims: DelegatedClaimsSchema,
+  /**
+   * An operation that returns the signed-in user, called with the new token
+   * in the auth header — for upstreams whose login returns only a token.
+   */
+  identity: z
+    .object({
+      path: z.string(),
+      method: z.string().default('get'),
+    })
+    .optional(),
+  claims: DelegatedClaimsSchema.default({}),
+  /**
+   * Builds the user's email when the upstream has none. Placeholders:
+   * `{login}`, `{externalId}`, `{host}` (the upstream's host).
+   */
+  emailTemplate: z.string().default('{login}@{host}'),
+  /** Maps the raw `claims.role` value onto an app role; unmapped values get no role. */
+  roles: z.record(z.string(), z.string()).optional(),
 })
 
 export const AuthConfigSchema = z.object({

@@ -79,7 +79,10 @@ export const FabricLogin = pikkuSessionlessFunc({
       browser,
     }
   ) => {
-    const ctx = await resolveApiContext({ apiUrlOverride })
+    const ctx = await resolveApiContext({
+      apiUrlOverride,
+      resolveProject: false,
+    })
     const apiUrl = ctx.apiUrl
 
     // Static-token fast paths — useful for CI and "I already have a token".
@@ -87,6 +90,7 @@ export const FabricLogin = pikkuSessionlessFunc({
     if (explicit) {
       const auth = await readAuthFile()
       auth.tokens[apiUrl] = explicit
+      auth.defaultApiUrl = apiUrl
       await writeAuthFile(auth)
       console.log(`[fabric] saved token for ${apiUrl}`)
       return { ok: true, apiUrl }
@@ -136,6 +140,7 @@ export const FabricLogin = pikkuSessionlessFunc({
       if (result.status === 'confirmed' && result.token) {
         const auth = await readAuthFile()
         auth.tokens[apiUrl] = result.token
+        auth.defaultApiUrl = apiUrl
         await writeAuthFile(auth)
         console.log(`[fabric] logged in; token saved for ${apiUrl}`)
         return { ok: true, apiUrl }

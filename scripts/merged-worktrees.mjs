@@ -55,7 +55,10 @@ const gitOk = (gitArgs, opts = {}) => {
  * `git worktree list --porcelain` as records. The main worktree is first and is
  * never a candidate — deleting the checkout the script runs from is not a thing
  * anyone wants — and a detached HEAD has no branch whose merge state could be
- * looked up, so both are marked to be skipped rather than judged.
+ * looked up, so both are marked to be skipped rather than judged. A `locked`
+ * worktree is someone else's live session, and the lock reason names it. A
+ * `prunable` one has lost its link to the repository, so git can answer
+ * nothing about it.
  */
 export function parseWorktrees(out) {
   const records = []
@@ -73,6 +76,8 @@ export function parseWorktrees(out) {
     else if (key === 'branch') current.branch = value.replace('refs/heads/', '')
     else if (key === 'detached') current.detached = true
     else if (key === 'bare') current.bare = true
+    else if (key === 'locked') current.locked = value || 'no reason given'
+    else if (key === 'prunable') current.prunable = value || 'no reason given'
   }
   if (current.path) records.push(current)
   return records.map((w, i) => ({ ...w, isMain: i === 0 }))
@@ -125,6 +130,9 @@ function unpushedCommits(worktree, extraRefs) {
   return out === '' ? [] : out.split('\n')
 }
 
+const firstLine = (error) =>
+  String((error.stderr ?? '').toString().trim() || error.message).split('\n')[0]
+
 export function classifyWorktree(worktree, probes) {
   const { isAncestor, mergedPullRequest, statusPorcelain, unpushedCommits } =
     probes
@@ -134,6 +142,16 @@ export function classifyWorktree(worktree, probes) {
   if (worktree.bare) return { verdict: 'skip', reason: 'a bare worktree' }
   if (!branch)
     return { verdict: 'skip', reason: 'detached HEAD — no branch to judge' }
+  // A lock is another session saying it is working here. Whether the branch is
+  // merged is beside the point: the answer is to leave it alone, and the only
+  // override git offers is `remove -f -f`, which this script will not reach for.
+  if (worktree.locked)
+    return { verdict: 'skip', reason: `locked — ${worktree.locked}` }
+  if (worktree.prunable)
+    return {
+      verdict: 'skip',
+      reason: `prunable — ${worktree.prunable}; \`git worktree prune\` clears it`,
+    }
 
   const pr = mergedPullRequest(branch)
   const mergeCommit = pr?.mergeCommit?.oid
@@ -155,7 +173,18 @@ export function classifyWorktree(worktree, probes) {
     ? `#${pr.number} merged as ${mergeCommit.slice(0, 9)}`
     : 'already an ancestor of origin/main'
 
-  const dirty = statusPorcelain(path)
+  // git can list a worktree whose own `.git` link no longer resolves, and every
+  // command run inside it then fails with "not a git repository". That is one
+  // broken worktree to report, not a reason to abandon the rest of the run.
+  let dirty
+  try {
+    dirty = statusPorcelain(path)
+  } catch (error) {
+    return {
+      verdict: 'skip',
+      reason: `prunable — git cannot read it: ${firstLine(error)}`,
+    }
+  }
   if (dirty !== '')
     return {
       verdict: 'review',
@@ -235,8 +264,18 @@ function main() {
     return
   }
 
+  let failed = 0
   for (const r of deletable) {
-    git(['worktree', 'remove', r.path])
+    // `remove` without --force, so git independently refuses a tree this script
+    // read as clean a moment ago. A refusal is information, not a reason to stop
+    // — the remaining worktrees are unaffected by whatever is true of this one.
+    try {
+      git(['worktree', 'remove', r.path])
+    } catch (error) {
+      failed += 1
+      console.log(`kept ${r.path} — git refused: ${firstLine(error)}`)
+      continue
+    }
     console.log(`removed ${r.path}`)
     if (pruneBranches) {
       // -d, never -D: it refuses a branch git cannot see as merged, which is a
@@ -251,6 +290,10 @@ function main() {
     }
   }
   git(['worktree', 'prune'])
+  if (failed > 0)
+    console.log(
+      `\n${failed} worktree(s) were left in place — see the refusals above.`
+    )
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()

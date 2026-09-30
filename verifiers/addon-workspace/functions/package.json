@@ -1,0 +1,15 @@
+{
+  "name": "@pikku/verifier-addon-workspace-functions",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "The workspace package that wires the addon, and the only one that declares it",
+  "imports": {
+    "#pikku/*.js": "../.pikku/*.ts",
+    "#pikku/*": "../.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/templates-function-addon": "workspace:*"
+  }
+}

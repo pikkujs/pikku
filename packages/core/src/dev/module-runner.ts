@@ -110,6 +110,15 @@ const evaluateModule = (
     loader: loaderFor(absPath),
     format: 'cjs',
     sourcefile: absPath,
+    // `cjs` output rewrites `import.meta` to an empty object, so a module
+    // that resolves its own neighbours through `createRequire(import.meta.url)`
+    // -- sharp, onnxruntime-node, any package with a native binding -- gets
+    // `undefined` and fails with "Cannot find module ... from ''".
+    define: {
+      'import.meta.url': JSON.stringify(pathToFileURL(absPath).href),
+      'import.meta.filename': JSON.stringify(absPath),
+      'import.meta.dirname': JSON.stringify(dirname(absPath)),
+    },
   })
 
   const fn = compileFunction(
@@ -204,7 +213,6 @@ export const createModuleRunner = (): PikkuModuleRunner => {
     try {
       await loadTransform()
       const exports = evaluateModule(absPath, new Map())
-
       registry.set(absPath, exports)
       return { ok: true, exports }
     } catch (thrown) {

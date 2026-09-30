@@ -101,6 +101,8 @@ function makeState(
     scopeDefinitions?: any[]
     flagDefinitions?: any[]
     analytics?: any[]
+    credentialDefinitions?: any[]
+    webhookSourceMeta?: Record<string, any>
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -133,11 +135,15 @@ function makeState(
     mcpEndpoints: { toolsMeta: {}, promptsMeta: {}, resourcesMeta: {} },
     agents: { agentsMeta: {} },
     workflows: { meta: {}, graphMeta: overrides.graphMeta ?? {} },
+    triggers: { webhookSourceMeta: overrides.webhookSourceMeta ?? {} },
     wireServicesMeta: new Map(),
     rpc: { internalMeta: {}, exposedMeta: {} },
     scopes: { definitions: overrides.scopeDefinitions ?? [] },
     featureFlags: { definitions: overrides.flagDefinitions ?? [] },
     ...(overrides.analytics ? { analytics: overrides.analytics } : {}),
+    ...(overrides.credentialDefinitions
+      ? { credentials: { definitions: overrides.credentialDefinitions } }
+      : {}),
     addonFunctions: overrides.addonFunctions ?? {},
     addonRequiredParentServices: overrides.addonRequiredParentServices ?? [],
     auth: overrides.authServices
@@ -595,6 +601,7 @@ const makeRemoteState = (
     remote?: boolean
     authCredentialId?: string
     authSecretId?: string
+    file?: string
   },
   declared: { credentials?: string[]; secrets?: string[] } = {}
 ): Omit<InspectorState, 'typesLookup'> =>
@@ -752,6 +759,122 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
       assert.deepEqual(criticals, [])
     } finally {
       rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('validateRemoteAddonDependencies — a workspace package that wires the addon', () => {
+  // Bun links a workspace dependency only into the package that declares it,
+  // so the repo root's node_modules and package.json know nothing about it.
+  const makeWorkspace = (member: {
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }) => {
+    const root = mkdtempSync(join(tmpdir(), 'pikku-addon-ws-'))
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] })
+    )
+    const memberDir = join(root, 'packages', 'functions')
+    mkdirSync(join(memberDir, 'src'), { recursive: true })
+    writeFileSync(
+      join(memberDir, 'package.json'),
+      JSON.stringify({ name: 'functions', ...member })
+    )
+    return {
+      root,
+      memberDir,
+      file: join(memberDir, 'src', 'addons.wiring.ts'),
+    }
+  }
+
+  const installInto = (dir: string, name: string) => {
+    const pkgDir = join(dir, 'node_modules', ...name.split('/'))
+    mkdirSync(pkgDir, { recursive: true })
+    writeFileSync(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name, version: '1.0.0' })
+    )
+  }
+
+  test('an addon installed only in the declaring package resolves', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      dependencies: { '@addon/local': 'workspace:*' },
+    })
+    try {
+      installInto(ws.memberDir, '@addon/local')
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, { package: '@addon/local', file: ws.file })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('an addon installed nowhere names the declaring package to add it to', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({})
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, { package: '@addon/local', file: ws.file })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(criticals[0]!.code, ErrorCode.ADDON_NOT_INSTALLED)
+      assert.match(criticals[0]!.message, /packages\/functions\/package\.json/)
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('a remote addon is judged against the declaring package’s devDependencies', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      devDependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+    })
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          file: ws.file,
+        })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
+    }
+  })
+
+  test('a remote addon in the declaring package’s dependencies is flagged there', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const ws = makeWorkspace({
+      dependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+    })
+    try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(ws.root, {
+          package: '@pikkufabric/addon-registry',
+          remote: true,
+          file: ws.file,
+        })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(
+        criticals[0]!.code,
+        ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY
+      )
+      assert.match(
+        criticals[0]!.message,
+        /production dependency in .*packages\/functions\/package\.json/
+      )
+    } finally {
+      rmSync(ws.root, { recursive: true, force: true })
     }
   })
 })
@@ -1204,5 +1327,51 @@ describe('aggregateRequiredServices — flags and analytics imply their services
     const required = state.serviceAggregation.requiredServices
     assert.ok(!required.has('featureFlags'))
     assert.ok(!required.has('analyticsService'))
+    assert.ok(!required.has('credentialService'))
+  })
+
+  test('a declared credential requires credentialService', () => {
+    const state = makeState({
+      credentialDefinitions: [{ name: 'dolibarr', type: 'wire' }],
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('credentialService')
+    )
+  })
+})
+
+describe('aggregateRequiredServices — webhook sources', () => {
+  const webhookSourceMeta = {
+    shop: { name: 'shop', method: 'post', route: '/webhooks/shop' },
+  }
+
+  test('a wired source route requires the services it accepts through', () => {
+    const state = makeState({
+      webhookSourceMeta,
+      functionsMeta: { 'http:post:/webhooks/shop': { services: {} } },
+    })
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(required.has('incomingWebhookService'))
+    assert.ok(required.has('queueService'))
+  })
+
+  test('a unit with only the worker still records attempts', () => {
+    const state = makeState({
+      functionsMeta: { 'queue:pikku-incoming-webhooks': { services: {} } },
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
+  })
+
+  test('a source filtered out of the unit requires nothing', () => {
+    const state = makeState({ webhookSourceMeta })
+    aggregateRequiredServices(state)
+    assert.ok(
+      !state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
   })
 })

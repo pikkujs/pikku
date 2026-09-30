@@ -1,13 +1,16 @@
 import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import {
   ConsoleLogger,
+  IncomingWebhookService,
   InMemoryQueueService,
   LocalSecretService,
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
+import { WebhookSigningSecret } from '@pikku/core/hmac'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
+import { FileCredentialService } from './file-credential-service.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -33,6 +36,9 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
     const queueService =
       existingServices?.queueService || new InMemoryQueueService()
+    const credentialService = new FileCredentialService(
+      await variables.get('CREDENTIALS_FILE')
+    )
 
     return {
       config,
@@ -44,6 +50,15 @@ export const createSingletonServices = pikkuServices(
       webhookService:
         existingServices?.webhookService ||
         new QueueWebhookService(queueService),
+      incomingWebhookService:
+        existingServices?.incomingWebhookService ||
+        new IncomingWebhookService(queueService, 1),
+      credentialService,
+      shopSigningSecret: WebhookSigningSecret.fromCredential(
+        'shop',
+        credentialService,
+        'shopWebhookSecret'
+      ),
     }
   }
 )

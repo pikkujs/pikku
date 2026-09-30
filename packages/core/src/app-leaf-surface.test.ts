@@ -44,6 +44,10 @@ const skipped = new Set([
   // barrel this repo does not own. They are gitignored and belong to no
   // workspace, which is what makes them out of scope rather than merely noisy.
   '.claude',
+  // Verifier output: `verifiers/addon-openapi` scaffolds whole Pikku projects
+  // into `generated/` and leaves them behind, so a second test run in the same
+  // checkout (a retried push, say) scanned CLI output this repo does not own.
+  'generated',
 ])
 
 const findProjects = (dir: string, out: string[] = []): string[] => {

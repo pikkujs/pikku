@@ -285,3 +285,83 @@ export async function doWork() {
     }
   })
 })
+
+describe('add-rpc-invocations — per-function invokes', () => {
+  async function inspectWithWarnings(source: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-rpc-invokes-test-'))
+    const path = join(dir, 'funcs.ts')
+    await writeFile(path, source)
+    const warnings: string[] = []
+    const logger = { ...makeLogger(), warn: (m: string) => warnings.push(m) }
+    const state = await inspect(logger, [path], { rootDir: dir })
+    return { state, dir, warnings }
+  }
+
+  test('literal rpc.invoke / rpc.remote names are recorded on the caller', async () => {
+    const { state, dir } = await inspectWithWarnings(`
+import { pikkuFunc } from '@pikku/core'
+export const getCandidateResult = pikkuFunc({
+  func: async ({ kysely }: any) => ({ ok: true }),
+})
+export const getCandidateResults = pikkuFunc({
+  func: async ({ translation }: any, _data: unknown, { rpc }: any) => {
+    await rpc.invoke("byDoubleQuotes")
+    await rpc!.invoke(\`byTemplate\`)
+    await rpc.remote('byRemote')
+    return rpc.invoke('getCandidateResult', {})
+  },
+})
+`)
+    try {
+      assert.deepStrictEqual(
+        state.functions.meta['getCandidateResults']?.invokes,
+        ['byDoubleQuotes', 'byRemote', 'byTemplate', 'getCandidateResult']
+      )
+      assert.strictEqual(
+        state.functions.meta['getCandidateResult']?.invokes,
+        undefined
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('wire.rpc.invoke is recorded too', async () => {
+    const { state, dir } = await inspectWithWarnings(`
+import { pikkuFunc } from '@pikku/core'
+export const caller = pikkuFunc({
+  func: async (_services: any, _data: unknown, wire: any) => {
+    return wire.rpc.invoke('callee')
+  },
+})
+`)
+    try {
+      assert.deepStrictEqual(state.functions.meta['caller']?.invokes, [
+        'callee',
+      ])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('a computed name is warned about, not recorded', async () => {
+    const { state, dir, warnings } = await inspectWithWarnings(`
+import { pikkuFunc } from '@pikku/core'
+export const caller = pikkuFunc({
+  func: async (_services: any, data: { name: string }, { rpc }: any) => {
+    await rpc.invoke(data.name)
+    return rpc.invoke(\`fn-\${data.name}\`)
+  },
+})
+`)
+    try {
+      assert.strictEqual(state.functions.meta['caller']?.invokes, undefined)
+      assert.strictEqual(
+        warnings.filter((w) => w.includes('computed name')).length,
+        2
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})

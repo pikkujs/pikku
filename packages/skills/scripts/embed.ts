@@ -21,8 +21,15 @@ import { collectSnippets, expandSkillMarkdown } from '../src/snippets.ts'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const skillsRoot = join(root, 'skills')
 
-/** Compiled projects whose @snippet regions skills may reference. */
-const SNIPPET_SOURCES = [join(root, '..', '..', 'examples', 'online-shop')]
+/**
+ * Compiled projects whose @snippet regions skills may reference. Earlier
+ * sources win a name collision, so the two docs examples each declare the
+ * regions a skill needs without one silently shadowing the other.
+ */
+const SNIPPET_SOURCES = [
+  join(root, '..', '..', 'examples', 'online-shop'),
+  join(root, '..', '..', 'examples', 'field-service'),
+]
 
 /** Every file under skills/, as POSIX-relative paths, sorted for a stable diff. */
 function collect(dir, out = []) {
@@ -46,7 +53,9 @@ for (const source of SNIPPET_SOURCES) {
   if (!statSync(source, { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error(`No snippet source at ${source}`)
   }
-  await collectSnippets(source, snippets)
+  for (const [name, body] of await collectSnippets(source)) {
+    if (!snippets.has(name)) snippets.set(name, body)
+  }
 }
 
 const files = collect(skillsRoot)

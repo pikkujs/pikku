@@ -171,9 +171,10 @@ const flattenScopes = (tree: unknown, prefix = ''): string[] => {
 /** The generated meta for a project, tolerating anything codegen has not produced yet. */
 export function readPikkuMeta(functionsDir: string): PikkuMeta {
   const pikku = join(functionsDir, '.pikku')
-  const functions = (readJson(
-    join(pikku, 'function/pikku-functions-meta.gen.json')
-  ) ?? {}) as Record<string, { auth?: boolean }>
+  const functions = withUnversionedNames(
+    (readJson(join(pikku, 'function/pikku-functions-meta.gen.json')) ??
+      {}) as Record<string, { auth?: boolean }>
+  )
   const http = readJson(
     join(pikku, 'http/pikku-http-wirings-meta.gen.json')
   ) as Record<string, Record<string, unknown>> | null
@@ -203,6 +204,40 @@ export function readPikkuMeta(functionsDir: string): PikkuMeta {
     depths: scenarioDepths(functionsDir),
     wired: wiredFunctions(pikku, new Set(Object.keys(functions))),
   }
+}
+
+/**
+ * The same functions, also reachable by the name a plan calls them.
+ *
+ * Codegen keys a function that carries a `version` as `name@vN`, so a plan naming
+ * `adminSaveProduct` found nothing the moment the build did what the plan asked and
+ * bumped the version — the gate reported five built, wired, scenario-covered functions
+ * as MISSING and the milestone could not be closed except by writing the version into
+ * the plan, which is editing the plan to match the build.
+ *
+ * A version is an implementation fact: a plan states which function exists, never which
+ * revision of it. The versioned keys are kept as they are, and the newest revision of
+ * each is aliased under its bare name for anything that looks a function up by name.
+ */
+function withUnversionedNames<T>(
+  functions: Record<string, T>
+): Record<string, T> {
+  const newest = new Map<string, { version: number; meta: T }>()
+  for (const [key, meta] of Object.entries(functions)) {
+    const at = key.lastIndexOf('@v')
+    if (at <= 0) continue
+    const name = key.slice(0, at)
+    const version = Number(key.slice(at + 2))
+    if (!Number.isFinite(version)) continue
+    const held = newest.get(name)
+    if (!held || version > held.version) newest.set(name, { version, meta })
+  }
+  const out = { ...functions }
+  for (const [name, { meta }] of newest) {
+    // An unversioned function of the same name is the real one — never shadow it.
+    if (!(name in out)) out[name] = meta
+  }
+  return out
 }
 
 /**

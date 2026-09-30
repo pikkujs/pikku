@@ -1,5 +1,111 @@
 # @pikku/better-auth
 
+## 0.12.52
+
+### Patch Changes
+
+- 65b0ba8: The OAuth proxy is now switched on by `OAUTH_PROXY_URL` and `OAUTH_PROXY_PROVIDERS`, not by `OAUTH_PROXY_SECRET`. `pikku db generate` loads the auth factory with a stub that answers every secret read with a made-up value, so a secret alone looked like a half-configured proxy and failed the command with "OAuth proxy is partly configured". A secret with no variables is now ignored; variables without the secret still fail at start and name it.
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- Updated dependencies [d327fa5]
+- Updated dependencies [942ebdd]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+
+## 0.12.51
+
+### Patch Changes
+
+- d8369d8: `pikkuBetterAuth` now signs users in through a host's OAuth proxy when the stage carries `OAUTH_PROXY_SECRET`, `OAUTH_PROXY_URL` and `OAUTH_PROXY_PROVIDERS` (plus the `GOOGLE_OAUTH` / `GITHUB_OAUTH` client id for each listed provider, and an optional `OAUTH_PROXY_KEY_ID`). With none of them set nothing changes. With only some set, the app fails at start naming what is missing. A provider the app also configures itself is an error rather than an override. `pikku` now declares these as optional secrets and variables so a stage that has none of them still deploys.
+- Updated dependencies [58cccc1]
+- Updated dependencies [a26c60e]
+  - @pikku/core@0.12.131
+
+## 0.12.50
+
+### Patch Changes
+
+- 698c7af: The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from `GET /auth/sign-in/personas` and signs in by persona id through `POST /auth/sign-in/persona`; `pikkuActor({ personaSignIn })` serves both, so the app writes no listing function.
+
+  **Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ apiUrl, app?, onSignedIn }`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor`, and `listDevActors({ apiUrl, app })` fetches the list, for callers outside React.
+
+  `@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when the gate is shut. `allowed` is now optional: pass `personaSignIn: { personas, featureFlags }` and both endpoints are open under `pikku dev`, and on a deployed stage only with `allowSignIn` opted in and the `devSwitcher` flag on. `devSwitcherOn(featureFlags, optIn)` exports that same check.
+
+  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+
+## 0.12.49
+
+### Patch Changes
+
+- 658f047: A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+
+## 0.12.48
+
+### Patch Changes
+
+- e54ae19: `pikkuActor` takes an optional `personaSignIn: { personas, allowed }`, which serves `POST /sign-in/persona { id }`: it signs in as a declared, runnable persona without the caller presenting a credential, so a "Sign in as" switcher on a deployed preview never ships an actor secret to the browser. `allowed` is asked on every call, and the actor sign-in gate still applies.
+- Updated dependencies [3511717]
+- Updated dependencies [3511717]
+  - @pikku/core@0.12.122
+
+## 0.12.47
+
+### Patch Changes
+
+- 2f317d0: The `actor` plugin can store upstream credentials for each actor at sign-in. Pass `credentials: { names, store }` and a persona signs in carrying `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` from the environment, stored through `credentialService.set` — so scenarios reach addons that call a third-party API as that persona.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 5442d94: `POST /sign-in/delegated` accepts `login` or `username` as well as `email`, and passes the identifier to `authenticate` as `credentials.login`. `email` still works as before. An identity marked `syntheticEmail` (a made-up address for an upstream user with no email) never attaches to an existing user row.
+- Updated dependencies [e84abd0]
+  - @pikku/core@0.12.121
+
+## 0.12.46
+
+### Patch Changes
+
+- 67c707a: The stateless session cookie's lifetime is now declared by the CLI and read by the framework, so an app needs no code of its own to get a session that outlives five minutes.
+
+  The previous fix stopped `betterAuthStatelessSession` leaving the cookie on better-auth's 300-second default, but it hardcoded one day. An app that wanted a different lifetime — and it is a real decision, because the lifetime is also the longest a ban or a revoked session can go unnoticed — had to declare a variable, read it, and thread it into its own `betterAuth({ session: { cookieCache } })`. That was the same three edits in every app, which is the shape of something the framework should be doing.
+
+  Now:
+
+  - **`@pikku/cli`** emits a `SESSION_COOKIE_CACHE_MAX_AGE` variable into `auth-secrets.gen.ts`, on the `cookieCache` branch that already decides whether to split the stateless middleware out. Only that branch: under the stateful middleware the cookie cache genuinely is a cache in front of the database, and a short life there is the correct trade rather than a bug. It is optional, so a deployment that never sets it stays valid.
+
+    The generated schema is `z.string().default('86400')` rather than a coerced number, because `TypedVariablesService` returns a stored host value **unparsed** and runs the declared schema only to resolve a default. A `z.coerce.number()` would never fire on a real value and would only mislead whoever read it.
+
+  - **`@pikku/better-auth`** reads that variable when it applies the default, coercing and range-checking it there. A value that is not a positive number of seconds is logged and ignored rather than honoured — a typo should not expire the cookie instantly. An app generated before the CLI emitted the declaration has no such variable, which is the ordinary case and not an error: the one-day default simply stands.
+
+    Insert-not-upsert still holds, and now holds against the variable too. An explicit `session.cookieCache.maxAge` in the app's own config is the author's decision and beats a stage binding.
+
+  - **`@pikku/cli`** also generates `useSession` into the react-query hooks file. An app wants the session anyway, and the same query heals the cookie for free: when `session_data` ages out, better-auth's cookie-cache branch bails on the stale payload and falls through to the database, reading the session from the still-valid `session_token` and minting a fresh cookie on the way out. `refetchInterval` and `refetchOnWindowFocus` are react-query's; there is no refresh loop beside them.
+
+    It deliberately does not pass `disableCookieCache`. That would make every refetch a database read — the exact cost the cookie cache exists to avoid — to re-mint a cookie with most of its life left. better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is not an option either: it is force-disabled whenever a database is configured, and where it does apply it re-signs the cached blob without reading the database, so a banned user's cookie would renew forever.
+
+  The upshot for an app: `pikku gen`, use `useSession()` where it wants the signed-in user, and delete any hand-rolled equivalent. The app's `betterAuth` config needs no `maxAge`.
+
+- Updated dependencies [e85f07e]
+  - @pikku/core@0.12.119
+
 ## 0.12.45
 
 ### Patch Changes

@@ -11,6 +11,7 @@ import {
 } from '../../deploy/build-pipeline.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import { resolveProvider, getEntryContext } from './deploy-apply.js'
+import { servedFrontend } from '../../utils/frontend.js'
 
 function sanitizeProjectId(raw: string): string {
   return (
@@ -82,9 +83,10 @@ export const deployPlan = pikkuSessionlessFunc<
       mangleIdentifiers: config.deploy?.mangleIdentifiers,
       globalHTTPPrefix: config.globalHTTPPrefix,
       getEntryContext,
-      frontend: config.frontend,
+      frontend: servedFrontend(config.frontends),
       outDir: config.outDir,
       srcDirectories: config.srcDirectories,
+      sqliteExtensions: config.db?.sqliteExtensions,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
       bundler,

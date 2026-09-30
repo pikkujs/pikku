@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { age, changesContext } from '../lib/changes.js'
+import { age, changeRef, changesContext, clockTime } from '../lib/changes.js'
 import { dim, keyValue, safe, safeBlock, statusColor } from '../lib/output.js'
 import type { GetChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -20,8 +20,8 @@ export const FabricChangesShow = pikkuSessionlessFunc({
   input: FabricChangesShowInput,
   output: FabricChangesShowOutput,
   func: async (_services, input) => {
-    const { rpc } = await changesContext(input.apiUrl)
-    return await rpc.invoke('getChange', { changeId: input.changeId })
+    const { rpc, projectId } = await changesContext(input.apiUrl)
+    return await rpc.invoke('getChange', changeRef(projectId, input.changeId))
   },
 })
 
@@ -38,7 +38,7 @@ export const renderChangesShow = (
 ): void => {
   console.log(`#${safe(change.shortId)}  ${safe(change.title)}`)
   console.log(
-    `${statusColor(change.status)}${change.held ? dim(' (held)') : ''}  ${dim(safe(change.changeId))}`
+    `${statusColor(change.status)}${change.heldUntil ? dim(` (claimable at ${clockTime(change.heldUntil)})`) : change.held ? dim(' (held)') : ''}  ${dim(safe(change.changeId))}`
   )
   if (change.body) {
     console.log('')

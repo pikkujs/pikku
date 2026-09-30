@@ -154,7 +154,7 @@ describe('serializeAuthGen', () => {
     assert.match(wiring, /export const authHandler = pikkuSessionlessFunc/)
     assert.match(wiring, /route: '\/api\/auth\{\/\*splat\}', func: authHandler/)
     assert.match(secrets, /secretId: 'BETTER_AUTH_SECRET'/)
-    assert.doesNotMatch(secrets, /OAuthSchema/)
+    assert.doesNotMatch(secrets, /MicrosoftOAuthSchema/)
   })
 
   test('generates code for multiple providers', () => {
@@ -191,8 +191,43 @@ describe('serializeAuthGen', () => {
     assert.match(output, /secretId: 'MICROSOFT_OAUTH'/)
   })
 
-  test('does not emit defineVariable for standard oauth providers', () => {
-    assert.doesNotMatch(genSecrets(['github']), /defineVariable\({/)
+  test('does not emit config variables for standard oauth providers', () => {
+    assert.doesNotMatch(genSecrets(['github']), /variableId: '(GITHUB|GOOGLE)_/)
+  })
+
+  describe('OAuth proxy declarations', () => {
+    test('are always emitted, and all optional', () => {
+      const secrets = genSecrets([])
+      for (const id of [
+        'OAUTH_PROXY_SECRET',
+        'OAUTH_PROXY_URL',
+        'OAUTH_PROXY_PROVIDERS',
+        'OAUTH_PROXY_KEY_ID',
+      ]) {
+        const block = secrets.split('\n\n').find((b) => b.includes(`'${id}'`))
+        assert.ok(block, `${id} is declared`)
+        assert.match(block!, /optional: true,/)
+      }
+    })
+
+    test('declare google and github as optional when the app has neither', () => {
+      const secrets = genSecrets([])
+      for (const id of ['GOOGLE_OAUTH', 'GITHUB_OAUTH']) {
+        const block = secrets.split('\n\n').find((b) => b.includes(`'${id}'`))
+        assert.ok(block, `${id} is declared`)
+        assert.match(block!, /optional: true,/)
+      }
+    })
+
+    test('leave a provider the app declares required, and declared once', () => {
+      const secrets = genSecrets(['github'])
+      assert.equal(secrets.match(/secretId: 'GITHUB_OAUTH'/g)?.length, 1)
+      const block = secrets
+        .split('\n\n')
+        .find((b) => b.includes(`'GITHUB_OAUTH'`))
+      assert.doesNotMatch(block!, /optional: true,/)
+      assert.match(secrets, /secretId: 'GOOGLE_OAUTH'/)
+    })
   })
 
   test('emits defineVariable for microsoft tenantId', () => {

@@ -1,5 +1,209 @@
 # @pikku/skills
 
+## 0.12.45
+
+### Patch Changes
+
+- 211c5e1: `pikku fabric changes reply <id> --message "…" [--image path]` posts on an item's thread without asking (which parks it) or closing it (`done --note`) — for "not doing this, because…" or "blocked on X". `next` is now woken by fabric's `changes:<projectId>` events, re-reading the list on each one, with a three-minute safety poll while subscribed and the `--interval` poll with backoff when the stream is down; it sleeps exactly until the soonest held item becomes claimable. `list`, `show` and a refused `claim` print when a held or leased item is claimable. Short ids are looked up by fabric instead of by listing the project's oldest 200 items. Needs the matching fabric-api release.
+
+  `reply`, `ask` (question and each `--option`) and `file --title` now refuse blank text and send it trimmed. Their `.trim().min(1)` input schemas never ran: the CLI enforces no input schema at runtime, so `ask --question "   "` posted an empty question.
+
+- 0c88361: `pikku fabric config key=value` sets a project's Fabric settings: the showcase card, the guide build and the scenario-only environment. With no arguments, it now also shows them. A frontend in `pikku.config.json` can declare `routeParams`.
+
+## 0.12.44
+
+### Patch Changes
+
+- 698c7af: The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from `GET /auth/sign-in/personas` and signs in by persona id through `POST /auth/sign-in/persona`; `pikkuActor({ personaSignIn })` serves both, so the app writes no listing function.
+
+  **Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ apiUrl, app?, onSignedIn }`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor`, and `listDevActors({ apiUrl, app })` fetches the list, for callers outside React.
+
+  `@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when the gate is shut. `allowed` is now optional: pass `personaSignIn: { personas, featureFlags }` and both endpoints are open under `pikku dev`, and on a deployed stage only with `allowSignIn` opted in and the `devSwitcher` flag on. `devSwitcherOn(featureFlags, optIn)` exports that same check.
+
+  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
+
+- 4e3af11: `pikku-build` says to run the whole scenario suite rather than the milestone's
+  own — the regression lives in someone else's scenario — and to restart the
+  server after adding a function rather than editing one while a run is in flight.
+
+## 0.12.43
+
+### Patch Changes
+
+- 88683e2: `pikku fabric changes next` blocks until the changes queue has work — an item past its grace window, or an answer to a question the `--claimed-by` claimant asked — prints it and exits, so a coding agent runs it in the background instead of polling. `--claim` takes what it found as one group, `--stage` narrows to a stage by branch, URL or id, and `--timeout`/`--once` exit 2 when nothing turns up; a refused session exits 3. `list` also takes `--stage`, `show 2`/`show #2` and short ids everywhere a change is named now resolve, and a 409 from `claim` says per item why it could not be taken. The `pikku-changes` skill is rewritten around that loop.
+
+## 0.12.42
+
+### Patch Changes
+
+- 3ff2b0c: Report the builder's own log when a fabric deploy fails. A failed deployment has
+  an empty manifest and plan, `statusReason` is null for anything that is not a
+  gate, and `fabric logs` serves the running stage rather than the build — so the
+  CLI said `failed in 248s` and nothing else, which reads as "your project is
+  broken" even when the build host was simply unreachable.
+- 974ced9: Add `pikku fabric user add <email>`, the CLI form of the console's Add user, so
+  a user can be created on a deployed stage without opening the console.
+- ff38f13: A guide marker can name one scenario — `<!-- pikku:guide feature=F scenario=S -->` — so each section of a page shows its own figures instead of every scenario's landing in one block. Showcase shots now lead a scenario's figures, and a recording is captioned with its actor only when there are several.
+
+  The pikku-guide skill now plans pages from the suite, puts one `scenario=` marker under each section, gives every cited scenario a closing still, and treats captions and seed data on camera as copy.
+
+- a377523: `pikku validate` reports app code importing `@pikku/core`
+
+  `#pikku` is the app's API and `@pikku/core` is the ecosystem's, so a name taken
+  from core is the untyped copy of one the alias hands over already typed against
+  the project. The new `coreImport` lint rule reports it, naming the `#pikku` leaf
+  that carries the name. `@pikku/core/services` stays exempt — the service
+  implementations bootstrap picks are a choice, not a wiring — as does
+  `application-types.d.ts`, which is codegen's input. Set
+  `"lint": { "coreImport": "off" | "warn" }` to lower or silence it.
+
+## 0.12.41
+
+### Patch Changes
+
+- a45bdaa: Add `pikku release`: versioned releases from the API surface. `release prepare` diffs the surface against the committed `surface.pikku.json`, bumps `package.json`, prepends a `CHANGELOG.md` section listing the API changes and any `Release-Note:` commit trailers, and records the result in `release.gen.json`. It never commits, tags or pushes — the caller does, with plain git or a platform. The bump comes from the surface diff alone; below 1.0 a breaking change is a minor, and `--go-live` cuts 1.0.0. `release diff` and `release snapshot` replace `pikku semver`, which stays as a deprecated alias. Surface wirings no longer carry `sourceFile`, so a baseline from another checkout no longer reports every route as modified.
+
+## 0.12.40
+
+### Patch Changes
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 1ac09c7: The `pikku-workflow` skill now documents sub-workflows: `workflow.do` with a workflow name runs it as a child run, graph nodes may name a workflow, and inline vs queued children differ on retries.
+
+## 0.12.39
+
+### Patch Changes
+
+- b35d3d4: Fix `pikku-knowledge` teaching a section and a status that nothing reads.
+
+  The skill described the work-note section as `slices/` with `type: slice`.
+  `@pikku/knowledge` has no such concept: `MILESTONES_DIR` is
+  `knowledge/milestones`, `MILESTONE_TYPE` is the literal `'milestone'`, and
+  `readMilestones` filters on both. A note written the way the skill described
+  is invisible to `pikku knowledge next`, to the milestone gate and to
+  reconcile — the knowledge base looks empty rather than wrong, which is the
+  expensive way to fail. The type-table row also claimed `validate` accepts
+  both spellings; it does not.
+
+  It also documented `status: designing` as the step before `proposed`.
+  `MILESTONE_STATUSES` is `['proposed', 'dispatched', 'built']`, so that note
+  fails `validate`. The paragraph now says a profile may add a status of its
+  own ahead of `proposed` and that validating it is the profile's job, which
+  is what a downstream base actually does.
+
+- b35d3d4: Add `pikku new app` and the registry's discovery half.
+
+  **`pikku new app <slug> --serves <group> --personas <ids>`** adds a frontend,
+  scaffolded from `pikkujs/starter-template`'s `apps/app`. It re-points the copy's
+  `package.json` at its own name, dev/preview port and `--tsBuildInfoFile`, stamps
+  `app: '<slug>'` onto each named persona, writes the `frontends` entry and
+  re-runs the install. `pikku-build`'s `multi-app.md` described all of that as
+  five files to edit by hand, including the build-cache path whose absence
+  produces type errors that vanish on a clean build.
+
+  It scaffolds from the template rather than copying the app already in the
+  project: a copy drags the first app's screens, routes and nav into an audience
+  that never asked for them. `--template <source>` takes any giget source, or a
+  path inside the repo for an offline or vendored copy.
+
+  The refusals matter more than the scaffolding, because the scaffolding is five
+  edits and a wrong audience is a whole second app nobody needed: a `--serves`
+  that names a surface rather than people, an audience that already has an app,
+  a persona who already signs into another one, a slug the plan already uses for
+  an existing app, and a persona no `definePersonas({…})` declares. It repairs
+  its own half-states too — the directory is written before the config entry,
+  and neither half survives alone.
+
+  It stops after the install; serving the app belongs to whatever hosts it.
+
+  **`pikku fabric addon search|get`** fill in the registry's read half, next to
+  the `verify`/`publish`/`add` that were already there. Both catalogues are
+  public GETs, so discovery needs no login — the question "is there already an
+  addon for this?" comes up before adopting one, not after. `search` prints
+  published addons ahead of OpenAPI entries, because one is built and typed
+  while the other still costs a codegen round that can fail on a bad spec.
+  `get` accepts every spelling in the wild — `gmail`, `addon-gmail` and
+  `@pikku/addon-gmail` all reach `pikku-addon-gmail`, including the ones
+  `search` itself printed.
+
+## 0.12.38
+
+### Patch Changes
+
+- b31675a: pikku-scenario: how a custom dev runner bakes the actor switcher's env, and why SCENARIO_ACTOR_SECRET must be set rather than minted
+- 237c061: pikku-build: link the console at the person's technical level (local console until deploy, then the Fabric stage's) and offer a picture of the main screens
+- 0672bdd: pikku-build: print the app, API and console links whenever the dev stack comes up and at every hand-over
+- b3e5443: OpenAPI onboarding in the skills: pikku-build picks the auth mode and documents the auth-config format and the matching sign-in or connect screen, and keeps a BUILD-REPORT.md sent with the user's okay; pikku-addon's OpenAPI reference follows the one-command install; pikku-auth documents login/username delegated sign-in.
+
+## 0.12.37
+
+### Patch Changes
+
+- 46f99b2: The pikku-guide skill's capture-step example is now compiled from `examples/online-shop`, and uses named schemas. The inline `z.object` it showed before is rejected by pikku (PKU489).
+- 17d8746: An addon generated with `pikku new addon --openapi` never built. Every function file declared its zod schemas next to an import of `#pikku/function`, and `pikku all` loads the file that declares a schema to convert it. At runtime `#pikku` resolves through the addon's `imports` into `dist/`, which the first build has not written yet, so every schema failed with `Could not convert Zod schema … Cannot find module …/dist/.pikku/function/index.js` and the build stopped there. Each operation's schemas now go in a sibling `<operation>.schemas.ts` that imports only zod, and the function file imports them from it.
+
+  The generated imports also named the wrong tree. An addon's generated code lives under `.pikku/addon/`, so `#pikku/function` and `#pikku/variables/…` pointed at leaves that do not exist, and `tsc` failed even once codegen had run. They are now `#pikku/addon/function` and `#pikku/addon/variables/…`, as the hand-written addon scaffold already had them.
+
+  `pikku validate` now reports an installed Pikku package that resolves a different copy of a type-identity package (`zod`, `kysely`, `@pikku/core`, `better-auth`) than the project as an error, `skewed-type-identity-…`, and the codegen preflight warns about it as `PKU719`. Under bun's isolated layout `@pikku/cli` can carry its own `zod` beside it in the store. Codegen then reads the app's schemas with a different zod than wrote them, and correct schemas fail to convert. The existing check only looked at dependencies linked from outside the project, so it never saw this case.
+
+  The `pikku-build` skill now recognises an OpenAPI spec or an n8n export handed over with the request, says so, converts it first, then carries on building the app. `pikku-addon` gains an OpenAPI reference and corrects its addon import paths and build steps. `pikku-n8n-import` joins the `core` install group.
+
+- 33b1d5a: New `pikku-report` skill for `pikku fabric report`.
+
+  A finding is about pikku rather than about the app, and the corpus had no skill
+  for filing one: the material lived inside `pikku-build/references/feature.md`
+  and was reachable only in the "feature added to an existing app" mode. The new
+  skill owns the workaround-first ladder, the product-vs-harness kinds, the
+  strict validation rules (a resolved finding needs a workaround or a proposal; an
+  unresolved one needs `--tried`), the JSON-on-stdin form, and the local spool
+  (`pikku fabric findings list|flush|clear`). `pikku-build`'s reference now points
+  at it instead of carrying a copy. `installGroups: [core]`.
+
+- 0602266: New `pikku-guide` skill: how `pikku scenario guide` compiles a user guide from the scenario suite — that the run supplies only the figures and the page supplies every word, what a page must carry to teach the task, page markers, the capture step, `.guide.lock` staleness, `document: false`, and the traps that make a block come out empty or a run refused.
+
+  `pikku-build` now sets both local secrets (`BETTER_AUTH_SECRET`, `SCENARIO_ACTOR_SECRET`) in `.env` before the first run, and says why the stack must start through `bun run dev`: a frontend launched on its own has no persona list, so the "Sign in as …" switcher silently disappears, and its dev proxy defaults to `:3000`, so beside another project's server sign-ins reach the wrong API. It also covers `pikkuSessionlessFunc` for public reads, domain tables that collide with Better Auth's `session`, and mounting the switcher on a public homepage. `pikku-scenario` lists the three silent causes of a missing switcher.
+
+- 33b1d5a: Truth pass over the corpus and snippet-backed code fences.
+
+  Phantom names removed: `pikku-verify` (16 hits across 10 skills — no such
+  command; the real check is `pikku all`), `pikku-workflow-view`,
+  `pikku-queue`/`pikku-schedule` in routing prose, and the `pikku-meta`/`pikku-db`
+  tool spellings in `pikku-fabric`. Stale facts corrected in `pikku-scenario`
+  (personas live in `definePersonas`, not `pikku.config.json`; `--no-browser` does
+  not exist), `pikku-workflow` (generated HTTP routes, not `workflowStart`),
+  `pikku-realtime` (`pikku enable events` is required), and `pikku-fabric`
+  (`pikkufabric.config.json`, `-y` does not approve destructive migrations).
+
+  Code fences can now be generated from compiled code: a fence marked
+  ` ```ts snippet:<region> ` is expanded at embed time from the
+  `// @snippet start <region>` regions in `examples/online-shop`, the same source
+  the website's code blocks use. `SKILL_SNIPPETS` ships with the package so a
+  filesystem read (`pikku skills install` from a checkout) expands the same way.
+  The corpus suite fails on a fence naming a region that does not exist, a CLI
+  suite fails when the embedded snippets drift from the example, and a ratchet
+  pins the number of TypeScript fences still unbacked (`73`). `pikku-scenario`'s
+  persona declaration is the first converted block.
+
+## 0.12.36
+
+### Patch Changes
+
+- bc29716: Add `pikku-changes`, the skill for working a project's changes queue — the todo list someone files by walking a deployed stage. It covers the `pikku fabric changes list|claim|show|ask|shot|done` loop, how to read an item (their words first, then the screenshot, then the circled elements, and the source anchor only as a starting point), when a question is worth their context switch and when it is not, offering visual answers as `--kind option` attachments shot in one pass at one width, and the one-item-one-commit rule with the `Change-Id:` trailer that makes a single item revertable.
+
+  It lived only in Fabric's own repo, so the agents that had it were the ones working inside Fabric. The queue is driven by `pikku fabric changes`, which every OSS client already has, so the skill ships with the CLI in the `fabric` install group.
+
+- cb239e2: `pikku-scenario` and `pikku-concepts` load lean: their long sections move into references (`steps`, `personas`, `browser`, `coverage`; `bootstrap`, `language`) that the skill body links to, and the long references in `pikku-auth`, `pikku-build`, `pikku-concepts` and `pikku-react` open with a table of contents.
+
 ## 0.12.35
 
 ### Patch Changes

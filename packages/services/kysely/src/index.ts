@@ -14,6 +14,9 @@ export { KyselyScopeService } from './kysely-scope-service.js'
 export { KyselyFeatureFlagStore } from './kysely-feature-flag-store.js'
 export type { KyselyFeatureFlagStoreOptions } from './kysely-feature-flag-store.js'
 export { KyselyWebhookService } from './kysely-webhook-service.js'
+export { KyselyTriggerSourceStore } from './kysely-trigger-source-store.js'
+export { KyselyLeaseService } from './kysely-lease-service.js'
+export { KyselyIncomingWebhookService } from './kysely-incoming-webhook-service.js'
 export {
   createAuditedKysely,
   type CreateAuditedKyselyOptions,
@@ -22,6 +25,11 @@ export { KyselyAuditService } from './kysely-audit-service.js'
 export { KyselyAnalyticsService } from './kysely-analytics-service.js'
 export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-store.js'
+
+// Re-exported so a generated file that constructs the services above opens and
+// types its database with the same copy of kysely those services were built
+// against, rather than a second copy the project may resolve on its own.
+export { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 
 export {
   SerializePlugin,
@@ -57,6 +65,8 @@ export {
   credentialSchema,
   deploymentSchema,
   flagSchema,
+  incomingWebhookSchema,
+  leaseSchema,
   scopeSchema,
   secretSchema,
   sessionSchema,

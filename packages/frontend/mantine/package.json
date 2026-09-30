@@ -1,6 +1,6 @@
 {
   "name": "@pikku/mantine",
-  "version": "0.12.14",
+  "version": "0.12.16",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "test": "tsc -p tsconfig.test-d.json && node --test src/theme/theme-contract.test.ts && tsx --test src/core/original.test.ts",
+    "test": "tsc -p tsconfig.test-d.json && node --test src/theme/theme-contract.test.ts && tsx --test src/core/original.test.ts src/core/statics.test.ts",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "build": "bun run build:esm && bun run build:cjs",
@@ -35,7 +35,7 @@
   "peerDependencies": {
     "@mantine/core": "^9.2.1",
     "@mantine/hooks": "^9.2.1",
-    "@pikku/react": "^0.12.11",
+    "@pikku/react": "^0.12.13",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },

@@ -3,16 +3,15 @@ name: pikku-knowledge
 description: >-
   Use when writing, reading, reorganising or validating a project's knowledge/ directory — the
   notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
-  note (path-as-identity markdown, YAML frontmatter, only `type` required), the sections of the
-  app-project profile (slices, entities, decisions, questions, wishlist) and the one question each
-  answers, slice status/entities/gherkin rules, the `resource:` URI scheme tying a note to the
-  code it is about, the shapes that are NOT a knowledge base, and the `pikku knowledge
-  validate|index` commands. TRIGGER when: user asks to write down a decision, requirement, entity
-  or open question; asks what the app does or is; asks about knowledge/, notes, slices,
-  an index.md, or a diagram, callout or decision block; or hands over a product
-  brief to record. DO NOT TRIGGER when: user asks what
-  functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
-  note), or to write a scenario test (use pikku-scenario).
+  note (path-as-identity markdown, YAML frontmatter, only `type` required), the app-project
+  profile's sections (milestones, entities, decisions, questions, wishlist) and what each answers,
+  milestone status/entities/gherkin rules, the `resource:` URI scheme tying a note to its code,
+  what is NOT a knowledge base, and `pikku knowledge validate|index`. TRIGGER when: user asks to
+  write down a decision, requirement, entity or open question; asks what the app does or is; asks
+  about knowledge/, notes, milestones, an index.md, or a diagram, callout or decision block; or
+  hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes,
+  tables or permissions exist (that is `pikku meta` / `pikku info`, never a note), or to write a
+  scenario test (use pikku-scenario).
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
@@ -76,7 +75,7 @@ Frontmatter fields:
 
 | Field         | Meaning                                                                                                                 |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `type`        | **The only required field.** `slice` — or `milestone`, when the project's own `knowledge/index.md` names the section that way; `validate` accepts both, so follow the scaffold rather than this list. Then `entity`, `decision`, `note`, `overview`. Lowercase — gates compare it literally. |
+| `type`        | **The only required field.** One of `milestone`, `entity`, `decision`, `note`, `overview`. Lowercase — every gate compares it literally, and `milestone` is the exact string `readMilestones` filters on, so a near-miss is a note no command can see. |
 | `title`       | What to call the note in a listing. Falls back to the first heading, then the filename.                                 |
 | `description` | One line, used as the note's subtitle in a section index.                                                               |
 | `resource`    | Comma-separated `<kind>:<id>` URIs — the code this note is about. See below.                                            |
@@ -92,9 +91,9 @@ Plain markdown links between notes — `[revocation](../decisions/revocation-end
 ```
 knowledge/
   index.md                                  # type: overview — the map
-  slices/
+  milestones/
     index.md
-    01-the-daily-entry.md                   # type: slice
+    01-the-daily-entry.md                   # type: milestone
   entities/
     index.md
     entry.md                                # type: entity
@@ -116,7 +115,7 @@ Each section answers exactly one question, which is what lets a reader find a no
 
 | Section               | The question it answers                                            |
 | --------------------- | ------------------------------------------------------------------ |
-| `slices/`             | What is one buildable piece of this app, and what proves it works? |
+| `milestones/`         | What is one buildable piece of this app, and what proves it works? |
 | `entities/`           | What is this thing, in the words users use for it?                 |
 | `decisions/`          | What was chosen, and what does that rule out?                      |
 | `decisions/security/` | Who may do what?                                                   |
@@ -125,13 +124,13 @@ Each section answers exactly one question, which is what lets a reader find a no
 
 **Create a section the turn you have a note for it** — never a scaffold of empty directories, and never a section without its own `index.md`. A section index says in one line what belongs in it; that sentence is the reason the file exists, so `pikku knowledge index` writes only the note listing and leaves your prose alone.
 
-## Slices
+## Milestones
 
-A slice is the one note type that is a piece of _work_ rather than a fact, so it alone carries state and size:
+A milestone is the one note type that is a piece of _work_ rather than a fact, so it alone carries state and size. It lives in `knowledge/milestones/` and nowhere else: `readMilestones` matches on that directory literally, so the same note under another section is invisible to every gate and command below.
 
 ````markdown
 ---
-type: slice
+type: milestone
 title: The daily entry
 description: An owner writes one entry per day, and sees it on the day.
 status: proposed
@@ -151,9 +150,9 @@ And writing again replaces it rather than adding a second
 ```
 ````
 
-- **`status`** is `designing` → `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally. `designing` sits BEFORE `proposed`: the slice is written down but must not be built yet, because whoever is being shown its looks has not picked one. Only `proposed` is dispatchable, so the two cannot be one status without a slice being built out from under the person still choosing.
+- **`status`** is `proposed` → `dispatched` → `built`. Nothing else — `MILESTONE_STATUSES` is those three, and every gate compares them literally, so an invented status fails `validate` rather than degrading. Only `proposed` is dispatchable. A profile may add one of its own ahead of `proposed` for work that is written down but must not be built yet; that is the profile's to define and validate, not core's.
 - **`statusAt:` and `attempts:` are bookkeeping, not content — never hand-edit them.** A loop driving this base writes both. `statusAt:` is stamped by whatever moved the status, and is what makes "how long has this been building?" answerable; the file's mtime is not the transition time, because a note is edited after dispatch for all sorts of reasons. `attempts:` is `seat@hash` entries recording which seat has already tried to move this note forward, against the content it was trying to move — it is the loop's only brake, and clearing it by hand hands back a budget that exists to stop a note nothing can satisfy being rewritten forever. Rewriting the note's real content refunds that budget on its own, which is the point: an answer that changes the note is what unsticks it.
-- **`entities`** lists what the slice touches, **at most three**. Past three it is not one buildable piece — split it.
+- **`entities`** lists what the milestone touches, **at most three**. Past three it is not one buildable piece — split it.
 - **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected. The console draws the keywords as a column and each quoted persona as a chip, so a first-person scenario is visibly a block with no personas in it.
 
 ## Showing it
@@ -231,7 +230,7 @@ These are all things that exist somewhere better, so a note is always the copy t
 | Do not write                        | Because it lives in                                        |
 | ----------------------------------- | ---------------------------------------------------------- |
 | a `personas/` section               | `definePersonas()` in the project's own code               |
-| a `scenarios/` section              | the gherkin block inside the slice it belongs to           |
+| a `scenarios/` section              | the gherkin block inside the milestone it belongs to       |
 | a `permissions/` section            | a decision note under `decisions/security/`                |
 | a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |
 | a changelog                         | `CHANGELOG.md` at the repo root                            |
@@ -250,7 +249,7 @@ pikku knowledge index           # refresh every index.md
 pikku knowledge index --check   # report stale indexes without writing (CI gate)
 ```
 
-`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, slices with a bad or missing `status`, slices over three entities, slices with no gherkin block or a first-person one, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
+`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, milestones with a bad or missing `status`, milestones over three entities, milestones with no gherkin block or a first-person one, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
 
@@ -312,4 +311,4 @@ The exception, and it is narrow: bookkeeping the loop owns. `statusAt:` and `att
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.
 
-Fabric is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `design:` field on a slice pointing at the design options it was built from. Both are Fabric's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.
+Fabric is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — a `screens/` section, and a `design:` field on a milestone pointing at the design options it was built from. Both are Fabric's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.

@@ -9,17 +9,25 @@ import { fileURLToPath } from 'node:url'
  * from the origin and 404 behind it. The generated client is imported straight
  * out of the e2e app's `.pikku`, the way a frontend in the same repository
  * would — nothing here is published, so there is no package boundary to keep.
+ *
+ * `--mode native` builds the same app for the Tauri shell in `src-tauri`: the
+ * webview serves it from its own root, and `.env.native` names the server it
+ * talks to, since its own origin is the app's and not the API's. It writes to
+ * `dist-native` so the build the scenarios serve is left alone.
  */
-export default defineConfig({
-  base: '/app/',
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '#pikku': fileURLToPath(new URL('../../.pikku', import.meta.url)),
+export default defineConfig(({ mode }) => {
+  const native = mode === 'native'
+  return {
+    base: native ? '/' : '/app/',
+    plugins: [react()],
+    resolve: {
+      alias: {
+        '#pikku': fileURLToPath(new URL('../../.pikku', import.meta.url)),
+      },
     },
-  },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  },
+    build: {
+      outDir: native ? 'dist-native' : 'dist',
+      emptyOutDir: true,
+    },
+  }
 })

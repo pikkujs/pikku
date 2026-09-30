@@ -484,6 +484,90 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
   })
 
+  test('builds no wire services for a function marked singletonServicesOnly', async () => {
+    let built = 0
+    addTestFunction('singletonOnly', { func: async () => 'ok' })
+    ;(
+      pikkuState(null, 'function', 'meta') as any
+    ).singletonOnly.singletonServicesOnly = true
+    addTestFunction('usesWire', { func: async () => 'ok' })
+    const createWireServices = async () => {
+      built++
+      throw new Error('no credential')
+    }
+    const run = (name: string) =>
+      runPikkuFunc('rpc', name, name, {
+        singletonServices: mockSingletonServices,
+        createWireServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      })
+
+    assert.equal(await run('singletonOnly'), 'ok')
+    assert.equal(built, 0)
+    await assert.rejects(run('usesWire'), { message: 'no credential' })
+    assert.equal(built, 1)
+  })
+
+  test('an rpc from a singletonServicesOnly function builds the callee its own wire services', async () => {
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async (_singletons: any, wire: any) => ({
+        builtFor: wire.functionId,
+      }),
+    } as any)
+    addTestFunction('forwarder', {
+      func: async (_services: any, _data: any, { rpc }: any) =>
+        rpc.invoke('needsWire', {}),
+    })
+    ;(
+      pikkuState(null, 'function', 'meta') as any
+    ).forwarder.singletonServicesOnly = true
+    addTestFunction('needsWire', {
+      func: async (services: any) => services.builtFor,
+    })
+
+    const result = await runPikkuFunc('http', 'forwarder', 'forwarder', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, 'needsWire')
+  })
+
+  test('reuses wire services the caller passes in and leaves them open', async () => {
+    let built = 0
+    let closed = 0
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async () => {
+        built++
+        return {}
+      },
+    } as any)
+    addTestFunction('onMessage', {
+      func: async (services: any) => services.connection,
+    })
+
+    const result = await runPikkuFunc('channel', 'onMessage', 'onMessage', {
+      singletonServices: mockSingletonServices,
+      wireServices: {
+        connection: 'kept',
+        close: async () => {
+          closed++
+        },
+      },
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, 'kept')
+    assert.equal(built, 0)
+    assert.equal(closed, 0)
+  })
+
   test('should resolve versioned function ids to the base function and warn once', async () => {
     const warnings: string[] = []
     const singletonServices = {

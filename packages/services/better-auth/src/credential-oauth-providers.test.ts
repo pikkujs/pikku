@@ -35,6 +35,15 @@ describe('credentialOAuthProviders', () => {
     assert.equal(providers[0]!.clientId, 'id')
   })
 
+  test('the scope separator reaches the provider', async () => {
+    const providers = await credentialOAuthProviders(
+      { gmail: { ...configs.gmail!, scopeSeparator: ',' } },
+      reader(async () => wrap({ clientId: 'id' }))
+    )
+
+    assert.equal(providers[0]!.scopeSeparator, ',')
+  })
+
   // An optional secret resolves `undefined` rather than throwing, which is the
   // whole point of `optional`. Dereferencing that for `.reveal()` turned an
   // unconfigured provider — the case this function exists to survive — into a

@@ -25,12 +25,27 @@ export interface CreateNodeSqliteKyselyOptions {
    * register functions. Using it is a decision to stay on Node.
    */
   functions?: SqliteFunctionMap
+  /**
+   * Absolute paths of loadable SQLite extensions (sqlite-vec's `vec0`, say) to
+   * load before the database is handed to Kysely. Loaded through the C API;
+   * SQL's own `load_extension()` stays refused.
+   */
+  extensions?: string[]
 }
 
 export function createNodeSqliteKysely<DB>(
   options: CreateNodeSqliteKyselyOptions
 ): Kysely<DB> {
-  const db = new DatabaseSync(options.filename)
+  const extensions = options.extensions ?? []
+  // node:sqlite refuses loadExtension on a connection not opened allowing it,
+  // so allow it only when there is something to load, and shut it again after.
+  const db = new DatabaseSync(options.filename, {
+    allowExtension: extensions.length > 0,
+  })
+  if (extensions.length > 0) {
+    for (const path of extensions) db.loadExtension(path)
+    db.enableLoadExtension(false)
+  }
   if (options.functions) registerSqliteFunctions(db, options.functions)
   const plugins: KyselyPlugin[] = []
   if (options.camelCase ?? true) plugins.push(new CamelCasePlugin())

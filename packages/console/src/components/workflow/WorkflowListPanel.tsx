@@ -1,27 +1,30 @@
 import React, { useMemo } from 'react'
 import type { ReactNode } from 'react'
+import { Text } from '@pikku/mantine/core'
 import { GitBranch } from 'lucide-react'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { EntityCardList } from '../layout/EntityCardList'
-import type { EntityCardItem, EntityCardBadge } from '../layout/EntityCardList'
+import { TableListPage } from '../layout/TableListPage'
+import { toEnglishName } from '../../lib/strings'
 
 export interface WorkflowListPanelProps {
   onOpen: (name: string) => void
-  /** Filters by name and description. Omit for the unfiltered list. */
   searchQuery?: string
   emptyHero?: ReactNode
   metricSlot?: (name: string) => ReactNode
   icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
 }
 
-/**
- * Every workflow in the project as selectable cards — scenarios left out (they
- * have their own surface).
- *
- * Reads the project meta rather than a `WorkflowSurface`: this is the panel a
- * host shows *before* one workflow has been chosen.
- */
+interface WorkflowRow {
+  name: string
+  title: string
+  funcId?: string
+  description?: string
+  steps: number
+}
+
 export const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
   onOpen,
   searchQuery = '',
@@ -29,66 +32,93 @@ export const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
   metricSlot,
   icon = GitBranch,
 }) => {
+  useLocale()
   const { meta, loading } = usePikkuMeta()
 
-  const scenarioNames = useMemo(() => {
-    const names = new Set<string>()
-    for (const w of Object.values(meta.workflows ?? {}) as any[]) {
-      if (w.source === 'scenario' || w.scenario === true) names.add(w.name)
-    }
-    return names
-  }, [meta.workflows])
-
-  const allItems = useMemo((): EntityCardItem[] => {
-    const workflows = meta.workflows ?? {}
-    const all = Object.values(workflows) as any[]
-    return all
-      .map((w: any): EntityCardItem => {
-        const stepCount = w.nodes
-          ? Object.keys(w.nodes).length
-          : (w.steps?.length ?? 0)
-        const badges: EntityCardBadge[] = []
-        if (w.source === 'scenario')
-          badges.push({ label: 'Scenario', tone: 'accent' as const })
-        else if (w.dsl === true)
-          badges.push({ label: 'DSL', tone: 'neutral' as const })
-        const metaTags: string[] = []
-        if (stepCount > 0)
-          metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
-        if (w.actors?.length) metaTags.push(w.actors.join(', '))
-        return {
+  const rows = useMemo(
+    (): WorkflowRow[] =>
+      (Object.values(meta.workflows ?? {}) as any[])
+        .filter((w) => w.source !== 'scenario' && w.scenario !== true)
+        .map((w) => ({
           name: w.name,
-          badges,
-          meta: metaTags,
+          title: w.displayName || toEnglishName(w.name),
+          funcId: w.pikkuFuncId,
           description: w.description ?? w.summary,
-          tags: w.tags,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.workflows])
+          steps: w.nodes
+            ? Object.keys(w.nodes).length
+            : (w.steps?.length ?? 0),
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [meta.workflows]
+  )
 
-  const items = useMemo(() => {
-    const base = allItems.filter((item) => !scenarioNames.has(item.name))
-    const q = searchQuery.toLowerCase()
-    if (!q) return base
-    return base.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q)
-    )
-  }, [allItems, scenarioNames, searchQuery])
+  const columns = [
+    {
+      key: 'name',
+      header: m.workflows_col_workflow(),
+      width: '100%',
+      maxWidth: 0,
+      render: (w: WorkflowRow) => (
+        <>
+          <Text size="sm" fw={600} truncate>
+            {asI18n(w.title)}
+          </Text>
+          <Text size="xs" c="dimmed" truncate>
+            {w.funcId ? (
+              <Text span ff="monospace" fz="xs">
+                {asI18n(w.funcId)}
+              </Text>
+            ) : null}
+            {w.description
+              ? asI18n(`${w.funcId ? ' · ' : ''}${w.description}`)
+              : null}
+          </Text>
+        </>
+      ),
+    },
+    {
+      key: 'steps',
+      header: m.workflows_col_steps(),
+      width: 90,
+      align: 'right' as const,
+      render: (w: WorkflowRow) => (
+        <Text size="sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {asI18n(String(w.steps))}
+        </Text>
+      ),
+    },
+    ...(metricSlot
+      ? [
+          {
+            key: 'last-run',
+            header: m.workflows_col_last_run(),
+            width: 200,
+            render: (w: WorkflowRow) => metricSlot(w.name),
+          },
+        ]
+      : []),
+  ]
 
   return (
-    <EntityCardList
-      items={items}
-      onOpen={onOpen}
-      loading={loading}
+    <TableListPage
+      title={m.workflows_title()}
       icon={icon}
+      docsHref="https://pikku.dev/docs/wiring/workflows"
+      data={rows}
+      columns={columns}
+      getKey={(w) => w.name}
+      onRowClick={(w) => onOpen(w.name)}
+      externalSearch={searchQuery}
+      searchFilter={(w, q) =>
+        w.title.toLowerCase().includes(q) ||
+        w.name.toLowerCase().includes(q) ||
+        (w.funcId?.toLowerCase().includes(q) ?? false) ||
+        (w.description?.toLowerCase().includes(q) ?? false)
+      }
+      loading={loading}
       emptyHero={emptyHero}
       emptyTitle={m.workflows_empty_title()}
       emptyDescription={m.workflows_empty_description()}
-      docsHref="https://pikku.dev/docs/wiring/workflows"
-      metricSlot={metricSlot}
     />
   )
 }

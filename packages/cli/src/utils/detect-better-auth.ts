@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-import { glob } from 'tinyglobby'
+import { findSourceFiles } from './find-source-files.js'
 
 // A pikkuBetterAuth(...) call. Used as a cheap, AST-free signal during bootstrap
 // (when the inspector hasn't run yet) to decide whether to pre-write the
@@ -19,16 +18,7 @@ export async function projectDeclaresBetterAuth(
   srcDirectories: string[],
   ignoreFiles: string[] = []
 ): Promise<boolean> {
-  const files = (
-    await Promise.all(
-      srcDirectories.map((dir) =>
-        glob(`${path.join(rootDir, dir)}/**/*.ts`, {
-          ignore: ignoreFiles,
-          absolute: true,
-        })
-      )
-    )
-  ).flat()
+  const files = await findSourceFiles(rootDir, srcDirectories, ignoreFiles)
 
   for (const file of files) {
     if (file.includes('/.pikku/')) continue

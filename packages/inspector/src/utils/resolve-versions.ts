@@ -209,6 +209,13 @@ function updateWiringReferences(
         source.pikkuFuncId = newId
       }
     }
+    for (const source of Object.values(
+      state.triggers.webhookSourceMeta ?? {}
+    )) {
+      for (const step of ['receive', 'check', 'setup', 'teardown'] as const) {
+        if (source[step] === oldId) source[step] = newId
+      }
+    }
   }
 
   // MCP resources, tools, and prompts

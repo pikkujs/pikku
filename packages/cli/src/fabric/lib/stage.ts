@@ -58,3 +58,66 @@ export async function resolveStageId(
 ): Promise<string> {
   return (await resolveStage(rpc, projectId, branch)).stageId
 }
+
+const hostOf = (value: string): string => {
+  try {
+    return new URL(value.includes('://') ? value : `https://${value}`).host
+  } catch {
+    return value
+  }
+}
+
+/**
+ * Find the stage a person named however they happened to name it: the branch
+ * (`develop`), the address they were looking at when they filed
+ * (`https://fabric-develop-….pikkufabric.dev`, with or without the scheme or a
+ * path), or its id.
+ */
+export async function matchStage(
+  rpc: PikkuRPC,
+  projectId: string,
+  ref: string
+): Promise<ResolvedStage> {
+  const { stages } = await rpc.invoke('listStages', { projectId })
+  const wanted = ref.trim()
+  const host = hostOf(wanted).toLowerCase()
+  const stage = stages.find(
+    (s) =>
+      s.stageId === wanted ||
+      s.branch === wanted ||
+      [s.url, s.containerUrl].some(
+        (url) => !!url && hostOf(url).toLowerCase() === host
+      )
+  )
+  if (!stage) {
+    const known = stages.map((s) =>
+      s.url ? `${s.branch} (${s.url})` : s.branch
+    )
+    throw new FabricPreconditionError(
+      `No stage matches "${wanted}".${known.length ? ` Stages: ${known.join(', ')}` : ' This project has no stages yet.'}`
+    )
+  }
+  return { stageId: stage.stageId, branch: stage.branch }
+}
+
+export async function autoDeployOffHints(
+  rpc: PikkuRPC,
+  projectId: string,
+  branch?: string
+): Promise<string[]> {
+  const { stages } = await rpc.invoke('getProjectDeployments', { projectId })
+  return stages
+    .filter(
+      (s) =>
+        (!branch || s.branch === branch) &&
+        !s.autoDeployOnPush &&
+        s.deployments.some(
+          (d) =>
+            d.status === 'suspended' && d.statusReason === 'awaiting_approval'
+        )
+    )
+    .map(
+      (s) =>
+        `waiting for approval — auto-deploy is off (pikku fabric deploy auto on -b ${s.branch})`
+    )
+}

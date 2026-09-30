@@ -188,6 +188,11 @@ export type ScenarioRunIdentity = {
   scenarioName: string
   featureId?: string
   featureName?: string
+  /** The scenario's declared title, snapshotted so the record reads as prose. */
+  title?: string
+  description?: string
+  /** Who the scenario cast, in declaration order. */
+  actors?: string[]
   tags?: string[]
 }
 
@@ -207,5 +212,8 @@ export const identifyScenarioResult = (
   scenarioName: identity.scenarioName,
   ...(identity.featureId ? { featureId: identity.featureId } : {}),
   ...(identity.featureName ? { feature: identity.featureName } : {}),
+  ...(identity.title ? { title: identity.title } : {}),
+  ...(identity.description ? { description: identity.description } : {}),
+  ...(identity.actors?.length ? { actors: identity.actors } : {}),
   ...(identity.tags?.length ? { tags: identity.tags } : {}),
 })

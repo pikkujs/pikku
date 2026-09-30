@@ -18,7 +18,7 @@ Use this skill as an execution checklist, not reference material.
 5. **Verify with `pikku fabric validate --json`, then codegen and `tsc`** after every slice (Stage 8 has the exact commands). Never batch a whole app and verify at the end.
 6. **Write the parity report as you go**, not at the end — it is the deliverable that proves the rebuild is complete.
 
-This skill is the **translation layer** only. For how Fabric itself works (SQLite/libSQL, `fabric.config.json`, deploy provider, project layout) read **pikku-fabric**. For everything else, delegate to the sibling skill named at each step.
+This skill is the **translation layer** only. For how Fabric itself works (SQLite/libSQL, project linking, deploy provider, project layout) read **pikku-fabric**. For everything else, delegate to the sibling skill named at each step.
 
 ## The one idea
 
@@ -47,7 +47,7 @@ Then read, in this order — **whole files, once**: `product.json` (what it is, 
 
 ### The terminology trap — do this before you name anything
 
-`product.json.terminology` and `migration.json.decisionsNeeded` frequently carry a **false friend**: a word the legacy code used that means something else to everyone else (a real case: `tenant` meaning *the seller's own market/legal entity*, not a customer org — where the customer org was `Company`).
+`product.json.terminology` and `migration.json.decisionsNeeded` frequently carry a **false friend**: a word the legacy code used that means something else to everyone else (a real case: `tenant` meaning _the seller's own market/legal entity_, not a customer org — where the customer org was `Company`).
 
 Carrying a false friend into the rebuild wastes the single cheapest opportunity you will ever have to fix it. Resolve the rename **before the first migration is written**, then apply the new name in table names, function names, and types. Add it to the parity report's glossary so the mapping stays legible to whoever compares old and new.
 
@@ -65,7 +65,7 @@ Present each as a real question with the options the code implies and what each 
 
 **Never resolve one by reading the legacy code.** If the code answered it, the archaeologist would not have raised it. Silence in the legacy code is the finding.
 
-Record each answer in the parity report under **Decisions taken** with the date and who decided. This is the audit trail for behaviour that is *deliberately* not a port.
+Record each answer in the parity report under **Decisions taken** with the date and who decided. This is the audit trail for behaviour that is _deliberately_ not a port.
 
 ## Stage 1.5 — Emit the implementation inventory (do this before any code)
 
@@ -100,7 +100,7 @@ check its calls. The distinctions it encodes are the ones that matter:
   workflow. That trigger is the legacy shape of an event: a handler doing five
   unrelated things because there was no bus. Splitting it is the upgrade.
 - **user/admin journeys → scenarios, NOT `pikkuWorkflowFunc`s.** A blueprint
-  "workflow" is a *journey* — a sequence a person drives through the UI. A
+  "workflow" is a _journey_ — a sequence a person drives through the UI. A
   `pikkuWorkflowFunc` is durable multi-step orchestration. Conflating them produces
   a workflow engine driving form submissions, which is the most common way this
   mapping goes wrong.
@@ -110,22 +110,22 @@ cheapest progress report you have.
 
 ## Stage 2 — Scaffold
 
-Clone the Fabric starter template, then do the post-clone cleanup **pikku-build** covers (README, package name, lockfile, leftover template artifacts) — a rebuild that ships the template's own name and readme is the first thing a reviewer notices. Set `projectId`, `production.branch` and the frontend entry in `fabric.config.json` per **pikku-fabric**.
+Clone the Fabric starter template, then do the post-clone cleanup **pikku-build** covers (README, package name, lockfile, leftover template artifacts) — a rebuild that ships the template's own name and readme is the first thing a reviewer notices. Declare the frontend in `frontends` in `pikku.config.json` and link with `pikku fabric link` per **pikku-fabric** — there is no Fabric config file.
 
 Map `architecture.json` onto Fabric honestly, and expect it to shrink:
 
-| Blueprint `architecture.json` | Fabric |
-|---|---|
-| API/web process (Puma, Express, …) | the Fabric worker — no component to build |
-| Worker process + queue | `wireQueueWorker` (**pikku-wiring**) |
-| Cron/scheduler component | `wireScheduler` (**pikku-wiring**) |
-| Reverse proxy, deploy tooling, process manager | **drop** — the platform does this |
-| Admin console (ActiveAdmin, Django admin, …) | `scaffold.console: true` first; only build screens for what it genuinely can't express |
-| Session/auth store | Better Auth (**pikku-auth**) |
-| Relational datastore | SQLite via libSQL/Kysely (**pikku-fabric**, **pikku-kysely**) |
-| Redis for cache/locks/queues | usually **nothing** — see the trap below |
+| Blueprint `architecture.json`                  | Fabric                                                                                 |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| API/web process (Puma, Express, …)             | the Fabric worker — no component to build                                              |
+| Worker process + queue                         | `wireQueueWorker` (**pikku-wiring**)                                                   |
+| Cron/scheduler component                       | `wireScheduler` (**pikku-wiring**)                                                     |
+| Reverse proxy, deploy tooling, process manager | **drop** — the platform does this                                                      |
+| Admin console (ActiveAdmin, Django admin, …)   | `scaffold.console: true` first; only build screens for what it genuinely can't express |
+| Session/auth store                             | Better Auth (**pikku-auth**)                                                           |
+| Relational datastore                           | SQLite via libSQL/Kysely (**pikku-fabric**, **pikku-kysely**)                          |
+| Redis for cache/locks/queues                   | usually **nothing** — see the trap below                                               |
 
-**The Redis trap.** Legacy apps use Redis for four unrelated jobs: queue backend (→ Fabric's queue), cache (→ usually delete; measure first), pub/sub (→ **pikku-realtime**), and **distributed locks**. That last one is the trap: a lock is nearly always a workaround for a missing database constraint (`invariants.json` will show the same rule with `enforcedBy: "code-guard"` and an `atRiskBecause`). Port the *invariant* to a constraint; do not port the lock. Re-implementing legacy locking on a new stack is how you carry a race condition across a rewrite.
+**The Redis trap.** Legacy apps use Redis for four unrelated jobs: queue backend (→ Fabric's queue), cache (→ usually delete; measure first), pub/sub (→ **pikku-realtime**), and **distributed locks**. That last one is the trap: a lock is nearly always a workaround for a missing database constraint (`invariants.json` will show the same rule with `enforcedBy: "code-guard"` and an `atRiskBecause`). Port the _invariant_ to a constraint; do not port the lock. Re-implementing legacy locking on a new stack is how you carry a race condition across a rewrite.
 
 `architecture.json.deploymentConstraints` is the exception to "drop the infrastructure": entries there are constraints that must **survive** (raw-body ordering for webhook signatures, retry semantics an external caller depends on). Read them; they are cheap to lose and expensive to rediscover.
 
@@ -144,19 +144,19 @@ hand-coerce forever. `TEXT` + `CHECK` for a closed set is the highest-leverage c
 available: the constraint compiles into a **TypeScript union type**, so an invalid
 state is a compile error rather than a runtime one.
 
-The blueprint gives you `attributes`, `relationships`, `states`, `transitions`, `ownership`, `constraints`. It is a *domain* model, not the legacy DDL — you are not required to reproduce the old column layout, and usually shouldn't.
+The blueprint gives you `attributes`, `relationships`, `states`, `transitions`, `ownership`, `constraints`. It is a _domain_ model, not the legacy DDL — you are not required to reproduce the old column layout, and usually shouldn't.
 
 ### Legacy SQL → SQLite traps
 
-| Legacy | SQLite / Fabric | Why |
-|---|---|---|
-| `DECIMAL`/`NUMERIC` money, or a money library's `*_cents` | `INTEGER` minor units | SQLite has no exact decimal. Minor units are what the legacy money library stored anyway — keep the currency in its own column. **Never `REAL` for money.** |
-| `TIMESTAMP`/`DATETIME` | `DATETIME` | Types as a real `Date`. Do NOT store Unix ms in an `INTEGER` — you lose the typing and coerce by hand forever. |
-| `BOOLEAN` | `BOOLEAN` | Types as a real `boolean`. Do NOT store 0/1 in an `INTEGER`. |
-| `ENUM` | `TEXT` + `CHECK` | The one place to spend a `CHECK` — it is a closed set, and a typo'd state is exactly the bug class the blueprint keeps finding. |
-| `uuid`/`serial` PK | `INTEGER PRIMARY KEY AUTOINCREMENT`, or `TEXT` for a public id | **Look at `queries.json.scoping` first.** If the legacy app used a random public id (`puid`, slug) precisely so ids aren't enumerable, that is a *security property* — keep it. Silently switching to sequential integers un-fixes a fix. |
-| JSON column | `TEXT` + a typed parse | Fine, but if `entities.json` gives it real attributes, it wants columns. |
-| DB-level `CHECK` sprawl | app-level validation | Per **pikku-fabric** — *except* the invariants below. |
+| Legacy                                                    | SQLite / Fabric                                                | Why                                                                                                                                                                                                                                       |
+| --------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DECIMAL`/`NUMERIC` money, or a money library's `*_cents` | `INTEGER` minor units                                          | SQLite has no exact decimal. Minor units are what the legacy money library stored anyway — keep the currency in its own column. **Never `REAL` for money.**                                                                               |
+| `TIMESTAMP`/`DATETIME`                                    | `DATETIME`                                                     | Types as a real `Date`. Do NOT store Unix ms in an `INTEGER` — you lose the typing and coerce by hand forever.                                                                                                                            |
+| `BOOLEAN`                                                 | `BOOLEAN`                                                      | Types as a real `boolean`. Do NOT store 0/1 in an `INTEGER`.                                                                                                                                                                              |
+| `ENUM`                                                    | `TEXT` + `CHECK`                                               | The one place to spend a `CHECK` — it is a closed set, and a typo'd state is exactly the bug class the blueprint keeps finding.                                                                                                           |
+| `uuid`/`serial` PK                                        | `INTEGER PRIMARY KEY AUTOINCREMENT`, or `TEXT` for a public id | **Look at `queries.json.scoping` first.** If the legacy app used a random public id (`puid`, slug) precisely so ids aren't enumerable, that is a _security property_ — keep it. Silently switching to sequential integers un-fixes a fix. |
+| JSON column                                               | `TEXT` + a typed parse                                         | Fine, but if `entities.json` gives it real attributes, it wants columns.                                                                                                                                                                  |
+| DB-level `CHECK` sprawl                                   | app-level validation                                           | Per **pikku-fabric** — _except_ the invariants below.                                                                                                                                                                                     |
 
 ### States and transitions
 
@@ -171,26 +171,26 @@ Two traps the blueprint hands you for free:
 
 One vertical slice per domain. **Order by inbound reference count, not by importance**: the domains everything else points at go first. Identity and the customer/account domain are almost always the base — every other domain's `ownership` and `scoping` mentions them.
 
-Derive the order mechanically: for each domain, count how many *other* domains' entities have a relationship into it. Build the most-referenced first. Then, among the rest, take the ones that carry the most invariants and events (`domains.json` roll-ups tell you) — that's where the product is, and you want it under test early.
+Derive the order mechanically: for each domain, count how many _other_ domains' entities have a relationship into it. Build the most-referenced first. Then, among the rest, take the ones that carry the most invariants and events (`domains.json` roll-ups tell you) — that's where the product is, and you want it under test early.
 
 Leave for last: thin CRUD domains with no events and no invariants (content, downloads, media libraries). They're mechanical, and `migration.json` may well say the honest thing — that some shouldn't be rebuilt at all.
 
 ### What one slice contains
 
-| Blueprint | Fabric artifact | Skill |
-|---|---|---|
-| `commands[]` | one `pikkuFunc` per command, one per file, `expose: true` | **pikku-concepts** |
-| `queries[]` | one `pikkuSessionlessFunc`, `readonly: true`, `expose: true` | **pikku-concepts** |
-| `commands[].preconditions` | guards in the function body, throwing typed errors | **pikku-fabric** hard rules |
-| `policies[]` | `pikkuPermission` on the function's `permissions:` field | **pikku-permissions** |
-| `queries[].scoping` | the permission + the query's `where` | **pikku-permissions**, **pikku-kysely** |
-| `events[]` | realtime topic / queue message | **pikku-realtime**, **pikku-wiring** |
-| `workflows[] kind: system` | `wireScheduler` | **pikku-wiring** |
-| `workflows[]` multi-step | `pikkuWorkflowFunc` + `*.steps.ts` | **pikku-workflow** |
-| `workflows[].scenarios[]` | scenario tests | **pikku-scenario** |
-| `api[]` | mostly **nothing** — see below | **pikku-wiring** |
-| `invariants[]` | DB constraints, in the migration | **pikku-fabric** |
-| `integrations[]` | services | **pikku-services** |
+| Blueprint                  | Fabric artifact                                              | Skill                                   |
+| -------------------------- | ------------------------------------------------------------ | --------------------------------------- |
+| `commands[]`               | one `pikkuFunc` per command, one per file, `expose: true`    | **pikku-concepts**                      |
+| `queries[]`                | one `pikkuSessionlessFunc`, `readonly: true`, `expose: true` | **pikku-concepts**                      |
+| `commands[].preconditions` | guards in the function body, throwing typed errors           | **pikku-fabric** hard rules             |
+| `policies[]`               | `pikkuPermission` on the function's `permissions:` field     | **pikku-permissions**                   |
+| `queries[].scoping`        | the permission + the query's `where`                         | **pikku-permissions**, **pikku-kysely** |
+| `events[]`                 | realtime topic / queue message                               | **pikku-realtime**, **pikku-wiring**    |
+| `workflows[] kind: system` | `wireScheduler`                                              | **pikku-wiring**                        |
+| `workflows[]` multi-step   | `pikkuWorkflowFunc` + `*.steps.ts`                           | **pikku-workflow**                      |
+| `workflows[].scenarios[]`  | scenario tests                                               | **pikku-scenario**                      |
+| `api[]`                    | mostly **nothing** — see below                               | **pikku-wiring**                        |
+| `invariants[]`             | DB constraints, in the migration                             | **pikku-fabric**                        |
+| `integrations[]`           | services                                                     | **pikku-services**                      |
 
 ### Names are the contract
 
@@ -202,7 +202,7 @@ Every function needs a real `description` — take it from the concept's `descri
 
 ### The API is not the contract
 
-`api.json` has one entry per legacy surface, and it is **evidence, not a spec**. Each entry's `mapsTo` names the command or query — build *that*, and let RPC be the transport (**pikku-fabric**: RPC first, `expose: true`).
+`api.json` has one entry per legacy surface, and it is **evidence, not a spec**. Each entry's `mapsTo` names the command or query — build _that_, and let RPC be the transport (**pikku-fabric**: RPC first, `expose: true`).
 
 Add `wireHTTP` only where the URL shape is a real external contract:
 
@@ -235,7 +235,7 @@ In the rebuild these become real: publish the event (**pikku-realtime**) or enqu
 
 Two disciplines:
 
-- **Do not invent events.** The archaeologist applied a threshold (≥1 real consumer beyond the row write). If a CRUD fact isn't in `events.json`, it didn't earn an event; a state row that is only *read* later is state, not an event.
+- **Do not invent events.** The archaeologist applied a threshold (≥1 real consumer beyond the row write). If a CRUD fact isn't in `events.json`, it didn't earn an event; a state row that is only _read_ later is state, not an event.
 - **`explicit: false` is a confidence marker.** These are reconstructions of intent. When one drives money or an external side effect, the parity report says it was reconstructed — the reviewer should confirm the consumer list is complete.
 
 ### Policies — collapse the drift
@@ -244,17 +244,17 @@ Two disciplines:
 
 The whole point is **one `pikkuPermission` per rule**, referenced from every function that needs it (**pikku-permissions**). When the `enforcedAt` versions genuinely disagree, that's a decision, not a merge — ask which is correct. Picking the one you read first silently ships a behaviour change.
 
-Per **pikku-fabric**: no auth checks in function bodies. If a policy resists expression as a permission, that's a signal it's a *business rule* (a precondition) rather than authorization — those live in the function body and throw typed errors.
+Per **pikku-fabric**: no auth checks in function bodies. If a policy resists expression as a permission, that's a signal it's a _business rule_ (a precondition) rather than authorization — those live in the function body and throw typed errors.
 
 ## Stage 5 — Scenarios from the blueprint's tests
 
 `workflows[].scenarios[]` entries carry `fromTest` — they were excavated from the legacy suite, which means **they are the legacy app's executable spec**, already in given/when/outcome shape. They map directly onto **pikku-scenario** actors and flows, and `product.json.actors` gives you the actor list.
 
-This is the highest-leverage stage in the rebuild and the easiest to skip. A scenario ported from a legacy test is the only artifact that can tell you the new app *behaves* like the old one — parity of function names proves nothing.
+This is the highest-leverage stage in the rebuild and the easiest to skip. A scenario ported from a legacy test is the only artifact that can tell you the new app _behaves_ like the old one — parity of function names proves nothing.
 
 Two rules:
 
-- A scenario whose legacy test was **commented out or broken** (`gaps.json` flags these) still gets written — it just isn't parity, it's new coverage. Note which in the parity report; often the disabled test is disabled *because* the behaviour was broken.
+- A scenario whose legacy test was **commented out or broken** (`gaps.json` flags these) still gets written — it just isn't parity, it's new coverage. Note which in the parity report; often the disabled test is disabled _because_ the behaviour was broken.
 - A workflow with **no scenarios** is a gap in the blueprint, not permission to skip testing. Flag it rather than inventing behaviour to test.
 
 ## Stage 6 — Integrations
@@ -265,7 +265,7 @@ Two rules:
 - `"trivial"` → candidates for a platform-native equivalent, but only if the user wants it. Swapping a vendor mid-rebuild makes every failure ambiguous.
 - `envVars` → `defineVariable` / `defineSecret` (**pikku-services**). Per **pikku-fabric**: no `process.env`, ever.
 
-**Secrets in the blueprint are live secrets.** `gaps.json` security entries routinely name credentials hardcoded in the legacy source *and its committed history*. They must be **rotated**, not copied into the new app's secret store — and rotation is the legacy app's problem, today, independent of the rebuild. Say so; don't let the rebuild timeline become the remediation timeline.
+**Secrets in the blueprint are live secrets.** `gaps.json` security entries routinely name credentials hardcoded in the legacy source _and its committed history_. They must be **rotated**, not copied into the new app's secret store — and rotation is the legacy app's problem, today, independent of the rebuild. Say so; don't let the rebuild timeline become the remediation timeline.
 
 **Inbound webhooks deserve a real look.** They're the surfaces most likely to be carrying a `gaps.json` security entry (unverified signatures, disabled checks). Rebuild the verification properly (**pikku-wiring**), and if the reason it was disabled was a vendor that doesn't reliably sign, that's a `decisionsNeeded` — not something to replicate.
 
@@ -273,24 +273,24 @@ Two rules:
 
 Only when `frontend*.json` is present. Target: TanStack Start + Mantine.
 
-`frontend.json` records the legacy stack as facts. **It is context, not a port target** — a bespoke Sass system, a server-rendered template stack, or a different component library all land on the same target. Read `designSystemConsistency` and `designFindings` to know what *not* to carry: findings are the drift (hardcoded colors, forked-per-locale pages, duplicated components), and the rebuild is the moment they cost nothing to drop.
+`frontend.json` records the legacy stack as facts. **It is context, not a port target** — a bespoke Sass system, a server-rendered template stack, or a different component library all land on the same target. Read `designSystemConsistency` and `designFindings` to know what _not_ to carry: findings are the drift (hardcoded colors, forked-per-locale pages, duplicated components), and the rebuild is the moment they cost nothing to drop.
 
 ### Routes
 
 `frontend-routes[]` → TanStack routes. `path` and `purpose` carry over; `auth` becomes the route guard.
 
-**`dataFrom` is the payoff.** It lists query/command names — the *same* names as `queries.json`/`commands.json`, which are the same names as your `pikkuFunc`s, which are the same names in the generated client. So a route's data layer is mechanical: each `dataFrom` entry is a generated hook (**pikku-react**). If `dataFrom` contains a name that isn't a real function, the blueprint wasn't reconciled — go fix it there.
+**`dataFrom` is the payoff.** It lists query/command names — the _same_ names as `queries.json`/`commands.json`, which are the same names as your `pikkuFunc`s, which are the same names in the generated client. So a route's data layer is mechanical: each `dataFrom` entry is a generated hook (**pikku-react**). If `dataFrom` contains a name that isn't a real function, the blueprint wasn't reconciled — go fix it there.
 
 ### Components — the honest cost
 
 `frontend-components[].rebuild` is the only field that matters for planning:
 
-| `rebuild` | What to do |
-|---|---|
-| `mantine-standard` | Use the Mantine component. Do not port. |
-| `mantine-composition` | Compose from Mantine primitives. Do not port. |
-| `custom-style` | Normalize to Mantine + theme tokens. The divergence is the thing to drop. |
-| **`custom-logic`** | **Port the behaviour.** Read `customLogic` and `dependencies`. |
+| `rebuild`             | What to do                                                                |
+| --------------------- | ------------------------------------------------------------------------- |
+| `mantine-standard`    | Use the Mantine component. Do not port.                                   |
+| `mantine-composition` | Compose from Mantine primitives. Do not port.                             |
+| `custom-style`        | Normalize to Mantine + theme tokens. The divergence is the thing to drop. |
+| **`custom-logic`**    | **Port the behaviour.** Read `customLogic` and `dependencies`.            |
 
 The first three are the bulk and they're cheap — they're a re-expression, not a migration. **`custom-logic` is the actual project**: the bespoke chart, the virtualized table, the map surface, the rich editor, the drag interaction. Each has real behaviour that must survive, and `customLogic` says what it is.
 
@@ -313,7 +313,7 @@ Then run the slice's scenarios. All four green — validate, codegen, `tsc`, sce
 
 Never batch. A rebuild verified only at the end gives you an undifferentiated pile of failures with no bisect point, and the whole reason for slicing is that each slice is a checkpoint you can trust.
 
-New functions with `expose: true` are versioned from the start — `pikku versions` / `pikku semver` (**pikku-meta**); you're establishing v1 contracts, not migrating them.
+New functions with `expose: true` are versioned from the start — `pikku versions` / `pikku release` (**pikku-meta**); you're establishing v1 contracts, not migrating them.
 
 ## Stage 9 — The parity report (the deliverable)
 
@@ -324,7 +324,7 @@ diff, because it is the only document that holds the blueprint and the new code 
 Per domain:
 
 - **Built** — each command/query/event/policy → its function/file. The concept-name-as-ID makes this a table, not prose.
-- **Deliberately not built** — from `migration.json.dropped` and `gaps.json`, with the reason. *The most important section.* Without it, every dropped bug and orphan reads as a regression to whoever reviews.
+- **Deliberately not built** — from `migration.json.dropped` and `gaps.json`, with the reason. _The most important section._ Without it, every dropped bug and orphan reads as a regression to whoever reviews.
 - **Decisions taken** — each gate answer, who decided, when. Behaviour that deliberately differs from the legacy app.
 - **Now enforced** — invariants that were `enforcedBy: "nothing"` and now have a constraint. The rebuild's actual dividend, in one list.
 - **Reconstructed** — anything from `confidence: low`/`medium` or `explicit: false` events. Flag for confirmation against production behaviour.
@@ -333,20 +333,20 @@ Per domain:
 
 ## Red flags
 
-| Thought | Reality |
-|---|---|
-| "Let me check how the old code did this" | The blueprint says what it does. If it doesn't, it's a decision — ask. Reading legacy source is how its accidents get re-imported. |
-| "I'll port the state machine library" | Port the *states and transitions*. The library is implementation; `commands.json` already names every transition. |
-| "The blueprint lists this state, so I'll create it" | Check it's reachable. Unreachable states are a finding, not a spec. |
-| "I'll wire HTTP for each `api.json` entry" | You're transcribing the legacy router. RPC first; `wireHTTP` only for genuinely fixed external URLs. |
-| "The old app didn't enforce it, so neither will I" | `enforcedBy: "nothing"` is the highest-value work in the rebuild — the reason it's worth doing at all. |
-| "I'll add events for the CRUD actions too" | The archaeologist applied a consumer threshold. Not in `events.json` = didn't earn one. |
-| "Two enforcement sites disagree; I'll use the first one" | That's a silent behaviour change. Drift is a decision — ask which is correct. |
-| "It's just screens, the frontend is quick" | The `custom-logic` components are the project. Scope them individually before starting. |
-| "I'll copy the secrets into the new secret store" | Blueprint-exposed secrets are burned. Rotate. And the legacy app needs that today, regardless of the rebuild. |
-| "I'll do the parity report at the end" | You will not remember why you dropped things, and dropped-on-purpose will read as regression. |
-| "Verify once it's all built" | No bisect point. Verify per slice; that's what slices are for. |
-| "The blueprint has a `low`-confidence entry, I'll build my best guess" | That's inventing product. It's a gate question. |
+| Thought                                                                | Reality                                                                                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| "Let me check how the old code did this"                               | The blueprint says what it does. If it doesn't, it's a decision — ask. Reading legacy source is how its accidents get re-imported. |
+| "I'll port the state machine library"                                  | Port the _states and transitions_. The library is implementation; `commands.json` already names every transition.                  |
+| "The blueprint lists this state, so I'll create it"                    | Check it's reachable. Unreachable states are a finding, not a spec.                                                                |
+| "I'll wire HTTP for each `api.json` entry"                             | You're transcribing the legacy router. RPC first; `wireHTTP` only for genuinely fixed external URLs.                               |
+| "The old app didn't enforce it, so neither will I"                     | `enforcedBy: "nothing"` is the highest-value work in the rebuild — the reason it's worth doing at all.                             |
+| "I'll add events for the CRUD actions too"                             | The archaeologist applied a consumer threshold. Not in `events.json` = didn't earn one.                                            |
+| "Two enforcement sites disagree; I'll use the first one"               | That's a silent behaviour change. Drift is a decision — ask which is correct.                                                      |
+| "It's just screens, the frontend is quick"                             | The `custom-logic` components are the project. Scope them individually before starting.                                            |
+| "I'll copy the secrets into the new secret store"                      | Blueprint-exposed secrets are burned. Rotate. And the legacy app needs that today, regardless of the rebuild.                      |
+| "I'll do the parity report at the end"                                 | You will not remember why you dropped things, and dropped-on-purpose will read as regression.                                      |
+| "Verify once it's all built"                                           | No bisect point. Verify per slice; that's what slices are for.                                                                     |
+| "The blueprint has a `low`-confidence entry, I'll build my best guess" | That's inventing product. It's a gate question.                                                                                    |
 
 ## Quick reference
 
@@ -372,6 +372,6 @@ legacy repo → pikku-software-archaeology → .knowledge/ blueprint
 thing, and emits `parity-*.md` so the rebuild can be reviewed against the blueprint rather than
 against the legacy code.
 
-For Fabric mechanics — project layout, `fabric.config.json`, the validate loop, reading a deployed
-stage — use **pikku-fabric**. For a single feature *after* the rebuild, and for the post-clone
+For Fabric mechanics — project layout, how a checkout is linked, the validate loop, reading a deployed
+stage — use **pikku-fabric**. For a single feature _after_ the rebuild, and for the post-clone
 cleanup in Stage 2, use **pikku-build**.

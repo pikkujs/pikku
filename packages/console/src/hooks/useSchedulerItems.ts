@@ -9,9 +9,8 @@ export interface SchedulerItem {
 }
 
 /**
- * Every scheduled task in the project meta, shared by `SchedulersPage` and
- * `SchedulersListPanel` so a host can read the same rows without mounting
- * either.
+ * Every scheduled task in the project meta, so a host can read the same rows
+ * `SchedulersPage` shows without mounting it.
  */
 export const useSchedulerItems = (): {
   items: SchedulerItem[]

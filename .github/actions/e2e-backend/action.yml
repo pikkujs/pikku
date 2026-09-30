@@ -1,0 +1,31 @@
+name: E2E Backend
+description: Generate the e2e project and leave its dev server running on port 4077 for the rest of the job. Must run after the setup action.
+
+# The native smoke tests launch a packaged app that calls this server, so the
+# server has to outlive the step that starts it: a background process started
+# in one step keeps running for the steps after it, until the job ends.
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/e2e-codegen
+    - name: Start the e2e server
+      shell: bash
+      working-directory: e2e
+      env:
+        SCENARIO_ACTOR_SECRET: e2e-actor-secret-long-enough-to-derive-from
+        PIKKU_MOCK_LLM: '1'
+        FABRIC_API_URL: http://localhost:4096
+        API_URL: http://localhost:4077
+      run: |
+        nohup npx pikku dev --port 4077 > "$RUNNER_TEMP/e2e-server.log" 2>&1 &
+        # `pikku: ready` is printed after afterStart, which seeds the database;
+        # `listening on` comes earlier and is not readiness.
+        for _ in $(seq 1 180); do
+          if grep -q 'pikku: ready' "$RUNNER_TEMP/e2e-server.log"; then
+            echo "e2e server ready"; exit 0
+          fi
+          sleep 1
+        done
+        echo "::error::the e2e server was not ready within 180s"
+        cat "$RUNNER_TEMP/e2e-server.log"
+        exit 1

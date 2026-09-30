@@ -1169,6 +1169,62 @@ export function filterInspectorState(
     }
   }
 
+  // Workflows asked for by meta only — a unit that `rpc.startWorkflow`s one the
+  // orchestrator unit runs. The run is created from the meta and handed to the
+  // orchestrator queue, so the meta (and the workflow function's meta, which
+  // the generated workflow map types the start from) is restored, while the
+  // registration files stay out: bundling them would pull the workflow
+  // function and everything it imports into the unit.
+  const fullWorkflowNames = new Set(filters.names ?? [])
+  for (const name of filters.workflowMeta ?? []) {
+    const graphMeta = state.workflows?.graphMeta?.[name]
+    const workflowMeta = state.workflows?.meta?.[name]
+    if (!graphMeta && !workflowMeta) continue
+    const pikkuFuncId = graphMeta?.pikkuFuncId ?? workflowMeta?.pikkuFuncId
+    if (graphMeta && !filteredState.workflows.graphMeta[name]) {
+      filteredState.workflows.graphMeta[name] = JSON.parse(
+        JSON.stringify(graphMeta)
+      )
+    }
+    if (workflowMeta && !filteredState.workflows.meta[name]) {
+      filteredState.workflows.meta[name] = JSON.parse(
+        JSON.stringify(workflowMeta)
+      )
+    }
+    const funcMeta = pikkuFuncId ? state.functions.meta[pikkuFuncId] : undefined
+    if (pikkuFuncId && funcMeta && !filteredState.functions.meta[pikkuFuncId]) {
+      filteredState.functions.meta[pikkuFuncId] = funcMeta
+    }
+    // The orchestrator queue's meta routes the start to the workflow's own
+    // queue instead of the shared fallback; its consumer is core's synthetic
+    // orchestrator, so no registration comes with it.
+    const orchestratorQueue = `wf-orchestrator-${name
+      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+      .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+      .toLowerCase()}`
+    const orchestratorMeta = state.queueWorkers?.meta?.[orchestratorQueue]
+    if (
+      orchestratorMeta &&
+      !filteredState.queueWorkers.meta[orchestratorQueue]
+    ) {
+      filteredState.queueWorkers.meta[orchestratorQueue] = JSON.parse(
+        JSON.stringify(orchestratorMeta)
+      )
+    }
+    const keepsRegistration =
+      fullWorkflowNames.has(name) ||
+      (pikkuFuncId !== undefined &&
+        filteredState.serviceAggregation.usedFunctions.has(pikkuFuncId))
+    if (!keepsRegistration) {
+      for (const key of [name, pikkuFuncId]) {
+        if (!key) continue
+        filteredState.workflows.files.delete(key)
+        filteredState.workflows.graphFiles.delete(key)
+      }
+    }
+    filteredState.serviceAggregation.requiredServices.add('workflowService')
+  }
+
   // Recompute requiredSchemas based on pruned functions.meta
   if (filteredState.serviceAggregation.usedFunctions.size > 0) {
     const prunedSchemas = new Set<string>()

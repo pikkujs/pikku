@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { I18nString } from '@pikku/react'
-import { usePageOptions } from '../../context/PageOptionsProvider'
+import { useOptionalPageOptions } from '../../context/PageOptionsProvider'
 
 /**
  * Declares this page's options rail as the phone's Options sheet. Render it
@@ -25,9 +25,11 @@ export function PageOptionsPortal({
   children: React.ReactNode
   label?: I18nString
 }) {
-  const { host, setHasOptions, setLabel, setOpen } = usePageOptions()
+  const options = useOptionalPageOptions()
+  const { host, setHasOptions, setLabel, setOpen } = options ?? {}
 
   useEffect(() => {
+    if (!setHasOptions || !setLabel || !setOpen) return
     setHasOptions(true)
     setLabel(label ?? null)
     return () => {
@@ -39,6 +41,9 @@ export function PageOptionsPortal({
     }
   }, [label, setHasOptions, setLabel, setOpen])
 
+  // No sheet to move into, so the rail stays where it was declared rather than
+  // disappearing — a host without our chrome still has to show its choices.
+  if (!options) return <>{children}</>
   if (!host) return null
   return createPortal(children, host)
 }

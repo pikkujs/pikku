@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { ReportEnvironment } from './report-environment.js'
+import { PikkuFetch } from '../sdk/pikku-fetch.gen.js'
+import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 export const FindingInput = z.object({
   title: z.string(),
@@ -19,7 +21,6 @@ export const FindingInput = z.object({
   area: z.string().optional(),
   surface: z.enum(['local', 'deployed', 'both']).optional(),
   cost: z.string().optional(),
-  run: z.string().optional(),
   deployTarget: z.string().optional(),
 })
 
@@ -65,8 +66,9 @@ export function parseFindingJson(raw: string): ParsedFinding {
   return parseFinding(parsed)
 }
 
-export interface FindingPayload extends Omit<FindingInput, 'run'> {
-  runId?: string
+export interface FindingPayload extends FindingInput {
+  /** Shared by every finding from one checkout, so fabric sees a build's findings together. */
+  runId: string
   environment: ReportEnvironment
   reportedAt: string
 }
@@ -107,56 +109,60 @@ export function validateFinding(input: FindingInput): string[] {
 export function buildFindingPayload(
   input: FindingInput,
   environment: ReportEnvironment,
+  runId: string,
   now: Date = new Date()
 ): FindingPayload {
-  const { run, ...rest } = input
-  return { ...rest, runId: run, environment, reportedAt: now.toISOString() }
+  return { ...input, runId, environment, reportedAt: now.toISOString() }
 }
 
 /**
- * Best-effort by construction. A finding is worth having and never worth
- * failing a build for, so a refused, slow or unreachable endpoint is reported
- * to the terminal and swallowed.
+ * Anonymous, and every request gives up after `timeoutMs`: a finding is worth
+ * having and never worth holding up a build for.
+ */
+export function findingRPC(
+  apiUrl: string,
+  timeoutMs = 5000,
+  send: typeof fetch = fetch
+): PikkuRPC {
+  const rpc = new PikkuRPC()
+  rpc.setPikkuFetch(
+    new PikkuFetch({
+      serverUrl: apiUrl,
+      fetch: ((input, init) =>
+        send(input, {
+          ...init,
+          signal: AbortSignal.timeout(timeoutMs),
+        })) as typeof fetch,
+    })
+  )
+  return rpc
+}
+
+/**
+ * Best-effort by construction: a refused, slow or unreachable endpoint is
+ * reported to the terminal and swallowed.
  */
 export async function postFinding(opts: {
-  apiUrl: string
-  token: string
-  /**
-   * Provenance, not a routing key. A finding is about the framework rather
-   * than about anyone's project, and the reports worth having most — a
-   * scaffold that never produced a config, a first run that went wrong — come
-   * from checkouts that have no project to name.
-   */
-  projectId: string | null
+  rpc: Pick<PikkuRPC, 'invoke'>
   payload: FindingPayload
-  timeoutMs?: number
 }): Promise<{ sent: boolean; reason?: string }> {
+  const { environment, ...finding } = opts.payload
   try {
-    const response = await fetch(`${opts.apiUrl}/findings`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${opts.token}`,
-      },
-      body: JSON.stringify({
-        projectId: opts.projectId,
-        finding: opts.payload,
-      }),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 5000),
+    await opts.rpc.invoke('submitFinding', {
+      finding: { ...finding, environment: { ...environment } },
     })
-    if (!response.ok) {
-      return { sent: false, reason: `fabric answered ${response.status}` }
-    }
     return { sent: true }
   } catch (error: any) {
+    if (typeof error?.status === 'number') {
+      return { sent: false, reason: `fabric answered ${error.status}` }
+    }
     return { sent: false, reason: error?.message ?? 'request failed' }
   }
 }
 
 /**
- * The receipt. Nothing is written to disk, so the terminal is the only place
- * the user sees what left their machine. Printed before the request goes out,
- * so it is there whether or not the send succeeds.
+ * The receipt: exactly what would leave the machine, printed whether the
+ * finding is sent now or held until the user answers.
  */
 export function renderReceipt(payload: FindingPayload): string {
   const lines: string[] = [`[fabric] reporting: ${payload.title}`]

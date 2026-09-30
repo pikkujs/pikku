@@ -13,8 +13,8 @@ import {
   runSharedProjectChecks,
 } from '../../functions/validate/shared-checks.js'
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
+import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
-import { isGitRepo, isTracked } from '../lib/git.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
@@ -47,7 +47,7 @@ export const FabricValidateOutput = z.object({
 async function findProjectRoot(startDir: string): Promise<string> {
   let dir = startDir
   while (true) {
-    if (existsSync(join(dir, 'pikkufabric.config.json'))) {
+    if (existsSync(join(dir, 'pikku.config.json'))) {
       return dir
     }
     if (existsSync(join(dir, 'package.json'))) {
@@ -157,17 +157,17 @@ const LOGIN_FILE_PATTERN =
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
 //
-// Canonical implementation is now `<DevActorSwitcher>` from `@pikku/mantine/dev`
-// (built on `useDevActors` from `@pikku/react`), rendered from the login screen.
-// The hand-rolled shape the templates used to copy — a local component backed by
-// `signInAsActor()` → POST /auth/sign-in/actor — still passes: apps that predate
-// the package keep working, and the useDevActors call site is matched for apps
-// that want their own UI on the shared logic.
+// Canonical implementation is `<DevActorSwitcher>` from `@pikku/mantine/dev`
+// (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
+// it lists and signs in personas by id through `pikkuActor({ personaSignIn })`. A local component calling `signInAsPersona()`, and
+// the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
+// pass, so apps that predate the package keep working.
 const ACTOR_QUICK_LOGIN_PATTERNS = [
   /<\s*DevActorSwitcher\b/,
   /(?<!function\s)\bsignInAsActor\s*\(/,
+  /(?<!function\s)\bsignInAsPersona\s*\(/,
   /(?<!function\s)\buseDevActors\s*\(/,
-  /\/auth\/sign-in\/actor/,
+  /\/auth\/sign-in\/(?:actor|persona)/,
 ]
 
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
@@ -444,76 +444,41 @@ export async function runValidate(
     }
   }
 
-  // ── pikkufabric.config.json ────────────────────────────────────────────
-  // Not required to run validate — downgraded to info so any pikku project
-  // can be checked for compatibility before it is linked to a fabric account.
-  const fabricConfigPath = join(root, 'pikkufabric.config.json')
-  const fabricConfig =
-    await readJsonSafe<Record<string, unknown>>(fabricConfigPath)
-  if (!fabricConfig) {
+  // ── fabric project link ────────────────────────────────────────────────
+  // Info, never an error: any pikku project can be validated before it is
+  // linked. The link is the git remote, so it can only be checked with a
+  // session; logged out, validate stays silent rather than guess.
+  const link = await resolveApiContext({ startDir: root }).then(
+    (ctx) => ({ ctx, error: null }),
+    (error: unknown) => ({
+      ctx: null,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  )
+  if (link.error) {
     info(
-      'fabric-config-missing',
-      'pikkufabric.config.json not found — project has not been linked to fabric yet',
-      fabricConfigPath,
-      lines(
-        'Recommended fix:',
-        '1. Run `pikku fabric link` if you already have a Fabric project.',
-        '2. If you only want to scaffold the file, create:',
-        '{',
-        '  "projectId": "__PROJECT_ID__"',
-        '}',
-        '3. Replace `__PROJECT_ID__` later with the real Fabric project id.'
-      )
+      'fabric-project-unresolved',
+      `could not tell which fabric project this repo is — ${link.error.split('\n')[0]}`,
+      root,
+      link.error
     )
-  } else if (!fabricConfig.projectId) {
+  } else if (link.ctx?.token && !link.ctx.project) {
     info(
-      'fabric-config-no-project-id',
-      'pikkufabric.config.json is missing "projectId"',
-      fabricConfigPath,
+      'fabric-project-not-linked',
+      'no fabric project has this repo as its git remote — project has not been linked to fabric yet',
+      root,
       lines(
-        'Edit `pikkufabric.config.json` and add:',
-        '{',
-        '  "projectId": "<your-project-id>"',
-        '}',
-        'If you do not know the id yet, run `pikku fabric link`.'
-      )
-    )
-  } else if (
-    (await isGitRepo(root)) &&
-    !(await isTracked('pikkufabric.config.json', root))
-  ) {
-    // An error, unlike the three states around it. Those describe a project
-    // that has not been linked yet, which is a legitimate thing to validate.
-    // This one is a project that *is* linked and still cannot deploy: the build
-    // container clones the repository, so a config that exists only in the
-    // working tree is absent the moment it matters. Locally everything passes;
-    // remotely the deploy aborts with "pikkufabric.config.json not found in
-    // repository root". Nothing downstream of here can detect that, which is
-    // why it is caught at the one point that can.
-    e(
-      'fabric-config-untracked',
-      'pikkufabric.config.json is not committed — deploy clones the repository, so the build container will not see it and aborts with "pikkufabric.config.json not found in repository root"',
-      fabricConfigPath,
-      lines(
-        'Commit the file:',
-        '  git add pikkufabric.config.json && git commit -m "chore: link to fabric"',
-        'Then check it is not being excluded:',
-        '  git check-ignore -v pikkufabric.config.json',
-        'A .gitignore rule such as `*.config.json` or a broad `*.json` will swallow it.'
-      )
-    )
-  } else if (fabricConfig.projectId === '__PROJECT_ID__') {
-    info(
-      'fabric-config-placeholder-project-id',
-      'pikkufabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
-      fabricConfigPath,
-      lines(
-        'The file exists but still contains the placeholder project id.',
-        'Run `pikku fabric link` to replace it automatically, or edit the file and set:',
-        '"projectId": "<real-project-id>"'
+        'Run `pikku fabric link` to create the project from this repo.',
+        'If the project already exists under a different remote, set FABRIC_PROJECT_ID=<projectId> (see `pikku fabric projects`).'
       )
     )
   }
+
+  // ── deploy-only failure classes ────────────────────────────────────────
+  // Everything in here passed locally and failed on a build host: an override
+  // pinning @pikku/* below what the project asks for, a lockfile holding two versions of a package the deploy's hoist will pick one
+  // of, and paraglide flags written in a vite config the container never reads.
+  findings.push(...(await runDeployReadinessChecks(root)))
 
   // ── .gitignore must ignore generated/runtime artifacts ─────────────────
   // These are regenerated on every dev boot / scaffold / codegen. Committing
@@ -1289,7 +1254,7 @@ export async function runValidate(
     const coercionPath = join(root, outDirRel, 'db', 'coercion.gen.ts')
     const coercionText = await readTextSafe(coercionPath)
     // `{}` means no column declared a `kind`, so there is nothing to wire.
-    if (coercionText && /:\s*"(date|boolean|json)"/.test(coercionText)) {
+    if (coercionText && /:\s*"(date|bool|json)"/.test(coercionText)) {
       const wired = (
         await Promise.all(
           (await walkSourceFiles(root)).map((f) => readTextSafe(f))
@@ -1395,7 +1360,7 @@ export async function runValidate(
   }
 
   // ── declared frontends ────────────────────────────────────────────────
-  // pikkufabric.config.json is unvalidated JSON, so every field below is a
+  // pikku.config.json is unvalidated JSON, so every field below is a
   // claim, not a guarantee: a null entry or a non-string cwd used to throw on
   // property access and take down the whole validation run — the one thing that
   // was supposed to report the broken config. Shape-check the entries once here
@@ -1409,15 +1374,19 @@ export async function runValidate(
   let hasMantineFrontend = false
   /** every syntactically valid cwd, including ones whose directory is missing */
   const declaredCwdList: string[] = []
-  const rawFrontends = fabricConfig?.frontends
+  // `frontends` lives in pikku.config.json: an app is a pikku concept, not a
+  // Fabric one, and `pikku app` reads and writes it there.
+  const appsConfigPath = join(root, 'pikku.config.json')
+  const appsConfig = await readJsonSafe<Record<string, unknown>>(appsConfigPath)
+  const rawFrontends = appsConfig?.frontends
   if (
     rawFrontends !== undefined &&
     (!rawFrontends || typeof rawFrontends !== 'object')
   ) {
     e(
       'frontends-invalid',
-      'pikkufabric.config.json "frontends" is not an object — no frontend will be built or type-checked',
-      fabricConfigPath,
+      'pikku.config.json "frontends" is not an object — no frontend will be built or type-checked',
+      appsConfigPath,
       `Set "frontends" to an object keyed by slug: { "app": { "cwd": "apps/app", "kind": "ssr" } }`
     )
   } else if (rawFrontends) {
@@ -1427,8 +1396,8 @@ export async function runValidate(
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
         e(
           `frontend-entry-invalid-${slug}`,
-          `pikkufabric.config.json frontend "${slug}" is not an object`,
-          fabricConfigPath,
+          `pikku.config.json frontend "${slug}" is not an object`,
+          appsConfigPath,
           `Give "${slug}" an object value: { "cwd": "apps/${slug}", "kind": "ssr" }`
         )
         continue
@@ -1437,8 +1406,8 @@ export async function runValidate(
       if (typeof cwd !== 'string' || cwd.trim() === '') {
         e(
           `frontend-cwd-invalid-${slug}`,
-          `pikkufabric.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
-          fabricConfigPath,
+          `pikku.config.json frontend "${slug}" has no string "cwd" — the build container has nothing to build`,
+          appsConfigPath,
           `Set "cwd" to the app directory, e.g. { "${slug}": { "cwd": "apps/${slug}" } }`
         )
         continue
@@ -1558,7 +1527,7 @@ export async function runValidate(
     }
   }
 
-  // ── apps/ vs fabric.config.json frontends ─────────────────────────────
+  // ── apps/ vs pikku.config.json frontends ─────────────────────────────
   const appsDir = join(root, 'apps')
 
   if (existsSync(appsDir)) {
@@ -1572,7 +1541,7 @@ export async function runValidate(
       /* ignore */
     }
 
-    const declaredCwds = fabricConfig ? new Set(declaredCwdList) : null
+    const declaredCwds = appsConfig ? new Set(declaredCwdList) : null
 
     for (const name of appEntries) {
       const appPath = join(appsDir, name)
@@ -1581,9 +1550,9 @@ export async function runValidate(
       if (declaredCwds && !declaredCwds.has(cwd)) {
         w(
           `app-not-declared-${name}`,
-          `apps/${name} is not declared in fabric.config.json frontends`,
+          `apps/${name} is not declared in pikku.config.json frontends`,
           appPath,
-          `Add an entry to fabric.config.json: { "frontends": { "${name}": { "cwd": "${cwd}", "kind": "ssr" } } }`
+          `Add an entry to pikku.config.json, or run \`pikku app new ${name}\`: { "frontends": { "${name}": { "cwd": "${cwd}", "kind": "ssr" } } }`
         )
       }
 
@@ -1822,20 +1791,21 @@ export async function runValidate(
             `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
             join(appPath, loginFiles[0]!),
             lines(
-              'Render the dev-only "Sign in as …" switcher from the login screen.',
+              'Render the "Sign in as …" switcher from the login screen.',
               `In ${loginFiles[0]}:`,
               "  import { DevActorSwitcher } from '@pikku/mantine/dev'",
               '  <DevActorSwitcher',
-              '    actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}',
-              '    secrets={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTOR_SECRETS : undefined}',
               '    apiUrl={apiUrl()}',
+              '    app={appSlug}',
               "    onSignedIn={() => navigate({ to: '/' })}",
               '  />',
-              'The sandbox dev server bakes both env vars from your declared personas;',
-              'neither is set in production, so the control renders null there.',
-              'VITE_DEV_ACTOR_SECRETS is one credential per persona, each accepted for',
-              'that persona only. Gate the reads on import.meta.env.DEV as above so no',
-              'credential reaches a production bundle. Next.js reads the NEXT_PUBLIC_* pair.',
+              'On the server, pikkuActor from @pikku/better-auth serves the list and',
+              'the sign-in:',
+              '  pikkuActor({ allowSignIn: optIn,',
+              '    personaSignIn: { personas: personaList, featureFlags } })',
+              'No credential reaches the bundle: the switcher signs in by persona id.',
+              'It shows under `pikku dev`; a deployed stage shows it only when actor',
+              'sign-in is opted in and its devSwitcher flag is on.',
               'For custom UI, build on useDevActors() from @pikku/react instead.'
             )
           )
@@ -2347,17 +2317,12 @@ export const renderValidate = (
   if (ok) {
     console.log()
     // "can be linked" is not "will deploy", and conflating them is how a green
-    // validate is followed straight by a failed deploy. The three
-    // fabric-config findings are info on purpose — an unlinked project is
-    // still worth validating — but reporting unqualified success while the
-    // build container is guaranteed to abort on a missing config is the part
-    // that misleads. So the success line says which of the two it earned.
+    // validate is followed straight by a failed deploy. The link findings are
+    // info on purpose — an unlinked project is still worth validating — but
+    // reporting unqualified success for a project nothing can deploy is the
+    // part that misleads. So the success line says which of the two it earned.
     const notLinked = findings.find((f) =>
-      [
-        'fabric-config-missing',
-        'fabric-config-no-project-id',
-        'fabric-config-placeholder-project-id',
-      ].includes(f.id)
+      ['fabric-project-not-linked', 'fabric-project-unresolved'].includes(f.id)
     )
     if (notLinked) {
       console.log(

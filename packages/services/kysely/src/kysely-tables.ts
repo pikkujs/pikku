@@ -266,6 +266,30 @@ export interface PikkuFeatureFlagsTable {
   updatedAt: Generated<Date>
 }
 
+/** What a declared trigger source registered with its provider. */
+export interface PikkuTriggerSourceTable {
+  name: string
+  kind: string
+  baseUrl: string | null
+  labelPrefix: string | null
+  declared: Generated<boolean>
+  enabled: Generated<boolean>
+  status: string | null
+  /** The last setup's provider identifiers as JSON; never a secret. */
+  state: string | null
+  detail: string | null
+  updatedAt: Generated<Date>
+}
+
+/** A named lease, current or last. */
+export interface PikkuLeaseTable {
+  key: string
+  holder: string
+  token: number
+  /** Epoch milliseconds on the clock leases are judged by; see `appNowMs`. */
+  expiresAt: number
+}
+
 /** One subject's short-circuit, in either direction, over a flag's rollout. */
 export interface PikkuFeatureFlagOverridesTable {
   flag: string
@@ -316,6 +340,18 @@ export interface WebhookDeliveryAttemptTable {
   responseBody: string | null
   error: string | null
   createdAt: Generated<Date>
+}
+
+export interface WebhookReceiptTable {
+  receiptId: string
+  source: string
+  event: string
+  providerEventId: string | null
+  status: Generated<'pending' | 'delivered' | 'failed'>
+  attempts: Generated<number>
+  lastError: string | null
+  createdAt: Generated<Date>
+  deliveredAt: Date | null
 }
 
 /**
@@ -451,6 +487,8 @@ export interface KyselyPikkuDB {
   pikkuUserScope: PikkuUserScopeTable
   pikkuFeatureFlags: PikkuFeatureFlagsTable
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
+  pikkuTriggerSource: PikkuTriggerSourceTable
+  pikkuLease: PikkuLeaseTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable
@@ -474,6 +512,7 @@ export interface KyselyPikkuDB {
   pikkuUserSessions: UserSessionsTable
   webhookDelivery: WebhookDeliveryTable
   webhookDeliveryAttempt: WebhookDeliveryAttemptTable
+  webhookReceipt: WebhookReceiptTable
   virtualUserRun: VirtualUserRunTable
   virtualUserRunStep: VirtualUserRunStepTable
   virtualUserSchedule: VirtualUserScheduleTable

@@ -1,0 +1,25 @@
+name: Cancel merged PR runs
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cancel:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Cancel in-flight runs for the merged branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          for status in queued in_progress waiting; do
+            gh run list --repo "$GITHUB_REPOSITORY" --branch "$BRANCH" --status "$status" \
+              --json databaseId --jq '.[].databaseId' |
+              xargs -r -n1 gh run cancel --repo "$GITHUB_REPOSITORY" || true
+          done

@@ -10,7 +10,7 @@
  *
  * Usage:
  *   node --import tsx/esm benchmarks/bench-codegen-perf.ts
- *   # or via the CI job (see .github/workflows/develop.yml)
+ *   # or via the CI job (see .github/workflows/full.yml)
  */
 import { spawnSync } from 'child_process'
 import {

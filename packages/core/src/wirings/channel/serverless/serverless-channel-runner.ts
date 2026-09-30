@@ -146,6 +146,7 @@ export const runChannelConnect = async ({
         data: openingData,
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
+        wireServices,
       })
     }
 
@@ -239,6 +240,7 @@ export const runChannelDisconnect = async ({
         channel,
         channelMiddlewareMeta: meta.channelMiddleware,
         userSession,
+        wireServices,
       })
     } catch (e: any) {
       singletonServices.logger.error(
@@ -308,7 +310,8 @@ export const runChannelMessage = async (
       services,
       channelConfig,
       channelHandler,
-      userSession
+      userSession,
+      wireServices
     )
     response = await onMessage(data)
   } catch (e: any) {

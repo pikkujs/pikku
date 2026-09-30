@@ -1,5 +1,35 @@
 # @pikku/deploy-standalone
 
+## 0.12.23
+
+### Patch Changes
+
+- a9513b6: A trigger source store is now provided wherever an app runs: `pikku dev`, `pikku serve`, generated local services and the standalone deploy entry. Apps with a database get the Kysely store, falling back to memory when its table is not migrated yet. The admin addon's trigger-source functions and the webhook source runner no longer throw `No triggerSourceStore is configured`.
+
+## 0.12.22
+
+### Patch Changes
+
+- 2dcc651: Native apps hang off `frontends`: `pikku app native init|add|upgrade|check <name>` writes and maintains a committed Tauri project per frontend (desktop and Android; bundled dist, a deployed URL, or a bundled server sidecar). App commands move under `pikku app` (`pikku app new`, `pikku app list`). The top-level `frontend` key is replaced by `frontends` in `pikku.config.json`, where the one entry with `serve` is what `pikku serve`/`dev`/standalone deploys mount. `deploy apply --desktop` is gone — a frontend's `native.bundleServer` asks for the sidecar instead.
+- 2dcc651: The Tauri shell is a library crate a mobile build can link (`[lib]` target, program in `lib.rs`, single-instance gated to desktop), and takes a `desktopNative` list of Tauri's own plugins — crates, initialisers, per-origin capability grants and iOS consent strings generated together.
+- 2dcc651: A generated native project packages on Windows: it ships a placeholder `icons/icon.ico` beside `icon.png` and lists both, where the Windows bundler refused to run with `Couldn't find a .ico icon`.
+
+## 0.12.21
+
+### Patch Changes
+
+- 1fe79bc: SQLite extensions now load under bun on macOS. Bun there opens Apple's SQLite, which is built without extension loading, so the CLI points bun at Homebrew's libsqlite3 (`brew install sqlite`) as it starts, or at the one `PIKKU_SQLITE_LIBRARY` names; without one it warns and carries on without extensions. A bun standalone build on macOS embeds that libsqlite3 and opens its database with it, and fails if the build machine has none. Linux is unchanged: bun there brings a SQLite that loads extensions, and node uses `node:sqlite` everywhere.
+- 1fe79bc: A standalone artifact now carries its migrations: `db/<engine>` is copied beside the bundle (and the bun binary), where `db migrate` looks for them. Before, the artifact found none and reported an empty database as up to date. A bun standalone build of an app with a database also compiles again: the bundle's require shim declared the same `dirname` alias the entry imports.
+- 1fe79bc: A standalone build of a SQLite app now ships its `db.sqliteExtensions` (sqlite-vec's vec0 by default) inside the artifact, so a migration or query that uses them works in production the way it does under `pikku dev`. The node bundle loads them from `sqlite-extensions/` beside itself; a compiled bun binary embeds them and writes them out under `$PIKKU_DATA_DIR/.pikku-sqlite-extensions/` on start. The libraries are the build machine's, so an extension that cannot be resolved there fails the build; `[]` builds without them.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` take an `extensions` list of library paths to load into the connection.
+
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+  - @pikku/deploy@0.12.12
+  - @pikku/migrator-sql@0.12.6
+
 ## 0.12.20
 
 ### Patch Changes

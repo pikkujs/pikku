@@ -1,9 +1,10 @@
 name: CI
 
+# Pull requests only, and not drafts: a branch uses no runners until it is up
+# for review. `ready_for_review` starts the run a draft skipped.
 on:
-  push:
-    branches-ignore:
-      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +20,7 @@ env:
 jobs:
   validate-deps:
     name: Validate Package Deps
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -38,13 +40,16 @@ jobs:
         run: node --test scripts/merged-worktrees.test.mjs
       - name: Test the live-AI e2e gate
         run: node --test scripts/ai-e2e-gate.test.mjs
+      - name: Test the native apps gate
+        run: node --test scripts/native-gate.test.mjs
       - name: Check peer dependency ranges agree across the monorepo
         run: node scripts/check-peer-dependency-consistency.mjs
-      - name: Check every verifier runs in both workflows
+      - name: Check every verifier runs in the full suite
         run: node scripts/check-verifier-matrix.mjs
 
   lint:
     name: Lint & Format
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,19 +71,26 @@ jobs:
 
   build:
     name: Build
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - name: Check every changeset is a patch
+        run: node scripts/check-changesets-are-patch.mjs
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
       - uses: ./.github/actions/build
+        with:
+          templates: 'false'
 
-  # Ran only on main until now, so a branch could go green with a red unit
-  # suite and only break once it had already landed.
+  # Two runners. The sequential one holds what cannot share a machine: the CLI
+  # suite spawns subprocesses with 120s timeouts and writes fixtures inside
+  # packages/cli that the core suite walks, and the database suites. The rest
+  # run package-parallel on the other.
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (sequential)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
@@ -104,20 +116,19 @@ jobs:
           echo "NATS did not become ready" >&2
           docker logs pikku-nats >&2 || true
           exit 1
-      - run: bun run test
+      - run: bun run --filter @pikku/cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
 
-  codegen-perf:
-    name: Codegen Perf (500 functions ≤ 30s)
+  unit-tests-parallel:
+    name: Unit Tests (parallel)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: build
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Run codegen perf gate
-        run: npx tsx benchmarks/bench-codegen-perf.ts
+      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
 
   e2e:
     name: E2E Standard
@@ -127,7 +138,7 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     needs: build
     steps:
       - uses: actions/checkout@v7
@@ -135,22 +146,8 @@ jobs:
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
         run: bun run test:e2e
-
-  e2e-agent:
-    name: E2E Agent (deterministic)
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 15
-    needs: build
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - uses: ./.github/actions/e2e-codegen
       - name: Run deterministic agent e2e tests
+        if: ${{ !cancelled() }}
         run: bun run test:e2e:agent
 
   # Newly guarded: `tests/cli/` drives the CLI as a subprocess against a server
@@ -194,11 +191,12 @@ jobs:
         run: bun run test:e2e:console
 
   # Live-model scenarios are the only coverage the agent runner has, but they
-  # spend real tokens and about twenty minutes — which is why the Release
-  # workflow parked them outright. Here they run on the commits that can break
-  # them: `scripts/ai-e2e-gate.mjs` says which those are.
+  # spend real tokens and about twenty minutes, so they run only on the pull
+  # requests that can break them: `scripts/ai-e2e-gate.mjs` says which those
+  # are. Off unless the repo variable AI_LIVE_E2E is 'true'.
   ai-gate:
     name: AI e2e gate
+    if: ${{ vars.AI_LIVE_E2E == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -210,9 +208,10 @@ jobs:
       - id: decide
         run: node scripts/ai-e2e-gate.mjs >> "$GITHUB_OUTPUT"
         env:
-          BEFORE_SHA: ${{ github.event.before }}
-          AFTER_SHA: ${{ github.sha }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          # No BEFORE_SHA: the gate diffs from the merge base with origin/main,
+          # which is the whole pull request.
+          AFTER_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
 
   e2e-ai-live:
     name: E2E AI (live)
@@ -248,444 +247,245 @@ jobs:
           # without one.
           OPENAI_BASE_URL: https://openrouter.ai/api/v1
 
-  verifiers:
-    name: Verifiers (${{ matrix.verifier }})
+  # The native apps: e2e/packages/web built once into a dist, then packaged by
+  # Tauri on each platform from that one artifact — the flow a project follows
+  # to ship its frontend as an app. Each smoke test launches the package against
+  # a live e2e server and waits for the app to record `native_opened` there
+  # (scripts/native-smoke.mjs). Gated like the live AI scenarios, since Rust,
+  # Gradle, an emulator and a simulator are half an hour of runners.
+  native-gate:
+    name: Native apps gate
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        verifier:
-          [
-            addon,
-            addon-openapi,
-            addon-registry,
-            addon-treeshake,
-            analytics,
-            classification,
-            gateway,
-            middleware-and-permissions,
-            treeshaking,
-            types,
-            secrets,
-            scopes,
-            feature-flags,
-            workflows,
-            variables,
-            functions,
-            hmr,
-            dev-bun,
-            deploy-cloudflare,
-            deploy-serverless,
-            deploy-grouping,
-            deploy-azure,
-            deploy-standalone,
-            better-auth,
-            next-better-auth,
-            tanstack-start-better-auth,
-            bun-server,
-            webhooks,
-            db-schema,
-            mcp-auth,
-          ]
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: cd verifiers/${{ matrix.verifier }} && bun run test
+        with:
+          fetch-depth: 0
+      - id: decide
+        run: node scripts/native-gate.mjs >> "$GITHUB_OUTPUT"
+        env:
+          AFTER_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
 
-  # The only verifier that runs a browser, so it gets its own job rather than a
-  # row in the matrix: every other row would pay for a ~90MB chromium download
-  # it never opens. It is what proves the served page actually renders and its
-  # own fetches reach the API on the same origin.
-  verifiers-fullstack:
-    name: Fullstack (browser)
+  native-web:
+    name: Native web dist
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
+    needs: [build, native-gate]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Install chromium
-        run: cd verifiers/fullstack && npx playwright install --with-deps chromium
-      - name: Run fullstack verifier
-        run: cd verifiers/fullstack && bun run test
+      - uses: ./.github/actions/e2e-codegen
+      # `.env.native` points the build at http://localhost:4077, where each
+      # smoke job runs the e2e server.
+      - name: Build the web app for the native shell
+        working-directory: e2e/packages/web
+        run: bun run build:native
+      # Nothing native is committed: the Tauri project is written here from the
+      # `native` entry in e2e/pikku.config.json, then given the full icon set,
+      # exactly as `pikku app native init`'s next steps tell a user to.
+      - name: Create the native project
+        working-directory: e2e
+        run: npx pikku app native init web
+      - name: Generate the icon set
+        working-directory: e2e/packages/web
+        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-web-dist
+          path: |
+            e2e/packages/web/dist-native
+            e2e/packages/web/src-tauri
+          if-no-files-found: error
+          retention-days: 7
 
-  verifiers-binary:
-    name: Binary (${{ matrix.os }})
+  native-desktop:
+    name: Native desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    needs: build
+    timeout-minutes: 45
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
+    continue-on-error: ${{ matrix.optional == true }}
     strategy:
       fail-fast: false
       matrix:
-        # windows-latest excluded: its pre-installed global Yarn 1.22 shadows
-        # Corepack's Yarn 4 in the shared setup action, breaking `bun install`.
-        # The pikku-windows-x64.exe is still cross-compiled and published on each
-        # release (see packages/cli/build.sh).
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - name: linux
+            os: ubuntu-latest
+            bundles: deb,appimage
+            smoke: true
+          - name: macos
+            os: macos-latest
+            bundles: app,dmg
+            smoke: true
+          # Runs but may fail: it has not yet passed end to end — see
+          # knowledge/projects/pikku/status/native-apps-1908.md.
+          - name: windows
+            os: windows-latest
+            bundles: nsis,msi
+            smoke: true
+            optional: true
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/download-artifact@v8
         with:
-          bun-version: 1.4.0
-      - name: Run binary verifier
+          name: native-web-dist
+          path: e2e/packages/web
+      - name: Install the WebKitGTK toolchain
+        if: ${{ matrix.name == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Package the app
+        working-directory: e2e/packages/web
         shell: bash
-        run: cd verifiers/binary && bun run test
-
-  # The workflow verifier's pg/redis runners need real queue + storage backends,
-  # so they can't run in the plain `verifiers` job. This job gives them Postgres
-  # (KyselyWorkflowService + pg-boss) and Redis (RedisWorkflowService + bullmq)
-  # and asserts every node's state — provenance + cycles — on both transports.
-  verifiers-workflows-db:
-    name: Verifiers (workflows, db-backed)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    services:
-      redis:
-        image: mirror.gcr.io/library/redis:7
-        ports:
-          - 6379:6379
-      postgres:
-        image: mirror.gcr.io/library/postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: pikku_queue
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: cd verifiers/workflows && bun run test:db
-    env:
-      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_queue
-      REDIS_URL: redis://localhost:6379
-
-  # The db-schema verifier's second pass needs a real postgres server. The
-  # sqlite pass runs in the plain `verifiers` job and covers the same thirteen
-  # steps, but only postgres has the types the schema sources must agree on —
-  # a `uuid` primary key a hand-written `text` foreign key cannot reference, and
-  # a migration that compiles either way but is rejected by exactly one of them.
-  # It gets a database of its own: the run drops and recreates `public`.
-  verifiers-db-schema-db:
-    name: Verifiers (db-schema, postgres)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    services:
-      postgres:
-        image: mirror.gcr.io/library/postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: pikku_db_schema
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: cd verifiers/db-schema && bun run test:db
-    env:
-      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
-
-  verifier-coverage:
-    name: Verifier Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Run functions verifier with coverage
-        run: cd verifiers/functions && bun run test:coverage
-      - name: Upload verifier coverage to Codecov
-        uses: codecov/codecov-action@v7
+        run: npx --yes @tauri-apps/cli@2 build --bundles ${{ matrix.bundles }}
+      - uses: actions/upload-artifact@v7
         with:
-          files: verifiers/functions/coverage/lcov.info
-          flags: verifiers
-          name: verifier-coverage
-        continue-on-error: true
-
-  unit-coverage:
-    name: Unit Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: build
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Run package unit tests with coverage
-        # --enable-source-maps so tsx-transpiled line numbers map back to the
-        # original .ts before lcov is written. A single package's test failure
-        # must not halt the sweep, so each run is isolated with `|| warning`.
-        # Each package is also capped with `timeout`, because a package whose
-        # test process never exits otherwise burns the whole job's 20 minutes
-        # and every package sorted after it is never run at all.
-        #
-        # The cap is a hang detector, not a performance budget, so it sits well
-        # above the slowest suite rather than near it. packages/inspector runs
-        # 672 tests over real TypeScript programs — 141s plain, 338s under
-        # coverage instrumentation — and at 300s it began being killed on every
-        # branch at once. CI never runs on main, so a suite creeping past the
-        # cap first appears as every open PR going red together.
-        env:
-          NODE_OPTIONS: --enable-source-maps
+          name: native-${{ matrix.name }}
+          path: e2e/packages/web/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 7
+      - if: ${{ matrix.smoke }}
+        uses: ./.github/actions/setup
+      - if: ${{ matrix.smoke }}
+        uses: ./.github/actions/e2e-backend
+      - name: Launch the app and wait for it to call home
+        if: ${{ matrix.smoke }}
+        working-directory: e2e/packages/web
+        shell: bash
         run: |
-          : > unit-test-failures.txt
-          while IFS= read -r script; do
-            dir=$(dirname "$script")
-            echo "::group::coverage ${dir}"
-            (cd "$dir" && timeout --signal=KILL 600 bash run-tests.sh --coverage) || { status=$?; [ "$status" = 137 ] && echo "::error::unit tests timed out after 600s in ${dir}" || echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
-            echo "::endgroup::"
-          done < <(find packages -name run-tests.sh -not -path '*/node_modules/*' | sort)
-      - name: Merge lcov reports and re-root paths to repo root
-        # Each package writes lcov.info with package-relative SF paths (src/...).
-        # Prefix them with the package directory so Codecov maps them to the
-        # correct file in a monorepo where many packages share src/index.ts.
-        run: |
-          : > unit-lcov.info
-          while IFS= read -r f; do
-            dir=$(dirname "$f")
-            sed "s#^SF:#SF:${dir}/#" "$f" >> unit-lcov.info
-          done < <(find packages -name lcov.info -not -path '*/node_modules/*' | sort)
-          echo "Merged $(grep -c '^SF:' unit-lcov.info || echo 0) source files into unit-lcov.info"
-      - name: Upload unit coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          files: unit-lcov.info
-          flags: unit
-          name: unit-coverage
-        continue-on-error: true
-      - name: Fail if any package's unit tests failed
-        run: |
-          if [ -s unit-test-failures.txt ]; then
-            echo "Unit tests failed in:"; cat unit-test-failures.txt
-            exit 1
-          fi
+          case "${{ matrix.name }}" in
+            linux) xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            windows) src-tauri/target/release/web-app.exe > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            *) src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+          esac
+          node ../../../scripts/native-smoke.mjs http://localhost:4077 120 || { cat "$RUNNER_TEMP/app.log"; exit 1; }
 
-  examples:
-    name: Example (${{ matrix.example }})
+  native-android:
+    name: Native Android
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        example: [online-shop, field-service]
+    timeout-minutes: 60
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Generate, migrate and type-check
-        run: cd examples/${{ matrix.example }} && bun run build
-      - name: Test
-        run: cd examples/${{ matrix.example }} && bun run test
-
-  templates:
-    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    services:
-      redis:
-        image: mirror.gcr.io/library/redis:7
-        ports:
-          - 6379:6379
-      postgres:
-        image: mirror.gcr.io/library/postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: pikku_workspace_starter
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [24]
-        template: [
-            express,
-            express-middleware,
-            fastify,
-            fastify-plugin,
-            uws,
-            ws,
-            aws-lambda,
-            aws-lambda-websocket,
-            cloudflare-workers,
-            cloudflare-websocket,
-            nextjs,
-            mcp-server,
-            pg-boss,
-            bullmq,
-            workflows-bullmq,
-            workflows-pg-boss,
-            remote-rpc-pg,
-            remote-rpc-redis,
-            # ai-postgres is disabled: it drives a live agent turn, and the
-            # OPENAI_API_KEY it runs against has no credits left, so both the
-            # yarn and bun jobs burn five minutes retrying and fail on `You have
-            # no credits remaining.` on every push to every branch. Disabled in
-            # `main.yml` too, for the other dead key. Re-enable in both once one
-            # of them is funded.
-            # ai-postgres,
-            bun,
-          ]
-        package-manager: [yarn, bun]
-        exclude:
-          - package-manager: bun
-            template: uws
-          - package-manager: bun
-            template: aws-lambda
-          - package-manager: bun
-            template: aws-lambda-websocket
-          - package-manager: bun
-            template: cloudflare-workers
-          - package-manager: bun
-            template: cloudflare-websocket
-          - package-manager: bun
-            template: nextjs
-          - package-manager: bun
-            template: nextjs-full
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v8
         with:
-          node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
-      - name: Test template
-        timeout-minutes: 5
-        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
-        env:
-          TEMPLATE_NAME: ${{ matrix.template }}
-          TEMPLATE_VERSION: ${{ github.ref_name }}
-          PACKAGE_MANAGER: ${{ matrix.package-manager }}
-          TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
-      - name: Generate template coverage report
-        if: always()
+          name: native-web-dist
+          path: e2e/packages/web
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # gen/android is generated here rather than committed: the e2e app has no
+      # manifest, signing or icon changes of its own, and a fresh `init` on every
+      # run is what proves the generated project still initialises. A debug
+      # build is signed with the debug key, so the APK installs on any phone
+      # that allows sideloading, and permits the cleartext localhost API.
+      - name: Build a debug APK (arm64 phones + x86_64 emulator)
+        working-directory: e2e/packages/web
         run: |
-          if find "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" -type f -name '*.json' -print -quit >/dev/null 2>&1; then
-            npx --yes c8@11.0.0 report \
-              --temp-directory "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" \
-              --reporter=lcov \
-              --report-dir "${{ runner.temp }}/template-coverage/${{ matrix.template }}/report" \
-              --exclude '.pikku/**' \
-              --exclude 'client/**' \
-              --exclude 'src/tests/**'
-          fi
-      - name: Upload template coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v7
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          npx --yes @tauri-apps/cli@2 android init --ci
+          npx --yes @tauri-apps/cli@2 android build --apk --debug --target aarch64 --target x86_64
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          echo "APK=$PWD/$apk" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
         with:
-          files: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/report/lcov.info
-          flags: templates
-          name: template-${{ matrix.template }}
-        continue-on-error: true
-    env:
-      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
-      REDIS_URL: redis://localhost:6379
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SLS_TELEMETRY_DISABLED: 1
-      SLS_NOTIFICATIONS_MODE: off
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  templates-no-services:
-    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [24]
-        template: [cli, tanstack]
-        package-manager: [yarn]
-    steps:
-      - uses: actions/checkout@v7
+          name: native-android
+          path: ${{ env.APK }}
+          if-no-files-found: error
+          retention-days: 7
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
-      - name: Test template
-        timeout-minutes: 5
-        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
-        env:
-          TEMPLATE_NAME: ${{ matrix.template-name || matrix.template }}
-          TEMPLATE_VERSION: ${{ github.ref_name }}
-          PACKAGE_MANAGER: ${{ matrix.package-manager }}
-          TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
-      - name: Generate template coverage report
-        if: always()
+      - uses: ./.github/actions/e2e-backend
+      - name: Enable KVM for the emulator
         run: |
-          if find "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" -type f -name '*.json' -print -quit >/dev/null 2>&1; then
-            npx --yes c8@11.0.0 report \
-              --temp-directory "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" \
-              --reporter=lcov \
-              --report-dir "${{ runner.temp }}/template-coverage/${{ matrix.template }}/report" \
-              --exclude '.pikku/**' \
-              --exclude 'client/**' \
-              --exclude 'src/tests/**'
-          fi
-      - name: Upload template coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v7
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # `adb reverse` makes the emulator's localhost:4077 the runner's, so the
+      # APK built for localhost reaches the e2e server unchanged.
+      - name: Install, launch and wait for it to call home
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          files: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/report/lcov.info
-          flags: templates
-          name: template-${{ matrix.template }}
-        continue-on-error: true
-    env:
-      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SLS_TELEMETRY_DISABLED: 1
-      SLS_NOTIFICATIONS_MODE: off
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb reverse tcp:4077 tcp:4077
+            adb install -r "$APK"
+            adb shell monkey -p dev.pikku.e2e -c android.intent.category.LAUNCHER 1
+            node scripts/native-smoke.mjs http://localhost:4077 180 || (adb logcat -d | tail -200; exit 1)
 
-  template-runtime-targets:
-    name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    services:
-      elasticmq:
-        image: softwaremill/elasticmq-native
-        ports:
-          - 9324:9324
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [24]
-        target: [dev, standalone]
+  # Unsigned, for the simulator only: a build that installs on a phone needs an
+  # Apple Developer team, which this repository does not have. What it proves is
+  # that the generated project initialises, compiles and runs on iOS.
+  native-ios:
+    name: Native iOS (simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    needs: [build, native-gate, native-web]
+    if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v8
         with:
-          node-version: ${{ matrix.version }}
-          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
-      - name: Test functions template runtime target
-        timeout-minutes: 5
-        run: cd templates/functions && bun run test:runtime ${{ matrix.target }}
-        env:
-          AWS_ACCESS_KEY_ID: local
-          AWS_SECRET_ACCESS_KEY: local
-          AWS_REGION: us-east-1
-          SLS_TELEMETRY_DISABLED: 1
-          SLS_NOTIFICATIONS_MODE: off
+          name: native-web-dist
+          path: e2e/packages/web
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: e2e/packages/web/src-tauri -> target
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Build for the simulator
+        working-directory: e2e/packages/web
+        run: |
+          npx --yes @tauri-apps/cli@2 ios init --ci
+          npx --yes @tauri-apps/cli@2 ios build --debug --target aarch64-sim --no-sign
+          app=$(find src-tauri/gen/apple -name '*.app' -type d -path '*iphonesimulator*' | head -1)
+          [ -n "$app" ] || app=$(find src-tauri/gen/apple -name '*.app' -type d | head -1)
+          echo "IOS_APP=$PWD/$app" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-ios-simulator
+          path: ${{ env.IOS_APP }}
+          if-no-files-found: error
+          retention-days: 7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-backend
+      # The simulator shares the Mac's network, so localhost:4077 is the server.
+      - name: Install, launch and wait for it to call home
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl install "$udid" "$IOS_APP"
+          xcrun simctl launch "$udid" dev.pikku.e2e
+          node scripts/native-smoke.mjs http://localhost:4077 180

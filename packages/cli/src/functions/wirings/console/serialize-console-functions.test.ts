@@ -29,6 +29,19 @@ test('serializeConsoleFunctions gates the console addon behind the console scope
   )
 })
 
+// wireAddon's scopes reach only the addon's own functions, and these two are
+// emitted into the application, so each has to carry the console scope itself.
+test('serializeConsoleFunctions gates the variable brokers it emits into the app', () => {
+  const { functions } = serializeConsoleFunctions(leaf, '#agents', '/api')
+
+  for (const name of ['pikkuConsoleGetVariable', 'pikkuConsoleSetVariable']) {
+    const declaration = functions
+      .split(`export const ${name} = `)[1]!
+      .split('\n})')[0]!
+    assert.match(declaration, /scopes: \['pikku:console'\]/, name)
+  }
+})
+
 test('serializeConsoleFunctions describes every payload with a zod schema', () => {
   const { schemas, functions } = serializeConsoleFunctions(
     leaf,

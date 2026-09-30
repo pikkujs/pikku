@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyzeDeployment as analyzeUnpinned,
   toSafeKebab,
+  unroutedHttpWirings,
 } from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
 
@@ -838,6 +839,19 @@ describe('analyzeDeployment - the remote job inbox lands on the work', () => {
     const unit = analyze().units.find((u) => u.name === 'run-remote-queue-job')
     assert.ok(unit?.services.some((s) => s.capability === 'database'))
   })
+
+  test('the inbox is bound to what its workers rpc.invoke', () => {
+    const state = stateWithRemoteJobInbox()
+    ;(state.functions.meta as any).nightlyReport.invokes = ['sendEmail']
+    const { units } = analyzeDeployment(state, {
+      projectId: 'test',
+      serverlessIncompatible: ['fileStore'],
+    })
+    const inbox = units.find((u) => u.name === 'run-remote-scheduled-job')
+    const target = inbox?.dispatch?.sendEmail
+    assert.ok(target && target !== inbox.name)
+    assert.ok(inbox.dependsOn.includes(target))
+  })
 })
 
 /**
@@ -1106,5 +1120,456 @@ describe('analyzeDeployment - a unit records why it is where it is', () => {
       grouping: { strategy: 'function', rules: [pdfRule, consoleRule] },
     }).units.find((u) => u.name === 'pdf')
     assert.deepEqual(merged?.targetForcedBy, ['pdfService', 'ghostscript'])
+  })
+})
+
+describe('analyzeDeployment - workflow orchestrator target', () => {
+  function stateWithWorkflow(): InspectorState {
+    const state = stateWithScenario() as any
+    state.functions.meta.sendEmail = {
+      pikkuFuncId: 'sendEmail',
+      name: 'sendEmail',
+    }
+    state.workflows.graphMeta = {
+      onboard: {
+        name: 'onboard',
+        pikkuFuncId: 'onboard',
+        nodes: { 'step-1': { rpcName: 'sendEmail', stepName: 'send' } },
+        entryNodeIds: ['step-1'],
+      },
+    }
+    return state
+  }
+
+  const orchestrator = (defaultTarget?: 'serverless' | 'server') =>
+    analyzeDeployment(stateWithWorkflow(), {
+      projectId: 'test',
+      defaultTarget,
+    }).units.find((u) => u.name === 'wf-onboard')
+
+  test('inherits deploy.defaultTarget', () => {
+    assert.equal(orchestrator('server')?.target, 'server')
+  })
+
+  test('stays serverless by default', () => {
+    assert.equal(orchestrator()?.target, 'serverless')
+  })
+})
+
+/**
+ * `rpc.startWorkflow('onboard')` resolves onboard's meta in the calling
+ * process. A unit whose function starts it, but which is not onboard's
+ * orchestrator, needs that meta — or the deployed call fails with
+ * WorkflowNotFoundError.
+ */
+describe('analyzeDeployment - rpc.startWorkflow from a function body', () => {
+  function stateWithStarter(starter: Record<string, unknown> = {}) {
+    const state = stateWithScenario() as any
+    state.functions.meta.createTodo = {
+      ...state.functions.meta.createTodo,
+      services: { services: ['kysely'] },
+      startsWorkflows: ['onboard', 'notAWorkflow'],
+      ...starter,
+    }
+    state.functions.meta.sendEmail = {
+      pikkuFuncId: 'sendEmail',
+      name: 'sendEmail',
+    }
+    state.workflows.graphMeta = {
+      onboard: {
+        name: 'onboard',
+        pikkuFuncId: 'onboard',
+        nodes: { 'step-1': { rpcName: 'sendEmail', stepName: 'send' } },
+        entryNodeIds: ['step-1'],
+      },
+    }
+    return state as InspectorState
+  }
+
+  const starterUnit = (state: InspectorState, workflowQueues?: boolean) =>
+    analyzeUnpinned(state, { projectId: 'test', workflowQueues }).units.find(
+      (u) => u.functionIds.includes('createTodo')
+    )
+
+  test('the starting unit records the workflows it starts, known ones only', () => {
+    assert.deepEqual(starterUnit(stateWithStarter())?.startedWorkflows, [
+      'onboard',
+    ])
+  })
+
+  test('the starting unit gets the run store and the queue a start enqueues on', () => {
+    const unit = starterUnit(stateWithStarter())
+    assert.ok(unit?.services.some((s) => s.capability === 'workflow-state'))
+    assert.ok(unit?.services.some((s) => s.capability === 'queue'))
+  })
+
+  test('no queue capability when the provider runs workflows without queues', () => {
+    const unit = starterUnit(stateWithStarter(), false)
+    assert.deepEqual(unit?.startedWorkflows, ['onboard'])
+    assert.ok(!unit?.services.some((s) => s.capability === 'queue'))
+  })
+
+  test('a unit that already has workflow-state is left to bundle every workflow', () => {
+    const unit = starterUnit(
+      stateWithStarter({
+        services: { services: ['kysely', 'workflowService'] },
+      })
+    )
+    assert.equal(unit?.startedWorkflows, undefined)
+  })
+
+  test('a unit that starts nothing is unchanged', () => {
+    const unit = starterUnit(stateWithStarter({ startsWorkflows: undefined }))
+    assert.equal(unit?.startedWorkflows, undefined)
+    assert.ok(!unit?.services.some((s) => s.capability === 'workflow-state'))
+  })
+})
+
+/**
+ * A project with both shapes of `http:<method>:<route>` id: an agent wired over
+ * HTTP with an inline `func` (the route is the app's own, nobody else serves
+ * it) and the OPTIONS preflight beside `rpcCaller`'s catch-all (a bridge whose
+ * route a named function already owns).
+ */
+function stateWithInlineHttpFuncs(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        rpcCaller: { pikkuFuncId: 'rpcCaller', name: 'rpcCaller' },
+        'http:post:/agents/shop': {
+          pikkuFuncId: 'http:post:/agents/shop',
+          name: 'http:post:/agents/shop',
+        },
+        'http:options:/rpc/:rpcName': {
+          pikkuFuncId: 'http:options:/rpc/:rpcName',
+          name: 'http:options:/rpc/:rpcName',
+        },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'rpcCaller',
+            method: 'post',
+            route: '/rpc/:rpcName',
+          },
+          '/agents/shop': {
+            pikkuFuncId: 'http:post:/agents/shop',
+            method: 'post',
+            route: '/agents/shop',
+          },
+        },
+        options: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'http:options:/rpc/:rpcName',
+            method: 'options',
+            route: '/rpc/:rpcName',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - routes wired to an inline func', () => {
+  const servedRoutes = () =>
+    analyzeDeployment(stateWithInlineHttpFuncs(), { projectId: 'test' })
+      .units.flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .map((r) => `${r.method} ${r.route}`)
+
+  // `wireHTTP({ func: agent('shopAssistant') })` has no nameable func, so the
+  // inspector ids it after its route. Skipping every such id dropped the route
+  // from the plan entirely: deployed, active units and a 404 at the edge.
+  test('an inline func on its own route still gets a unit', () => {
+    assert.ok(servedRoutes().includes('POST /agents/shop'))
+  })
+
+  // The OPTIONS preflight beside `rpcCaller`'s catch-all gets no unit of its
+  // own — it rides the unit of the function that owns the route, which is what
+  // makes it reachable rather than merely not-duplicated.
+  test('a bridge onto a route a named function owns rides that unit', () => {
+    const manifest = analyzeDeployment(stateWithInlineHttpFuncs(), {
+      projectId: 'test',
+    })
+    const rpcUnit = manifest.units.find((u) =>
+      u.functionIds.includes('rpcCaller')
+    )
+    assert.ok(rpcUnit)
+    const routes = rpcUnit.handlers
+      .flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      .map((r) => `${r.method} ${r.route}`)
+    assert.deepEqual(routes.sort(), [
+      'OPTIONS /rpc/:rpcName',
+      'POST /rpc/:rpcName',
+    ])
+  })
+})
+
+describe('unroutedHttpWirings', () => {
+  test('names a declared route that reached no unit', () => {
+    const state = stateWithInlineHttpFuncs()
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    assert.deepEqual(unroutedHttpWirings(state.http.meta, manifest.units), [])
+
+    // The shape every dropped route had: declared, generated into the meta,
+    // owned by nothing. Previously indistinguishable from a healthy build.
+    assert.deepEqual(
+      unroutedHttpWirings(state.http.meta, [])
+        .map((r) => r.route)
+        .sort(),
+      ['/agents/shop', '/rpc/:rpcName', '/rpc/:rpcName']
+    )
+  })
+
+  // `agentCaller`'s `/rpc/agent/:agentName` is re-emitted as one concrete route
+  // per agent, so the parameterized declaration owning no unit is correct.
+  test('ignores the scaffold callers the analyzer expands per agent', () => {
+    const httpMeta = {
+      post: {
+        '/rpc/agent/:agentName': {
+          pikkuFuncId: 'agentCaller',
+          method: 'post',
+          route: '/rpc/agent/:agentName',
+        },
+      },
+    } as any
+    assert.deepEqual(unroutedHttpWirings(httpMeta, []), [])
+  })
+})
+
+function stateWithTwoFunctionsOnOnePath(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getItems: { pikkuFuncId: 'getItems', name: 'getItems' },
+        postItems: { pikkuFuncId: 'postItems', name: 'postItems' },
+        'http:options:/items': {
+          pikkuFuncId: 'http:options:/items',
+          name: 'http:options:/items',
+        },
+      },
+    },
+    http: {
+      meta: {
+        get: {
+          '/items': { pikkuFuncId: 'getItems', method: 'get', route: '/items' },
+        },
+        post: {
+          '/items': {
+            pikkuFuncId: 'postItems',
+            method: 'post',
+            route: '/items',
+          },
+        },
+        options: {
+          '/items': {
+            pikkuFuncId: 'http:options:/items',
+            method: 'options',
+            route: '/items',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - a synthetic bridge shared by two owners', () => {
+  test('the bridge is attached to exactly one unit', () => {
+    const manifest = analyzeDeployment(stateWithTwoFunctionsOnOnePath(), {
+      projectId: 'test',
+    })
+    const bridges = manifest.units
+      .flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .filter((r) => r.method === 'OPTIONS' && r.route === '/items')
+    assert.equal(bridges.length, 1)
+  })
+})
+
+describe('unroutedHttpWirings - ownership', () => {
+  // Another function's route on the same method and path must not satisfy the
+  // declaration: the declared handler would still be missing.
+  test('a different pikkuFuncId on the same method and path does not count', () => {
+    const httpMeta = {
+      get: {
+        '/mcp': {
+          pikkuFuncId: 'declaredThing',
+          method: 'get',
+          route: '/mcp',
+        },
+      },
+    } as any
+    const units = [
+      {
+        name: 'u',
+        handlers: [
+          {
+            type: 'fetch',
+            routes: [
+              { method: 'GET', route: '/mcp', pikkuFuncId: 'mcpGateway' },
+            ],
+          },
+        ],
+      },
+    ] as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, units).map((r) => r.pikkuFuncId),
+      ['declaredThing']
+    )
+  })
+
+  // The thread readers ride the gateway unit but declare no route of their own,
+  // so a declared HTTP route onto one reaches nothing and must be reported.
+  test('a declared route onto a thread reader is reported', () => {
+    const httpMeta = {
+      get: {
+        '/threads': {
+          pikkuFuncId: 'getAgentThreads',
+          method: 'get',
+          route: '/threads',
+        },
+      },
+    } as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, []).map((r) => r.route),
+      ['/threads']
+    )
+  })
+})
+
+/**
+ * A function body that calls `rpc.invoke('x')` crosses to x's unit through the
+ * DeploymentService, which only knows the units the plan binds. Grouped by
+ * service set, a caller that builds no services lands in `svc-base` while a DB
+ * callee lands in `svc-kysely`.
+ */
+function stateWithRpcInvoke(
+  extraFunctions: Record<string, unknown> = {},
+  extraRoutes: Record<string, unknown> = {}
+): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getCandidate: {
+          pikkuFuncId: 'getCandidate',
+          name: 'getCandidate',
+          invokes: ['getCandidateById'],
+        },
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+          services: { services: ['kysely'] },
+        },
+        ...extraFunctions,
+      },
+    },
+    http: {
+      meta: {
+        get: {
+          '/candidate': {
+            pikkuFuncId: 'getCandidate',
+            method: 'get',
+            route: '/candidate',
+          },
+          ...extraRoutes,
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - rpc.invoke between units', () => {
+  test('a no-service caller is bound to the DB unit of the function it invokes', () => {
+    const { units } = analyzeUnpinned(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const base = units.find((u) => u.name === 'svc-base')
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.deepEqual(base?.functionIds, ['getCandidate'])
+    assert.deepEqual(kysely?.functionIds, ['getCandidateById'])
+    assert.ok(base?.dependsOn.includes('svc-kysely'))
+    assert.equal(base?.dispatch?.['getCandidateById'], 'svc-kysely')
+  })
+
+  test('the callee gets an RPC unit even when nothing else wires it', () => {
+    const { units } = analyzeUnpinned(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.ok(kysely?.handlers.some((h) => h.type === 'fetch'))
+  })
+
+  test('a callee in the same unit needs no binding', () => {
+    const { units } = analyzeUnpinned(
+      stateWithRpcInvoke({
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+        },
+      }),
+      { projectId: 'test' }
+    )
+    const base = units.find((u) => u.name === 'svc-base')
+    assert.deepEqual(base?.dependsOn, [])
+    assert.equal(base?.dispatch, undefined)
+  })
+
+  test('calls made by a callee reached only over rpc are bound too', () => {
+    const { units } = analyzeUnpinned(
+      stateWithRpcInvoke({
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+          services: { services: ['kysely'] },
+          invokes: ['translate'],
+        },
+        translate: {
+          pikkuFuncId: 'translate',
+          name: 'translate',
+          services: { services: ['translation'] },
+        },
+      }),
+      { projectId: 'test' }
+    )
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.equal(kysely?.dispatch?.['translate'], 'svc-translation')
+    assert.ok(units.some((u) => u.name === 'svc-translation'))
+  })
+
+  test('under one unit per function, the binding is by function unit', () => {
+    const { units } = analyzeDeployment(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const caller = units.find((u) => u.name === 'get-candidate')
+    assert.ok(caller?.dependsOn.includes('get-candidate-by-id'))
+    assert.equal(caller?.dispatch?.['getCandidateById'], 'get-candidate-by-id')
   })
 })

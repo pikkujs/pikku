@@ -16,6 +16,10 @@ failed; a showcase where every surface is a stub has also failed. The bar for
 each surface below: **it does something the app genuinely needs, and a scenario
 proves it.** A cron job that logs "tick" is not a schedule — it is a comment.
 
+Each surface lands with its console link, filtered by the person's level
+(SKILL.md, "Who you are talking to"): a non-technical person sees the workflow
+or agent page, never the queue, scheduler or wire pages behind it.
+
 Budget the extra surfaces at one milestone each. They are not free, and a
 half-wired workflow engine is worse than no workflow engine.
 
@@ -163,8 +167,8 @@ bunx --bun pikku versions init
 
 The CLI suggests this on every run of a project without it. Versioning a function
 contract, then changing it, is a short milestone that shows something no
-scaffold demonstrates on its own. `pikku semver` derives the release version by
-comparing this build's surface against a deployed one.
+scaffold demonstrates on its own. `pikku release` derives the release version by
+comparing this build's surface against the last release, then ships it.
 
 ### Addons — `pikku-addon`
 

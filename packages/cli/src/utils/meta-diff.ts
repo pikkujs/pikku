@@ -143,7 +143,7 @@ export function readMetaSnapshot(outDir: string): MetaSnapshot {
 // meaningful structural change — excluded from equality (matches StateDiffService).
 const NORMALIZE_IGNORE = new Set(['sourceFile'])
 
-function normalize(value: unknown): unknown {
+export function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize)
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {}

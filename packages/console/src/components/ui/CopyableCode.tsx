@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Text } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
+import './code-highlight-styles'
 
 interface CopyableCodeProps {
   code: string

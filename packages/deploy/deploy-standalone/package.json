@@ -1,12 +1,12 @@
 {
   "name": "@pikku/deploy-standalone",
-  "version": "0.12.20",
+  "version": "0.12.23",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/deploy/deploy-standalone"
   },
-  "description": "Standalone deploy adapter for Pikku — bundles a project into a node bundle or a compiled bun executable",
+  "description": "Standalone deploy adapter for Pikku \u2014 bundles a project into a node bundle or a compiled bun executable",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -16,11 +16,12 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./runtime": "./dist/runtime/index.js"
+    "./runtime": "./dist/runtime/index.js",
+    "./native": "./dist/tauri/index.js"
   },
   "license": "MIT",
   "dependencies": {
-    "@pikku/deploy": "^0.12.7",
-    "@pikku/migrator-sql": "^0.12.3"
+    "@pikku/deploy": "^0.12.12",
+    "@pikku/migrator-sql": "^0.12.6"
   }
 }

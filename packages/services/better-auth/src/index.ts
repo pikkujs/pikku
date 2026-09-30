@@ -25,8 +25,15 @@ export {
 export type { AuthGetter } from './admin-users.js'
 export { pikkuBan, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
-export { pikkuActor } from './actor-plugin.js'
-export type { ActorPluginOptions } from './actor-plugin.js'
+export {
+  pikkuActor,
+  actorCredentialEnvKey,
+  parseActorCredential,
+} from './actor-plugin.js'
+export type {
+  ActorPluginOptions,
+  ActorCredentialsOptions,
+} from './actor-plugin.js'
 export {
   ACTOR_NOT_PROVISIONED_MESSAGE,
   ACTOR_SIGN_IN_DISABLED_MESSAGE,
@@ -39,6 +46,8 @@ export type {
   ActorSignInGate,
   ActorSignInReason,
 } from './actor-sign-in-gate.js'
+export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-actors.js'
+export type { DevActor, DevActorPersona } from './dev-actors.js'
 
 export type { PersonaOrphanPolicy } from './provision-personas.js'
 export { pikkuFabric } from './fabric-plugin.js'
@@ -79,6 +88,16 @@ export {
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
 export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
+export {
+  applyOAuthProxy,
+  resolveOAuthProxyConfig,
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+  OAUTH_PROXY_PROVIDER_IDS,
+} from './oauth-proxy.js'
+export type { OAuthProxyConfig } from './oauth-proxy.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
 export type { AuthProvider, AuthProviderDef } from './provider-registry.js'
 export { pluginDisplayName } from './plugin-registry.js'

@@ -4,6 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { writeLocalServices } from '../cli/write-local-services.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -188,6 +189,7 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       )
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
+    await writeLocalServices(logger, config, visitState)
   },
   middleware: [
     logCommandInfoAndTime({

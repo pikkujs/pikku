@@ -1,11 +1,10 @@
 import { useMemo } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { pairTriggers, type TriggerPair } from '../lib/trigger-pairs'
 
-export interface TriggerPair {
-  name: string
-  source: any | null
-  trigger: any | null
-}
+export type { TriggerPair } from '../lib/trigger-pairs'
+export { sourcePanelMetadata } from '../lib/trigger-pairs'
+export type { WebhookSourcePair } from '../lib/webhook-source'
 
 /**
  * Every trigger name in the project meta paired with its source and its
@@ -18,20 +17,10 @@ export const useTriggerItems = (): {
 } => {
   const { meta, loading } = usePikkuMeta()
 
-  const items = useMemo((): TriggerPair[] => {
-    const names = new Set<string>()
-    if (meta.triggerSourceMeta)
-      Object.keys(meta.triggerSourceMeta).forEach((n) => names.add(n))
-    if (meta.triggerMeta)
-      Object.keys(meta.triggerMeta).forEach((n) => names.add(n))
-    return Array.from(names)
-      .sort()
-      .map((name) => ({
-        name,
-        source: meta.triggerSourceMeta?.[name] || null,
-        trigger: meta.triggerMeta?.[name] || null,
-      }))
-  }, [meta.triggerMeta, meta.triggerSourceMeta])
+  const items = useMemo(
+    () => pairTriggers(meta),
+    [meta.triggerMeta, meta.triggerSourceMeta, meta.webhookSourceMeta]
+  )
 
   return { items, loading }
 }

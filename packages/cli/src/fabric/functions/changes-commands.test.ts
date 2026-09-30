@@ -5,7 +5,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as changesLib from '../lib/changes.js'
-import * as gitLib from '../lib/git.js'
+import * as gitLib from '../../utils/git.js'
 
 /**
  * The commands themselves, not the helpers they call: what reaches
@@ -18,6 +18,8 @@ import * as gitLib from '../lib/git.js'
  * checkout running the suite happens to be on.
  */
 const invoked: { name: string; data: any }[] = []
+
+let respond: (name: string, data: any) => unknown = () => ({ ok: true })
 
 let projectId: string | null = 'proj_linked'
 let git: { repo: boolean; branch: string; sha: string } = {
@@ -32,7 +34,7 @@ mock.module('../lib/changes.js', () => ({
     rpc: {
       invoke: async (name: string, data: unknown) => {
         invoked.push({ name, data })
-        return { ok: true }
+        return respond(name, data)
       },
     },
     projectId: projectIdOverride ?? projectId,
@@ -57,7 +59,7 @@ const realGit = { ...gitLib }
 /** Whether the faked answers above are still in force. */
 let gitOverride = true
 
-mock.module('../lib/git.js', () => ({
+mock.module('../../utils/git.js', () => ({
   ...realGit,
   isGitRepo: async (cwd?: string) =>
     gitOverride ? git.repo : realGit.isGitRepo(cwd),
@@ -72,11 +74,13 @@ after(() => {
 })
 
 const { FabricChangesClaim } = await import('./changes-claim.function.js')
-const { FabricChangesAsk, FabricChangesAskInput } =
-  await import('./changes-ask.function.js')
+const { FabricChangesAsk } = await import('./changes-ask.function.js')
 const { FabricChangesDone } = await import('./changes-done.function.js')
 const { FabricChangesShot } = await import('./changes-shot.function.js')
 const { FabricChangesFile } = await import('./changes-file.function.js')
+const { FabricChangesReply } = await import('./changes-reply.function.js')
+const { FabricChangesShow } = await import('./changes-show.function.js')
+const { clockTime } = changesLib
 
 const sent = async (run: () => Promise<unknown>) => {
   invoked.length = 0
@@ -122,6 +126,93 @@ describe('changes claim', () => {
   })
 })
 
+describe('changes claim, refused', () => {
+  const HELD = '5f0f6a4e-0000-4000-8000-000000000001'
+  const TAKEN = '5f0f6a4e-0000-4000-8000-000000000002'
+  const heldUntil = new Date(Date.now() + 40_000)
+  const leaseEnds = new Date(Date.now() + 20 * 60_000)
+
+  test('a 409 names why each item could not be taken, and when it can', async () => {
+    respond = (name, data) => {
+      if (name === 'claimChanges')
+        throw Object.assign(
+          new Error('already claimed by another group: #4 by other-agent'),
+          { status: 409 }
+        )
+      if (data.changeId === '#3')
+        return {
+          change: {
+            changeId: HELD,
+            shortId: '3',
+            status: 'open',
+            held: true,
+            heldUntil: heldUntil.toISOString(),
+          },
+        }
+      if (data.changeId === TAKEN)
+        return {
+          change: {
+            changeId: TAKEN,
+            shortId: '4',
+            status: 'claimed',
+            held: false,
+            heldUntil: leaseEnds.toISOString(),
+          },
+        }
+      throw Object.assign(new Error('change not found'), { status: 404 })
+    }
+    try {
+      invoked.length = 0
+      await assert.rejects(
+        FabricChangesClaim.func(
+          {} as any,
+          { changeIds: ['#3', TAKEN, '#99'] } as any
+        ),
+        (error: Error) => {
+          assert.match(
+            error.message,
+            new RegExp(
+              `#3: still held for the person filing it — claimable at ${clockTime(heldUntil)}`
+            )
+          )
+          assert.match(
+            error.message,
+            new RegExp(
+              `#4: claimed, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
+            )
+          )
+          assert.match(error.message, /#99: not found in this project/)
+          assert.match(error.message, /fabric: already claimed .* other-agent/)
+          assert.match(error.message, /changes next --claim/)
+          return true
+        }
+      )
+      const lookups = invoked.filter((call) => call.name === 'getChange')
+      assert.deepStrictEqual(
+        lookups.map((call) => call.data),
+        [
+          { changeId: '#3', projectId: 'proj_linked' },
+          { changeId: TAKEN },
+          { changeId: '#99', projectId: 'proj_linked' },
+        ]
+      )
+      assert.ok(!invoked.some((call) => call.name === 'listChanges'))
+    } finally {
+      respond = () => ({ ok: true })
+    }
+  })
+
+  test('short ids go to fabric as they are, to look up in the project', async () => {
+    invoked.length = 0
+    await FabricChangesClaim.func({} as any, { changeIds: ['#3', '4'] } as any)
+    assert.deepStrictEqual(
+      invoked.map((call) => call.name),
+      ['claimChanges']
+    )
+    assert.deepStrictEqual(invoked[0]!.data.changeIds, ['#3', '4'])
+  })
+})
+
 describe('changes ask', () => {
   test('sends the question with a default author', async () => {
     const { name, data } = await sent(() =>
@@ -141,12 +232,56 @@ describe('changes ask', () => {
     })
   })
 
-  test('a blank question never reaches the api', () => {
-    const parsed = FabricChangesAskInput.safeParse({
-      changeId: 'chg_1',
-      question: '   ',
-    })
-    assert.strictEqual(parsed.success, false)
+  test('a short id is sent with the linked project', async () => {
+    const { data } = await sent(() =>
+      FabricChangesAsk.func(
+        {} as any,
+        { changeId: '#7', question: 'Which?' } as any
+      )
+    )
+    assert.strictEqual(data.changeId, '#7')
+    assert.strictEqual(data.projectId, 'proj_linked')
+  })
+
+  // The CLI runs no input schema, so these are the function's own refusals.
+  test('a blank question never reaches the api', async () => {
+    invoked.length = 0
+    for (const question of ['', '   '])
+      await assert.rejects(
+        FabricChangesAsk.func(
+          {} as any,
+          { changeId: 'chg_1', question } as any
+        ),
+        /the question is empty/
+      )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('a blank option never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesAsk.func(
+        {} as any,
+        { changeId: 'chg_1', question: 'Which?', option: ['a', ' '] } as any
+      ),
+      /An --option is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the question and its options travel trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesAsk.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          question: '  Grouped or per-line?  ',
+          option: [' Grouped ', 'Per line'],
+        } as any
+      )
+    )
+    assert.strictEqual(data.question, 'Grouped or per-line?')
+    assert.deepStrictEqual(data.option, ['Grouped', 'Per line'])
   })
 })
 
@@ -248,6 +383,28 @@ describe('changes file', () => {
       /not both/
     )
   })
+
+  test('a blank title never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  ' } as any
+      ),
+      /Give the item a title/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the title travels trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  Drop the figure  ' } as any
+      )
+    )
+    assert.strictEqual(data.title, 'Drop the figure')
+  })
 })
 
 describe('changes shot', () => {
@@ -338,5 +495,97 @@ describe('changes shot', () => {
       ),
       /--image <path> or --image-base64/
     )
+  })
+})
+
+describe('changes show', () => {
+  test('looks a short id up on the server, not by listing the project', async () => {
+    const { name, data } = await sent(() =>
+      FabricChangesShow.func({} as any, { changeId: '243' } as any)
+    )
+    assert.strictEqual(name, 'getChange')
+    assert.deepStrictEqual(data, { changeId: '243', projectId: 'proj_linked' })
+  })
+})
+
+describe('changes reply', () => {
+  test('sends the message with a default author and no image', async () => {
+    const { name, data } = await sent(() =>
+      FabricChangesReply.func(
+        {} as any,
+        {
+          changeId: '#4',
+          message: 'Not doing this: the copy comes from the CMS.',
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'replyToChange')
+    assert.deepStrictEqual(data, {
+      changeId: '#4',
+      projectId: 'proj_linked',
+      body: 'Not doing this: the copy comes from the CMS.',
+      authorName: 'pikku-cli',
+      contentType: 'image/png',
+      imageLabel: 'screenshot',
+    })
+  })
+
+  test('reads an image, encodes it and infers its type', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-reply-'))
+    const path = join(dir, 'staging.jpg')
+    const bytes = Buffer.from([0xff, 0xd8, 0xff])
+    await writeFile(path, bytes)
+    const { data } = await sent(() =>
+      FabricChangesReply.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          message: 'Cannot reproduce on staging.',
+          image: path,
+          imageLabel: 'staging @ abc123',
+          authorName: 'claude-code',
+        } as any
+      )
+    )
+    assert.strictEqual(data.changeId, 'chg_1')
+    assert.strictEqual(data.projectId, undefined)
+    assert.strictEqual(data.imageBase64, bytes.toString('base64'))
+    assert.strictEqual(data.contentType, 'image/jpeg')
+    assert.strictEqual(data.imageLabel, 'staging @ abc123')
+    assert.strictEqual(data.authorName, 'claude-code')
+  })
+
+  test('an image whose name implies nothing is refused before anything is sent', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: 'see', image: '/tmp/shot.gif' } as any
+      ),
+      /pass --content-type/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('a blank message never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  ' } as any
+      ),
+      /the message is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the message travels trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  Blocked on X.  ' } as any
+      )
+    )
+    assert.strictEqual(data.body, 'Blocked on X.')
   })
 })

@@ -39,5 +39,6 @@ as an embedded path → contents map (already expanded), which is what makes the
 skills available inside the `bun --compile` CLI binaries where no filesystem copy
 exists. Regenerate it with `bun run embed` after changing anything under
 `skills/` — that is also when snippets are collected from
-`examples/online-shop`, and a fence naming a region that does not exist fails
-the embed.
+`examples/online-shop` and `examples/field-service` (the earlier source wins a
+name collision), and a fence naming a region that does not exist fails the
+embed.

@@ -57,6 +57,9 @@ const openDb = async () =>
     dbFile: join(root, '.pikku-runtime', 'dev.db'),
     camelCase: true,
     coercionFile: join(root, 'nope.js'),
+    rootDir: root,
+    sqliteExtensions: [],
+    sqliteExtensionsDeclared: true,
   } as any)
 
 const roleNames = async (db: Kysely<KyselyPikkuDB>) =>

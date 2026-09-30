@@ -5,6 +5,8 @@ import {
   idList,
   imageContentType,
   remaining,
+  changeRef,
+  clockTime,
   requireProjectId,
 } from './changes.js'
 
@@ -71,5 +73,37 @@ describe('imageContentType', () => {
   test('says nothing when the name says nothing', () => {
     assert.strictEqual(imageContentType('shot'), undefined)
     assert.strictEqual(imageContentType('shot.gif'), undefined)
+  })
+})
+
+describe('changeRef', () => {
+  const UUID = '0f3c8a12-9b44-4d2e-8f01-27c6a1d9e5b3'
+
+  test('2 and #2 go to fabric with the project to look them up in', () => {
+    assert.deepStrictEqual(changeRef('p1', '2'), {
+      changeId: '2',
+      projectId: 'p1',
+    })
+    assert.deepStrictEqual(changeRef('p1', ' #2 '), {
+      changeId: '#2',
+      projectId: 'p1',
+    })
+  })
+
+  test('a uuid goes alone, so it works from any directory', () => {
+    assert.deepStrictEqual(changeRef('p1', UUID), { changeId: UUID })
+    assert.deepStrictEqual(changeRef(null, UUID), { changeId: UUID })
+  })
+
+  test('refuses a short id with no project to look in', () => {
+    assert.throws(() => changeRef(null, '#2'), /uuid/)
+  })
+})
+
+describe('clockTime', () => {
+  test('is the local wall-clock hour and minute', () => {
+    const at = new Date(2026, 8, 29, 9, 5, 42)
+    assert.strictEqual(clockTime(at), '09:05')
+    assert.strictEqual(clockTime(at.toISOString()), '09:05')
   })
 })

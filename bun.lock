@@ -190,10 +190,12 @@
       "version": "0.0.1",
       "dependencies": {
         "@pikku/react": "*",
+        "@tauri-apps/api": "^2",
         "react": "^19",
         "react-dom": "^19",
       },
       "devDependencies": {
+        "@tauri-apps/cli": "^2",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "@vitejs/plugin-react": "^6",
@@ -265,17 +267,17 @@
     },
     "packages/addon/pikku-admin": {
       "name": "@pikku/addon-admin",
-      "version": "0.12.6",
+      "version": "0.12.10",
       "devDependencies": {
-        "@pikku/better-auth": "^0.12.42",
-        "@pikku/cli": "^0.12.151",
+        "@pikku/better-auth": "^0.12.50",
+        "@pikku/cli": "^0.12.173",
         "@pikku/core": "*",
         "@standard-schema/spec": "^1.1.0",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/better-auth": "^0.12.42",
-        "@pikku/core": "^0.12.111",
+        "@pikku/better-auth": "^0.12.50",
+        "@pikku/core": "^0.12.130",
         "zod": "^4",
       },
       "optionalPeers": [
@@ -284,7 +286,7 @@
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.54",
+      "version": "0.12.56",
       "dependencies": {
         "@pikku/code-edit": "^0.12.1",
         "@pikku/knowledge": "^0.12.9",
@@ -292,16 +294,16 @@
         "open": "^11.0.1",
       },
       "devDependencies": {
-        "@pikku/better-auth": "^0.12.44",
-        "@pikku/cli": "^0.12.156",
-        "@pikku/core": "^0.12.114",
+        "@pikku/better-auth": "^0.12.50",
+        "@pikku/cli": "^0.12.173",
+        "@pikku/core": "^0.12.130",
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
         "oauth2-mock-server": "^9.1.0",
       },
       "peerDependencies": {
-        "@pikku/better-auth": "^0.12.44",
-        "@pikku/core": "^0.12.114",
+        "@pikku/better-auth": "^0.12.50",
+        "@pikku/core": "^0.12.130",
       },
       "optionalPeers": [
         "@pikku/better-auth",
@@ -348,32 +350,34 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.160",
+      "version": "0.12.176",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
       "dependencies": {
         "@ai-sdk/openai": "^4.0.42",
         "@ai-sdk/openai-compatible": "^3.0.30",
-        "@electric-sql/pglite": "^0.5.5",
+        "@electric-sql/pglite": "0.5.8",
+        "@electric-sql/pglite-pgvector": "0.0.9",
         "@jridgewell/trace-mapping": "^0.3.31",
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "@pikku/ai-vercel": "^0.12.14",
-        "@pikku/better-auth": "^0.12.44",
+        "@pikku/better-auth": "^0.12.52",
         "@pikku/bun-server": "^0.12.13",
         "@pikku/code-edit": "^0.12.2",
-        "@pikku/deploy": "^0.12.11",
+        "@pikku/deploy": "^0.12.13",
         "@pikku/deploy-cloudflare": "^0.12.18",
+        "@pikku/deploy-standalone": "^0.12.23",
         "@pikku/fetch": "^0.12.12",
-        "@pikku/inspector": "^0.12.86",
-        "@pikku/knowledge": "^0.12.15",
-        "@pikku/kysely": "^0.13.27",
-        "@pikku/migrator-sql": "^0.12.5",
+        "@pikku/inspector": "^0.12.98",
+        "@pikku/knowledge": "^0.12.16",
+        "@pikku/kysely": "^0.13.32",
+        "@pikku/migrator-sql": "^0.12.6",
         "@pikku/n8n-import": "^0.0.8",
         "@pikku/node-http-server": "^0.12.17",
-        "@pikku/openapi-parser": "^0.12.21",
+        "@pikku/openapi-parser": "^0.12.23",
         "@pikku/schedule": "^0.12.8",
-        "@pikku/skills": "^0.12.35",
+        "@pikku/skills": "^0.12.45",
         "@pikku/websocket": "^0.12.5",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -381,6 +385,7 @@
         "chalk": "^6.0.0",
         "chokidar": "^5.0.0",
         "esbuild": "~0.28.2",
+        "giget": "^3.3.1",
         "istanbul-lib-instrument": "^6.0.3",
         "kysely": "^0.29.5",
         "open": "^11.0.1",
@@ -388,16 +393,16 @@
         "path-to-regexp": "^8.4.2",
         "pg": "^8.23.0",
         "semver": "^7.8.5",
+        "sqlite-vec": "0.1.9",
         "tinyglobby": "^0.2.17",
         "ts-json-schema-generator": "2.9.1-next.18",
         "tsx": "^4.23.12",
         "yaml": "^2.9.0",
         "zod": "^4.4.3",
-        "zod-to-ts": "^2.1.0",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.118",
-        "@pikku/playwright": "^0.12.84",
+        "@pikku/core": "^0.12.132",
+        "@pikku/playwright": "^0.12.86",
         "@pikku/ws": "^0.12.10",
         "@playwright/test": "^1.50.0",
         "@standard-schema/spec": "^1.1.0",
@@ -409,8 +414,8 @@
         "ws": "^8.21.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.118",
-        "@pikku/playwright": "^0.12.84",
+        "@pikku/core": "^0.12.132",
+        "@pikku/playwright": "^0.12.86",
         "@pikku/ws": "^0.12.10",
         "better-auth": "^1.7.5",
         "ws": "^8.21.3",
@@ -445,7 +450,7 @@
     },
     "packages/console": {
       "name": "@pikku/console",
-      "version": "0.12.87",
+      "version": "0.12.94",
       "dependencies": {
         "@assistant-ui/react": "^0.15.14",
         "@codemirror/lang-html": "^6.4.12",
@@ -462,12 +467,12 @@
         "@mantine/notifications": "^9.5.1",
         "@mantine/spotlight": "^9.5.1",
         "@pikku/assistant-ui": "^0.12.13",
-        "@pikku/better-auth": "^0.12.44",
+        "@pikku/better-auth": "^0.12.50",
         "@pikku/fetch": "^0.12.11",
-        "@pikku/mantine": "^0.12.14",
-        "@pikku/react": "^0.12.12",
-        "@pikku/react-layout-panel": "^0.1.0",
-        "@pikku/workflow-graph": "^0.12.1",
+        "@pikku/mantine": "^0.12.16",
+        "@pikku/react": "^0.12.13",
+        "@pikku/react-layout-panel": "^0.1.2",
+        "@pikku/workflow-graph": "^0.12.2",
         "@rjsf/core": "^6.8.0",
         "@rjsf/mantine": "^6.8.0",
         "@rjsf/utils": "^6.8.0",
@@ -503,10 +508,10 @@
       "devDependencies": {
         "@inlang/paraglide-js": "^2.24.1",
         "@mantine/colors-generator": "^9.5.1",
-        "@pikku/addon-admin": "^0.12.6",
-        "@pikku/addon-console": "^0.12.54",
-        "@pikku/cli": "^0.12.156",
-        "@pikku/core": "^0.12.114",
+        "@pikku/addon-admin": "^0.12.10",
+        "@pikku/addon-console": "^0.12.56",
+        "@pikku/cli": "^0.12.173",
+        "@pikku/core": "^0.12.130",
         "@pikku/websocket": "^0.12.5",
         "@standard-schema/spec": "^1.1.0",
         "@types/chroma-js": "^3",
@@ -524,12 +529,12 @@
         "vite": "^8.2.1",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.114",
+        "@pikku/core": "^0.12.130",
       },
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.118",
+      "version": "0.12.132",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -581,7 +586,7 @@
     },
     "packages/deploy/deploy-core": {
       "name": "@pikku/deploy",
-      "version": "0.12.11",
+      "version": "0.12.13",
       "devDependencies": {
         "tsx": "^4.23.12",
       },
@@ -595,15 +600,15 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.20",
+      "version": "0.12.23",
       "dependencies": {
-        "@pikku/deploy": "^0.12.7",
-        "@pikku/migrator-sql": "^0.12.3",
+        "@pikku/deploy": "^0.12.12",
+        "@pikku/migrator-sql": "^0.12.6",
       },
     },
     "packages/frontend/mantine": {
       "name": "@pikku/mantine",
-      "version": "0.12.14",
+      "version": "0.12.16",
       "devDependencies": {
         "@mantine/core": "^9.5.1",
         "@mantine/hooks": "^9.5.1",
@@ -616,14 +621,14 @@
       "peerDependencies": {
         "@mantine/core": "^9.2.1",
         "@mantine/hooks": "^9.2.1",
-        "@pikku/react": "^0.12.11",
+        "@pikku/react": "^0.12.13",
         "react": "^18 || ^19",
         "react-dom": "^18 || ^19",
       },
     },
     "packages/frontend/react": {
       "name": "@pikku/react",
-      "version": "0.12.12",
+      "version": "0.12.13",
       "dependencies": {
         "@pikku/fetch": "^0.12.11",
       },
@@ -640,7 +645,7 @@
     },
     "packages/frontend/react-layout-panel": {
       "name": "@pikku/react-layout-panel",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "@mantine/hooks": "^9.5.1",
         "@pikku/mantine": "workspace:^",
@@ -663,7 +668,7 @@
     },
     "packages/frontend/workflow-graph": {
       "name": "@pikku/workflow-graph",
-      "version": "0.12.1",
+      "version": "0.12.2",
       "dependencies": {
         "@xyflow/react": "^12.10.0",
         "elkjs": "^0.12.0",
@@ -671,7 +676,7 @@
       },
       "devDependencies": {
         "@mantine/core": "^9.5.1",
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.127",
         "@pikku/mantine": "workspace:^",
         "@pikku/react": "workspace:^",
         "@types/react": "^19",
@@ -680,7 +685,7 @@
       },
       "peerDependencies": {
         "@mantine/core": "^9.2.1",
-        "@pikku/core": "^0.12.106",
+        "@pikku/core": "^0.12.127",
         "@pikku/mantine": "^0.12.12",
         "@pikku/react": "^0.12.10",
         "react": "^18 || ^19",
@@ -699,7 +704,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.86",
+      "version": "0.12.98",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
@@ -708,19 +713,18 @@
         "tsx": "^4.23.12",
         "typescript": "^6.0.3",
         "zod": "^4.4.3",
-        "zod-to-ts": "^2.1.0",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.118",
+        "@pikku/core": "^0.12.132",
         "@types/node": "^24.13.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.118",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/knowledge": {
       "name": "@pikku/knowledge",
-      "version": "0.12.15",
+      "version": "0.12.16",
       "dependencies": {
         "zod": "^4.4.3",
       },
@@ -730,7 +734,7 @@
     },
     "packages/migrator-sql": {
       "name": "@pikku/migrator-sql",
-      "version": "0.12.5",
+      "version": "0.12.6",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "@types/node": "^22",
@@ -751,7 +755,7 @@
     },
     "packages/openapi-parser": {
       "name": "@pikku/openapi-parser",
-      "version": "0.12.21",
+      "version": "0.12.23",
       "dependencies": {
         "yaml": "^2.9.0",
         "zod": "^4",
@@ -788,13 +792,13 @@
     },
     "packages/playwright": {
       "name": "@pikku/playwright",
-      "version": "0.12.84",
+      "version": "0.12.86",
       "devDependencies": {
         "@playwright/test": "1.58.2",
         "@types/node": "^25.9.5",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.118",
+        "@pikku/core": "^0.12.127",
         "@playwright/test": "^1.50.0",
       },
     },
@@ -844,14 +848,14 @@
     },
     "packages/runtimes/cloudflare": {
       "name": "@pikku/cloudflare",
-      "version": "0.12.26",
+      "version": "0.12.27",
       "dependencies": {
         "kysely-d1": "^0.4.0",
       },
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
         "@cloudflare/workers-types": "^5.20260815.1",
-        "@pikku/core": "^0.12.117",
+        "@pikku/core": "^0.12.124",
         "@pikku/kysely": "^0.13.25",
         "@pikku/modelcontextprotocol": "^0.12.15",
         "@vitest/runner": "^4.1.10",
@@ -860,7 +864,7 @@
         "vitest": "^4.1.10",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.117",
+        "@pikku/core": "^0.12.124",
         "@pikku/kysely": "^0.13.25",
         "@pikku/modelcontextprotocol": "^0.12.15",
         "kysely": "^0.29.0",
@@ -940,7 +944,7 @@
     },
     "packages/runtimes/modelcontextprotocol": {
       "name": "@pikku/modelcontextprotocol",
-      "version": "0.12.15",
+      "version": "0.12.16",
       "dependencies": {
         "@modelcontextprotocol/server": "2.0.0",
       },
@@ -948,7 +952,7 @@
         "@modelcontextprotocol/sdk": "1.30.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.127",
       },
     },
     "packages/runtimes/next": {
@@ -1128,7 +1132,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.45",
+      "version": "0.12.52",
       "devDependencies": {
         "@better-auth/api-key": "^1.7.5",
         "@better-auth/core": "^1.7.5",
@@ -1141,7 +1145,7 @@
         "nanostores": "^1.4.2",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.114",
+        "@pikku/core": "^0.12.132",
         "better-auth": "^1.7.5",
         "zod": "^4",
       },
@@ -1171,7 +1175,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.27",
+      "version": "0.13.32",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1187,85 +1191,85 @@
         "postgres": "^3.4.9",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.111",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-bun-sqlite": {
       "name": "@pikku/kysely-bun-sqlite",
-      "version": "0.12.9",
+      "version": "0.12.10",
       "dependencies": {
         "@pikku/kysely": "^0.13.18",
-        "@pikku/kysely-sqlite": "^0.12.13",
+        "@pikku/kysely-sqlite": "^0.12.15",
         "kysely": "^0.29.5",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.105",
+        "@pikku/core": "^0.12.124",
         "@types/bun": "^1.4.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.105",
+        "@pikku/core": "^0.12.124",
       },
     },
     "packages/services/kysely-mysql": {
       "name": "@pikku/kysely-mysql",
-      "version": "0.12.27",
+      "version": "0.12.28",
       "dependencies": {
-        "@pikku/kysely": "^0.13.25",
+        "@pikku/kysely": "^0.13.32",
         "kysely": "^0.29.5",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-node-sqlite": {
       "name": "@pikku/kysely-node-sqlite",
-      "version": "0.12.8",
+      "version": "0.12.9",
       "dependencies": {
         "@pikku/kysely": "^0.13.25",
-        "@pikku/kysely-sqlite": "^0.12.14",
+        "@pikku/kysely-sqlite": "^0.12.15",
         "kysely": "^0.29.5",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.124",
         "@types/node": "^22",
         "tsx": "^4.23.12",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.124",
       },
     },
     "packages/services/kysely-postgres": {
       "name": "@pikku/kysely-postgres",
-      "version": "0.12.24",
+      "version": "0.12.25",
       "dependencies": {
-        "@pikku/kysely": "^0.13.25",
+        "@pikku/kysely": "^0.13.32",
         "kysely": "^0.29.5",
         "kysely-postgres-js": "^3.0.0",
         "postgres": "^3.4.9",
       },
       "devDependencies": {
         "@electric-sql/pglite": "^0.5.5",
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-sqlite": {
       "name": "@pikku/kysely-sqlite",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "dependencies": {
         "@pikku/kysely": "^0.13.25",
         "kysely": "^0.29.5",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.124",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.124",
       },
     },
     "packages/services/mongodb": {
@@ -1325,7 +1329,7 @@
     },
     "packages/services/redis": {
       "name": "@pikku/redis",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "dependencies": {
         "ioredis": "^6.0.0",
       },
@@ -1334,7 +1338,7 @@
         "ioredis-mock": "^8.13.1",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/schema-ajv": {
@@ -1360,7 +1364,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.35",
+      "version": "0.12.45",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
@@ -1605,14 +1609,14 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.160",
-        "@pikku/core": "^0.12.118",
+        "@pikku/cli": "^0.12.176",
+        "@pikku/core": "^0.12.132",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.118",
+        "@pikku/core": "^0.12.132",
         "zod": "^4",
       },
     },
@@ -1937,6 +1941,24 @@
         "zod": "^4",
       },
     },
+    "verifiers/addon-workspace": {
+      "name": "@pikku/verifiers-addon-workspace",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@types/node": "^24",
+      },
+    },
+    "verifiers/addon-workspace/functions": {
+      "name": "@pikku/verifier-addon-workspace-functions",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/templates-function-addon": "workspace:*",
+      },
+    },
     "verifiers/analytics": {
       "name": "@pikku/verifiers-analytics",
       "dependencies": {
@@ -1949,6 +1971,13 @@
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^24",
         "tsx": "^4.23.12",
+      },
+    },
+    "verifiers/app-native": {
+      "name": "@pikku/verifiers-app-native",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@types/node": "^24",
       },
     },
     "verifiers/better-auth": {
@@ -2062,6 +2091,29 @@
         "@pikku/core": "*",
         "kysely": "^0.29.0",
         "zod": "^4",
+      },
+    },
+    "verifiers/db-vectors": {
+      "name": "@pikku/verifiers-db-vectors",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/kysely": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "kysely": "^0.29.5",
+      },
+      "devDependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/cli": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/kysely-bun-sqlite": "workspace:*",
+        "@pikku/kysely-node-sqlite": "workspace:*",
+        "@pikku/node-http-server": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@pikku/ws": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+        "tsx": "^4.23.12",
+        "ws": "^8.21.3",
       },
     },
     "verifiers/deploy-azure": {
@@ -2248,6 +2300,14 @@
         "tsx": "^4.23.12",
       },
     },
+    "verifiers/release": {
+      "name": "@pikku/verifiers-release",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@types/node": "^24",
+      },
+    },
     "verifiers/scopes": {
       "name": "@pikku/verifiers-scopes",
       "dependencies": {
@@ -2332,6 +2392,18 @@
         "zod": "^4",
       },
     },
+    "verifiers/validate": {
+      "name": "@pikku/verifiers-validate",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+        "zod": "^4",
+      },
+    },
     "verifiers/variables": {
       "name": "@pikku/verifiers-variables",
       "dependencies": {
@@ -2367,6 +2439,7 @@
         "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
         "@pikku/kysely": "workspace:*",
+        "@pikku/kysely-mysql": "workspace:*",
         "@pikku/kysely-postgres": "workspace:*",
         "@pikku/queue-bullmq": "workspace:*",
         "@pikku/queue-pg-boss": "workspace:*",
@@ -2374,6 +2447,7 @@
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.5",
         "kysely-postgres-js": "^3.0.0",
+        "mysql2": "^3.23.3",
         "postgres": "^3.4.9",
         "zod": "^4",
       },
@@ -2669,6 +2743,8 @@
     "@effect/schema": ["@effect/schema@0.73.4", "", { "dependencies": { "fast-check": "^3.21.0" }, "peerDependencies": { "effect": "^3.8.3" } }, "sha512-Vjgu+EuG6eyh3oB21jpHv0l9ZgGZCyVZf3lXs+2X18UEUOkppvpw11heHiK02iJCVchgp3Qjw/GDPUqhQvKpSg=="],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.5.8", "", {}, "sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q=="],
+
+    "@electric-sql/pglite-pgvector": ["@electric-sql/pglite-pgvector@0.0.9", "", { "peerDependencies": { "@electric-sql/pglite": "0.5.8" } }, "sha512-ue4iBW651gDQwBwn97Ekv1lYGPvXa1ymHbRbTCSL0Ib286PRDD1VDOwzwEoekZuO/wctMbTzKzlwdgDwYrqZ8A=="],
 
     "@emnapi/core": ["@emnapi/core@1.11.2", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-TC8MkTuZUtcTSiFeuC0ksCh9QIJ5+F21MvZ4Wn4ORfYaFJ/0dsiudv5tVkejgwZlwQ39jL9WWDe2lz8x0WglOA=="],
 
@@ -3432,6 +3508,8 @@
 
     "@pikku/uws-handler": ["@pikku/uws-handler@workspace:packages/runtimes/uws-handler"],
 
+    "@pikku/verifier-addon-workspace-functions": ["@pikku/verifier-addon-workspace-functions@workspace:verifiers/addon-workspace/functions"],
+
     "@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@workspace:verifiers/db-schema/addon"],
 
     "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
@@ -3448,7 +3526,11 @@
 
     "@pikku/verifiers-addon-treeshake": ["@pikku/verifiers-addon-treeshake@workspace:verifiers/addon-treeshake"],
 
+    "@pikku/verifiers-addon-workspace": ["@pikku/verifiers-addon-workspace@workspace:verifiers/addon-workspace"],
+
     "@pikku/verifiers-analytics": ["@pikku/verifiers-analytics@workspace:verifiers/analytics"],
+
+    "@pikku/verifiers-app-native": ["@pikku/verifiers-app-native@workspace:verifiers/app-native"],
 
     "@pikku/verifiers-better-auth": ["@pikku/verifiers-better-auth@workspace:verifiers/better-auth"],
 
@@ -3459,6 +3541,8 @@
     "@pikku/verifiers-classification": ["@pikku/verifiers-classification@workspace:verifiers/classification"],
 
     "@pikku/verifiers-db-schema": ["@pikku/verifiers-db-schema@workspace:verifiers/db-schema"],
+
+    "@pikku/verifiers-db-vectors": ["@pikku/verifiers-db-vectors@workspace:verifiers/db-vectors"],
 
     "@pikku/verifiers-deploy-azure": ["@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"],
 
@@ -3488,6 +3572,8 @@
 
     "@pikku/verifiers-next-better-auth": ["@pikku/verifiers-next-better-auth@workspace:verifiers/next-better-auth"],
 
+    "@pikku/verifiers-release": ["@pikku/verifiers-release@workspace:verifiers/release"],
+
     "@pikku/verifiers-scopes": ["@pikku/verifiers-scopes@workspace:verifiers/scopes"],
 
     "@pikku/verifiers-secrets": ["@pikku/verifiers-secrets@workspace:verifiers/secrets"],
@@ -3497,6 +3583,8 @@
     "@pikku/verifiers-treeshaking": ["@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking"],
 
     "@pikku/verifiers-types": ["@pikku/verifiers-types@workspace:verifiers/types"],
+
+    "@pikku/verifiers-validate": ["@pikku/verifiers-validate@workspace:verifiers/validate"],
 
     "@pikku/verifiers-variables": ["@pikku/verifiers-variables@workspace:verifiers/variables"],
 
@@ -3859,6 +3947,32 @@
     "@tanstack/virtual-core": ["@tanstack/virtual-core@3.17.9", "", {}, "sha512-M8Bzy7CCMvUjRiuoHVH9mRjyUVczRs8v8RcUEphLFGc445ZP4KQ15Y1sLqhQqJi/HgGJrxfCHnEnIX0x9mVrBg=="],
 
     "@tanstack/virtual-file-routes": ["@tanstack/virtual-file-routes@1.162.0", "", {}, "sha512-uhOeFyxLcU41HzvrxsGpiWdcMbScY1EDgbZ5K7DVRMYInbLYWAC0EA/kx9wXAoSM8q82bUG2hRl8+EAjE6XAbA=="],
+
+    "@tauri-apps/api": ["@tauri-apps/api@2.12.0", "", {}, "sha512-fUSxFX8VABYe9W9K5ROdEaKVkNUFRcMSRofjruvaxztXA+I0XnQHcYHF8m/a6iExRUxsUf0HsFWhPBuH9IgzJw=="],
+
+    "@tauri-apps/cli": ["@tauri-apps/cli@2.12.0", "", { "optionalDependencies": { "@tauri-apps/cli-darwin-arm64": "2.12.0", "@tauri-apps/cli-darwin-x64": "2.12.0", "@tauri-apps/cli-linux-arm-gnueabihf": "2.12.0", "@tauri-apps/cli-linux-arm64-gnu": "2.12.0", "@tauri-apps/cli-linux-arm64-musl": "2.12.0", "@tauri-apps/cli-linux-riscv64-gnu": "2.12.0", "@tauri-apps/cli-linux-x64-gnu": "2.12.0", "@tauri-apps/cli-linux-x64-musl": "2.12.0", "@tauri-apps/cli-win32-arm64-msvc": "2.12.0", "@tauri-apps/cli-win32-ia32-msvc": "2.12.0", "@tauri-apps/cli-win32-x64-msvc": "2.12.0" }, "bin": { "tauri": "tauri.js" } }, "sha512-GIShnAR4C16kSTA8NO02fo8fOw/I5z5sAUEB5S2HlPHFnBkbihL4c9a/MpkxOm1+q5S+tFd3X4QUjHWxfyGzpQ=="],
+
+    "@tauri-apps/cli-darwin-arm64": ["@tauri-apps/cli-darwin-arm64@2.12.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-v5J+jISihLGtih1+3yWagbsL+5dbLZORu4vaSI0vhY0Heb+MAW+T/1s1RyKxrQrwEPGBG5kqwfDDTnSbmVkuqA=="],
+
+    "@tauri-apps/cli-darwin-x64": ["@tauri-apps/cli-darwin-x64@2.12.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-g27I07pfW/dMS8vcNqB9lamgKF0TqLlcy8e7t9qDGsB1iaeyjJWb2TgBF4tM9ZwLqPAZUXbsz28oXljO12WC4g=="],
+
+    "@tauri-apps/cli-linux-arm-gnueabihf": ["@tauri-apps/cli-linux-arm-gnueabihf@2.12.0", "", { "os": "linux", "cpu": "arm" }, "sha512-gXyQ710fNc99YuxFxNyeX9PLSrIpbtgBBj7GQo9tSeRT6fIK40q3/gm7X5jqZo7mWLR2m0R/2ALd3vAWo0Z32Q=="],
+
+    "@tauri-apps/cli-linux-arm64-gnu": ["@tauri-apps/cli-linux-arm64-gnu@2.12.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-H9cyXuq9WgxoHh2NZ+R+oN+W78x5UwaBDEp0/fmqUUkaBoioCuOZErM9xKiIV6bpNAhmw1RoWZ49u37q/vaiAg=="],
+
+    "@tauri-apps/cli-linux-arm64-musl": ["@tauri-apps/cli-linux-arm64-musl@2.12.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-5tFuk3JKMBa1M/iN4gN32OYlSfhY3aqb5PO3zCugxaT+sfecyMKpc3EM9VDbhmwWBE9QD4Tfj7wGhlqx2yy2pQ=="],
+
+    "@tauri-apps/cli-linux-riscv64-gnu": ["@tauri-apps/cli-linux-riscv64-gnu@2.12.0", "", { "os": "linux", "cpu": "none" }, "sha512-LOrMyV+nb7pKq8P0BZtTBQuyzm1ORjn16R9MlupmxuT5LqxtuYJlw3VMwbaeXCToJ8jbP5u9JnkfmbqDlvETXw=="],
+
+    "@tauri-apps/cli-linux-x64-gnu": ["@tauri-apps/cli-linux-x64-gnu@2.12.0", "", { "os": "linux", "cpu": "x64" }, "sha512-aMIkI+X9qvD2+k80QZB3tuOYT41/cEheikC510CwAIZ31KLXORsRASYYzM4mi1/58ICmtzSLFhCC08keir7COw=="],
+
+    "@tauri-apps/cli-linux-x64-musl": ["@tauri-apps/cli-linux-x64-musl@2.12.0", "", { "os": "linux", "cpu": "x64" }, "sha512-9gl3NhUbfuGhSKjeGCypKSdtoezOQRcDUrkhTWtLQEjnajets6peO6NadgI2DF0OzbiiFOzrnnIGMwBS+Ap6Iw=="],
+
+    "@tauri-apps/cli-win32-arm64-msvc": ["@tauri-apps/cli-win32-arm64-msvc@2.12.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-1W+v86wsYLuyBDN0iDessD4CD9o+yNyO0m8Dp3+/vfjiZrJ/v7R7/aTRBeikaq2tLGgxeag0gxnFggBNBGw91A=="],
+
+    "@tauri-apps/cli-win32-ia32-msvc": ["@tauri-apps/cli-win32-ia32-msvc@2.12.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-SsBjvq4f7YaBGqcWoE3cycoItPf0SrQeqFqWWgfxoeZWAIz01E31LDSeZ2p/etJiIY0R9oi045chkFfb0O7WGw=="],
+
+    "@tauri-apps/cli-win32-x64-msvc": ["@tauri-apps/cli-win32-x64-msvc@2.12.0", "", { "os": "win32", "cpu": "x64" }, "sha512-9zzDKYUH4TKKBgRdDdVQX8fiRO5gJ8hD1nGsHU9DOHG5Jpm3arjbu9Xg1frR20EusG3Sl8X0dppoO/4EoUXUGg=="],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg=="],
 
@@ -5846,6 +5960,18 @@
 
     "sql-escaper": ["sql-escaper@1.5.1", "", {}, "sha512-4toX5E1fQbBrpfXidaHnF0669nkAdETeIPTs2SUjxxD7RRIs9ICG4gtpmfc68JCEKehsdwLFqBu9VlQqZ1P1gg=="],
 
+    "sqlite-vec": ["sqlite-vec@0.1.9", "", { "optionalDependencies": { "sqlite-vec-darwin-arm64": "0.1.9", "sqlite-vec-darwin-x64": "0.1.9", "sqlite-vec-linux-arm64": "0.1.9", "sqlite-vec-linux-x64": "0.1.9", "sqlite-vec-windows-x64": "0.1.9" } }, "sha512-L7XJWRIBNvR9O5+vh1FQ+IGkh/3D2AzVksW5gdtk28m78Hy8skFD0pqReKH1Yp0/BUKRGcffgKvyO/EON5JXpA=="],
+
+    "sqlite-vec-darwin-arm64": ["sqlite-vec-darwin-arm64@0.1.9", "", { "os": "darwin", "cpu": "arm64" }, "sha512-jSsZpE42OfBkGL/ItyJTVCUwl6o6Ka3U5rc4j+UBDIQzC1ulSSKMEhQLthsOnF/MdAf1MuAkYhkdKmmcjaIZQg=="],
+
+    "sqlite-vec-darwin-x64": ["sqlite-vec-darwin-x64@0.1.9", "", { "os": "darwin", "cpu": "x64" }, "sha512-KDlVyqQT7pnOhU1ymB9gs7dMbSoVmKHitT+k1/xkjarcX8bBqPxWrGlK/R+C5WmWkfvWwyq5FfXfiBYCBs6PlA=="],
+
+    "sqlite-vec-linux-arm64": ["sqlite-vec-linux-arm64@0.1.9", "", { "os": "linux", "cpu": "arm64" }, "sha512-5wXVJ9c9kR4CHm/wVqXb/R+XUHTdpZ4nWbPHlS+gc9qQFVHs92Km4bPnCKX4rtcPMzvNis+SIzMJR1SCEwpuUw=="],
+
+    "sqlite-vec-linux-x64": ["sqlite-vec-linux-x64@0.1.9", "", { "os": "linux", "cpu": "x64" }, "sha512-w3tCH8xK2finW8fQJ/m8uqKodXUZ9KAuAar2UIhz4BHILfpE0WM/MTGCRfa7RjYbrYim5Luk3guvMOGI7T7JQA=="],
+
+    "sqlite-vec-windows-x64": ["sqlite-vec-windows-x64@0.1.9", "", { "os": "win32", "cpu": "x64" }, "sha512-y3gEIyy/17bq2QFPQOWLE68TYWcRZkBQVA2XLrTPHNTOp55xJi/BBBmOm40tVMDMjtP+Elpk6UBUXdaq+46b0Q=="],
+
     "srvx": ["srvx@0.11.22", "", { "bin": { "srvx": "bin/srvx.mjs" } }, "sha512-LqZxxBDMKuMAZzFzJnDCkFOrs9MZQZr0LvHiO/SuSZVdQaXD7xQ5UWTUxheJrQPve1qk9MG2B/yttUvJxw8egQ=="],
 
     "stackback": ["stackback@0.0.2", "", {}, "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw=="],
@@ -6150,8 +6276,6 @@
 
     "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
 
-    "zod-to-ts": ["zod-to-ts@2.1.0", "", { "peerDependencies": { "typescript": "^5 || ^6", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-jZP1GokTqR99FLmtGU+B9acjD9u/R++b++Vxe1sWpBQDd82/9/j5LyLZZ7/Oy3h2nxcz5NihikgX4D0hhdu3+g=="],
-
     "zustand": ["zustand@5.0.14", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["@types/react", "immer", "react", "use-sync-external-store"] }, "sha512-/8tAspM5LMPr28b3fwLYrtdj77ECpfZviaP75CMTnwO8ISyaE4GDIG/9rDDYq/cH9D2Xw2A2RXglLInmVBQB/g=="],
 
     "zwitch": ["zwitch@2.0.4", "", {}, "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="],
@@ -6370,7 +6494,11 @@
 
     "@pikku/verifiers-addon-treeshake/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-addon-workspace/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-analytics/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
+    "@pikku/verifiers-app-native/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-better-auth/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
@@ -6381,6 +6509,8 @@
     "@pikku/verifiers-classification/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-db-schema/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
+    "@pikku/verifiers-db-vectors/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-deploy-azure/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
@@ -6410,6 +6540,8 @@
 
     "@pikku/verifiers-next-better-auth/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-release/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-scopes/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-secrets/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -6419,6 +6551,8 @@
     "@pikku/verifiers-treeshaking/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-types/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
+    "@pikku/verifiers-validate/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-variables/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
@@ -6972,9 +7106,13 @@
 
     "@pikku/verifiers-addon-treeshake/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
+    "@pikku/verifiers-addon-workspace/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
     "@pikku/verifiers-addon/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-analytics/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-app-native/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-better-auth/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
@@ -6985,6 +7123,8 @@
     "@pikku/verifiers-classification/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-db-schema/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-db-vectors/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-deploy-azure/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
@@ -7014,6 +7154,8 @@
 
     "@pikku/verifiers-next-better-auth/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
+    "@pikku/verifiers-release/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
     "@pikku/verifiers-scopes/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-secrets/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
@@ -7023,6 +7165,8 @@
     "@pikku/verifiers-treeshaking/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-types/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-validate/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-variables/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

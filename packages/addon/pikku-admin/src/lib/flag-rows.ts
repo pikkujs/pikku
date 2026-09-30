@@ -38,3 +38,30 @@ export const flagRowsFromSource = (
       }
     })
   )
+
+/**
+ * A pikku-owned store's rows, plus every declaration it holds no row for.
+ *
+ * The rows lead here, unlike a provider: a row whose declaration has gone is
+ * still an operator's to prune. A declaration without a row is the case the
+ * store alone cannot show — it fails open, so it is listed as live and unbacked
+ * rather than left off a board that would otherwise read "no flags".
+ */
+export const flagRowsFromStore = (
+  declared: readonly DeclaredFlag[],
+  rows: readonly FlagRow[]
+): FlagListRow[] => {
+  const stored = new Set(rows.map((row) => row.name))
+  return sortFlagRows([
+    ...rows.map((row) => ({ ...row, backed: true })),
+    ...declared
+      .filter((flag) => !stored.has(flag.name))
+      .map((flag) => ({
+        ...flag,
+        enabled: true,
+        rolloutPercent: null,
+        declared: true,
+        backed: false,
+      })),
+  ])
+}

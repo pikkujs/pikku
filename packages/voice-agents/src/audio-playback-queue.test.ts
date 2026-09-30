@@ -63,7 +63,16 @@ const clip = (label: string, n: number): ArrayBuffer => {
   return bytes.buffer
 }
 
-const settled = () => new Promise((resolve) => setTimeout(resolve, 60))
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Waits for `done` rather than a fixed delay: the decodes and playback ticks run
+ * on timers, and a loaded CI runner can push those past any fixed wait.
+ */
+const until = async (done: () => boolean, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs
+  while (!done() && Date.now() < deadline) await sleep(5)
+}
 
 describe('AudioPlaybackQueue', () => {
   test('speaks sentences in the order enqueued, not the order decoded', async () => {
@@ -78,7 +87,7 @@ describe('AudioPlaybackQueue', () => {
     // Enqueued without awaiting, exactly as the stream handler does.
     void queue.enqueue({ text: 'first', audio: clip('first', 3) })
     void queue.enqueue({ text: 'second', audio: clip('second', 1) })
-    await settled()
+    await until(() => played.length >= 2)
 
     assert.deepEqual(played, ['first', 'second'])
   })
@@ -96,7 +105,7 @@ describe('AudioPlaybackQueue', () => {
     void queue.enqueue({ text: 'ok', audio: clip('ok', 1) })
     queue.enqueue({ text: 'bad', audio: clip('bad', 1) }).catch(() => {})
     void queue.enqueue({ text: 'after', audio: clip('after', 1) })
-    await settled()
+    await until(() => played.length >= 2)
 
     assert.deepEqual(played, ['ok', 'after'])
   })
@@ -111,18 +120,21 @@ describe('AudioPlaybackQueue', () => {
     void queue.enqueue({ text: 'abandoned', audio: clip('abandoned', 1) })
     queue.interrupt()
     void queue.enqueue({ text: 'next turn', audio: clip('next turn', 1) })
-    await settled()
+    // The abandoned decode was started first, so it has settled by the time the
+    // next turn plays; the grace period catches it arriving late regardless.
+    await until(() => played.includes('next turn'))
+    await sleep(40)
 
     assert.deepEqual(played, ['next turn'])
   })
 
   test('reports what was heard, in order, once the queue drains', async () => {
-    const { ctx } = fakeContext((n) => n * 10)
+    const { ctx, played } = fakeContext((n) => n * 10)
     const queue = new AudioPlaybackQueue(ctx as any)
 
     void queue.enqueue({ text: 'The first one.', audio: clip('a', 3) })
     void queue.enqueue({ text: 'Second.', audio: clip('b', 1) })
-    await settled()
+    await until(() => played.length >= 2)
 
     const heard = queue.interrupt()
     assert.equal(heard.text, 'The first one. Second.')

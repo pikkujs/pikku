@@ -1,14 +1,14 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { changesContext } from '../lib/changes.js'
+import { changeRef, changesContext, nonBlank } from '../lib/changes.js'
 import { dim, safe, safeBlock } from '../lib/output.js'
 import type { AskChangeQuestionOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesAskInput = z.object({
   apiUrl: z.string().optional(),
   changeId: z.string(),
-  question: z.string().trim().min(1, 'Ask something — the question is empty.'),
-  option: z.array(z.string().trim().min(1)).max(6).optional(),
+  question: z.string(),
+  option: z.array(z.string()).max(6).optional(),
   authorName: z.string().optional(),
 })
 
@@ -21,12 +21,21 @@ export const FabricChangesAsk = pikkuSessionlessFunc({
   input: FabricChangesAskInput,
   output: FabricChangesAskOutput,
   func: async (_services, input) => {
-    const { rpc } = await changesContext(input.apiUrl)
+    const { rpc, projectId } = await changesContext(input.apiUrl)
     return await rpc.invoke('askChangeQuestion', {
-      changeId: input.changeId,
-      question: input.question,
+      ...changeRef(projectId, input.changeId),
+      question: nonBlank(
+        input.question,
+        'Ask something — the question is empty.'
+      ),
       authorName: input.authorName ?? 'pikku-cli',
-      ...(input.option?.length ? { option: input.option } : {}),
+      ...(input.option?.length
+        ? {
+            option: input.option.map((option) =>
+              nonBlank(option, 'An --option is empty.')
+            ),
+          }
+        : {}),
     })
   },
 })

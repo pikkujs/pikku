@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.118",
+  "version": "0.12.132",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -24,6 +24,7 @@
   "sideEffects": [
     "./dist/errors/errors.js",
     "./dist/wirings/addon/remote-addon-auth.js",
+    "./dist/wirings/agent/agent-rpc.js",
     "./dist/wirings/rpc/rpc-runner.js",
     "./dist/wirings/workflow/pikku-scenario-service.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",
@@ -68,6 +69,7 @@
     "./persona": "./dist/wirings/persona/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
+    "./webhook": "./dist/wirings/webhook/index.js",
     "./oauth2": "./dist/wirings/oauth2/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",

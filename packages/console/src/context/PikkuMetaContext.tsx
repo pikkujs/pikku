@@ -9,6 +9,7 @@ import React, {
 import { usePikkuRPC } from './PikkuRpcProvider'
 import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { WebhookSourcesMeta } from '@pikku/core/trigger'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
@@ -31,6 +32,7 @@ type PikkuMetaState = Omit<
 > & {
   personas: Record<string, ResolvedPersona>
   systemRoles: SystemRoleDefinitionsMeta
+  webhookSourceMeta: WebhookSourcesMeta
 }
 
 interface PikkuMetaContextType {
@@ -77,6 +79,7 @@ const EMPTY_META: PikkuMetaState = {
   features: {},
   triggerMeta: {},
   triggerSourceMeta: {},
+  webhookSourceMeta: {},
   middlewareGroupsMeta: {
     definitions: {},
     instances: {},
@@ -89,6 +92,7 @@ const EMPTY_META: PikkuMetaState = {
   secretsMeta: {},
   credentialsMeta: {},
   variablesMeta: {},
+  outgoingWebhooksMeta: {},
 }
 
 const EMPTY_COUNTS: MetaCounts = {
@@ -110,6 +114,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
   featureFlags: 0,
   analyticsEvents: 0,
+  outgoingWebhooks: 0,
 }
 
 export const PikkuMetaProvider: React.FC<{
@@ -154,6 +159,9 @@ export const PikkuMetaProvider: React.FC<{
         features: allMeta.features ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
+        webhookSourceMeta:
+          (allMeta as { webhookSourceMeta?: WebhookSourcesMeta })
+            .webhookSourceMeta ?? {},
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,
         permissionsGroupsMeta: allMeta.permissionsGroupsMeta,
         agentsMeta: allMeta.agentsMeta,
@@ -161,6 +169,7 @@ export const PikkuMetaProvider: React.FC<{
         secretsMeta: allMeta.secretsMeta,
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
+        outgoingWebhooksMeta: allMeta.outgoingWebhooksMeta ?? {},
       })
       setCounts({
         ...EMPTY_COUNTS,

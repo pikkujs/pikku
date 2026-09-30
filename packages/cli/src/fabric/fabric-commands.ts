@@ -34,10 +34,19 @@ import {
   renderDeployList,
 } from './functions/deploy-list.function.js'
 import {
+  FabricDeployLogs,
+  renderDeployLogs,
+} from './functions/deploy-logs.function.js'
+import {
   FabricDeployUnits,
   renderDeployUnits,
 } from './functions/deploy-units.function.js'
+import {
+  FabricDeployAuto,
+  renderDeployAuto,
+} from './functions/deploy-auto.function.js'
 import { FabricStatus, renderStatus } from './functions/status.function.js'
+import { FabricConfig, renderConfig } from './functions/config.function.js'
 import {
   FabricProjectsList,
   renderProjectsList,
@@ -48,6 +57,7 @@ import {
   renderDbSchema,
 } from './functions/db-schema.function.js'
 import { FabricRollback } from './functions/rollback.function.js'
+import { FabricUserAdd } from './functions/user-add.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
 import { FabricSecretsDelete } from './functions/secrets-delete.function.js'
@@ -65,6 +75,10 @@ import {
   FabricChangesList,
   renderChangesList,
 } from './functions/changes-list.function.js'
+import {
+  FabricChangesNext,
+  renderChangesNext,
+} from './functions/changes-next.function.js'
 import {
   FabricChangesShow,
   renderChangesShow,
@@ -86,6 +100,10 @@ import {
   renderChangesShot,
 } from './functions/changes-shot.function.js'
 import {
+  FabricChangesReply,
+  renderChangesReply,
+} from './functions/changes-reply.function.js'
+import {
   FabricChangesDone,
   renderChangesDone,
 } from './functions/changes-done.function.js'
@@ -96,13 +114,15 @@ import {
 import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
-import { FabricReport } from './functions/report.function.js'
 import {
-  FabricFindingsList,
-  renderFindingsList,
-} from './functions/findings-list.function.js'
-import { FabricFindingsFlush } from './functions/findings-flush.function.js'
-import { FabricFindingsClear } from './functions/findings-clear.function.js'
+  FabricAddonSearch,
+  renderAddonSearch,
+} from './functions/addon-search.function.js'
+import {
+  FabricAddonGet,
+  renderAddonGet,
+} from './functions/addon-get.function.js'
+import { FabricReport } from './functions/report.function.js'
 import {
   FabricAddonVerify,
   renderAddonVerify,
@@ -175,7 +195,8 @@ export const fabricCommands = defineCLICommands({
           'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       force: {
-        description: 'Replace existing fabric.config.json',
+        description:
+          'Replace a link from FABRIC_PROJECT_ID (a git-remote link cannot be replaced)',
         default: false,
       },
       apiUrl: { description: 'Override the fabric-api URL for this call' },
@@ -205,13 +226,36 @@ export const fabricCommands = defineCLICommands({
           'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       apiUrl: {
-        description: 'Override the fabric-api URL stored in fabric.config.json',
+        description: 'Override the fabric-api URL for this call',
       },
     },
   }),
   addon: {
-    description: 'Publish and install Fabric community-registry addons',
+    description: 'Search, publish and install Fabric community-registry addons',
     subcommands: {
+      search: pikkuCLICommand({
+        parameters: '<query>',
+        func: FabricAddonSearch,
+        render: renderAddonSearch,
+        description:
+          'Search the registry for an addon, or an OpenAPI spec to generate one from',
+        options: {
+          limit: {
+            description: 'How many OpenAPI entries to return (default 20)',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      get: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricAddonGet,
+        render: renderAddonGet,
+        description:
+          'Look one entry up by name, in both the published-addon and OpenAPI catalogues',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       verify: pikkuCLICommand({
         parameters: '[dir]',
         func: FabricAddonVerify,
@@ -298,10 +342,33 @@ export const fabricCommands = defineCLICommands({
           branch: { description: 'Target branch', short: 'b' },
         },
       }),
+      logs: pikkuCLICommand({
+        parameters: '<deploymentId>',
+        func: FabricDeployLogs,
+        render: renderDeployLogs,
+        description:
+          "Print a deployment's build log (last lines by default; --full for all of it)",
+        options: {
+          tail: {
+            description: 'Number of trailing lines to show (default 100)',
+          },
+          full: { description: 'Print the whole log', default: false },
+        },
+      }),
       units: pikkuCLICommand({
         func: FabricDeployUnits,
         render: renderDeployUnits,
         description: 'List the deployed worker units (topology) for a branch',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+      auto: pikkuCLICommand({
+        parameters: '[state]',
+        func: FabricDeployAuto,
+        render: renderDeployAuto,
+        description:
+          'Show whether a push deploys without waiting for approval, or turn it on/off for a branch',
         options: {
           branch: { description: 'Target branch', short: 'b' },
         },
@@ -420,7 +487,7 @@ export const fabricCommands = defineCLICommands({
     parameters: '[title]',
     func: FabricReport,
     description:
-      'Report a finding — something about pikku that cost time — to fabric',
+      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
     options: {
       stdin: {
         description:
@@ -457,32 +524,13 @@ export const fabricCommands = defineCLICommands({
       area: { description: 'The part of pikku this is about' },
       surface: { description: 'Where it showed up: local, deployed or both' },
       cost: { description: 'What it cost, measured or estimated' },
-      run: { description: 'Run id, to group findings from one build' },
       deployTarget: { description: 'The deploy target in use' },
+      consent: {
+        description:
+          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
+      },
     },
   }),
-  findings: {
-    description:
-      'Inspect the findings held locally because they could not be sent',
-    subcommands: {
-      list: pikkuCLICommand({
-        func: FabricFindingsList,
-        render: renderFindingsList,
-        description: 'List the findings queued locally, waiting to be sent',
-      }),
-      flush: pikkuCLICommand({
-        func: FabricFindingsFlush,
-        description: 'Send every finding queued locally',
-        options: {
-          apiUrl: { description: 'Override the fabric-api URL for this call' },
-        },
-      }),
-      clear: pikkuCLICommand({
-        func: FabricFindingsClear,
-        description: 'Discard every queued finding without sending it',
-      }),
-    },
-  },
   metrics: pikkuCLICommand({
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',
@@ -506,6 +554,16 @@ export const fabricCommands = defineCLICommands({
     func: FabricStatus,
     render: renderStatus,
     description: 'Show the linked project status (active + in-flight deploy)',
+  }),
+  config: pikkuCLICommand({
+    func: FabricConfig,
+    render: renderConfig,
+    parameters: '[assignments...]',
+    description:
+      'Show what this checkout resolves to — project, api url, frontends, settings — or change project settings: `pikku fabric config showcase.name="My app" showcase.tags=voice,realtime` (an empty value clears a key)',
+    options: {
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
+    },
   }),
   projects: pikkuCLICommand({
     func: FabricProjectsList,
@@ -531,6 +589,25 @@ export const fabricCommands = defineCLICommands({
         description: 'Show the live database schema (tables + columns)',
         options: {
           branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+    },
+  },
+  user: {
+    description: "Manage a stage's end-users",
+    subcommands: {
+      add: pikkuCLICommand({
+        parameters: '<email>',
+        func: FabricUserAdd,
+        description:
+          'Create a user on a deployed stage (the CLI form of the console Add user)',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          password: {
+            description:
+              'Password (prompted if omitted; blank to auto-generate)',
+          },
+          name: { description: "The user's display name" },
         },
       }),
     },
@@ -570,7 +647,7 @@ export const fabricCommands = defineCLICommands({
   },
   changes: {
     description:
-      'The todo list filed from inside a deployed stage: read what is open, file what was decided elsewhere, claim a batch, ask what you need to know, and tick items off',
+      'The todo list filed from inside a deployed stage: read what is open, file what was decided elsewhere, claim a batch, ask what you need to know, reply without asking, and tick items off',
     subcommands: {
       list: pikkuCLICommand({
         func: FabricChangesList,
@@ -583,6 +660,11 @@ export const fabricCommands = defineCLICommands({
             short: 'p',
           },
           stageId: { description: 'Only changes filed on this stage' },
+          stage: {
+            description:
+              'Only changes filed on this stage, by branch, url or id — e.g. develop',
+            short: 's',
+          },
           route: {
             description: 'Only changes filed on this route, e.g. /checkout',
           },
@@ -603,14 +685,63 @@ export const fabricCommands = defineCLICommands({
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
+      next: pikkuCLICommand({
+        func: FabricChangesNext,
+        render: renderChangesNext,
+        description:
+          'Wait until there is work — an item past its grace window, or an answer to a question you asked — then print it and exit. Run it in the background instead of polling. Exits 0 with work, 2 on --timeout/--once with none, 3 when the session is refused',
+        options: {
+          projectId: {
+            description: 'Project to watch (defaults to the linked checkout)',
+            short: 'p',
+          },
+          stage: {
+            description:
+              'Only changes filed on this stage, by branch, url or id — e.g. develop',
+            short: 's',
+          },
+          route: {
+            description: 'Only changes filed on this route, e.g. /checkout',
+          },
+          claim: {
+            description:
+              'Claim what it finds as one group before returning, so no other harness takes it',
+            default: false,
+          },
+          claimedBy: {
+            description:
+              'Who you are, e.g. claude-code — needed with --claim, and wakes you when someone answers a question you asked',
+          },
+          title: { description: 'What to call the group --claim forms' },
+          leaseMinutes: {
+            description: 'Lease for --claim (default 30)',
+            type: 'number',
+          },
+          interval: {
+            description: 'Seconds between checks (default 15, minimum 5)',
+            type: 'number',
+          },
+          timeout: {
+            description: 'Give up after this many seconds and exit 2',
+            type: 'number',
+          },
+          once: {
+            description:
+              'Check once without waiting; exit 2 if there is nothing',
+            default: false,
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       show: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesShow,
         render: renderChangesShow,
         description:
-          'One change with its thread, its circled elements and the build it was filed against',
+          'One change with its thread, its circled elements and the build it was filed against. Takes 2, #2 or the uuid',
         options: {
           changeId: {
-            description: 'The change to read, from `pikku fabric changes list`',
+            description: 'The change to read — 2, #2 or its uuid',
           },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
@@ -662,7 +793,8 @@ export const fabricCommands = defineCLICommands({
             description: 'Claim an existing group instead of forming one',
           },
           changeIds: {
-            description: 'The items to take, comma-separated or repeated',
+            description:
+              'The items to take — #2, 2 or uuids — comma-separated or repeated',
             type: 'string[]',
           },
           title: { description: 'What to call the group being formed' },
@@ -696,6 +828,32 @@ export const fabricCommands = defineCLICommands({
             type: 'string[]',
           },
           authorName: { description: 'Who is asking, e.g. claude-code' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      reply: pikkuCLICommand({
+        func: FabricChangesReply,
+        render: renderChangesReply,
+        parameters: '<changeId>',
+        description:
+          'Say something on an item’s thread without asking (which parks it) or closing it (done --note) — e.g. why you are not doing it, or what it is blocked on',
+        options: {
+          message: {
+            description: 'What to say, in the filer’s vocabulary',
+            short: 'm',
+          },
+          image: {
+            description:
+              'Path to a screenshot to attach as evidence, e.g. what you saw when you could not reproduce it',
+          },
+          imageLabel: {
+            description: 'What to call the screenshot (default “screenshot”)',
+          },
+          contentType: {
+            description:
+              'image/png, image/jpeg or image/webp (inferred from --image)',
+          },
+          authorName: { description: 'Who is replying, e.g. claude-code' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),

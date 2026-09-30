@@ -5,6 +5,7 @@ import {
   isAddonPackage,
   runAddonPackageChecks,
 } from './addon-package-checks.js'
+import { runCoreImportChecks } from './core-import-checks.js'
 import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
@@ -108,6 +109,15 @@ export const CHECKS: ValidateCheck[] = [
     // a hub whose re-exports had quietly been dropped.
     applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
     run: async ({ dir }) => runPikkuBarrelChecks(dir),
+  },
+  {
+    id: 'core-import',
+    subject: 'app tier imports',
+    // Every Pikku project, addon included: an addon generates its own leaves
+    // under `#pikku/addon/*` and its functions are as typed against them as an
+    // application's are.
+    applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
+    run: async ({ dir }) => runCoreImportChecks(dir),
   },
   {
     id: 'addon-package',

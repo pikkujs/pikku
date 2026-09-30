@@ -14,6 +14,7 @@ import { RemoteAddonAuthError } from '../addon/remote-addon-auth.js'
 import { wireAddon } from '../addon/wire-addon.js'
 import { wireRemoteAddon } from '../addon/wire-remote-addon.js'
 import { createSecretValue } from '../../classification/secret-value.js'
+import { MissingSessionError } from '../../errors/errors.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -598,6 +599,36 @@ describe('ContextAwareRPCService.rpcExposed', () => {
     await assert.rejects(
       () => service.rpcExposed('shop:declared', {}),
       RPCNotFoundError
+    )
+  })
+
+  test('an exposed function of an auth: true instance still needs a session', async () => {
+    wireAddon({
+      name: 'shop',
+      package: '@shop/pkg',
+      auth: true,
+      expose: ['undeclared'],
+    })
+    registerFunction('undeclared', async () => ({ ran: 'undeclared' }), {
+      packageName: '@shop/pkg',
+    })
+
+    await assert.rejects(
+      () =>
+        new ContextAwareRPCService(
+          createServices(),
+          {} as never,
+          {}
+        ).rpcExposed('shop:undeclared', {}),
+      MissingSessionError
+    )
+    assert.deepEqual(
+      await new ContextAwareRPCService(
+        createServices(),
+        { session: { userId: 'u1' } } as never,
+        {}
+      ).rpcExposed('shop:undeclared', {}),
+      { ran: 'undeclared' }
     )
   })
 
@@ -1206,5 +1237,37 @@ describe('rpcService.getContextRPCService', () => {
     assert.equal(rpc.depth, 7)
     assert.equal(rpc.global, false)
     assert.deepEqual(await rpc.invoke('echo', { ok: true }), { ok: true })
+  })
+})
+
+describe('ContextAwareRPCService.agent', () => {
+  test('refuses when no unit registered the agent runtime', () => {
+    const service = new ContextAwareRPCService(
+      createServices(),
+      { traceId: 'trace-agent' } as never,
+      { requiresAuth: false }
+    )
+
+    assert.throws(() => service.agent, /import @pikku\/core\/agent/)
+  })
+
+  test('builds the facade from the registered factory', () => {
+    const built: unknown[] = []
+    const facade = { run: async () => 'ran' }
+    pikkuState(null, 'agent', 'rpcFactory', ((wire, options) => {
+      built.push({ wire, options })
+      return facade
+    }) as never)
+
+    const service = new ContextAwareRPCService(
+      createServices(),
+      { traceId: 'trace-agent' } as never,
+      { requiresAuth: false }
+    )
+
+    assert.equal(service.agent, facade)
+    assert.deepEqual(built, [
+      { wire: { traceId: 'trace-agent' }, options: { requiresAuth: false } },
+    ])
   })
 })

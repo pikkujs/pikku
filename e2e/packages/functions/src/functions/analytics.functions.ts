@@ -55,3 +55,22 @@ export const resetAnalytics = pikkuSessionlessFunc<void, { cleared: true }>({
     return { cleared: true }
   },
 })
+
+/**
+ * The native build of `e2e/packages/web` calling home once it has launched.
+ *
+ * A packaged app has no test hooks to drive, so the CI smoke test asks the
+ * server instead: an app that rendered and could reach its API records this,
+ * and `readAnalytics` is where the job looks for it. Recorded server-side
+ * because the client's own beacon waits on a consent banner nobody clicks.
+ */
+export const nativeOpened = pikkuSessionlessFunc<
+  { userAgent: string },
+  { recorded: true }
+>({
+  expose: true,
+  func: async ({ analytics }, { userAgent }) => {
+    await analytics?.record({ name: 'native_opened', userAgent })
+    return { recorded: true }
+  },
+})

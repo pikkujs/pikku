@@ -29,6 +29,21 @@ describe('deriveOAuth2AppSecrets', () => {
     assert.equal(derived[0]!.optional, true)
   })
 
+  test('the scope separator carries over to the derived secret', () => {
+    const credential = oauthCredential('twistOAuth', 'TWIST_APP')
+    const derived = deriveOAuth2AppSecrets(
+      [
+        {
+          ...credential,
+          oauth2: { ...credential.oauth2, scopeSeparator: ',' },
+        },
+      ] as CredentialDefinitions,
+      []
+    )
+
+    assert.equal(derived[0]!.oauth2?.scopeSeparator, ',')
+  })
+
   test('a hand-written declaration wins, so an author keeps their own copy', () => {
     const derived = deriveOAuth2AppSecrets(
       [oauthCredential('gmailOAuth', 'GMAIL_APP')] as CredentialDefinitions,

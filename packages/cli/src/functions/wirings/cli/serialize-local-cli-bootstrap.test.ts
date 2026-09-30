@@ -7,6 +7,7 @@ const config = {
   rootDir: '/project',
   outDir: '.pikku',
   bootstrapFile: '/project/.pikku/pikku-bootstrap.gen.ts',
+  localServicesFile: '/project/.pikku/pikku-local-services.gen.ts',
   packageMappings: {},
 } as unknown as Config
 
@@ -49,6 +50,27 @@ describe('the generated local CLI bootstrap', () => {
     assert.match(
       emit(),
       /if \(error instanceof CLIError\) process\.exit\(error\.exitCode\)/
+    )
+  })
+})
+
+/**
+ * A command run from the generated CLI used to get whatever the app's factory
+ * built with nothing injected, so it saw none of the database-backed services
+ * `pikku serve` hands the same factory.
+ */
+describe('the services the generated local CLI boots', () => {
+  test('imports the generated local services beside the bootstrap', () => {
+    assert.match(
+      emit(),
+      /import \{ createLocalServices \} from '\.\.\/pikku-local-services\.gen\.js'/
+    )
+  })
+
+  test("hands them to the app's factory as its existing services", () => {
+    assert.match(
+      emit(),
+      /createSingletonServices: async \(config\) =>\s+createSingletonServices\(config, await createLocalServices\(config\)\)/
     )
   })
 })

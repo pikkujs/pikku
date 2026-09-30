@@ -53,6 +53,18 @@ export const HELP_SCREENS: Record<string, HelpScreen> = {
     whatYouCanDo: [m.help_analytics_do_open, m.help_analytics_do_search],
     docsHref: 'https://pikku.dev/docs/console/features#analytics-events',
   },
+  '/virtual-users': {
+    title: m.help_virtual_users_title,
+    what: m.help_virtual_users_what,
+    behaviour: m.help_virtual_users_behaviour,
+    surprise: m.help_virtual_users_surprise,
+    examples: m.help_virtual_users_examples,
+    whatYouCanDo: [
+      m.help_virtual_users_do_list,
+      m.help_virtual_users_do_try,
+      m.help_virtual_users_do_visits,
+    ],
+  },
 }
 
 /**
@@ -83,7 +95,6 @@ export const HELP_PENDING: readonly string[] = [
   '/changes',
   '/scenarios',
   '/personas',
-  '/virtual-users',
   '/knowledge',
   '/surface',
   '/database',

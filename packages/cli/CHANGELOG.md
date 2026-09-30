@@ -1,3 +1,615 @@
+## 0.12.176
+
+### Patch Changes
+
+- d327fa5: Two gaps from the August security sweep that never reached main:
+
+  - The memoized middleware chains are capped per wire type. The key is the requested wire id, so a caller varying RPC names could otherwise grow the cache without limit.
+  - The console's generated variable brokers require `pikku:console`. They are emitted into the application rather than the console addon, so the addon's scope never reached them and any signed-in user could read and overwrite variables through `/rpc`.
+
+- 211c5e1: `pikku fabric changes reply <id> --message "…" [--image path]` posts on an item's thread without asking (which parks it) or closing it (`done --note`) — for "not doing this, because…" or "blocked on X". `next` is now woken by fabric's `changes:<projectId>` events, re-reading the list on each one, with a three-minute safety poll while subscribed and the `--interval` poll with backoff when the stream is down; it sleeps exactly until the soonest held item becomes claimable. `list`, `show` and a refused `claim` print when a held or leased item is claimable. Short ids are looked up by fabric instead of by listing the project's oldest 200 items. Needs the matching fabric-api release.
+
+  `reply`, `ask` (question and each `--option`) and `file --title` now refuse blank text and send it trimmed. Their `.trim().min(1)` input schemas never ran: the CLI enforces no input schema at runtime, so `ask --question "   "` posted an empty question.
+
+- a9513b6: A trigger source store is now provided wherever an app runs: `pikku dev`, `pikku serve`, generated local services and the standalone deploy entry. Apps with a database get the Kysely store, falling back to memory when its table is not migrated yet. The admin addon's trigger-source functions and the webhook source runner no longer throw `No triggerSourceStore is configured`.
+- 0c88361: `pikku fabric config key=value` sets a project's Fabric settings: the showcase card, the guide build and the scenario-only environment. With no arguments, it now also shows them. A frontend in `pikku.config.json` can declare `routeParams`.
+- 7b0a5b3: Add `pikku fabric deploy logs <deployment-id>` to read a deployment's build log on request (last 100 lines by default; `--tail <n>` or `--full`). A failed `deploy apply` no longer says "The builder recorded no reason" — the builder's output is stored apart from the deployment row, so that was untrue whenever the log existed. It now points at the new command.
+- 0c88361: A Fabric project is named by an optional `fabric.projectId` in `pikku.config.json`. Without one, the CLI finds the project from the git remote — it asks Fabric for your organization's projects and picks the one whose repo is one of the checkout's remotes (`origin` first) — and writes the id into `pikku.config.json`. The write is never committed or pushed, and `pikku fabric deploy` ignores a `pikku.config.json` whose only change is `fabric.projectId`. `FABRIC_PROJECT_ID` overrides both. Two projects on one repo are refused rather than guessed between.
+
+  `pikku fabric link` writes `fabric.projectId` the same way and no longer commits or pushes anything on your behalf; it refuses a checkout that already names a project. This fixes the first deploy of a linked project failing on a config file that was never pushed. The separate Fabric config file is gone, and its `apiUrl` and `production.domain` settings with it: the api url you last logged in against is remembered in `~/.fabric/auth.json`, and custom domains are managed with `pikku fabric domains`.
+
+  New: `pikku fabric config` shows what the checkout resolves to and where each answer came from — the project (id, name, repo, production branch), the api url, and the frontends from `pikku.config.json`.
+
+- 15c292e: `#pikku/setup` exports `pikkuServerLifecycle`, typed to the project's own singleton services, so the server lifecycle shows up in `pikku doc` next to the other three bootstrap factories. An addon's setup barrel does not have it. The template and the bootstrap skill import it from there.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
+- Updated dependencies [d327fa5]
+- Updated dependencies [211c5e1]
+- Updated dependencies [a9513b6]
+- Updated dependencies [0c88361]
+- Updated dependencies [942ebdd]
+- Updated dependencies [65b0ba8]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+  - @pikku/skills@0.12.45
+  - @pikku/deploy-standalone@0.12.23
+  - @pikku/kysely@0.13.32
+  - @pikku/better-auth@0.12.52
+  - @pikku/inspector@0.12.98
+
+## 0.12.175
+
+### Patch Changes
+
+- 27fd69c: `pikku <command> --config <path>` (and `-c`) now reads the config it names. The flag was declared as `config` while the loader read `configFile`, so it was dropped and the CLI searched upward from the current directory instead. Relative fields in the config resolve against the config file's own directory.
+- 2dcc651: A `pikku.config.json` without `tsconfig` uses `tsconfig.json` in the root, as `tsc` does, instead of crashing on an undefined path.
+- 2dcc651: Source directories are searched relative to themselves rather than through a glob built from their path, so codegen finds the project's files on Windows and under a path holding `[ ] ( ) {`, and `ignoreFiles` applies when the project is outside the working directory.
+- 2dcc651: Generated imports are forward-slashed on Windows. A path like `..\src\update-user.function.js` read `\u` as a unicode escape and failed to compile.
+- a7355b9: `pikku db generate` now writes a migration for a required column its source stopped writing. A column that is NOT NULL with no default and no longer in the source's schema fails every insert into its table, yet counted as "already covered" because nothing was missing. Better Auth 1.7.0–1.7.2 required `account.issuer` and 1.7.3 stopped writing it, which broke sign-in for every project that had generated the column. PostgreSQL gets `ALTER COLUMN … DROP NOT NULL`; SQLite, which cannot change a constraint, gets `DROP INDEX` for any index on the column and then `DROP COLUMN`.
+- d8369d8: `pikkuBetterAuth` now signs users in through a host's OAuth proxy when the stage carries `OAUTH_PROXY_SECRET`, `OAUTH_PROXY_URL` and `OAUTH_PROXY_PROVIDERS` (plus the `GOOGLE_OAUTH` / `GITHUB_OAUTH` client id for each listed provider, and an optional `OAUTH_PROXY_KEY_ID`). With none of them set nothing changes. With only some set, the app fails at start naming what is missing. A provider the app also configures itself is an error rather than an override. `pikku` now declares these as optional secrets and variables so a stage that has none of them still deploys.
+- 2dcc651: Native apps hang off `frontends`: `pikku app native init|add|upgrade|check <name>` writes and maintains a committed Tauri project per frontend (desktop and Android; bundled dist, a deployed URL, or a bundled server sidecar). App commands move under `pikku app` (`pikku app new`, `pikku app list`). The top-level `frontend` key is replaced by `frontends` in `pikku.config.json`, where the one entry with `serve` is what `pikku serve`/`dev`/standalone deploys mount. `deploy apply --desktop` is gone — a frontend's `native.bundleServer` asks for the sidecar instead.
+- a92cae2: `pikku db generate` now quotes the table and column names in the `ALTER TABLE … ADD COLUMN` drift migrations and the fallback `CREATE TABLE` it writes for Postgres. `ALTER TABLE user ADD COLUMN actor …` was a syntax error, because `user` is reserved. SQLite output is unchanged.
+- 58cccc1: `wire.getCredential('name')` is typed by the project's own credentials, and is always on the wire. Function types were written from the setup-only inspection, which never sees `defineCredential`, so every project fell back to an untyped map; `pikku all` now rewrites them once the credentials leaf exists. `getCredential` and `getCredentials` are no longer optional on `PikkuWire`, since the function runner always sets them. Without a credentials map, `getCredential<string>('name')` returns `string` rather than `unknown`.
+- Updated dependencies [26dbfc0]
+- Updated dependencies [2dcc651]
+- Updated dependencies [d8369d8]
+- Updated dependencies [2dcc651]
+- Updated dependencies [2dcc651]
+- Updated dependencies [2dcc651]
+- Updated dependencies [58cccc1]
+- Updated dependencies [a26c60e]
+  - @pikku/inspector@0.12.97
+  - @pikku/better-auth@0.12.51
+  - @pikku/deploy-standalone@0.12.22
+  - @pikku/core@0.12.131
+
+## 0.12.174
+
+### Patch Changes
+
+- 0347955: `pikku release` keeps scaffold and generated entries in the surface and tags them `platform: true` instead of dropping them, including wirings with no `sourceFile` whose function is platform (such as an injected queue worker). The changelog lists them under their own `### Platform` heading.
+
+## 0.12.173
+
+### Patch Changes
+
+- 5bce779: A type an addon's functions take from a built package, such as `TriggerEvent` in a webhook source's receive output, is imported through that package's exported subpath (`@pikku/core/trigger`) instead of a path into its `dist/`, which a consuming app could not resolve.
+- a10253c: The Bun bundler now keeps a relative external (`./sqlite-extensions.gen.js`, `./frontend-assets.gen.js`) as an import instead of inlining it, so a standalone bun binary built with the CLI under bun embeds its sqlite extensions and frontend assets again rather than looking for them on disk at `./vec0-<hash>.so`.
+- dfcd351: The deploy planner now binds a unit to the units of the functions its functions call with `rpc.invoke('name')` / `rpc.remote('name')`. Before, a caller and callee split into different units (e.g. a no-service function in `svc-base` calling a DB function in `svc-kysely`) got no service binding and failed on the deployed stage with "No service binding for function". The inspector records literal RPC names per function as `invokes` (single, double or substitution-free template quotes; `rpc!`, `wire.rpc`) and warns on a computed name, which the planner cannot see (#1883).
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+- 698c7af: The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from `GET /auth/sign-in/personas` and signs in by persona id through `POST /auth/sign-in/persona`; `pikkuActor({ personaSignIn })` serves both, so the app writes no listing function.
+
+  **Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ apiUrl, app?, onSignedIn }`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor`, and `listDevActors({ apiUrl, app })` fetches the list, for callers outside React.
+
+  `@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when the gate is shut. `allowed` is now optional: pass `personaSignIn: { personas, featureFlags }` and both endpoints are open under `pikku dev`, and on a deployed stage only with `allowSignIn` opted in and the `devSwitcher` flag on. `devSwitcherOn(featureFlags, optIn)` exports that same check.
+
+  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
+
+- 5bce779: `pikku dev` registers webhook sources with their providers when `PIKKU_DEV_WEBHOOK_URL` is set. What it registered, signing secrets included, is kept in a git-ignored `.webhook-registrations.gen.json` next to `pikku.config.json`, so a database reset or `.pikku` wipe does not register again, and nothing reaches a provider while the url and events are unchanged. Registrations no source declares any more are warned about on every run, with the endpoint and label to delete by hand. The prefix defaults to `dev-<username>`; override it with `PIKKU_DEV_WEBHOOK_LABEL_PREFIX`. New in core: `reconcileWebhookRegistrations`.
+- b9a821b: Add `pikku fabric deploy auto [on|off] -b <branch>` to show or set whether a push
+  deploys a stage without waiting for approval. `deploy list` and `status` now say
+  when a deploy is waiting because auto-deploy is off.
+- 4394bbc: Fail the deploy build when a declared HTTP route reached no unit, and stop
+  dropping the three kinds that did.
+
+  Units are built by walking functions and asking which routes point at each one,
+  so a route nothing claims produces no handler and no error. It is simply not
+  deployed: the stage 404s it while every worker reports active. `unroutedHttpWirings`
+  now checks the finished manifest against the HTTP meta and fails the build with
+  the offending routes, however one comes to be dropped.
+
+  Three were being dropped. A wiring with an inline `func` (`wireHTTP({ func:
+agent('x') })`) has nothing the inspector can name, so it is id'd after its own
+  route — `http:post:/agents/shop` — and the analyzer read that prefix as "a
+  scaffold catch-all somebody else serves"; the five `*Caller` name checks beside
+  it already cover the real ones. A route onto an addon function via `ref('ns:fn')`
+  carries the addon's id, which is absent from the app's function meta, so the
+  addon unit now picks up app-declared routes onto its functions — including
+  functions it does not expose over RPC, since the wired route is the exposure. And
+  a synthetic bridge onto a route a named function owns (the OPTIONS preflight
+  beside `rpcCaller`'s `/rpc/:rpcName`) now rides that function's unit instead of
+  being skipped into nothing.
+
+- 01c0209: `pikku serve`, `pikku dev` and a local CLI entrypoint now boot an app on the same services, from one generated file. The local CLI's bootstrap used to call the app's `createSingletonServices` with nothing injected, so a command run from it saw none of the database-backed agent, feature-flag, analytics, scope and webhook services, nor the in-memory queue, scheduler, trigger and workflow services a request to the dev server gets.
+
+  Codegen now writes `pikku-local-services.gen.ts` beside `pikku-services.gen.ts` for every project. Its `createLocalServices(config, extras, options)` assembles that set. `pikku serve` and `pikku dev` load it from the project and pass in what only they have: the database they opened, their event hub, content store, scheduler and agent runner, and the requiredServices, scopes and system roles from a live inspector. The local CLI bootstrap hands its result to the app's factory as existing services.
+
+  The file imports only what the project has:
+
+  - A project with no database — no `db` config, no `db/sqlite` or `db/postgres`, and no kysely declared — imports from `@pikku/core` alone.
+  - A project with a database also imports `@pikku/kysely`, whose own copy of kysely it opens and types the database with.
+  - A project with a local CLI entrypoint also imports `@pikku/schedule`. It opens its own database: `DATABASE_URL`, else the config's `sqliteDb` / `postgresUrl`, else `.pikku-runtime/dev.db`. The driver is whichever of `@pikku/kysely-node-sqlite`, `@pikku/kysely-bun-sqlite` and `pg` the project declares, with the generated coercion map applied.
+
+  Codegen adds whichever of those packages the file imports to the project's dependencies.
+
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [01c0209]
+- Updated dependencies [4e3af11]
+- Updated dependencies [f817f1c]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/inspector@0.12.96
+  - @pikku/deploy@0.12.13
+  - @pikku/better-auth@0.12.50
+  - @pikku/skills@0.12.44
+  - @pikku/kysely@0.13.31
+
+## 0.12.172
+
+### Patch Changes
+
+- 88683e2: `pikku fabric changes next` blocks until the changes queue has work — an item past its grace window, or an answer to a question the `--claimed-by` claimant asked — prints it and exits, so a coding agent runs it in the background instead of polling. `--claim` takes what it found as one group, `--stage` narrows to a stage by branch, URL or id, and `--timeout`/`--once` exit 2 when nothing turns up; a refused session exits 3. `list` also takes `--stage`, `show 2`/`show #2` and short ids everywhere a change is named now resolve, and a 409 from `claim` says per item why it could not be taken. The `pikku-changes` skill is rewritten around that loop.
+- Updated dependencies [88683e2]
+  - @pikku/skills@0.12.43
+
+## 0.12.171
+
+### Patch Changes
+
+- 658f047: Webhook signing secrets live in the credential store. `WebhookSigningSecret.fromCredential(provider, credentialService, name)` reads the secret per delivery via `load()`, so a `setup` step (or a handshake) that stores a new one with `credentialService.set` takes effect without a deploy.
+
+  Breaking: `setup` no longer returns `secret`, `wireTriggerWebhookSource` no longer takes `secret`, lifecycle outcomes drop `secretName`/`secret`, and `pikku webhooks setup` drops `--secretsOut`.
+
+- 658f047: A webhook source's `method` may be a list, mounting one route per method, for providers that verify the URL with a GET and deliver events with a POST (WhatsApp, Strava, Onfleet, Mailchimp), or a HEAD (Trello, Mandrill, SurveyMonkey).
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+  - @pikku/inspector@0.12.93
+  - @pikku/kysely@0.13.30
+  - @pikku/better-auth@0.12.49
+
+## 0.12.170
+
+### Patch Changes
+
+- 02d9848: An addon can import `defineCLICommands` again. The whole `cli` leaf was retired for addons, so the helper the inspector explicitly permits — and that `refCLI` exists to mount on the consuming side — had nowhere to be imported from. The leaf now emits an addon-safe subset (`defineCLICommands`, `pikkuCLICommand`, `pikkuCLIRender`) and drops only `wireCLI`, the registry an addon genuinely cannot reach.
+- f84e173: An addon wired from a workspace package now resolves from that package. The installed-addon check (PKU340), the remote addon `devDependencies` check and `pikku db generate`'s addon schemas all looked only at the project root, so an addon declared where it is wired — the only place bun links it — failed codegen unless it was also declared at the root.
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- 3ff2b0c: Report the builder's own log when a fabric deploy fails. A failed deployment has
+  an empty manifest and plan, `statusReason` is null for anything that is not a
+  gate, and `fabric logs` serves the running stage rather than the build — so the
+  CLI said `failed in 248s` and nothing else, which reads as "your project is
+  broken" even when the build host was simply unreachable.
+- 974ced9: Add `pikku fabric user add <email>`, the CLI form of the console's Add user, so
+  a user can be created on a deployed stage without opening the console.
+- 9979830: `pikku fabric validate` reports failures that only show up on a deploy build host
+
+  - A project that still has `fabric.config.json` under its old name and no `pikkufabric.config.json` is an error, because the build container only reads the new name.
+  - An `overrides`/`resolutions` pin that holds an `@pikku/*` package at a different version from the one the project declares is an error.
+  - A `bun.lock` that resolves `ai`, `@ai-sdk/provider(-utils)`, `zod` or `@pikku/core` at more than one major version is a warning. A hoist can give a workspace member the wrong copy.
+  - An app whose vite config sets paraglide's `outputStructure`/`strategy`/`outdir` but has no `i18n:compile` script is flagged. The deploy compiles translations with the CLI's defaults.
+
+- ff38f13: A guide marker can name one scenario — `<!-- pikku:guide feature=F scenario=S -->` — so each section of a page shows its own figures instead of every scenario's landing in one block. Showcase shots now lead a scenario's figures, and a recording is captioned with its actor only when there are several.
+
+  The pikku-guide skill now plans pages from the suite, puts one `scenario=` marker under each section, gives every cited scenario a closing still, and treats captions and seed data on camera as copy.
+
+- 8ea16f5: `pikku validate` reports an app that authenticates with better-auth but never
+  wires `@pikku/addon-admin` (`admin-addon-not-wired`): it exposes no `admin:*`
+  RPCs, so the console's Users and Scopes pages have nothing to call.
+- e966cf2: `pikku validate` reports a raw `sql` template that double-quotes a non-snake_case
+  identifier (`raw-sql-camel-case-identifier`). `CamelCasePlugin` never rewrites the
+  text of a raw template, so `"createdAt"` reaches the database verbatim and fails
+  with `no such column`.
+- a377523: `pikku validate` reports app code importing `@pikku/core`
+
+  `#pikku` is the app's API and `@pikku/core` is the ecosystem's, so a name taken
+  from core is the untyped copy of one the alias hands over already typed against
+  the project. The new `coreImport` lint rule reports it, naming the `#pikku` leaf
+  that carries the name. `@pikku/core/services` stays exempt — the service
+  implementations bootstrap picks are a choice, not a wiring — as does
+  `application-types.d.ts`, which is codegen's input. Set
+  `"lint": { "coreImport": "off" | "warn" }` to lower or silence it.
+
+- 409f149: Workflow orchestrator units (`wf-*`) take `deploy.defaultTarget` instead of always being `serverless`. A project with `defaultTarget: 'server'` no longer gets a Cloudflare worker bundle per workflow, which failed for any workflow whose services need Node built-ins.
+- Updated dependencies [f84e173]
+- Updated dependencies [f02585e]
+- Updated dependencies [ff38f13]
+- Updated dependencies [3ff2b0c]
+- Updated dependencies [974ced9]
+- Updated dependencies [ff38f13]
+- Updated dependencies [413163d]
+- Updated dependencies [5586749]
+- Updated dependencies [a377523]
+  - @pikku/inspector@0.12.92
+  - @pikku/core@0.12.127
+  - @pikku/playwright@0.12.86
+  - @pikku/skills@0.12.42
+  - @pikku/knowledge@0.12.16
+
+## 0.12.169
+
+### Patch Changes
+
+- 44da33f: A scenario run records which version of the suite it ran against — the commit, and which attempt against that commit it is
+- 44da33f: The scenarios screen and the runs screen are one surface: the declared suite is the document and a run is a lens over it. A scenario is filed as `running` the moment it starts, so a console watching a run in progress can tell what is on screen now from what is still waiting, and the run snapshots each scenario's title, description and cast so the record reads as prose.
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+  - @pikku/core@0.12.126
+
+## 0.12.168
+
+### Patch Changes
+
+- 5e93f30: Add `defineOutgoingWebhook({ event, title, description?, payload })` in `@pikku/core/webhook`. The CLI collects every exported declaration into `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` and `pikku-outgoing-webhooks.gen.ts`, which exports `OutgoingWebhooksMap`, `TypedWebhookService` and `typedWebhookService(service)`: `send` checks `data` against the declared payload for a declared event and accepts any other event unchanged. `MetaService.getOutgoingWebhooksMeta()` and the console addon's `outgoingWebhooksMeta` serve the declarations.
+- a45bdaa: Add `pikku release`: versioned releases from the API surface. `release prepare` diffs the surface against the committed `surface.pikku.json`, bumps `package.json`, prepends a `CHANGELOG.md` section listing the API changes and any `Release-Note:` commit trailers, and records the result in `release.gen.json`. It never commits, tags or pushes — the caller does, with plain git or a platform. The bump comes from the surface diff alone; below 1.0 a breaking change is a minor, and `--go-live` cuts 1.0.0. `release diff` and `release snapshot` replace `pikku semver`, which stays as a deprecated alias. Surface wirings no longer carry `sourceFile`, so a baseline from another checkout no longer reports every route as modified.
+- 5e93f30: Add `wireTriggerWebhookSource({ name, method?, route?, secret?, events, receive?, check?, setup?, teardown? })` in `#pikku/trigger`. Each source becomes a `POST /webhooks/<name>` route whose events are validated against their schemas and queued on `pikku-incoming-webhooks` through `IncomingWebhookService`; a generated worker runs the matching `wireTrigger({ name: '<source>:<event>' })` and the queue retries it on failure. `pikku webhooks status | setup | teardown --url --labelPrefix [--previous]` registers the routes with the provider and prints one JSON line per source.
+
+  `KyselyIncomingWebhookService` (with the `incoming-webhook` schema) records a receipt per event, drops a provider's redelivery of an event it already accepted, and keeps each dispatch's attempts and last error. `pikku dev` and `pikku serve` use it when a Kysely database is configured.
+
+- Updated dependencies [5e93f30]
+- Updated dependencies [a45bdaa]
+- Updated dependencies [5e93f30]
+  - @pikku/core@0.12.125
+  - @pikku/inspector@0.12.91
+  - @pikku/skills@0.12.41
+  - @pikku/kysely@0.13.29
+
+## 0.12.167
+
+### Patch Changes
+
+- 1fe79bc: SQLite extensions now load under bun on macOS. Bun there opens Apple's SQLite, which is built without extension loading, so the CLI points bun at Homebrew's libsqlite3 (`brew install sqlite`) as it starts, or at the one `PIKKU_SQLITE_LIBRARY` names; without one it warns and carries on without extensions. A bun standalone build on macOS embeds that libsqlite3 and opens its database with it, and fails if the build machine has none. Linux is unchanged: bun there brings a SQLite that loads extensions, and node uses `node:sqlite` everywhere.
+- 4e05a10: Print the TypeScript text for a Zod schema directly, dropping `zod-to-ts`.
+
+  `processZodSchema` built a TypeScript AST only to print it straight back to a
+  string. `zodToTypeText` walks Zod's own definitions instead, which removes
+  `zod-to-ts`, `ts.createPrinter`, `ts.EmitHint` and `ts.createSourceFile` from
+  the Zod path — it no longer touches the compiler API at all. `@pikku/cli`
+  declared `zod-to-ts` without importing it; that is dropped too.
+
+  A defaulted field is now optional in the generated type. `processZodSchema`
+  already strips defaulted fields out of the JSON Schema's `required`, so the two
+  halves of the same contract disagreed: the validator accepted a payload that
+  omitted the field, while the type said a caller had to pass it.
+
+- 1fe79bc: The embedded PGlite database loads pgvector by default, so `CREATE EXTENSION vector` works in `pikku dev` and every `db` command without declaring `@electric-sql/pglite-pgvector` in `db.pgliteExtensions`. The CLI pins `@electric-sql/pglite` and `@electric-sql/pglite-pgvector` to the exact pair pgvector was built for, so they can no longer drift apart. A project that still declares its own copy keeps using that one.
+- 1fe79bc: New `db.sqliteExtensions` in pikku.config.json: loadable SQLite extensions loaded into every SQLite connection the CLI opens (migrations, the shadow database, the dev server, the seed and scenario baselines). It defaults to `['sqlite-vec']`, which the CLI now ships, so `CREATE VIRTUAL TABLE ... USING vec0(...)` works in `pikku dev` with no configuration. `[]` opts out. An entry is a package exporting `getLoadablePath()` or a path to the extension's library file.
+
+  A runtime that cannot load extensions (bun on macOS, whose system SQLite is built without it) skips the default rather than failing, and a migration that then needs vec0 says why it is missing. A declared extension that cannot be loaded is an error. Codegen no longer types the shadow tables a virtual table keeps its data in (fts5's, vec0's).
+
+- 7740547: Let the SQLite and D1 Kysely factories take extra plugins, and stop the fabric
+  coercion check from missing a bool-only map.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` both accept a `plugins`
+  array, which is how the generated `coercionMap` reaches a Kysely instance.
+  `createSQLiteKysely` and `createD1Kysely` did not: they hard-coded their plugin
+  array, so the one instance a deployed Cloudflare Worker builds had no way to
+  apply the coercion the CLI generates. They now take an options object with
+  `plugins`, layered ahead of `SerializePlugin`, which has to stay last, and
+  `@pikku/kysely-sqlite` re-exports `createCoercionPlugin` and `CoercionMap` the
+  way `@pikku/kysely-node-sqlite` already did, so a worker that only depends on
+  the SQLite package can build the plugin.
+
+  The fabric `coercion-map-not-wired` check tested the generated file for
+  `"date" | "boolean" | "json"`, but the codegen emits `bool`, never `boolean`. A
+  project whose only annotated columns were booleans passed the check with the map
+  unwired — exactly the case that is invisible locally, since the dev driver
+  returns `true` where a deployed stage returns `1`.
+
+- 1fe79bc: A standalone artifact now carries its migrations: `db/<engine>` is copied beside the bundle (and the bun binary), where `db migrate` looks for them. Before, the artifact found none and reported an empty database as up to date. A bun standalone build of an app with a database also compiles again: the bundle's require shim declared the same `dirname` alias the entry imports.
+- 1fe79bc: A standalone build of a SQLite app now ships its `db.sqliteExtensions` (sqlite-vec's vec0 by default) inside the artifact, so a migration or query that uses them works in production the way it does under `pikku dev`. The node bundle loads them from `sqlite-extensions/` beside itself; a compiled bun binary embeds them and writes them out under `$PIKKU_DATA_DIR/.pikku-sqlite-extensions/` on start. The libraries are the build machine's, so an extension that cannot be resolved there fails the build; `[]` builds without them.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` take an `extensions` list of library paths to load into the connection.
+
+- Updated dependencies [1394385]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [4e05a10]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+  - @pikku/core@0.12.124
+  - @pikku/deploy@0.12.12
+  - @pikku/inspector@0.12.90
+  - @pikku/migrator-sql@0.12.6
+
+## 0.12.166
+
+### Patch Changes
+
+- 6a9c62e: `pikku fabric report` sends findings through fabric's `submitFinding` RPC instead of the `/findings` route that never existed, so held findings finally leave the machine.
+
+## 0.12.165
+
+### Patch Changes
+
+- 39e2b7e: `pikku fabric deploy apply` no longer dies on a transient 5xx, 429 or dropped
+  connection while it waits on a deployment. The status poll and the approval
+  call retry with backoff until `--timeout`, so `-y` still approves a plan parked
+  at the gate instead of leaving it to time out. An approve whose success was
+  hidden behind a 502 is not re-refused on retry. If the command still gives up
+  after a deployment was created, it prints the id and the
+  `deploy apply --deployment-id <id> -y` command to resume.
+- 3e65d46: fix(fabric): held findings filed in the same millisecond are sent in the order they were held
+
+  `readHeld` sorts oldest first by `reportedAt`, which is only millisecond-precise,
+  and broke ties on a file name whose only other part was random. Two findings
+  filed back to back could come back in either order. The file name now carries
+  a monotonic sequence ahead of the random suffix.
+
+- 2b946e9: Read JSONC by tokens, so a comment or a comma in a string cannot change the value
+
+  `readJsonSafe` stripped comments by deleting them, which joined the tokens on
+  either side: `{"value": 1/* why */2}` parsed as `12`. Trailing commas were swept
+  with a regular expression that could not see string boundaries, so
+  `{"value": ",}"}` lost the comma inside its own string. And an unterminated
+  block comment silently discarded everything after it, letting a truncated file
+  parse as though it were whole.
+
+  A comment is now replaced by whitespace, trailing commas are recognised during
+  the scan rather than after it, and an unterminated block comment is reported
+  with its position.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 2b946e9: fix(deploy): say "native addon" when a serverless bundle hits one
+
+  A native addon cannot be bundled for a serverless runtime — there is no `.node`
+  loading on Workers — but that is not what the bundler reported. The addon's JS
+  wrapper imports `node:child_process`, `node:stream` and friends, none of which
+  resolve on a `neutral` platform, so the failure arrived as a wall of unresolved
+  builtins naming neither the package nor the reason:
+
+  ```
+  Could not resolve "node:util"          @ sharp/dist/constructor.mjs
+  Could not resolve "node:child_process" @ sharp/dist/libvips.mjs
+  Could not resolve "detect-libc"        @ sharp/dist/libvips.mjs
+  ```
+
+  Read as missing polyfills, that sends people to `nodejs_compat`, which cannot
+  help — the blocker is the binary underneath.
+
+  A failed serverless compile now reads the owning packages back out of the
+  unresolved-import lines only, checks each for a native binary (`gypfile`, a
+  `binary` declaration, a node-gyp install script, per-platform optional
+  dependencies), and when it finds one leads with the package, the evidence, and
+  the two ways out: `deploy.serverlessIncompatible` in `pikku.config.json`, or
+  `deploy: 'server'` on the function. The original error is kept underneath. A
+  failure with no native addon behind it is rethrown untouched.
+
+  An `os` restriction is not counted: a pure-JS package pinned to one platform
+  carries no binary, and reporting it as an addon says Node compatibility cannot
+  help when it is exactly what is needed. Nor is any failure other than an
+  unresolved import — a syntax error inside a native package is still a syntax
+  error, and keeps its own message.
+
+- Updated dependencies [50b59a3]
+- Updated dependencies [2b946e9]
+- Updated dependencies [bc488cf]
+- Updated dependencies [3276942]
+- Updated dependencies [1ac09c7]
+  - @pikku/core@0.12.123
+  - @pikku/inspector@0.12.89
+  - @pikku/skills@0.12.40
+
+## 0.12.164
+
+### Patch Changes
+
+- 182989a: A generated CLI-over-channel client imports `@pikku/websocket`; the CLI now declares it in the package that owns the client file when that package doesn't already list it.
+- 663c8c2: fabric login and fabric changes run outside a pikku project, and a missing config says what to do
+
+  Neither command reads `pikku.config.json` — `changesContext` resolves the api url, bearer and project from `pikkufabric.config.json` or `--project-id`, and you log in before there is a project to be inside. Both were still gated on a config being found, so a harness emptying the change queue from anywhere but a linked checkout died before its function ran.
+
+  The refusal itself is now a `PikkuError`, so "no pikku.config.json here" prints as the single line it is, naming the directory searched and the `--config` flag, rather than a stack trace through the loader.
+
+- b35d3d4: Add `pikku new app` and the registry's discovery half.
+
+  **`pikku new app <slug> --serves <group> --personas <ids>`** adds a frontend,
+  scaffolded from `pikkujs/starter-template`'s `apps/app`. It re-points the copy's
+  `package.json` at its own name, dev/preview port and `--tsBuildInfoFile`, stamps
+  `app: '<slug>'` onto each named persona, writes the `frontends` entry and
+  re-runs the install. `pikku-build`'s `multi-app.md` described all of that as
+  five files to edit by hand, including the build-cache path whose absence
+  produces type errors that vanish on a clean build.
+
+  It scaffolds from the template rather than copying the app already in the
+  project: a copy drags the first app's screens, routes and nav into an audience
+  that never asked for them. `--template <source>` takes any giget source, or a
+  path inside the repo for an offline or vendored copy.
+
+  The refusals matter more than the scaffolding, because the scaffolding is five
+  edits and a wrong audience is a whole second app nobody needed: a `--serves`
+  that names a surface rather than people, an audience that already has an app,
+  a persona who already signs into another one, a slug the plan already uses for
+  an existing app, and a persona no `definePersonas({…})` declares. It repairs
+  its own half-states too — the directory is written before the config entry,
+  and neither half survives alone.
+
+  It stops after the install; serving the app belongs to whatever hosts it.
+
+  **`pikku fabric addon search|get`** fill in the registry's read half, next to
+  the `verify`/`publish`/`add` that were already there. Both catalogues are
+  public GETs, so discovery needs no login — the question "is there already an
+  addon for this?" comes up before adopting one, not after. `search` prints
+  published addons ahead of OpenAPI entries, because one is built and typed
+  while the other still costs a codegen round that can fail on a bad spec.
+  `get` accepts every spelling in the wild — `gmail`, `addon-gmail` and
+  `@pikku/addon-gmail` all reach `pikku-addon-gmail`, including the ones
+  `search` itself printed.
+
+- 3511717: Enabling a virtual user schedule whose disposition production refuses is now refused when written (403), rather than saved and then failing on every tick with nobody watching. Disabling one, or editing one that is off, is always allowed.
+- Updated dependencies [e54ae19]
+- Updated dependencies [b35d3d4]
+- Updated dependencies [b35d3d4]
+- Updated dependencies [3511717]
+- Updated dependencies [3511717]
+  - @pikku/better-auth@0.12.48
+  - @pikku/skills@0.12.39
+  - @pikku/core@0.12.122
+
+## 0.12.163
+
+### Patch Changes
+
+- b16645a: `pikku new addon --openapi` is one command: it takes a URL or path, --openapi-header, --tags/--include/--exclude and --auth user|shared|none, picks the auth mode from the spec (delegated with --auth-config), refuses a spec without machine-readable auth, writes a valid addon config with icon and forceRequiredServices, and inside an app installs the addon: dependencies, a wireAddon file with expose, Better Auth wiring and the base-URL env entry, then install and build.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 86c2f1d: `pikku dev` keeps stored credentials in the dev database, so connected accounts and delegated sign-ins survive a restart. The key comes from `PIKKU_DEV_CREDENTIALS_KEY`, or is generated once into `.pikku-runtime/dev-credentials.key`. A project that declares a credential now gets the credential tables in its generated migration; without them dev falls back to the in-memory store and says so once.
+- f6c1dd6: `pikku all` writes `db/schema.gen.ts` from the migrations when it is missing, so `#pikku/db/schema.gen.js` resolves on a fresh project before `pikku db migrate` has run. `pikku db migrate` no longer logs a Better Auth "Database schema mismatch" for the scratch database it reads the auth schema from.
+- 894e57a: The console's knowledge page keeps the open note in `?id=`, so a note or a milestone plan can be linked to. For example, `/console/knowledge?id=milestones/01-foo.plan.json` opens that milestone with its plan. `pikku knowledge plan set`, `show` and `progress` print that link, and add it to their JSON output as `consoleUrl`. The link uses the running `pikku dev` server's address when there is one, and `http://localhost:3000` otherwise.
+- 8167c4b: fix(cli): reading the auth schema survives a plugin whose init rejects
+
+  Better Auth 1.7 made constructing an auth instance do I/O. A plugin's `init`
+  starts real work and does not wait for it — the OAuth provider behind
+  `@better-auth/mcp` seeds its `oauthResource` rows that way.
+
+  Schema introspection builds the instance against a throwaway database purely to
+  read `options`, so that work has nowhere to go: the auth tables do not exist
+  yet, and on the SQLite path the handle is closed as soon as the options have
+  been read. The seed then rejected with nothing awaiting it, and the default for
+  an unhandled rejection is to terminate the process — so `pikku db generate` and
+  the `pikku db migrate` drift check died on `database is not open`, from a write
+  the schema derivation never wanted, in any project that merely configured MCP.
+
+  The rejection is now reported and stepped over. Whatever the plugin was doing
+  says nothing about the shape of its tables, which is all that is being read.
+
+- a8cf3a1: The generated `usePikkuQuery` no longer retries a 4xx. A missing record or a refused permission shows at once instead of after three retries. Pass `retry` in the options to override it.
+- Updated dependencies [2f317d0]
+- Updated dependencies [55ab4d1]
+- Updated dependencies [f6c1dd6]
+- Updated dependencies [0210e96]
+- Updated dependencies [e84abd0]
+- Updated dependencies [5442d94]
+- Updated dependencies [b31675a]
+- Updated dependencies [86c2f1d]
+- Updated dependencies [da9b931]
+- Updated dependencies [38d4f65]
+- Updated dependencies [a8cf3a1]
+- Updated dependencies [237c061]
+- Updated dependencies [0672bdd]
+- Updated dependencies [b3e5443]
+  - @pikku/better-auth@0.12.47
+  - @pikku/inspector@0.12.88
+  - @pikku/openapi-parser@0.12.23
+  - @pikku/core@0.12.121
+  - @pikku/skills@0.12.38
+
+## 0.12.162
+
+### Patch Changes
+
+- 17d8746: An addon generated with `pikku new addon --openapi` never built. Every function file declared its zod schemas next to an import of `#pikku/function`, and `pikku all` loads the file that declares a schema to convert it. At runtime `#pikku` resolves through the addon's `imports` into `dist/`, which the first build has not written yet, so every schema failed with `Could not convert Zod schema … Cannot find module …/dist/.pikku/function/index.js` and the build stopped there. Each operation's schemas now go in a sibling `<operation>.schemas.ts` that imports only zod, and the function file imports them from it.
+
+  The generated imports also named the wrong tree. An addon's generated code lives under `.pikku/addon/`, so `#pikku/function` and `#pikku/variables/…` pointed at leaves that do not exist, and `tsc` failed even once codegen had run. They are now `#pikku/addon/function` and `#pikku/addon/variables/…`, as the hand-written addon scaffold already had them.
+
+  `pikku validate` now reports an installed Pikku package that resolves a different copy of a type-identity package (`zod`, `kysely`, `@pikku/core`, `better-auth`) than the project as an error, `skewed-type-identity-…`, and the codegen preflight warns about it as `PKU719`. Under bun's isolated layout `@pikku/cli` can carry its own `zod` beside it in the store. Codegen then reads the app's schemas with a different zod than wrote them, and correct schemas fail to convert. The existing check only looked at dependencies linked from outside the project, so it never saw this case.
+
+  The `pikku-build` skill now recognises an OpenAPI spec or an n8n export handed over with the request, says so, converts it first, then carries on building the app. `pikku-addon` gains an OpenAPI reference and corrects its addon import paths and build steps. `pikku-n8n-import` joins the `core` install group.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [a95179a]
+- Updated dependencies [145b32b]
+- Updated dependencies [46f99b2]
+- Updated dependencies [17d8746]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [0602266]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+  - @pikku/kysely@0.13.28
+  - @pikku/inspector@0.12.87
+  - @pikku/skills@0.12.37
+  - @pikku/openapi-parser@0.12.22
+  - @pikku/playwright@0.12.85
+
+## 0.12.161
+
+### Patch Changes
+
+- 22d542e: serve: keep the project's own `staticMounts`
+
+  `pikku serve` built its mount list from the console and frontend mounts alone
+  and dropped anything the project declared in `staticMounts`, so every mount an
+  app configured for itself was silently unserved under `serve`. `dev` already
+  appends them; `serve` never did.
+
+  They now sit between the console mount and the frontend mount: the console
+  stays first so a frontend at `/` cannot claim `/console`, and the app's own
+  mounts are offered the request before the catch-all frontend.
+
+- 67c707a: The stateless session cookie's lifetime is now declared by the CLI and read by the framework, so an app needs no code of its own to get a session that outlives five minutes.
+
+  The previous fix stopped `betterAuthStatelessSession` leaving the cookie on better-auth's 300-second default, but it hardcoded one day. An app that wanted a different lifetime — and it is a real decision, because the lifetime is also the longest a ban or a revoked session can go unnoticed — had to declare a variable, read it, and thread it into its own `betterAuth({ session: { cookieCache } })`. That was the same three edits in every app, which is the shape of something the framework should be doing.
+
+  Now:
+
+  - **`@pikku/cli`** emits a `SESSION_COOKIE_CACHE_MAX_AGE` variable into `auth-secrets.gen.ts`, on the `cookieCache` branch that already decides whether to split the stateless middleware out. Only that branch: under the stateful middleware the cookie cache genuinely is a cache in front of the database, and a short life there is the correct trade rather than a bug. It is optional, so a deployment that never sets it stays valid.
+
+    The generated schema is `z.string().default('86400')` rather than a coerced number, because `TypedVariablesService` returns a stored host value **unparsed** and runs the declared schema only to resolve a default. A `z.coerce.number()` would never fire on a real value and would only mislead whoever read it.
+
+  - **`@pikku/better-auth`** reads that variable when it applies the default, coercing and range-checking it there. A value that is not a positive number of seconds is logged and ignored rather than honoured — a typo should not expire the cookie instantly. An app generated before the CLI emitted the declaration has no such variable, which is the ordinary case and not an error: the one-day default simply stands.
+
+    Insert-not-upsert still holds, and now holds against the variable too. An explicit `session.cookieCache.maxAge` in the app's own config is the author's decision and beats a stage binding.
+
+  - **`@pikku/cli`** also generates `useSession` into the react-query hooks file. An app wants the session anyway, and the same query heals the cookie for free: when `session_data` ages out, better-auth's cookie-cache branch bails on the stale payload and falls through to the database, reading the session from the still-valid `session_token` and minting a fresh cookie on the way out. `refetchInterval` and `refetchOnWindowFocus` are react-query's; there is no refresh loop beside them.
+
+    It deliberately does not pass `disableCookieCache`. That would make every refetch a database read — the exact cost the cookie cache exists to avoid — to re-mint a cookie with most of its life left. better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is not an option either: it is force-disabled whenever a database is configured, and where it does apply it re-signs the cached blob without reading the database, so a banned user's cookie would renew forever.
+
+  The upshot for an app: `pikku gen`, use `useSession()` where it wants the signed-in user, and delete any hand-rolled equivalent. The app's `betterAuth` config needs no `maxAge`.
+
+- Updated dependencies [bc29716]
+- Updated dependencies [e85f07e]
+- Updated dependencies [67c707a]
+- Updated dependencies [cb239e2]
+  - @pikku/skills@0.12.36
+  - @pikku/core@0.12.119
+  - @pikku/better-auth@0.12.46
+
 ## 0.12.160
 
 ### Patch Changes

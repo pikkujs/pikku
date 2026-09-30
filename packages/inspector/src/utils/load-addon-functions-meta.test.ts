@@ -326,3 +326,180 @@ describe('loadAddonFunctionsMeta — wireAddon expose lists', () => {
     assert.deepEqual(await criticalsFor(true), [])
   })
 })
+
+describe('loadAddonFunctionsMeta — where an addon resolves from', () => {
+  let rootDir: string
+  let functionsDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-resolve-'))
+    writeFileSync(
+      join(rootDir, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] })
+    )
+    functionsDir = join(rootDir, 'packages', 'functions')
+    mkdirSync(join(functionsDir, 'src'), { recursive: true })
+    writeFileSync(
+      join(functionsDir, 'package.json'),
+      JSON.stringify({ name: '@project/functions' })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const warnings: string[] = []
+  const recording = {
+    ...logger,
+    warn: (message: string) => warnings.push(message),
+  } as unknown as InspectorLogger
+
+  const load = async (pkg: string) => {
+    warnings.length = 0
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([
+        [
+          'crm',
+          { package: pkg, file: join(functionsDir, 'src', 'crm.addon.ts') },
+        ],
+      ])
+    )
+    await loadAddonFunctionsMeta(recording, state)
+    return state
+  }
+
+  test('an addon installed only in the package that calls wireAddon still loads', async () => {
+    const addonDir = join(functionsDir, 'node_modules', '@addon', 'crm')
+    mkdirSync(join(addonDir, '.pikku', 'function'), { recursive: true })
+    writeFileSync(
+      join(addonDir, 'package.json'),
+      JSON.stringify({ name: '@addon/crm' })
+    )
+    writeFileSync(
+      join(addonDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+      JSON.stringify({ listContacts: {} })
+    )
+
+    const state = await load('@addon/crm')
+
+    assert.deepEqual(Object.keys(state.addonFunctions.crm), ['listContacts'])
+    assert.deepEqual(warnings, [])
+  })
+
+  test('the declaring package’s copy wins over the root’s', async () => {
+    for (const [dir, fn] of [
+      [rootDir, 'rootVersion'],
+      [functionsDir, 'localVersion'],
+    ]) {
+      const addonDir = join(dir, 'node_modules', '@addon', 'both')
+      mkdirSync(join(addonDir, '.pikku', 'function'), { recursive: true })
+      writeFileSync(
+        join(addonDir, 'package.json'),
+        JSON.stringify({ name: '@addon/both' })
+      )
+      writeFileSync(
+        join(addonDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+        JSON.stringify({ [fn]: {} })
+      )
+    }
+
+    const state = await load('@addon/both')
+
+    assert.deepEqual(Object.keys(state.addonFunctions.crm), ['localVersion'])
+  })
+
+  test('a package that is not installed anywhere says where to add it', async () => {
+    await load('@addon/missing')
+
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /@addon\/missing, which is not installed/)
+    assert.match(
+      warnings[0],
+      /"@addon\/missing": "workspace:\*".*packages\/functions\/package\.json/
+    )
+  })
+
+  test('a package that is installed but unbuilt says to build it', async () => {
+    const addonDir = join(rootDir, 'node_modules', '@addon', 'unbuilt')
+    mkdirSync(addonDir, { recursive: true })
+    writeFileSync(
+      join(addonDir, 'package.json'),
+      JSON.stringify({ name: '@addon/unbuilt' })
+    )
+
+    await load('@addon/unbuilt')
+
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /is installed at .* but has not been built/)
+    assert.match(warnings[0], /pikku-functions-meta\.gen\.json/)
+  })
+})
+
+describe('loadAddonFunctionsMeta — webhook sources an addon declares', () => {
+  let rootDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-webhooks-'))
+    writeAddonFixture(rootDir)
+    const webhooks = join(rootDir, 'node_modules', ADDON, '.pikku', 'webhooks')
+    mkdirSync(webhooks, { recursive: true })
+    writeFileSync(
+      join(webhooks, 'pikku-webhook-sources-meta.gen.json'),
+      JSON.stringify({
+        slack: {
+          name: 'slack',
+          method: 'post',
+          route: '/webhooks/slack',
+          events: ['message'],
+          receive: 'slackWebhookReceive',
+          setup: 'slackWebhookSetup',
+        },
+      })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const load = async (existing: Record<string, any> = {}) => {
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([
+        ['slack-marketing', { package: ADDON }],
+        ['slack-support', { package: ADDON }],
+      ])
+    ) as any
+    state.triggers = { webhookSourceMeta: { ...existing } }
+    state.serviceAggregation = { usedFunctions: new Set() }
+    await loadAddonFunctionsMeta(logger, state)
+    return state
+  }
+
+  test('mounts one source per addon instance, named and routed after its namespace', async () => {
+    const state = await load()
+
+    assert.deepEqual(state.triggers.webhookSourceMeta['slack-marketing'], {
+      name: 'slack-marketing',
+      method: 'post',
+      route: '/webhooks/slack-marketing',
+      events: ['message'],
+      receive: 'slack-marketing:slackWebhookReceive',
+      setup: 'slack-marketing:slackWebhookSetup',
+    })
+    assert.ok(state.triggers.webhookSourceMeta['slack-support'])
+    assert.ok(
+      state.serviceAggregation.usedFunctions.has(
+        'slack-support:slackWebhookReceive'
+      )
+    )
+  })
+
+  test('leaves a source the app declares itself alone', async () => {
+    const own = { name: 'slack-support', route: '/hooks/mine' }
+    const state = await load({ 'slack-support': own })
+    assert.equal(state.triggers.webhookSourceMeta['slack-support'], own)
+  })
+})

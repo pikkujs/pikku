@@ -8,6 +8,8 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
+import { collectInvokedRpcNames } from './add-rpc-invocations.js'
+import { collectStartedWorkflows } from './collect-started-workflows.js'
 import type { AuditDurability } from '@pikku/core/services'
 import type { FunctionServicesMeta } from '@pikku/core/function'
 import type { ScenarioSurface, ScenarioStepKind } from '@pikku/core/scenario'
@@ -575,10 +577,11 @@ export const addFunctions: AddWiring = (
   let remote: boolean | undefined
   let mcp: boolean | undefined
   /**
-   * A sessionless function's own `auth: true`. `sessionless` records the
-   * baseline — a `pikkuFunc` always needs a session — while this records the
-   * tightening a `pikkuSessionlessFunc` applies to itself, which is otherwise
-   * invisible to anything reading meta.
+   * A sessionless function's own `auth`, exactly as written. `sessionless`
+   * records the baseline — a `pikkuFunc` always needs a session — while this
+   * records what a `pikkuSessionlessFunc` says about itself: `true` tightens it
+   * to require a session, `false` declares it public on purpose. Both are
+   * otherwise invisible to anything reading meta; left out, it stays undefined.
    */
   let auth: boolean | undefined
   /** The author's claim that the body authorizes its own callers. */
@@ -876,15 +879,17 @@ export const addFunctions: AddWiring = (
               }
             }
           } else if (ts.isCallExpression(prop.initializer)) {
-            // Bad - it's an inline expression
             const schemaName = `${funcIdToTypeName(name)}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
-            logger.critical(
-              ErrorCode.INLINE_SCHEMA,
-              `Inline schemas are not supported for '${propName}' in '${name}'.\n` +
+            logger.diagnostic({
+              severity: 'error',
+              code: ErrorCode.INLINE_SCHEMA,
+              message:
+                `Inline schemas are not supported for '${propName}' in '${name}'; ` +
+                `it is validated against its TypeScript type only, so refinements are not enforced.\n` +
                 `  Extract to an exported variable:\n` +
                 `    export const ${schemaName} = ${prop.initializer.getText()}\n` +
-                `  Then use: ${propName}: ${schemaName}`
-            )
+                `  Then use: ${propName}: ${schemaName}`,
+            })
           }
         }
       }
@@ -976,6 +981,13 @@ export const addFunctions: AddWiring = (
   }
 
   const wires = extractUsedWires(handler, 2)
+
+  const invoked = collectInvokedRpcNames(handler.body)
+  for (const call of invoked.dynamic) {
+    logger.warn(
+      `• ${pikkuFuncId} calls ${call} with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`
+    )
+  }
 
   // --- Generics → ts.Type[], unwrapped from Promise ---
   const genericTypes: ts.Type[] = (typeArguments ?? [])
@@ -1355,6 +1367,22 @@ export const addFunctions: AddWiring = (
           bodyEnd: lineOf(handlerBody.getEnd()),
         }
 
+  const started = collectStartedWorkflows(handler.body)
+  // Generated scaffolds (the workflow start/run routes) take the name from the
+  // request by design, and are served by units that have every workflow.
+  const handlerFile = handler.getSourceFile().fileName
+  const warnOnStarts = !/\.gen\.[cm]?[jt]s$/.test(handlerFile)
+  for (const call of warnOnStarts ? started.dynamic : []) {
+    logger.warn(
+      `• ${pikkuFuncId} calls ${call} with a computed name — the deploy planner cannot bundle that workflow's meta into ${pikkuFuncId}'s unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`
+    )
+  }
+  if (warnOnStarts && started.rpcHandoffs.length > 0) {
+    logger.warn(
+      `• ${pikkuFuncId} passes rpc to ${started.rpcHandoffs.join(', ')} — rpc.startWorkflow / rpc.invoke calls made there are invisible to the deploy planner, so their targets are not bundled into or bound to ${pikkuFuncId}'s unit. Make those calls in the handler itself.`
+    )
+  }
+
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
     functionType: 'user',
@@ -1363,12 +1391,13 @@ export const addFunctions: AddWiring = (
     name,
     services,
     wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
+    invokes: invoked.names.length > 0 ? invoked.names : undefined,
     inputSchemaName: inputNames[0] ?? null,
     outputSchemaName: outputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
-    auth: auth || undefined,
+    auth: typeof auth === 'boolean' ? auth : undefined,
     permissionsInBody: permissionsInBody || undefined,
     audit,
     remote: remote || undefined,
@@ -1407,6 +1436,7 @@ export const addFunctions: AddWiring = (
     bodySourceFile,
     exportedName: exportedName || undefined,
     ...bodySpan,
+    startsWorkflows: started.names.length > 0 ? started.names : undefined,
   }
 
   if (handlerHasDynamicImport(handler)) {

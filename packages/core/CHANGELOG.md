@@ -1,3 +1,228 @@
+## 0.12.132
+
+### Patch Changes
+
+- d327fa5: Two gaps from the August security sweep that never reached main:
+
+  - The memoized middleware chains are capped per wire type. The key is the requested wire id, so a caller varying RPC names could otherwise grow the cache without limit.
+  - The console's generated variable brokers require `pikku:console`. They are emitted into the application rather than the console addon, so the addon's scope never reached them and any signed-in user could read and overwrite variables through `/rpc`.
+
+- 942ebdd: Add `LeaseService`: named leases shared by every process on the same store. A lease is not a mutex: a holder that stalls past its expiry loses the key without knowing, so whatever the body writes to should check the lease's `token` and refuse an older one. `acquire` never blocks and answers `null` while someone else holds the key; a lease lapses on its own if its holder dies; and each lease carries a `token` that rises every time the key changes hands, so a stale holder cannot refresh or release its successor's lease. `holdLease` refreshes the lease while its body runs, hands the body an `AbortSignal` that fires the moment the lease is lost, and throws `LeaseLostError` once the body finishes if the lease lapsed or changed hands meanwhile, so a caller never takes that result as produced under the lease.
+
+  Ships as `InMemoryLeaseService`, `PgKyselyLeaseService` (`@pikku/kysely-postgres`), `MySQLKyselyLeaseService` (`@pikku/kysely-mysql`) and `KyselyLeaseService` (SQLite), all on `pikku_lease`. The Postgres and MySQL services judge every lease by the database's clock, so a worker whose clock runs fast cannot take a live lease or stretch its own; `KyselyLeaseService` reads the process clock and is for a single-host SQLite app. `pikku db generate` writes the table for any project that reaches `leaseService`.
+
+  `RedisLeaseService` (`@pikku/redis`) keeps each lease in a hash Redis expires itself, with every check-and-set in one Lua script that reads Redis's `TIME`, so it too judges leases by the server's clock; its token counter outlives release, so the next holder always gets a higher token.
+
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
+## 0.12.131
+
+### Patch Changes
+
+- 58cccc1: `wire.getCredential('name')` is typed by the project's own credentials, and is always on the wire. Function types were written from the setup-only inspection, which never sees `defineCredential`, so every project fell back to an untyped map; `pikku all` now rewrites them once the credentials leaf exists. `getCredential` and `getCredentials` are no longer optional on `PikkuWire`, since the function runner always sets them. Without a credentials map, `getCredential<string>('name')` returns `string` rather than `unknown`.
+- a26c60e: The workflow status stream sends a `suspended` frame with the run's reason when a run suspends, and stays open for the resume. It used to send nothing to say that no more progress was coming without action.
+
+## 0.12.130
+
+### Patch Changes
+
+- dfcd351: The deploy planner now binds a unit to the units of the functions its functions call with `rpc.invoke('name')` / `rpc.remote('name')`. Before, a caller and callee split into different units (e.g. a no-service function in `svc-base` calling a DB function in `svc-kysely`) got no service binding and failed on the deployed stage with "No service binding for function". The inspector records literal RPC names per function as `invokes` (single, double or substitution-free template quotes; `rpc!`, `wire.rpc`) and warns on a computed name, which the planner cannot see (#1883).
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+- 5bce779: `pikku dev` registers webhook sources with their providers when `PIKKU_DEV_WEBHOOK_URL` is set. What it registered, signing secrets included, is kept in a git-ignored `.webhook-registrations.gen.json` next to `pikku.config.json`, so a database reset or `.pikku` wipe does not register again, and nothing reaches a provider while the url and events are unchanged. Registrations no source declares any more are warned about on every run, with the endpoint and label to delete by hand. The prefix defaults to `dev-<username>`; override it with `PIKKU_DEV_WEBHOOK_LABEL_PREFIX`. New in core: `reconcileWebhookRegistrations`.
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+## 0.12.129
+
+### Patch Changes
+
+- 1ab6eb4: Fix app functions reached through `rpc.invoke`/`rpc.exposed` (including the generated `/rpc/:rpcName` endpoint) running without their wire services. Since `singletonServicesOnly`, the forwarding `rpcCaller` built none and the callee inherited that, so any service from `pikkuWireServices` was `undefined`. The runner now resolves the callee's factory itself. Channels pass their per-connection set as the new `wireServices` option, which is reused and left open.
+
+## 0.12.128
+
+### Patch Changes
+
+- 658f047: A function whose services are all singletons no longer builds wire services, so an addon's credential-bound wire factory does not run for, or fail, a webhook `receive` step that needs no connection. The inspector decides this from the `Services` type and records it as `singletonServicesOnly` on the function's runtime meta; the runner only reads the flag.
+- de63ab2: Store a workflow's graph when a run is created, so a run suspended across a
+  deploy that changes the definition resumes on the graph it started on instead
+  of failing with `VERSION_NOT_FOUND`. Nothing called `registerWorkflowVersions`,
+  so the versions table stayed empty and the replay fallback could never find a
+  version.
+- 658f047: A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.
+- 658f047: Webhook signing secrets live in the credential store. `WebhookSigningSecret.fromCredential(provider, credentialService, name)` reads the secret per delivery via `load()`, so a `setup` step (or a handshake) that stores a new one with `credentialService.set` takes effect without a deploy.
+
+  Breaking: `setup` no longer returns `secret`, `wireTriggerWebhookSource` no longer takes `secret`, lifecycle outcomes drop `secretName`/`secret`, and `pikku webhooks setup` drops `--secretsOut`.
+
+- 658f047: `WebhookSigningSecret` in `@pikku/core/hmac`: holds a provider's webhook signing secret in a singleton service and checks HMAC, shared-token and public-key signatures for a `receive` step, refusing everything when the secret was never provisioned.
+- 658f047: A webhook source's `method` may be a list, mounting one route per method, for providers that verify the URL with a GET and deliver events with a POST (WhatsApp, Strava, Onfleet, Mailchimp), or a HEAD (Trello, Mandrill, SurveyMonkey).
+
+## 0.12.127
+
+### Patch Changes
+
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- 5586749: A suspended workflow's pause step now reads as `running` while the run waits, and only becomes `succeeded` when the run resumes past it — previously it was marked succeeded the moment the run paused.
+
+## 0.12.126
+
+### Patch Changes
+
+- 44da33f: A scenario run records which version of the suite it ran against — the commit, and which attempt against that commit it is
+- 44da33f: The scenarios screen and the runs screen are one surface: the declared suite is the document and a run is a lens over it. A scenario is filed as `running` the moment it starts, so a console watching a run in progress can tell what is on screen now from what is still waiting, and the run snapshots each scenario's title, description and cast so the record reads as prose.
+
+## 0.12.125
+
+### Patch Changes
+
+- 5e93f30: Add `defineOutgoingWebhook({ event, title, description?, payload })` in `@pikku/core/webhook`. The CLI collects every exported declaration into `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` and `pikku-outgoing-webhooks.gen.ts`, which exports `OutgoingWebhooksMap`, `TypedWebhookService` and `typedWebhookService(service)`: `send` checks `data` against the declared payload for a declared event and accepts any other event unchanged. `MetaService.getOutgoingWebhooksMeta()` and the console addon's `outgoingWebhooksMeta` serve the declarations.
+- 5e93f30: Add `wireTriggerWebhookSource({ name, method?, route?, secret?, events, receive?, check?, setup?, teardown? })` in `#pikku/trigger`. Each source becomes a `POST /webhooks/<name>` route whose events are validated against their schemas and queued on `pikku-incoming-webhooks` through `IncomingWebhookService`; a generated worker runs the matching `wireTrigger({ name: '<source>:<event>' })` and the queue retries it on failure. `pikku webhooks status | setup | teardown --url --labelPrefix [--previous]` registers the routes with the provider and prints one JSON line per source.
+
+  `KyselyIncomingWebhookService` (with the `incoming-webhook` schema) records a receipt per event, drops a provider's redelivery of an event it already accepted, and keeps each dispatch's attempts and last error. `pikku dev` and `pikku serve` use it when a Kysely database is configured.
+
+## 0.12.124
+
+### Patch Changes
+
+- 1394385: Carry the wired instance through a `ref('ns:fn')` an app writes. The wiring is
+  the app's, so the reference arrives with no instance and the function used to
+  run against the addon's declared secrets alone — the consuming app's
+  `secretOverrides` and grants silently did not apply, and the app's own global
+  middleware was denied secrets it owns.
+
+## 0.12.123
+
+### Patch Changes
+
+- 50b59a3: Keep the agent runtime out of deployment units that hold no agent.
+
+  `ContextAwareRPCService.agent` imported `agent-rpc.ts` directly, and every unit
+  reaches that class through the function runner, so the agent runner, stream,
+  memory and AGUI modules were pinned into every bundle — 51.8 KB raw / 15.7 KB
+  gzip a unit. The facade is now resolved through state, registered by
+  `@pikku/core/agent` on import, so only a unit that actually holds an agent
+  bundles it. A unit that reaches `rpc.agent` without importing the agent entry
+  point throws rather than silently pulling the runtime back in.
+
+- 2b946e9: fix(dev): keep `import.meta` pointing at the real file in the hot-reload runner
+
+  The dev module runner transforms each user file to `cjs` before compiling it,
+  and esbuild's `cjs` output rewrites `import.meta` to an empty object. Any module
+  that resolves its own neighbours through `createRequire(import.meta.url)` —
+  sharp, onnxruntime-node, essentially every package with a native binding —
+  therefore received `undefined` and failed with `Cannot find module
+'@img/sharp-linux-x64/sharp.node' from ''`. sharp's own loader filters on
+  `MODULE_NOT_FOUND` and reports its generic "could not load the sharp module"
+  instead, so the empty referrer never appears in the error the developer sees.
+
+  `import.meta.url`, `import.meta.filename` and `import.meta.dirname` are now
+  defined to the file being run, so resolution behaves as it does under Node's
+  ESM loader.
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+## 0.12.122
+
+### Patch Changes
+
+- 3511717: A virtual user run refused for an unknown or acted-upon persona now answers 400, and one refused for a probing disposition in production answers 403, carrying the reason instead of a bare 500 errorId.
+- 3511717: Enabling a virtual user schedule whose disposition production refuses is now refused when written (403), rather than saved and then failing on every tick with nobody watching. Disabling one, or editing one that is off, is always allowed.
+
+## 0.12.121
+
+### Patch Changes
+
+- e84abd0: Add CredentialRejectedError: an upstream refused the stored per-user credential, so the user must sign in again or reconnect it.
+
+## 0.12.120
+
+### Patch Changes
+
+- 4a9dcd2: `admin:listUsers` now pages, counts and can carry roles.
+
+  `ListUsersInput` gains `offset` and `includeRoles`; `ListUsersOutput` gains `total`, and each `User` gains `roles` and `fields`. `total` is how many users match `search`, which is what a pager counts against — `users.length` never was, because it is capped by `limit`.
+
+  ```typescript
+  const { users, total } = await rpc.invoke('admin:listUsers', {
+    search: 'example.com',
+    limit: 50,
+    offset: 50,
+    includeRoles: true,
+  })
+  ```
+
+  Paging only means something over a stable order, so the query now sorts newest first rather than however the database felt like returning rows.
+
+  Synthetic principals — the platform credential owner, Fabric service users, scenario actors — are excluded by the query instead of dropped from the page afterwards. Filtering after the fact broke both halves of paging: `limit` had already counted the rows it then discarded, so a page came back short, and `offset` skipped synthetic rows as though they were people, so the same person could appear on two pages or on none.
+
+  `includeRoles` is refused without `admin:scopes:read`. `admin:users:list` says who may see the directory; it does not say who may see what each of those users can do.
+
+  `ScopeService` gains `listRolesForUsers(userIds)`, implemented in `@pikku/kysely`. It answers for every id asked for — an empty array for a user holding no roles, so a caller cannot read a missing key as "holds nothing" — and chunks its `in` list to stay inside the bound-parameter cap. A page of users used to cost one query per row, which on a database reached over the network is a round trip per row.
+
+  ```typescript
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
+  ```
+
+  Anything implementing `ScopeService` outside this repository has to add it.
+
+- 5ab24ad: Scenario recordings can be followed by eye, at no cost to the run. The encode holds each browser step's starting screen, and the last frame, for two seconds (`E2E_VIDEO_STEP_HOLD_MS`, `0` to turn off). The step offsets in the run record account for the holds. Recordings are made at the viewport's own size instead of Playwright's 800px downscale, and they show a pointer that follows the mouse and jumps to each filled field. Drivers get an optional `ScenarioBrowserProvider.markVideoStep(actor)`, which returns a step's offset in the finished video. It is preferred over `videoStartedAt`.
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+## 0.12.119
+
+### Patch Changes
+
+- e85f07e: A route declaring a numeric parameter could not be called over a query string. `coerceTopLevelDataFromSchema` converted an `array` from a comma-separated string and a `date-time` from text, but left numbers alone — and because the JSON Schema check runs before zod, `?year=2027` was rejected as `Instance type "string" is invalid. Expected "integer"` before the function ever ran. `z.coerce.number()` does not help: it runs after the schema has already refused. The shipped validator is spec-compliant and has no `coerceTypes` of its own, and `minimum`/`maximum` cannot stand in for one, being value constraints that apply only to instances that are already numbers.
+
+  `integer` and `number` now coerce from a string, on the same path as the two existing cases — so query strings, path params and argv reach a numeric parameter.
+
+  A string converts only when the number it produces prints back as the identical text. That rules out the readings that quietly rewrite the input — `007`, `+5`, `1e3`, `2027.50`, a padded `12` — and the values `Number` invents from nothing, where `''` and `'  '` both become `0`. It also rules out `9007199254740993`, which does not survive a double: a caller who sends an id as a string is usually doing so precisely because it does not, and rounding it silently would be data corruption. `NaN` and `Infinity` are refused for the same reason, and a fraction is refused where `integer` was asked for. Everything refused is left exactly as it arrived, so the validator reports the value the caller actually sent.
+
+  Note that this applies wherever the existing coercions already applied, which includes a JSON body — a string `"2027"` for a numeric field is now accepted there too, consistently with how an array and a `date-time` have always been read. A union `type` such as `['integer', 'null']` is left alone, as the array and `date-time` cases already leave it.
+
 ## 0.12.118
 
 ### Patch Changes

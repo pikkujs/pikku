@@ -8,27 +8,15 @@ import {
   reloadGeneratedMeta,
   reconcileAddonRegistry,
 } from '@pikku/core/dev'
-import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
+  InMemoryTriggerSourceStore,
+  InMemoryWorkflowService,
   LocalEmailService,
-  LocalCredentialService,
   spy,
-  InMemoryAgentRunStateService,
 } from '@pikku/core/services'
-import { InMemoryTriggerService } from '@pikku/core/services'
-import { InMemoryWorkflowService } from '@pikku/core/services'
-import {
-  KyselyAgentStorageService,
-  KyselyAgentRunStateService,
-  KyselyAgentRunService,
-  KyselyAnalyticsService,
-  KyselyFeatureFlagStore,
-  KyselyScopeService,
-  KyselyWebhookService,
-} from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -44,8 +32,13 @@ import {
   parseDatabaseUrl,
   type ResolvedDb,
 } from '../db/local-db.js'
-import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
-import { initOrWarn } from './init-or-warn.js'
+import {
+  loadCreateLocalServices,
+  loadUserBootstrap,
+  loadUserModule,
+} from './load-user-project.js'
+import { createDevCredentialService } from './dev-credentials.js'
+import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
@@ -55,8 +48,8 @@ import { serverReadyLine } from '../../server/server-ready.js'
 import { clearDevAddress, writeDevAddress } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
-import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { servedFrontend } from '../../utils/frontend.js'
 
 export const dev = pikkuSessionlessFunc<
   {
@@ -86,15 +79,7 @@ export const dev = pikkuSessionlessFunc<
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )
-    await enableDevActorSignIn(logger, async () => {
-      const state = await getInspectorState(true, false, false, true)
-      return Object.values(
-        resolvePersonas(
-          state.personas?.definitions ?? [],
-          config.scenarios?.emailDomain
-        )
-      )
-    })
+    enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
@@ -294,70 +279,6 @@ export const dev = pikkuSessionlessFunc<
 
     const requiredServices = inspectorState.serviceAggregation.requiredServices
 
-    const schedulerService = new InMemorySchedulerService()
-    const agentStorage = kysely
-      ? new KyselyAgentStorageService(kysely as any)
-      : undefined
-    const agentRunState = kysely
-      ? new KyselyAgentRunStateService(kysely as any)
-      : new InMemoryAgentRunStateService()
-    const agentRunService = kysely
-      ? new KyselyAgentRunService(kysely as any)
-      : undefined
-
-    if (agentStorage) await agentStorage.init()
-    if ('init' in agentRunState && typeof agentRunState.init === 'function') {
-      await agentRunState.init()
-    }
-
-    // Flags and analytics get the same local database the rest of the services
-    // do, so a flag an operator flips in the console survives a restart and a
-    // declared event lands somewhere a query can reach.
-    //
-    // Dropped with a warning rather than thrown on, unlike the agent services
-    // above: both tables are generated from a declaration the project may have
-    // added since it last migrated, and neither absence is worse than what a
-    // project has today — an unregistered flag source resolves every gate open,
-    // and analytics without a service falls back to the logger. Failing the
-    // boot instead would turn adding one `featureFlag:` into a dead dev server.
-    const featureFlags = kysely
-      ? await initOrWarn(
-          new KyselyFeatureFlagStore(kysely as any),
-          'featureFlags',
-          logger
-        )
-      : undefined
-    const analyticsService = kysely
-      ? await initOrWarn(
-          new KyselyAnalyticsService(kysely as any),
-          'analyticsService',
-          logger
-        )
-      : undefined
-    // Gated on `requiredServices` rather than on `kysely` alone, because that is
-    // the same set `pikku db generate` filters the runtime schemas by: a project
-    // that never asks for `scopeService` has no scope tables, and `init()` here
-    // would fail its boot over a service nothing uses.
-    const scopeService =
-      kysely && requiredServices.has('scopeService')
-        ? new KyselyScopeService(kysely as any)
-        : undefined
-    if (scopeService) {
-      await scopeService.init()
-      await scopeService.syncScopes(
-        flattenScopeDefinitions(inspectorState.scopes.definitions)
-      )
-      await scopeService.syncSystemRoles(
-        flattenSystemRoleDefinitions(inspectorState.systemRoles.definitions)
-      )
-    }
-
-    // InMemoryWorkflowService implements both the workflowService and
-    // workflowRunService surfaces (listRuns/getRun live on it). Expose the
-    // single instance under both names so addons like @pikku/addon-console
-    // can read runs in dev without projects having to wire their own backing
-    // store.
-    const devLogger = new ConsoleLogger()
     // Deployed agent units get their runner from the bundler; the dev server
     // has no equivalent, so construct one from env or agents 503 with
     // AIProviderNotConfiguredError. The template forwards injected services
@@ -375,51 +296,63 @@ export const dev = pikkuSessionlessFunc<
             variables,
           })
         : undefined
-    // The dev server runner (node http+ws, or bun-server) is resolved by DI in
-    // services.ts. Its EventHub is shared into the singleton services so
-    // function-side broadcasts reach the sockets the transport holds.
-    const eventHub = await devServerRunner.createEventHub()
-    const devQueueService = new InMemoryQueueService()
-    // The queue-only service delivers but keeps no history, so the console's
-    // webhooks page is empty on a project that has the tables for it. Same
-    // `requiredServices` gate as the scope service above.
-    const devWebhookService =
-      kysely && requiredServices.has('webhookService')
-        ? new KyselyWebhookService(devQueueService, kysely as any)
-        : new QueueWebhookService(devQueueService)
-    if (devWebhookService instanceof KyselyWebhookService) {
-      await devWebhookService.init()
-    }
-    const inMemoryServices = {
-      logger: devLogger,
-      ...(agentRunner ? { agentRunner } : {}),
-      emailService: test
-        ? spy('emailService', new LocalEmailService())
-        : new LocalEmailService(),
-      metaService: new LocalMetaService(pikkuDir),
-      ...(coverageService ? { coverageService } : {}),
-      schedulerService,
-      queueService: devQueueService,
-      webhookService: devWebhookService,
-      ...(scopeService ? { scopeService } : {}),
-      workflowService,
-      workflowRunService: workflowService,
-      triggerService: new InMemoryTriggerService(),
-      credentialService: new LocalCredentialService(),
-      agentStorage,
-      agentRunState,
-      agentRunService,
-      ...(featureFlags ? { featureFlags } : {}),
-      ...(analyticsService ? { analyticsService } : {}),
-      eventHub,
-      ...(kysely ? { kysely } : {}),
-      content: localContent,
-    }
-
-    const singletonServices = await userCreateSingletonServices(userConfig, {
-      ...inMemoryServices,
-      getInspectorState,
+    const credentialService = await createDevCredentialService({
+      kysely,
+      runtimeDir: resolvedRuntimeDir,
+      logger,
+      expectsCredentials:
+        requiredServices.has('credentialService') ||
+        inspectorState.credentials.definitions.length > 0 ||
+        inspectorState.rpc.wireAddonDeclarations.size > 0,
     })
+
+    const createLocalServices = await loadCreateLocalServices(
+      config.rootDir,
+      config.localServicesFile
+    )
+    // Only what the dev server alone has is passed in: the database it opened
+    // (so sqlite extensions and embedded postgres apply), its event hub,
+    // content store and credentials, the workflow service codegen already runs
+    // through, and the gates read off the live inspector rather than the ones
+    // baked in at the last codegen.
+    const localServices = await createLocalServices(
+      userConfig,
+      {
+        kysely: kysely ?? null,
+        logger: new ConsoleLogger(),
+        ...(agentRunner ? { agentRunner } : {}),
+        ...(test
+          ? { emailService: spy('emailService', new LocalEmailService()) }
+          : {}),
+        metaService: new LocalMetaService(pikkuDir),
+        ...(coverageService ? { coverageService } : {}),
+        schedulerService: new InMemorySchedulerService(),
+        triggerSourceStore: new InMemoryTriggerSourceStore(),
+        workflowService,
+        workflowRunService: workflowService,
+        credentialService,
+        // The dev server runner (node http+ws, or bun-server) is resolved by
+        // DI in services.ts. Its EventHub is shared into the singleton
+        // services so function-side broadcasts reach the sockets the
+        // transport holds.
+        eventHub: await devServerRunner.createEventHub(),
+        content: localContent,
+        getInspectorState,
+      },
+      {
+        logger,
+        requiredServices,
+        scopes: flattenScopeDefinitions(inspectorState.scopes.definitions),
+        systemRoles: flattenSystemRoleDefinitions(
+          inspectorState.systemRoles.definitions
+        ),
+      }
+    )
+
+    const singletonServices = await userCreateSingletonServices(
+      userConfig,
+      localServices
+    )
     const resolvedServices = {
       ...singletonServices,
       getInspectorState,
@@ -495,13 +428,24 @@ export const dev = pikkuSessionlessFunc<
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own
     // dev server owns dev; it proxies its API calls back to this port.
-    if (config.frontend) {
+    if (servedFrontend(config.frontends)) {
       logger.info(
         `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${boundPort}`
       )
     }
 
     logger.info(serverReadyLine(hostname, boundPort))
+
+    // After start, not before: some providers probe the URL before they accept it.
+    await reconcileDevWebhooks({
+      configDir: config.configDir,
+      logger,
+      singletonServices: resolvedServices,
+    }).catch((error) =>
+      logger.warn(
+        `Webhook sources were not registered: ${error instanceof Error ? error.message : String(error)}`
+      )
+    )
 
     // Written from the bound port, so anything that has to find this server later
     // reads where it actually is rather than where it was asked to be.

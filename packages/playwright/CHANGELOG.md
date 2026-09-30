@@ -1,5 +1,24 @@
 # @pikku/playwright
 
+## 0.12.86
+
+### Patch Changes
+
+- ff38f13: The recording cursor no longer appears in screenshots — it is drawn for the video only.
+- Updated dependencies [f02585e]
+- Updated dependencies [5586749]
+  - @pikku/core@0.12.127
+
+## 0.12.85
+
+### Patch Changes
+
+- 5ab24ad: Scenario recordings can be followed by eye, at no cost to the run. The encode holds each browser step's starting screen, and the last frame, for two seconds (`E2E_VIDEO_STEP_HOLD_MS`, `0` to turn off). The step offsets in the run record account for the holds. Recordings are made at the viewport's own size instead of Playwright's 800px downscale, and they show a pointer that follows the mouse and jumps to each filled field. Drivers get an optional `ScenarioBrowserProvider.markVideoStep(actor)`, which returns a step's offset in the finished video. It is preferred over `videoStartedAt`.
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
 ## 0.12.84
 
 ### Patch Changes

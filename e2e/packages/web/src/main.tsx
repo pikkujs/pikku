@@ -31,13 +31,18 @@ const readConsent = (): boolean =>
     .split(';')
     .some((entry) => entry.trim() === `${CONSENT_COOKIE}=1`)
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? window.location.origin
+
+/** Inside the Tauri shell rather than a browser tab. */
+const IN_NATIVE_SHELL = '__TAURI_INTERNALS__' in window
+
 const pikku = {
-  ...createPikku(PikkuFetch, PikkuRPC, { serverUrl: window.location.origin }),
+  ...createPikku(PikkuFetch, PikkuRPC, { serverUrl: SERVER_URL }),
   featureFlags: createFeatureFlags<FeatureFlagName>({
-    endpoint: `${window.location.origin}/feature-flags`,
+    endpoint: `${SERVER_URL}/feature-flags`,
   }),
   analytics: createAnalytics<AppEvent>({
-    endpoint: `${window.location.origin}/analytics`,
+    endpoint: `${SERVER_URL}/analytics`,
     // Short enough that a scenario can read the destination back without
     // waiting on the default, long enough to still be a batch.
     flushIntervalMs: 1_000,
@@ -120,6 +125,10 @@ const App: React.FC = () => {
       <DarkPanel />
     </main>
   )
+}
+
+if (IN_NATIVE_SHELL) {
+  void pikku.rpc.invoke('nativeOpened', { userAgent: navigator.userAgent })
 }
 
 createRoot(document.getElementById('root')!).render(

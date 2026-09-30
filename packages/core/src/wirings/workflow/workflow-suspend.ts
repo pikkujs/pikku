@@ -15,8 +15,8 @@ export type SuspendStore = Pick<
 /**
  * Record a suspension point and unwind the run.
  *
- * A suspension that has already succeeded returns instead of throwing, so a
- * replay walks past a gate the run has already passed through.
+ * The gate stays `running` while the run waits, so it reads as in progress; the
+ * replay that follows a resume settles it and walks past.
  */
 export const recordSuspension = async (
   store: SuspendStore,
@@ -49,13 +49,11 @@ export const recordSuspension = async (
     return
   }
 
-  if (stepState.status === 'pending') {
-    await store.setStepRunning(stepState.stepId)
+  if (stepState.status === 'running') {
+    await store.setStepResult(stepState.stepId, { reason })
+    return
   }
 
-  await store.setStepResult(stepState.stepId, {
-    reason,
-    suspendedAt: new Date().toISOString(),
-  })
+  await store.setStepRunning(stepState.stepId)
   throw new WorkflowSuspendedException(runId, reason)
 }

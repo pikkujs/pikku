@@ -25,6 +25,7 @@ import {
   KnowledgePlanShowInputSchema,
   KnowledgePlanShowOutputSchema,
 } from '../knowledge/schemas.js'
+import { knowledgeConsoleUrl } from '../knowledge/console-url.js'
 
 export const knowledgePlanSchema = pikkuSessionlessFunc({
   description:
@@ -39,8 +40,10 @@ export const knowledgePlanShow = pikkuSessionlessFunc({
     "Print a milestone's plan, either as it is stored or as the ordered list of work a build follows.",
   input: KnowledgePlanShowInputSchema,
   output: KnowledgePlanShowOutputSchema,
-  func: async ({ config }, input) =>
-    runKnowledgePlanShow(config.rootDir, input),
+  func: async ({ config }, input) => {
+    const result = await runKnowledgePlanShow(config.rootDir, input)
+    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+  },
 })
 
 export const knowledgePlanProgress = pikkuSessionlessFunc({
@@ -48,8 +51,10 @@ export const knowledgePlanProgress = pikkuSessionlessFunc({
     "Reconcile a milestone's plan against the generated meta and say what is still owed, so a milestone closes on what exists rather than on what was claimed.",
   input: KnowledgePlanProgressInputSchema,
   output: KnowledgePlanProgressOutputSchema,
-  func: async ({ config }, input) =>
-    runKnowledgePlanProgress(config.rootDir, input),
+  func: async ({ config }, input) => {
+    const result = await runKnowledgePlanProgress(config.rootDir, input)
+    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+  },
 })
 
 export const knowledgePlanSet = pikkuSessionlessFunc({
@@ -57,7 +62,10 @@ export const knowledgePlanSet = pikkuSessionlessFunc({
     'Validate a plan against its milestone note and write it, or write nothing and say what is wrong.',
   input: KnowledgePlanSetInputSchema,
   output: KnowledgePlanSetOutputSchema,
-  func: async ({ config }, input) => runKnowledgePlanSet(config.rootDir, input),
+  func: async ({ config }, input) => {
+    const result = await runKnowledgePlanSet(config.rootDir, input)
+    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+  },
 })
 
 export const knowledgePlanDefer = pikkuSessionlessFunc({

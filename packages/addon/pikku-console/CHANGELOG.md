@@ -1,3 +1,25 @@
+## 0.12.56
+
+### Patch Changes
+
+- 5bce779: The console shows webhook trigger sources. A trigger named `<source>:<event>` now pairs with its `wireTriggerWebhookSource` instead of reading as having nothing to listen to, and its row says which event it listens to and where it is received. Opening it shows the source's address, accepted request types, declared events, which lifecycle steps (receive, check, setup, teardown) it has, and whether its `<source>WebhookSecret` signing secret is saved, with a link to Credentials when it is not. `console:getAllMeta` now returns `webhookSourceMeta`.
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/better-auth@0.12.50
+
+## 0.12.55
+
+### Patch Changes
+
+- 5e93f30: Add `defineOutgoingWebhook({ event, title, description?, payload })` in `@pikku/core/webhook`. The CLI collects every exported declaration into `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` and `pikku-outgoing-webhooks.gen.ts`, which exports `OutgoingWebhooksMap`, `TypedWebhookService` and `typedWebhookService(service)`: `send` checks `data` against the declared payload for a declared event and accepts any other event unchanged. `MetaService.getOutgoingWebhooksMeta()` and the console addon's `outgoingWebhooksMeta` serve the declarations.
+- Updated dependencies [5e93f30]
+- Updated dependencies [5e93f30]
+  - @pikku/core@0.12.125
+
 ## 0.12.54
 
 ### Patch Changes
