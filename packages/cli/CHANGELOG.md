@@ -1,3 +1,64 @@
+## 0.12.176
+
+### Patch Changes
+
+- d327fa5: Two gaps from the August security sweep that never reached main:
+
+  - The memoized middleware chains are capped per wire type. The key is the requested wire id, so a caller varying RPC names could otherwise grow the cache without limit.
+  - The console's generated variable brokers require `pikku:console`. They are emitted into the application rather than the console addon, so the addon's scope never reached them and any signed-in user could read and overwrite variables through `/rpc`.
+
+- 211c5e1: `pikku fabric changes reply <id> --message "…" [--image path]` posts on an item's thread without asking (which parks it) or closing it (`done --note`) — for "not doing this, because…" or "blocked on X". `next` is now woken by fabric's `changes:<projectId>` events, re-reading the list on each one, with a three-minute safety poll while subscribed and the `--interval` poll with backoff when the stream is down; it sleeps exactly until the soonest held item becomes claimable. `list`, `show` and a refused `claim` print when a held or leased item is claimable. Short ids are looked up by fabric instead of by listing the project's oldest 200 items. Needs the matching fabric-api release.
+
+  `reply`, `ask` (question and each `--option`) and `file --title` now refuse blank text and send it trimmed. Their `.trim().min(1)` input schemas never ran: the CLI enforces no input schema at runtime, so `ask --question "   "` posted an empty question.
+
+- a9513b6: A trigger source store is now provided wherever an app runs: `pikku dev`, `pikku serve`, generated local services and the standalone deploy entry. Apps with a database get the Kysely store, falling back to memory when its table is not migrated yet. The admin addon's trigger-source functions and the webhook source runner no longer throw `No triggerSourceStore is configured`.
+- 0c88361: `pikku fabric config key=value` sets a project's Fabric settings: the showcase card, the guide build and the scenario-only environment. With no arguments, it now also shows them. A frontend in `pikku.config.json` can declare `routeParams`.
+- 7b0a5b3: Add `pikku fabric deploy logs <deployment-id>` to read a deployment's build log on request (last 100 lines by default; `--tail <n>` or `--full`). A failed `deploy apply` no longer says "The builder recorded no reason" — the builder's output is stored apart from the deployment row, so that was untrue whenever the log existed. It now points at the new command.
+- 0c88361: A Fabric project is named by an optional `fabric.projectId` in `pikku.config.json`. Without one, the CLI finds the project from the git remote — it asks Fabric for your organization's projects and picks the one whose repo is one of the checkout's remotes (`origin` first) — and writes the id into `pikku.config.json`. The write is never committed or pushed, and `pikku fabric deploy` ignores a `pikku.config.json` whose only change is `fabric.projectId`. `FABRIC_PROJECT_ID` overrides both. Two projects on one repo are refused rather than guessed between.
+
+  `pikku fabric link` writes `fabric.projectId` the same way and no longer commits or pushes anything on your behalf; it refuses a checkout that already names a project. This fixes the first deploy of a linked project failing on a config file that was never pushed. The separate Fabric config file is gone, and its `apiUrl` and `production.domain` settings with it: the api url you last logged in against is remembered in `~/.fabric/auth.json`, and custom domains are managed with `pikku fabric domains`.
+
+  New: `pikku fabric config` shows what the checkout resolves to and where each answer came from — the project (id, name, repo, production branch), the api url, and the frontends from `pikku.config.json`.
+
+- 15c292e: `#pikku/setup` exports `pikkuServerLifecycle`, typed to the project's own singleton services, so the server lifecycle shows up in `pikku doc` next to the other three bootstrap factories. An addon's setup barrel does not have it. The template and the bootstrap skill import it from there.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
+- Updated dependencies [d327fa5]
+- Updated dependencies [211c5e1]
+- Updated dependencies [a9513b6]
+- Updated dependencies [0c88361]
+- Updated dependencies [942ebdd]
+- Updated dependencies [65b0ba8]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+  - @pikku/skills@0.12.45
+  - @pikku/deploy-standalone@0.12.23
+  - @pikku/kysely@0.13.32
+  - @pikku/better-auth@0.12.52
+  - @pikku/inspector@0.12.98
+
 ## 0.12.175
 
 ### Patch Changes

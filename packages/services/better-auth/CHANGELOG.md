@@ -1,5 +1,17 @@
 # @pikku/better-auth
 
+## 0.12.52
+
+### Patch Changes
+
+- 65b0ba8: The OAuth proxy is now switched on by `OAUTH_PROXY_URL` and `OAUTH_PROXY_PROVIDERS`, not by `OAUTH_PROXY_SECRET`. `pikku db generate` loads the auth factory with a stub that answers every secret read with a made-up value, so a secret alone looked like a half-configured proxy and failed the command with "OAuth proxy is partly configured". A secret with no variables is now ignored; variables without the secret still fail at start and name it.
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- Updated dependencies [d327fa5]
+- Updated dependencies [942ebdd]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+
 ## 0.12.51
 
 ### Patch Changes

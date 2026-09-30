@@ -1,3 +1,37 @@
+## 0.12.98
+
+### Patch Changes
+
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
+- Updated dependencies [d327fa5]
+- Updated dependencies [942ebdd]
+- Updated dependencies [8ac25a8]
+- Updated dependencies [6606777]
+  - @pikku/core@0.12.132
+
 ## 0.12.97
 
 ### Patch Changes

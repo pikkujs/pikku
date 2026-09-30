@@ -1,5 +1,11 @@
 # @pikku/deploy-standalone
 
+## 0.12.23
+
+### Patch Changes
+
+- a9513b6: A trigger source store is now provided wherever an app runs: `pikku dev`, `pikku serve`, generated local services and the standalone deploy entry. Apps with a database get the Kysely store, falling back to memory when its table is not migrated yet. The admin addon's trigger-source functions and the webhook source runner no longer throw `No triggerSourceStore is configured`.
+
 ## 0.12.22
 
 ### Patch Changes
