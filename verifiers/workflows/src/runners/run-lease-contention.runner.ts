@@ -110,6 +110,7 @@ async function setup(): Promise<Harness> {
 
   let workflowService: Recording
   let leaseService: LeaseService
+  let probe: RunLeaseProbe
   if (backend === 'bullmq-mysql') {
     const { MySQLKyselyWorkflowService, MySQLKyselyLeaseService } =
       await import('@pikku/kysely-mysql')
@@ -126,7 +127,8 @@ async function setup(): Promise<Harness> {
     }
     leaseService = new MySQLKyselyLeaseService(db)
     const Service = recordingPasses(MySQLKyselyWorkflowService)
-    workflowService = new (Service as any)(db, { leaseService })
+    probe = new RunLeaseProbe(leaseService)
+    workflowService = new (Service as any)(db, { leaseService: probe })
   } else {
     const { PgKyselyWorkflowService, PgKyselyLeaseService } =
       await import('@pikku/kysely-postgres')
@@ -143,11 +145,11 @@ async function setup(): Promise<Harness> {
         ? new InMemoryLeaseService()
         : new PgKyselyLeaseService(db)
     const Service = recordingPasses(PgKyselyWorkflowService)
-    workflowService = new (Service as any)(db, { leaseService })
+    probe = new RunLeaseProbe(leaseService)
+    workflowService = new (Service as any)(db, { leaseService: probe })
   }
   await workflowService.init()
   closers.unshift(() => workflowService.close())
-  const probe = new RunLeaseProbe(leaseService)
 
   let queues: Parameters<typeof createSingletonServices>[1]
   let registerQueues: () => Promise<unknown> = async () => {}

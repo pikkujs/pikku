@@ -9,8 +9,8 @@
  *   without extension loading, for one that has it.
  * - `pikku db migrate` creates a pgvector column in PGlite, and the data
  *   directory it leaves answers a `<->` query.
- * - A standalone artifact carries the extension with it. The node bundle and
- *   the compiled bun binary are each copied out of the repo — so nothing can
+ * - A standalone artifact carries the extension with it. The compiled bun
+ *   binary, built by each bundler, is copied out of the repo — so nothing can
  *   resolve from a node_modules beside them — then run their own
  *   `db migrate` and answer a nearest-neighbour query over HTTP.
  *
@@ -329,28 +329,6 @@ async function checkArtifact(
   })
 }
 
-// --- node bundle ---
-let nodeBuilt = false
-await check('standalone (node): ships vec0 and the migrations', () => {
-  run('node', [PIKKU_BIN, 'deploy', 'apply', '--provider', 'standalone'], {
-    cwd: PROJECT_DIR,
-  })
-  for (const expected of ['bundle.js', 'sqlite-extensions', 'db/sqlite']) {
-    if (!existsSync(join(DIST_DIR, expected)))
-      throw new Error(`The artifact has no ${expected}`)
-  }
-  const shipped = readdirSync(join(DIST_DIR, 'sqlite-extensions'))
-  if (!shipped.some((file) => file.startsWith('vec0.')))
-    throw new Error(`No vec0 library shipped: ${shipped.join(', ')}`)
-  nodeBuilt = true
-})
-if (nodeBuilt) {
-  const dir = isolate('node')
-  await checkArtifact('standalone (node)', dir, 'node', [
-    join(dir, 'bundle.js'),
-  ])
-}
-
 // --- compiled bun binary ---
 // Once with the CLI under node (esbuild bundles) and once under bun (Bun.build
 // bundles): each bundler has to leave the extension manifest for the compile.
@@ -359,19 +337,9 @@ async function checkCompiledBinary(cli: 'node' | 'bun') {
   let bunBuilt = false
   await check(`${label}: compiles a binary`, () => {
     rmSync(join(PROJECT_DIR, '.deploy'), { recursive: true, force: true })
-    run(
-      cli,
-      [
-        PIKKU_BIN,
-        'deploy',
-        'apply',
-        '--provider',
-        'standalone',
-        '--runtime',
-        'bun',
-      ],
-      { cwd: PROJECT_DIR }
-    )
+    run(cli, [PIKKU_BIN, 'deploy', 'apply', '--provider', 'standalone'], {
+      cwd: PROJECT_DIR,
+    })
     if (!existsSync(join(DIST_DIR, BINARY_NAME)))
       throw new Error(`No ${BINARY_NAME} binary in ${DIST_DIR}`)
     bunBuilt = true
