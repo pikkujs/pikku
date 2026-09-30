@@ -175,6 +175,21 @@ check('init saves the native entry, then writes the project from it', () => {
   )
 })
 
+check('init lists an icon for every desktop bundler, and writes each', () => {
+  const conf = readJson('apps/shop/src-tauri/tauri.conf.json')
+  const icons: string[] = conf.bundle.icon
+  assert(
+    icons.some((icon) => icon.endsWith('.ico')),
+    `the Windows bundler refuses to run without an .ico: ${JSON.stringify(icons)}`
+  )
+  for (const icon of icons) {
+    assert(
+      existsSync(join(APP, 'apps/shop/src-tauri', icon)),
+      `${icon} is listed but was not written`
+    )
+  }
+})
+
 check('init adds the Tauri packages and keeps a pinned version', () => {
   const pkg = readJson('apps/shop/package.json')
   assert(

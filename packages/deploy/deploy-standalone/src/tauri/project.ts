@@ -1,7 +1,7 @@
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
-import { renderPlaceholderIcon } from './icon.js'
+import { renderPlaceholderIco, renderPlaceholderIcon } from './icon.js'
 import { nativeIdentifierProblems } from './identifier.js'
 import { iosUsageDescriptions, resolveNativeApis } from './native.js'
 import {
@@ -61,6 +61,7 @@ const DESKTOP_CFG =
 const MOBILE_CFG = 'cfg(any(target_os = "android", target_os = "ios"))'
 
 const ICON_SIZE = 512
+const ICO_SIZE = 256
 
 const PIKKU_RS = 'src/pikku.rs'
 const PIKKU_CAPABILITY = 'capabilities/pikku.json'
@@ -210,7 +211,7 @@ const renderInitialConfig = (spec: NativeProjectSpec): string =>
         bundle: {
           active: true,
           targets: 'all',
-          icon: ['icons/icon.png'],
+          icon: ['icons/icon.png', 'icons/icon.ico'],
         },
       },
       spec
@@ -475,6 +476,7 @@ export const createNativeProject = async (
     'src/main.rs': renderMainRs(crateName(spec.name)),
     'src/lib.rs': renderLibRs({ bundleServer: spec.mode.kind === 'sidecar' }),
     'icons/icon.png': renderPlaceholderIcon(ICON_SIZE),
+    'icons/icon.ico': renderPlaceholderIco(ICO_SIZE),
     '.gitignore': GITIGNORE,
     'Info.ios.plist':
       Object.keys(plist).length > 0 ? renderIosPlist(plist) : undefined,

@@ -51,8 +51,8 @@ export const renderNativeNextSteps = ({
   }
 
   lines.push(
-    `  ${tauri} icon <png>   replaces the placeholder icon with a full set — Windows`,
-    '                           and macOS bundles need the .ico and .icns it writes'
+    `  ${tauri} icon <png>   replaces the placeholder icon with your artwork, in every`,
+    '                           size each platform asks for'
   )
 
   if (platforms.includes('android')) {
