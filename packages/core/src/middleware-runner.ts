@@ -118,28 +118,77 @@ const getMiddlewareByName = (name: string): CorePikkuMiddleware | undefined => {
   return middleware?.[0]
 }
 
+/**
+ * Per-wire-type cap on the memoized middleware chains. The cache key is the
+ * wire id, which for an RPC is the requested function name — and a name can
+ * carry attacker-influenced version/alias suffixes that still resolve. Left
+ * unbounded, a caller could grow the map without limit and exhaust memory. It
+ * is a pure memoization, so evicting the oldest entry and recomputing on the
+ * next miss is free of correctness cost. The cap sits well above any realistic
+ * function count.
+ */
+const MIDDLEWARE_CACHE_MAX = 4096
+
+const newCache = (): Map<string, readonly CorePikkuMiddleware[]> => new Map()
+
 const middlewareCache: Record<
   PikkuWiringTypes,
-  Record<string, readonly CorePikkuMiddleware[]>
+  Map<string, readonly CorePikkuMiddleware[]>
 > = {
-  http: {},
-  rpc: {},
-  channel: {},
-  queue: {},
-  scheduler: {},
-  trigger: {},
-  mcp: {},
-  agent: {},
-  cli: {},
-  workflow: {},
-  gateway: {},
+  http: newCache(),
+  rpc: newCache(),
+  channel: newCache(),
+  queue: newCache(),
+  scheduler: newCache(),
+  trigger: newCache(),
+  mcp: newCache(),
+  agent: newCache(),
+  cli: newCache(),
+  workflow: newCache(),
+  gateway: newCache(),
+}
+
+const cacheGet = (
+  wireType: PikkuWiringTypes,
+  uid: string
+): readonly CorePikkuMiddleware[] | undefined => {
+  const cache = middlewareCache[wireType]
+  const hit = cache.get(uid)
+  if (hit !== undefined) {
+    // Refresh recency: delete + re-set moves the key to the end (LRU).
+    cache.delete(uid)
+    cache.set(uid, hit)
+  }
+  return hit
+}
+
+const cacheSet = (
+  wireType: PikkuWiringTypes,
+  uid: string,
+  value: readonly CorePikkuMiddleware[]
+): readonly CorePikkuMiddleware[] => {
+  const cache = middlewareCache[wireType]
+  cache.set(uid, value)
+  if (cache.size > MIDDLEWARE_CACHE_MAX) {
+    // Evict the least-recently-used entry (Map iteration is insertion order).
+    const oldest = cache.keys().next().value
+    if (oldest !== undefined) cache.delete(oldest)
+  }
+  return value
 }
 
 export const clearMiddlewareCache = () => {
   for (const key of Object.keys(middlewareCache) as PikkuWiringTypes[]) {
-    middlewareCache[key] = {}
+    middlewareCache[key] = newCache()
   }
 }
+
+/** The per-wire-type entry cap. Exposed so the boundedness invariant is testable. */
+export const MIDDLEWARE_CACHE_MAX_ENTRIES = MIDDLEWARE_CACHE_MAX
+
+/** Current number of cached chains for a wire type. Test/observability only. */
+export const middlewareCacheSize = (wireType: PikkuWiringTypes): number =>
+  middlewareCache[wireType].size
 
 export const combineMiddleware = (
   wireType: PikkuWiringTypes,
@@ -158,8 +207,9 @@ export const combineMiddleware = (
     packageName?: string | null
   } = {}
 ): readonly CorePikkuMiddleware[] => {
-  if (middlewareCache[wireType][uid]) {
-    return middlewareCache[wireType][uid]
+  const cached = cacheGet(wireType, uid)
+  if (cached) {
+    return cached
   }
 
   const resolved: CorePikkuMiddleware[] = []
@@ -229,9 +279,9 @@ export const combineMiddleware = (
   }
 
   sortByPriority(resolved)
-  middlewareCache[wireType][uid] = freezeDedupe(
-    resolved
-  ) as readonly CorePikkuMiddleware[]
-
-  return middlewareCache[wireType][uid]
+  return cacheSet(
+    wireType,
+    uid,
+    freezeDedupe(resolved) as readonly CorePikkuMiddleware[]
+  )
 }

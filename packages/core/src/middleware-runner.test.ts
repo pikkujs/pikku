@@ -4,6 +4,8 @@ import {
   combineMiddleware,
   addTagMiddleware,
   runMiddleware,
+  middlewareCacheSize,
+  MIDDLEWARE_CACHE_MAX_ENTRIES,
 } from './middleware-runner.js'
 import { pikkuState, resetPikkuState } from './pikku-state.js'
 import type {
@@ -629,5 +631,35 @@ describe('combineMiddleware global middleware namespaces', () => {
     })
 
     assert.deepEqual(result, [mine])
+  })
+})
+
+describe('middleware cache is bounded', () => {
+  beforeEach(() => {
+    resetPikkuState()
+  })
+
+  test('does not grow without limit under many distinct wire ids', () => {
+    // Simulate an attacker varying the RPC name (the cache key) across far more
+    // distinct values than any real deployment has functions. Memory must stay
+    // bounded — a correct result is still returned for every key, but old
+    // entries are evicted rather than retained forever.
+    const wireMiddleware = [pikkuMiddleware(async (_s, _w, next) => next())]
+    for (let i = 0; i < 10_000; i++) {
+      const result = combineMiddleware('rpc', `attacker-name-${i}`, {
+        wireMiddleware,
+      })
+      assert.equal(result.length, 1)
+    }
+    assert.ok(
+      middlewareCacheSize('rpc') <= MIDDLEWARE_CACHE_MAX_ENTRIES,
+      `cache grew to ${middlewareCacheSize('rpc')}, over the ${MIDDLEWARE_CACHE_MAX_ENTRIES} cap`
+    )
+    // Re-resolving a very old (evicted) key must still return a correct chain,
+    // proving eviction is safe for this pure memoization.
+    const recomputed = combineMiddleware('rpc', 'attacker-name-0', {
+      wireMiddleware,
+    })
+    assert.equal(recomputed.length, 1)
   })
 })
