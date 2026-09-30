@@ -31,7 +31,7 @@ import {
   getInitialInspectorState,
   ErrorCode,
 } from '@pikku/inspector'
-import { glob } from 'tinyglobby'
+import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
@@ -324,16 +324,11 @@ export const createSingletonServices: CreateSingletonServices<
       (unfilteredStateIsSetupOnly && !setupOnly && !preloadedInspectorState)
     ) {
       // Run inspector WITHOUT filters to get full state
-      const wiringFiles = (
-        await Promise.all(
-          srcDirectories.map((dir) =>
-            glob(`${path.join(rootDir, dir)}/**/*.ts`, {
-              ignore: config.ignoreFiles || [],
-              absolute: true,
-            })
-          )
-        )
-      ).flat()
+      const wiringFiles = await findSourceFiles(
+        rootDir,
+        srcDirectories,
+        config.ignoreFiles || []
+      )
 
       const scaffoldFiles = [
         config.consoleFunctionsFile,
