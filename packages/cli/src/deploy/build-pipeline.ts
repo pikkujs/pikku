@@ -600,6 +600,15 @@ export async function runBuildPipeline(options: {
             )
           ),
         ].filter((dep) => dep !== unit.name)
+        if (unit.dispatch) {
+          const dispatch: Record<string, string> = {}
+          for (const [rpcName, target] of Object.entries(unit.dispatch)) {
+            const merged = mergedNames.has(target) ? serverUnitName : target
+            if (merged !== unit.name) dispatch[rpcName] = merged
+          }
+          unit.dispatch =
+            Object.keys(dispatch).length > 0 ? dispatch : undefined
+        }
       }
 
       logger.info(

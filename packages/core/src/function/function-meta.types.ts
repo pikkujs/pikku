@@ -148,6 +148,13 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      /**
+       * RPC names this function's own body calls by literal name through
+       * `rpc.invoke(...)` / `rpc.remote(...)`. The deploy planner binds the
+       * function's unit to each callee's unit from this; a call with a computed
+       * name is not listed, and is warned about instead.
+       */
+      invokes: string[]
       /** File containing the handler body when it differs from sourceFile (imported handlers) */
       bodySourceFile?: string
       /** 1-indexed first line of the handler body (verbose meta; coverage mapping) */
