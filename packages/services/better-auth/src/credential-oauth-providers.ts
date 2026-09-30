@@ -18,6 +18,7 @@ export interface CredentialOAuthProvider {
   authorizationUrl: string
   tokenUrl: string
   scopes?: string[]
+  scopeSeparator?: string
   pkce?: boolean
   authorizationUrlParams?: Record<string, string>
   /**
@@ -119,6 +120,7 @@ export const credentialOAuthProviders = async (
           authorizationUrl: config.authorizationUrl,
           tokenUrl: config.tokenUrl,
           scopes: config.scopes,
+          scopeSeparator: config.scopeSeparator,
           pkce: config.pkce,
           // Provider-specific flags that decide whether a refresh token is issued
           // at all (access_type=offline, duration=permanent).

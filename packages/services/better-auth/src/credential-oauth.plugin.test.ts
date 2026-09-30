@@ -187,6 +187,30 @@ describe('credentialOAuth plugin', () => {
     assert.match(url, /credential-oauth%2Fcallback%2Facme/)
   })
 
+  test('scopes are joined with a space unless the provider says otherwise', async () => {
+    const twoScopes = { ...provider('acme', 'wire'), scopes: ['read', 'write'] }
+    const auth = makeAuth(emptyDb(), [
+      twoScopes,
+      { ...twoScopes, providerId: 'twist', scopeSeparator: ',' },
+    ])
+    const { cookie } = await signUp(auth, 'user@example.com')
+
+    const space = new URL((await (await link(auth, 'acme', cookie)).json()).url)
+    const comma = new URL((await (await link(auth, 'twist', cookie)).json()).url)
+
+    assert.equal(space.searchParams.get('scope'), 'read write')
+    assert.equal(comma.searchParams.get('scope'), 'read,write')
+  })
+
+  test('a provider with no scopes gets no scope parameter', async () => {
+    const auth = makeAuth(emptyDb(), [{ ...provider('acme', 'wire'), scopes: [] }])
+    const { cookie } = await signUp(auth, 'user@example.com')
+
+    const url = new URL((await (await link(auth, 'acme', cookie)).json()).url)
+
+    assert.equal(url.searchParams.has('scope'), false)
+  })
+
   // Connecting a singleton rebinds the token for EVERY user of the app, so an
   // ordinary signed-in caller must not be able to do it just by being signed in.
   test('a singleton link is refused without admin:credentials:link', async () => {

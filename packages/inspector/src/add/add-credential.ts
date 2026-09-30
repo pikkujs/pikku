@@ -131,6 +131,10 @@ export const addCredential: AddWiring = (
       ) as string | null
       const tokenUrl = getPropertyValue(oauth2Obj, 'tokenUrl') as string | null
       const scopes = getArrayPropertyValue(oauth2Obj, 'scopes')
+      const scopeSeparator = getPropertyValue(
+        oauth2Obj,
+        'scopeSeparator'
+      ) as string | null
       const pkce = getPropertyValue(oauth2Obj, 'pkce') as boolean | null
       const additionalParams = getRecordPropertyValue(
         oauth2Obj,
@@ -144,6 +148,7 @@ export const addCredential: AddWiring = (
           authorizationUrl,
           tokenUrl,
           scopes,
+          scopeSeparator: scopeSeparator || undefined,
           pkce: pkce || undefined,
           additionalParams: additionalParams || undefined,
         }

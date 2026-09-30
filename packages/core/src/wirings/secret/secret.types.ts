@@ -32,6 +32,12 @@ export type OAuth2CredentialConfig = {
   authorizationUrl: string
   tokenUrl: string
   scopes: string[]
+  /**
+   * What joins `scopes` in the authorization URL. RFC 6749 says a space, which
+   * is the default; a few providers (Twist) document a comma. An empty `scopes`
+   * omits the parameter altogether.
+   */
+  scopeSeparator?: string
   pkce?: boolean
   /** Appended to the authorization URL's query string. */
   additionalParams?: Record<string, string>
