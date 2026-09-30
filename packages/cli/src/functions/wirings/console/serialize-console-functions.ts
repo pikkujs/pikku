@@ -41,6 +41,7 @@ import {
 
 export const pikkuConsoleGetVariable = pikkuFunc({
   tags: ['pikku'],
+  scopes: ['pikku:console'],
   description: 'Get the current value of a variable',
   expose: true,
   input: VariableRef,
@@ -57,6 +58,7 @@ export const pikkuConsoleGetVariable = pikkuFunc({
 
 export const pikkuConsoleSetVariable = pikkuFunc({
   tags: ['pikku'],
+  scopes: ['pikku:console'],
   description: 'Set the value of a variable',
   expose: true,
   input: SetVariable,
