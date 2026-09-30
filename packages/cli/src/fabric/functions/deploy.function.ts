@@ -373,7 +373,7 @@ export async function applyDeploy(
       ref: resolved,
       expectedHeadSha: safety.headSha,
       ...(input.reset ? { resetDatabase: true } : {}),
-    } as Parameters<typeof rpc.invoke<'deployByStageKind'>>[1])
+    })
     // Before `started` is set: the resume hint would offer to approve a
     // deployment that was created without the reset that was asked for.
     if (input.reset) assertResetHonoured(created, ctx.apiUrl)
