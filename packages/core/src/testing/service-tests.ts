@@ -9,6 +9,7 @@ import type { SecretService } from '../services/secret-service.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { SessionStore } from '../services/session-store.js'
+import type { LeaseService } from '../services/lease-service.js'
 
 export interface ServiceTestConfig {
   name: string
@@ -35,6 +36,7 @@ export interface ServiceTestConfig {
       previousKey?: string
     }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>
     sessionStore?: () => Promise<SessionStore>
+    leaseService?: () => Promise<LeaseService>
   }
 }
 
@@ -48,6 +50,7 @@ import { defineSecretServiceTests } from './service-tests/secret-service-tests.j
 import { defineCredentialServiceTests } from './service-tests/credential-service-tests.js'
 import { defineAgentRunServiceTests } from './service-tests/agent-run-service-tests.js'
 import { defineSessionStoreTests } from './service-tests/session-store-tests.js'
+import { defineLeaseServiceTests } from './service-tests/lease-service-tests.js'
 
 /**
  * The shared conformance suite every storage backend runs.
@@ -91,5 +94,8 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   }
   if (services.sessionStore) {
     defineSessionStoreTests(name, services.sessionStore)
+  }
+  if (services.leaseService) {
+    defineLeaseServiceTests(name, services.leaseService)
   }
 }

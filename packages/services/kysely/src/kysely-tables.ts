@@ -281,6 +281,15 @@ export interface PikkuTriggerSourceTable {
   updatedAt: Generated<Date>
 }
 
+/** A named lease, current or last. */
+export interface PikkuLeaseTable {
+  key: string
+  holder: string
+  token: number
+  /** Epoch milliseconds on the clock leases are judged by; see `appNowMs`. */
+  expiresAt: number
+}
+
 /** One subject's short-circuit, in either direction, over a flag's rollout. */
 export interface PikkuFeatureFlagOverridesTable {
   flag: string
@@ -479,6 +488,7 @@ export interface KyselyPikkuDB {
   pikkuFeatureFlags: PikkuFeatureFlagsTable
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   pikkuTriggerSource: PikkuTriggerSourceTable
+  pikkuLease: PikkuLeaseTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable

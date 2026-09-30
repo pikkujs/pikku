@@ -43,6 +43,14 @@ export {
   type TriggerSourceRow,
   type TriggerSourceStore,
 } from './trigger-source-store.js'
+export {
+  LeaseLostError,
+  LeaseTakenError,
+  holdLease,
+  type Lease,
+  type LeaseService,
+} from './lease-service.js'
+export { InMemoryLeaseService } from './in-memory-lease-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
 export {

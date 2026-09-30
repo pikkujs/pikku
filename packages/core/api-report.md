@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3160 observable things**: 1046 exported names, plus
-2114 members on the classes and interfaces among them, reachable
+**3178 observable things**: 1052 exported names, plus
+2126 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,13 +14,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 169 | 137 | 453 |
+| `./services` | 175 | 143 | 464 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 24 | 21 | 81 |
+| `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
@@ -218,6 +218,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   webhookService?: WebhookService
   incomingWebhookService?: IncomingWebhookService
   triggerSourceStore?: TriggerSourceStore
+  leaseService?: LeaseService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -4983,6 +4984,7 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
+holdLease: <T>(leases: LeaseService, key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs?: number) => Promise<T>
 export type IncomingWebhookAttempt = {
   trigger: string
   error?: string
@@ -5014,6 +5016,13 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async findRunByToolCallId(toolCallId: string): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
+}
+export class InMemoryLeaseService implements LeaseService {
+  constructor(private now: () => number = Date.now)
+  async acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  async refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  async release(lease: Lease): Promise<void>
+  async get(key: string): Promise<Lease | null>
 }
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
@@ -5088,6 +5097,24 @@ export class JsonConsoleLogger implements Logger {
 export interface JWTService {
   encode: <T extends any>(expiresIn: RelativeTimeInput, payload: T) => Promise<string>
   decode: <T>(hash: string, invalidHashError?: Error, debug?: boolean) => Promise<T>
+}
+export type Lease = {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+export class LeaseLostError extends Error {
+  constructor(public readonly key: string)
+}
+export interface LeaseService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  release(lease: Lease): Promise<void>
+  get(key: string): Promise<Lease | null>
+}
+export class LeaseTakenError extends Error {
+  constructor(public readonly key: string)
 }
 export class LocalCredentialService implements CredentialService {
   async get<T = unknown>(name: string, userId?: string): Promise<T | null>
@@ -6268,7 +6295,7 @@ clearPikkuRuntimeState: () => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService> }
 }
 ```
 
