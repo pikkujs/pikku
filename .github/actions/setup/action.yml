@@ -98,7 +98,7 @@ runs:
             # job then fails much later as a missing module — which is how a
             # flake extracting uWebSockets.js surfaced four jobs downstream as
             # `Cannot find package 'better-sqlite3'`.
-            dangling=$(find . -maxdepth 6 -path '*/node_modules/*' -xtype l -print 2>/dev/null | head -20)
+            dangling=$(find . -maxdepth 6 -path '*/node_modules/*' -type l ! -exec test -e {} \; -print 2>/dev/null | head -20)
             if [ -n "$dangling" ]; then
               echo "::warning::node_modules holds links to packages that were never installed:"
               echo "$dangling"
