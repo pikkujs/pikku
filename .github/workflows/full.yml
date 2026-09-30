@@ -92,6 +92,7 @@ jobs:
             release,
             deploy-azure,
             deploy-standalone,
+            app-native,
             better-auth,
             next-better-auth,
             tanstack-start-better-auth,

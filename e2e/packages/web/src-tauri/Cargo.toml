@@ -1,0 +1,39 @@
+[package]
+name = "web-app"
+version = "0.1.0"
+edition = "2021"
+
+# A mobile build never calls `main`: Android loads the crate as a cdylib through
+# JNI and iOS links it as a staticlib. Both need a library target, and its name
+# is what main.rs calls into.
+[lib]
+name = "web_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+# The two marked blocks below are rewritten by `pikku app native add` and
+# `upgrade` from the frontend's `native.plugins`. Add your own crates outside
+# them; delete a marker and pikku will refuse to touch this file.
+[dependencies]
+tauri = { version = "2", features = [] }
+# pikku:plugins:start
+# pikku:plugins:end
+
+# Focusing an already-open window is a desktop concept, and the plugin has no
+# build for a mobile target.
+[target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = "2"
+
+# Plugins that exist only for iOS and Android; as plain dependencies they would
+# break every desktop build of the same crate.
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+# pikku:mobile-plugins:start
+# pikku:mobile-plugins:end
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+strip = true

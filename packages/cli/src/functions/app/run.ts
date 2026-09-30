@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { isAbsolute, join, relative } from 'node:path'
+import { dirname, isAbsolute, join, relative } from 'node:path'
 import {
   NATIVE_PROJECT_DIR,
   checkNativeProject,
@@ -203,13 +203,24 @@ const syncPackageJson = (dir: string, plugins: readonly string[]): boolean => {
   return true
 }
 
-/** How this project runs a package script, judged by its lockfile. */
+const LOCKFILE_RUNNERS: ReadonlyArray<[string, string]> = [
+  ['bun.lock', 'bun run'],
+  ['bun.lockb', 'bun run'],
+  ['pnpm-lock.yaml', 'pnpm'],
+  ['yarn.lock', 'yarn'],
+  ['package-lock.json', 'npm run'],
+]
+
+/**
+ * How this project runs a package script, judged by the nearest lockfile —
+ * searched upward, since a project inside a workspace has none of its own.
+ */
 const scriptRunner = (project: AppProject): string => {
-  const has = (file: string) => existsSync(join(project.rootDir, file))
-  if (has('bun.lock') || has('bun.lockb')) return 'bun run'
-  if (has('pnpm-lock.yaml')) return 'pnpm'
-  if (has('yarn.lock')) return 'yarn'
-  return 'npm run'
+  for (let dir = project.rootDir; ; dir = dirname(dir)) {
+    const found = LOCKFILE_RUNNERS.find(([file]) => existsSync(join(dir, file)))
+    if (found) return found[1]
+    if (dirname(dir) === dir) return 'npm run'
+  }
 }
 
 const hasRust = (): boolean =>

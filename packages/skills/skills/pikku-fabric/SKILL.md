@@ -186,31 +186,38 @@ packages/functions/
 apps/app/              # Frontend(s)
 db/sqlite/             # Plain .sql migrations, numbered, gap-free (project root)
 db/sqlite-dev-seed.sql # Dev-only test data, applied by `pikku db reset`
-pikku.config.json      # Pikku + deploy config (project root)
-pikkufabric.config.json # Fabric project link + frontends (project root)
+pikku.config.json      # Pikku + deploy config, and the frontends (project root)
+pikkufabric.config.json # Fabric project link (project root)
 ```
 
 ## `pikkufabric.config.json`
 
-Links the repo to a Fabric project and declares its frontends:
+Links the repo to a Fabric project:
 
 ```json
 {
   "projectId": "my-project-id",
   "production": {
     "domain": "example.com"
-  },
-  "frontends": {
-    "app": {
-      "cwd": "apps/app",
-      "primary": true,
-      "deploy": true,
-      "kind": "ssr",
-      "dev": {
-        "command": ["yarn", "dev"],
-        "port": 7105,
-        "healthPath": "/"
-      }
+  }
+}
+```
+
+The apps are not declared here. They are the `frontends` in `pikku.config.json`,
+the same list `pikku serve`, `pikku app` and native builds read, and
+`pikku fabric validate` and `smoke` read them from there:
+
+```json
+"frontends": {
+  "app": {
+    "cwd": "apps/app",
+    "primary": true,
+    "deploy": true,
+    "kind": "ssr",
+    "dev": {
+      "command": ["yarn", "dev"],
+      "port": 7105,
+      "healthPath": "/"
     }
   }
 }
@@ -221,7 +228,9 @@ Links the repo to a Fabric project and declares its frontends:
   unlinked.
 - `production.domain`: optional custom domain. Production always maps to `main`;
   without a domain it lives on the platform `*.pikkufabric.app` hostnames.
-- `frontends`: each entry declares a frontend app with its dev command and port
+- `frontends` (in `pikku.config.json`): each entry declares a frontend app with
+  its dev command and port. A `frontends` key left in `pikkufabric.config.json`
+  is ignored
 
 Several CLI messages call this file `fabric.config.json` — `fabric init --force`,
 `fabric link --apiUrl`, and the `domains` commands' "No fabric.config.json found".
@@ -520,7 +529,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
 4. **Replace `process.env` calls**: plain config becomes `defineVariable` + `variables.get()`, anything sensitive becomes `defineSecret` + `secrets.getSecret()`.
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles` — plus `metaLocale` if the team does not work in English, which is the language every `description`, `title` and step `template` is then authored in.
-6. **Add `pikkufabric.config.json`** at project root with `projectId`, `production.domain`, and `frontends` (production is always `main`, so there is no `production.branch`).
+6. **Add `pikkufabric.config.json`** at project root with `projectId` and `production.domain` (production is always `main`, so there is no `production.branch`), and declare the apps as `frontends` in `pikku.config.json`.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
 8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.
 

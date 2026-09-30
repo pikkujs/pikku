@@ -4,14 +4,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "vite build"
+    "tauri": "tauri",
+    "build": "vite build",
+    "build:native": "vite build --mode native"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2",
     "@pikku/react": "*",
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",
