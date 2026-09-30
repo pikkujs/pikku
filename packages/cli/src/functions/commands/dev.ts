@@ -12,6 +12,7 @@ import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
+  InMemoryTriggerSourceStore,
   InMemoryWorkflowService,
   LocalEmailService,
   spy,
@@ -326,6 +327,7 @@ export const dev = pikkuSessionlessFunc<
         metaService: new LocalMetaService(pikkuDir),
         ...(coverageService ? { coverageService } : {}),
         schedulerService: new InMemorySchedulerService(),
+        triggerSourceStore: new InMemoryTriggerSourceStore(),
         workflowService,
         workflowRunService: workflowService,
         credentialService,

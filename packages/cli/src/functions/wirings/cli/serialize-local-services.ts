@@ -202,6 +202,8 @@ const inMemoryBody = (
   }
   const queueService = new InMemoryQueueService()
   const workflowService = new InMemoryWorkflowService()
+  const triggerSourceStore = new InMemoryTriggerSourceStore()
+
   return {
     emailService: new LocalEmailService(),
 ${localCLI ? cliOnlyServices : ''}    queueService,
@@ -210,6 +212,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     workflowService,
     workflowRunService: workflowService,
     triggerService: new InMemoryTriggerService(),
+    triggerSourceStore,
     agentStorage: undefined,
     agentRunState: new InMemoryAgentRunStateService(),
     agentRunService: undefined,
@@ -320,6 +323,13 @@ export const createLocalServices = async (
     await incomingWebhookService.init()
   }
 
+  // Falls back to the in-memory store when the table is not migrated yet, so
+  // the admin addon's trigger-source functions work rather than throwing.
+  const triggerSourceStore =
+    (kysely
+      ? await initOrWarn(new KyselyTriggerSourceStore(kysely), 'triggerSourceStore', warnLogger)
+      : undefined) ?? new InMemoryTriggerSourceStore()
+
   // One instance under both names: InMemoryWorkflowService implements the
   // workflowRunService surface too, which the console reads runs through.
   const workflowService = new InMemoryWorkflowService()
@@ -333,6 +343,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     workflowService,
     workflowRunService: workflowService,
     triggerService: new InMemoryTriggerService(),
+    triggerSourceStore,
     agentStorage,
     agentRunState,
     agentRunService,
@@ -403,6 +414,7 @@ export const serializeLocalServices = ({
   InMemoryAgentRunStateService,
   InMemoryQueueService,
   InMemoryTriggerService,
+  InMemoryTriggerSourceStore,
   InMemoryWorkflowService,
   LocalEmailService,
   QueueWebhookService,
@@ -426,6 +438,7 @@ export const serializeLocalServices = ({
   KyselyFeatureFlagStore,
   KyselyIncomingWebhookService,
   KyselyScopeService,
+  KyselyTriggerSourceStore,
   KyselyWebhookService,
 } from '@pikku/kysely'`)
   }

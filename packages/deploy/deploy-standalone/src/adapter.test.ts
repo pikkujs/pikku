@@ -885,3 +885,26 @@ describe('StandaloneProviderAdapter SQLite extensions', () => {
     assert.doesNotMatch(source, /__pikkuSqliteExtensions/)
   })
 })
+
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter trigger source store (${runtime})`, () => {
+    test('an app with a database gets the Kysely store, falling back to memory', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(source, /new KyselyTriggerSourceStore\(kysely\)/)
+      assert.match(source, /new InMemoryTriggerSourceStore\(\)/)
+      assert.match(source, /\n\s+triggerSourceStore,\n/)
+    })
+
+    test('an app without a database gets the in-memory store', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(baseContext)
+
+      assert.match(source, /new InMemoryTriggerSourceStore\(\)/)
+      assert.doesNotMatch(source, /KyselyTriggerSourceStore/)
+    })
+  })
+}
