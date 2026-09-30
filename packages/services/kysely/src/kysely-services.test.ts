@@ -11,6 +11,7 @@ import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyChannelStore } from './kysely-channel-store.js'
 import { KyselyEventHubStore } from './kysely-eventhub-store.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
+import { InMemoryLeaseService } from '@pikku/core/services'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { KyselyDeploymentService } from './kysely-deployment-service.js'
 import { KyselyAgentStorageService } from './kysely-agent-storage-service.js'
@@ -108,12 +109,16 @@ function registerTests(
         return s
       },
       workflowService: async () => {
-        const s = new KyselyWorkflowService(getDb())
+        const s = new KyselyWorkflowService(getDb(), {
+          leaseService: new InMemoryLeaseService(),
+        })
         await s.init()
         return s
       },
       workflowFencing: async () => {
-        const service = new KyselyWorkflowService(getDb())
+        const service = new KyselyWorkflowService(getDb(), {
+          leaseService: new InMemoryLeaseService(),
+        })
         await service.init()
         return {
           service,

@@ -3,10 +3,11 @@ import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import Database from 'better-sqlite3'
 
-import type { StepState } from '@pikku/core/workflow'
+import type { StepState, WorkflowServiceOptions } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
+import { InMemoryLeaseService } from '@pikku/core/services'
 import { applyPikkuSchemas, workflowSchema } from './schema/index.js'
 
 let db: Kysely<KyselyPikkuDB>
@@ -33,7 +34,10 @@ const createDb = () => {
 beforeEach(async () => {
   db = createDb()
   await applyPikkuSchemas(db, [workflowSchema])
-  service = new KyselyWorkflowService(db, { wireQueues: false } as any)
+  service = new KyselyWorkflowService(db, {
+    wireQueues: false,
+    leaseService: new InMemoryLeaseService(),
+  } as WorkflowServiceOptions)
   await service.init()
 })
 
@@ -130,7 +134,10 @@ describe('KyselyWorkflowService — schema indexes', () => {
     // A fresh instance, because `init()` returns at its `initialized` guard on
     // the same one — so calling it twice re-issues no DDL and never exercises
     // the duplicate-index path this is here to cover.
-    await new KyselyWorkflowService(db, { wireQueues: false } as any).init()
+    await new KyselyWorkflowService(db, {
+      wireQueues: false,
+      leaseService: new InMemoryLeaseService(),
+    } as WorkflowServiceOptions).init()
 
     const indexes = await listIndexes('workflow_step_history')
     assert.ok(indexes.length > 0)

@@ -2,7 +2,7 @@ import type { SerializedError } from '@pikku/core/errors'
 import { PikkuWorkflowService } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
-  WorkflowQueueOptions,
+  WorkflowServiceOptions,
   WorkflowRun,
   WorkflowRunWire,
   StepState,
@@ -16,28 +16,34 @@ import { randomUUID } from 'crypto'
 /**
  * Redis-based implementation of WorkflowStateService
  *
- * Stores workflow run state and step state in Redis with row-level locking.
+ * Stores workflow run state and step state in Redis. Runs and steps are locked
+ * on the app's `leaseService`, which need not be Redis-backed.
  *
  * @example
  * ```typescript
  * const redis = new Redis('redis://localhost:6379')
- * const workflowService = new RedisWorkflowService(redis, 'workflows')
+ * const leaseService = new RedisLeaseService(redis)
+ * const workflowService = new RedisWorkflowService(redis, { leaseService })
  * ```
  */
 export class RedisWorkflowService extends PikkuWorkflowService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
-  private lockTTL = 30000 // Lock TTL in milliseconds (30 seconds)
 
   /**
    * @param connectionOrConfig - ioredis Redis instance, RedisOptions config, or connection string
-   * @param keyPrefix - Redis key prefix (default: 'workflows')
+   * @param options.keyPrefix - Redis key prefix (default: 'workflows')
+   * @param options.leaseService - the app's lease service, which locks runs and steps
    */
   constructor(
     connectionOrConfig: Redis | RedisOptions | string | undefined,
-    keyPrefix = 'workflows',
-    options: WorkflowQueueOptions = {}
+    {
+      keyPrefix = 'workflows',
+      ...options
+    }: WorkflowServiceOptions & {
+      keyPrefix?: string
+    }
   ) {
     super(options)
     this.keyPrefix = keyPrefix
@@ -78,14 +84,6 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
   private stepHistoryKey(stepId: string): string {
     return `${this.keyPrefix}:step-history:${stepId}`
-  }
-
-  private lockKey(runId: string): string {
-    return `${this.keyPrefix}:lock:${runId}`
-  }
-
-  private stepLockKey(runId: string, stepName: string): string {
-    return `${this.keyPrefix}:step-lock:${runId}:${stepName}`
   }
 
   /**
@@ -652,67 +650,6 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       serializedError,
       retries,
       retryDelay
-    )
-  }
-
-  private async withLock<T>(
-    lockKey: string,
-    errorMessage: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const lockValue = randomUUID()
-    const maxRetries = 10
-    const retryDelay = 100 // ms
-
-    // Try to acquire lock with retries
-    for (let i = 0; i < maxRetries; i++) {
-      const acquired = await this.redis.set(
-        lockKey,
-        lockValue,
-        'PX',
-        this.lockTTL,
-        'NX'
-      )
-
-      if (acquired === 'OK') {
-        try {
-          // Lock acquired, execute function
-          return await fn()
-        } finally {
-          // Release lock using Lua script to ensure we only delete our own lock
-          await this.redis.eval(
-            `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`,
-            1,
-            lockKey,
-            lockValue
-          )
-        }
-      }
-
-      // Lock not acquired, wait and retry
-      await new Promise((resolve) => setTimeout(resolve, retryDelay))
-    }
-
-    throw new Error(`${errorMessage} after ${maxRetries} retries`)
-  }
-
-  async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return this.withLock(
-      this.lockKey(id),
-      `Failed to acquire lock for run ${id}`,
-      fn
-    )
-  }
-
-  async withStepLock<T>(
-    runId: string,
-    stepName: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    return this.withLock(
-      this.stepLockKey(runId, stepName),
-      `Failed to acquire step lock for run ${runId}, step ${stepName}`,
-      fn
     )
   }
 

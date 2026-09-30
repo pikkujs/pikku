@@ -20,6 +20,7 @@ import { defineServiceTests } from '@pikku/core/testing'
 import type { WorkflowFencingHarness } from '@pikku/core/testing'
 import type { KyselyWorkflowService } from '@pikku/kysely'
 import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
+import { InMemoryLeaseService } from '@pikku/core/services'
 import { PgKyselyWorkflowService } from '@pikku/kysely-postgres'
 import { MySQLKyselyWorkflowService } from '@pikku/kysely-mysql'
 
@@ -141,7 +142,9 @@ defineServiceTests({
   services: {
     workflowFencing: async () => {
       await (pgReady ??= migratePostgres())
-      const service = new PgKyselyWorkflowService(pg)
+      const service = new PgKyselyWorkflowService(pg, {
+        leaseService: new InMemoryLeaseService(),
+      })
       await service.init()
       return harness(pg, service)
     },
@@ -153,7 +156,9 @@ defineServiceTests({
   services: {
     workflowFencing: async () => {
       await (mysqlReady ??= migrateMysql())
-      const service = new MySQLKyselyWorkflowService(mysql)
+      const service = new MySQLKyselyWorkflowService(mysql, {
+        leaseService: new InMemoryLeaseService(),
+      })
       await service.init()
       return harness(mysql, service)
     },

@@ -124,9 +124,9 @@ async function setup(): Promise<Harness> {
     for (const statement of MYSQL_TABLES) {
       await sql.raw(statement).execute(db)
     }
-    const Service = recordingPasses(MySQLKyselyWorkflowService)
-    workflowService = new (Service as any)(db)
     leaseService = new MySQLKyselyLeaseService(db)
+    const Service = recordingPasses(MySQLKyselyWorkflowService)
+    workflowService = new (Service as any)(db, { leaseService })
   } else {
     const { PgKyselyWorkflowService, PgKyselyLeaseService } =
       await import('@pikku/kysely-postgres')
@@ -138,12 +138,12 @@ async function setup(): Promise<Harness> {
       dialect: new PostgresJSDialect({ postgres: pg }),
       plugins: [new CamelCasePlugin()],
     })
-    const Service = recordingPasses(PgKyselyWorkflowService)
-    workflowService = new (Service as any)(db)
     leaseService =
       backend === 'memory'
         ? new InMemoryLeaseService()
         : new PgKyselyLeaseService(db)
+    const Service = recordingPasses(PgKyselyWorkflowService)
+    workflowService = new (Service as any)(db, { leaseService })
   }
   await workflowService.init()
   closers.unshift(() => workflowService.close())
@@ -171,11 +171,17 @@ async function setup(): Promise<Harness> {
     const { BullQueueService } = await import('@pikku/queue-bullmq')
     class TMPQ extends BullQueueService {
       protected override createQueue(name: string, config?: any) {
-        return super.createQueue(name, { connection: redisConnection(), ...config })
+        return super.createQueue(name, {
+          connection: redisConnection(),
+          ...config,
+        })
       }
     }
     const tmpq = new TMPQ(redisConnection())
-    closers.unshift(async () => { for (const q of (tmpq as any).queues.values()) await q.close(); for (const q of (tmpq as any).queueEvents.values()) await q.close() })
+    closers.unshift(async () => {
+      for (const q of (tmpq as any).queues.values()) await q.close()
+      for (const q of (tmpq as any).queueEvents.values()) await q.close()
+    })
     queues = {
       queueService: tmpq,
       schedulerService: factory.getSchedulerService(),

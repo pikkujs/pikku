@@ -15,15 +15,25 @@ npm install @pikku/kysely kysely
 ## Usage
 
 ```typescript
-import { KyselyWorkflowService, KyselySecretService } from '@pikku/kysely'
+import {
+  KyselyLeaseService,
+  KyselySecretService,
+  KyselyWorkflowService,
+} from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import type { Kysely } from 'kysely'
 
 declare const db: Kysely<KyselyPikkuDB>
 
-const workflowService = new KyselyWorkflowService(db)
+const leaseService = new KyselyLeaseService(db)
+await leaseService.init()
+
+const workflowService = new KyselyWorkflowService(db, { leaseService })
 const secretService = new KyselySecretService(db, { key: encryptionKey })
 ```
+
+The workflow service locks runs and steps on the `leaseService` you give it;
+register the same instance as the app's `leaseService`.
 
 ## Docs
 

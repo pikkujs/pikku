@@ -73,6 +73,7 @@ import {
   MongoDBChannelStore,
   MongoDBWorkflowService,
 } from '@pikku/mongodb'
+import { RedisLeaseService } from '@pikku/redis'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()
@@ -82,9 +83,23 @@ const createSingletonServices = pikkuServices(async (config) => {
   const channelStore = new MongoDBChannelStore(mongo.db)
   await channelStore.init()
 
-  const workflowService = new MongoDBWorkflowService(mongo.db)
+  const leaseService = new RedisLeaseService(config.redisUrl)
+  const workflowService = new MongoDBWorkflowService(mongo.db, {
+    leaseService,
+  })
   await workflowService.init()
 
-  return { config, logger, database: mongo, channelStore, workflowService }
+  return {
+    config,
+    logger,
+    database: mongo,
+    channelStore,
+    leaseService,
+    workflowService,
+  }
 })
 ```
+
+`MongoDBWorkflowService` requires a `leaseService` to lock runs and steps, and
+`@pikku/mongodb` ships none — pair it with Redis, a Kysely lease service, or
+`InMemoryLeaseService` for a single process.

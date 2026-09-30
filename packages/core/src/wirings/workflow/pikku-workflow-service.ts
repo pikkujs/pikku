@@ -99,7 +99,12 @@ import {
 import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import { claimStepByReadThenWrite } from './workflow-step-claim.js'
-import { isRunLeaseError, withAppRunLease } from './workflow-run-lease.js'
+import { isRunLeaseError } from './workflow-run-lease.js'
+import {
+  holdLease,
+  LeaseTakenError,
+  type LeaseService,
+} from '../../services/lease-service.js'
 import { summarizeRunStatus } from './workflow-run-status.js'
 import {
   runningStepLease,
@@ -161,6 +166,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected mirror?: WorkflowRunMirror
 
+  /**
+   * Serialises orchestration passes over a run and claims on a step. A service
+   * whose state no other process can reach — in-memory, a Durable Object —
+   * has no competitor to exclude, overrides both locks and passes none.
+   */
+  protected readonly leaseService?: LeaseService
+
   protected readonly queueStrategy: 'per-workflow' | 'shared-groups'
   protected readonly queueConcurrency: number
   protected readonly queueGroupConcurrency: number | GroupConcurrencyConfig
@@ -169,10 +181,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     options: {
       wireQueues?: boolean
       mirror?: WorkflowRunMirror
+      leaseService?: LeaseService
     } & WorkflowQueueOptions = {}
   ) {
     const wireQueues = options.wireQueues ?? true
     this.mirror = options.mirror
+    this.leaseService = options.leaseService
     this.queueStrategy = options.queueStrategy ?? 'per-workflow'
     this.queueConcurrency = options.queueConcurrency ?? 20
     this.queueGroupConcurrency = options.queueGroupConcurrency ?? 2
@@ -495,15 +509,41 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     status: 'pending' | 'running'
   ): Promise<StepState>
 
+  /**
+   * Run one orchestration pass holding the run's lease. A run held elsewhere
+   * throws `LeaseTakenError` rather than waiting: the orchestrator wakes it
+   * again later.
+   */
   async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return withAppRunLease(this, id, fn)
+    return holdLease(this.requireLeaseService(), `workflow-run:${id}`, () =>
+      fn()
+    )
   }
 
-  abstract withStepLock<T>(
+  /**
+   * Run `fn` holding one step's lease. Like the run lease it never waits: a
+   * step held elsewhere throws `LeaseTakenError`.
+   */
+  async withStepLock<T>(
     runId: string,
     stepName: string,
     fn: () => Promise<T>
-  ): Promise<T>
+  ): Promise<T> {
+    return holdLease(
+      this.requireLeaseService(),
+      `workflow-step:${runId}:${stepName}`,
+      () => fn()
+    )
+  }
+
+  private requireLeaseService(): LeaseService {
+    if (!this.leaseService) {
+      throw new Error(
+        `${this.constructor.name} was constructed without a leaseService, so it cannot exclude a second process from a run or step. Pass the app's leaseService to its constructor.`
+      )
+    }
+    return this.leaseService
+  }
 
   abstract close(): Promise<void>
 
@@ -1311,10 +1351,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * believes were dropped, and a queue can redeliver a job it already handed
    * out. This is the one place that keeps a duplicate dispatch from becoming a
    * second execution of a side-effecting step, so it is only as strong as the
-   * exclusion it is built on — and `withStepLock` excludes nothing unless the
-   * store backs it with a real primitive. A store able to express the decision
-   * as one conditional write should override this rather than reach for a lock,
-   * which is what `@pikku/kysely` does with a status-guarded `UPDATE`.
+   * exclusion it is built on: here, the step's lease on the app's
+   * `leaseService`. A store able to express the decision as one conditional
+   * write should override this rather than reach for a lock, which is what
+   * `@pikku/kysely` does with a status-guarded `UPDATE`.
    *
    * Ownership is held for `leaseMs` rather than forever. A dispatch that
    * dies mid-step leaves the step `running` with nothing to complete it, and an
@@ -1327,9 +1367,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcName: string,
     leaseMs: number
   ): Promise<StepState | null> {
-    return this.withStepLock(runId, stepName, () =>
-      claimStepByReadThenWrite(this, runId, stepName, rpcName, leaseMs)
-    )
+    try {
+      return await this.withStepLock(runId, stepName, () =>
+        claimStepByReadThenWrite(this, runId, stepName, rpcName, leaseMs)
+      )
+    } catch (error) {
+      if (error instanceof LeaseTakenError) {
+        return null
+      }
+      throw error
+    }
   }
 
   private async executeWorkflowStepInner(

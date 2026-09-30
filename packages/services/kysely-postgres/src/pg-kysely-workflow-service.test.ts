@@ -23,6 +23,8 @@ import {
 import { pikkuState } from '@pikku/core/state'
 import { RPCNotFoundError } from '@pikku/core/rpc'
 import { defineServiceTests } from '@pikku/core/testing'
+import { InMemoryLeaseService } from '@pikku/core/services'
+import type { WorkflowServiceOptions } from '@pikku/core/workflow'
 
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 import { pgNowMs } from './pg-now-ms.js'
@@ -164,7 +166,10 @@ beforeEach(async () => {
   open = []
   db = createDb()
   await applyPikkuSchemas(db, [workflowSchema])
-  service = new PgKyselyWorkflowService(db, { wireQueues: false } as any)
+  service = new PgKyselyWorkflowService(db, {
+    wireQueues: false,
+    leaseService: new InMemoryLeaseService(),
+  } as WorkflowServiceOptions)
   await service.init()
 })
 
@@ -225,7 +230,10 @@ describe('the schema Postgres actually gets', () => {
   })
 
   test('boot is idempotent, so a second one does not throw', async () => {
-    const again = new PgKyselyWorkflowService(db, { wireQueues: false } as any)
+    const again = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      leaseService: new InMemoryLeaseService(),
+    } as WorkflowServiceOptions)
     await again.init()
   })
 })
@@ -628,7 +636,8 @@ defineServiceTests({
       await applyPikkuSchemas(fenced, [workflowSchema])
       const service = new PgKyselyWorkflowService(fenced, {
         wireQueues: false,
-      } as any)
+        leaseService: new InMemoryLeaseService(),
+      } as WorkflowServiceOptions)
       await service.init()
       return {
         service,

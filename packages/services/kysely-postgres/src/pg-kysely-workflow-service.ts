@@ -22,30 +22,4 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
   protected override nowMs() {
     return pgNowMs()
   }
-
-  private hashStringToInt(str: string): number {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash |= 0
-    }
-    return hash
-  }
-
-  /**
-   * Stays on the query pool: the caller claims the step under this lock and
-   * runs it outside, so the connection is held for a few statements.
-   */
-  async withStepLock<T>(
-    runId: string,
-    stepName: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const lockId = this.hashStringToInt(`step:${runId}:${stepName}`)
-    return this.db.transaction().execute(async (trx) => {
-      await sql`SELECT pg_advisory_xact_lock(${lockId})`.execute(trx)
-      return fn()
-    })
-  }
 }

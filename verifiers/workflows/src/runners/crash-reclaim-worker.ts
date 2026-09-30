@@ -38,10 +38,10 @@ async function main(): Promise<void> {
     dialect: new PostgresJSDialect({ postgres: sql }),
     plugins: [new CamelCasePlugin()],
   })
-  const workflowService = new PgKyselyWorkflowService(db)
-  await workflowService.init()
   const leaseService = new PgKyselyLeaseService(db)
   await leaseService.init()
+  const workflowService = new PgKyselyWorkflowService(db, { leaseService })
+  await workflowService.init()
 
   await createSingletonServices(config, {
     queueService: pgBossFactory.getQueueService(),

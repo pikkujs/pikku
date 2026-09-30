@@ -128,7 +128,9 @@ for (const [name, create] of Object.entries(backends)) {
 
 describe('a Postgres step lease under clock skew', () => {
   test('a worker with a fast clock cannot claim a step another holds', async () => {
-    const service = new PgKyselyWorkflowService(pg)
+    const service = new PgKyselyWorkflowService(pg, {
+      leaseService: new PgKyselyLeaseService(pg),
+    })
     await service.init()
     const runId = await service.createRun('skew', {}, false, 'hash', {
       type: 'test',

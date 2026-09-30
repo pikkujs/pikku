@@ -20,12 +20,19 @@ import {
   createSQLiteKysely,
   SQLiteKyselyWorkflowService,
 } from '@pikku/kysely-sqlite'
+import { KyselyLeaseService } from '@pikku/kysely'
 import Database from 'better-sqlite3'
 
 const db = createSQLiteKysely(new Database('app.db'))
 
-const workflowService = new SQLiteKyselyWorkflowService(db)
+const leaseService = new KyselyLeaseService(db)
+await leaseService.init()
+
+const workflowService = new SQLiteKyselyWorkflowService(db, { leaseService })
 ```
+
+The workflow service locks runs and steps on the `leaseService` you give it;
+register the same instance as the app's `leaseService`.
 
 ## Docs
 

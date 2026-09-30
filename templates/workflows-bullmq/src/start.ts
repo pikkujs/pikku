@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { RedisWorkflowService } from '@pikku/redis'
+import { RedisLeaseService, RedisWorkflowService } from '@pikku/redis'
 import { InMemoryTriggerService } from '@pikku/core/services'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig } from '../../functions/src/config.js'
@@ -13,7 +13,10 @@ async function main(): Promise<void> {
     const bullFactory = new BullServiceFactory()
     await bullFactory.init()
 
-    const workflowService = new RedisWorkflowService(undefined)
+    const leaseService = new RedisLeaseService(undefined)
+    const workflowService = new RedisWorkflowService(undefined, {
+      leaseService,
+    })
 
     const schedulerService = bullFactory.getSchedulerService()
 
@@ -21,6 +24,7 @@ async function main(): Promise<void> {
       queueService: bullFactory.getQueueService(),
       schedulerService,
       workflowService,
+      leaseService,
     })
 
     const appServer = new PikkuExpressServer(

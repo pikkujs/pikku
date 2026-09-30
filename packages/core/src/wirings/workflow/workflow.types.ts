@@ -2,6 +2,7 @@ import type { CommonWireMeta } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
+import type { LeaseService } from '../../services/lease-service.js'
 
 export type { WorkflowService } from '../../services/workflow-service.js'
 
@@ -55,6 +56,16 @@ export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
+}
+
+/**
+ * What a workflow service over a shared store is built with. Every process that
+ * can reach the store may orchestrate the same run or claim the same step, so
+ * the service serialises both on `leaseService` — the same one the app
+ * registers, whatever store it is backed by.
+ */
+export interface WorkflowServiceOptions extends WorkflowQueueOptions {
+  leaseService: LeaseService
 }
 
 export interface WorkflowPlannedStep {

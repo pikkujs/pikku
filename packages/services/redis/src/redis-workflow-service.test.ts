@@ -2,19 +2,25 @@ import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import Redis from 'ioredis-mock'
 
+import { InMemoryLeaseService, LeaseTakenError } from '@pikku/core/services'
 import { RedisWorkflowService } from './redis-workflow-service.js'
 
 const KEY_PREFIX = 'workflows'
 
 let ws: RedisWorkflowService
 let redis: any
+let leases: InMemoryLeaseService
 
 const newRun = () =>
   ws.createRun('flow', {}, false, 'hash', { type: 'test' } as any)
 
 beforeEach(() => {
   redis = new Redis()
-  ws = new RedisWorkflowService(redis, KEY_PREFIX)
+  leases = new InMemoryLeaseService()
+  ws = new RedisWorkflowService(redis, {
+    keyPrefix: KEY_PREFIX,
+    leaseService: leases,
+  })
 })
 
 afterEach(() => {
@@ -111,5 +117,41 @@ describe('workflow run state in redis', () => {
       { legacy: 'kept', shared: 'new', fresh: 1 },
       'a run in flight across the deploy lost the state it already had'
     )
+  })
+})
+
+describe('RedisWorkflowService locks on the lease service it is given', () => {
+  test('a run held on the lease service is not orchestrated here', async () => {
+    const runId = await newRun()
+    await leases.acquire(`workflow-run:${runId}`, 'another-worker', 60_000)
+
+    let entered = false
+    await assert.rejects(
+      ws.withRunLease(runId, async () => {
+        entered = true
+      }),
+      LeaseTakenError
+    )
+    assert.equal(entered, false)
+  })
+
+  test('a step held on the lease service is not claimed here', async () => {
+    const runId = await newRun()
+    await ws.insertStepState(runId, 'charge', 'flow', {})
+    await leases.acquire(
+      `workflow-step:${runId}:charge`,
+      'another-worker',
+      60_000
+    )
+
+    const claimed = await (ws as any).claimStepForExecution(
+      runId,
+      'charge',
+      'flow',
+      60_000
+    )
+
+    assert.equal(claimed, null)
+    assert.equal((await ws.getStepState(runId, 'charge')).status, 'pending')
   })
 })

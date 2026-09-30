@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 
 import type { StepState } from '@pikku/core/workflow'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
+import { InMemoryLeaseService } from '@pikku/core/services'
 
 let mongod: MongoMemoryServer
 let client: MongoClient
@@ -25,7 +26,9 @@ after(async () => {
 
 beforeEach(async () => {
   db = client.db(`wf-${++dbCount}`)
-  ws = new MongoDBWorkflowService(db)
+  ws = new MongoDBWorkflowService(db, {
+    leaseService: new InMemoryLeaseService(),
+  })
   await ws.init()
 })
 

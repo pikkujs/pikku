@@ -12,6 +12,7 @@ import { SerializePlugin } from '@pikku/kysely'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
 import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { WorkflowServiceOptions } from '@pikku/core/workflow'
 import {
   KyselyWorkflowService,
   KyselyAgentStorageService,
@@ -48,8 +49,8 @@ export function createD1Kysely(
  * Auto-creates tables on first init().
  */
 export class CloudflareWorkflowService extends KyselyWorkflowService {
-  constructor(kysely: Kysely<KyselyPikkuDB>) {
-    super(kysely)
+  constructor(kysely: Kysely<KyselyPikkuDB>, options: WorkflowServiceOptions) {
+    super(kysely, options)
   }
 }
 

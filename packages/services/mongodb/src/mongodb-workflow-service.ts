@@ -6,7 +6,7 @@ import {
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
-  WorkflowQueueOptions,
+  WorkflowServiceOptions,
   WorkflowRun,
   WorkflowRunWire,
   StepState,
@@ -82,7 +82,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   private stepHistory: Collection<WorkflowStepHistoryDoc>
   private versions: Collection<WorkflowVersionDoc>
 
-  constructor(db: Db, options: WorkflowQueueOptions = {}) {
+  constructor(db: Db, options: WorkflowServiceOptions) {
     super(options)
     this.runService = new MongoDBWorkflowRunService(db)
     this.runs = db.collection<WorkflowRunDoc>('workflow_runs')
@@ -445,28 +445,14 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A pass-through: MongoDB has no advisory-lock primitive to build one on.
-   * The one decision that must exclude — claiming a step to execute it — is
-   * made by `claimStepForExecution` below as a single conditional write, which
-   * needs no lock to be exclusive.
-   */
-  async withStepLock<T>(
-    _runId: string,
-    _stepName: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    return fn()
-  }
-
-  /**
    * Claim the step with a status-guarded update and read the modified count:
    * a single-document update is atomic in MongoDB, so two dispatches racing for
    * the same step cannot both proceed.
    *
    * This replaces the read-then-write the base engine does under
-   * `withStepLock`, which excludes nothing here — the lock above is a
-   * pass-through. The winner then goes through the ordinary transition methods,
-   * so history rows see exactly what they saw before.
+   * `withStepLock`: one atomic write needs no lease round-trips around it. The
+   * winner then goes through the ordinary transition methods, so history rows
+   * see exactly what they saw before.
    */
   protected override async claimStepForExecution(
     runId: string,

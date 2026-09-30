@@ -49,7 +49,8 @@ async function setup(backend: Backend): Promise<{
   const config = await createConfig()
 
   if (backend === 'pg') {
-    const { PgKyselyWorkflowService } = await import('@pikku/kysely-postgres')
+    const { PgKyselyWorkflowService, PgKyselyLeaseService } =
+      await import('@pikku/kysely-postgres')
     const { PgBossServiceFactory } = await import('@pikku/queue-pg-boss')
     const { Kysely, CamelCasePlugin } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
@@ -64,7 +65,9 @@ async function setup(backend: Backend): Promise<{
       dialect: new PostgresJSDialect({ postgres: sql }),
       plugins: [new CamelCasePlugin()],
     })
-    const workflowService = new PgKyselyWorkflowService(db)
+    const leaseService = new PgKyselyLeaseService(db)
+    await leaseService.init()
+    const workflowService = new PgKyselyWorkflowService(db, { leaseService })
     await workflowService.init()
 
     await createSingletonServices(config, {
@@ -84,12 +87,16 @@ async function setup(backend: Backend): Promise<{
     }
   }
 
-  const { RedisWorkflowService } = await import('@pikku/redis')
+  const { RedisWorkflowService, RedisLeaseService } =
+    await import('@pikku/redis')
   const { BullServiceFactory } = await import('@pikku/queue-bullmq')
 
   const bullFactory = new BullServiceFactory()
   await bullFactory.init()
-  const workflowService = new RedisWorkflowService(undefined)
+  const leaseService = new RedisLeaseService(undefined)
+  const workflowService = new RedisWorkflowService(undefined, {
+    leaseService,
+  })
   await workflowService.init()
 
   await createSingletonServices(config, {
@@ -105,6 +112,7 @@ async function setup(backend: Backend): Promise<{
     cleanup: async () => {
       await queueWorkers.close()
       await workflowService.close()
+      await leaseService.close()
       await bullFactory.close()
     },
   }

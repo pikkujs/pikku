@@ -58,6 +58,7 @@ export type {
 export type {
   WorkflowService,
   WorkflowQueueOptions,
+  WorkflowServiceOptions,
   WorkflowServiceConfig,
   WorkflowPlannedStep,
   WorkflowRunWire,

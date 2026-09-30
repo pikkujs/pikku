@@ -8,7 +8,7 @@ import {
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
-  WorkflowQueueOptions,
+  WorkflowServiceOptions,
   WorkflowRun,
   WorkflowRunWire,
   StepState,
@@ -76,7 +76,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   constructor(
     protected db: Kysely<KyselyPikkuDB>,
-    options: WorkflowQueueOptions = {}
+    options: WorkflowServiceOptions
   ) {
     super(options)
     this.runService = new KyselyWorkflowRunService(db)
@@ -511,24 +511,6 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A pass-through, and deliberately so: the one decision that must exclude —
-   * claiming a step to execute it — is made by `claimStepForExecution` below as
-   * a single conditional write, which needs no lock to be exclusive.
-   *
-   * What is left are the suspend and approval sections in the engine, where the
-   * lock is genuine mutual exclusion rather than a claim. A dialect with a real
-   * primitive overrides this to cover them — `kysely-postgres` with
-   * `pg_advisory_xact_lock`, `kysely-mysql` with `GET_LOCK`.
-   */
-  async withStepLock<T>(
-    _runId: string,
-    _stepName: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    return fn()
-  }
-
-  /**
    * Claim the step with a status-guarded `UPDATE` and read the affected-row
    * count: the database decides the winner in one statement, so two dispatches
    * racing for the same step cannot both proceed.
@@ -857,7 +839,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
    * The undispatched-step query, shared by every dialect.
    *
    * It used to be deliberately NOT an override, because this class's
-   * `withStepLock` is a pass-through: a subclass inheriting it (kysely-sqlite)
+   * `withStepLock` was a pass-through: a subclass inheriting it (kysely-sqlite)
    * had no atomic claim, so the relay's redundant dispatches would have become
    * double executions, and only `kysely-postgres` and `kysely-mysql` opted in
    * on the strength of their real locks. `claimStepForExecution` no longer
