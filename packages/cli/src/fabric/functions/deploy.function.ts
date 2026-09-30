@@ -656,15 +656,19 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
   )
   printBuildLog('build log', buildLog)
   printBuildLog('image build log', imageBuildLog)
+  // The builder's own output is stored apart from the deployment row, so an
+  // empty `buildLog` here does not mean nothing was recorded. It is read on
+  // request rather than printed: it can run to thousands of lines.
+  console.log(dim(`Build log: \`pikku fabric deploy logs ${deploymentId}\``))
   if (!buildLog && !imageBuildLog) {
     console.log(
       dim(
-        'The builder recorded no reason. That is usually a fabric-side failure rather than'
+        'If that is empty too, the deploy failed before a build started — usually a fabric-side'
       )
     )
     console.log(
       dim(
-        'a defect in this project — check `pikku fabric smoke` before changing code.'
+        'failure rather than a defect in this project (`pikku fabric smoke`).'
       )
     )
   }

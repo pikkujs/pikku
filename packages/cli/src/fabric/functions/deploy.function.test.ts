@@ -52,7 +52,13 @@ describe('renderDeployApply on a failure', () => {
     assert.doesNotMatch(out, /recorded no reason/)
   })
 
-  test('says so when the builder recorded nothing, rather than implying the project', () => {
-    assert.match(printed({}), /The builder recorded no reason/)
+  test('points at the explicit log command rather than printing the whole log', () => {
+    const out = printed({})
+    assert.match(out, /pikku fabric deploy logs dep-1/)
+    assert.doesNotMatch(out, /recorded no reason/)
+  })
+
+  test('says a missing log means the build never started, not that the project is broken', () => {
+    assert.match(printed({}), /failed before a build started/)
   })
 })
