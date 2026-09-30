@@ -1,9 +1,13 @@
 name: Release
 
+# Started by the Full Suite finishing, not by the push: the tests on a commit
+# come first and Release, and the publish behind it, follow. A cancelled Full
+# Suite (a newer push superseded it) starts nothing; the newest run carries it.
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['Full Suite']
+    types: [completed]
+    branches: [main]
 
 # Latest wins. A push to main supersedes whatever is already running for main,
 # rather than queueing behind it — without this, a burst of merges left each run
@@ -15,7 +19,7 @@ on:
 # here: `publish.yml` picks up a successful run of this workflow and queues
 # instead of cancelling. See that file for why.
 # This run keeps only the jobs publish.yml gates on. The verifier, template and
-# example matrices run in `full.yml`, which nothing waits on.
+# example matrices run in `full.yml`, which this run follows.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -30,10 +34,13 @@ env:
 jobs:
   validate-deps:
     name: Validate Package Deps
+    if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -56,10 +63,13 @@ jobs:
 
   lint:
     name: Lint & Format
+    if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -72,10 +82,13 @@ jobs:
 
   build:
     name: Build
+    if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -90,6 +103,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
       # @pikku/queue-nats' integration suite skips itself when NATS_TEST_URL is
       # unset, so until this existed it reported pass without ever connecting.
@@ -126,6 +141,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests

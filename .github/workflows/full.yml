@@ -1,32 +1,29 @@
 name: Full Suite
 # The tested commit is in the title so Publish can find this run: see publish.yml.
-run-name: Full Suite ${{ github.event.workflow_run.head_sha || github.sha }}
+run-name: Full Suite ${{ github.sha }}
 
 # The verifier, template and example matrices, run once per push to main.
 #
 # Branch CI keeps only build, lint, unit and the e2e suites: ~90 jobs per push
 # across a dozen agent branches queued every run for close to an hour. These
-# run after the merge instead. Nothing waits on them: `publish.yml` gates on
-# `Release` alone, and a Version Packages merge only bumps versions, so it is
-# skipped. A red run here is fixed forward on main.
+# run after the merge instead, and Release (main.yml) starts when they finish,
+# so nothing ships before its commit has been tested. A red run here does not
+# stop Release; only a Version Packages publish waits on the result (publish.yml).
+# A Version Packages merge only bumps versions, so it is skipped here.
 #
 # Run it on a branch before merging a risky change:
 #   gh workflow run "Full Suite" --ref <branch>
-#
-# Started by Release finishing rather than by the push, so Release (and the
-# publish behind it) gets runners first instead of queueing behind ~80 jobs.
 on:
-  workflow_run:
-    workflows: ['Release']
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 # Latest wins: the newest run on main carries every commit before it. A Version
 # Packages run skips everything, so it gets a group of its own: sharing one, it
 # cancelled the real run of the merge before it and left main untested.
 concurrency:
-  group: ${{ github.workflow }}-${{ startsWith(github.event.workflow_run.head_commit.message, 'Version Packages') && github.run_id || github.ref }}
+  group: ${{ github.workflow }}-${{ startsWith(github.event.head_commit.message, 'Version Packages') && github.run_id || github.ref }}
   cancel-in-progress: true
 
 # better-auth now throws on a missing BETTER_AUTH_SECRET (mapSession errors no
@@ -39,13 +36,11 @@ env:
 jobs:
   build:
     name: Build
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion != 'cancelled' && !startsWith(github.event.workflow_run.head_commit.message, 'Version Packages')) }}
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -58,8 +53,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - name: Run codegen perf gate
         run: npx tsx benchmarks/bench-codegen-perf.ts
@@ -110,8 +103,6 @@ jobs:
           ]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
@@ -126,8 +117,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - name: Install chromium
         run: cd verifiers/fullstack && npx playwright install --with-deps chromium
@@ -149,8 +138,6 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
@@ -174,8 +161,6 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
@@ -216,8 +201,6 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - run: cd verifiers/workflows && bun run test:db
     env:
@@ -251,8 +234,6 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - run: cd verifiers/db-schema && bun run test:db
     env:
@@ -265,8 +246,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - name: Run functions verifier with coverage
         run: cd verifiers/functions && bun run test:coverage
@@ -285,8 +264,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - name: Run package unit tests with coverage
         # --enable-source-maps so tsx-transpiled line numbers map back to the
@@ -348,8 +325,6 @@ jobs:
         example: [online-shop, field-service]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
       - name: Generate, migrate and type-check
         run: cd examples/${{ matrix.example }} && bun run build
@@ -429,8 +404,6 @@ jobs:
             template: nextjs-full
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -485,8 +458,6 @@ jobs:
         package-manager: [yarn]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -543,8 +514,6 @@ jobs:
         target: [dev, standalone]
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}

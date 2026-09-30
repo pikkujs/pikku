@@ -39,7 +39,6 @@ jobs:
     name: Gate
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'cancelled'
-    # Most of this is waiting on the Full Suite for a Version Packages commit.
     timeout-minutes: 100
     permissions:
       actions: read
@@ -74,7 +73,7 @@ jobs:
 
           # A Version Packages commit is the one that reaches npm, and it only
           # bumps versions, so the code it ships is the commit below it. Full
-          # Suite is not rerun for it: its result for that commit is awaited
+          # Suite is not rerun for it: its result for that commit is read
           # instead, and anything but success holds the publish.
           if [ "$ok" = true ] && [[ "$HEAD_MESSAGE" == "Version Packages"* ]]; then
             sha=$HEAD_SHA
