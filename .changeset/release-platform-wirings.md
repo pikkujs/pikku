@@ -2,4 +2,4 @@
 '@pikku/cli': patch
 ---
 
-`pikku release` drops a wiring whose function is platform plumbing even when the wiring meta carries no `sourceFile`, so fabric's injected `fabric-audit` queue no longer shows up in an app's changelog.
+`pikku release` keeps scaffold and generated entries in the surface and tags them `platform: true` instead of dropping them, including wirings with no `sourceFile` whose function is platform (such as an injected queue worker). The changelog lists them under their own `### Platform` heading.

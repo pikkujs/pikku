@@ -85,6 +85,7 @@ describe('changelog', () => {
         id: 'GET /users',
         status: 'removed',
         breaking: true,
+        platform: false,
         reasons: ['http wiring removed'],
       },
       {
@@ -92,6 +93,7 @@ describe('changelog', () => {
         id: 'createInvoice',
         status: 'added',
         breaking: false,
+        platform: false,
         reasons: ['function added'],
       },
       {
@@ -99,6 +101,7 @@ describe('changelog', () => {
         id: 'welcome',
         status: 'modified',
         breaking: false,
+        platform: false,
         reasons: ['email wiring changed'],
       },
     ],
@@ -133,6 +136,43 @@ describe('changelog', () => {
         '### Notes',
         '',
         '- Use /people instead',
+        '',
+      ].join('\n')
+    )
+  })
+
+  test('puts platform changes in their own group', () => {
+    const section = renderChangelogSection({
+      version: '0.1.0',
+      date: '2026-09-30',
+      changes: {
+        ...changes,
+        changes: [
+          changes.changes[1]!,
+          {
+            kind: 'queue',
+            id: 'fabric-audit',
+            status: 'added',
+            breaking: false,
+            platform: true,
+            reasons: ['queue wiring added'],
+          },
+        ],
+      },
+      commits: [],
+    })
+    assert.equal(
+      section,
+      [
+        '## 0.1.0 (2026-09-30)',
+        '',
+        '### Added',
+        '',
+        '- `function` `createInvoice` — function added',
+        '',
+        '### Platform',
+        '',
+        '- `queue` `fabric-audit` — queue wiring added',
         '',
       ].join('\n')
     )

@@ -169,7 +169,7 @@ describe('loadSurface', () => {
 })
 
 describe('readSurface — platform plumbing', () => {
-  test('scaffold and generated sources are not part of the app surface', () => {
+  test('scaffold and generated sources are marked as platform', () => {
     const dir = join(root, 'platform', '.pikku')
     writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
       getUser: { pikkuFuncId: 'getUser' },
@@ -207,12 +207,21 @@ describe('readSurface — platform plumbing', () => {
     })
 
     const surface = readSurface(dir)
-    assert.deepEqual(Object.keys(surface.functions), ['getUser'])
-    assert.deepEqual(Object.keys(surface.wirings), ['http'])
-    assert.deepEqual(Object.keys(surface.wirings.http!), ['GET /users/:id'])
+    const platformIds = (entries: Record<string, unknown>) =>
+      Object.entries(entries)
+        .filter(([, v]) => (v as { platform?: boolean }).platform === true)
+        .map(([k]) => k)
+        .sort()
+    assert.deepEqual(platformIds(surface.functions), ['relayChangeRequest'])
+    assert.deepEqual(platformIds(surface.wirings.http!), [
+      'GET /api/auth',
+      'POST /changes',
+    ])
+    assert.deepEqual(platformIds(surface.wirings.queue!), ['audit'])
+    assert.equal(surface.functions.getUser!.platform, undefined)
   })
 
-  test('a wiring with no sourceFile is dropped when its function is platform', () => {
+  test('a wiring with no sourceFile is platform when its function is', () => {
     const dir = join(root, 'platform-queue', '.pikku')
     writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
       'queue:fabric-audit': { pikkuFuncId: 'queue:fabric-audit' },
@@ -232,7 +241,11 @@ describe('readSurface — platform plumbing', () => {
       emails: { pikkuFuncId: 'sendEmail', name: 'emails' },
     })
 
-    const surface = readSurface(dir)
-    assert.deepEqual(Object.keys(surface.wirings.queue!), ['emails'])
+    const queue = readSurface(dir).wirings.queue as Record<
+      string,
+      { platform?: boolean }
+    >
+    assert.equal(queue['fabric-audit']!.platform, true)
+    assert.equal(queue.emails!.platform, undefined)
   })
 })
