@@ -7,6 +7,7 @@ import {
   waitForNext,
   type NextResult,
 } from '../lib/changes-next.js'
+import { subscribeToChanges } from '../lib/changes-events.js'
 import { matchStage } from '../lib/stage.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { dim, safe } from '../lib/output.js'
@@ -38,7 +39,18 @@ export const FabricChangesNextOutput = z.object({
 
 const clock = {
   now: () => Date.now(),
-  sleep: (ms: number) => new Promise<void>((done) => setTimeout(done, ms)),
+  sleep: (ms: number, signal?: AbortSignal) =>
+    new Promise<void>((done) => {
+      const timer = setTimeout(done, ms)
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer)
+          done()
+        },
+        { once: true }
+      )
+    }),
 }
 
 /**
@@ -57,10 +69,12 @@ export const FabricChangesNext = pikkuSessionlessFunc({
         '--claim needs --claimed-by, so the panel can say who is holding the batch.'
       )
 
-    const { rpc, projectId: linked } = await changesContext(
-      input.apiUrl,
-      input.projectId
-    )
+    const {
+      rpc,
+      projectId: linked,
+      apiUrl,
+      token,
+    } = await changesContext(input.apiUrl, input.projectId)
     const projectId = requireProjectId(linked)
     const stage = input.stage
       ? await matchStage(rpc, projectId, input.stage)
@@ -73,10 +87,14 @@ export const FabricChangesNext = pikkuSessionlessFunc({
     if (!input.once)
       console.error(
         dim(
-          `Waiting for changes${scope ? ` ${scope}` : ''} (checking every ${every}s${input.timeout ? `, up to ${input.timeout}s` : ''})…`
+          `Waiting for changes${scope ? ` ${scope}` : ''} (woken by fabric's change events, checking every ${every}s while they are unavailable${input.timeout ? `, up to ${input.timeout}s` : ''})…`
         )
       )
 
+    const log = (line: string) => console.error(dim(line))
+    const events = input.once
+      ? null
+      : subscribeToChanges({ apiUrl, token, projectId, log })
     try {
       const result = await waitForNext(
         rpc,
@@ -93,7 +111,8 @@ export const FabricChangesNext = pikkuSessionlessFunc({
           once: input.once ?? false,
         },
         clock,
-        (line) => console.error(dim(line))
+        log,
+        events
       )
       if (result.outcome === 'timeout') process.exitCode = NEXT_EXIT_TIMEOUT
       return result
@@ -101,6 +120,8 @@ export const FabricChangesNext = pikkuSessionlessFunc({
       if (!(error instanceof FabricAuthError)) throw error
       console.error(error.message)
       throw new CLIError(error.message, NEXT_EXIT_AUTH)
+    } finally {
+      events?.close()
     }
   },
 })

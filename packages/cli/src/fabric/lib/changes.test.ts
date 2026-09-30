@@ -5,10 +5,10 @@ import {
   idList,
   imageContentType,
   remaining,
+  changeRef,
+  clockTime,
   requireProjectId,
-  resolveChangeId,
 } from './changes.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 describe('idList', () => {
   test('reads a comma-separated flag', () => {
@@ -76,43 +76,34 @@ describe('imageContentType', () => {
   })
 })
 
-describe('resolveChangeId', () => {
+describe('changeRef', () => {
   const UUID = '0f3c8a12-9b44-4d2e-8f01-27c6a1d9e5b3'
-  const listed: boolean[] = []
-  const rpc = {
-    invoke: async (_name: string, data: { includeDone: boolean }) => {
-      listed.push(data.includeDone)
-      return {
-        changes: data.includeDone
-          ? [
-              { shortId: '2', changeId: UUID },
-              { shortId: '9', changeId: 'done-9' },
-            ]
-          : [{ shortId: '2', changeId: UUID }],
-      }
-    },
-  } as unknown as PikkuRPC
 
-  test('2 and #2 both name the change', async () => {
-    assert.strictEqual(await resolveChangeId(rpc, 'p1', '2'), UUID)
-    assert.strictEqual(await resolveChangeId(rpc, 'p1', '#2'), UUID)
+  test('2 and #2 go to fabric with the project to look them up in', () => {
+    assert.deepStrictEqual(changeRef('p1', '2'), {
+      changeId: '2',
+      projectId: 'p1',
+    })
+    assert.deepStrictEqual(changeRef('p1', ' #2 '), {
+      changeId: '#2',
+      projectId: 'p1',
+    })
   })
 
-  test('a uuid goes straight through without a lookup', async () => {
-    listed.length = 0
-    assert.strictEqual(await resolveChangeId(rpc, 'p1', UUID), UUID)
-    assert.deepStrictEqual(listed, [])
+  test('a uuid goes alone, so it works from any directory', () => {
+    assert.deepStrictEqual(changeRef('p1', UUID), { changeId: UUID })
+    assert.deepStrictEqual(changeRef(null, UUID), { changeId: UUID })
   })
 
-  test('falls back to closed items', async () => {
-    assert.strictEqual(await resolveChangeId(rpc, 'p1', '#9'), 'done-9')
+  test('refuses a short id with no project to look in', () => {
+    assert.throws(() => changeRef(null, '#2'), /uuid/)
   })
+})
 
-  test('refuses a short id with no project to look in', async () => {
-    await assert.rejects(resolveChangeId(rpc, null, '#2'), /uuid/)
-  })
-
-  test('says so when no change has that number', async () => {
-    await assert.rejects(resolveChangeId(rpc, 'p1', '#40'), /No change #40/)
+describe('clockTime', () => {
+  test('is the local wall-clock hour and minute', () => {
+    const at = new Date(2026, 8, 29, 9, 5, 42)
+    assert.strictEqual(clockTime(at), '09:05')
+    assert.strictEqual(clockTime(at.toISOString()), '09:05')
   })
 })

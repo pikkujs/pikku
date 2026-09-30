@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import {
+  changeRef,
   changesContext,
+  clockTime,
   httpStatus,
   idList,
-  remaining,
   requireProjectId,
-  resolveChangeIds,
 } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { dim, safe } from '../lib/output.js'
@@ -38,11 +38,7 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
       input.projectId
     )
     const project = requireProjectId(projectId)
-    const changeIds = await resolveChangeIds(
-      rpc,
-      project,
-      idList(input.changeIds)
-    )
+    const changeIds = idList(input.changeIds)
     try {
       return await rpc.invoke('claimChanges', {
         projectId: project,
@@ -55,51 +51,54 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
     } catch (error) {
       if (httpStatus(error) !== 409 || !changeIds?.length) throw error
       throw new FabricPreconditionError(
-        await whyUnclaimable(rpc, project, changeIds)
+        await whyUnclaimable(rpc, project, changeIds, error)
       )
     }
   },
 })
 
-const secondsAgo = (at: string | Date): number =>
-  Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 1000))
-
 /**
- * The server's 409 says only that nothing in the set could be taken. Each
- * reason calls for something different — wait, leave it, or pick another — so
- * name it per item.
+ * Each reason a claim is refused calls for something different — wait, leave
+ * it, or pick another — so name it per item, with the time a wait ends.
+ * fabric's own message comes first because it alone says who holds a lease.
  */
 async function whyUnclaimable(
   rpc: PikkuRPC,
   projectId: string,
-  changeIds: string[]
+  refs: string[],
+  refusal: unknown
 ): Promise<string> {
-  const { changes, groups } = await rpc.invoke('listChanges', {
-    projectId,
-    includeDone: true,
-    pickupOnly: false,
-    limit: 200,
-  })
-  const lines = changeIds.map((changeId) => {
-    const change = changes.find((c) => c.changeId === changeId)
-    if (!change) return `  ${changeId}: not found in this project`
-    const label = `  #${change.shortId}`
-    if (change.held)
-      return `${label}: still held for the person filing it (filed ${secondsAgo(change.createdAt)}s ago)`
-    const group = groups.find((g) => g.groupId === change.groupId)
-    if (group?.claimedBy && group.claimExpiresAt)
-      return `${label}: ${change.status}, claimed by ${group.claimedBy} for ${remaining(group.claimExpiresAt)} more`
-    return `${label}: ${change.status}`
-  })
-  const waiting = changes.some(
-    (change) => changeIds.includes(change.changeId) && change.held
+  let waiting = false
+  const lines = await Promise.all(
+    refs.map(async (ref) => {
+      try {
+        const { change } = await rpc.invoke(
+          'getChange',
+          changeRef(projectId, ref)
+        )
+        const label = `  #${change.shortId}`
+        if (change.heldUntil) {
+          waiting = true
+          const why = change.held
+            ? 'still held for the person filing it'
+            : `${change.status}, inside another group's lease`
+          return `${label}: ${why} — claimable at ${clockTime(change.heldUntil)}`
+        }
+        return `${label}: ${change.status}`
+      } catch (error) {
+        if (httpStatus(error) !== 404) throw error
+        return `  ${ref}: not found in this project`
+      }
+    })
   )
+  const said = refusal instanceof Error ? refusal.message : ''
   return [
     'Nothing in that set can be claimed right now:',
     ...lines,
+    ...(said ? [`fabric: ${said}`] : []),
     ...(waiting
       ? [
-          'Run `pikku fabric changes next --claim --claimed-by <you>` — it waits out the hold and claims them.',
+          'Run `pikku fabric changes next --claim --claimed-by <you>` — it sleeps until then and claims them.',
         ]
       : []),
   ].join('\n')

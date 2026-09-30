@@ -3,6 +3,7 @@ import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
 
 /**
  * Resolve the three things every `changes` command needs: the api url, a
@@ -15,7 +16,12 @@ import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 export async function changesContext(
   apiUrlOverride: string | undefined,
   projectIdOverride?: string
-): Promise<{ rpc: PikkuRPC; projectId: string | null }> {
+): Promise<{
+  rpc: PikkuRPC
+  projectId: string | null
+  apiUrl: string
+  token: string
+}> {
   const ctx = await resolveApiContext({
     apiUrlOverride,
     resolveProject: !projectIdOverride,
@@ -27,6 +33,8 @@ export async function changesContext(
   return {
     rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
     projectId: projectIdOverride ?? ctx.projectId,
+    apiUrl: ctx.apiUrl,
+    token: ctx.token,
   }
 }
 
@@ -36,6 +44,17 @@ export function requireProjectId(projectId: string | null): string {
       'No fabric project. Pass --project-id, or run `pikku fabric link` in the checkout.'
     )
   return projectId
+}
+
+/**
+ * Text a person will read on the thread, trimmed, or refused when there is
+ * none. The CLI enforces no input schema at runtime, so a `.trim().min(1)`
+ * there would let "   " through.
+ */
+export function nonBlank(text: string, refusal: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) throw new FabricPreconditionError(refusal)
+  return trimmed
 }
 
 /**
@@ -61,45 +80,22 @@ export const httpStatus = (error: unknown): number | undefined => {
 const SHORT_ID = /^#?(\d+)$/
 
 /**
- * Accept a change the way a person refers to it — `2`, `#2` — as well as by
- * uuid. Anything that is not a short id is passed through untouched.
+ * Name a change the way a person refers to it — `2`, `#2` — as well as by
+ * uuid. fabric looks a number up inside the project, so a short id carries the
+ * linked project; a uuid goes alone, so it still works from any directory.
  */
-export async function resolveChangeId(
-  rpc: PikkuRPC,
+export function changeRef(
   projectId: string | null,
   ref: string
-): Promise<string> {
-  const match = ref.trim().match(SHORT_ID)
-  if (!match) return ref.trim()
-  const shortId = match[1]!
+): Pick<GetChangeInput, 'changeId' | 'projectId'> {
+  const changeId = ref.trim()
+  const match = changeId.match(SHORT_ID)
+  if (!match) return { changeId }
   if (!projectId)
     throw new FabricPreconditionError(
-      `#${shortId} is a short id, which only means something inside a project. Pass the uuid, or run this from the linked checkout.`
+      `#${match[1]} is a short id, which only means something inside a project. Pass the uuid, or run this from the linked checkout.`
     )
-  for (const includeDone of [false, true]) {
-    const { changes } = await rpc.invoke('listChanges', {
-      projectId,
-      includeDone,
-      pickupOnly: false,
-      limit: 200,
-    })
-    const found = changes.find((change) => change.shortId === shortId)
-    if (found) return found.changeId
-  }
-  throw new FabricPreconditionError(
-    `No change #${shortId} in this project. Pass its uuid if it is an old one.`
-  )
-}
-
-export async function resolveChangeIds(
-  rpc: PikkuRPC,
-  projectId: string | null,
-  refs: string[] | undefined
-): Promise<string[] | undefined> {
-  if (!refs) return undefined
-  const ids: string[] = []
-  for (const ref of refs) ids.push(await resolveChangeId(rpc, projectId, ref))
-  return ids
+  return { changeId, projectId }
 }
 
 const span = (minutes: number): string => {
@@ -121,6 +117,13 @@ export function age(at: Date | string): string {
 export function remaining(at: Date | string): string {
   const minutes = Math.round((new Date(at).getTime() - Date.now()) / 60_000)
   return span(Math.max(0, minutes))
+}
+
+/** A wall-clock time, `14:05`, for when something held becomes claimable. */
+export function clockTime(at: Date | string): string {
+  const date = new Date(at)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 const CONTENT_TYPES = {
