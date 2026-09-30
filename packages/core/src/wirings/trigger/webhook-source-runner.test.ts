@@ -2,7 +2,10 @@ import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { CoreTriggerWebhookSource } from './webhook-source.types.js'
+import {
+  type CoreTriggerWebhookSource,
+  webhookSecretCredentialName,
+} from './webhook-source.types.js'
 import {
   dispatchWebhookSourceJob,
   receiveWebhookSourceRequest,
@@ -229,9 +232,12 @@ describe('receiveWebhookSourceRequest with verify', () => {
     }
   }
 
-  const withSecret = async (secret: string | null) => {
+  const withSecret = async (
+    secret: string | null,
+    credential = 'shopWebhookSecret'
+  ) => {
     const credentialService = new LocalCredentialService()
-    if (secret) await credentialService.set('shopSecret', secret)
+    if (secret) await credentialService.set(credential, secret)
     pikkuState(null, 'package', 'singletonServices', {
       logger,
       credentialService,
@@ -244,7 +250,7 @@ describe('receiveWebhookSourceRequest with verify', () => {
 
   const wireShop = (verify: CoreTriggerWebhookSource['verify']) => {
     setWebhookSourceMeta({ name: 'shop' })
-    wireTriggerWebhookSource({ name: 'shop', credential: 'shopSecret', verify })
+    wireTriggerWebhookSource({ name: 'shop', verify })
     wireTriggerMeta('shop', () => {})
   }
 
@@ -277,11 +283,7 @@ describe('receiveWebhookSourceRequest with verify', () => {
       received = true
       return { events: [] }
     })
-    wireTriggerWebhookSource({
-      name: 'shop',
-      credential: 'shopSecret',
-      verify: hmac,
-    })
+    wireTriggerWebhookSource({ name: 'shop', verify: hmac })
 
     await assert.rejects(
       receiveWebhookSourceRequest(
@@ -354,11 +356,7 @@ describe('receiveWebhookSourceRequest with verify', () => {
         ? { respond: { status: 200 } }
         : { events: [{ name: '', data: {} }] }
     )
-    wireTriggerWebhookSource({
-      name: 'shop',
-      credential: 'shopSecret',
-      verify: hmac,
-    })
+    wireTriggerWebhookSource({ name: 'shop', verify: hmac })
 
     const probe = await receiveWebhookSourceRequest(
       'shop',
@@ -375,11 +373,30 @@ describe('receiveWebhookSourceRequest with verify', () => {
     assert.equal(queued.length, 0)
   })
 
-  test('refuses verify without a credential when wired', () => {
+  test('reads the secret from a named credential', async () => {
+    await withSecret('shh', 'shopSigningKey')
     setWebhookSourceMeta({ name: 'shop' })
-    assert.throws(
-      () => wireTriggerWebhookSource({ name: 'shop', verify: hmac }),
-      /without the 'credential'/
+    wireTriggerWebhookSource({
+      name: 'shop',
+      credential: 'shopSigningKey',
+      verify: hmac,
+    })
+    wireTriggerMeta('shop', () => {})
+
+    assert.deepEqual(
+      await receiveWebhookSourceRequest(
+        'shop',
+        rawWire(body, { 'x-shop-signature': `sha256=${signature}` })
+      ),
+      { received: 1 }
+    )
+  })
+
+  test('names the default credential after the source', () => {
+    assert.equal(webhookSecretCredentialName('github'), 'githubWebhookSecret')
+    assert.equal(
+      webhookSecretCredentialName('microsoft-outlook'),
+      'microsoftOutlookWebhookSecret'
     )
   })
 })

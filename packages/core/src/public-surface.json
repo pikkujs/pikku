@@ -192,6 +192,7 @@
     "runWebhookSourceLifecycle",
     "subscribedWebhookEvents",
     "teardownTriggerSources",
+    "webhookSecretCredentialName",
     "wireTrigger",
     "wireTriggerSource",
     "wireTriggerWebhookSource"

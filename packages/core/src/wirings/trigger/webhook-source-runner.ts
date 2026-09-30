@@ -33,6 +33,7 @@ import type {
   WebhookTeardownResult,
   WebhookVerify,
 } from './webhook-source.types.js'
+import { webhookSecretCredentialName } from './webhook-source.types.js'
 
 const LIFECYCLE = ['receive', 'check', 'setup', 'teardown'] as const
 
@@ -47,11 +48,6 @@ export const wireTriggerWebhookSource = <
       `[pikku] Skipping webhook source '${source.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
     return
-  }
-  if (source.verify && !source.credential) {
-    throw new Error(
-      `Webhook source '${source.name}' declares 'verify' without the 'credential' that holds its secret`
-    )
   }
   const sources = pikkuState(null, 'trigger', 'webhookSources')
   if (sources.has(source.name)) {
@@ -166,7 +162,7 @@ const verifyRequest = async (
   if (!source?.verify) return true
   if (request.body.length === 0) return false
   const secret = await services.credentialService?.get<string>(
-    source.credential!
+    source.credential ?? webhookSecretCredentialName(source.name)
   )
   if (typeof secret !== 'string' || !secret) {
     throw new UnauthorizedError(

@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3185 observable things**: 1059 exported names, plus
+**3186 observable things**: 1060 exported names, plus
 2126 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
@@ -26,7 +26,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 39 | 39 | 11 |
+| `./trigger` | 40 | 40 | 11 |
 | `./services/local-meta` | 22 | 2 | 42 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
@@ -2961,6 +2961,7 @@ export type CoreTriggerWebhookSource<
   route?: string
   events?: Events
   credential?: string
+  credentialDescription?: string
   verify?: WebhookVerify
   receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
@@ -3036,6 +3037,7 @@ export type WebhookRequest = {
   url: string
   query: Record<string, string>
 }
+webhookSecretCredentialName: (source: string) => string
 export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'

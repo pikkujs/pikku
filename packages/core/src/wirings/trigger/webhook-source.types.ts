@@ -4,6 +4,10 @@ import type { HmacAlgorithm, SecretEncoding } from '../../utils/hmac.js'
 
 export const PIKKU_INCOMING_WEBHOOK_QUEUE_NAME = 'pikku-incoming-webhooks'
 
+/** `github` → `githubWebhookSecret`, `microsoft-outlook` → `microsoftOutlookWebhookSecret`. */
+export const webhookSecretCredentialName = (source: string): string =>
+  `${source.replace(/[-_]+([a-z0-9])/gi, (_, c: string) => c.toUpperCase())}WebhookSecret`
+
 /** What every trigger source produces, whichever way it arrives. */
 export type TriggerEvent<Name extends string = string, Data = unknown> = {
   /** The provider's event type; dispatched to the trigger named `<source>:<name>`. Empty dispatches to `<source>`. */
@@ -120,8 +124,14 @@ export type CoreTriggerWebhookSource<
   route?: string
   /** What the source can produce. Each event's data is validated against its schema before it is queued. */
   events?: Events
-  /** The credential holding the signing secret. Required with `verify`. */
+  /**
+   * The credential holding the signing secret. Defaults to
+   * {@link webhookSecretCredentialName}. Declaring `verify` declares this
+   * credential too, as a singleton string, so it needs no `defineCredential`.
+   */
   credential?: string
+  /** What the secret is and where to find it, shown to whoever has to set it. */
+  credentialDescription?: string
   /**
    * Checked before `receive` on every request with a body. A request is
    * refused when the credential is not set or the signature does not match.

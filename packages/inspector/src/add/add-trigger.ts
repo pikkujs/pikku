@@ -18,6 +18,7 @@ import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 
 import { ErrorCode } from '../error-codes.js'
 import type { WebhookSourceMeta } from '@pikku/core/trigger'
+import { webhookSecretCredentialName } from '@pikku/core/trigger'
 
 const WEBHOOK_SOURCE_STEPS = ['receive', 'check', 'setup', 'teardown'] as const
 
@@ -278,6 +279,23 @@ const addWireTriggerWebhookSource: (
   }
   state.triggers.webhookSourceMeta[name] = meta
   state.triggers.files.add(node.getSourceFile().fileName)
+
+  if (!getPropertyAssignmentInitializer(obj, 'verify', false, checker)) return
+  const sourceFile = node.getSourceFile().fileName
+  const credential =
+    (getPropertyValue(obj, 'credential') as string | null) ??
+    webhookSecretCredentialName(name)
+  state.credentials.files.add(sourceFile)
+  state.credentials.definitions.push({
+    name: credential,
+    displayName: `${name} webhook secret`,
+    description:
+      (getPropertyValue(obj, 'credentialDescription') as string | null) ??
+      undefined,
+    type: 'singleton',
+    schema: { type: 'string' },
+    sourceFile,
+  })
 }
 
 /**
