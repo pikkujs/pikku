@@ -12,6 +12,7 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import { createSourceFileCacheHost } from './source-file-cache.js'
 import { createNestedProjectFilter } from './utils/nested-project-filter.js'
+import { toProgramPath } from './utils/program-path.js'
 import {
   aggregateRequiredServices,
   stampAuthHandlerServices,
@@ -368,7 +369,9 @@ export const inspect = async (
   )
 
   // Use provided rootDir or infer from source files
-  const rootDir = options.rootDir || findCommonAncestor(normalizedRouteFiles)
+  const rootDir = toProgramPath(
+    options.rootDir || findCommonAncestor(normalizedRouteFiles)
+  )
 
   const startSourceFiles = performance.now()
   // node_modules under rootDir (e.g. a locally-installed addon) is a
