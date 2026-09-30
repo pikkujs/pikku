@@ -3,12 +3,9 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
-import {
-  branchFromHead,
-  currentBranch,
-  resolveRef,
-} from '../../utils/git.js'
+import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
+import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
@@ -41,6 +38,7 @@ export const FabricDeployInput = z.object({
   detach: z.boolean().optional(),
   autoApprove: z.boolean().optional(),
   allowDestructive: z.boolean().optional(),
+  migrationsBase: z.string().optional(),
   timeout: z.number().optional(),
   json: z.boolean().optional(),
 })
@@ -222,7 +220,37 @@ export const FabricDeployApply = pikkuSessionlessFunc({
   },
 })
 
-async function applyDeploy(
+/**
+ * Refuses to create a deployment while the migration history is broken: a
+ * stage would run the migrations that exist and silently skip the ones that
+ * were edited, so it ends up with a schema no migration describes. Checked
+ * against the stage being deployed and against main, since a branch stage can
+ * be reset at will but main's history reaches production. There is no
+ * override, and a check that cannot run refuses too.
+ */
+export async function guardMigrationHistory(
+  input: DeployInput,
+  targetBranch: string
+): Promise<void> {
+  const { findings } = await runValidate(process.cwd(), {
+    skipTypecheck: true,
+    migrationsBase: input.migrationsBase,
+    deployTarget: targetBranch,
+  })
+  const errors = migrationHistoryErrors(findings)
+  if (errors.length === 0) return
+  throw new FabricPreconditionError(
+    [
+      `Refusing to deploy: ${errors.length} migration-history problem${errors.length === 1 ? '' : 's'}.`,
+      ...errors.map((f) => `  - [${f.id}] ${f.message}`),
+      '',
+      'Applied migrations are forward-only: restore the original file and add a NEW migration.',
+      'Run `pikku fabric validate` for fix hints.',
+    ].join('\n')
+  )
+}
+
+export async function applyDeploy(
   input: DeployInput,
   started: { deploymentId?: string }
 ): Promise<ApplyOutput> {
@@ -275,6 +303,8 @@ async function applyDeploy(
     branch = targetBranch
     ref = resolved
     rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+
+    await guardMigrationHistory(input, targetBranch)
 
     // An inferred target is said out loud before anything is built. Under -y
     // there is no confirmation prompt to name it, and a deploy that never

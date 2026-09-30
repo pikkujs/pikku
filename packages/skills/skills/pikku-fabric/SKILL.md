@@ -91,6 +91,31 @@ Numbers must be consecutive and gap-free, and an applied migration is frozen —
 correct a mistake with a new forward migration, never by editing or renaming one
 that has already run (the recorded hash will no longer match).
 
+**Forward-only rule.** Once a migration exists on the base branch (or any stage
+has applied it), never edit, rename or delete it — add a NEW numbered migration
+that makes the change. A stage records a migration by name and never re-runs it,
+so an edit never reaches a database that already applied it. Two guards enforce
+this:
+
+- `pikku fabric validate` reports `migration-modified-after-base-*` (error) for
+  any `db/<engine>/*.sql` that exists on the base ref (default `origin/main`, else `main`, `origin/master`, `master`,
+  compared at the branch's merge-base; override with `--migrations-base <ref>`
+  or `PIKKU_MIGRATIONS_BASE`) but was modified, deleted or renamed in the working
+  tree. New files are fine. It is skipped outside a git repo or with no base ref.
+  In CI use a full clone (`fetch-depth: 0`) so the base ref exists.
+- `pikku fabric deploy apply` runs the migration-history checks first and
+  refuses to create a deployment if any fail. It compares against the stage
+  being deployed and the production (`main`) stage's applied ledger, and against
+  the base ref — a branch stage can be reset at will, but main's history reaches
+  production. Findings: `migration-applied-file-missing-*`, `migration-drift-*`,
+  `migration-gap`, `migration-modified-after-base-*`. Unlike `validate`, a check
+  that cannot run refuses too: an unreadable ledger (`migration-drift-unchecked`)
+  or a base ref that does not resolve (`migration-base-unresolved`). There is no
+  override flag — fix the history.
+
+Fix a finding by restoring the file (`git checkout origin/main -- db/sqlite/<file>`)
+and putting the change in a new migration.
+
 Run migrations: `pikku db migrate`. It also regenerates `.pikku/db/schema.gen.ts`
 (Kysely types) and `.pikku/db/zod.gen.ts` — there is no separate types step.
 
