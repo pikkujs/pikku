@@ -567,3 +567,139 @@ describe('graph forEach fanout — durable queued path', () => {
     cleanup()
   })
 })
+
+/**
+ * Stand in for a worker that claimed `stepName`'s queued job and was killed
+ * mid-step: the job is gone, and the step sits `running` under a lease nobody
+ * renews any more.
+ */
+const loseTheWorker = async (h: Harness, runId: string, stepName: string) => {
+  const job = h.jobs.findIndex((j) => j.data.stepName === stepName)
+  assert.notEqual(job, -1, `${stepName} was never queued`)
+  const [{ data }] = h.jobs.splice(job, 1)
+  const claimed = await (h.ws as any).claimStepForExecution(
+    runId,
+    stepName,
+    data.rpcName,
+    60_000
+  )
+  assert.ok(claimed, `${stepName} could not be claimed`)
+  const step = await h.ws.getStepState(runId, stepName)
+  step.leaseExpiresAt = new Date(0)
+}
+
+describe('a graph node whose worker died', () => {
+  test('is dispatched again, with its input, once its lease has lapsed', async () => {
+    const charged: any[] = []
+    const h = harness(async (rpcName, data) => {
+      if (rpcName === 'charge') {
+        charged.push(data)
+        return { paid: data.amount }
+      }
+      return { done: true }
+    })
+    const cleanup = seedMeta(
+      'lapsedNode',
+      {
+        charge: {
+          nodeId: 'charge',
+          rpcName: 'charge',
+          input: { amount: { $ref: 'trigger', path: 'amount' } },
+          next: 'receipt',
+        },
+        receipt: { nodeId: 'receipt', rpcName: 'receipt' },
+      },
+      ['charge']
+    )
+
+    const { runId } = await runWorkflowGraph(
+      h.ws,
+      'lapsedNode',
+      { amount: 5 },
+      h.rpc,
+      false
+    )
+    await loseTheWorker(h, runId, 'charge')
+
+    await h.ws.orchestrateWorkflow(runId, h.rpc)
+    await h.drain()
+
+    assert.deepEqual(charged, [{ amount: 5 }])
+    assert.equal((await h.ws.getRun(runId))?.status, 'completed')
+    assert.equal((await h.ws.getStepState(runId, 'charge')).attemptCount, 2)
+
+    cleanup()
+  })
+
+  test('a fan-out instance is dispatched again with its own item', async () => {
+    const handled: any[] = []
+    const h = harness(async (rpcName, data) => {
+      if (rpcName === 'listRows') return [10, 20]
+      handled.push(data.value)
+      return { ok: true }
+    })
+    const cleanup = seedMeta(
+      'lapsedFanout',
+      {
+        list: { nodeId: 'list', rpcName: 'listRows', next: 'handle' },
+        handle: {
+          nodeId: 'handle',
+          rpcName: 'handleRow',
+          forEach: { $ref: 'list' },
+          input: { value: { $ref: '$item' } },
+        },
+      },
+      ['list']
+    )
+
+    const { runId } = await runWorkflowGraph(
+      h.ws,
+      'lapsedFanout',
+      {},
+      h.rpc,
+      false
+    )
+    h.onEnqueue(async (job) => {
+      if (job.data.stepName === 'handle[1]') {
+        h.onEnqueue(() => {})
+        await loseTheWorker(h, runId, 'handle[1]')
+      }
+    })
+    // `handle[0]` finishing sends the run back through the orchestrator, which
+    // meets `handle[1]` lapsed and has to dispatch it again.
+    await h.drain()
+
+    assert.deepEqual(handled.sort(), [10, 20])
+    assert.equal((await h.ws.getRun(runId))?.status, 'completed')
+
+    cleanup()
+  })
+
+  test('is left alone while its lease is live', async () => {
+    const h = harness(async () => ({ ok: true }))
+    const cleanup = seedMeta(
+      'liveNode',
+      { work: { nodeId: 'work', rpcName: 'work' } },
+      ['work']
+    )
+
+    const { runId } = await runWorkflowGraph(h.ws, 'liveNode', {}, h.rpc, false)
+    const [{ data }] = h.jobs.splice(0, 1)
+    await (h.ws as any).claimStepForExecution(
+      runId,
+      'work',
+      data.rpcName,
+      60_000
+    )
+
+    await h.ws.orchestrateWorkflow(runId, h.rpc)
+
+    assert.deepEqual(
+      h.jobs.filter((j) => j.data.stepName === 'work'),
+      [],
+      'a step still being worked was dispatched again'
+    )
+
+    cleanup()
+  })
+})

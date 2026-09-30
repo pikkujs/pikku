@@ -76,7 +76,7 @@ export const startStepLeaseRefresh = (
  * than a first run — a step that kills its worker every time then runs out.
  */
 export const runningStepLease = (
-  stepState: StepState
+  stepState: Pick<StepState, 'status' | 'leaseExpiresAt'>
 ): 'held' | 'lapsed' | undefined => {
   if (stepState.status !== 'running' || stepState.leaseExpiresAt == null) {
     return undefined

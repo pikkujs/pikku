@@ -310,6 +310,30 @@ describe('KyselyWorkflowService — attempt counting', () => {
       's5',
     ])
   })
+
+  // A replay decides from this snapshot whether a `running` step still has a
+  // worker on it. Without its lease the step reads as never claimed, and is
+  // scheduled and dispatched again while the first worker is still running it.
+  test('a replay reads a step exactly as getStepState does, lease included', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 'charge', 'charge:card', {})
+    const claimed = await (service as any).claimStepForExecution(
+      runId,
+      'charge',
+      'charge:card',
+      60_000
+    )
+    assert.ok(claimed)
+
+    const [replayed] = await (service as any).listStepStates(runId)
+    const { stepName, ...snapshot } = replayed
+    assert.equal(stepName, 'charge')
+    assert.ok(
+      snapshot.leaseExpiresAt,
+      "the replay lost the running step's lease"
+    )
+    assert.deepEqual(snapshot, await service.getStepState(runId, 'charge'))
+  })
 })
 
 describe('KyselyWorkflowService — run state writes', () => {

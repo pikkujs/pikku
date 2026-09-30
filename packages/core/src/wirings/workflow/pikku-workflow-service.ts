@@ -518,6 +518,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepName: string
       status: StepStatus
       fromStepName?: string
+      /** Set by a store that records step leases; see `runningStepLease`. */
+      leaseExpiresAt?: Date
     }>
   >
 

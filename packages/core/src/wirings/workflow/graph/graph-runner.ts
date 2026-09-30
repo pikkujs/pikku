@@ -4,6 +4,7 @@ import {
   WorkflowSuspendedException,
 } from '../workflow-errors.js'
 import { DEFAULT_STEP_RETRIES } from '../workflow-constants.js'
+import { runningStepLease } from '../workflow-step-lease.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
@@ -697,6 +698,14 @@ async function createGraphResultReader(
   }
 }
 
+const graphStepOptions = (nodeConfig?: {
+  retries?: number
+  retryDelay?: string | number
+}) => ({
+  retries: nodeConfig?.retries ?? DEFAULT_STEP_RETRIES,
+  retryDelay: nodeConfig?.retryDelay,
+})
+
 async function queueGraphNode(
   workflowService: PikkuWorkflowService,
   runId: string,
@@ -707,10 +716,7 @@ async function queueGraphNode(
   nodeConfig?: { retries?: number; retryDelay?: string | number },
   fromStepName?: string
 ): Promise<void> {
-  const stepOptions = {
-    retries: nodeConfig?.retries ?? DEFAULT_STEP_RETRIES,
-    retryDelay: nodeConfig?.retryDelay,
-  }
+  const stepOptions = graphStepOptions(nodeConfig)
   await workflowService.insertStepState(
     runId,
     nodeId,
@@ -786,6 +792,45 @@ export async function continueGraph(
     reader.fanoutWidths
   )
 
+  const resolveNodeInput = async (logical: string, itemIndex?: number) => {
+    const node = nodes[logical]
+    const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
+      (id) => !IGNORED_REFS.has(id)
+    )
+    const fetchedResults = await reader.read(referencedNodeIds)
+    const nodeResults: Record<string, any> = {
+      trigger: triggerInput,
+      ...fetchedResults,
+    }
+    if (itemIndex !== undefined) {
+      nodeResults['$item'] = reader.fanoutItems[logical]?.[itemIndex]
+    }
+    return resolveSerializedInput(node.input, nodeResults)
+  }
+
+  // A node whose worker died is still `running`, so the plan counts it in
+  // flight and would wait on it forever. Its step already exists: dispatching
+  // it again is enough, and the claim makes that the next attempt.
+  for (const instance of instances) {
+    if (runningStepLease(instance) !== 'lapsed') continue
+    const logical = remapStepNamesToNodeIds(
+      [instance.stepName],
+      nodes,
+      graphName
+    )[0]!
+    const node = nodes[logical]
+    if (!node?.rpcName) continue
+    const itemIndex = splitFanoutInstance(instance.stepName)?.index
+    await workflowService.queueStepWorker(
+      runId,
+      instance.stepName,
+      node.rpcName,
+      await resolveNodeInput(logical, itemIndex),
+      graphStepOptions(node),
+      instance.fromStepName
+    )
+  }
+
   if (plan.toFire.length === 0) {
     if (!plan.hasInFlight && !plan.blockedWaiting) {
       await workflowService.updateRunStatus(runId, 'completed')
@@ -797,18 +842,7 @@ export async function continueGraph(
     const node = nodes[fire.logical]
     if (!node?.rpcName) continue
 
-    const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
-      (id) => !IGNORED_REFS.has(id)
-    )
-    const fetchedResults = await reader.read(referencedNodeIds)
-    const nodeResults: Record<string, any> = {
-      trigger: triggerInput,
-      ...fetchedResults,
-    }
-    if (fire.itemIndex !== undefined) {
-      nodeResults['$item'] = reader.fanoutItems[fire.logical]?.[fire.itemIndex]
-    }
-    const resolvedInput = resolveSerializedInput(node.input, nodeResults)
+    const resolvedInput = await resolveNodeInput(fire.logical, fire.itemIndex)
 
     await queueGraphNode(
       workflowService,
@@ -1204,7 +1238,8 @@ function planEntryFirings(
   }
 
   const items = resolveForEachItems(graphName, nodeId, node, triggerNodeResults)
-  const width = node.mode === 'sequential' ? Math.min(items.length, 1) : items.length
+  const width =
+    node.mode === 'sequential' ? Math.min(items.length, 1) : items.length
   const firings: Array<{ instanceKey: string; input: any }> = []
   for (let index = 0; index < width; index++) {
     firings.push({
