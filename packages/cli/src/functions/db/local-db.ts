@@ -992,6 +992,38 @@ function diffSchemas(
 }
 
 /**
+ * Columns the migrations gave a table that its source no longer declares, and
+ * that no insert can satisfy: NOT NULL, no default, not a key. The source wrote
+ * them once (Better Auth 1.7.0–1.7.2 required `account.issuer`; 1.7.3 stopped
+ * writing it), so they are in the covered schema, and every insert into the table
+ * fails until they are relaxed. `diffSchemas` cannot see this — it only looks for
+ * what is missing — so a source that is otherwise "already covered" stays broken.
+ */
+function orphanedRequiredColumns(
+  desired: SchemaMap,
+  actual: SchemaMap,
+  schema?: string
+): { table: string; columns: ColumnInfo[] }[] {
+  const orphans: { table: string; columns: ColumnInfo[] }[] = []
+  for (const [table, cols] of desired) {
+    const actualCols = schema
+      ? actual.get(qualifiedTableKey(schema, table))
+      : (actual.get(table) ?? schemaQualifiedMatch(actual, table))
+    if (!actualCols) continue
+    const columns = [...actualCols.values()].filter(
+      (c) =>
+        !cols.has(c.name) &&
+        c.notNull &&
+        c.defaultValue === null &&
+        !c.pk &&
+        !c.generated
+    )
+    if (columns.length) orphans.push({ table, columns })
+  }
+  return orphans
+}
+
+/**
  * How an introspected schema map keys a table in a given schema.
  *
  * Introspection elides `public`, so the key for a table there is the bare name.
@@ -1324,7 +1356,8 @@ export async function introspectSchema(
 
 async function coveredSqliteSchema(
   migrationsDir: string,
-  context: SqliteExtensionContext
+  context: SqliteExtensionContext,
+  indexes?: Map<string, string[]>
 ): Promise<SchemaMap> {
   const db = await openSqlite(context, ':memory:')
   try {
@@ -1333,9 +1366,40 @@ async function coveredSqliteSchema(
     } catch (error) {
       throw explainMissingSqliteExtension(error, context)
     }
-    return await introspectorToMap(new SqliteIntrospector(db))
+    const map = await introspectorToMap(new SqliteIntrospector(db))
+    if (indexes) collectSqliteColumnIndexes(db, map, indexes)
+    return map
   } finally {
     db.close()
+  }
+}
+
+/**
+ * Which explicit indexes cover each column, keyed `table.column`. SQLite refuses
+ * to drop a column an index names, so the migration that drops one has to drop
+ * those first. Only `CREATE INDEX` ones (origin `c`): a column with a UNIQUE or
+ * PRIMARY KEY constraint cannot be dropped at all, and is left alone.
+ */
+function collectSqliteColumnIndexes(
+  db: { prepare(sql: string): { all(): unknown[] } },
+  schema: SchemaMap,
+  out: Map<string, string[]>
+): void {
+  for (const table of schema.keys()) {
+    const list = db
+      .prepare(`PRAGMA index_list(${JSON.stringify(table)})`)
+      .all() as { name: string; origin: string }[]
+    for (const index of list) {
+      if (index.origin !== 'c') continue
+      const info = db
+        .prepare(`PRAGMA index_info(${JSON.stringify(index.name)})`)
+        .all() as { name: string | null }[]
+      for (const col of info) {
+        if (!col.name) continue
+        const key = `${table}.${col.name}`
+        out.set(key, [...(out.get(key) ?? []), index.name])
+      }
+    }
   }
 }
 
@@ -1925,11 +1989,54 @@ function addColumnStatements(
   return { sql, needsBackfill }
 }
 
+/**
+ * The statements that stop an orphaned required column failing every insert.
+ *
+ * PostgreSQL relaxes it — the column and what it holds stay, only the constraint
+ * goes. SQLite cannot change a column's constraints, so it is dropped, indexes
+ * first (SQLite refuses to drop a column an index still names).
+ */
+function orphanedColumnStatements(
+  dialect: 'sqlite' | 'postgres',
+  qualified: string,
+  table: string,
+  columns: ColumnInfo[],
+  columnIndexes: Map<string, string[]>,
+  quote: (name: string) => string
+): string[] {
+  const statements: string[] = []
+  for (const column of columns) {
+    const note =
+      `-- ${table}.${column.name} is NOT NULL with no default, and its source no longer\n` +
+      `-- declares it, so nothing inserts it and every insert into ${table} fails.\n`
+    if (dialect === 'postgres') {
+      statements.push(
+        `${note}ALTER TABLE ${qualified} ALTER COLUMN ${quote(column.name)} DROP NOT NULL;`
+      )
+      continue
+    }
+    const indexes = columnIndexes.get(`${table}.${column.name}`) ?? []
+    statements.push(
+      note +
+        [
+          ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
+          `ALTER TABLE ${qualified} DROP COLUMN ${quote(column.name)};`,
+        ].join('\n')
+    )
+  }
+  return statements
+}
+
 export interface GeneratedMigration {
   source: string
   file: string
   /** Columns the migration adds that need a backfill decision before it is applied. */
   needsBackfill: string[]
+  /**
+   * Columns the migration drops or relaxes because the source no longer writes
+   * them and they were NOT NULL with no default, so every insert failed.
+   */
+  orphaned: string[]
 }
 
 export interface GenerateResult {
@@ -1980,9 +2087,14 @@ export async function generateMigrations(
   for (const source of sources) {
     // Re-read after each write: a migration just written for an earlier source
     // is part of what the next one is compared against.
+    const columnIndexes = new Map<string, string[]>()
     const covered =
       resolved.dialect === 'sqlite'
-        ? await coveredSqliteSchema(resolved.migrationsDir, resolved)
+        ? await coveredSqliteSchema(
+            resolved.migrationsDir,
+            resolved,
+            columnIndexes
+          )
         : await coveredPostgresSchema(resolved.migrationsDir, resolved)
 
     const { missingTables, missingColumns } = diffSchemas(
@@ -1990,7 +2102,16 @@ export async function generateMigrations(
       covered,
       source.schema
     )
-    if (missingTables.length === 0 && missingColumns.length === 0) {
+    const orphans = orphanedRequiredColumns(
+      source.desired.tables,
+      covered,
+      source.schema
+    )
+    if (
+      missingTables.length === 0 &&
+      missingColumns.length === 0 &&
+      orphans.length === 0
+    ) {
       result.upToDate.push(source.name)
       continue
     }
@@ -2009,6 +2130,7 @@ export async function generateMigrations(
 
     let body: string
     let needsBackfill: string[] = []
+    const orphaned: string[] = []
 
     // The source's own SQL is already qualified when it can be; the delta below
     // is written here from bare introspected names, so it has to be qualified
@@ -2066,6 +2188,18 @@ export async function generateMigrations(
         statements.push(...added.sql)
         needsBackfill.push(...added.needsBackfill)
       }
+      for (const { table, columns } of orphans) {
+        const dropped = orphanedColumnStatements(
+          resolved.dialect,
+          qualify(table),
+          table,
+          columns,
+          columnIndexes,
+          quote
+        )
+        statements.push(...dropped)
+        orphaned.push(...columns.map((c) => `${table}.${c.name}`))
+      }
       body = statements.join('\n\n')
     }
 
@@ -2074,7 +2208,7 @@ export async function generateMigrations(
       `-- Generated by \`pikku db generate\` from ${source.origin}.\n` +
       '-- Re-run the command after changing that source.\n\n'
     writeFileSync(file, header + body + '\n', 'utf8')
-    result.written.push({ source: source.name, file, needsBackfill })
+    result.written.push({ source: source.name, file, needsBackfill, orphaned })
   }
 
   return result
