@@ -6,7 +6,8 @@
  * whole `LeaseService` contract, then is raced and skewed: a lease is judged by
  * the database's clock, never by the clock of the worker asking.
  *
- * Postgres comes from `DATABASE_URL` and MySQL from `MYSQL_URL`. Both tables are
+ * Postgres comes from `DATABASE_URL`, MySQL from `MYSQL_URL` and Redis from
+ * `REDIS_URL`. Both tables are
  * created here: nothing this app wires reaches `leaseService`, so
  * `pikku db migrate` has no reason to, and pikku ships no MySQL migrations.
  */
@@ -20,10 +21,13 @@ import type { LeaseService } from '@pikku/core/services'
 import { defineServiceTests } from '@pikku/core/testing'
 import { PgKyselyLeaseService } from '@pikku/kysely-postgres'
 import { MySQLKyselyLeaseService } from '@pikku/kysely-mysql'
+import { RedisLeaseService } from '@pikku/redis'
 import { connectionString } from '../config.js'
 
 const mysqlUrl =
   process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
+
+const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379'
 
 const HOUR = 60 * 60 * 1000
 
@@ -48,9 +52,12 @@ const mysql = new Kysely<any>({
   plugins: [new CamelCasePlugin()],
 })
 
+const redisLeases: RedisLeaseService[] = []
+
 after(async () => {
   await pg.destroy()
   await mysql.destroy()
+  await Promise.all(redisLeases.map((leases) => leases.close()))
 })
 
 const backends: Record<string, () => Promise<LeaseService>> = {
@@ -77,6 +84,13 @@ const backends: Record<string, () => Promise<LeaseService>> = {
     `.execute(mysql)
     await mysql.deleteFrom('pikkuLease').execute()
     return new MySQLKyselyLeaseService(mysql)
+  },
+  redis: async () => {
+    const leases = new RedisLeaseService(redisUrl, {
+      keyPrefix: `lease-db-${crypto.randomUUID()}`,
+    })
+    redisLeases.push(leases)
+    return leases
   },
 }
 
