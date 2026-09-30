@@ -309,6 +309,7 @@ jobs:
     timeout-minutes: 45
     needs: [build, native-gate, native-web]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
+    continue-on-error: ${{ matrix.optional == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -321,12 +322,13 @@ jobs:
             os: macos-latest
             bundles: app,dmg
             smoke: true
-          # Windows is off until codegen writes forward-slashed import paths
-          # there — see knowledge/projects/pikku/status/native-apps-1908.md.
-          # - name: windows
-          #   os: windows-latest
-          #   bundles: nsis,msi
-          #   smoke: true
+          # Runs but may fail: it has not yet passed end to end — see
+          # knowledge/projects/pikku/status/native-apps-1908.md.
+          - name: windows
+            os: windows-latest
+            bundles: nsis,msi
+            smoke: true
+            optional: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
