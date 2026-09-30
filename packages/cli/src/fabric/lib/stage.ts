@@ -99,3 +99,25 @@ export async function matchStage(
   }
   return { stageId: stage.stageId, branch: stage.branch }
 }
+
+export async function autoDeployOffHints(
+  rpc: PikkuRPC,
+  projectId: string,
+  branch?: string
+): Promise<string[]> {
+  const { stages } = await rpc.invoke('getProjectDeployments', { projectId })
+  return stages
+    .filter(
+      (s) =>
+        (!branch || s.branch === branch) &&
+        !s.autoDeployOnPush &&
+        s.deployments.some(
+          (d) =>
+            d.status === 'suspended' && d.statusReason === 'awaiting_approval'
+        )
+    )
+    .map(
+      (s) =>
+        `waiting for approval — auto-deploy is off (pikku fabric deploy auto on -b ${s.branch})`
+    )
+}

@@ -37,6 +37,10 @@ import {
   FabricDeployUnits,
   renderDeployUnits,
 } from './functions/deploy-units.function.js'
+import {
+  FabricDeployAuto,
+  renderDeployAuto,
+} from './functions/deploy-auto.function.js'
 import { FabricStatus, renderStatus } from './functions/status.function.js'
 import {
   FabricProjectsList,
@@ -332,6 +336,16 @@ export const fabricCommands = defineCLICommands({
         func: FabricDeployUnits,
         render: renderDeployUnits,
         description: 'List the deployed worker units (topology) for a branch',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+      auto: pikkuCLICommand({
+        parameters: '[state]',
+        func: FabricDeployAuto,
+        render: renderDeployAuto,
+        description:
+          'Show whether a push deploys without waiting for approval, or turn it on/off for a branch',
         options: {
           branch: { description: 'Target branch', short: 'b' },
         },

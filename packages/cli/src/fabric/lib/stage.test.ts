@@ -1,6 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { matchStage, resolveStage, resolveStageId } from './stage.js'
+import {
+  autoDeployOffHints,
+  matchStage,
+  resolveStage,
+  resolveStageId,
+} from './stage.js'
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 const rpcWith = (branches: string[]) =>
@@ -129,5 +134,117 @@ describe('matchStage', () => {
       matchStage(rpc, 'p1', 'staging'),
       /No stage matches "staging"\. Stages: main \(https:\/\/mono\.pikkufabric\.dev\), develop/
     )
+  })
+})
+
+type HintStage = {
+  branch: string
+  autoDeployOnPush: boolean
+  deployments: { status: string; statusReason: string | null }[]
+}
+
+const deploymentsRpc = (stages: HintStage[]) =>
+  ({
+    invoke: async (name: string) => {
+      assert.strictEqual(name, 'getProjectDeployments')
+      return { stages }
+    },
+  }) as unknown as PikkuRPC
+
+const waiting = (statusReason: string | null = 'awaiting_approval') => ({
+  status: 'suspended',
+  statusReason,
+})
+
+describe('autoDeployOffHints', () => {
+  test('names the branch and the command that would turn it on', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        {
+          branch: 'staging',
+          autoDeployOnPush: false,
+          deployments: [waiting()],
+        },
+      ]),
+      'p1'
+    )
+    assert.deepStrictEqual(hints, [
+      'waiting for approval — auto-deploy is off (pikku fabric deploy auto on -b staging)',
+    ])
+  })
+
+  test('says nothing when auto-deploy is already on', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        { branch: 'main', autoDeployOnPush: true, deployments: [waiting()] },
+      ]),
+      'p1'
+    )
+    assert.deepStrictEqual(hints, [])
+  })
+
+  test('says nothing about a suspension that is not an approval wait', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        {
+          branch: 'main',
+          autoDeployOnPush: false,
+          deployments: [waiting('org_cannot_pay')],
+        },
+      ]),
+      'p1'
+    )
+    assert.deepStrictEqual(hints, [])
+  })
+
+  test('says nothing when the stage has no waiting deployment', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        {
+          branch: 'main',
+          autoDeployOnPush: false,
+          deployments: [{ status: 'succeeded', statusReason: null }],
+        },
+      ]),
+      'p1'
+    )
+    assert.deepStrictEqual(hints, [])
+  })
+
+  test('still points at a branch whose own stage is not waiting', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        {
+          branch: 'main',
+          autoDeployOnPush: false,
+          deployments: [waiting()],
+        },
+        {
+          branch: 'preview',
+          autoDeployOnPush: false,
+          deployments: [waiting()],
+        },
+      ]),
+      'p1',
+      'preview'
+    )
+    assert.deepStrictEqual(hints, [
+      'waiting for approval — auto-deploy is off (pikku fabric deploy auto on -b preview)',
+    ])
+  })
+
+  test('ignores the other branches when one is asked about', async () => {
+    const hints = await autoDeployOffHints(
+      deploymentsRpc([
+        {
+          branch: 'main',
+          autoDeployOnPush: false,
+          deployments: [waiting()],
+        },
+      ]),
+      'p1',
+      'preview'
+    )
+    assert.deepStrictEqual(hints, [])
   })
 })

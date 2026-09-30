@@ -5709,8 +5709,10 @@ export type ListStagesOutput = {
         containerUrl: string | null;
         createdAt: string;
         hasActiveDeployment: boolean;
+        isPublic: boolean;
         changesEnabled: boolean;
         changesBuildEnabled: boolean;
+        autoDeployOnPush: boolean;
         /** Set when the stage was stopped because its organization could not pay */
         suspension: ("stopped" | "resuming") | null;
     }[];
@@ -7958,6 +7960,14 @@ export type SetsCascadeValueOutput = {
     status: number;
     ok: boolean;
 }
+export type SetStageAutoDeployInput = {
+    stageId: string;
+    autoDeployOnPush: boolean;
+}
+export type SetStageAutoDeployOutput = {
+    autoDeployOnPush: boolean;
+    protected: boolean;
+}
 export type SetStageConsoleSecretInput = {
     stageId: string;
     secretId: string;
@@ -9219,6 +9229,7 @@ export type RPCMap = {
   readonly 'revokeStageSecrets': RPCHandler<RevokeStageSecretsInput, RevokeStageSecretsOutput>,
   readonly 'rotateStageSealingKey': RPCHandler<RotateStageSealingKeyInput, RotateStageSealingKeyOutput>,
   readonly 'setProductionBranch': RPCHandler<SetProductionBranchInput, SetProductionBranchOutput>,
+  readonly 'setStageAutoDeploy': RPCHandler<SetStageAutoDeployInput, SetStageAutoDeployOutput>,
   readonly 'setStageConsoleSecret': RPCHandler<SetStageConsoleSecretInput, SetStageConsoleSecretOutput>,
   readonly 'setStageConsoleVariable': RPCHandler<SetStageConsoleVariableInput, SetStageConsoleVariableOutput>,
   readonly 'setStageCredential': RPCHandler<SetStageCredentialInput, SetStageCredentialOutput>,
