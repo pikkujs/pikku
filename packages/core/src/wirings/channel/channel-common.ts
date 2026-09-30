@@ -86,7 +86,6 @@ export const runChannelLifecycleWithMiddleware = async ({
       singletonServices: services,
       wireServices,
       data: () => data,
-      auth: channelConfig.auth !== false,
       wire,
       sessionService: userSession,
       tags: meta.tags ?? [],
