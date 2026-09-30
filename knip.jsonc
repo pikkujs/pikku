@@ -34,8 +34,10 @@
     "ffprobe",
     // Part of a Rust toolchain rather than of this repo. The test that checks
     // the generated Tauri shell parses skips itself when it is absent, so it
-    // is never a dependency anyone has to install.
+    // is never a dependency anyone has to install. `pikku app native` probes
+    // for rustc only to say whether this machine can build what it wrote.
     "rustfmt",
+    "rustc",
   ],
 
   // Build output and generated sources are not hand-authored, and their
