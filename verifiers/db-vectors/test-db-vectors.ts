@@ -352,12 +352,15 @@ if (nodeBuilt) {
 }
 
 // --- compiled bun binary ---
-if (BUN_AVAILABLE) {
+// Once with the CLI under node (esbuild bundles) and once under bun (Bun.build
+// bundles): each bundler has to leave the extension manifest for the compile.
+async function checkCompiledBinary(cli: 'node' | 'bun') {
+  const label = `standalone (bun, bundled under ${cli})`
   let bunBuilt = false
-  await check('standalone (bun): compiles a binary', () => {
+  await check(`${label}: compiles a binary`, () => {
     rmSync(join(PROJECT_DIR, '.deploy'), { recursive: true, force: true })
     run(
-      'node',
+      cli,
       [
         PIKKU_BIN,
         'deploy',
@@ -373,29 +376,33 @@ if (BUN_AVAILABLE) {
       throw new Error(`No ${BINARY_NAME} binary in ${DIST_DIR}`)
     bunBuilt = true
   })
-  if (bunBuilt) {
-    const dir = isolate('bun')
-    await checkArtifact('standalone (bun)', dir, join(dir, BINARY_NAME), [])
+  if (!bunBuilt) return
+  const dir = isolate(`bun-${cli}`)
+  await checkArtifact(label, dir, join(dir, BINARY_NAME), [])
 
-    await check(
-      'standalone (bun): writes its embedded libraries beside the database',
-      () => {
-        const extracted = join(dir, 'data', '.pikku-sqlite-extensions')
-        if (!existsSync(extracted))
-          throw new Error(`Nothing was written to ${extracted}`)
-        const files = readdirSync(extracted, { recursive: true }).map(String)
-        if (!files.some((file) => /(^|\/)vec0\./.test(file)))
-          throw new Error(`No vec0 among ${files.join(', ')}`)
-        // Only macOS needs a SQLite of its own: bun elsewhere links one that
-        // loads extensions.
-        if (
-          process.platform === 'darwin' &&
-          !files.some((file) => /(^|\/)libsqlite3/.test(file))
-        )
-          throw new Error(`No libsqlite3 among ${files.join(', ')}`)
-      }
-    )
-  }
+  await check(
+    `${label}: writes its embedded libraries beside the database`,
+    () => {
+      const extracted = join(dir, 'data', '.pikku-sqlite-extensions')
+      if (!existsSync(extracted))
+        throw new Error(`Nothing was written to ${extracted}`)
+      const files = readdirSync(extracted, { recursive: true }).map(String)
+      if (!files.some((file) => /(^|\/)vec0\./.test(file)))
+        throw new Error(`No vec0 among ${files.join(', ')}`)
+      // Only macOS needs a SQLite of its own: bun elsewhere links one that
+      // loads extensions.
+      if (
+        process.platform === 'darwin' &&
+        !files.some((file) => /(^|\/)libsqlite3/.test(file))
+      )
+        throw new Error(`No libsqlite3 among ${files.join(', ')}`)
+    }
+  )
+}
+
+if (BUN_AVAILABLE) {
+  await checkCompiledBinary('node')
+  await checkCompiledBinary('bun')
 } else {
   skip('standalone (bun)', 'bun not on PATH')
 }
