@@ -4380,6 +4380,7 @@ export type OAuth2CredentialConfig = {
   authorizationUrl: string
   tokenUrl: string
   scopes: string[]
+  scopeSeparator?: string
   pkce?: boolean
   additionalParams?: Record<string, string>
 }
