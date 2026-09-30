@@ -2,6 +2,7 @@ import type { CoreSingletonServices } from '@pikku/core/types'
 import type { AuthInstance } from '@pikku/core/types'
 import { pikkuState } from '@pikku/core/state'
 import { applyStatelessCookieCacheDefault } from './stateless-cookie-default.js'
+import { applyOAuthProxy } from './oauth-proxy.js'
 
 /**
  * better-auth's instance as pikku sees it. `$context` is what credential
@@ -38,7 +39,8 @@ export const pikkuBetterAuth = <
    * result as one (`services.auth()` resolves it lazily and caches it).
    */
   const wrapped: PikkuBetterAuthFactory<I, S> = async (services) => {
-    const instance = await factory(services)
+    const built = await factory(services)
+    const instance = await applyOAuthProxy(built, services as any)
     await applyStatelessCookieCacheDefault(instance, services as any)
     return instance
   }

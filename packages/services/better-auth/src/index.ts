@@ -88,6 +88,16 @@ export {
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
 export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
+export {
+  applyOAuthProxy,
+  resolveOAuthProxyConfig,
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+  OAUTH_PROXY_PROVIDER_IDS,
+} from './oauth-proxy.js'
+export type { OAuthProxyConfig } from './oauth-proxy.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
 export type { AuthProvider, AuthProviderDef } from './provider-registry.js'
 export { pluginDisplayName } from './plugin-registry.js'

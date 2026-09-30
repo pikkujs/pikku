@@ -1,4 +1,11 @@
-import { PROVIDER_REGISTRY } from '@pikku/better-auth'
+import {
+  PROVIDER_REGISTRY,
+  OAUTH_PROXY_PROVIDER_IDS,
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+} from '@pikku/better-auth'
 import { AUTH_HANDLER_FUNC_ID } from '@pikku/inspector'
 import type { AuthDefinition } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -97,6 +104,8 @@ export const serializeAuthGen = (
   includeConsoleToken = false
 ): AuthGenOutput => {
   const known = providers.filter((p) => p in PROVIDER_REGISTRY)
+  const proxied = OAUTH_PROXY_PROVIDER_IDS.filter((p) => !known.includes(p))
+  const declared = [...known, ...proxied]
 
   const basePath = definition.basePath
   // Side-effect import of the user's auth file so `pikkuBetterAuth` runs and
@@ -112,12 +121,7 @@ export const serializeAuthGen = (
     '',
     `import { defineSecret } from '@pikku/core/secret'`,
   ]
-  const hasVariables =
-    known.some((name) => (PROVIDER_REGISTRY as any)[name].variables) ||
-    definition.cookieCache
-  if (hasVariables) {
-    secrets.push(`import { defineVariable } from '@pikku/core/variable'`)
-  }
+  secrets.push(`import { defineVariable } from '@pikku/core/variable'`)
   secrets.push(`import { z } from 'zod'`, '')
 
   // better-auth's session-signing secret is always required (its BETTER_AUTH_SECRET
@@ -134,7 +138,7 @@ export const serializeAuthGen = (
   secrets.push('')
 
   // Zod schemas for each provider's OAuth credentials secret.
-  for (const name of known) {
+  for (const name of declared) {
     const def = (PROVIDER_REGISTRY as any)[name]
     const schemaName = providerSchemaName(name)
     const fieldLines = Object.entries(def.fields as Record<string, string>).map(
@@ -146,8 +150,11 @@ export const serializeAuthGen = (
     secrets.push('')
   }
 
-  // defineSecret for each provider.
-  for (const name of known) {
+  // defineSecret for each provider. A provider the app never configures is
+  // still declared, as optional, when a host may inject it through an OAuth
+  // proxy: a stage's secrets are narrowed to what is declared, so an undeclared
+  // credential a host writes for the stage would not be readable.
+  for (const name of declared) {
     const def = (PROVIDER_REGISTRY as any)[name]
     const schemaName = providerSchemaName(name)
     const secretName = providerSecretName(name)
@@ -156,6 +163,59 @@ export const serializeAuthGen = (
     secrets.push(`  displayName: '${def.displayName}',`)
     secrets.push(`  secretId: '${def.secretId}',`)
     secrets.push(`  schema: ${schemaName},`)
+    if ((proxied as readonly string[]).includes(name))
+      secrets.push(`  optional: true,`)
+    secrets.push(`})`)
+    secrets.push('')
+  }
+
+  // The OAuth proxy a host may inject into a non-production stage. All optional:
+  // a stage with none of them signs in exactly as before, and a stage with some
+  // but not all fails at boot (see resolveOAuthProxyConfig) rather than at the
+  // deploy gate, so a production stage is never asked for them.
+  secrets.push(`export const OAuthProxySecretSchema = z.string()`)
+  secrets.push('')
+  secrets.push(`defineSecret({`)
+  secrets.push(`  name: 'oauthProxySecret',`)
+  secrets.push(`  displayName: 'OAuth Proxy Secret',`)
+  secrets.push(
+    `  description: 'Key this stage shares with its host OAuth proxy. Set together with the proxy URL and providers, or not at all.',`
+  )
+  secrets.push(`  secretId: '${OAUTH_PROXY_SECRET_ID}',`)
+  secrets.push(`  schema: OAuthProxySecretSchema,`)
+  secrets.push(`  optional: true,`)
+  secrets.push(`})`)
+  secrets.push('')
+  for (const [name, displayName, description, variableId] of [
+    [
+      'oauthProxyUrl',
+      'OAuth Proxy URL',
+      'Origin of the host OAuth proxy this stage signs in through.',
+      OAUTH_PROXY_URL_VARIABLE,
+    ],
+    [
+      'oauthProxyProviders',
+      'OAuth Proxy Providers',
+      'Comma-separated providers that sign in through the proxy, for example google,github.',
+      OAUTH_PROXY_PROVIDERS_VARIABLE,
+    ],
+    [
+      'oauthProxyKeyId',
+      'OAuth Proxy Key ID',
+      'Identifier the proxy uses to find this stage key. Sent in the OAuth state.',
+      OAUTH_PROXY_KEY_ID_VARIABLE,
+    ],
+  ] as const) {
+    const schemaName = `${capitalize(name)}VariableSchema`
+    secrets.push(`export const ${schemaName} = z.string()`)
+    secrets.push('')
+    secrets.push(`defineVariable({`)
+    secrets.push(`  name: '${name}',`)
+    secrets.push(`  displayName: '${displayName}',`)
+    secrets.push(`  description: '${description}',`)
+    secrets.push(`  variableId: '${variableId}',`)
+    secrets.push(`  schema: ${schemaName},`)
+    secrets.push(`  optional: true,`)
     secrets.push(`})`)
     secrets.push('')
   }
