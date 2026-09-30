@@ -35,7 +35,8 @@ export interface WorkflowStatusStreamParams {
 }
 
 /**
- * Streams one run's progress until it reaches a terminal state.
+ * Streams one run's progress until it reaches a terminal state. A suspended
+ * run is not terminal: it gets a `suspended` frame and the stream stays open.
  *
  * Polled rather than subscribed because a run's steps are written by whichever
  * worker picked them up, in whichever process — there is no in-memory event to
@@ -55,6 +56,7 @@ export const streamWorkflowRunStatus = async ({
 }: WorkflowStatusStreamParams): Promise<void> => {
   let lastHash = ''
   let initSent = false
+  let announcedSuspend: string | undefined
 
   const poll = async (): Promise<boolean> => {
     const run = await workflowRunService.getRun(runId)
@@ -107,6 +109,21 @@ export const streamWorkflowRunStatus = async ({
             : {}),
         })),
       })
+    }
+
+    // A suspended run is waiting for a decision or a signal, not finished, so
+    // the stream stays open for the resume. The frame is what tells a client
+    // that nothing more arrives until someone acts. `reason` is the string the
+    // workflow author gave `suspend()` for a person to read, so it goes to both
+    // routes, unlike `error`.
+    if (run.status === 'suspended') {
+      const reason = run.error?.message ?? 'Workflow suspended'
+      if (announcedSuspend !== reason) {
+        announcedSuspend = reason
+        await channel.send({ type: 'suspended', reason })
+      }
+    } else {
+      announcedSuspend = undefined
     }
 
     if (TERMINAL.has(run.status)) {
