@@ -7,6 +7,7 @@ import {
   changesContext,
   imageContentType,
   type ImageContentType,
+  nonBlank,
 } from '../lib/changes.js'
 import { dim, safe, safeBlock } from '../lib/output.js'
 import type { ReplyToChangeOutput } from '../sdk/rpc-map.gen.d.js'
@@ -14,7 +15,7 @@ import type { ReplyToChangeOutput } from '../sdk/rpc-map.gen.d.js'
 export const FabricChangesReplyInput = z.object({
   apiUrl: z.string().optional(),
   changeId: z.string(),
-  message: z.string().trim().min(1, 'Say something — the message is empty.'),
+  message: z.string(),
   image: z.string().optional(),
   imageLabel: z.string().optional(),
   contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']).optional(),
@@ -52,7 +53,7 @@ export const FabricChangesReply = pikkuSessionlessFunc({
     const { rpc, projectId } = await changesContext(input.apiUrl)
     return await rpc.invoke('replyToChange', {
       ...changeRef(projectId, input.changeId),
-      body: input.message,
+      body: nonBlank(input.message, 'Say something — the message is empty.'),
       authorName: input.authorName ?? 'pikku-cli',
       contentType: contentType ?? 'image/png',
       imageLabel: input.imageLabel ?? 'screenshot',

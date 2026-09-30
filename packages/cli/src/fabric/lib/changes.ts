@@ -47,6 +47,17 @@ export function requireProjectId(projectId: string | null): string {
 }
 
 /**
+ * Text a person will read on the thread, trimmed, or refused when there is
+ * none. The CLI enforces no input schema at runtime, so a `.trim().min(1)`
+ * there would let "   " through.
+ */
+export function nonBlank(text: string, refusal: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) throw new FabricPreconditionError(refusal)
+  return trimmed
+}
+
+/**
  * Split a repeatable comma-separated option into ids. `--change-ids a,b
  * --change-ids c` and `--change-ids a --change-ids b` both mean the same list,
  * because a harness building the flag from a shell loop will produce either.

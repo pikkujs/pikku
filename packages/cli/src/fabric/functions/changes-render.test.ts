@@ -47,36 +47,6 @@ const change = (over: Record<string, unknown> = {}) => ({
 })
 
 describe('changes ask', () => {
-  test('refuses a question that says nothing', () => {
-    assert.strictEqual(
-      FabricChangesAskInput.safeParse({ changeId: 'chg_1', question: '' })
-        .success,
-      false
-    )
-    assert.strictEqual(
-      FabricChangesAskInput.safeParse({ changeId: 'chg_1', question: '   ' })
-        .success,
-      false
-    )
-  })
-
-  test('trims a question before it travels', () => {
-    const parsed = FabricChangesAskInput.parse({
-      changeId: 'chg_1',
-      question: '  Grouped or per-line?  ',
-    })
-    assert.strictEqual(parsed.question, 'Grouped or per-line?')
-  })
-
-  test('carries the named options across', () => {
-    const parsed = FabricChangesAskInput.parse({
-      changeId: 'chg_1',
-      question: 'Grouped or per-line?',
-      option: [' Grouped ', 'Per line'],
-    })
-    assert.deepStrictEqual(parsed.option, ['Grouped', 'Per line'])
-  })
-
   test('rejects a seventh option', () => {
     assert.strictEqual(
       FabricChangesAskInput.safeParse({

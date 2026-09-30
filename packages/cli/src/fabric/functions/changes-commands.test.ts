@@ -74,13 +74,11 @@ after(() => {
 })
 
 const { FabricChangesClaim } = await import('./changes-claim.function.js')
-const { FabricChangesAsk, FabricChangesAskInput } =
-  await import('./changes-ask.function.js')
+const { FabricChangesAsk } = await import('./changes-ask.function.js')
 const { FabricChangesDone } = await import('./changes-done.function.js')
 const { FabricChangesShot } = await import('./changes-shot.function.js')
 const { FabricChangesFile } = await import('./changes-file.function.js')
-const { FabricChangesReply, FabricChangesReplyInput } =
-  await import('./changes-reply.function.js')
+const { FabricChangesReply } = await import('./changes-reply.function.js')
 const { FabricChangesShow } = await import('./changes-show.function.js')
 const { clockTime } = changesLib
 
@@ -245,12 +243,45 @@ describe('changes ask', () => {
     assert.strictEqual(data.projectId, 'proj_linked')
   })
 
-  test('a blank question never reaches the api', () => {
-    const parsed = FabricChangesAskInput.safeParse({
-      changeId: 'chg_1',
-      question: '   ',
-    })
-    assert.strictEqual(parsed.success, false)
+  // The CLI runs no input schema, so these are the function's own refusals.
+  test('a blank question never reaches the api', async () => {
+    invoked.length = 0
+    for (const question of ['', '   '])
+      await assert.rejects(
+        FabricChangesAsk.func(
+          {} as any,
+          { changeId: 'chg_1', question } as any
+        ),
+        /the question is empty/
+      )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('a blank option never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesAsk.func(
+        {} as any,
+        { changeId: 'chg_1', question: 'Which?', option: ['a', ' '] } as any
+      ),
+      /An --option is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the question and its options travel trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesAsk.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          question: '  Grouped or per-line?  ',
+          option: [' Grouped ', 'Per line'],
+        } as any
+      )
+    )
+    assert.strictEqual(data.question, 'Grouped or per-line?')
+    assert.deepStrictEqual(data.option, ['Grouped', 'Per line'])
   })
 })
 
@@ -351,6 +382,28 @@ describe('changes file', () => {
         ) as Promise<unknown>,
       /not both/
     )
+  })
+
+  test('a blank title never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  ' } as any
+      ),
+      /Give the item a title/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the title travels trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  Drop the figure  ' } as any
+      )
+    )
+    assert.strictEqual(data.title, 'Drop the figure')
   })
 })
 
@@ -514,11 +567,25 @@ describe('changes reply', () => {
     assert.strictEqual(invoked.length, 0)
   })
 
-  test('a blank message never reaches the api', () => {
-    const parsed = FabricChangesReplyInput.safeParse({
-      changeId: 'chg_1',
-      message: '  ',
-    })
-    assert.strictEqual(parsed.success, false)
+  test('a blank message never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      FabricChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  ' } as any
+      ),
+      /the message is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the message travels trimmed', async () => {
+    const { data } = await sent(() =>
+      FabricChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  Blocked on X.  ' } as any
+      )
+    )
+    assert.strictEqual(data.body, 'Blocked on X.')
   })
 })

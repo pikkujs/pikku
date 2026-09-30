@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { FabricPreconditionError } from '../lib/errors.js'
-import { changesContext, requireProjectId } from '../lib/changes.js'
+import { changesContext, nonBlank, requireProjectId } from '../lib/changes.js'
 import { resolveStageId } from '../lib/stage.js'
 import { dim, safe } from '../lib/output.js'
 import type { CreateChangeOutput } from '../sdk/rpc-map.gen.d.js'
@@ -12,7 +12,7 @@ export const FabricChangesFileInput = z.object({
   projectId: z.string().optional(),
   stageId: z.string().optional(),
   branch: z.string().optional(),
-  title: z.string().trim().min(1, 'Give the item a title.'),
+  title: z.string(),
   body: z.string().optional(),
   bodyFile: z.string().optional(),
   route: z.string().optional(),
@@ -39,9 +39,7 @@ export const FabricChangesFile = pikkuSessionlessFunc({
   output: FabricChangesFileOutput,
   func: async (_services, input) => {
     if (input.body && input.bodyFile)
-      throw new FabricPreconditionError(
-        'Pass --body or --body-file, not both.'
-      )
+      throw new FabricPreconditionError('Pass --body or --body-file, not both.')
 
     const { rpc, projectId } = await changesContext(
       input.apiUrl,
@@ -58,7 +56,7 @@ export const FabricChangesFile = pikkuSessionlessFunc({
 
     return await rpc.invoke('createChange', {
       stageId,
-      title: input.title,
+      title: nonBlank(input.title, 'Give the item a title.'),
       body: body?.trim() || undefined,
       route: input.route,
       locale: input.locale,
