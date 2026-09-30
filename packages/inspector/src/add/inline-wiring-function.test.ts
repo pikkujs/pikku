@@ -102,3 +102,91 @@ describe('inline wiring functions register metadata', () => {
     })
   }
 })
+
+describe('inline CLI and channel handlers', () => {
+  const inspectSource = async (source: string) => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-inline-cli-'))
+    const file = join(rootDir, 'wire.ts')
+    await writeFile(file, source)
+    const critical: Array<{ code: ErrorCode; message: string }> = []
+    const logger: InspectorLogger = {
+      ...silentLogger(),
+      critical: (code, message) => {
+        critical.push({ code, message })
+      },
+    }
+    try {
+      const state = await inspect(logger, [file], { rootDir })
+      return { state, critical }
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  }
+
+  test('wireCLI registers a func inlined into a command', async () => {
+    const { state, critical } = await inspectSource(
+      [
+        "import { wireCLI, pikkuCLIRender } from '@pikku/core/cli'",
+        "import { pikkuSessionlessFunc } from '@pikku/core'",
+        'wireCLI({',
+        "  program: 'tool',",
+        '  render: pikkuCLIRender(() => {}),',
+        '  commands: {',
+        '    hello: {',
+        '      func: pikkuSessionlessFunc<{ name: string }, void>({ func: async () => {} }),',
+        '    },',
+        '  },',
+        '})',
+      ].join('\n')
+    )
+    assert.deepEqual(critical, [])
+    assert.equal(
+      state.cli.meta.programs['tool']?.commands['hello']?.pikkuFuncId,
+      'cli:tool:hello'
+    )
+    assert.ok(state.functions.meta['cli:tool:hello'])
+    assert.equal(state.functions.meta['cli:tool:hello']!.sessionless, true)
+  })
+
+  test('wireCLI registers a func inlined into a nested command', async () => {
+    const { state } = await inspectSource(
+      [
+        "import { wireCLI, pikkuCLIRender } from '@pikku/core/cli'",
+        "import { pikkuSessionlessFunc } from '@pikku/core'",
+        'wireCLI({',
+        "  program: 'tool',",
+        '  render: pikkuCLIRender(() => {}),',
+        '  commands: {',
+        '    db: {',
+        '      subcommands: {',
+        '        migrate: {',
+        '          func: pikkuSessionlessFunc<{ dry: boolean }, void>({ func: async () => {} }),',
+        '        },',
+        '      },',
+        '    },',
+        '  },',
+        '})',
+      ].join('\n')
+    )
+    assert.ok(state.functions.meta['cli:tool:db:migrate'])
+  })
+
+  test('wireChannel refuses an inline onMessage with a named error', async () => {
+    const { critical } = await inspectSource(
+      [
+        "import { wireChannel } from '@pikku/core/channel'",
+        "import { pikkuChannelFunc } from '@pikku/core'",
+        'wireChannel({',
+        "  name: 'ch1',",
+        "  route: '/ch1',",
+        '  onMessage: pikkuChannelFunc<{ text: string }, void>({ func: async () => {} }),',
+        '})',
+      ].join('\n')
+    )
+    assert.equal(critical.length, 1)
+    assert.match(
+      critical[0]!.message,
+      /No function metadata found for onMessage handler 'channel:ch1:message'/
+    )
+  })
+})

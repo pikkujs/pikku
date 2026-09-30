@@ -14,6 +14,7 @@ import {
 import { resolveCoreType } from '../utils/resolve-core-type.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
+import { ensureInlineWiringFunction } from '../utils/ensure-function-metadata.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
@@ -414,13 +415,22 @@ function processCommand(
             )!.package
         }
       } else {
-        pikkuFuncId = extractFunctionName(
+        const extracted = extractFunctionName(
           prop.initializer,
           typeChecker,
           inspectorState.rootDir
-        ).pikkuFuncId
+        )
+        pikkuFuncId = extracted.pikkuFuncId
         if (pikkuFuncId.startsWith('__temp_')) {
           pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
+          ensureInlineWiringFunction(
+            inspectorState,
+            pikkuFuncId,
+            fullPath.join(' '),
+            prop.initializer,
+            typeChecker,
+            extracted.isHelper
+          )
         }
         meta.pikkuFuncId = pikkuFuncId
         const cliPackageName = ts.isIdentifier(prop.initializer)
