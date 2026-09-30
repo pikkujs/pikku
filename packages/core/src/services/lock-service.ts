@@ -36,6 +36,17 @@ export class LockLostError extends Error {
   }
 }
 
+/** Resolves after `ms`, or as soon as `signal` aborts. */
+const sleep = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms)
+    timer.unref?.()
+    signal.addEventListener('abort', () => {
+      clearTimeout(timer)
+      resolve()
+    })
+  })
+
 export abstract class PikkuLockService implements LockService {
   abstract acquire(
     key: string,
@@ -46,58 +57,60 @@ export abstract class PikkuLockService implements LockService {
   abstract release(lease: LockLease): Promise<void>
   abstract get(key: string): Promise<LockLease | null>
 
+  /**
+   * Runs `fn` holding `key`, renewing the lease every third of `ttlMs` until
+   * it settles. Never waits for a taken key: that throws `LockTakenError`.
+   */
   async withLock<T>(
     key: string,
     fn: (lease: LockLease, signal: AbortSignal) => Promise<T>,
     ttlMs = 30_000
   ): Promise<T> {
-    let lease = await this.acquire(key, crypto.randomUUID(), ttlMs)
-    if (!lease) throw new LockTakenError(key)
+    const acquired = await this.acquire(key, crypto.randomUUID(), ttlMs)
+    if (!acquired) throw new LockTakenError(key)
+    let lease = acquired
+
     const lost = new AbortController()
-    // Measured on this process's own clock from the last renewal it saw, so a
-    // store whose clock disagrees cannot stretch how long this holder trusts it.
-    let heldUntil = Date.now() + ttlMs
-    let refreshing: Promise<unknown> = Promise.resolve()
-    const renew = async () => {
+    const finished = new AbortController()
+
+    // `null` is an answer: someone else holds the key. A throw is not, so the
+    // lease is only given up once this process's own clock says it has run out.
+    const renew = async (heldUntil: number) => {
       const renewedAt = Date.now()
-      const next = await this.refresh(lease!, ttlMs)
+      const next = await this.refresh(lease, ttlMs).catch(() => undefined)
       if (next) {
         lease = next
-        heldUntil = renewedAt + ttlMs
-      } else {
+        return renewedAt + ttlMs
+      }
+      if (next === null || Date.now() >= heldUntil) {
         lost.abort(new LockLostError(key))
       }
+      return heldUntil
     }
-    // A refresh that fails outright says nothing about the lease, but one that
-    // keeps failing past its expiry means another holder may have taken it.
-    const refresher = setInterval(
-      () => {
-        refreshing = refreshing.then(renew).catch(() => {
-          if (heldUntil <= Date.now()) lost.abort(new LockLostError(key))
-        })
-      },
-      Math.max(1, Math.floor(ttlMs / 3))
-    )
-    refresher.unref?.()
-    let result: T
-    try {
-      result = await fn(lease, lost.signal)
-      clearInterval(refresher)
-      await refreshing
-      // The last renewal may be up to a third of the lease old, and a stalled
-      // event loop can make it older: confirm the lease is still this
-      // holder's before vouching for what the body did under it.
-      if (!lost.signal.aborted) {
-        await renew().catch(() => lost.abort(new LockLostError(key)))
+
+    const keepAlive = async () => {
+      let heldUntil = Date.now() + ttlMs
+      while (!lost.signal.aborted) {
+        await sleep(Math.max(1, ttlMs / 3), finished.signal)
+        if (finished.signal.aborted) return
+        heldUntil = await renew(heldUntil)
       }
+    }
+    const renewing = keepAlive()
+
+    try {
+      const result = await fn(lease, lost.signal)
+      finished.abort()
+      await renewing
+      // The last renewal can be a third of a lease old, so check once more
+      // before vouching that the body ran alone.
+      if (!lost.signal.aborted) await renew(0)
+      if (lost.signal.aborted) throw new LockLostError(key)
+      return result
     } finally {
-      clearInterval(refresher)
-      await refreshing
+      finished.abort()
+      await renewing
       await this.release(lease).catch(() => {})
     }
-    // The body ran to completion, but not necessarily alone: a caller must not
-    // treat its result as having been produced under the lock.
-    if (lost.signal.aborted) throw new LockLostError(key)
-    return result
   }
 }
