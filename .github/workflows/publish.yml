@@ -39,6 +39,7 @@ jobs:
     name: Gate
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'cancelled'
+    timeout-minutes: 100
     permissions:
       actions: read
     outputs:
@@ -50,6 +51,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
         run: |
           gh api --paginate \
             "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
@@ -67,6 +70,36 @@ jobs:
               echo "- \`$name\`: **$conclusion**" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
+
+          # A Version Packages commit is the one that reaches npm, and it only
+          # bumps versions, so the code it ships is the commit below it. Full
+          # Suite is not rerun for it: its result for that commit is read
+          # instead, and anything but success holds the publish.
+          if [ "$ok" = true ] && [[ "$HEAD_MESSAGE" == "Version Packages"* ]]; then
+            sha=$HEAD_SHA
+            while :; do
+              sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq '.parents[0].sha')
+              message=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq '.commit.message')
+              [[ "$message" == "Version Packages"* ]] || break
+            done
+            echo "Waiting for Full Suite on ${sha}"
+            conclusion=missing
+            for _ in $(seq 1 90); do
+              conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/full.yml/runs?branch=main&per_page=50" \
+                --jq "[.workflow_runs[] | select(.display_title == \"Full Suite ${sha}\")][0] | if . == null then \"missing\" else (.conclusion // \"pending\") end")
+              case "$conclusion" in
+                missing|pending) sleep 60 ;;
+                *) break ;;
+              esac
+            done
+            if [ "$conclusion" = success ]; then
+              echo "- Full Suite on \`${sha:0:9}\`: success" >> "$GITHUB_STEP_SUMMARY"
+            else
+              ok=false
+              echo "::error::Full Suite on ${sha} is '$conclusion'"
+              echo "- Full Suite on \`${sha:0:9}\`: **$conclusion**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
           if [ "$ok" = true ]; then
             echo "" >> "$GITHUB_STEP_SUMMARY"

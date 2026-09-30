@@ -1,12 +1,15 @@
 name: Full Suite
+# The tested commit is in the title so Publish can find this run: see publish.yml.
+run-name: Full Suite ${{ github.sha }}
 
 # The verifier, template and example matrices, run once per push to main.
 #
 # Branch CI keeps only build, lint, unit and the e2e suites: ~90 jobs per push
 # across a dozen agent branches queued every run for close to an hour. These
-# run after the merge instead. Nothing waits on them: `publish.yml` gates on
-# `Release` alone, and a Version Packages merge only bumps versions, so it is
-# skipped. A red run here is fixed forward on main.
+# run after the merge instead, and Release (main.yml) starts when they finish,
+# so nothing ships before its commit has been tested. A red run here does not
+# stop Release; only a Version Packages publish waits on the result (publish.yml).
+# A Version Packages merge only bumps versions, so it is skipped here.
 #
 # Run it on a branch before merging a risky change:
 #   gh workflow run "Full Suite" --ref <branch>
@@ -16,9 +19,11 @@ on:
       - main
   workflow_dispatch:
 
-# Latest wins: the newest run on main carries every commit before it.
+# Latest wins: the newest run on main carries every commit before it. A Version
+# Packages run skips everything, so it gets a group of its own: sharing one, it
+# cancelled the real run of the merge before it and left main untested.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ startsWith(github.event.head_commit.message, 'Version Packages') && github.run_id || github.ref }}
   cancel-in-progress: true
 
 # better-auth now throws on a missing BETTER_AUTH_SECRET (mapSession errors no
