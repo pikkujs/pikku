@@ -29,6 +29,8 @@ export interface SurfaceFunction {
   inputSchemaName: string | null
   outputSchemaName: string | null
   contractHash?: string
+  /** Added by the platform (scaffold or generated source), not written in the app. */
+  platform?: true
 }
 
 export interface Surface {
@@ -58,7 +60,7 @@ interface FunctionMetaEntry {
 
 const SCHEMA_SUFFIX = '.schema.json'
 
-/** Scaffold output and generated files are platform plumbing, not the app's API. */
+/** Scaffold output and generated files are added by the platform, not written in the app. */
 export function isPlatformSource(sourceFile: string): boolean {
   return (
     /(^|[\\/])scaffold[\\/]/.test(sourceFile) ||
@@ -69,20 +71,26 @@ export function isPlatformSource(sourceFile: string): boolean {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 
-function withoutPlatform(
-  entries: Record<string, unknown>
+function markPlatform(
+  entries: Record<string, unknown>,
+  platform: Set<string>
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(entries)) {
     if (!isRecord(value)) {
       out[key] = value
-    } else if (typeof value.sourceFile === 'string') {
-      if (!isPlatformSource(value.sourceFile)) out[key] = value
+    } else if (
+      typeof value.pikkuFuncId === 'string' ||
+      typeof value.sourceFile === 'string'
+    ) {
+      const isPlatform =
+        (typeof value.pikkuFuncId === 'string' &&
+          platform.has(value.pikkuFuncId)) ||
+        (typeof value.sourceFile === 'string' &&
+          isPlatformSource(value.sourceFile))
+      out[key] = isPlatform ? { ...value, platform: true } : value
     } else {
-      const inner = withoutPlatform(value)
-      if (Object.keys(inner).length > 0 || Object.keys(value).length === 0) {
-        out[key] = inner
-      }
+      out[key] = markPlatform(value, platform)
     }
   }
   return out
@@ -162,7 +170,7 @@ export function readSurface(
   for (const [id, raw] of Object.entries(snapshot.functions ?? {})) {
     const meta = (raw ?? {}) as FunctionMetaEntry
     // A remote function is another service's surface, not this one's.
-    if (meta.remote === true || platform.has(id)) continue
+    if (meta.remote === true) continue
     const parsed = parseVersionedId(id)
     const inputSchemaName = meta.inputSchemaName ?? null
     const outputSchemaName = meta.outputSchemaName ?? null
@@ -174,13 +182,14 @@ export function readSurface(
       inputSchemaName,
       outputSchemaName,
       contractHash: meta.contractHash,
+      ...(platform.has(id) ? { platform: true } : {}),
     }
   }
 
   const wirings: Surface['wirings'] = {}
   for (const [category, entries] of Object.entries(snapshot)) {
     if (category === 'functions' || !entries) continue
-    const own = withoutPlatform(entries as Record<string, unknown>)
+    const own = markPlatform(entries as Record<string, unknown>, platform)
     if (Object.keys(own).length === 0) continue
     wirings[category as WiringCategory] = normalize(own) as Record<
       string,

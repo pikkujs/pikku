@@ -88,16 +88,12 @@ export function renderChangelogSection(input: ChangelogInput): string {
   const { changes, commits } = input
   const lines: string[] = [`## ${input.version} (${input.date})`, '']
 
+  const own = changes.changes.filter((c) => !c.platform)
   const groups: Array<[string, SurfaceChange[]]> = [
-    ['Breaking', changes.changes.filter((c) => c.breaking)],
-    [
-      'Added',
-      changes.changes.filter((c) => !c.breaking && c.status === 'added'),
-    ],
-    [
-      'Changed',
-      changes.changes.filter((c) => !c.breaking && c.status !== 'added'),
-    ],
+    ['Breaking', own.filter((c) => c.breaking)],
+    ['Added', own.filter((c) => !c.breaking && c.status === 'added')],
+    ['Changed', own.filter((c) => !c.breaking && c.status !== 'added')],
+    ['Platform', changes.changes.filter((c) => c.platform)],
   ]
   for (const [heading, entries] of groups) {
     if (entries.length === 0) continue
