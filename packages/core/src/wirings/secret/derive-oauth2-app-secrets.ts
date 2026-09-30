@@ -43,6 +43,7 @@ export const deriveOAuth2AppSecrets = (
         authorizationUrl: oauth2.authorizationUrl,
         tokenUrl: oauth2.tokenUrl,
         scopes: oauth2.scopes,
+        scopeSeparator: oauth2.scopeSeparator,
         pkce: oauth2.pkce,
         additionalParams: oauth2.additionalParams,
       },

@@ -65,6 +65,20 @@ describe('an OAuth2 credential implies its app secret', () => {
     assert.equal(app!.oauth2?.tokenSecretId, 'GMAIL_TOKENS')
   })
 
+  test('a credential keeps the scope separator it declares', async () => {
+    const state = await inspectSource(
+      CREDENTIAL.replace(
+        "scopes: [",
+        "scopeSeparator: ',',\n    scopes: ["
+      )
+    )
+
+    const credential = state.credentials.definitions.find(
+      (d) => d.name === 'gmailOAuth'
+    )
+    assert.equal(credential!.oauth2?.scopeSeparator, ',')
+  })
+
   test("an author's own declaration is left alone", async () => {
     const state = await inspectSource(
       `${CREDENTIAL}

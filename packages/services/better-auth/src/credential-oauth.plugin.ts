@@ -175,6 +175,7 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
         state: state.state,
         codeVerifier: config.pkce ? state.codeVerifier : undefined,
         scopes: config.scopes ?? [],
+        scopeJoiner: config.scopeSeparator,
         redirectURI,
         // access_type=offline / duration=permanent — without these the provider
         // never issues the refresh token that getAccessToken relies on.
