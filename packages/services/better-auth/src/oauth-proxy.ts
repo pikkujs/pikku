@@ -62,6 +62,10 @@ const parseProviders = (raw: string): string[] =>
  * of it is present. All-or-nothing: a stage with some of it set is a broken
  * deploy, and a sign-in button that silently does nothing is worse than a boot
  * failure that names what is missing.
+ *
+ * The URL and provider variables are what say the proxy is on. The secret is not
+ * a signal: schema tooling answers every secret read with a made-up value, so a
+ * secret alone must not read as a half-configured proxy.
  */
 export const resolveOAuthProxyConfig = async (
   services: ProxyServices
@@ -74,7 +78,7 @@ export const resolveOAuthProxyConfig = async (
   )
   const keyId = await readVariable(services, OAUTH_PROXY_KEY_ID_VARIABLE)
 
-  if (!secret && !productionURL && !providerList) return null
+  if (!productionURL && !providerList) return null
   if (providerList?.trim().toLowerCase() === 'none') return null
 
   const missing = [
