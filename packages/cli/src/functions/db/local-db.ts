@@ -1895,14 +1895,15 @@ export async function schemaSources(
  */
 function addColumnStatements(
   table: string,
-  columns: ColumnInfo[]
+  columns: ColumnInfo[],
+  quote: (name: string) => string
 ): { sql: string[]; needsBackfill: string[] } {
   const sql: string[] = []
   const needsBackfill: string[] = []
 
   for (const column of columns) {
     const parts = [
-      `ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`,
+      `ALTER TABLE ${table} ADD COLUMN ${quote(column.name)} ${column.type}`,
     ]
     if (column.defaultValue !== null) {
       parts.push(`DEFAULT ${column.defaultValue}`)
@@ -2016,8 +2017,12 @@ export async function generateMigrations(
     // through the schema builder and is quoted there. `db.schema: "App"` left
     // raw folds to `app`, so the delta would alter a table in a schema the
     // runtime never uses.
+    const quote =
+      resolved.dialect === 'postgres' ? quoteIdentifier : (name: string) => name
     const qualify = (table: string) =>
-      source.schema ? `${quoteIdentifier(source.schema)}.${table}` : table
+      source.schema
+        ? `${quoteIdentifier(source.schema)}.${quote(table)}`
+        : quote(table)
 
     if (!partial) {
       body = source.desired.sql
@@ -2046,7 +2051,8 @@ export async function generateMigrations(
             `CREATE TABLE ${qualify(table)} (\n` +
             [...(columns?.values() ?? [])]
               .map(
-                (c) => `  ${c.name} ${c.type}${c.notNull ? ' NOT NULL' : ''}`
+                (c) =>
+                  `  ${quote(c.name)} ${c.type}${c.notNull ? ' NOT NULL' : ''}`
               )
               .join(',\n') +
             '\n);'
@@ -2056,7 +2062,7 @@ export async function generateMigrations(
         const infos = columns
           .map((name) => source.desired.tables.get(table)?.get(name))
           .filter((c): c is ColumnInfo => c !== undefined)
-        const added = addColumnStatements(qualify(table), infos)
+        const added = addColumnStatements(qualify(table), infos, quote)
         statements.push(...added.sql)
         needsBackfill.push(...added.needsBackfill)
       }
