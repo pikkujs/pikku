@@ -158,6 +158,50 @@ describe('streamWorkflowRunStatus', () => {
     }
   })
 
+  test('a suspended run announces why and keeps the stream open for the resume', async () => {
+    const suspended = run({
+      status: 'suspended',
+      error: { message: 'Awaiting manager approval' },
+    })
+    const h = harness([
+      { run: run(), steps: [step('a', 'running')] },
+      { run: suspended, steps: [step('a', 'succeeded')] },
+      { run: suspended, steps: [step('a', 'succeeded')] },
+      { run: run(), steps: [step('a', 'succeeded'), step('b', 'running')] },
+      {
+        run: run({ status: 'completed' }),
+        steps: [step('a', 'succeeded'), step('b', 'succeeded')],
+      },
+    ])
+    await h.stream()
+    assert.deepEqual(
+      h.sent.map((frame) => frame.type),
+      ['update', 'update', 'suspended', 'update', 'update', 'done']
+    )
+    const frame = h.sent.find((f) => f.type === 'suspended')
+    assert.equal(frame.reason, 'Awaiting manager approval')
+  })
+
+  test('the user-facing stream still says why a run is suspended, but not the error', async () => {
+    const h = harness([
+      {
+        run: run({
+          status: 'suspended',
+          error: { message: 'Awaiting manager approval' },
+        }),
+        steps: [],
+      },
+      { run: run({ status: 'cancelled' }), steps: [] },
+    ])
+    await h.stream()
+    const update = h.sent[0]
+    assert.equal('error' in update, false)
+    assert.deepEqual(h.sent[1], {
+      type: 'suspended',
+      reason: 'Awaiting manager approval',
+    })
+  })
+
   // The whole difference between the two scaffolded routes. A workflow's output
   // and its error messages are internal detail, and a step that spawned a child
   // run says so only to tooling that can follow it.
