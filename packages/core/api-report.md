@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3160 observable things**: 1046 exported names, plus
-2114 members on the classes and interfaces among them, reachable
+**3184 observable things**: 1052 exported names, plus
+2132 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,13 +14,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 169 | 137 | 453 |
+| `./services` | 175 | 143 | 470 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 24 | 21 | 81 |
+| `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
@@ -218,6 +218,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   webhookService?: WebhookService
   incomingWebhookService?: IncomingWebhookService
   triggerSourceStore?: TriggerSourceStore
+  lockService?: LockService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -5009,6 +5010,13 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
 }
+export class InMemoryLockService extends PikkuLockService {
+  constructor(private now: () => number = Date.now)
+  async acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
+  async refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
+  async release(lease: LockLease): Promise<void>
+  async get(key: string): Promise<LockLease | null>
+}
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
   async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
@@ -5115,6 +5123,25 @@ export class LocalVariablesService implements VariablesService {
   public set(name: string, value: unknown): void
   public has(name: string): boolean
   public delete(name: string): void
+}
+export type LockLease = {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+export class LockLostError extends Error {
+  constructor(public readonly key: string)
+}
+export interface LockService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
+  refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
+  release(lease: LockLease): Promise<void>
+  get(key: string): Promise<LockLease | null>
+  withLock<T>(key: string, fn: (lease: LockLease, signal: AbortSignal) => Promise<T>, ttlMs?: number): Promise<T>
+}
+export class LockTakenError extends Error {
+  constructor(public readonly key: string)
 }
 export interface Logger {
   info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
@@ -5241,6 +5268,13 @@ export class PikkuCredentialWireService {
   get<T = unknown>(name: string): T | null | Promise<T | null>
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
   getScoped(allowedNames: string[]): Record<string, unknown> | Promise<Record<string, unknown>>
+}
+export abstract class PikkuLockService implements LockService {
+  abstract acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
+  abstract refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
+  abstract release(lease: LockLease): Promise<void>
+  abstract get(key: string): Promise<LockLease | null>
+  async withLock<T>(key: string, fn: (lease: LockLease, signal: AbortSignal) => Promise<T>, ttlMs = 30_000): Promise<T>
 }
 pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
 pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
@@ -6262,7 +6296,7 @@ clearPikkuRuntimeState: () => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; lockService?: () => Promise<LockService> }
 }
 ```
 

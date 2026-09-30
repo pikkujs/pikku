@@ -199,12 +199,27 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # The lock service's lease is judged by the database's clock, which only a
+      # real server has: PGlite and SQLite read the clock of the process asking.
+      mysql:
+        image: mirror.gcr.io/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: pikku_locks
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/workflows && bun run test:db
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_queue
+      MYSQL_URL: mysql://root:password@localhost:3306/pikku_locks
       REDIS_URL: redis://localhost:6379
 
   # The db-schema verifier's second pass needs a real postgres server. The

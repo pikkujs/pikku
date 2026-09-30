@@ -1,5 +1,6 @@
 import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
 import type { TriggerSourceStore } from '../services/trigger-source-store.js'
+import type { LockService } from '../services/lock-service.js'
 import type { Logger, LogLevel } from '../services/logger.js'
 import type { VariablesService } from '../services/variables-service.js'
 import type { SecretService } from '../services/secret-service.js'
@@ -181,6 +182,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   incomingWebhookService?: IncomingWebhookService
   /** Which trigger sources an operator enabled, and what enabling registered. */
   triggerSourceStore?: TriggerSourceStore
+  lockService?: LockService
   metaService?: MetaService
   /**
    * Where virtual-user runs are recorded. A run is dispatched and answered for

@@ -1,4 +1,5 @@
 export { MySQLKyselyWorkflowService } from './mysql-kysely-workflow-service.js'
+export { MySQLKyselyLockService } from './mysql-kysely-lock-service.js'
 export { MySQLKyselyDeploymentService } from './mysql-kysely-deployment-service.js'
 export { MySQLKyselyAgentStorageService } from './mysql-kysely-agent-storage-service.js'
 export { MySQLKyselyAgentRunService } from './mysql-kysely-agent-run-service.js'
