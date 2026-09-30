@@ -1,11 +1,9 @@
-import { PikkuLeaseService, type Lease } from './lease-service.js'
+import type { Lease, LeaseService } from './lease-service.js'
 
-export class InMemoryLeaseService extends PikkuLeaseService {
+export class InMemoryLeaseService implements LeaseService {
   private leases = new Map<string, Lease>()
 
-  constructor(private now: () => number = Date.now) {
-    super()
-  }
+  constructor(private now: () => number = Date.now) {}
 
   async acquire(
     key: string,

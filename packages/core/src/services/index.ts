@@ -46,7 +46,7 @@ export {
 export {
   LeaseLostError,
   LeaseTakenError,
-  PikkuLeaseService,
+  holdLease,
   type Lease,
   type LeaseService,
 } from './lease-service.js'

@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3184 observable things**: 1052 exported names, plus
-2132 members on the classes and interfaces among them, reachable
+**3178 observable things**: 1052 exported names, plus
+2126 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 175 | 143 | 470 |
+| `./services` | 175 | 143 | 464 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
@@ -4978,6 +4978,7 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
+holdLease: <T>(leases: LeaseService, key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs?: number) => Promise<T>
 export type IncomingWebhookAttempt = {
   trigger: string
   error?: string
@@ -5010,7 +5011,7 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
 }
-export class InMemoryLeaseService extends PikkuLeaseService {
+export class InMemoryLeaseService implements LeaseService {
   constructor(private now: () => number = Date.now)
   async acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
   async refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
@@ -5105,7 +5106,6 @@ export interface LeaseService {
   refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
   release(lease: Lease): Promise<void>
   get(key: string): Promise<Lease | null>
-  withLease<T>(key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs?: number): Promise<T>
 }
 export class LeaseTakenError extends Error {
   constructor(public readonly key: string)
@@ -5268,13 +5268,6 @@ export class PikkuCredentialWireService {
   get<T = unknown>(name: string): T | null | Promise<T | null>
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
   getScoped(allowedNames: string[]): Record<string, unknown> | Promise<Record<string, unknown>>
-}
-export abstract class PikkuLeaseService implements LeaseService {
-  abstract acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
-  abstract refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
-  abstract release(lease: Lease): Promise<void>
-  abstract get(key: string): Promise<Lease | null>
-  async withLease<T>(key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs = 30_000): Promise<T>
 }
 pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
 pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>

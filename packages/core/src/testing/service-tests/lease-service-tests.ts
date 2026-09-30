@@ -1,11 +1,15 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import type { Lease, LeaseService } from '../../services/lease-service.js'
+import {
+  holdLease,
+  type Lease,
+  type LeaseService,
+} from '../../services/lease-service.js'
 
 const HOUR = 60 * 60 * 1000
 /**
- * A lease a test lets lapse, and the lease `withLease` renews. Both leave room
+ * A lease a test lets lapse, and the lease `holdLease` renews. Both leave room
  * for a real database's round-trips: a lease has to outlive the statement that
  * writes it and the one that reads it back.
  */
@@ -88,10 +92,10 @@ export const defineLeaseServiceTests = (
       )
       assert.equal(results.filter(Boolean).length, 1)
     })
-    test('withLease hands the body its lease and frees the key', async () => {
+    test('holdLease hands the body its lease and frees the key', async () => {
       const leases = await create()
       let seen: Lease | undefined
-      const result = await leases.withLease('stage', async (lease) => {
+      const result = await holdLease(leases, 'stage', async (lease) => {
         seen = lease
         return 42
       })
@@ -100,19 +104,19 @@ export const defineLeaseServiceTests = (
       assert.equal(await leases.get('stage'), null)
     })
 
-    test('withLease refuses a taken key', async () => {
+    test('holdLease refuses a taken key', async () => {
       const leases = await create()
       await leases.acquire('stage', 'a', HOUR)
       await assert.rejects(
-        leases.withLease('stage', async () => {}),
+        holdLease(leases, 'stage', async () => {}),
         (err: Error) => err.name === 'LeaseTakenError'
       )
     })
 
-    test('withLease frees the key when the body throws', async () => {
+    test('holdLease frees the key when the body throws', async () => {
       const leases = await create()
       await assert.rejects(
-        leases.withLease('stage', async () => {
+        holdLease(leases, 'stage', async () => {
           throw new Error('boom')
         }),
         /boom/
@@ -120,10 +124,11 @@ export const defineLeaseServiceTests = (
       assert.equal(await leases.get('stage'), null)
     })
 
-    test('withLease refuses to vouch for a body that outlived its lease', async () => {
+    test('holdLease refuses to vouch for a body that outlived its lease', async () => {
       const leases = await create()
       await assert.rejects(
-        leases.withLease(
+        holdLease(
+          leases,
           'stage',
           async (lease) => {
             await leases.release(lease)
@@ -138,10 +143,10 @@ export const defineLeaseServiceTests = (
       assert.equal((await leases.get('stage'))?.holder, 'other')
     })
 
-    test('withLease notices a lease lost after its last renewal', async () => {
+    test('holdLease notices a lease lost after its last renewal', async () => {
       const leases = await create()
       await assert.rejects(
-        leases.withLease('stage', async (lease) => {
+        holdLease(leases, 'stage', async (lease) => {
           await leases.release(lease)
           assert.ok(await leases.acquire('stage', 'other', HOUR))
           return 'finished before any renewal ran'
@@ -151,11 +156,12 @@ export const defineLeaseServiceTests = (
       assert.equal((await leases.get('stage'))?.holder, 'other')
     })
 
-    test('withLease aborts the body once its lease is lost', async () => {
+    test('holdLease aborts the body once its lease is lost', async () => {
       const leases = await create()
       let aborted = false
       await assert.rejects(
-        leases.withLease(
+        holdLease(
+          leases,
           'stage',
           async (lease, signal) => {
             await leases.release(lease)
@@ -173,9 +179,10 @@ export const defineLeaseServiceTests = (
       assert.equal(aborted, true, 'the body was never told its lease was gone')
     })
 
-    test('withLease keeps the lease alive past its ttl', async () => {
+    test('holdLease keeps the lease alive past its ttl', async () => {
       const leases = await create()
-      await leases.withLease(
+      await holdLease(
+        leases,
         'stage',
         async () => {
           await wait(2 * RENEWED)

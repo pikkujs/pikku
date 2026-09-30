@@ -443,7 +443,7 @@
     "NoopAuditService",
     "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
     "PikkuCredentialWireService",
-    "PikkuLeaseService",
+    "holdLease",
     "PikkuSessionService",
     "QueueWebhookService",
     "REMOTE_JOBS_SECRET_HEADER",

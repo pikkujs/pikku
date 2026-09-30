@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { defineServiceTests } from '../testing/service-tests.js'
 import { InMemoryLeaseService } from './in-memory-lease-service.js'
-import type { Lease } from './lease-service.js'
+import { holdLease, type Lease } from './lease-service.js'
 
 defineServiceTests({
   name: 'in-memory',
@@ -23,10 +23,11 @@ class UnreachableLeaseService extends InMemoryLeaseService {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-describe('withLease when refreshing throws', () => {
+describe('holdLease when refreshing throws', () => {
   test('a store that is briefly unreachable does not cost the lease', async () => {
     const leases = new UnreachableLeaseService()
-    const result = await leases.withLease(
+    const result = await holdLease(
+      leases,
       'stage',
       async (_lease, signal) => {
         leases.down = true
@@ -46,7 +47,8 @@ describe('withLease when refreshing throws', () => {
     const leases = new UnreachableLeaseService()
     let aborted = false
     await assert.rejects(
-      leases.withLease(
+      holdLease(
+        leases,
         'stage',
         async (_lease, signal) => {
           leases.down = true
@@ -66,7 +68,7 @@ describe('withLease when refreshing throws', () => {
   test('a store unreachable when the body finishes cannot vouch for it', async () => {
     const leases = new UnreachableLeaseService()
     await assert.rejects(
-      leases.withLease('stage', async () => {
+      holdLease(leases, 'stage', async () => {
         leases.down = true
       }),
       (err: Error) => err.name === 'LeaseLostError'

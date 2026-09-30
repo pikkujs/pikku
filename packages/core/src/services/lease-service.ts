@@ -16,11 +16,6 @@ export interface LeaseService {
   refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
   release(lease: Lease): Promise<void>
   get(key: string): Promise<Lease | null>
-  withLease<T>(
-    key: string,
-    fn: (lease: Lease, signal: AbortSignal) => Promise<T>,
-    ttlMs?: number
-  ): Promise<T>
 }
 
 export class LeaseTakenError extends Error {
@@ -31,7 +26,7 @@ export class LeaseTakenError extends Error {
 }
 
 /**
- * Thrown by `withLease` when the lease lapsed or passed to another holder while
+ * Thrown by `holdLease` when the lease lapsed or passed to another holder while
  * the body ran, so its result was not produced under the lease. The body's
  * `signal` is aborted with it as soon as the loss is seen.
  */
@@ -53,70 +48,62 @@ const sleep = (ms: number, signal: AbortSignal) =>
     })
   })
 
-export abstract class PikkuLeaseService implements LeaseService {
-  abstract acquire(
-    key: string,
-    holder: string,
-    ttlMs: number
-  ): Promise<Lease | null>
-  abstract refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
-  abstract release(lease: Lease): Promise<void>
-  abstract get(key: string): Promise<Lease | null>
+/**
+ * Runs `fn` holding `key` on `leases`, renewing the lease every third of
+ * `ttlMs` until it settles. `ttlMs` is how long a crashed holder keeps the key
+ * from everyone else. Never waits for a taken key: that throws
+ * `LeaseTakenError`.
+ */
+export const holdLease = async <T>(
+  leases: LeaseService,
+  key: string,
+  fn: (lease: Lease, signal: AbortSignal) => Promise<T>,
+  ttlMs = 30_000
+): Promise<T> => {
+  const acquired = await leases.acquire(key, crypto.randomUUID(), ttlMs)
+  if (!acquired) throw new LeaseTakenError(key)
+  let lease = acquired
 
-  /**
-   * Runs `fn` holding `key`, renewing the lease every third of `ttlMs` until
-   * it settles. Never waits for a taken key: that throws `LeaseTakenError`.
-   */
-  async withLease<T>(
-    key: string,
-    fn: (lease: Lease, signal: AbortSignal) => Promise<T>,
-    ttlMs = 30_000
-  ): Promise<T> {
-    const acquired = await this.acquire(key, crypto.randomUUID(), ttlMs)
-    if (!acquired) throw new LeaseTakenError(key)
-    let lease = acquired
+  const lost = new AbortController()
+  const finished = new AbortController()
 
-    const lost = new AbortController()
-    const finished = new AbortController()
-
-    // `null` is an answer: someone else holds the key. A throw is not, so the
-    // lease is only given up once this process's own clock says it has run out.
-    const renew = async (heldUntil: number) => {
-      const renewedAt = Date.now()
-      const next = await this.refresh(lease, ttlMs).catch(() => undefined)
-      if (next) {
-        lease = next
-        return renewedAt + ttlMs
-      }
-      if (next === null || Date.now() >= heldUntil) {
-        lost.abort(new LeaseLostError(key))
-      }
-      return heldUntil
+  // `null` is an answer: someone else holds the key. A throw is not, so the
+  // lease is only given up once this process's own clock says it has run out.
+  const renew = async (heldUntil: number) => {
+    const renewedAt = Date.now()
+    const next = await leases.refresh(lease, ttlMs).catch(() => undefined)
+    if (next) {
+      lease = next
+      return renewedAt + ttlMs
     }
-
-    const keepAlive = async () => {
-      let heldUntil = Date.now() + ttlMs
-      while (!lost.signal.aborted) {
-        await sleep(Math.max(1, ttlMs / 3), finished.signal)
-        if (finished.signal.aborted) return
-        heldUntil = await renew(heldUntil)
-      }
+    if (next === null || Date.now() >= heldUntil) {
+      lost.abort(new LeaseLostError(key))
     }
-    const renewing = keepAlive()
+    return heldUntil
+  }
 
-    try {
-      const result = await fn(lease, lost.signal)
-      finished.abort()
-      await renewing
-      // The last renewal can be a third of a lease old, so check once more
-      // before vouching that the body ran alone.
-      if (!lost.signal.aborted) await renew(0)
-      if (lost.signal.aborted) throw new LeaseLostError(key)
-      return result
-    } finally {
-      finished.abort()
-      await renewing
-      await this.release(lease).catch(() => {})
+  const keepAlive = async () => {
+    let heldUntil = Date.now() + ttlMs
+    while (!lost.signal.aborted) {
+      await sleep(Math.max(1, ttlMs / 3), finished.signal)
+      if (finished.signal.aborted) return
+      heldUntil = await renew(heldUntil)
     }
+  }
+  const renewing = keepAlive()
+
+  try {
+    const result = await fn(lease, lost.signal)
+    finished.abort()
+    await renewing
+    // The last renewal can be a third of a lease old, so check once more
+    // before vouching that the body ran alone.
+    if (!lost.signal.aborted) await renew(0)
+    if (lost.signal.aborted) throw new LeaseLostError(key)
+    return result
+  } finally {
+    finished.abort()
+    await renewing
+    await leases.release(lease).catch(() => {})
   }
 }

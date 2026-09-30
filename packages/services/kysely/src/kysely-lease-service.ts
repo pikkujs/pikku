@@ -1,4 +1,4 @@
-import { PikkuLeaseService, type Lease } from '@pikku/core/services'
+import type { Lease, LeaseService } from '@pikku/core/services'
 import type { Kysely, Selectable } from 'kysely'
 import type { KyselyPikkuDB, PikkuLeaseTable } from './kysely-tables.js'
 import { appNowMs, leaseUntil } from './kysely-lease-clock.js'
@@ -13,7 +13,7 @@ const toLease = (row: Selectable<PikkuLeaseTable>): Lease => ({
 })
 
 /**
- * Lease leases on the `pikku_lease` table.
+ * Leases on the `pikku_lease` table.
  *
  * Use it directly on SQLite. On PostgreSQL and MySQL use
  * `PgKyselyLeaseService` and `MySQLKyselyLeaseService`, which judge every lease
@@ -22,12 +22,10 @@ const toLease = (row: Selectable<PikkuLeaseTable>): Lease => ({
  * Every statement is one MySQL can run too — no `RETURNING`, no conditional
  * upsert — so the dialects differ only in `nowMs` and `insertIfAbsent`.
  */
-export class KyselyLeaseService extends PikkuLeaseService {
+export class KyselyLeaseService implements LeaseService {
   private initialized = false
 
-  constructor(protected db: Kysely<KyselyPikkuDB>) {
-    super()
-  }
+  constructor(protected db: Kysely<KyselyPikkuDB>) {}
 
   public async init(): Promise<void> {
     if (this.initialized) return
