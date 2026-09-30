@@ -1,3 +1,13 @@
+## 0.12.97
+
+### Patch Changes
+
+- 26dbfc0: A `func` written inline in a `wireCLI` command now registers its function metadata under `cli:<program>:<command path>`, with `sessionless` taken from the helper it was built with. Before, the command pointed at an id nothing had registered. An inline channel `onMessage` still fails the build with the named "No function metadata found" error, and a test now pins that.
+- 2dcc651: The inspector finds a project's source on Windows: its root directory is compared with TypeScript's forward-slash file names, not the backslash path `path.resolve` returns.
+- Updated dependencies [58cccc1]
+- Updated dependencies [a26c60e]
+  - @pikku/core@0.12.131
+
 ## 0.12.96
 
 ### Patch Changes

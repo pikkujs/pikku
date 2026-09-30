@@ -1,3 +1,29 @@
+## 0.12.175
+
+### Patch Changes
+
+- 27fd69c: `pikku <command> --config <path>` (and `-c`) now reads the config it names. The flag was declared as `config` while the loader read `configFile`, so it was dropped and the CLI searched upward from the current directory instead. Relative fields in the config resolve against the config file's own directory.
+- 2dcc651: A `pikku.config.json` without `tsconfig` uses `tsconfig.json` in the root, as `tsc` does, instead of crashing on an undefined path.
+- 2dcc651: Source directories are searched relative to themselves rather than through a glob built from their path, so codegen finds the project's files on Windows and under a path holding `[ ] ( ) {`, and `ignoreFiles` applies when the project is outside the working directory.
+- 2dcc651: Generated imports are forward-slashed on Windows. A path like `..\src\update-user.function.js` read `\u` as a unicode escape and failed to compile.
+- a7355b9: `pikku db generate` now writes a migration for a required column its source stopped writing. A column that is NOT NULL with no default and no longer in the source's schema fails every insert into its table, yet counted as "already covered" because nothing was missing. Better Auth 1.7.0–1.7.2 required `account.issuer` and 1.7.3 stopped writing it, which broke sign-in for every project that had generated the column. PostgreSQL gets `ALTER COLUMN … DROP NOT NULL`; SQLite, which cannot change a constraint, gets `DROP INDEX` for any index on the column and then `DROP COLUMN`.
+- d8369d8: `pikkuBetterAuth` now signs users in through a host's OAuth proxy when the stage carries `OAUTH_PROXY_SECRET`, `OAUTH_PROXY_URL` and `OAUTH_PROXY_PROVIDERS` (plus the `GOOGLE_OAUTH` / `GITHUB_OAUTH` client id for each listed provider, and an optional `OAUTH_PROXY_KEY_ID`). With none of them set nothing changes. With only some set, the app fails at start naming what is missing. A provider the app also configures itself is an error rather than an override. `pikku` now declares these as optional secrets and variables so a stage that has none of them still deploys.
+- 2dcc651: Native apps hang off `frontends`: `pikku app native init|add|upgrade|check <name>` writes and maintains a committed Tauri project per frontend (desktop and Android; bundled dist, a deployed URL, or a bundled server sidecar). App commands move under `pikku app` (`pikku app new`, `pikku app list`). The top-level `frontend` key is replaced by `frontends` in `pikku.config.json`, where the one entry with `serve` is what `pikku serve`/`dev`/standalone deploys mount. `deploy apply --desktop` is gone — a frontend's `native.bundleServer` asks for the sidecar instead.
+- a92cae2: `pikku db generate` now quotes the table and column names in the `ALTER TABLE … ADD COLUMN` drift migrations and the fallback `CREATE TABLE` it writes for Postgres. `ALTER TABLE user ADD COLUMN actor …` was a syntax error, because `user` is reserved. SQLite output is unchanged.
+- 58cccc1: `wire.getCredential('name')` is typed by the project's own credentials, and is always on the wire. Function types were written from the setup-only inspection, which never sees `defineCredential`, so every project fell back to an untyped map; `pikku all` now rewrites them once the credentials leaf exists. `getCredential` and `getCredentials` are no longer optional on `PikkuWire`, since the function runner always sets them. Without a credentials map, `getCredential<string>('name')` returns `string` rather than `unknown`.
+- Updated dependencies [26dbfc0]
+- Updated dependencies [2dcc651]
+- Updated dependencies [d8369d8]
+- Updated dependencies [2dcc651]
+- Updated dependencies [2dcc651]
+- Updated dependencies [2dcc651]
+- Updated dependencies [58cccc1]
+- Updated dependencies [a26c60e]
+  - @pikku/inspector@0.12.97
+  - @pikku/better-auth@0.12.51
+  - @pikku/deploy-standalone@0.12.22
+  - @pikku/core@0.12.131
+
 ## 0.12.174
 
 ### Patch Changes
