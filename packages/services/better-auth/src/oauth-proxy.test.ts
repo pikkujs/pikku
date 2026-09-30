@@ -69,6 +69,14 @@ describe('resolveOAuthProxyConfig', () => {
     })
   })
 
+  test('is null when the stage lists no providers', async () => {
+    const { services } = makeServices(
+      { OAUTH_PROXY_SECRET: 'stage-key' },
+      { OAUTH_PROXY_URL: PROXY, OAUTH_PROXY_PROVIDERS: 'none' }
+    )
+    assert.equal(await resolveOAuthProxyConfig(services), null)
+  })
+
   test('names what is missing when only part is set', async () => {
     const { services } = makeServices(
       { OAUTH_PROXY_SECRET: 'stage-key' },

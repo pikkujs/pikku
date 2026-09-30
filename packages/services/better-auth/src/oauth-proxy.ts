@@ -77,6 +77,7 @@ export const resolveOAuthProxyConfig = async (
   const keyId = await readVariable(services, OAUTH_PROXY_KEY_ID_VARIABLE)
 
   if (!secret && !productionURL && !providerList) return null
+  if (providerList?.trim().toLowerCase() === 'none') return null
 
   const missing = [
     typeof secret === 'string' && secret ? null : OAUTH_PROXY_SECRET_ID,
