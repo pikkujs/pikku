@@ -323,6 +323,7 @@ export async function readWorkers(
 export type ProgressEvent =
   | { event: 'created'; deploymentId: string; branch: string; ref: string }
   | { event: 'attached'; deploymentId: string; status: string }
+  | { event: 'reset'; app: string; branch: string }
   | {
       event: 'status'
       deploymentId: string

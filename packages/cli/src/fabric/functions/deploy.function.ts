@@ -7,6 +7,12 @@ import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'
+import {
+  assertResetAllowed,
+  assertResetHonoured,
+  resetPrompt,
+  resetWarning,
+} from '../lib/deploy-reset.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
   blockedReason,
@@ -39,12 +45,23 @@ export const FabricDeployInput = z.object({
   autoApprove: z.boolean().optional(),
   allowDestructive: z.boolean().optional(),
   migrationsBase: z.string().optional(),
+  reset: z.boolean().optional(),
   timeout: z.number().optional(),
   json: z.boolean().optional(),
 })
 
 export const FabricDeployValidatedInput = FabricDeployInput.superRefine(
   (value, ctx) => {
+    if (value.reset) {
+      try {
+        assertResetAllowed(value)
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: (error as Error).message,
+        })
+      }
+    }
     if (value.deploymentId) {
       if (value.branch || value.production) {
         ctx.addIssue({
@@ -123,6 +140,7 @@ export const FabricDeployApplyOutput = z.object({
     .optional(),
   url: z.string().nullable().optional(),
   approved: z.boolean().optional(),
+  reset: z.boolean().optional(),
   elapsedMs: z.number().optional(),
   timeoutSeconds: z.number().optional(),
 })
@@ -313,7 +331,31 @@ export async function applyDeploy(
       console.log(dim(`Deploying the current branch: ${targetBranch}`))
     }
 
-    if (!input.autoApprove) {
+    // The branch may have been inferred from the checkout, so the production
+    // refusal has to run here as well as on the input.
+    if (input.reset) {
+      assertResetAllowed({ branch })
+      const status = await rpc.invoke('getProjectStatus', { projectId })
+      const app = status.projectName ?? projectId
+      if (input.json) {
+        emit({ event: 'reset', app, branch })
+      } else {
+        for (const line of resetWarning({ app, branch })) {
+          console.log(removed(line))
+        }
+      }
+      if (!input.autoApprove) {
+        if (!process.stdin.isTTY) {
+          throw new FabricPreconditionError(
+            `Refusing to reset ${branch} of "${app}" without confirmation — re-run with -y to wipe it non-interactively.`
+          )
+        }
+        const ok = await promptConfirm(
+          resetPrompt({ app, branch, ref: resolved.slice(0, 8) })
+        )
+        if (!ok) throw new FabricPreconditionError('Deploy aborted.')
+      }
+    } else if (!input.autoApprove) {
       const target = `${branch} @ ${resolved.slice(0, 8)}`
       if (!process.stdin.isTTY) {
         throw new FabricPreconditionError(
@@ -330,7 +372,11 @@ export async function applyDeploy(
       branch,
       ref: resolved,
       expectedHeadSha: safety.headSha,
+      ...(input.reset ? { resetDatabase: true } : {}),
     })
+    // Before `started` is set: the resume hint would offer to approve a
+    // deployment that was created without the reset that was asked for.
+    if (input.reset) assertResetHonoured(created, ctx.apiUrl)
     deploymentId = created.deploymentId
     started.deploymentId = deploymentId
     stageId = created.stageId
@@ -356,6 +402,7 @@ export async function applyDeploy(
     deploymentId,
     branch,
     ...(ref ? { ref } : {}),
+    ...(input.reset ? { reset: true } : {}),
     ...(stageId ? { stageId } : {}),
     ...(runId ? { runId } : {}),
   }
@@ -612,6 +659,11 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
     console.log(
       `${added('deployed')} ${where}${at} ${dim('·')} ${deploymentId}${took}`
     )
+    if (result.reset) {
+      console.log(
+        dim('database reset: migrations re-applied and dev seed loaded')
+      )
+    }
     for (const line of changeLines(changes)) console.log(line)
     if (workers && workers.length > 0) {
       console.log(

@@ -329,6 +329,11 @@ export const fabricCommands = defineCLICommands({
               'Approve a plan whose migrations drop or rewrite data (-y alone will not)',
             default: false,
           },
+          reset: {
+            description:
+              'Wipe the stage database and rebuild it from the migrations and the dev seed as part of this deploy (never production; -y skips the prompt)',
+            default: false,
+          },
           timeout: {
             description: 'Seconds to wait for the deployment (default 900)',
           },
