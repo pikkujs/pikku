@@ -211,4 +211,28 @@ describe('readSurface — platform plumbing', () => {
     assert.deepEqual(Object.keys(surface.wirings), ['http'])
     assert.deepEqual(Object.keys(surface.wirings.http!), ['GET /users/:id'])
   })
+
+  test('a wiring with no sourceFile is dropped when its function is platform', () => {
+    const dir = join(root, 'platform-queue', '.pikku')
+    writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
+      'queue:fabric-audit': { pikkuFuncId: 'queue:fabric-audit' },
+      sendEmail: { pikkuFuncId: 'sendEmail' },
+    })
+    writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
+      'queue:fabric-audit': {
+        sourceFile: '/app/src/scaffold/fabric/audit/fabric-audit.queue.ts',
+      },
+      sendEmail: { sourceFile: '/app/src/email.function.ts' },
+    })
+    writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
+      'fabric-audit': {
+        pikkuFuncId: 'queue:fabric-audit',
+        name: 'fabric-audit',
+      },
+      emails: { pikkuFuncId: 'sendEmail', name: 'emails' },
+    })
+
+    const surface = readSurface(dir)
+    assert.deepEqual(Object.keys(surface.wirings.queue!), ['emails'])
+  })
 })

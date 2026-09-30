@@ -70,16 +70,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 
 function withoutPlatform(
-  entries: Record<string, unknown>
+  entries: Record<string, unknown>,
+  platform: Set<string>
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(entries)) {
     if (!isRecord(value)) {
       out[key] = value
+    } else if (
+      typeof value.pikkuFuncId === 'string' &&
+      platform.has(value.pikkuFuncId)
+    ) {
+      continue
     } else if (typeof value.sourceFile === 'string') {
       if (!isPlatformSource(value.sourceFile)) out[key] = value
     } else {
-      const inner = withoutPlatform(value)
+      const inner = withoutPlatform(value, platform)
       if (Object.keys(inner).length > 0 || Object.keys(value).length === 0) {
         out[key] = inner
       }
@@ -180,7 +186,7 @@ export function readSurface(
   const wirings: Surface['wirings'] = {}
   for (const [category, entries] of Object.entries(snapshot)) {
     if (category === 'functions' || !entries) continue
-    const own = withoutPlatform(entries as Record<string, unknown>)
+    const own = withoutPlatform(entries as Record<string, unknown>, platform)
     if (Object.keys(own).length === 0) continue
     wirings[category as WiringCategory] = normalize(own) as Record<
       string,
