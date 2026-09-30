@@ -299,7 +299,6 @@ export async function resolveProvider(
   },
   providerName?: string,
   options?: {
-    runtime?: string
     projectDir?: string
     nativeSidecars?: Array<{ name: string; dir: string }>
   }
@@ -429,7 +428,6 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
-    runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -438,7 +436,6 @@ export const deployApply = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const provider = await resolveProvider(config, data?.provider, {
-      runtime: data?.runtime,
       projectDir,
       nativeSidecars: nativeSidecars(config.frontends),
     })

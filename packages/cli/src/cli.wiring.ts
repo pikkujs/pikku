@@ -1535,11 +1535,6 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
-            },
             resultFile: {
               description:
                 'Write structured JSON plan result to this file path',
@@ -1554,11 +1549,6 @@ wireCLI({
               description: 'Deployment provider (cloudflare, aws)',
               default: 'cloudflare',
               short: 'p',
-            },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
             },
             fromPlan: {
               description:

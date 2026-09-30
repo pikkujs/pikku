@@ -1,7 +1,7 @@
 /**
  * Offline verifier for the Standalone deploy pipeline — bun runtime.
  *
- * Runs `pikku deploy plan --provider standalone --runtime bun`, asserts the
+ * Runs `pikku deploy plan --provider standalone`, asserts the
  * generated entry targets PikkuBunServer (not the node http server), then
  * compiles the bundle into a self-contained executable with
  * `bun build --compile` and hits its endpoints.
@@ -105,8 +105,6 @@ execFileSync(
     'plan',
     '--provider',
     'standalone',
-    '--runtime',
-    'bun',
     '--result-file',
     '.deploy/standalone/plan-result.json',
   ],
@@ -156,7 +154,7 @@ await check('entry: PikkuBunServer (not PikkuNodeHTTPServer)', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
   if (!e.includes('PikkuBunServer'))
     throw new Error(
-      'Missing PikkuBunServer — runtime=bun did not switch server'
+      'Missing PikkuBunServer — the entry does not use the bun server'
     )
   if (e.includes('PikkuNodeHTTPServer'))
     throw new Error('Unexpected PikkuNodeHTTPServer in bun entry')
