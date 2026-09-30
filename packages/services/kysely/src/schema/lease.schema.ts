@@ -1,12 +1,12 @@
 import type { PikkuSchema } from './pikku-schema.types.js'
 
-export const lockSchema: PikkuSchema = {
-  name: 'lock',
-  ownedBy: ['lockService'],
+export const leaseSchema: PikkuSchema = {
+  name: 'lease',
+  ownedBy: ['leaseService'],
   statements: [
     (db) =>
       db.schema
-        .createTable('pikkuLock')
+        .createTable('pikkuLease')
         .addColumn('key', 'text', (col) => col.primaryKey())
         .addColumn('holder', 'text', (col) => col.notNull())
         .addColumn('token', 'integer', (col) => col.notNull())

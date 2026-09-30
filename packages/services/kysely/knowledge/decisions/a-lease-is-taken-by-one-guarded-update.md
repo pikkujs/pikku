@@ -1,11 +1,11 @@
 ---
 type: decision
-title: A lock is taken by one guarded UPDATE
+title: A lease is taken by one guarded UPDATE
 description: Acquire inserts the key's row already lapsed, takes it with a guarded UPDATE, and reads the row back, because that is the one shape that behaves the same on SQLite, Postgres and MySQL
-tags: [locks, kysely, mysql]
+tags: [leases, kysely, mysql]
 ---
 
-# A lock is taken by one guarded UPDATE
+# A lease is taken by one guarded UPDATE
 
 `acquire` is three statements, in an order that looks roundabout:
 

@@ -44,13 +44,13 @@ export {
   type TriggerSourceStore,
 } from './trigger-source-store.js'
 export {
-  LockLostError,
-  LockTakenError,
-  PikkuLockService,
-  type LockLease,
-  type LockService,
-} from './lock-service.js'
-export { InMemoryLockService } from './in-memory-lock-service.js'
+  LeaseLostError,
+  LeaseTakenError,
+  PikkuLeaseService,
+  type Lease,
+  type LeaseService,
+} from './lease-service.js'
+export { InMemoryLeaseService } from './in-memory-lease-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
 export {

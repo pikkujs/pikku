@@ -1,38 +1,44 @@
-export type LockLease = {
+export type Lease = {
   key: string
   holder: string
   token: number
   expiresAt: Date
 }
 
-export interface LockService {
-  acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
-  refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
-  release(lease: LockLease): Promise<void>
-  get(key: string): Promise<LockLease | null>
-  withLock<T>(
+/**
+ * Named leases shared by every process on the same store. A lease is held until
+ * it is released or runs out, so it is not a mutex: a holder that stalls past
+ * its expiry loses the key without knowing. `token` rises every time the key
+ * changes hands, and a write that must not come from a stale holder checks it.
+ */
+export interface LeaseService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  release(lease: Lease): Promise<void>
+  get(key: string): Promise<Lease | null>
+  withLease<T>(
     key: string,
-    fn: (lease: LockLease, signal: AbortSignal) => Promise<T>,
+    fn: (lease: Lease, signal: AbortSignal) => Promise<T>,
     ttlMs?: number
   ): Promise<T>
 }
 
-export class LockTakenError extends Error {
+export class LeaseTakenError extends Error {
   constructor(public readonly key: string) {
-    super(`Lock ${key} is held by another holder`)
-    this.name = 'LockTakenError'
+    super(`Lease ${key} is held by another holder`)
+    this.name = 'LeaseTakenError'
   }
 }
 
 /**
- * Thrown by `withLock` when the lease lapsed or passed to another holder while
- * the body ran, so its result was not produced under the lock. The body's
+ * Thrown by `withLease` when the lease lapsed or passed to another holder while
+ * the body ran, so its result was not produced under the lease. The body's
  * `signal` is aborted with it as soon as the loss is seen.
  */
-export class LockLostError extends Error {
+export class LeaseLostError extends Error {
   constructor(public readonly key: string) {
-    super(`Lock ${key} was lost before the body finished`)
-    this.name = 'LockLostError'
+    super(`Lease ${key} was lost before the body finished`)
+    this.name = 'LeaseLostError'
   }
 }
 
@@ -47,27 +53,27 @@ const sleep = (ms: number, signal: AbortSignal) =>
     })
   })
 
-export abstract class PikkuLockService implements LockService {
+export abstract class PikkuLeaseService implements LeaseService {
   abstract acquire(
     key: string,
     holder: string,
     ttlMs: number
-  ): Promise<LockLease | null>
-  abstract refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
-  abstract release(lease: LockLease): Promise<void>
-  abstract get(key: string): Promise<LockLease | null>
+  ): Promise<Lease | null>
+  abstract refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  abstract release(lease: Lease): Promise<void>
+  abstract get(key: string): Promise<Lease | null>
 
   /**
    * Runs `fn` holding `key`, renewing the lease every third of `ttlMs` until
-   * it settles. Never waits for a taken key: that throws `LockTakenError`.
+   * it settles. Never waits for a taken key: that throws `LeaseTakenError`.
    */
-  async withLock<T>(
+  async withLease<T>(
     key: string,
-    fn: (lease: LockLease, signal: AbortSignal) => Promise<T>,
+    fn: (lease: Lease, signal: AbortSignal) => Promise<T>,
     ttlMs = 30_000
   ): Promise<T> {
     const acquired = await this.acquire(key, crypto.randomUUID(), ttlMs)
-    if (!acquired) throw new LockTakenError(key)
+    if (!acquired) throw new LeaseTakenError(key)
     let lease = acquired
 
     const lost = new AbortController()
@@ -83,7 +89,7 @@ export abstract class PikkuLockService implements LockService {
         return renewedAt + ttlMs
       }
       if (next === null || Date.now() >= heldUntil) {
-        lost.abort(new LockLostError(key))
+        lost.abort(new LeaseLostError(key))
       }
       return heldUntil
     }
@@ -105,7 +111,7 @@ export abstract class PikkuLockService implements LockService {
       // The last renewal can be a third of a lease old, so check once more
       // before vouching that the body ran alone.
       if (!lost.signal.aborted) await renew(0)
-      if (lost.signal.aborted) throw new LockLostError(key)
+      if (lost.signal.aborted) throw new LeaseLostError(key)
       return result
     } finally {
       finished.abort()

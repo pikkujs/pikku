@@ -1,11 +1,11 @@
-import { PikkuLockService, type LockLease } from '@pikku/core/services'
+import { PikkuLeaseService, type Lease } from '@pikku/core/services'
 import type { Kysely, Selectable } from 'kysely'
-import type { KyselyPikkuDB, PikkuLockTable } from './kysely-tables.js'
+import type { KyselyPikkuDB, PikkuLeaseTable } from './kysely-tables.js'
 import { appNowMs, leaseUntil } from './kysely-lease-clock.js'
 import { requirePikkuSchema } from './schema/index.js'
-import { lockSchema } from './schema/lock.schema.js'
+import { leaseSchema } from './schema/lease.schema.js'
 
-const toLease = (row: Selectable<PikkuLockTable>): LockLease => ({
+const toLease = (row: Selectable<PikkuLeaseTable>): Lease => ({
   key: row.key,
   holder: row.holder,
   token: Number(row.token),
@@ -13,16 +13,16 @@ const toLease = (row: Selectable<PikkuLockTable>): LockLease => ({
 })
 
 /**
- * Lease locks on the `pikku_lock` table.
+ * Lease leases on the `pikku_lease` table.
  *
  * Use it directly on SQLite. On PostgreSQL and MySQL use
- * `PgKyselyLockService` and `MySQLKyselyLockService`, which judge every lease
+ * `PgKyselyLeaseService` and `MySQLKyselyLeaseService`, which judge every lease
  * on the database's clock rather than on each worker's own.
  *
  * Every statement is one MySQL can run too — no `RETURNING`, no conditional
  * upsert — so the dialects differ only in `nowMs` and `insertIfAbsent`.
  */
-export class KyselyLockService extends PikkuLockService {
+export class KyselyLeaseService extends PikkuLeaseService {
   private initialized = false
 
   constructor(protected db: Kysely<KyselyPikkuDB>) {
@@ -31,7 +31,7 @@ export class KyselyLockService extends PikkuLockService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await requirePikkuSchema(this.db, lockSchema)
+    await requirePikkuSchema(this.db, leaseSchema)
     this.initialized = true
   }
 
@@ -43,7 +43,7 @@ export class KyselyLockService extends PikkuLockService {
   /** Create the key's row, lapsed, unless it already has one. */
   protected async insertIfAbsent(key: string, holder: string): Promise<void> {
     await this.db
-      .insertInto('pikkuLock')
+      .insertInto('pikkuLease')
       .values({ key, holder, token: 0, expiresAt: 0 })
       .onConflict((oc) => oc.column('key').doNothing())
       .execute()
@@ -62,7 +62,7 @@ export class KyselyLockService extends PikkuLockService {
     await this.insertIfAbsent(key, holder)
     const now = this.nowMs()
     await this.db
-      .updateTable('pikkuLock')
+      .updateTable('pikkuLease')
       .set((eb) => ({
         token: eb
           .case()
@@ -81,10 +81,10 @@ export class KyselyLockService extends PikkuLockService {
     return this.readHeld(key, holder)
   }
 
-  async refresh(lease: LockLease, ttlMs: number) {
+  async refresh(lease: Lease, ttlMs: number) {
     const now = this.nowMs()
     await this.db
-      .updateTable('pikkuLock')
+      .updateTable('pikkuLease')
       .set({ expiresAt: leaseUntil(now, ttlMs) })
       .where('key', '=', lease.key)
       .where('holder', '=', lease.holder)
@@ -94,9 +94,9 @@ export class KyselyLockService extends PikkuLockService {
     return this.readHeld(lease.key, lease.holder, lease.token)
   }
 
-  async release(lease: LockLease) {
+  async release(lease: Lease) {
     await this.db
-      .updateTable('pikkuLock')
+      .updateTable('pikkuLease')
       .set({ expiresAt: 0 })
       .where('key', '=', lease.key)
       .where('holder', '=', lease.holder)
@@ -106,7 +106,7 @@ export class KyselyLockService extends PikkuLockService {
 
   async get(key: string) {
     const row = await this.db
-      .selectFrom('pikkuLock')
+      .selectFrom('pikkuLease')
       .selectAll()
       .where('key', '=', key)
       .where('expiresAt', '>', this.nowMs())
@@ -116,7 +116,7 @@ export class KyselyLockService extends PikkuLockService {
 
   private async readHeld(key: string, holder: string, token?: number) {
     let query = this.db
-      .selectFrom('pikkuLock')
+      .selectFrom('pikkuLease')
       .selectAll()
       .where('key', '=', key)
       .where('holder', '=', holder)

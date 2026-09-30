@@ -11,12 +11,12 @@ import {
 } from 'kysely'
 import Database from 'better-sqlite3'
 import { PGlite } from '@electric-sql/pglite'
-import type { LockService } from '@pikku/core/services'
+import type { LeaseService } from '@pikku/core/services'
 import { defineServiceTests } from '@pikku/core/testing'
 import { SerializePlugin } from './serialize-plugin.js'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { KyselyLockService } from './kysely-lock-service.js'
-import { applyPikkuSchemas, lockSchema } from './schema/index.js'
+import { KyselyLeaseService } from './kysely-lease-service.js'
+import { applyPikkuSchemas, leaseSchema } from './schema/index.js'
 
 const pgliteDriver = (pg: PGlite): Driver => {
   const connection: DatabaseConnection = {
@@ -43,16 +43,16 @@ const pgliteDriver = (pg: PGlite): Driver => {
   }
 }
 
-const kyselyLocks = async (db: Kysely<KyselyPikkuDB>) => {
-  await applyPikkuSchemas(db, [lockSchema])
-  const service = new KyselyLockService(db)
+const kyselyLeases = async (db: Kysely<KyselyPikkuDB>) => {
+  await applyPikkuSchemas(db, [leaseSchema])
+  const service = new KyselyLeaseService(db)
   await service.init()
   return service
 }
 
-const backends: Record<string, () => Promise<LockService>> = {
+const backends: Record<string, () => Promise<LeaseService>> = {
   sqlite: () =>
-    kyselyLocks(
+    kyselyLeases(
       new Kysely<KyselyPikkuDB>({
         dialect: new SqliteDialect({ database: new Database(':memory:') }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
@@ -60,7 +60,7 @@ const backends: Record<string, () => Promise<LockService>> = {
     ),
   postgres: () => {
     const pg = new PGlite()
-    return kyselyLocks(
+    return kyselyLeases(
       new Kysely<KyselyPikkuDB>({
         dialect: {
           createAdapter: () => new PostgresAdapter(),
@@ -75,5 +75,5 @@ const backends: Record<string, () => Promise<LockService>> = {
 }
 
 for (const [name, create] of Object.entries(backends)) {
-  defineServiceTests({ name, services: { lockService: create } })
+  defineServiceTests({ name, services: { leaseService: create } })
 }

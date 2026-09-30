@@ -1,8 +1,8 @@
-import { KyselyLockService } from '@pikku/kysely'
+import { KyselyLeaseService } from '@pikku/kysely'
 import { mysqlNowMs } from './mysql-now-ms.js'
 
-/** `KyselyLockService` on MySQL, with every lease judged on the database's clock. */
-export class MySQLKyselyLockService extends KyselyLockService {
+/** `KyselyLeaseService` on MySQL, with every lease judged on the database's clock. */
+export class MySQLKyselyLeaseService extends KyselyLeaseService {
   protected override nowMs() {
     return mysqlNowMs()
   }
@@ -12,7 +12,7 @@ export class MySQLKyselyLockService extends KyselyLockService {
     holder: string
   ): Promise<void> {
     await this.db
-      .insertInto('pikkuLock')
+      .insertInto('pikkuLease')
       .values({ key, holder, token: 0, expiresAt: 0 })
       .orIgnore()
       .execute()

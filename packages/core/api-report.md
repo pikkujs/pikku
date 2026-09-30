@@ -218,7 +218,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   webhookService?: WebhookService
   incomingWebhookService?: IncomingWebhookService
   triggerSourceStore?: TriggerSourceStore
-  lockService?: LockService
+  leaseService?: LeaseService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -5010,12 +5010,12 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
 }
-export class InMemoryLockService extends PikkuLockService {
+export class InMemoryLeaseService extends PikkuLeaseService {
   constructor(private now: () => number = Date.now)
-  async acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
-  async refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
-  async release(lease: LockLease): Promise<void>
-  async get(key: string): Promise<LockLease | null>
+  async acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  async refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  async release(lease: Lease): Promise<void>
+  async get(key: string): Promise<Lease | null>
 }
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
@@ -5091,6 +5091,25 @@ export interface JWTService {
   encode: <T extends any>(expiresIn: RelativeTimeInput, payload: T) => Promise<string>
   decode: <T>(hash: string, invalidHashError?: Error, debug?: boolean) => Promise<T>
 }
+export type Lease = {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+export class LeaseLostError extends Error {
+  constructor(public readonly key: string)
+}
+export interface LeaseService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  release(lease: Lease): Promise<void>
+  get(key: string): Promise<Lease | null>
+  withLease<T>(key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs?: number): Promise<T>
+}
+export class LeaseTakenError extends Error {
+  constructor(public readonly key: string)
+}
 export class LocalCredentialService implements CredentialService {
   async get<T = unknown>(name: string, userId?: string): Promise<T | null>
   async set(name: string, value: unknown, userId?: string): Promise<void>
@@ -5123,25 +5142,6 @@ export class LocalVariablesService implements VariablesService {
   public set(name: string, value: unknown): void
   public has(name: string): boolean
   public delete(name: string): void
-}
-export type LockLease = {
-  key: string
-  holder: string
-  token: number
-  expiresAt: Date
-}
-export class LockLostError extends Error {
-  constructor(public readonly key: string)
-}
-export interface LockService {
-  acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
-  refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
-  release(lease: LockLease): Promise<void>
-  get(key: string): Promise<LockLease | null>
-  withLock<T>(key: string, fn: (lease: LockLease, signal: AbortSignal) => Promise<T>, ttlMs?: number): Promise<T>
-}
-export class LockTakenError extends Error {
-  constructor(public readonly key: string)
 }
 export interface Logger {
   info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
@@ -5269,12 +5269,12 @@ export class PikkuCredentialWireService {
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
   getScoped(allowedNames: string[]): Record<string, unknown> | Promise<Record<string, unknown>>
 }
-export abstract class PikkuLockService implements LockService {
-  abstract acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
-  abstract refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
-  abstract release(lease: LockLease): Promise<void>
-  abstract get(key: string): Promise<LockLease | null>
-  async withLock<T>(key: string, fn: (lease: LockLease, signal: AbortSignal) => Promise<T>, ttlMs = 30_000): Promise<T>
+export abstract class PikkuLeaseService implements LeaseService {
+  abstract acquire(key: string, holder: string, ttlMs: number): Promise<Lease | null>
+  abstract refresh(lease: Lease, ttlMs: number): Promise<Lease | null>
+  abstract release(lease: Lease): Promise<void>
+  abstract get(key: string): Promise<Lease | null>
+  async withLease<T>(key: string, fn: (lease: Lease, signal: AbortSignal) => Promise<T>, ttlMs = 30_000): Promise<T>
 }
 pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
 pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
@@ -6296,7 +6296,7 @@ clearPikkuRuntimeState: () => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; lockService?: () => Promise<LockService> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService> }
 }
 ```
 
