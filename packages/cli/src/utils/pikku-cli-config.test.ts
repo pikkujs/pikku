@@ -272,82 +272,87 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('a frontend directory is resolved relative to the config file', async () => {
-    const root = await writeConfig({ frontend: { dir: './web/dist' } })
+  const loadConfig = (root: string) =>
+    getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), [], false)
 
-    const config = await getPikkuCLIConfig(
-      silentLogger,
-      join(root, 'pikku.config.json'),
-      [],
-      false
+  const rejectsWith = (root: string, message: RegExp) =>
+    assert.rejects(
+      loadConfig(root),
+      (e: unknown) =>
+        e instanceof PikkuCLIConfigError && message.test((e as Error).message)
     )
 
-    assert.equal(config.frontend?.dir, join(root, 'web', 'dist'))
+  test('a frontend cwd is resolved relative to the config file, and dist to its cwd', async () => {
+    const root = await writeConfig({ frontends: { web: { cwd: './web' } } })
+
+    const config = await loadConfig(root)
+
+    assert.equal(config.frontends?.web?.cwd, join(root, 'web'))
+    assert.equal(config.frontends?.web?.dist, join(root, 'web', 'dist'))
+    assert.equal(config.frontends?.web?.serve, undefined)
   })
 
-  test('a frontend mount defaults to the root with a SPA fallback', async () => {
-    const root = await writeConfig({ frontend: { dir: './web/dist' } })
+  test('a frontend dist is resolved relative to its cwd', async () => {
+    const root = await writeConfig({
+      frontends: { web: { cwd: './web', dist: 'dist/client' } },
+    })
 
-    const config = await getPikkuCLIConfig(
-      silentLogger,
-      join(root, 'pikku.config.json'),
-      [],
-      false
+    const config = await loadConfig(root)
+
+    assert.equal(
+      config.frontends?.web?.dist,
+      join(root, 'web', 'dist', 'client')
     )
-
-    assert.equal(config.frontend?.urlPrefix, '/')
-    assert.equal(config.frontend?.spaFallback, true)
   })
 
-  test('a frontend urlPrefix keeps no trailing slash', async () => {
+  test('a served frontend defaults to the root with a SPA fallback', async () => {
+    const root = await writeConfig({
+      frontends: { web: { cwd: './web', serve: {} } },
+    })
+
+    const config = await loadConfig(root)
+
+    assert.deepEqual(config.frontends?.web?.serve, {
+      urlPrefix: '/',
+      spaFallback: true,
+    })
+  })
+
+  test('a served frontend urlPrefix keeps no trailing slash', async () => {
     // The mount compares `pathname === prefix || pathname.startsWith(prefix + '/')`,
     // so a stored `/app/` would match nothing at all.
     const root = await writeConfig({
-      frontend: { dir: './web/dist', urlPrefix: '/app/' },
+      frontends: { web: { cwd: './web', serve: { urlPrefix: '/app/' } } },
     })
 
-    const config = await getPikkuCLIConfig(
-      silentLogger,
-      join(root, 'pikku.config.json'),
-      [],
-      false
-    )
+    const config = await loadConfig(root)
 
-    assert.equal(config.frontend?.urlPrefix, '/app')
+    assert.equal(config.frontends?.web?.serve?.urlPrefix, '/app')
   })
 
-  test('a frontend urlPrefix that is not a path is rejected', async () => {
+  test('a served frontend urlPrefix that is not a path is rejected', async () => {
     const root = await writeConfig({
-      frontend: { dir: './web/dist', urlPrefix: 'app' },
+      frontends: { web: { cwd: './web', serve: { urlPrefix: 'app' } } },
     })
 
-    await assert.rejects(
-      getPikkuCLIConfig(
-        silentLogger,
-        join(root, 'pikku.config.json'),
-        [],
-        false
-      ),
-      (e: unknown) =>
-        e instanceof PikkuCLIConfigError &&
-        /frontend\.urlPrefix must start with/.test((e as Error).message)
-    )
+    await rejectsWith(root, /frontends\.web\.serve\.urlPrefix must start with/)
   })
 
-  test('a frontend without a directory is rejected', async () => {
-    const root = await writeConfig({ frontend: { urlPrefix: '/' } })
+  test('a frontend without a cwd is rejected', async () => {
+    const root = await writeConfig({ frontends: { web: { dist: 'dist' } } })
 
-    await assert.rejects(
-      getPikkuCLIConfig(
-        silentLogger,
-        join(root, 'pikku.config.json'),
-        [],
-        false
-      ),
-      (e: unknown) =>
-        e instanceof PikkuCLIConfigError &&
-        /frontend\.dir is required/.test((e as Error).message)
-    )
+    await rejectsWith(root, /frontends\.web\.cwd is required/)
+  })
+
+  test('two served frontends are rejected', async () => {
+    const root = await writeConfig({
+      frontends: {
+        web: { cwd: './web', serve: {} },
+        admin: { cwd: './admin', serve: { urlPrefix: '/admin' } },
+      },
+    })
+
+    await rejectsWith(root, /web and admin both set "serve"/)
   })
 })
 

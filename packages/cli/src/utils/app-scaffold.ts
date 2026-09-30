@@ -12,7 +12,7 @@ import { join } from 'node:path'
 
 export const DEFAULT_PORT = 7104
 
-/** What `pikku.config.json`/`pikkufabric.config.json` says about one frontend. */
+/** What `pikku.config.json` says about one frontend. */
 export interface Frontend {
   cwd: string
   primary?: boolean

@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/deploy/deploy-standalone"
   },
-  "description": "Standalone deploy adapter for Pikku — bundles a project into a node bundle or a compiled bun executable",
+  "description": "Standalone deploy adapter for Pikku \u2014 bundles a project into a node bundle or a compiled bun executable",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./runtime": "./dist/runtime/index.js"
+    "./runtime": "./dist/runtime/index.js",
+    "./native": "./dist/tauri/index.js"
   },
   "license": "MIT",
   "dependencies": {

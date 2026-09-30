@@ -102,7 +102,19 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
-import { pikkuNewApp, renderNewApp } from './functions/commands/new-app.js'
+import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
+import {
+  appList,
+  appNativeAdd,
+  appNativeCheck,
+  appNativeInit,
+  appNativeUpgrade,
+} from './functions/commands/app.js'
+import {
+  renderAppList,
+  renderAppNativeCheck,
+  renderAppNativeWrite,
+} from './functions/app/render.js'
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import { doc, renderDoc } from './functions/commands/doc.js'
 import {
@@ -1213,6 +1225,103 @@ wireCLI({
         }),
       },
     },
+    app: {
+      description:
+        'The apps in `frontends`: create one, list them, and package one as a desktop or mobile app',
+      subcommands: {
+        new: pikkuCLICommand({
+          func: pikkuAppNew,
+          render: renderAppNew,
+          description:
+            'Add a frontend from the starter template, for a group the first app is not for',
+          parameters: '<slug>',
+          options: {
+            serves: {
+              description:
+                'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
+            },
+            personas: {
+              description:
+                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+            },
+            template: {
+              description:
+                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/starter-template/apps/app)',
+            },
+            primary: {
+              description: 'Make this the primary frontend',
+              default: false,
+            },
+            install: {
+              description: 'Run `bun install` afterwards',
+              default: true,
+            },
+          },
+        }),
+        list: pikkuCLICommand({
+          func: appList,
+          render: renderAppList,
+          description: 'List every app, where it lives and what it ships as',
+        }),
+        native: {
+          description:
+            "Package an app as a desktop, Android or iOS app — the Tauri project in the app's src-tauri/",
+          subcommands: {
+            init: pikkuCLICommand({
+              func: appNativeInit,
+              render: renderAppNativeWrite,
+              description:
+                "Create the app's native project, or re-apply its config to one that exists",
+              parameters: '<name>',
+              options: {
+                desktop: { description: 'Build for macOS, Windows and Linux' },
+                android: { description: 'Build for Android' },
+                ios: { description: 'Build for iOS' },
+                identifier: {
+                  description:
+                    'Bundle id and Android package name, e.g. com.acme.shop — permanent once released (default: com.<npm scope>.<name>)',
+                },
+                productName: {
+                  description: 'The name people see (default: the app name)',
+                },
+                url: {
+                  description:
+                    'Open a deployed server instead of bundling the frontend — nothing is packaged',
+                },
+                bundleServer: {
+                  description:
+                    'Ship the compiled pikku server inside the app as a sidecar. Desktop only; installed by `pikku deploy apply --provider standalone --runtime bun`',
+                },
+                plugins: {
+                  description:
+                    'Comma-separated native plugins: biometric, haptics, barcode-scanner, nfc, geolocation, notification, dialog, clipboard-manager, os, store',
+                },
+              },
+            }),
+            add: pikkuCLICommand({
+              func: appNativeAdd,
+              render: renderAppNativeWrite,
+              description: 'Add native plugins to an app',
+              parameters: '<name> [plugins...]',
+            }),
+            upgrade: pikkuCLICommand({
+              func: appNativeUpgrade,
+              render: renderAppNativeWrite,
+              description:
+                "Rewrite pikku's files in the native project from the config; yours are left alone",
+              parameters: '<name>',
+            }),
+            check: pikkuCLICommand({
+              func: appNativeCheck,
+              render: renderAppNativeCheck,
+              description:
+                'Check native projects against the config, and apps against each other',
+              parameters: '[name]',
+            }),
+          },
+        },
+      },
+    },
     new: {
       description: 'Scaffold new functions and wirings',
       subcommands: {
@@ -1263,35 +1372,6 @@ wireCLI({
               description: 'Permission type: simple (default) or factory',
               short: 't',
               default: 'simple',
-            },
-          },
-        }),
-        app: pikkuCLICommand({
-          func: pikkuNewApp,
-          render: renderNewApp,
-          description:
-            'Add a frontend from the starter template, for a group the first app is not for',
-          parameters: '<slug>',
-          options: {
-            serves: {
-              description:
-                'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
-            },
-            personas: {
-              description:
-                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
-            },
-            template: {
-              description:
-                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/starter-template/apps/app)',
-            },
-            primary: {
-              description: 'Make this the primary frontend',
-              default: false,
-            },
-            install: {
-              description: 'Run `bun install` afterwards',
-              default: true,
             },
           },
         }),
@@ -1479,15 +1559,6 @@ wireCLI({
               description:
                 'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
               default: 'node',
-            },
-            desktop: {
-              description:
-                'Also generate a desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone --runtime bun, unless --desktop-url is given.',
-              default: false,
-            },
-            desktopUrl: {
-              description:
-                'Point the desktop shell at an already-deployed server instead of bundling one. Implies --desktop; nothing is shipped with the app.',
             },
             fromPlan: {
               description:

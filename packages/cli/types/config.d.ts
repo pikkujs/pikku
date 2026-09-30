@@ -315,6 +315,82 @@ export interface PikkuCLICoreOutputFiles {
   webhookSourcesMetaJsonFile: string
 }
 
+/** A platform a native app is built for. */
+export type PikkuNativePlatform = 'desktop' | 'android' | 'ios'
+
+/**
+ * Makes a frontend an installable app. Written by `pikku app native init`,
+ * read by every `pikku app native` command. The native project lives at
+ * `<cwd>/src-tauri`.
+ */
+export type PikkuNativeInput = {
+  /**
+   * The macOS/iOS bundle id and Android package name. One per app, unique
+   * across apps, and fixed after the first store release.
+   */
+  identifier: string
+  /** The name the OS shows. Defaults to the frontend's name, title-cased. */
+  productName?: string
+  platforms: PikkuNativePlatform[]
+  /** Native APIs the app may call — `biometric`, `haptics`, `notification`, … */
+  plugins?: string[]
+  /**
+   * Open this deployed server's origin instead of bundling `dist`. Nothing is
+   * shipped with the app, and auth keeps working exactly as in a browser.
+   */
+  url?: string
+  /**
+   * Ship the compiled pikku server inside the app and point the window at it.
+   * Desktop only; `pikku deploy apply --provider standalone --runtime bun`
+   * installs the binary.
+   */
+  bundleServer?: boolean
+}
+
+/** One frontend, as `pikku.config.json` declares it. */
+export type PikkuFrontendInput = {
+  /** The frontend's project directory, relative to the config file. */
+  cwd: string
+  /**
+   * Its build output, relative to `cwd`. Defaults to `dist`. Pikku reads it
+   * and never builds it.
+   */
+  dist?: string
+  primary?: boolean
+  /** Whether Fabric deploys it. */
+  deploy?: boolean
+  kind?: 'spa' | 'ssr' | 'static'
+  dev?: { command: string[]; port: number; healthPath: string }
+  /** Who the app is for, in their own word. */
+  serves?: string
+  personas?: string[]
+  planSlug?: string
+  /**
+   * Serve `dist` from the pikku server's own origin, so the UI and the API
+   * share a host and cookies stay first-party. `pikku dev` deliberately
+   * ignores it — a frontend dev server owns that job and proxies its API
+   * calls back to pikku, which is what makes HMR work. At most one frontend
+   * may set it.
+   */
+  serve?: {
+    /** Where the frontend is mounted. Defaults to `/`. */
+    urlPrefix?: string
+    /**
+     * Serve `index.html` for a path under the prefix that no route and no
+     * file claimed, so the client-side router can handle it. Defaults to true.
+     */
+    spaFallback?: boolean
+  }
+  native?: PikkuNativeInput
+}
+
+/** A frontend with its paths made absolute and its defaults filled in. */
+export type PikkuFrontend = Omit<PikkuFrontendInput, 'serve'> & {
+  cwd: string
+  dist: string
+  serve?: { urlPrefix: string; spaFallback: boolean }
+}
+
 export type PikkuCLIInput = {
   $schema?: string
 
@@ -442,26 +518,11 @@ export type PikkuCLIInput = {
   emailTemplatesDir?: string
 
   /**
-   * A built frontend for the server to serve from its own origin, so the UI and
-   * the API share a host and cookies stay first-party.
-   *
-   * This names *output*, not a project: `pikku serve` and `pikku deploy` read
-   * the directory and never build it, so the frontend's own build has to have
-   * run first. `pikku dev` deliberately ignores it — a frontend dev server owns
-   * that job and proxies its API calls back to pikku, which is what makes HMR
-   * work.
+   * Every frontend in the project, by name — the one list of apps. An entry
+   * with `serve` is mounted on the pikku server; one with `native` is packaged
+   * as an installable app. Managed by `pikku app`.
    */
-  frontend?: {
-    /** Directory of built frontend output, resolved relative to the config file. */
-    dir: string
-    /** Where the frontend is mounted. Defaults to `/`. */
-    urlPrefix?: string
-    /**
-     * Serve `index.html` for a path under the prefix that no route and no file
-     * claimed, so the client-side router can handle it. Defaults to true.
-     */
-    spaFallback?: boolean
-  }
+  frontends?: Record<string, PikkuFrontendInput>
 
   /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
@@ -907,22 +968,6 @@ export type PikkuCLIInput = {
         routes?: string[]
       }>
     }
-    /** Desktop shell settings, used by `pikku deploy apply --desktop`. */
-    desktop?: {
-      /**
-       * Reverse-DNS bundle identifier for the desktop app. Derived from the
-       * package name when omitted, which is fine for a local build but should
-       * be set before anything is distributed — it is the identity the OS
-       * keys the app's data directory and permissions on.
-       */
-      identifier?: string
-      /**
-       * An already-deployed server for the app to open, instead of bundling
-       * one. The window is a webview onto that origin: nothing is shipped with
-       * the app, and there is no sidecar to compile.
-       */
-      url?: string
-    }
   }
 
   /** Branches `pikku release` moves; defaults staging → main via release/next on origin. */
@@ -945,12 +990,8 @@ export type PikkuCLIConfig = PikkuCLIInput & {
   wires?: string[]
   excludeWires?: string[]
 
-  /** Defaults filled in and `dir` made absolute by `getPikkuCLIConfig`. */
-  frontend?: {
-    dir: string
-    urlPrefix: string
-    spaFallback: boolean
-  }
+  /** Paths made absolute and defaults filled in by `getPikkuCLIConfig`. */
+  frontends?: Record<string, PikkuFrontend>
 
   userSessionType?: string
   singletonServicesFactoryType?: string

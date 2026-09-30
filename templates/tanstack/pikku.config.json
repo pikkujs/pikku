@@ -1,6 +1,10 @@
 {
   "extends": "../functions/pikku.config.json",
-  "frontend": {
-    "dir": "./dist/client"
+  "frontends": {
+    "web": {
+      "cwd": ".",
+      "dist": "dist/client",
+      "serve": {}
+    }
   }
 }

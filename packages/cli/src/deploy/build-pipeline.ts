@@ -324,8 +324,8 @@ export async function runBuildPipeline(options: {
     state: InspectorState
   ) => unknown
   /**
-   * A built frontend to ship with the bundle, from the project's `frontend`
-   * config. Single-unit builds only — a decomposed deployment has no one unit
+   * A built frontend to ship with the bundle — the one `frontends` entry that sets `serve`.
+   * Single-unit builds only — a decomposed deployment has no one unit
    * that owns the origin the UI would be served from.
    */
   frontend?: {

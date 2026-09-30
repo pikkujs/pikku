@@ -3,7 +3,11 @@
   "srcDirectories": ["./src", "./types"],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
-  "frontend": {
-    "dir": "./web"
+  "frontends": {
+    "web": {
+      "cwd": "./web",
+      "dist": ".",
+      "serve": {}
+    }
   }
 }

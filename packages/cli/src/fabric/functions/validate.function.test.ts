@@ -17,6 +17,16 @@ async function writeJson(path: string, data: unknown) {
   await writeFile(path, JSON.stringify(data, null, 2), 'utf8')
 }
 
+async function writeFrontends(root: string, frontends: unknown) {
+  const path = join(root, 'pikku.config.json')
+  const config = JSON.parse(await readFile(path, 'utf8'))
+  await writeFile(
+    path,
+    JSON.stringify({ ...config, frontends }, null, 2),
+    'utf8'
+  )
+}
+
 async function makeValidProject(root: string) {
   await writeJson(join(root, 'pikkufabric.config.json'), {
     projectId: 'proj-abc123',
@@ -1501,7 +1511,7 @@ describe('pikku fabric validate', () => {
   })
 
   describe('apps/ frontend checks', () => {
-    test('app not declared in pikkufabric.config.json frontends → warn', async () => {
+    test('app not declared in pikku.config.json frontends → warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1520,15 +1530,12 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('pikkufabric.config.json frontend cwd does not exist → error', async () => {
+    test('pikku.config.json frontend cwd does not exist → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await mkdir(join(tmp, 'apps'), { recursive: true })
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: 'proj-abc123',
-          frontends: { web: { cwd: './apps/web', kind: 'ssr' } },
-        })
+        await writeFrontends(tmp, { web: { cwd: './apps/web', kind: 'ssr' } })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
         const finding = result.findings.find(
@@ -1565,10 +1572,7 @@ describe('pikku fabric validate', () => {
           name: 'web',
           dependencies: {},
         })
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: 'proj-abc123',
-          frontends: { web: { cwd: 'apps/web', kind: 'ssr' } },
-        })
+        await writeFrontends(tmp, { web: { cwd: 'apps/web', kind: 'ssr' } })
         const result = await runValidate(tmp)
         assert.ok(
           result.findings.some((f) => f.id === 'app-missing-functions-sdk-web'),
@@ -2336,13 +2340,10 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
 })
 
 describe('declared frontends + type-check (live validate.function)', () => {
-  // pikkufabric.config.json is unvalidated JSON — validate has to survive
+  // pikku.config.json is unvalidated JSON — validate has to survive
   // whatever is in it and report the problem, not crash on a property access.
   const declareFrontends = async (root: string, frontends: unknown) => {
-    await writeJson(join(root, 'pikkufabric.config.json'), {
-      projectId: 'proj-abc123',
-      frontends,
-    })
+    await writeFrontends(root, frontends)
   }
 
   const findingIds = (findings: Array<{ id: string }>) =>
@@ -2466,10 +2467,7 @@ describe('declared frontends + type-check (live validate.function)', () => {
 
 describe('deployed frontend API base (live validate.function)', () => {
   const declareWeb = async (root: string, deploy = true) => {
-    await writeJson(join(root, 'pikkufabric.config.json'), {
-      projectId: 'proj-abc123',
-      frontends: { web: { cwd: 'apps/web', deploy } },
-    })
+    await writeFrontends(root, { web: { cwd: 'apps/web', deploy } })
   }
 
   const writeApiLib = async (root: string, source: string) => {

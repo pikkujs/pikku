@@ -8,23 +8,14 @@ const DEFAULT_API_URL = 'https://api.pikkufabric.com'
 
 /**
  * `pikkufabric.config.json` lives next to `pikku.config.json` in the project
- * root. Pins the project link (id, default api url) and declares deployable
- * apps + production domain. Discovered by walking up from cwd until found.
+ * root. Pins the project link (id, default api url) and the production domain.
+ * The apps it deploys are `frontends` in `pikku.config.json`. Discovered by
+ * walking up from cwd until found.
  */
 export interface ProjectConfig {
   projectId: string
   apiUrl?: string
-  frontends?: Record<string, FabricAppConfig>
   production?: FabricProductionConfig
-}
-
-/** One entry per deployable frontend in the repo. Key is a short slug. */
-export interface FabricAppConfig {
-  cwd: string
-  primary?: boolean
-  deploy?: boolean
-  kind?: 'spa' | 'ssr' | 'static'
-  dev?: { command?: string[]; port?: number; healthPath?: string }
 }
 
 /**
@@ -80,10 +71,8 @@ export function isLinkedProjectId(projectId?: string | null): boolean {
 /**
  * Merge into the existing config rather than replacing it. `link` and `init`
  * only know the projectId, so a plain write silently deleted every other key —
- * including `frontends`, which is what tells the build container an app exists.
- * The symptom is a deploy that succeeds having built no frontend at all, long
- * after the link that caused it. Unknown keys are preserved too; nothing here
- * has any business dropping config it does not understand.
+ * `production` among them. Unknown keys are preserved too; nothing here has
+ * any business dropping config it does not understand.
  */
 export async function writeProjectConfig(
   cwd: string,

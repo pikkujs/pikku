@@ -365,6 +365,7 @@
         "@pikku/code-edit": "^0.12.2",
         "@pikku/deploy": "^0.12.12",
         "@pikku/deploy-cloudflare": "^0.12.18",
+        "@pikku/deploy-standalone": "^0.12.21",
         "@pikku/fetch": "^0.12.12",
         "@pikku/inspector": "^0.12.93",
         "@pikku/knowledge": "^0.12.16",
@@ -599,8 +600,8 @@
       "name": "@pikku/deploy-standalone",
       "version": "0.12.21",
       "dependencies": {
-        "@pikku/deploy": "^0.12.7",
-        "@pikku/migrator-sql": "^0.12.3",
+        "@pikku/deploy": "^0.12.12",
+        "@pikku/migrator-sql": "^0.12.6",
       },
     },
     "packages/frontend/mantine": {

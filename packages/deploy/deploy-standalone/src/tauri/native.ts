@@ -23,6 +23,13 @@ export type NativeApi = {
   readonly crate: string
   /** The Rust module path `.plugin()` is called on. */
   readonly module: string
+  /**
+   * The expression `.plugin()` is given. Most plugins expose `init()`; a few
+   * only expose a builder, and guessing `init()` for those is a build failure.
+   */
+  readonly init: string
+  /** The npm package the frontend calls the plugin through. */
+  readonly jsPackage: string
   /** Permission granted in the capability file. */
   readonly permission: string
   readonly support: NativeSupport
@@ -42,6 +49,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'biometric',
     crate: 'tauri-plugin-biometric',
     module: 'tauri_plugin_biometric',
+    init: 'tauri_plugin_biometric::init()',
+    jsPackage: '@tauri-apps/plugin-biometric',
     permission: 'biometric:default',
     support: 'mobile',
     summary: 'Face ID, Touch ID and Android BiometricPrompt',
@@ -55,6 +64,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'haptics',
     crate: 'tauri-plugin-haptics',
     module: 'tauri_plugin_haptics',
+    init: 'tauri_plugin_haptics::init()',
+    jsPackage: '@tauri-apps/plugin-haptics',
     permission: 'haptics:default',
     support: 'mobile',
     summary: 'Vibration and impact feedback',
@@ -63,6 +74,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'barcode-scanner',
     crate: 'tauri-plugin-barcode-scanner',
     module: 'tauri_plugin_barcode_scanner',
+    init: 'tauri_plugin_barcode_scanner::init()',
+    jsPackage: '@tauri-apps/plugin-barcode-scanner',
     permission: 'barcode-scanner:default',
     support: 'mobile',
     summary: 'Camera barcode and QR scanning',
@@ -74,6 +87,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'nfc',
     crate: 'tauri-plugin-nfc',
     module: 'tauri_plugin_nfc',
+    init: 'tauri_plugin_nfc::init()',
+    jsPackage: '@tauri-apps/plugin-nfc',
     permission: 'nfc:default',
     support: 'mobile',
     summary: 'Reading and writing NFC tags',
@@ -87,6 +102,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'geolocation',
     crate: 'tauri-plugin-geolocation',
     module: 'tauri_plugin_geolocation',
+    init: 'tauri_plugin_geolocation::init()',
+    jsPackage: '@tauri-apps/plugin-geolocation',
     permission: 'geolocation:default',
     support: 'all',
     summary: 'Current position and position watching',
@@ -98,6 +115,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'notification',
     crate: 'tauri-plugin-notification',
     module: 'tauri_plugin_notification',
+    init: 'tauri_plugin_notification::init()',
+    jsPackage: '@tauri-apps/plugin-notification',
     permission: 'notification:default',
     support: 'all',
     summary: 'Local notifications, scheduled or immediate',
@@ -108,6 +127,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'dialog',
     crate: 'tauri-plugin-dialog',
     module: 'tauri_plugin_dialog',
+    init: 'tauri_plugin_dialog::init()',
+    jsPackage: '@tauri-apps/plugin-dialog',
     permission: 'dialog:default',
     support: 'all',
     summary: 'Native message, confirm and file-picker dialogs',
@@ -116,6 +137,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'clipboard-manager',
     crate: 'tauri-plugin-clipboard-manager',
     module: 'tauri_plugin_clipboard_manager',
+    init: 'tauri_plugin_clipboard_manager::init()',
+    jsPackage: '@tauri-apps/plugin-clipboard-manager',
     permission: 'clipboard-manager:default',
     support: 'all',
     summary: 'Reading and writing the system clipboard',
@@ -124,6 +147,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'os',
     crate: 'tauri-plugin-os',
     module: 'tauri_plugin_os',
+    init: 'tauri_plugin_os::init()',
+    jsPackage: '@tauri-apps/plugin-os',
     permission: 'os:default',
     support: 'all',
     summary: 'Platform, version and architecture of the host',
@@ -132,6 +157,8 @@ export const NATIVE_APIS: readonly NativeApi[] = [
     name: 'store',
     crate: 'tauri-plugin-store',
     module: 'tauri_plugin_store',
+    init: 'tauri_plugin_store::Builder::new().build()',
+    jsPackage: '@tauri-apps/plugin-store',
     permission: 'store:default',
     support: 'all',
     summary: 'A persistent key-value store on the device',
@@ -145,12 +172,11 @@ export const nativeApiList = (): string =>
   NATIVE_APIS.map((api) => api.name).join(', ')
 
 /**
- * Turn `--desktop-native biometric,haptics` into the APIs it names.
+ * Turn `native.plugins` into the APIs it names.
  *
- * Order follows the catalogue rather than the command line, so the generated
- * crate is byte-identical however the flag was typed — the shell manifest
- * records a hash of what was written, and a reordered plugin list would read as
- * a file the user had taken over.
+ * Order follows the catalogue rather than the config, so the files pikku owns
+ * are byte-identical however the list was written — `pikku app native check`
+ * compares them, and a reordered list would read as drift.
  */
 export const resolveNativeApis = (
   raw: string | readonly string[] | undefined

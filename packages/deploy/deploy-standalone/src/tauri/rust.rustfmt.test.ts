@@ -5,7 +5,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { renderLibRs, renderMainRs, type MainRsOptions } from './main-rs.js'
+import { renderLibRs, renderMainRs, renderPikkuRs } from './rust.js'
 import { resolveNativeApis } from './native.js'
 
 /**
@@ -21,6 +21,12 @@ const assertRustfmtClean = async (source: string, label: string) => {
   const file = join(dir, 'shell.rs')
   try {
     await writeFile(file, source, 'utf-8')
+    // lib.rs declares `mod pikku;`, and rustfmt follows it.
+    await writeFile(
+      join(dir, 'pikku.rs'),
+      renderPikkuRs({ plugins: [], bundleServer: false }),
+      'utf-8'
+    )
     const result = spawnSync(
       'rustfmt',
       ['--edition', '2021', '--check', file],
@@ -38,42 +44,32 @@ const assertRustfmtClean = async (source: string, label: string) => {
   }
 }
 
-const window = { windowTitle: 'Shop', width: 1200, height: 800 }
-
-const libCases: Array<[string, MainRsOptions]> = [
-  ['sidecar lib.rs', { sidecarName: 'shop', ...window }],
+const cases: Array<[string, string]> = [
+  ['main.rs', renderMainRs('shop-app')],
+  ['lib.rs for a bundled UI', renderLibRs({ bundleServer: false })],
+  ['lib.rs for a bundled server', renderLibRs({ bundleServer: true })],
   [
-    'sidecar lib.rs with native APIs',
-    {
-      sidecarName: 'shop',
-      ...window,
-      native: resolveNativeApis('dialog,store'),
-    },
+    'pikku.rs with no plugins',
+    renderPikkuRs({ plugins: [], bundleServer: false }),
   ],
-  ['remote lib.rs', { remoteUrl: 'https://shop.example.com', ...window }],
   [
-    'remote lib.rs with native APIs',
-    {
-      remoteUrl: 'https://shop.example.com',
-      ...window,
-      native: resolveNativeApis('biometric,geolocation,haptics'),
-    },
+    'pikku.rs with every kind of plugin',
+    renderPikkuRs({
+      plugins: resolveNativeApis(['store', 'biometric', 'dialog']),
+      bundleServer: true,
+    }),
   ],
 ]
 
 describe('the generated shell as Rust source', () => {
   const skip = rustfmtAvailable ? false : 'rustfmt is not installed'
 
-  it('main.rs parses, and is already in rustfmt form', { skip }, async () => {
-    await assertRustfmtClean(renderMainRs('shop-shell'), 'main.rs')
-  })
-
-  for (const [label, options] of libCases) {
+  for (const [label, source] of cases) {
     it(
       `${label} parses, and is already in rustfmt form`,
       { skip },
       async () => {
-        await assertRustfmtClean(renderLibRs(options), label)
+        await assertRustfmtClean(source, label)
       }
     )
   }

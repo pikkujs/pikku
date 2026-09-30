@@ -73,7 +73,7 @@ type FrontendConfig = {
   }
 }
 
-type FabricConfig = {
+type AppsConfig = {
   frontends?: Record<string, FrontendConfig>
 }
 
@@ -291,14 +291,10 @@ async function runFrontendChecks(args: {
   timeoutMs: number
   steps: SmokeStep[]
 }): Promise<{ ok: boolean; failure?: string; logTail?: string }> {
-  const fabricConfigPath = existsSync(
-    join(args.root, 'pikkufabric.config.json')
+  const appsConfig = await readJsonSafe<AppsConfig>(
+    join(args.root, 'pikku.config.json')
   )
-    ? join(args.root, 'pikkufabric.config.json')
-    : join(args.root, 'fabric.config.json')
-
-  const fabricConfig = await readJsonSafe<FabricConfig>(fabricConfigPath)
-  const frontends = fabricConfig?.frontends ?? {}
+  const frontends = appsConfig?.frontends ?? {}
   const entries = Object.entries(frontends).filter(
     (entry): entry is [string, FrontendConfig] =>
       Boolean(entry[1]) && typeof entry[1] === 'object'
@@ -309,7 +305,7 @@ async function runFrontendChecks(args: {
       name: 'frontend checks',
       status: 'skipped',
       durationMs: 0,
-      detail: 'no frontends declared in pikkufabric.config.json',
+      detail: 'no frontends declared in pikku.config.json',
     })
     return { ok: true }
   }
@@ -386,14 +382,10 @@ async function startFrontends(args: {
   timeoutMs: number
   steps: SmokeStep[]
 }) {
-  const fabricConfigPath = existsSync(
-    join(args.root, 'pikkufabric.config.json')
+  const appsConfig = await readJsonSafe<AppsConfig>(
+    join(args.root, 'pikku.config.json')
   )
-    ? join(args.root, 'pikkufabric.config.json')
-    : join(args.root, 'fabric.config.json')
-
-  const fabricConfig = await readJsonSafe<FabricConfig>(fabricConfigPath)
-  const frontends = fabricConfig?.frontends ?? {}
+  const frontends = appsConfig?.frontends ?? {}
   const entries = Object.entries(frontends).filter(
     (entry): entry is [string, FrontendConfig] =>
       Boolean(entry[1]) && typeof entry[1] === 'object'
@@ -410,7 +402,7 @@ async function startFrontends(args: {
       name: 'frontend startup',
       status: 'skipped',
       durationMs: 0,
-      detail: 'no frontends declared in pikkufabric.config.json',
+      detail: 'no frontends declared in pikku.config.json',
     })
     return { ok: true as const, running }
   }
@@ -447,7 +439,7 @@ async function startFrontends(args: {
         name: `frontend:${slug}:start`,
         status: 'failed',
         durationMs: 0,
-        detail: `frontend dev config is incomplete in ${relative(args.root, fabricConfigPath)}`,
+        detail: `frontends.${slug}.dev is incomplete in pikku.config.json`,
       })
       return {
         ok: false as const,
