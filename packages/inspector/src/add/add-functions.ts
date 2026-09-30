@@ -1452,7 +1452,7 @@ export const addFunctions: AddWiring = (
     workflowQueued: workflowQueued === true ? true : undefined,
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
-    compensate: compensateNode ? true : undefined,
+    compensate: compensateInitializer ? true : undefined,
     scenarioStepSurfaces,
     scenarioStepRequiresActor,
     // `persona` is the default reading of an unmarked step, so it is left off

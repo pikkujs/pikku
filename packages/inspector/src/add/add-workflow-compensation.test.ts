@@ -15,6 +15,10 @@ const STEP_FILE = [
   '    void workflow?.compensatingFor',
   '  },',
   '})',
+  'export const holdStock = pikkuSessionlessFunc({',
+  "  func: async () => ({ id: 'h' }),",
+  '  async compensate() {},',
+  '})',
   'export const sendReceipt = pikkuSessionlessFunc({',
   "  func: async () => ({ id: 'r' }),",
   '})',
@@ -106,5 +110,25 @@ describe('compensate — the inspector', () => {
     )
     const charge = Object.values(nodes).find((n) => n.rpcName === 'chargeCard')
     assert.ok(!('onError' in (charge ?? {})))
+  })
+
+  test('compensate written as a method is still recorded', async () => {
+    const { state } = await inspectWorkflow(
+      "  await workflow.do('Hold', 'holdStock', {})\n  return { ok: true }"
+    )
+    assert.equal(state.functions.meta['holdStock'].compensate, true)
+  })
+
+  test('compensate: false on a parallel child survives regeneration', async () => {
+    const { code } = await inspectWorkflow(
+      [
+        '  await Promise.all([',
+        "    workflow.do('Charge', 'chargeCard', {}, { compensate: false }),",
+        "    workflow.do('Receipt', 'sendReceipt', {}),",
+        '  ])',
+        '  return { ok: true }',
+      ].join('\n')
+    )
+    assert.ok(code.includes('compensate: false'), code)
   })
 })

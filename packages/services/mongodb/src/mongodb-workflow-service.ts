@@ -80,6 +80,19 @@ interface WorkflowVersionDoc {
   createdAt: Date
 }
 
+const ENCODED_STATE_KEY = '__enc_'
+
+/** Field names cannot hold `.` or `$`, and step names are free text. */
+const encodeStateKey = (name: string): string =>
+  /^[a-zA-Z0-9_]+$/.test(name) && !name.startsWith(ENCODED_STATE_KEY)
+    ? name
+    : ENCODED_STATE_KEY + Buffer.from(name, 'utf8').toString('hex')
+
+const decodeStateKey = (key: string): string =>
+  key.startsWith(ENCODED_STATE_KEY)
+    ? Buffer.from(key.slice(ENCODED_STATE_KEY.length), 'hex').toString('utf8')
+    : key
+
 export class MongoDBWorkflowService extends PikkuWorkflowService {
   private initialized = false
   private runService: MongoDBWorkflowRunService
@@ -732,14 +745,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     name: string,
     value: unknown
   ): Promise<void> {
-    if (!/^[a-zA-Z0-9_]+$/.test(name)) {
-      throw new Error('Invalid state key name')
-    }
     await this.runs.updateOne(
       { _id: runId },
       {
         $set: {
-          [`state.${name}`]: value,
+          [`state.${encodeStateKey(name)}`]: value,
           updatedAt: new Date(),
         },
       }
@@ -752,7 +762,12 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       { projection: { state: 1 } }
     )
     if (!row) return {}
-    return row.state ?? {}
+    return Object.fromEntries(
+      Object.entries(row.state ?? {}).map(([key, value]) => [
+        decodeStateKey(key),
+        value,
+      ])
+    )
   }
 
   protected async upsertWorkflowVersionImpl(

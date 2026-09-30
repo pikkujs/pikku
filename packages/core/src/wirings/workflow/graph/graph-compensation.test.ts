@@ -375,4 +375,30 @@ describe('graph recover', () => {
 
     assert.equal(record.status, 'compensated')
   })
+  test('a node reading a recovered failure is skipped, not waited on forever', async () => {
+    register('a', boom())
+    register('fallback', ok())
+    register('reader', ok())
+    defineGraph('dead', 'a', {
+      a: { recover: 'fallback', next: 'reader' },
+      fallback: {},
+      reader: { input: { from: { $ref: 'a' } } },
+    })
+
+    const { run: record } = await run('dead')
+
+    assert.equal(record.status, 'completed')
+    assert.ok(!log.includes('do:reader'))
+  })
+
+  test('a node reached normally after a recovery does not see the old error', async () => {
+    register('a', boom('first'))
+    register('fallback', ok())
+    defineGraph('fresh', 'a', { a: { recover: 'fallback' }, fallback: {} })
+
+    await run('fresh')
+
+    assert.equal(recovering.length, 1)
+    assert.equal(recovering[0]!.from.error.message, 'first')
+  })
 })

@@ -204,7 +204,13 @@ function fanoutBodyToCode(
       const stepName = node.stepName || `Call ${node.rpcName}`
       const input = (node.input || {}) as Record<string, unknown>
       const inputCode = inputToCode(input, indent, itemVar)
-      const options = node.options ? optionsToCode(node.options) : ''
+      const options =
+        node.options || (node as any).compensate === false
+          ? optionsToCode(
+              node.options ?? {},
+              (node as any).compensate === false ? false : undefined
+            )
+          : ''
       const doCall = `await workflow.do('${escapeSingleQuotes(stepName)}', '${node.rpcName}', ${inputCode}${options ? `, ${options}` : ''})`
       lines.push(
         node.outputVar
@@ -725,8 +731,11 @@ function nodeToCode(
           const input = (childNode.input || {}) as Record<string, unknown>
           const inputCode = inputToCode(input, indent + '  ')
           let call = `workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}`
-          if (childNode.options) {
-            const optCode = optionsToCode(childNode.options)
+          if (childNode.options || (childNode as any).compensate === false) {
+            const optCode = optionsToCode(
+              childNode.options ?? {},
+              (childNode as any).compensate === false ? false : undefined
+            )
             if (optCode) {
               call += `, ${optCode}`
             }

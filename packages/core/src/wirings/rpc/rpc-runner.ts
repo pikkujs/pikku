@@ -123,8 +123,9 @@ const resolvePikkuFunction = (
   }
   if (!rpcMeta && isCompensationStepName(rpcName)) {
     const forward = forwardStepName(rpcName)
-    const forwardFunc = pikkuState(null, 'function', 'functions').get(forward)
-    const forwardId = rpc[forward] ?? (forwardFunc ? forward : undefined)
+    const funcs = pikkuState(null, 'function', 'functions')
+    const forwardId = rpc[forward] ?? (funcs.has(forward) ? forward : undefined)
+    const forwardFunc = forwardId ? funcs.get(forwardId) : undefined
     if (forwardId && forwardFunc?.compensate) {
       return { pikkuFuncId: `${forwardId}:compensate`, packageName: null }
     }
@@ -302,7 +303,17 @@ export class ContextAwareRPCService {
     }
 
     const addonFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
-    const funcMeta = addonFunctionMeta[resolved.function]
+    let funcMeta = addonFunctionMeta[resolved.function]
+    if (!funcMeta && isCompensationStepName(resolved.function)) {
+      const forwardName = forwardStepName(resolved.function)
+      const forwardMeta = addonFunctionMeta[forwardName]
+      if (forwardMeta?.compensate) {
+        funcMeta = {
+          ...forwardMeta,
+          pikkuFuncId: `${forwardMeta.pikkuFuncId || forwardName}:compensate`,
+        }
+      }
+    }
     if (!funcMeta) {
       return NOT_RESOLVED
     }

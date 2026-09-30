@@ -222,12 +222,28 @@ function planGraphTransitions(
     }
   }
 
+  const deadLogical = new Set(
+    instances
+      .filter((i) => recovered.has(i.stepName) && !isDone(i))
+      .map((i) => toLogical(i.stepName))
+  )
+  const readsDeadNode = (nodeId: string) =>
+    nodeDependencies(nodes[nodeId] ?? {}).some((dep) => deadLogical.has(dep))
+
   const toFire: GraphFireInstruction[] = []
   const plannedFanout = new Set<string>()
   let blockedWaiting = false
   for (const edge of edges) {
     const target = edge.target
     const edgeKey = `${edge.fromKey}->${target}`
+
+    // A node reading the output of a failure that was recovered without
+    // `'ignore'` has no output to read and never will; waiting on it would
+    // leave the run unable to finish.
+    if (readsDeadNode(target)) {
+      consumed.add(edgeKey)
+      continue
+    }
 
     if (isFanned(target)) {
       if (plannedFanout.has(target)) continue
@@ -793,12 +809,19 @@ async function prepareFire(
     )
   }
   const from = fire.recoveringFrom
-  if (!from) return
+  if (!from) {
+    await workflowService.updateRunState(
+      runId,
+      `${RECOVERING_FROM_STATE_PREFIX}${fire.instanceKey}`,
+      null
+    )
+    return
+  }
   const steps = await workflowService.getRunSteps(runId)
   const failed = steps.find((step) => step.stepName === from.stepName)
   await workflowService.updateRunState(
     runId,
-    `${RECOVERING_FROM_STATE_PREFIX}${fire.logical}`,
+    `${RECOVERING_FROM_STATE_PREFIX}${fire.instanceKey}`,
     { ...from, error: failed?.error ?? { message: 'step failed' } }
   )
   await workflowService.updateRunState(

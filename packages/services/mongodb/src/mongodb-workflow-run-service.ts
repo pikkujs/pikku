@@ -33,6 +33,7 @@ interface WorkflowStepDoc {
   status: string
   result: any | null
   error: any | null
+  childRunId?: string
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
@@ -116,11 +117,25 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       .sort({ createdAt: 1 })
       .toArray()
 
+    const history = await this.stepHistory
+      .find({ workflowStepId: { $in: result.map((row) => row._id) } })
+      .sort({ createdAt: 1, attempt: 1 })
+      .toArray()
+    const latest = new Map<string, (typeof history)[number]>()
+    for (const row of history) latest.set(row.workflowStepId, row)
+
     return result.map((row) => ({
       stepId: row._id,
       stepName: row.stepName,
       rpcName: row.rpcName ?? undefined,
       data: row.data ?? undefined,
+      childRunId: row.childRunId ?? undefined,
+      succeededAt: latest.get(row._id)?.succeededAt
+        ? new Date(latest.get(row._id)!.succeededAt!)
+        : undefined,
+      failedAt: latest.get(row._id)?.failedAt
+        ? new Date(latest.get(row._id)!.failedAt!)
+        : undefined,
       status: row.status as StepState['status'],
       result: row.result ?? undefined,
       error: row.error ?? undefined,
