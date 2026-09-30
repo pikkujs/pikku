@@ -310,12 +310,10 @@ jobs:
             os: macos-latest
             bundles: app,dmg
             smoke: true
-          # Built but not launched: the smoke test needs the e2e server on the
-          # same machine, and the monorepo's install is not proven on Windows.
           - name: windows
             os: windows-latest
             bundles: nsis,msi
-            smoke: false
+            smoke: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -351,12 +349,13 @@ jobs:
       - name: Launch the app and wait for it to call home
         if: ${{ matrix.smoke }}
         working-directory: e2e/packages/web
+        shell: bash
         run: |
-          if [ "${{ matrix.name }}" = linux ]; then
-            xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 &
-          else
-            src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 &
-          fi
+          case "${{ matrix.name }}" in
+            linux) xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            windows) src-tauri/target/release/web-app.exe > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+            *) src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
+          esac
           node ../../../scripts/native-smoke.mjs http://localhost:4077 120 || { cat "$RUNNER_TEMP/app.log"; exit 1; }
 
   native-android:
@@ -435,9 +434,6 @@ jobs:
     timeout-minutes: 60
     needs: [build, native-gate, native-web]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
-    # New: the unsigned simulator path has not run in CI before. Remove once it
-    # has settled.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
