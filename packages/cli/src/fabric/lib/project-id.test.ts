@@ -37,7 +37,7 @@ describe('projectId in pikku.config.json', () => {
     await writeConfigProjectId('p1', dir)
     assert.equal(
       await readFile(join(dir, 'pikku.config.json'), 'utf8'),
-      '{\n    "projectId": "p1",\n    "srcDirectories": ["src"]\n}\n'
+      '{\n    "fabric": { "projectId": "p1" },\n    "srcDirectories": ["src"]\n}\n'
     )
     await writeConfigProjectId('p2', dir)
     assert.equal((await readConfigProjectId(dir))?.projectId, 'p2')
@@ -53,9 +53,24 @@ describe('projectId in pikku.config.json', () => {
     await rm(join(dir, 'other.txt'))
     await writeFile(
       join(dir, 'pikku.config.json'),
-      '{\n  "projectId": "p1",\n  "srcDirectories": ["lib"]\n}\n'
+      '{\n  "fabric": { "projectId": "p1" },\n  "srcDirectories": ["lib"]\n}\n'
     )
     assert.equal(await isTreeCleanBesidesProjectId(dir), false)
+    await rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe('an existing fabric block', () => {
+  test('gets projectId added or replaced inside it', async () => {
+    const dir = await repo('{\n  "fabric": {\n    "x": 1\n  },\n  "a": 2\n}\n')
+    await writeConfigProjectId('p1', dir)
+    assert.equal(
+      await readFile(join(dir, 'pikku.config.json'), 'utf8'),
+      '{\n  "fabric": {\n    "projectId": "p1",\n    "x": 1\n  },\n  "a": 2\n}\n'
+    )
+    await writeConfigProjectId('p2', dir)
+    assert.equal((await readConfigProjectId(dir))?.projectId, 'p2')
+    assert.equal(await isTreeCleanBesidesProjectId(dir), true)
     await rm(dir, { recursive: true, force: true })
   })
 })

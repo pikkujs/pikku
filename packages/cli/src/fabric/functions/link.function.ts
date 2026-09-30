@@ -153,7 +153,7 @@ export const FabricLink = pikkuSessionlessFunc({
 
     if (await writeConfigProjectId(project.projectId)) {
       console.log(
-        '[fabric] wrote projectId to pikku.config.json (not committed)'
+        '[fabric] wrote fabric.projectId to pikku.config.json (not committed)'
       )
     }
 

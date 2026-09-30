@@ -104,7 +104,7 @@ export const matchRemoteProjects = async (
  * The project this checkout is linked to, or null when nothing links it.
  *
  *   1. `FABRIC_PROJECT_ID` — CI, scripts, and anyone overriding the remote.
- *   2. `projectId` in pikku.config.json.
+ *   2. `fabric.projectId` in pikku.config.json.
  *   3. A git remote whose repo is a fabric project in the session's org; the
  *      id is then written into pikku.config.json (uncommitted), so the lookup
  *      happens once.

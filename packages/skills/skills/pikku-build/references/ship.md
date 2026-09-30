@@ -162,7 +162,7 @@ Everything above is open source. This is the contract that keeps
   entry with the right `cwd`, `kind` and `dev` (`command`, `port`); exactly one
   is `primary`; `serves` and `personas` name real personas from the personas
   section.
-- **`projectId` in `pikku.config.json` is optional.** Leave it out unless you
+- **`fabric.projectId` in `pikku.config.json` is optional.** Leave it out unless you
   have the real id; the CLI writes it after finding the project from the git
   remote. Do not invent a value.
 - **One `definePersonas` call**, every persona reachable through exactly one

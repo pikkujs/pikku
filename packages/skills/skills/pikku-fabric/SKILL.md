@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -191,15 +191,15 @@ pikku.config.json      # Pikku + deploy config, and the frontends (project root)
 
 ## How a checkout is linked to its Fabric project
 
-`projectId` in `pikku.config.json` names the project. It is optional. Order
+`fabric.projectId` in `pikku.config.json` names the project. It is optional. Order
 tried:
 
 1. `FABRIC_PROJECT_ID` env var — CI and scripts.
-2. `projectId` in `pikku.config.json`.
+2. `fabric.projectId` in `pikku.config.json`.
 3. The git remote, matched against Fabric's projects. The id found is written
    into `pikku.config.json` so the lookup happens once. It is never committed
    for you; commit it or not. A deploy ignores a `pikku.config.json` whose only
-   change is `projectId`. If two projects share one repo the CLI refuses; pick
+   change is `fabric.projectId`. If two projects share one repo the CLI refuses; pick
    one with `FABRIC_PROJECT_ID=<projectId>`.
 
 `pikku fabric config` prints which project, api url and login the current
@@ -454,7 +454,7 @@ the selection. There is no CLI flag that works around a missing installation:
 `init` returns "Connect the GitHub account '<owner>'". Send the user to install
 it, or create the project in the console instead (which provisions a Fabric-hosted
 git repo you push to) and clone it — the remote links the checkout, or put
-the id in `projectId` in `pikku.config.json`.
+the id in `fabric.projectId` in `pikku.config.json`.
 
 Deploy refuses to run unless the target branch equals its upstream — the guard
 compares `main` against `main@{upstream}`. So the remote you pushed to must be

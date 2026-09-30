@@ -20,7 +20,7 @@ export const findPikkuConfigPath = (
 
 const idFrom = (raw: string): string | null => {
   try {
-    const { projectId } = JSON.parse(raw)
+    const projectId = JSON.parse(raw)?.fabric?.projectId
     return typeof projectId === 'string' && projectId.trim()
       ? projectId.trim()
       : null
@@ -38,10 +38,42 @@ export const readConfigProjectId = async (
   return projectId ? { projectId, path } : null
 }
 
+const closingBrace = (raw: string, open: number): number => {
+  let depth = 0
+  for (let i = open; i < raw.length; i++) {
+    const c = raw[i]
+    if (c === '"') {
+      i++
+      while (i < raw.length && raw[i] !== '"') i += raw[i] === '\\' ? 2 : 1
+    } else if (c === '{') depth++
+    else if (c === '}' && --depth === 0) return i
+  }
+  return -1
+}
+
+const indentAfter = (raw: string, open: number): string =>
+  raw.slice(open + 1).match(/^[ \t]*\r?\n([ \t]+)\S/)?.[1] ?? '  '
+
+const insertKey = (
+  raw: string,
+  open: number,
+  text: (indent: string, hasKeys: boolean) => string
+): string => {
+  const close = closingBrace(raw, open)
+  const hasKeys = close !== -1 && /\S/.test(raw.slice(open + 1, close))
+  const indent = indentAfter(raw, open)
+  return (
+    raw.slice(0, open + 1) +
+    `\n${indent}${text(indent, hasKeys)}` +
+    (hasKeys ? '' : '\n') +
+    raw.slice(open + 1)
+  )
+}
+
 /**
- * Sets `projectId` in pikku.config.json by editing the text, so the rest of
- * the file keeps its formatting and the diff is one line. Nothing is staged or
- * committed. Returns false when there is no config to write to.
+ * Sets `fabric.projectId` in pikku.config.json by editing the text, so the
+ * rest of the file keeps its formatting and the diff stays small. Nothing is
+ * staged or committed. Returns false when there is no config to write to.
  */
 export const writeConfigProjectId = async (
   projectId: string,
@@ -51,30 +83,44 @@ export const writeConfigProjectId = async (
   if (!path) return false
   const raw = await readFile(path, 'utf8')
   const value = JSON.stringify(projectId)
-  const existing = raw.match(/("projectId"\s*:\s*)"(?:[^"\\]|\\.)*"/)
-  if (existing) {
-    await writeFile(path, raw.replace(existing[0], `${existing[1]}${value}`))
+  const rootOpen = raw.indexOf('{')
+  if (rootOpen === -1) return false
+
+  const block = raw.match(/"fabric"\s*:\s*\{/)
+  if (block) {
+    const open = block.index! + block[0].length - 1
+    const close = closingBrace(raw, open)
+    const inner = raw.slice(open, close + 1)
+    const existing = inner.match(/("projectId"\s*:\s*)"(?:[^"\\]|\\.)*"/)
+    const next = existing
+      ? inner.replace(existing[0], `${existing[1]}${value}`)
+      : insertKey(
+          inner,
+          0,
+          (_i, hasKeys) => `"projectId": ${value}${hasKeys ? ',' : ''}`
+        )
+    await writeFile(path, raw.slice(0, open) + next + raw.slice(close + 1))
     return true
   }
-  const open = raw.indexOf('{')
-  if (open === -1) return false
-  const indent = raw.slice(open + 1).match(/^\s*\n([ \t]+)\S/)?.[1] ?? '  '
-  const hasKeys = /^\s*"/.test(raw.slice(open + 1))
-  const inserted = `\n${indent}"projectId": ${value}` + (hasKeys ? ',' : '')
+
   await writeFile(
     path,
-    raw.slice(0, open + 1) +
-      inserted +
-      (hasKeys ? '' : '\n') +
-      raw.slice(open + 1)
+    insertKey(
+      raw,
+      rootOpen,
+      (indent, hasKeys) =>
+        `"fabric": { "projectId": ${value} }${hasKeys ? ',' : ''}`
+    )
   )
   return true
 }
 
 const withoutProjectId = (raw: string): unknown => {
   try {
-    const { projectId: _ignored, ...rest } = JSON.parse(raw)
-    return rest
+    const { fabric, ...rest } = JSON.parse(raw)
+    if (!fabric || typeof fabric !== 'object') return { ...rest, fabric }
+    const { projectId: _ignored, ...others } = fabric
+    return Object.keys(others).length ? { ...rest, fabric: others } : rest
   } catch {
     return raw
   }
@@ -82,7 +128,7 @@ const withoutProjectId = (raw: string): unknown => {
 
 /**
  * `git status` is clean, allowing one exception: pikku.config.json differing
- * from HEAD only in its `projectId`. The CLI writes that key uncommitted, and
+ * from HEAD only in `fabric.projectId`. The CLI writes that key uncommitted, and
  * it must not block a deploy — fabric never reads it from the clone.
  */
 export const isTreeCleanBesidesProjectId = async (
