@@ -2064,9 +2064,6 @@
     "verifiers/db-schema/addon": {
       "name": "@pikku/verifier-db-addon",
       "version": "0.1.0",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.31",
-      },
       "devDependencies": {
         "@pikku/cli": "*",
         "@pikku/core": "*",
@@ -2083,9 +2080,6 @@
     "verifiers/db-schema/remote-addon": {
       "name": "@pikku/verifier-db-remote-addon",
       "version": "0.1.0",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.31",
-      },
       "devDependencies": {
         "@pikku/cli": "*",
         "@pikku/core": "*",
