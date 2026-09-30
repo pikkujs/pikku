@@ -192,6 +192,7 @@
     "runWebhookSourceLifecycle",
     "subscribedWebhookEvents",
     "teardownTriggerSources",
+    "webhookSecretCredentialName",
     "wireTrigger",
     "wireTriggerSource",
     "wireTriggerWebhookSource"
@@ -525,7 +526,14 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["WebhookSigningSecret", "hmacSha256Hex", "timingSafeStringEqual"],
+  "./hmac": [
+    "WebhookSigningSecret",
+    "hmacDigest",
+    "hmacSha256Hex",
+    "timingSafeStringEqual",
+    "verifyHmacSignature",
+    "verifyPublicKeySignature"
+  ],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",

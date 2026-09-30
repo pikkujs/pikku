@@ -18,7 +18,10 @@ export type {
   WebhookRegistrations,
   WebhookSourceOutcome,
 } from './webhook-source-runner.js'
-export { PIKKU_INCOMING_WEBHOOK_QUEUE_NAME } from './webhook-source.types.js'
+export {
+  PIKKU_INCOMING_WEBHOOK_QUEUE_NAME,
+  webhookSecretCredentialName,
+} from './webhook-source.types.js'
 export type {
   CoreTriggerWebhookSource,
   TriggerEvent,
@@ -34,6 +37,7 @@ export type {
   WebhookSourceState,
   WebhookTeardownInput,
   WebhookTeardownResult,
+  WebhookVerify,
 } from './webhook-source.types.js'
 export { PikkuTriggerService } from './pikku-trigger-service.js'
 export type {

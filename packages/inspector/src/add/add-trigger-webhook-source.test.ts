@@ -95,6 +95,58 @@ wireTrigger({ name: 'shop:order.lost', func: { func: async () => {} } })
   })
 })
 
+describe('wireTriggerWebhookSource verify', () => {
+  const verify = `{ token: { header: 'x-token' } }`
+
+  test('declares the signing secret as a credential', async () => {
+    const { state, errors } = await inspectSource(
+      HEADER +
+        `wireTriggerWebhookSource({
+  name: 'microsoft-outlook',
+  verify: ${verify},
+  credentialDescription: 'The client state set on the subscription',
+})
+`
+    )
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(
+      state.credentials.definitions.map(({ sourceFile, ...rest }) => rest),
+      [
+        {
+          name: 'microsoftOutlookWebhookSecret',
+          displayName: 'microsoft-outlook webhook secret',
+          description: 'The client state set on the subscription',
+          type: 'singleton',
+          schema: { type: 'string' },
+        },
+      ]
+    )
+  })
+
+  test('uses a named credential', async () => {
+    const { state } = await inspectSource(
+      HEADER +
+        `wireTriggerWebhookSource({ name: 'shop', credential: 'shopKey', verify: ${verify} })
+`
+    )
+
+    assert.deepEqual(
+      state.credentials.definitions.map((d) => d.name),
+      ['shopKey']
+    )
+  })
+
+  test('declares nothing without verify', async () => {
+    const { state } = await inspectSource(
+      HEADER + `wireTriggerWebhookSource({ name: 'shop' })
+`
+    )
+
+    assert.deepEqual(state.credentials.definitions, [])
+  })
+})
+
 describe('wireTriggerWebhookSource method shorthand', () => {
   test('keeps an array of methods as an array, not its source text', async () => {
     const { state, errors } = await inspectSource(

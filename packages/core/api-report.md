@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3178 observable things**: 1052 exported names, plus
+**3186 observable things**: 1060 exported names, plus
 2126 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
@@ -26,7 +26,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 38 | 38 | 11 |
+| `./trigger` | 40 | 40 | 11 |
 | `./services/local-meta` | 22 | 2 | 42 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
@@ -43,12 +43,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./hmac` | 9 | 9 | 8 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
-| `./hmac` | 3 | 3 | 8 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
@@ -2960,6 +2960,9 @@ export type CoreTriggerWebhookSource<
   method?: WebhookSourceMethod | WebhookSourceMethod[]
   route?: string
   events?: Events
+  credential?: string
+  credentialDescription?: string
+  verify?: WebhookVerify
   receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
   setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
@@ -3034,6 +3037,7 @@ export type WebhookRequest = {
   url: string
   query: Record<string, string>
 }
+webhookSecretCredentialName: (source: string) => string
 export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'
@@ -3077,6 +3081,29 @@ export type WebhookTeardownInput = {
   previous?: WebhookSourceState
 }
 export type WebhookTeardownResult = { status: 'deleted' | 'absent' }
+export type WebhookVerify<Services = any> =
+  | {
+      hmac: {
+        header: string
+        prefix?: string
+        algorithm: HmacAlgorithm
+        encoding: 'hex' | 'base64'
+        secretEncoding?: SecretEncoding
+      }
+    }
+  | { token: { header: string; prefix?: string } }
+  | {
+      publicKey: {
+        header: string
+        algorithm?: string
+        dsaEncoding?: 'der' | 'ieee-p1363'
+      }
+    }
+  | ((
+      request: WebhookRequest,
+      secret: string,
+      services: Services
+    ) => boolean | Promise<boolean>)
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
 wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
@@ -6130,8 +6157,14 @@ wrapDEK: (kek: CryptoKey, plaintextDEK: string) => Promise<WrappedValue>
 ## ./hmac
 
 ```ts
+export type HmacAlgorithm = 'sha1' | 'sha256' | 'sha512'
+hmacDigest: (secret: string, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => string
 hmacSha256Hex: (secret: string, payload: string) => string
+export type SecretEncoding = 'utf8' | 'hex' | 'base64'
 timingSafeStringEqual: (a: string, b: string) => boolean
+verifyHmacSignature: (secret: string, signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => boolean
+verifyPublicKeySignature: (publicKey: string, signature: string | undefined, payload: WebhookPayload, options?: { algorithm?: string | undefined; dsaEncoding?: "der" | "ieee-p1363" | undefined; }) => boolean
+export type WebhookPayload = string | Uint8Array
 export class WebhookSigningSecret {
   constructor(private readonly provider: string, private readonly secret: SecretSource)
   static fromCredential(provider: string, credentials: CredentialService | undefined, name: string): WebhookSigningSecret

@@ -52,6 +52,12 @@ export const serializeCredentialsTypes = ({
           `  '${name}': z.infer<typeof ${schemaRef.variableName}>`
         )
       }
+    } else if (
+      meta.schema &&
+      typeof meta.schema === 'object' &&
+      meta.schema.type === 'string'
+    ) {
+      mapEntries.push(`  '${name}': string`)
     }
 
     const metaParts = [

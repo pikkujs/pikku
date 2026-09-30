@@ -10,7 +10,7 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\n`}import type { CoreTriggerWebhookSource, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'
+${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\n`}import type { CoreTriggerWebhookSource, WebhookVerify, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'
 import {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,${addon ? '' : `\n  CoreTrigger,`}
@@ -103,7 +103,8 @@ type WebhookSourceStep<In, Out> = {
  * A webhook source, using project-specific services.
  */
 type TriggerWebhookSource<Events extends Record<string, StandardSchemaV1>> =
-  Omit<CoreTriggerWebhookSource<Events>, 'receive' | 'check' | 'setup' | 'teardown'> & {
+  Omit<CoreTriggerWebhookSource<Events>, 'verify' | 'receive' | 'check' | 'setup' | 'teardown'> & {
+    verify?: WebhookVerify<${addon ? 'any' : "Omit<SingletonServices, 'secrets'>"}>
     receive?: WebhookSourceStep<WebhookRequest, WebhookReceiveResult>
     check?: WebhookSourceStep<WebhookLifecycleInput, WebhookCheckResult>
     setup?: WebhookSourceStep<WebhookLifecycleInput, WebhookSetupResult>

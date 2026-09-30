@@ -1,7 +1,12 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { HmacAlgorithm, SecretEncoding } from '../../utils/hmac.js'
 
 export const PIKKU_INCOMING_WEBHOOK_QUEUE_NAME = 'pikku-incoming-webhooks'
+
+/** `github` → `githubWebhookSecret`, `microsoft-outlook` → `microsoftOutlookWebhookSecret`. */
+export const webhookSecretCredentialName = (source: string): string =>
+  `${source.replace(/[-_]+([a-z0-9])/gi, (_, c: string) => c.toUpperCase())}WebhookSecret`
 
 /** What every trigger source produces, whichever way it arrives. */
 export type TriggerEvent<Name extends string = string, Data = unknown> = {
@@ -67,6 +72,40 @@ export type WebhookTeardownInput = {
 
 export type WebhookTeardownResult = { status: 'deleted' | 'absent' }
 
+/**
+ * How a source's requests are signed. The declared forms cover a signature
+ * over the raw body in one header; anything else — a timestamp in the signed
+ * payload, form fields, a URL — is a function that says whether the request is
+ * genuine, using the helpers in `@pikku/core/hmac`.
+ */
+export type WebhookVerify<Services = any> =
+  | {
+      hmac: {
+        header: string
+        /** Stripped from the header before comparing, such as `sha256=`. */
+        prefix?: string
+        algorithm: HmacAlgorithm
+        encoding: 'hex' | 'base64'
+        /** How the stored secret is encoded. Defaults to `utf8`. */
+        secretEncoding?: SecretEncoding
+      }
+    }
+  /** The provider sends the shared secret itself rather than a signature. */
+  | { token: { header: string; prefix?: string } }
+  /** The provider signs with a private key: the stored secret is its public key, as PEM. */
+  | {
+      publicKey: {
+        header: string
+        algorithm?: string
+        dsaEncoding?: 'der' | 'ieee-p1363'
+      }
+    }
+  | ((
+      request: WebhookRequest,
+      secret: string,
+      services: Services
+    ) => boolean | Promise<boolean>)
+
 type SourceFunction<In, Out> = CorePikkuFunctionConfig<any, any> & {
   func: (services: any, data: In, wire: any) => Promise<Out>
 }
@@ -85,6 +124,21 @@ export type CoreTriggerWebhookSource<
   route?: string
   /** What the source can produce. Each event's data is validated against its schema before it is queued. */
   events?: Events
+  /**
+   * The credential holding the signing secret. Defaults to
+   * {@link webhookSecretCredentialName}. Declaring `verify` declares this
+   * credential too, as a singleton string, so it needs no `defineCredential`.
+   */
+  credential?: string
+  /** What the secret is and where to find it, shown to whoever has to set it. */
+  credentialDescription?: string
+  /**
+   * Checked before `receive` on every request with a body. A request is
+   * refused when the credential is not set or the signature does not match.
+   * A request without a body — a HEAD probe, a validation token in the query —
+   * reaches `receive` unchecked, and may be answered but dispatches nothing.
+   */
+  verify?: WebhookVerify
   /** Omitted: the JSON body is one event dispatched to the trigger named `<name>`. */
   receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
