@@ -31,24 +31,10 @@ const builtUnit = async () => {
 }
 
 describe('deploying a standalone unit as a desktop shell', () => {
-  test('refuses without the bun runtime, since there is no binary to ship', async () => {
-    const { buildDir, projectDir } = await builtUnit()
-
-    const result = await new StandaloneProviderAdapter({
-      runtime: 'node',
-      desktop: true,
-      projectDir,
-    }).deploy({ buildDir, logger: silentLogger })
-
-    assert.equal(result.success, false)
-    assert.match(result.errors[0]!.error, /bun/)
-  })
-
   test('refuses when it was not told where the project lives', async () => {
     const { buildDir } = await builtUnit()
 
     const result = await new StandaloneProviderAdapter({
-      runtime: 'bun',
       desktop: true,
     }).deploy({ buildDir, logger: silentLogger })
 
@@ -60,7 +46,6 @@ describe('deploying a standalone unit as a desktop shell', () => {
     const { buildDir, projectDir, outDir } = await builtUnit()
 
     const result = await new StandaloneProviderAdapter({
-      runtime: 'bun',
       desktop: true,
       projectDir,
     }).deploy({ buildDir, logger: silentLogger })
@@ -101,7 +86,6 @@ describe('deploying a standalone unit as a desktop shell', () => {
     const { buildDir, projectDir } = await builtUnit()
 
     await new StandaloneProviderAdapter({
-      runtime: 'bun',
       desktop: true,
       projectDir,
       desktopIdentifier: 'com.acme.pos',
@@ -113,13 +97,11 @@ describe('deploying a standalone unit as a desktop shell', () => {
     assert.equal(conf.identifier, 'com.acme.pos')
   })
 
-  test('points a remote shell at the url, with no runtime requirement', async () => {
+  test('points a remote shell at the url, and compiles no binary', async () => {
     const { buildDir, projectDir } = await builtUnit()
 
-    // Nothing is bundled, so there is no binary to compile and no reason to
-    // insist on bun — the node runtime has to be allowed through here.
+    // Nothing is bundled, so there is no binary to compile.
     const result = await new StandaloneProviderAdapter({
-      runtime: 'node',
       desktop: true,
       desktopUrl: 'https://shop.example.com',
       projectDir,
@@ -144,7 +126,6 @@ describe('deploying a standalone unit as a desktop shell', () => {
     const { buildDir, projectDir } = await builtUnit()
 
     const result = await new StandaloneProviderAdapter({
-      runtime: 'node',
       desktop: true,
       desktopUrl: 'file:///etc/passwd',
       projectDir,
@@ -158,7 +139,6 @@ describe('deploying a standalone unit as a desktop shell', () => {
     const { buildDir, projectDir } = await builtUnit()
 
     await new StandaloneProviderAdapter({
-      runtime: 'bun',
       projectDir,
     }).deploy({ buildDir, logger: silentLogger })
 

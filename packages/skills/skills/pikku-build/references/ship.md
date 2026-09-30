@@ -8,8 +8,8 @@ the last phase, and nothing in it is needed before then.
 `pikku deploy` builds and ships without any hosted service:
 
 ```sh
-bunx --bun pikku deploy plan  --provider standalone --runtime bun
-bunx --bun pikku deploy apply --provider standalone --runtime bun
+bunx --bun pikku deploy plan  --provider standalone
+bunx --bun pikku deploy apply --provider standalone
 ```
 
 `standalone` comes from the installed `@pikku/deploy-standalone` adapter: it

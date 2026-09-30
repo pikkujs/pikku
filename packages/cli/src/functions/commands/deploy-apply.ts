@@ -298,7 +298,6 @@ export async function resolveProvider(
   },
   providerName?: string,
   options?: {
-    runtime?: string
     desktop?: boolean
     projectDir?: string
     desktopIdentifier?: string
@@ -430,7 +429,6 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
-    runtime?: string
     desktop?: boolean
     desktopUrl?: string
     resultFile?: string
@@ -444,7 +442,6 @@ export const deployApply = pikkuSessionlessFunc<
     // only leave `--desktop-url` alone as a silent no-op.
     const desktopUrl = data?.desktopUrl ?? config.deploy?.desktop?.url
     const provider = await resolveProvider(config, data?.provider, {
-      runtime: data?.runtime,
       desktop: data?.desktop || Boolean(desktopUrl),
       projectDir,
       desktopIdentifier: config.deploy?.desktop?.identifier,

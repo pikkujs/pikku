@@ -7,13 +7,9 @@
  *   ├── bundle.js            # esbuild bundle (all deps inlined)
  *   ├── config/              # user config (env, secrets, etc.)
  *
- * Two runtimes, selected via `--runtime`:
- *
- * - `bun` (default): uses `@pikku/bun-server` (Bun.serve, native WebSockets)
- *   and compiles the bundle into a single self-contained executable via
- *   `bun build --compile`. No runtime needed on the target host.
- * - `node`: uses `@pikku/node-http-server` (pure JS, node:http). Ships
- *   `bundle.js`; run with `node bundle.js`.
+ * Runs on `@pikku/bun-server` (Bun.serve, native WebSockets) and compiles the
+ * bundle into a single self-contained executable via `bun build --compile`.
+ * No runtime needed on the target host.
  */
 import type {
   BindingSource,
@@ -33,12 +29,9 @@ import {
 
 export const STANDALONE_BINDING_SOURCES: readonly BindingSource[] = ['env']
 
-export type StandaloneRuntime = 'node' | 'bun'
-
 /**
  * Directory the built frontend is copied to, both inside the unit and beside
- * the shipped bundle. The node entry resolves it relative to itself at runtime,
- * so the two have to agree.
+ * the shipped bundle.
  */
 export const STANDALONE_FRONTEND_DIR = 'frontend'
 
@@ -93,17 +86,10 @@ const DATABASE_FILE_VAR = 'PIKKU_DATABASE_FILE'
 
 const DEFAULT_DATABASE_FILENAME = 'pikku.db'
 
-/**
- * The dialect factory each runtime opens SQLite with. bun cannot use the node
- * one — `bun:sqlite` is a different driver, and the node build reaches for
- * `node:sqlite`, which a compiled bun binary does not carry.
- */
+/** The dialect factory the entry opens SQLite with: `bun:sqlite`. */
 const SQLITE_FACTORY = {
-  node: {
-    specifier: '@pikku/kysely-node-sqlite',
-    fn: 'createNodeSqliteKysely',
-  },
-  bun: { specifier: '@pikku/kysely-bun-sqlite', fn: 'createBunSqliteKysely' },
+  specifier: '@pikku/kysely-bun-sqlite',
+  fn: 'createBunSqliteKysely',
 } as const
 
 /**
@@ -122,12 +108,11 @@ const coercionImportLines = (coercionImportPath: string): string[] => [
 
 /** Imports a database-backed entry needs on top of the common set. */
 const dbImportLines = (
-  runtime: 'node' | 'bun',
   db: NonNullable<EntryGenerationContext['db']>
 ): string[] => [
   ...(db.engine === 'sqlite'
     ? [
-        `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
+        `import { ${SQLITE_FACTORY.fn} } from '${SQLITE_FACTORY.specifier}'`,
         `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
       ]
     : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
@@ -144,7 +129,6 @@ const dbImportLines = (
  * that needs a documented mkdir nobody reads.
  */
 const dbSetupLines = (
-  runtime: 'node' | 'bun',
   db: NonNullable<EntryGenerationContext['db']>
 ): string[] => {
   const plugins = db.coercionImportPath
@@ -157,7 +141,7 @@ const dbSetupLines = (
       `    ? process.env.${DATABASE_FILE_VAR}`,
       `    : __pikkuJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
       `  __pikkuMkdirSync(__pikkuDirname(__pikkuDbFile), { recursive: true })`,
-      `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
+      `  const kysely = ${SQLITE_FACTORY.fn}({`,
       `    filename: __pikkuDbFile,`,
       `    plugins: ${plugins},`,
       `  })`,
@@ -186,15 +170,11 @@ const dbSetupLines = (
 /**
  * Where the migrations sit relative to the running artifact.
  *
- * A node bundle reads them from its own directory. A compiled bun binary has no
- * directory — `import.meta.url` points inside the embedded filesystem — so it
- * resolves them beside the executable, which is where an operator unpacking an
- * artifact puts them.
+ * A compiled bun binary has no directory — `import.meta.url` points inside the
+ * embedded filesystem — so they resolve beside the executable, which is where
+ * an operator unpacking an artifact puts them.
  */
-const bundleDirExpression = (runtime: 'node' | 'bun'): string =>
-  runtime === 'node'
-    ? `__pikkuDirname(__pikkuFileURLToPath(import.meta.url))`
-    : `__pikkuDirname(process.execPath)`
+const bundleDirExpression = `__pikkuDirname(process.execPath)`
 
 /**
  * The command line, parsed before anything is opened.
@@ -220,15 +200,12 @@ const commandParseLines = (ctx: EntryGenerationContext): string[] => [
  * own would be free to migrate a different database than the next `serve`
  * reads, and the two would only disagree once in production.
  */
-const commandDispatchLines = (
-  runtime: 'node' | 'bun',
-  ctx: EntryGenerationContext
-): string[] => {
+const commandDispatchLines = (ctx: EntryGenerationContext): string[] => {
   if (!ctx.db) {
     return [`  if (__pikkuCommand.kind !== 'serve') process.exit(0)`, ``]
   }
 
-  const dir = `__pikkuJoin(${bundleDirExpression(runtime)}, 'db', '${ctx.db.engine}')`
+  const dir = `__pikkuJoin(${bundleDirExpression}, 'db', '${ctx.db.engine}')`
   const handle =
     ctx.db.engine === 'sqlite'
       ? `databaseFile: __pikkuDbFile,`
@@ -337,11 +314,9 @@ const rustcHostOutput = async (): Promise<string | undefined> => {
 }
 
 export interface StandaloneProviderAdapterOptions {
-  runtime?: StandaloneRuntime
   /**
-   * Generate a desktop shell (Tauri) around the compiled binary. Requires the
-   * `bun` runtime — the shell ships the binary as a sidecar, and only that
-   * runtime produces one. A shell pointed at {@link desktopUrl} ships no binary
+   * Generate a desktop shell (Tauri) around the compiled binary. The shell ships
+   * the compiled binary as a sidecar. A shell pointed at {@link desktopUrl} ships no binary
    * and so has no such requirement.
    */
   desktop?: boolean
@@ -375,7 +350,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
-  readonly runtime: StandaloneRuntime
   readonly desktop: boolean
   readonly projectDir?: string
   readonly desktopIdentifier?: string
@@ -383,7 +357,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
-    this.runtime = options.runtime ?? 'bun'
     this.desktop = options.desktop ?? Boolean(options.desktopUrl)
     this.projectDir = options.projectDir
     this.desktopIdentifier = options.desktopIdentifier
@@ -433,116 +406,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
-    if (this.runtime === 'bun') {
-      return this.generateBunEntrySource(ctx)
-    }
-    return this.generateNodeEntrySource(ctx)
-  }
-
-  private generateNodeEntrySource(ctx: EntryGenerationContext): string {
     return [
       `// Generated standalone entry — all functions in one process`,
-      `import { LocalEventHubService } from '@pikku/core/channel/local'`,
-      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
-      `import { pikkuState } from '@pikku/core/state'`,
-      `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
-      `import { InMemorySchedulerService } from '@pikku/schedule'`,
-      `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
-      `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
-      `import { WebSocketServer } from 'ws'`,
-      runtimeImport(ctx),
-      ...(ctx.frontend || ctx.db
-        ? [
-            `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
-            `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
-          ]
-        : []),
-      ...(ctx.db ? dbImportLines('node', ctx.db) : []),
-      ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
-      ...this.contributorImportLines(ctx),
-      ``,
-      ctx.configImport,
-      ctx.servicesImport,
-      ctx.singletonServicesImport,
-      ctx.mcpImport,
-      `import '${ctx.bootstrapPath}'`,
-      ``,
-      `const logger = new ConsoleLogger()`,
-      `const port = parseInt(process.env.PORT || '3000', 10)`,
-      `const hostname = process.env.HOST || '0.0.0.0'`,
-      ``,
-      ...commandParseLines(ctx),
-      ``,
-      ...this.platformServicesBlock(ctx),
-      `async function main() {`,
-      `  const config = await ${ctx.configVar}()`,
-      ...this.platformServicesCallLines(),
-      `  const schedulerService = new InMemorySchedulerService()`,
-      `  const queueService = new InMemoryQueueService()`,
-      `  const workflowService = new InMemoryWorkflowService()`,
-      `  const triggerService = new InMemoryTriggerService()`,
-      `  const eventHub = new LocalEventHubService()`,
-      `  workflowService.wireQueueWorkers()`,
-      `  wireAgentScorerQueueWorkers()`,
-      ...(ctx.db ? dbSetupLines('node', ctx.db) : []),
-      ...commandDispatchLines('node', ctx),
-      `  const singletonServices = await ${ctx.servicesVar}(config, {`,
-      `    logger,`,
-      ...(ctx.db ? [`    kysely,`] : []),
-      `    schedulerService,`,
-      `    queueService,`,
-      `    workflowService,`,
-      `    workflowRunService: workflowService,`,
-      `    triggerService,`,
-      `    eventHub,`,
-      ...this.platformServicesSpreadLines(),
-      `  })`,
-      `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
-      ``,
-      ...(ctx.frontend
-        ? [
-            // Resolved from the running bundle rather than baked in at build
-            // time, so the distributable stays movable.
-            `  const staticMounts = [{`,
-            `    urlPrefix: '${ctx.frontend.urlPrefix}',`,
-            `    directory: __pikkuJoin(__pikkuDirname(__pikkuFileURLToPath(import.meta.url)), '${STANDALONE_FRONTEND_DIR}'),`,
-            `    spaFallback: ${ctx.frontend.spaFallback},`,
-            `  }]`,
-            ``,
-          ]
-        : []),
-      `  const wss = new WebSocketServer({ noServer: true, maxPayload: DEFAULT_WS_MAX_PAYLOAD })`,
-      `  const server = new PikkuNodeHTTPServer(`,
-      `    { ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} },`,
-      `    logger,`,
-      `    {`,
-      `      ${ctx.mcpServerOption}configureServer: (httpServer) => {`,
-      `        pikkuWebsocketHandler({ server: httpServer, wss, logger })`,
-      `      },`,
-      `    }`,
-      `  )`,
-      `  await server.init()`,
-      `  await singletonServices.schedulerService?.start()`,
-      `  await singletonServices.triggerService?.start()`,
-      ...(ctx.lifecycle ? lifecycleStartLines() : []),
-      `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
-      `  await server.start()`,
-      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
-      ...sidecarHandshakeLines(),
-      `}`,
-      ``,
-      `main().catch((err) => {`,
-      `  logger.error('Fatal: ' + err.message)`,
-      `  process.exit(1)`,
-      `})`,
-      ``,
-      ...(ctx.db?.engine === 'sqlite' ? [...dataDirHelperLines(), ``] : []),
-    ].join('\n')
-  }
-
-  private generateBunEntrySource(ctx: EntryGenerationContext): string {
-    return [
-      `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
       runtimeImport(ctx),
       `import { pikkuState } from '@pikku/core/state'`,
@@ -557,7 +422,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
           ]
         : []),
-      ...(ctx.db ? dbImportLines('bun', ctx.db) : []),
+      ...(ctx.db ? dbImportLines(ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ...this.contributorImportLines(ctx),
       ``,
@@ -584,8 +449,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new BunEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
-      ...(ctx.db ? dbSetupLines('bun', ctx.db) : []),
-      ...commandDispatchLines('bun', ctx),
+      ...(ctx.db ? dbSetupLines(ctx.db) : []),
+      ...commandDispatchLines(ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -645,39 +510,26 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   getExternals(): string[] {
-    const externals = nodeBuiltinExternals()
-    if (this.runtime === 'bun') {
+    return [
+      ...nodeBuiltinExternals(),
       // Bun-native builtins are provided by the runtime and resolved by
       // `bun build --compile` — leave them as imports rather than inlining.
-      externals.push('bun', 'bun:*', 'bun:sqlite', 'bun:ffi')
-      externals.push(STANDALONE_FRONTEND_MANIFEST)
-    }
-    return externals
+      'bun',
+      'bun:*',
+      'bun:sqlite',
+      'bun:ffi',
+      STANDALONE_FRONTEND_MANIFEST,
+    ]
   }
 
   /**
-   * The SQLite driver this runtime cannot load.
-   *
-   * `loadSqliteRuntime` picks its driver by looking for `globalThis.Bun`, so a
-   * node process never runs the bun branch — but esbuild still follows the
-   * import, and `bun:sqlite` sits at the top of that module as a static import
-   * it cannot resolve. Left in, the bundle fails to build; marked external, it
-   * becomes a top-level import node fails to load. Stubbing removes the branch
-   * that was already dead.
-   */
-  getStubModules(): string[] {
-    if (this.runtime === 'bun') return []
-    return ['sqlite-runtime-bun']
-  }
-
-  /**
-   * The bun bundle is not the artifact that runs — `bun build --compile` turns
+   * The bundle is not the artifact that runs — `bun build --compile` turns
    * it into the binary — so esbuild must not rename anything bun will rename
    * again. See `getMangleIdentifiers` on the adapter interface for the boot
    * failure the two passes produce together.
    */
   getMangleIdentifiers(): boolean {
-    return this.runtime !== 'bun'
+    return false
   }
 
   getPlatform(): 'node' {
@@ -694,17 +546,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     // Checked before anything expensive runs: a `--desktop` deploy that cannot
     // produce a shell should say so now, not after a bun compile.
     if (this.desktop) {
-      if (!this.desktopUrl && this.runtime !== 'bun') {
-        return {
-          success: false,
-          errors: [
-            {
-              step: 'desktop',
-              error: `A desktop shell ships the server as a sidecar binary, which only the bun runtime produces. Re-run with --runtime bun (got '${this.runtime}').`,
-            },
-          ],
-        }
-      }
       if (!this.projectDir) {
         return {
           success: false,
@@ -754,8 +595,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     logger.info(`Bundle: ${join(outDir, 'bundle.js')}`)
 
     // --- 2a. Frontend, when the build produced one ---
-    // Both runtimes need it here rather than only in the build directory: node
-    // resolves the mount relative to the shipped bundle, and `bun build
+    // Copied here rather than only kept in the build directory: `bun build
     // --compile` follows the manifest import out of the copy it is given.
     const frontendDir = join(unitDir, STANDALONE_FRONTEND_DIR)
     if (existsSync(frontendDir)) {
@@ -769,8 +609,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       logger.info(`Frontend: ${join(outDir, STANDALONE_FRONTEND_DIR)}`)
     }
 
-    // --- 2b. bun runtime: compile the bundle into a self-contained binary ---
-    if (this.runtime === 'bun') {
+    // --- 2b. compile the bundle into a self-contained binary ---
+    // A remote shell bundles nothing, so there is nothing to compile.
+    if (!this.desktopUrl) {
       const { execFileSync } = await import('node:child_process')
       const binaryPath = join(outDir, appName)
       try {

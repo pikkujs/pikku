@@ -1254,11 +1254,6 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: bun (compiled executable, default) or node (bundle.js)',
-              default: 'bun',
-            },
             resultFile: {
               description:
                 'Write structured JSON plan result to this file path',
@@ -1274,14 +1269,9 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: bun (compiled executable, default) or node (bundle.js)',
-              default: 'bun',
-            },
             desktop: {
               description:
-                'Also generate a desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone --runtime bun, unless --desktop-url is given.',
+                'Also generate a desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone.',
               default: false,
             },
             desktopUrl: {
