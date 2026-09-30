@@ -77,6 +77,25 @@ describe('resolveOAuthProxyConfig', () => {
     assert.equal(await resolveOAuthProxyConfig(services), null)
   })
 
+  test('does not read a backend failure as no configuration', async () => {
+    const { services } = makeServices({}, {})
+    services.secrets.getSecret = async () => {
+      throw new Error('connection refused')
+    }
+    await assert.rejects(
+      () => resolveOAuthProxyConfig(services),
+      /connection refused/
+    )
+  })
+
+  test('reads a secret this wiring was not granted as absent', async () => {
+    const { services } = makeServices({}, {})
+    services.secrets.getSecret = async (id: string) => {
+      throw new Error(`Access denied to secret key: ${id}`)
+    }
+    assert.equal(await resolveOAuthProxyConfig(services), null)
+  })
+
   test('names what is missing when only part is set', async () => {
     const { services } = makeServices(
       { OAUTH_PROXY_SECRET: 'stage-key' },

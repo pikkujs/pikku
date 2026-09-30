@@ -4,6 +4,7 @@ import { oAuthProxy } from 'better-auth/plugins'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { BetterAuthInstance } from './define-auth.js'
 import { PROVIDER_REGISTRY } from './provider-registry.js'
+import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
 
 export const OAUTH_PROXY_SECRET_ID = 'OAUTH_PROXY_SECRET'
 export const OAUTH_PROXY_URL_VARIABLE = 'OAUTH_PROXY_URL'
@@ -37,8 +38,9 @@ const readSecret = async (
 ): Promise<unknown> => {
   try {
     return (await services.secrets?.getSecret(id))?.reveal()
-  } catch {
-    return undefined
+  } catch (error) {
+    if (isSecretNotFound(error) || isSecretForbidden(error)) return undefined
+    throw error
   }
 }
 
@@ -46,11 +48,7 @@ const readVariable = async (
   services: ProxyServices,
   id: string
 ): Promise<string | undefined> => {
-  try {
-    return (await services.variables?.get(id)) || undefined
-  } catch {
-    return undefined
-  }
+  return (await services.variables?.get(id)) || undefined
 }
 
 const parseProviders = (raw: string): string[] =>
