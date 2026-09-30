@@ -8,10 +8,9 @@ There are two ways to start a Pikku app. Pick based on whether you need to own t
 
 ```typescript
 // src/lifecycle.ts
-import { pikkuServerLifecycle } from '@pikku/core'
-import type { SingletonServices } from '../types/application-types.js'
+import { pikkuServerLifecycle } from '#pikku/setup'
 
-export const lifecycle = pikkuServerLifecycle<SingletonServices>({
+export const lifecycle = pikkuServerLifecycle({
   beforeStart: async ({ kysely }) => {
     await runMigrations(kysely)
   },
