@@ -2,13 +2,10 @@ name: Full Suite
 # The tested commit is in the title so Publish can find this run: see publish.yml.
 run-name: Full Suite ${{ github.sha }}
 
-# The verifier, template and example matrices, run once per push to main.
-#
-# Branch CI keeps only build, lint, unit and the e2e suites: ~90 jobs per push
-# across a dozen agent branches queued every run for close to an hour. These
-# run after the merge instead, and Release (main.yml) starts when they finish,
-# so nothing ships before its commit has been tested. A red run here does not
-# stop Release; only a Version Packages publish waits on the result (publish.yml).
+# Everything runs here, once per push to main, and Publish (publish.yml) starts
+# when this run finishes and proceeds only if all of it passed. Branch CI keeps
+# only build, lint, unit and the e2e suites: ~90 jobs per push across a dozen
+# agent branches queued every run for close to an hour.
 # A Version Packages merge only bumps versions, so it is skipped here.
 #
 # Run it on a branch before merging a risky change:
@@ -34,6 +31,70 @@ env:
   BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
 
 jobs:
+  validate-deps:
+    name: Validate Package Deps
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Check published deps for workspace protocol
+        run: node scripts/check-no-workspace-protocol.mjs
+      - name: Check no publish-time CLI rebuild
+        run: node scripts/check-no-publish-time-cli-rebuild.mjs
+      - name: Check every publishable package declares its repository
+        run: node scripts/check-repository-field.mjs
+      - name: Test the semver range helpers
+        run: node --test scripts/semver-ranges.test.mjs
+      - name: Test the merged-worktree reporter
+        run: node --test scripts/merged-worktrees.test.mjs
+      - name: Check peer dependency ranges agree across the monorepo
+        run: node scripts/check-peer-dependency-consistency.mjs
+      - name: Check every verifier runs in the full suite
+        run: node scripts/check-verifier-matrix.mjs
+      - name: Test the live-AI e2e gate
+        run: node --test scripts/ai-e2e-gate.test.mjs
+      - name: Test the native apps gate
+        run: node --test scripts/native-gate.test.mjs
+
+  lint:
+    name: Lint & Format
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          download-build: 'false'
+      - name: Check formatting
+        run: bun run prettier
+      - name: Lint
+        run: bun run lint
+      - name: Check no runtime i18n key resolvers
+        run: node scripts/check-no-i18n-key-resolver.mjs
+
+  e2e:
+    name: E2E Standard
+    if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      - name: Run e2e tests
+        run: bun run test:e2e
+
   build:
     name: Build
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
@@ -382,8 +443,8 @@ jobs:
             # OPENAI_API_KEY it runs against has no credits left, so both the
             # yarn and bun jobs burn five minutes retrying and fail on `You have
             # no credits remaining.` on every push to every branch. Disabled in
-            # `main.yml` too, for the other dead key. Re-enable in both once one
-            # of them is funded.
+            # `develop.yml` too, for the other dead key. Re-enable in both once
+            # one of them is funded.
             # ai-postgres,
             bun,
           ]
