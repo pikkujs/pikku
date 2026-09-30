@@ -679,6 +679,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
@@ -4947,6 +4948,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
@@ -5755,6 +5757,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      invokes: string[]
       bodySourceFile?: string
       bodyStart: number
       bodyEnd: number
