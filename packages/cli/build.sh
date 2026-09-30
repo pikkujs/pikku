@@ -291,7 +291,13 @@ chmod +x dist/bin/pikku.js
 # so without this the scope is undeclared here and the inspector fails with
 # PKU124. Declaring it in the template instead collides with the addon once built.
 echo "Building @pikku/addon-console for its scope declarations..."
-(cd ../addon/pikku-console && PATH="$PWD/../../cli/node_modules/.bin:$PATH" bun run build)
+# No `pikku` bin is linked on a clean install (dist/bin/pikku.js did not exist
+# when bun linked workspace bins), so put the CLI just built on PATH.
+_shim_dir=$(mktemp -d)
+printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
+chmod +x "$_shim_dir/pikku"
+(cd ../addon/pikku-console && PATH="$_shim_dir:$PATH" bun run build)
+rm -rf "$_shim_dir"
 
 echo "Generating the public surface doc..."
 _cli_bin="$PWD/dist/bin/pikku.js"
