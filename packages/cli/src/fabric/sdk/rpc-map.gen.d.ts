@@ -4867,7 +4867,7 @@ export type GetStageWorkflowRunOutput = {
   run: {
     id: string
     workflow: string
-    status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+    status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
     input: unknown
     output?: unknown | undefined
     error?:
@@ -11604,7 +11604,7 @@ export type TypedWorkflowStatus = (
   runId: string
 ) => Promise<{
   id: string
-  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
   output?: unknown
   error?: { message?: string }
 }>
