@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { envWithoutInheritedRepo } from '../../utils/git.js'
 import {
   isTreeCleanBesidesProjectId,
   readConfigProjectId,
@@ -13,7 +14,11 @@ import {
 const repo = async (config: string) => {
   const dir = await mkdtemp(join(tmpdir(), 'project-id-'))
   const run = (...args: string[]) =>
-    execFileSync('git', args, { cwd: dir, stdio: 'ignore' })
+    execFileSync('git', args, {
+      cwd: dir,
+      env: envWithoutInheritedRepo(),
+      stdio: 'ignore',
+    })
   run('init', '-q')
   run('config', 'user.email', 't@t.t')
   run('config', 'user.name', 't')
