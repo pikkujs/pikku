@@ -96,6 +96,22 @@ describe('resolveOAuthProxyConfig', () => {
     assert.equal(await resolveOAuthProxyConfig(services), null)
   })
 
+  test('is null when only the secret is present', async () => {
+    const { services } = makeServices({ OAUTH_PROXY_SECRET: 'made-up' }, {})
+    assert.equal(await resolveOAuthProxyConfig(services), null)
+  })
+
+  test('names the secret when the variables are set without it', async () => {
+    const { services } = makeServices(
+      {},
+      { OAUTH_PROXY_URL: PROXY, OAUTH_PROXY_PROVIDERS: 'google' }
+    )
+    await assert.rejects(
+      () => resolveOAuthProxyConfig(services),
+      /partly configured: OAUTH_PROXY_SECRET not set/
+    )
+  })
+
   test('names what is missing when only part is set', async () => {
     const { services } = makeServices(
       { OAUTH_PROXY_SECRET: 'stage-key' },
