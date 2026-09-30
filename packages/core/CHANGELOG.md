@@ -1,3 +1,42 @@
+## 0.12.132
+
+### Patch Changes
+
+- d327fa5: Two gaps from the August security sweep that never reached main:
+
+  - The memoized middleware chains are capped per wire type. The key is the requested wire id, so a caller varying RPC names could otherwise grow the cache without limit.
+  - The console's generated variable brokers require `pikku:console`. They are emitted into the application rather than the console addon, so the addon's scope never reached them and any signed-in user could read and overwrite variables through `/rpc`.
+
+- 942ebdd: Add `LeaseService`: named leases shared by every process on the same store. A lease is not a mutex: a holder that stalls past its expiry loses the key without knowing, so whatever the body writes to should check the lease's `token` and refuse an older one. `acquire` never blocks and answers `null` while someone else holds the key; a lease lapses on its own if its holder dies; and each lease carries a `token` that rises every time the key changes hands, so a stale holder cannot refresh or release its successor's lease. `holdLease` refreshes the lease while its body runs, hands the body an `AbortSignal` that fires the moment the lease is lost, and throws `LeaseLostError` once the body finishes if the lease lapsed or changed hands meanwhile, so a caller never takes that result as produced under the lease.
+
+  Ships as `InMemoryLeaseService`, `PgKyselyLeaseService` (`@pikku/kysely-postgres`), `MySQLKyselyLeaseService` (`@pikku/kysely-mysql`) and `KyselyLeaseService` (SQLite), all on `pikku_lease`. The Postgres and MySQL services judge every lease by the database's clock, so a worker whose clock runs fast cannot take a live lease or stretch its own; `KyselyLeaseService` reads the process clock and is for a single-host SQLite app. `pikku db generate` writes the table for any project that reaches `leaseService`.
+
+  `RedisLeaseService` (`@pikku/redis`) keeps each lease in a hash Redis expires itself, with every check-and-set in one Lua script that reads Redis's `TIME`, so it too judges leases by the server's clock; its token counter outlives release, so the next holder always gets a higher token.
+
+- 8ac25a8: An OAuth2 credential can set `scopeSeparator` for a provider that wants scopes joined by something other than a space (Twist wants a comma). A credential with no scopes already sent no `scope` parameter; that is now tested.
+- 6606777: A webhook source can declare how its requests are signed, and the runner checks every request before `receive` runs:
+
+  ```ts
+  wireTriggerWebhookSource({
+    name: 'github',
+    verify: {
+      hmac: {
+        header: 'x-hub-signature-256',
+        prefix: 'sha256=',
+        algorithm: 'sha256',
+        encoding: 'hex',
+      },
+    },
+    receive: githubWebhookReceive,
+  })
+  ```
+
+  `verify` is an HMAC over the raw body, a shared token or a public-key signature in one header, or a function `(request, secret, services) => boolean` for anything else. A request is refused while the secret is unset or when the signature does not match. A request without a body reaches `receive` unchecked so handshakes still work, but it may only be answered: events from it are refused.
+
+  Declaring `verify` declares the secret's credential too, so it needs no `defineCredential`. It is a singleton string named `<source>WebhookSecret` in camelCase (`microsoft-outlook` → `microsoftOutlookWebhookSecret`, see `webhookSecretCredentialName`), or whatever `credential` names, described by `credentialDescription`.
+
+  `@pikku/core/hmac` gains `hmacDigest`, `verifyHmacSignature` and `verifyPublicKeySignature`. `WebhookSigningSecret` is deprecated.
+
 ## 0.12.131
 
 ### Patch Changes

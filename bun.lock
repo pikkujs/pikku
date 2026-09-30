@@ -350,7 +350,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.175",
+      "version": "0.12.176",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -362,22 +362,22 @@
         "@jridgewell/trace-mapping": "^0.3.31",
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "@pikku/ai-vercel": "^0.12.14",
-        "@pikku/better-auth": "^0.12.51",
+        "@pikku/better-auth": "^0.12.52",
         "@pikku/bun-server": "^0.12.13",
         "@pikku/code-edit": "^0.12.2",
         "@pikku/deploy": "^0.12.13",
         "@pikku/deploy-cloudflare": "^0.12.18",
-        "@pikku/deploy-standalone": "^0.12.22",
+        "@pikku/deploy-standalone": "^0.12.23",
         "@pikku/fetch": "^0.12.12",
-        "@pikku/inspector": "^0.12.97",
+        "@pikku/inspector": "^0.12.98",
         "@pikku/knowledge": "^0.12.16",
-        "@pikku/kysely": "^0.13.31",
+        "@pikku/kysely": "^0.13.32",
         "@pikku/migrator-sql": "^0.12.6",
         "@pikku/n8n-import": "^0.0.8",
         "@pikku/node-http-server": "^0.12.17",
         "@pikku/openapi-parser": "^0.12.23",
         "@pikku/schedule": "^0.12.8",
-        "@pikku/skills": "^0.12.44",
+        "@pikku/skills": "^0.12.45",
         "@pikku/websocket": "^0.12.5",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -401,7 +401,7 @@
         "zod": "^4.4.3",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
         "@pikku/playwright": "^0.12.86",
         "@pikku/ws": "^0.12.10",
         "@playwright/test": "^1.50.0",
@@ -414,7 +414,7 @@
         "ws": "^8.21.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
         "@pikku/playwright": "^0.12.86",
         "@pikku/ws": "^0.12.10",
         "better-auth": "^1.7.5",
@@ -534,7 +534,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.131",
+      "version": "0.12.132",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -600,7 +600,7 @@
     },
     "packages/deploy/deploy-standalone": {
       "name": "@pikku/deploy-standalone",
-      "version": "0.12.22",
+      "version": "0.12.23",
       "dependencies": {
         "@pikku/deploy": "^0.12.12",
         "@pikku/migrator-sql": "^0.12.6",
@@ -704,7 +704,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.97",
+      "version": "0.12.98",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
@@ -715,11 +715,11 @@
         "zod": "^4.4.3",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
         "@types/node": "^24.13.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/knowledge": {
@@ -1132,7 +1132,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.51",
+      "version": "0.12.52",
       "devDependencies": {
         "@better-auth/api-key": "^1.7.5",
         "@better-auth/core": "^1.7.5",
@@ -1145,7 +1145,7 @@
         "nanostores": "^1.4.2",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
         "better-auth": "^1.7.5",
         "zod": "^4",
       },
@@ -1175,7 +1175,7 @@
     },
     "packages/services/kysely": {
       "name": "@pikku/kysely",
-      "version": "0.13.31",
+      "version": "0.13.32",
       "bin": {
         "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
       },
@@ -1191,7 +1191,7 @@
         "postgres": "^3.4.9",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.130",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-bun-sqlite": {
@@ -1212,16 +1212,16 @@
     },
     "packages/services/kysely-mysql": {
       "name": "@pikku/kysely-mysql",
-      "version": "0.12.27",
+      "version": "0.12.28",
       "dependencies": {
-        "@pikku/kysely": "^0.13.25",
+        "@pikku/kysely": "^0.13.32",
         "kysely": "^0.29.5",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-node-sqlite": {
@@ -1243,19 +1243,19 @@
     },
     "packages/services/kysely-postgres": {
       "name": "@pikku/kysely-postgres",
-      "version": "0.12.24",
+      "version": "0.12.25",
       "dependencies": {
-        "@pikku/kysely": "^0.13.25",
+        "@pikku/kysely": "^0.13.32",
         "kysely": "^0.29.5",
         "kysely-postgres-js": "^3.0.0",
         "postgres": "^3.4.9",
       },
       "devDependencies": {
         "@electric-sql/pglite": "^0.5.5",
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/kysely-sqlite": {
@@ -1329,7 +1329,7 @@
     },
     "packages/services/redis": {
       "name": "@pikku/redis",
-      "version": "0.12.21",
+      "version": "0.12.22",
       "dependencies": {
         "ioredis": "^6.0.0",
       },
@@ -1338,7 +1338,7 @@
         "ioredis-mock": "^8.13.1",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.108",
+        "@pikku/core": "^0.12.132",
       },
     },
     "packages/services/schema-ajv": {
@@ -1364,7 +1364,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.44",
+      "version": "0.12.45",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
@@ -1609,14 +1609,14 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.175",
-        "@pikku/core": "^0.12.131",
+        "@pikku/cli": "^0.12.176",
+        "@pikku/core": "^0.12.132",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.131",
+        "@pikku/core": "^0.12.132",
         "zod": "^4",
       },
     },
