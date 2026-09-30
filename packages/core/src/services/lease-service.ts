@@ -40,13 +40,74 @@ export class LeaseLostError extends Error {
 /** Resolves after `ms`, or as soon as `signal` aborts. */
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms)
-    timer.unref?.()
-    signal.addEventListener('abort', () => {
+    if (signal.aborted) return resolve()
+    const done = () => {
       clearTimeout(timer)
+      signal.removeEventListener('abort', done)
       resolve()
-    })
+    }
+    const timer = setTimeout(done, ms)
+    timer.unref?.()
+    signal.addEventListener('abort', done)
   })
+
+/** How many renewals fit in one lease, so a failed one still leaves others before it runs out. */
+export const RENEWALS_PER_LEASE = 3
+
+/** How long a holder waits between renewals of a `ttlMs` lease. */
+export const leaseRenewalIntervalMs = (ttlMs: number) =>
+  Math.max(1, ttlMs / RENEWALS_PER_LEASE)
+
+export type LeaseRenewal = {
+  /** Aborts with `LeaseLostError` once the lease is no longer this holder's. */
+  signal: AbortSignal
+  /** Stops renewing, after waiting for a renewal already in flight. */
+  stop: () => Promise<void>
+}
+
+/**
+ * Renews a held lease every third of `ttlMs` until stopped, so a renewal that
+ * fails still leaves two more before the lease runs out.
+ *
+ * `renew` resolves `true` while the lease is still this holder's and `false`
+ * once another holder has it. A throw proves neither, so the lease is only
+ * counted lost once renewals have kept failing past its expiry on this
+ * process's clock.
+ *
+ * `stop` waits for a renewal in flight, so a release made after it cannot be
+ * undone by a late one.
+ */
+export const keepLeaseAlive = (
+  key: string,
+  ttlMs: number,
+  renew: () => Promise<boolean>
+): LeaseRenewal => {
+  const lost = new AbortController()
+  const stopped = new AbortController()
+
+  const renewing = (async () => {
+    let heldUntil = Date.now() + ttlMs
+    while (!lost.signal.aborted) {
+      await sleep(leaseRenewalIntervalMs(ttlMs), stopped.signal)
+      if (stopped.signal.aborted) return
+      const renewedAt = Date.now()
+      const held = await renew().catch(() => undefined)
+      if (held) {
+        heldUntil = renewedAt + ttlMs
+      } else if (held === false || Date.now() >= heldUntil) {
+        lost.abort(new LeaseLostError(key))
+      }
+    }
+  })()
+
+  return {
+    signal: lost.signal,
+    stop: async () => {
+      stopped.abort()
+      await renewing
+    },
+  }
+}
 
 /**
  * Runs `fn` holding `key` on `leases`, renewing the lease every third of
@@ -64,46 +125,24 @@ export const holdLease = async <T>(
   if (!acquired) throw new LeaseTakenError(key)
   let lease = acquired
 
-  const lost = new AbortController()
-  const finished = new AbortController()
-
-  // `null` is an answer: someone else holds the key. A throw is not, so the
-  // lease is only given up once this process's own clock says it has run out.
-  const renew = async (heldUntil: number) => {
-    const renewedAt = Date.now()
-    const next = await leases.refresh(lease, ttlMs).catch(() => undefined)
-    if (next) {
-      lease = next
-      return renewedAt + ttlMs
-    }
-    if (next === null || Date.now() >= heldUntil) {
-      lost.abort(new LeaseLostError(key))
-    }
-    return heldUntil
+  const renew = async () => {
+    const next = await leases.refresh(lease, ttlMs)
+    if (next) lease = next
+    return next !== null
   }
-
-  const keepAlive = async () => {
-    let heldUntil = Date.now() + ttlMs
-    while (!lost.signal.aborted) {
-      await sleep(Math.max(1, ttlMs / 3), finished.signal)
-      if (finished.signal.aborted) return
-      heldUntil = await renew(heldUntil)
-    }
-  }
-  const renewing = keepAlive()
+  const renewal = keepLeaseAlive(key, ttlMs, renew)
 
   try {
-    const result = await fn(lease, lost.signal)
-    finished.abort()
-    await renewing
+    const result = await fn(lease, renewal.signal)
+    await renewal.stop()
     // The last renewal can be a third of a lease old, so check once more
     // before vouching that the body ran alone.
-    if (!lost.signal.aborted) await renew(0)
-    if (lost.signal.aborted) throw new LeaseLostError(key)
+    const stillHeld =
+      !renewal.signal.aborted && (await renew().catch(() => false))
+    if (!stillHeld) throw new LeaseLostError(key)
     return result
   } finally {
-    finished.abort()
-    await renewing
+    await renewal.stop()
     await leases.release(lease).catch(() => {})
   }
 }

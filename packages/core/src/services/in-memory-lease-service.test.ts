@@ -75,3 +75,32 @@ describe('holdLease when refreshing throws', () => {
     )
   })
 })
+
+/** A store whose refresh takes `delayMs` to answer. */
+class SlowLeaseService extends InMemoryLeaseService {
+  constructor(private readonly delayMs: number) {
+    super()
+  }
+
+  async refresh(lease: Lease, ttlMs: number) {
+    await wait(this.delayMs)
+    return super.refresh(lease, ttlMs)
+  }
+}
+
+describe('holdLease when the body finishes mid-renewal', () => {
+  // The body ends while a renewal is in flight, so renewing is told to stop
+  // before it reaches its next wait. That wait must not run out the interval.
+  test('returns once the renewal lands, not an interval later', async () => {
+    const ttlMs = 3_000
+    const leases = new SlowLeaseService(100)
+    const started = Date.now()
+
+    await holdLease(leases, 'stage', () => wait(1_050), ttlMs)
+
+    assert.ok(
+      Date.now() - started < 1_800,
+      `holdLease took ${Date.now() - started}ms; it waited out a renewal interval after the body finished`
+    )
+  })
+})
