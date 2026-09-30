@@ -99,12 +99,12 @@ import {
 import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import { claimStepByReadThenWrite } from './workflow-step-claim.js'
-import { isRunLeaseError } from './workflow-run-lease.js'
 import {
-  holdLease,
-  LeaseTakenError,
-  type LeaseService,
-} from '../../services/lease-service.js'
+  holdWorkflowLease,
+  isRunLeaseError,
+  nullWhenStepHeld,
+} from './workflow-run-lease.js'
+import type { LeaseService } from '../../services/lease-service.js'
 import { summarizeRunStatus } from './workflow-run-status.js'
 import {
   runningStepLease,
@@ -509,40 +509,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     status: 'pending' | 'running'
   ): Promise<StepState>
 
-  /**
-   * Run one orchestration pass holding the run's lease. A run held elsewhere
-   * throws `LeaseTakenError` rather than waiting: the orchestrator wakes it
-   * again later.
-   */
+  /** One orchestration pass under the run's lease; never waits (see `holdWorkflowLease`). */
   async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return holdLease(this.requireLeaseService(), `workflow-run:${id}`, () =>
-      fn()
-    )
+    return holdWorkflowLease(this, this.leaseService, `workflow-run:${id}`, fn)
   }
 
-  /**
-   * Run `fn` holding one step's lease. Like the run lease it never waits: a
-   * step held elsewhere throws `LeaseTakenError`.
-   */
+  /** `fn` under one step's lease; never waits (see `holdWorkflowLease`). */
   async withStepLock<T>(
     runId: string,
     stepName: string,
     fn: () => Promise<T>
   ): Promise<T> {
-    return holdLease(
-      this.requireLeaseService(),
-      `workflow-step:${runId}:${stepName}`,
-      () => fn()
-    )
-  }
-
-  private requireLeaseService(): LeaseService {
-    if (!this.leaseService) {
-      throw new Error(
-        `${this.constructor.name} was constructed without a leaseService, so it cannot exclude a second process from a run or step. Pass the app's leaseService to its constructor.`
-      )
-    }
-    return this.leaseService
+    const key = `workflow-step:${runId}:${stepName}`
+    return holdWorkflowLease(this, this.leaseService, key, fn)
   }
 
   abstract close(): Promise<void>
@@ -1367,16 +1346,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcName: string,
     leaseMs: number
   ): Promise<StepState | null> {
-    try {
-      return await this.withStepLock(runId, stepName, () =>
+    return nullWhenStepHeld(() =>
+      this.withStepLock(runId, stepName, () =>
         claimStepByReadThenWrite(this, runId, stepName, rpcName, leaseMs)
       )
-    } catch (error) {
-      if (error instanceof LeaseTakenError) {
-        return null
-      }
-      throw error
-    }
+    )
   }
 
   private async executeWorkflowStepInner(
