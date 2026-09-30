@@ -309,7 +309,7 @@ export class PikkuWorkflowDoService<
     return toStepState(updated)
   }
 
-  async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
+  async withRunLease<T>(_id: string, fn: () => Promise<T>): Promise<T> {
     return fn()
   }
 

@@ -436,7 +436,7 @@ export class InMemoryWorkflowService
     return existed
   }
 
-  async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
+  async withRunLease<T>(_id: string, fn: () => Promise<T>): Promise<T> {
     // knowledge: decisions/internals/the-in-memory-workflow-service-is-inline-only-and-single-process.md
     return fn()
   }

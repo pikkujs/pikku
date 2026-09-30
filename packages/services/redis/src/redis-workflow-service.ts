@@ -696,7 +696,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     throw new Error(`${errorMessage} after ${maxRetries} retries`)
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
     return this.withLock(
       this.lockKey(id),
       `Failed to acquire lock for run ${id}`,

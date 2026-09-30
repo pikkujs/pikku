@@ -495,7 +495,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     status: 'pending' | 'running'
   ): Promise<StepState>
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
     return withAppRunLease(this, id, fn)
   }
 
@@ -1113,7 +1113,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowMeta?.graphHash &&
       run.graphHash !== workflowMeta.graphHash
     ) {
-      await this.withRunLock(runId, () =>
+      await this.withRunLease(runId, () =>
         runVersionMismatchFallback(this, run, workflowMeta, rpcService)
       )
       return
@@ -1123,7 +1123,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       // Two passes over one graph each plan from the state they read, so both
       // can fire the same next node; the run lease keeps them one at a time,
       // exactly as it does for a DSL run's replay.
-      await this.withRunLock(runId, async () => {
+      await this.withRunLease(runId, async () => {
         await continueGraph(this, runId, run.workflow)
         const updatedRun = await this.getRun(runId)
         if (updatedRun?.status === 'completed') {
@@ -1153,7 +1153,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowNotFoundError(run.workflow)
     }
 
-    await this.withRunLock(runId, async () => {
+    await this.withRunLease(runId, async () => {
       const addonNs = run.workflow.includes(':')
         ? run.workflow.substring(0, run.workflow.indexOf(':'))
         : null

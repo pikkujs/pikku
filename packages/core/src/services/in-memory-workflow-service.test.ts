@@ -304,8 +304,8 @@ describe('InMemoryWorkflowService', () => {
   })
 
   describe('locking', () => {
-    test('withRunLock should execute function directly', async () => {
-      const result = await service.withRunLock('run1', async () => 'result')
+    test('withRunLease should execute function directly', async () => {
+      const result = await service.withRunLease('run1', async () => 'result')
       assert.strictEqual(result, 'result')
     })
 

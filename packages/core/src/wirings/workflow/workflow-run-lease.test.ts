@@ -38,8 +38,8 @@ class LosingLeaseService extends InMemoryLeaseService {
  * is single-process by design.
  */
 class LeasedWorkflowService extends InMemoryWorkflowService {
-  override withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return PikkuWorkflowService.prototype.withRunLock.call(this, id, fn)
+  override withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    return PikkuWorkflowService.prototype.withRunLease.call(this, id, fn)
   }
 }
 
@@ -184,6 +184,9 @@ describe('the workflow run lease', () => {
       await service.orchestrateWorkflow(runId, {} as any)
     }
 
-    assert.equal(warnings.filter((w) => w.includes('no leaseService')).length, 1)
+    assert.equal(
+      warnings.filter((w) => w.includes('no leaseService')).length,
+      1
+    )
   })
 })

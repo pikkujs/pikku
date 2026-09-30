@@ -6,22 +6,22 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-/** Records every run lock taken, which is the whole point of the guard. */
-class LockSpyWorkflowService extends InMemoryWorkflowService {
-  public readonly locked: string[] = []
+/** Records every run lease taken, which is the whole point of the guard. */
+class LeaseSpyWorkflowService extends InMemoryWorkflowService {
+  public readonly leased: string[] = []
 
-  public override async withRunLock<T>(
+  public override async withRunLease<T>(
     id: string,
     fn: () => Promise<T>
   ): Promise<T> {
-    this.locked.push(id)
-    return super.withRunLock(id, fn)
+    this.leased.push(id)
+    return super.withRunLease(id, fn)
   }
 }
 
 /** A registered, fully described workflow, so nothing else can short-circuit. */
 const startRun = async (): Promise<{
-  service: LockSpyWorkflowService
+  service: LeaseSpyWorkflowService
   runId: string
   entered: () => boolean
 }> => {
@@ -52,7 +52,7 @@ const startRun = async (): Promise<{
   } as any)
   pikkuState(null, 'function', 'functions').set('flow', { func } as any)
 
-  const service = new LockSpyWorkflowService()
+  const service = new LeaseSpyWorkflowService()
   const runId = await service.createRun('flow', {}, false, '', { type: 'test' })
   return { service, runId, entered: () => bodyEntered }
 }
@@ -61,7 +61,7 @@ const startRun = async (): Promise<{
  * The leak this guards, read straight off production: every granted advisory
  * lock held by an idle session mapped to a run that was already `failed`. The
  * orchestrator queue is at-least-once, so a message for a settled run is
- * routine — and answering it by taking the run lock and replaying the body is
+ * routine — and answering it by taking the run lease and replaying the body is
  * how a run that can never move again ends up holding a lock and a pooled
  * connection while it waits on something that will never arrive.
  */
@@ -74,9 +74,9 @@ describe('an orchestrator message for a run that already settled', () => {
       await service.runWorkflowJob(runId, {} as any)
 
       assert.deepEqual(
-        service.locked,
+        service.leased,
         [],
-        'the run lock was taken for a run that can never move again'
+        'the run lease was taken for a run that can never move again'
       )
       assert.equal(
         entered(),
@@ -97,7 +97,7 @@ describe('an orchestrator message for a run that already settled', () => {
     await service.runWorkflowJob(runId, {} as any)
 
     assert.deepEqual(
-      service.locked,
+      service.leased,
       [runId],
       'suspended ends a pass, not the run — it resumes when its signal arrives'
     )

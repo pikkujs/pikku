@@ -405,23 +405,26 @@ describe('run and step leases', () => {
 
   test('without a leaseService the run lease passes through', async () => {
     pikkuState(null, 'package', 'singletonServices', {} as any)
-    assert.equal(await service.withRunLock('run-1', async () => 42), 42)
+    assert.equal(await service.withRunLease('run-1', async () => 42), 42)
   })
 
   test('a second orchestration of a held run is refused', async () => {
     await withLeases()
     const { run, bodyEntered, release } = heldBody()
 
-    const held = service.withRunLock('run-1', run)
+    const held = service.withRunLease('run-1', run)
     await bodyEntered
     await assert.rejects(
-      service.withRunLock('run-1', async () => {}),
+      service.withRunLease('run-1', async () => {}),
       (err: Error) => err.name === 'LeaseTakenError'
     )
 
     release()
     await held
-    assert.equal(await service.withRunLock('run-1', async () => 'next'), 'next')
+    assert.equal(
+      await service.withRunLease('run-1', async () => 'next'),
+      'next'
+    )
   })
 
   test('a run lease holds no connection or transaction while the body runs', async () => {
@@ -429,7 +432,7 @@ describe('run and step leases', () => {
     const { run, bodyEntered, release } = heldBody()
 
     executedSql.length = 0
-    const held = service.withRunLock('run-1', run)
+    const held = service.withRunLease('run-1', run)
     await bodyEntered
 
     const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
