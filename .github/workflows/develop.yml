@@ -283,11 +283,13 @@ jobs:
       # `.env.native` points the build at http://localhost:4077, where each
       # smoke job runs the e2e server.
       - name: Build the web app for the native shell
-        run: bun --cwd e2e/packages/web run build:native
+        working-directory: e2e/packages/web
+        run: bun run build:native
       - uses: actions/upload-artifact@v7
         with:
           name: native-web-dist
           path: e2e/packages/web/dist-native
+          if-no-files-found: error
           retention-days: 7
 
   native-desktop:
@@ -340,6 +342,7 @@ jobs:
         with:
           name: native-${{ matrix.name }}
           path: e2e/packages/web/src-tauri/target/release/bundle
+          if-no-files-found: error
           retention-days: 7
       - if: ${{ matrix.smoke }}
         uses: ./.github/actions/setup
@@ -398,6 +401,7 @@ jobs:
         with:
           name: native-android
           path: ${{ env.APK }}
+          if-no-files-found: error
           retention-days: 7
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-backend
@@ -461,6 +465,7 @@ jobs:
         with:
           name: native-ios-simulator
           path: ${{ env.IOS_APP }}
+          if-no-files-found: error
           retention-days: 7
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-backend
