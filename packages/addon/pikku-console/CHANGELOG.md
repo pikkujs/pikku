@@ -1,3 +1,16 @@
+## 0.12.56
+
+### Patch Changes
+
+- 5bce779: The console shows webhook trigger sources. A trigger named `<source>:<event>` now pairs with its `wireTriggerWebhookSource` instead of reading as having nothing to listen to, and its row says which event it listens to and where it is received. Opening it shows the source's address, accepted request types, declared events, which lifecycle steps (receive, check, setup, teardown) it has, and whether its `<source>WebhookSecret` signing secret is saved, with a link to Credentials when it is not. `console:getAllMeta` now returns `webhookSourceMeta`.
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/better-auth@0.12.50
+
 ## 0.12.55
 
 ### Patch Changes

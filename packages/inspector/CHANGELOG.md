@@ -1,3 +1,25 @@
+## 0.12.96
+
+### Patch Changes
+
+- dfcd351: The deploy planner now binds a unit to the units of the functions its functions call with `rpc.invoke('name')` / `rpc.remote('name')`. Before, a caller and callee split into different units (e.g. a no-service function in `svc-base` calling a DB function in `svc-kysely`) got no service binding and failed on the deployed stage with "No service binding for function". The inspector records literal RPC names per function as `invokes` (single, double or substitution-free template quotes; `rpc!`, `wire.rpc`) and warns on a computed name, which the planner cannot see (#1883).
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+- f817f1c: Schema generation no longer re-walks every source file for each type. ts-json-schema-generator looks each root type up by name by scanning the whole program, so a project with 677 types scanned it 677 times. The inspector now builds that name index once per program. On the e2e project, TS schema generation drops from 8.7s to 0.1s and a cold `pikku all` from 38s to 8s, with identical output.
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [5bce779]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+
 ## 0.12.95
 
 ### Patch Changes

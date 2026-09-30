@@ -1,3 +1,80 @@
+## 0.12.173
+
+### Patch Changes
+
+- 5bce779: A type an addon's functions take from a built package, such as `TriggerEvent` in a webhook source's receive output, is imported through that package's exported subpath (`@pikku/core/trigger`) instead of a path into its `dist/`, which a consuming app could not resolve.
+- a10253c: The Bun bundler now keeps a relative external (`./sqlite-extensions.gen.js`, `./frontend-assets.gen.js`) as an import instead of inlining it, so a standalone bun binary built with the CLI under bun embeds its sqlite extensions and frontend assets again rather than looking for them on disk at `./vec0-<hash>.so`.
+- dfcd351: The deploy planner now binds a unit to the units of the functions its functions call with `rpc.invoke('name')` / `rpc.remote('name')`. Before, a caller and callee split into different units (e.g. a no-service function in `svc-base` calling a DB function in `svc-kysely`) got no service binding and failed on the deployed stage with "No service binding for function". The inspector records literal RPC names per function as `invokes` (single, double or substitution-free template quotes; `rpc!`, `wire.rpc`) and warns on a computed name, which the planner cannot see (#1883).
+- cf40182: Deployed units that call `rpc.startWorkflow('x')` now get x's meta, so the call no longer fails with `WorkflowNotFoundError`. The inspector records `startsWorkflows` for literal `rpc.startWorkflow(...)` calls. It warns when a handler computes the workflow name or passes `rpc` to a helper, because the planner cannot see those calls.
+
+  With workflow queues, the deploy planner gives a starter unit the workflow meta and orchestrator queue meta only (new `--workflowMeta` filter), plus `workflow-state` and `queue` services. Without queues the start runs inline, so the whole workflow is bundled. Core's `startWorkflow` now requires the workflow registration only for inline runs; queued runs need only the meta.
+
+- 698c7af: The "Sign in as …" switcher no longer puts a credential in the frontend bundle. It lists personas from `GET /auth/sign-in/personas` and signs in by persona id through `POST /auth/sign-in/persona`; `pikkuActor({ personaSignIn })` serves both, so the app writes no listing function.
+
+  **Breaking (`@pikku/react`, `@pikku/mantine`):** `useDevActors` and `<DevActorSwitcher>` now take `{ apiUrl, app?, onSignedIn }`. The `actors` and `secrets` props are gone, and so are `parseDevActors`, `parseDevActorSecrets`, `signInAsActor` and `DevActorSecrets`. Actors are keyed by `id`, so `signInAs` takes an id and `pendingEmail` is now `pendingId`. `signInAsPersona({ apiUrl, id })` replaces `signInAsActor`, and `listDevActors({ apiUrl, app })` fetches the list, for callers outside React.
+
+  `@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when the gate is shut. `allowed` is now optional: pass `personaSignIn: { personas, featureFlags }` and both endpoints are open under `pikku dev`, and on a deployed stage only with `allowSignIn` opted in and the `devSwitcher` flag on. `devSwitcherOn(featureFlags, optIn)` exports that same check.
+
+  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
+
+- 5bce779: `pikku dev` registers webhook sources with their providers when `PIKKU_DEV_WEBHOOK_URL` is set. What it registered, signing secrets included, is kept in a git-ignored `.webhook-registrations.gen.json` next to `pikku.config.json`, so a database reset or `.pikku` wipe does not register again, and nothing reaches a provider while the url and events are unchanged. Registrations no source declares any more are warned about on every run, with the endpoint and label to delete by hand. The prefix defaults to `dev-<username>`; override it with `PIKKU_DEV_WEBHOOK_LABEL_PREFIX`. New in core: `reconcileWebhookRegistrations`.
+- b9a821b: Add `pikku fabric deploy auto [on|off] -b <branch>` to show or set whether a push
+  deploys a stage without waiting for approval. `deploy list` and `status` now say
+  when a deploy is waiting because auto-deploy is off.
+- 4394bbc: Fail the deploy build when a declared HTTP route reached no unit, and stop
+  dropping the three kinds that did.
+
+  Units are built by walking functions and asking which routes point at each one,
+  so a route nothing claims produces no handler and no error. It is simply not
+  deployed: the stage 404s it while every worker reports active. `unroutedHttpWirings`
+  now checks the finished manifest against the HTTP meta and fails the build with
+  the offending routes, however one comes to be dropped.
+
+  Three were being dropped. A wiring with an inline `func` (`wireHTTP({ func:
+agent('x') })`) has nothing the inspector can name, so it is id'd after its own
+  route — `http:post:/agents/shop` — and the analyzer read that prefix as "a
+  scaffold catch-all somebody else serves"; the five `*Caller` name checks beside
+  it already cover the real ones. A route onto an addon function via `ref('ns:fn')`
+  carries the addon's id, which is absent from the app's function meta, so the
+  addon unit now picks up app-declared routes onto its functions — including
+  functions it does not expose over RPC, since the wired route is the exposure. And
+  a synthetic bridge onto a route a named function owns (the OPTIONS preflight
+  beside `rpcCaller`'s `/rpc/:rpcName`) now rides that function's unit instead of
+  being skipped into nothing.
+
+- 01c0209: `pikku serve`, `pikku dev` and a local CLI entrypoint now boot an app on the same services, from one generated file. The local CLI's bootstrap used to call the app's `createSingletonServices` with nothing injected, so a command run from it saw none of the database-backed agent, feature-flag, analytics, scope and webhook services, nor the in-memory queue, scheduler, trigger and workflow services a request to the dev server gets.
+
+  Codegen now writes `pikku-local-services.gen.ts` beside `pikku-services.gen.ts` for every project. Its `createLocalServices(config, extras, options)` assembles that set. `pikku serve` and `pikku dev` load it from the project and pass in what only they have: the database they opened, their event hub, content store, scheduler and agent runner, and the requiredServices, scopes and system roles from a live inspector. The local CLI bootstrap hands its result to the app's factory as existing services.
+
+  The file imports only what the project has:
+
+  - A project with no database — no `db` config, no `db/sqlite` or `db/postgres`, and no kysely declared — imports from `@pikku/core` alone.
+  - A project with a database also imports `@pikku/kysely`, whose own copy of kysely it opens and types the database with.
+  - A project with a local CLI entrypoint also imports `@pikku/schedule`. It opens its own database: `DATABASE_URL`, else the config's `sqliteDb` / `postgresUrl`, else `.pikku-runtime/dev.db`. The driver is whichever of `@pikku/kysely-node-sqlite`, `@pikku/kysely-bun-sqlite` and `pg` the project declares, with the generated coercion map applied.
+
+  Codegen adds whichever of those packages the file imports to the project's dependencies.
+
+- 5bce779: Webhook trigger sources are off until someone turns them on, and addons declare their own.
+
+  An addon calls `wireTriggerWebhookSource` in its own package, and an app that wires the addon gets the source (its route included) without declaring it: named and routed after the addon's namespace, so two instances get one each. A source the app declares under the same name wins.
+
+  Every source now has an `enabled` switch in the `triggerSourceStore`, off by default. `reconcileTriggerSources` registers only enabled sources and records each one's `baseUrl` and `labelPrefix`; a disabled source's route answers 404 without running `receive`. New in core: `enableTriggerSource` registers a source with its provider and `disableTriggerSource` stops it receiving, then tears it down, both at the recorded address unless one is given. The admin addon exposes them as `triggerSourceEnable` and `triggerSourceDisable`. The `pikkuTriggerSource` table gains `enabled`, `baseUrl` and `labelPrefix`: run `pikku db generate` for the migration.
+
+- Updated dependencies [dfcd351]
+- Updated dependencies [cf40182]
+- Updated dependencies [698c7af]
+- Updated dependencies [5bce779]
+- Updated dependencies [01c0209]
+- Updated dependencies [4e3af11]
+- Updated dependencies [f817f1c]
+- Updated dependencies [5bce779]
+  - @pikku/core@0.12.130
+  - @pikku/inspector@0.12.96
+  - @pikku/deploy@0.12.13
+  - @pikku/better-auth@0.12.50
+  - @pikku/skills@0.12.44
+  - @pikku/kysely@0.13.31
+
 ## 0.12.172
 
 ### Patch Changes
