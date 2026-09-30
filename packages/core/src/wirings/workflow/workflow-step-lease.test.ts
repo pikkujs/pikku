@@ -15,6 +15,10 @@ import type { StepState } from './workflow.types.js'
 
 const RPC_NAME = 'charge:card'
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
+// Microtasks only: a macrotask would itself be a mocked timer.
+const flush = async () => {
+  for (let turn = 0; turn < 10; turn++) await Promise.resolve()
+}
 
 /** A step whose function is dispatched through the queue rather than inline. */
 function registerDispatched(rpcName: string): void {
@@ -222,16 +226,17 @@ describe('step leases', () => {
     let release!: () => void
     let stopped = false
 
-    mock.timers.enable({ apis: ['setInterval'] })
+    mock.timers.enable({ apis: ['setTimeout'] })
     try {
       const stop = startStepLeaseRefresh(
         'step-1',
-        10_000,
+        9_000,
         () => new Promise<boolean>((resolve) => (release = () => resolve(true)))
       )
-      mock.timers.tick(5_000)
+      mock.timers.tick(3_000)
+      await flush()
       const stopping = stop().then(() => (stopped = true))
-      await new Promise((resolve) => setImmediate(resolve))
+      await flush()
       assert.equal(stopped, false, 'stop returned with a renewal outstanding')
       release()
       await stopping
@@ -242,29 +247,32 @@ describe('step leases', () => {
     assert.equal(stopped, true)
   })
 
-  // A slow refresh must not overlap the next tick: overlapping renewals mean
+  // A slow refresh must not overlap the next one: overlapping renewals mean
   // `stop` only waits for the latest, so an earlier one can land after the
   // caller released the lease and put it back.
-  test('a refresh tick is skipped while a previous one is still in flight', async () => {
+  test('no refresh starts while a previous one is still in flight', async () => {
     let release!: () => void
     let calls = 0
 
-    mock.timers.enable({ apis: ['setInterval'] })
+    mock.timers.enable({ apis: ['setTimeout'] })
     try {
-      const stop = startStepLeaseRefresh('step-1', 10_000, () => {
+      const stop = startStepLeaseRefresh('step-1', 9_000, () => {
         calls += 1
         return new Promise<boolean>(
           (resolve) => (release = () => resolve(true))
         )
       })
-      mock.timers.tick(5_000)
-      mock.timers.tick(5_000)
-      assert.equal(calls, 1, 'the second tick did not start a second refresh')
+      mock.timers.tick(3_000)
+      await flush()
+      mock.timers.tick(3_000)
+      await flush()
+      assert.equal(calls, 1, 'a second refresh started alongside the first')
 
       release()
-      await new Promise((resolve) => setImmediate(resolve))
-      mock.timers.tick(5_000)
-      assert.equal(calls, 2, 'the next tick runs once the first settled')
+      await flush()
+      mock.timers.tick(3_000)
+      await flush()
+      assert.equal(calls, 2, 'the next refresh runs once the first settled')
 
       release()
       await stop()
@@ -275,18 +283,21 @@ describe('step leases', () => {
 
   test('a lease shorter than the refresh floor is still refreshed before it lapses', async () => {
     trackResumes()
-    // Under twice the floor, which is where applying the floor as a maximum
-    // pushes the first refresh past the expiry it is meant to prevent.
+    // Under three times the floor, which is where applying the floor as a
+    // maximum pushes the first refresh past the expiry it is meant to prevent.
     const leaseMs = STEP_LEASE_REFRESH_MIN_MS
     let refreshes = 0
 
-    mock.timers.enable({ apis: ['setInterval'] })
+    mock.timers.enable({ apis: ['setTimeout'] })
     try {
       const stop = startStepLeaseRefresh('step-1', leaseMs, async () => {
         refreshes += 1
         return true
       })
-      mock.timers.tick(leaseMs - 1)
+      for (let elapsed = 1; elapsed < leaseMs; elapsed++) {
+        mock.timers.tick(1)
+        await flush()
+      }
       await stop()
     } finally {
       mock.timers.reset()
@@ -338,27 +349,23 @@ describe('a superseded step lease', () => {
     } as any)
     let calls = 0
 
-    mock.timers.enable({ apis: ['setInterval'] })
+    mock.timers.enable({ apis: ['setTimeout'] })
     try {
-      const stop = startStepLeaseRefresh('step-1', 10_000, async () => {
+      const stop = startStepLeaseRefresh('step-1', 9_000, async () => {
         calls += 1
         return false
       })
-      mock.timers.tick(5_000)
-      await new Promise((resolve) => setImmediate(resolve))
-      mock.timers.tick(5_000)
-      mock.timers.tick(5_000)
+      for (let i = 0; i < 3; i++) {
+        mock.timers.tick(3_000)
+        await flush()
+      }
       await stop()
     } finally {
       mock.timers.reset()
     }
 
     assert.equal(calls, 1, 'a superseded lease kept being renewed')
-    assert.equal(
-      warnings.filter((w) => w.includes('another dispatch has claimed it'))
-        .length,
-      1
-    )
+    assert.equal(warnings.filter((w) => w.includes('lost its lease')).length, 1)
   })
 })
 

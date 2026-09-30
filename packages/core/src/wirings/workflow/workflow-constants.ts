@@ -70,15 +70,9 @@ export const REDISPATCH_BACKOFF_MAX_MS = 10 * 60_000
 export const DEFAULT_STEP_LEASE_MS = 60_000
 
 /**
- * Share of the lease that elapses before its holder renews it. Half leaves a
- * full lease of slack for a refresh that is slow or has to be retried.
- */
-export const STEP_LEASE_REFRESH_FACTOR = 0.5
-
-/**
  * The refresh interval below which a lease is short enough to be worth saying
  * so. It is a warning threshold, not a floor: applied as one it would push the
- * first refresh past the expiry of any lease under twice this, which is how a
+ * first refresh past the expiry of any lease under three times this, which is how a
  * step ends up claimed twice.
  */
 export const STEP_LEASE_REFRESH_MIN_MS = 1_000
