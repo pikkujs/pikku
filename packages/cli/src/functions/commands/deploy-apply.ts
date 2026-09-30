@@ -501,6 +501,17 @@ export const deployApply = pikkuSessionlessFunc<
     })
 
     if (buildResult.manifest.units.length === 0) {
+      const buildFailure = describeBuildFailure(buildResult)
+      if (buildFailure) {
+        await writeResultFile(resultFile, {
+          success: false,
+          errors: buildResult.unroutedWirings.map((r) => ({
+            step: 'route',
+            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+          })),
+        })
+        throw new PikkuDeployBuildFailedError(buildFailure)
+      }
       logger.info('No deployment units found. Nothing to deploy.')
       await writeResultFile(resultFile, {
         success: true,
@@ -515,10 +526,16 @@ export const deployApply = pikkuSessionlessFunc<
     if (buildFailure) {
       await writeResultFile(resultFile, {
         success: false,
-        errors: buildResult.bundleErrors.map((e) => ({
-          step: 'bundle',
-          error: `${e.unitName}: ${e.error}`,
-        })),
+        errors: [
+          ...buildResult.bundleErrors.map((e) => ({
+            step: 'bundle',
+            error: `${e.unitName}: ${e.error}`,
+          })),
+          ...buildResult.unroutedWirings.map((r) => ({
+            step: 'route',
+            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+          })),
+        ],
         codegenErrors: buildResult.codegenErrors,
       })
       throw new PikkuDeployBuildFailedError(buildFailure)

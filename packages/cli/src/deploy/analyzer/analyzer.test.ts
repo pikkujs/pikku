@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyzeDeployment as analyzeUnpinned,
   toSafeKebab,
+  unroutedHttpWirings,
 } from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
 
@@ -1208,5 +1209,237 @@ describe('analyzeDeployment - rpc.startWorkflow from a function body', () => {
     const unit = starterUnit(stateWithStarter({ startsWorkflows: undefined }))
     assert.equal(unit?.startedWorkflows, undefined)
     assert.ok(!unit?.services.some((s) => s.capability === 'workflow-state'))
+  })
+})
+
+/**
+ * A project with both shapes of `http:<method>:<route>` id: an agent wired over
+ * HTTP with an inline `func` (the route is the app's own, nobody else serves
+ * it) and the OPTIONS preflight beside `rpcCaller`'s catch-all (a bridge whose
+ * route a named function already owns).
+ */
+function stateWithInlineHttpFuncs(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        rpcCaller: { pikkuFuncId: 'rpcCaller', name: 'rpcCaller' },
+        'http:post:/agents/shop': {
+          pikkuFuncId: 'http:post:/agents/shop',
+          name: 'http:post:/agents/shop',
+        },
+        'http:options:/rpc/:rpcName': {
+          pikkuFuncId: 'http:options:/rpc/:rpcName',
+          name: 'http:options:/rpc/:rpcName',
+        },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'rpcCaller',
+            method: 'post',
+            route: '/rpc/:rpcName',
+          },
+          '/agents/shop': {
+            pikkuFuncId: 'http:post:/agents/shop',
+            method: 'post',
+            route: '/agents/shop',
+          },
+        },
+        options: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'http:options:/rpc/:rpcName',
+            method: 'options',
+            route: '/rpc/:rpcName',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - routes wired to an inline func', () => {
+  const servedRoutes = () =>
+    analyzeDeployment(stateWithInlineHttpFuncs(), { projectId: 'test' })
+      .units.flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .map((r) => `${r.method} ${r.route}`)
+
+  // `wireHTTP({ func: agent('shopAssistant') })` has no nameable func, so the
+  // inspector ids it after its route. Skipping every such id dropped the route
+  // from the plan entirely: deployed, active units and a 404 at the edge.
+  test('an inline func on its own route still gets a unit', () => {
+    assert.ok(servedRoutes().includes('POST /agents/shop'))
+  })
+
+  // The OPTIONS preflight beside `rpcCaller`'s catch-all gets no unit of its
+  // own — it rides the unit of the function that owns the route, which is what
+  // makes it reachable rather than merely not-duplicated.
+  test('a bridge onto a route a named function owns rides that unit', () => {
+    const manifest = analyzeDeployment(stateWithInlineHttpFuncs(), {
+      projectId: 'test',
+    })
+    const rpcUnit = manifest.units.find((u) =>
+      u.functionIds.includes('rpcCaller')
+    )
+    assert.ok(rpcUnit)
+    const routes = rpcUnit.handlers
+      .flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      .map((r) => `${r.method} ${r.route}`)
+    assert.deepEqual(routes.sort(), [
+      'OPTIONS /rpc/:rpcName',
+      'POST /rpc/:rpcName',
+    ])
+  })
+})
+
+describe('unroutedHttpWirings', () => {
+  test('names a declared route that reached no unit', () => {
+    const state = stateWithInlineHttpFuncs()
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    assert.deepEqual(unroutedHttpWirings(state.http.meta, manifest.units), [])
+
+    // The shape every dropped route had: declared, generated into the meta,
+    // owned by nothing. Previously indistinguishable from a healthy build.
+    assert.deepEqual(
+      unroutedHttpWirings(state.http.meta, [])
+        .map((r) => r.route)
+        .sort(),
+      ['/agents/shop', '/rpc/:rpcName', '/rpc/:rpcName']
+    )
+  })
+
+  // `agentCaller`'s `/rpc/agent/:agentName` is re-emitted as one concrete route
+  // per agent, so the parameterized declaration owning no unit is correct.
+  test('ignores the scaffold callers the analyzer expands per agent', () => {
+    const httpMeta = {
+      post: {
+        '/rpc/agent/:agentName': {
+          pikkuFuncId: 'agentCaller',
+          method: 'post',
+          route: '/rpc/agent/:agentName',
+        },
+      },
+    } as any
+    assert.deepEqual(unroutedHttpWirings(httpMeta, []), [])
+  })
+})
+
+function stateWithTwoFunctionsOnOnePath(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getItems: { pikkuFuncId: 'getItems', name: 'getItems' },
+        postItems: { pikkuFuncId: 'postItems', name: 'postItems' },
+        'http:options:/items': {
+          pikkuFuncId: 'http:options:/items',
+          name: 'http:options:/items',
+        },
+      },
+    },
+    http: {
+      meta: {
+        get: {
+          '/items': { pikkuFuncId: 'getItems', method: 'get', route: '/items' },
+        },
+        post: {
+          '/items': {
+            pikkuFuncId: 'postItems',
+            method: 'post',
+            route: '/items',
+          },
+        },
+        options: {
+          '/items': {
+            pikkuFuncId: 'http:options:/items',
+            method: 'options',
+            route: '/items',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - a synthetic bridge shared by two owners', () => {
+  test('the bridge is attached to exactly one unit', () => {
+    const manifest = analyzeDeployment(stateWithTwoFunctionsOnOnePath(), {
+      projectId: 'test',
+    })
+    const bridges = manifest.units
+      .flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .filter((r) => r.method === 'OPTIONS' && r.route === '/items')
+    assert.equal(bridges.length, 1)
+  })
+})
+
+describe('unroutedHttpWirings - ownership', () => {
+  // Another function's route on the same method and path must not satisfy the
+  // declaration: the declared handler would still be missing.
+  test('a different pikkuFuncId on the same method and path does not count', () => {
+    const httpMeta = {
+      get: {
+        '/mcp': {
+          pikkuFuncId: 'declaredThing',
+          method: 'get',
+          route: '/mcp',
+        },
+      },
+    } as any
+    const units = [
+      {
+        name: 'u',
+        handlers: [
+          {
+            type: 'fetch',
+            routes: [
+              { method: 'GET', route: '/mcp', pikkuFuncId: 'mcpGateway' },
+            ],
+          },
+        ],
+      },
+    ] as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, units).map((r) => r.pikkuFuncId),
+      ['declaredThing']
+    )
+  })
+
+  // The thread readers ride the gateway unit but declare no route of their own,
+  // so a declared HTTP route onto one reaches nothing and must be reported.
+  test('a declared route onto a thread reader is reported', () => {
+    const httpMeta = {
+      get: {
+        '/threads': {
+          pikkuFuncId: 'getAgentThreads',
+          method: 'get',
+          route: '/threads',
+        },
+      },
+    } as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, []).map((r) => r.route),
+      ['/threads']
+    )
   })
 })

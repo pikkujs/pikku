@@ -11,10 +11,10 @@ import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
 
-import { analyzeDeployment } from './analyzer/index.js'
+import { analyzeDeployment, unroutedHttpWirings } from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
-import type { DeploymentManifest } from '@pikku/deploy'
+import type { DeploymentManifest, HttpRouteInfo } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
@@ -47,6 +47,7 @@ export interface BuildPipelineResult {
   bundled: BundleResult[]
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
+  unroutedWirings: HttpRouteInfo[]
 }
 
 /**
@@ -61,16 +62,34 @@ export class PikkuDeployBuildFailedError extends PikkuError {}
  * when every unit was generated and bundled.
  */
 export function describeBuildFailure(
-  result: Pick<BuildPipelineResult, 'bundleErrors' | 'codegenErrors'>
+  result: Pick<
+    BuildPipelineResult,
+    'bundleErrors' | 'codegenErrors' | 'unroutedWirings'
+  >
 ): string | null {
   const failures = [
     ...result.codegenErrors.map((e) => `codegen ${e.unitName}: ${e.error}`),
     ...result.bundleErrors.map((e) => `bundle ${e.unitName}: ${e.error}`),
   ]
-  if (failures.length === 0) {
+  const unrouted = result.unroutedWirings ?? []
+  if (failures.length === 0 && unrouted.length === 0) {
     return null
   }
-  return `Deploy build failed — ${failures.length} unit(s) did not build:\n  ${failures.join('\n  ')}`
+  const parts: string[] = []
+  if (failures.length > 0) {
+    parts.push(
+      `Deploy build failed — ${failures.length} unit(s) did not build:\n  ${failures.join('\n  ')}`
+    )
+  }
+  if (unrouted.length > 0) {
+    parts.push(
+      `Deploy build failed — ${unrouted.length} route(s) reached no unit and would 404 once deployed:\n  ` +
+        unrouted
+          .map((r) => `${r.method} ${r.route} (func ${r.pikkuFuncId})`)
+          .join('\n  ')
+    )
+  }
+  return parts.join('\n\n')
 }
 
 const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'
@@ -360,6 +379,10 @@ export async function runBuildPipeline(options: {
     workflowQueues,
   })
 
+  const unroutedWirings = provider.singleUnit
+    ? []
+    : unroutedHttpWirings(inspectorState.http.meta, manifest.units)
+
   let bundled: BundleResult[] = []
   let bundleErrors: Array<{ unitName: string; error: string }> = []
   let codegenErrors: Array<{ unitName: string; error: string }> = []
@@ -478,6 +501,7 @@ export async function runBuildPipeline(options: {
         bundled: [],
         bundleErrors: [],
         codegenErrors: [],
+        unroutedWirings,
       }
     }
 
@@ -777,5 +801,6 @@ export async function runBuildPipeline(options: {
     bundled,
     bundleErrors,
     codegenErrors,
+    unroutedWirings,
   }
 }

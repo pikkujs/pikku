@@ -91,6 +91,33 @@ export interface AnalyzerOptions {
  * `mcpPath` in `mcp.gen.json` moves the mount but not this — the analyzer never
  * reads that file.
  */
+/**
+ * Scaffold functions the analyzer re-emits as concrete routes: `agentCaller`'s
+ * `/rpc/agent/:agentName` becomes one route per agent. Their parameterized
+ * declarations are therefore expected to own no unit, which is what keeps them
+ * out of `unroutedHttpWirings`.
+ */
+const GATEWAY_EXPANDED_CALLERS = new Set([
+  'agentCaller',
+  'agentStreamCaller',
+  'agentApproveCaller',
+  'agentResumeCaller',
+])
+
+/**
+ * Scaffold functions skipped as units but NOT exempt from the unrouted check.
+ * The thread readers ride the agent gateway unit but the gateway declares no
+ * route for them, so a declared HTTP route onto one has no unit and must be
+ * reported rather than silently dropped.
+ */
+const SKIPPED_SCAFFOLD_UNITS = new Set([
+  ...GATEWAY_EXPANDED_CALLERS,
+  'getAgentThreads',
+  'getAgentThreadMessages',
+  'getAgentThreadRuns',
+  'deleteAgentThread',
+])
+
 const MCP_PATH = '/mcp'
 
 /** The discovery document `PikkuMCPServer` serves, per RFC 9728. */
@@ -148,6 +175,10 @@ export function analyzeDeployment(
   const httpPrefix = (options.globalHTTPPrefix ?? '').replace(/\/+$/, '')
   const prefixed = (route: string) => `${httpPrefix}${route}`
   const units: DeploymentUnit[] = []
+  // A synthetic bridge (the OPTIONS preflight beside a catch-all) belongs to
+  // exactly one unit. When two named functions share a path, the bridge's route
+  // is in both owners' `owned` sets; this keeps the second from claiming it too.
+  const claimedSyntheticBridges = new Set<string>()
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
   const channels: ChannelDefinition[] = []
@@ -285,6 +316,17 @@ export function analyzeDeployment(
     return name
   }
 
+  const routesWithNamedOwner = new Set<string>()
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (!isSyntheticHttpBridge(routeMeta.pikkuFuncId)) {
+        routesWithNamedOwner.add(routeMeta.route)
+      }
+    }
+  }
+
   // ── Step 1: Create function units ──────────────────────────────────
   // Each function gets one unit. Collect all its triggers.
 
@@ -306,16 +348,13 @@ export function analyzeDeployment(
     }
 
     // Skip scaffold catch-all functions — they're bundled into units that need them
+    if (SKIPPED_SCAFFOLD_UNITS.has(funcId)) {
+      continue
+    }
+
     if (
-      funcId.startsWith('http:') ||
-      funcId === 'agentCaller' ||
-      funcId === 'agentStreamCaller' ||
-      funcId === 'agentApproveCaller' ||
-      funcId === 'agentResumeCaller' ||
-      funcId === 'getAgentThreads' ||
-      funcId === 'getAgentThreadMessages' ||
-      funcId === 'getAgentThreadRuns' ||
-      funcId === 'deleteAgentThread'
+      isSyntheticHttpBridge(funcId) &&
+      routesWithNamedOwner.has(routeOfSyntheticHttpBridge(funcId))
     ) {
       continue
     }
@@ -323,7 +362,7 @@ export function analyzeDeployment(
     const handlers: DeploymentHandler[] = []
 
     // HTTP routes for this function
-    const routes = collectHttpRoutes(httpMeta, funcId)
+    const routes = collectHttpRoutes(httpMeta, funcId, claimedSyntheticBridges)
     if (routes.length > 0) {
       handlers.push({ type: 'fetch', routes })
     }
@@ -435,12 +474,16 @@ export function analyzeDeployment(
     // the addon's own `expose: true` does — the same rule `rpc.exposed`
     // applies at runtime, so the unit carries exactly what can be called.
     const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
-    const exposed = entries(addonMeta).filter(([funcName, meta]) =>
+    const isExposed = (funcName: string, meta: { expose?: boolean }) =>
       Array.isArray(wiredExpose)
         ? wiredExpose.includes(funcName)
-        : wiredExpose !== false && meta.expose
+        : wiredExpose !== false && !!meta.expose
+    const wired = entries(addonMeta).filter(
+      ([funcName, meta]) =>
+        isExposed(funcName, meta) ||
+        collectHttpRoutes(httpMeta, `${namespace}:${funcName}`).length > 0
     )
-    if (exposed.length === 0) {
+    if (wired.length === 0) {
       continue
     }
 
@@ -455,20 +498,25 @@ export function analyzeDeployment(
     const addonForcedBy: string[] = []
     let target: 'serverless' | 'server' = defaultTarget
 
-    for (const [funcName, funcMeta] of exposed) {
+    for (const [funcName, funcMeta] of wired) {
       const rpcName = `${namespace}:${funcName}`
       functionIds.push(rpcName)
-      addonUnitByRpcName.set(rpcName, unitName)
-      routes.push({
-        method: 'post',
-        route: prefixed(`/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
-      routes.push({
-        method: 'post',
-        route: prefixed(`/remote/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
+      routes.push(
+        ...collectHttpRoutes(httpMeta, rpcName, claimedSyntheticBridges)
+      )
+      if (isExposed(funcName, funcMeta)) {
+        addonUnitByRpcName.set(rpcName, unitName)
+        routes.push({
+          method: 'post',
+          route: prefixed(`/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+        routes.push({
+          method: 'post',
+          route: prefixed(`/remote/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+      }
       for (const service of collectServicesForFunction(funcMeta)) {
         if (
           !services.some(
@@ -1265,21 +1313,107 @@ const HTTP_METHODS = [
   'options',
 ] as const
 
+/**
+ * `http:<method>:<route>` is the inspector's fallback id for a wiring whose
+ * `func` is an inline expression it could not name (`agent('x')`, an inline
+ * handler). It marks an unnamed function, NOT a route somebody else serves —
+ * only a route a named function also owns, such as the OPTIONS preflight beside
+ * `rpcCaller`'s `/rpc/:rpcName`, is a scaffold bridge safe to drop.
+ */
+function isSyntheticHttpBridge(funcId: string): boolean {
+  return funcId.startsWith('http:')
+}
+
+function routeOfSyntheticHttpBridge(funcId: string): string {
+  return funcId.slice(funcId.indexOf(':', 'http:'.length) + 1)
+}
+
+/**
+ * Routes the app declares that no unit ended up serving. Units are built by
+ * walking functions and asking which routes point at each one, so a route
+ * nothing claims produces no handler and no error — it simply is not deployed,
+ * and the stage 404s it while every worker reports healthy. Checked against the
+ * finished manifest so it holds however a route came to be dropped.
+ */
+export function unroutedHttpWirings(
+  httpMeta: HTTPWiringsMeta,
+  units: DeploymentUnit[]
+): HttpRouteInfo[] {
+  const served = new Set<string>()
+  for (const unit of units) {
+    for (const handler of unit.handlers) {
+      if (handler.type !== 'fetch') continue
+      for (const route of handler.routes) {
+        served.add(
+          `${route.method.toUpperCase()} ${route.route} ${route.pikkuFuncId}`
+        )
+      }
+    }
+  }
+  const unrouted: HttpRouteInfo[] = []
+  const seen = new Set<string>()
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (GATEWAY_EXPANDED_CALLERS.has(routeMeta.pikkuFuncId)) continue
+      const key = `${method.toUpperCase()} ${routeMeta.route} ${routeMeta.pikkuFuncId}`
+      if (served.has(key) || seen.has(key)) continue
+      seen.add(key)
+      unrouted.push({
+        method: method.toUpperCase(),
+        route: routeMeta.route,
+        pikkuFuncId: routeMeta.pikkuFuncId,
+      })
+    }
+  }
+  return unrouted
+}
+
 function collectHttpRoutes(
   httpMeta: HTTPWiringsMeta,
-  funcId: string
+  funcId: string,
+  claimedSyntheticBridges?: Set<string>
 ): HttpRouteInfo[] {
   const routes: HttpRouteInfo[] = []
+  const owned = new Set<string>()
 
   for (const method of HTTP_METHODS) {
     const methodRoutes = httpMeta[method]
     if (!methodRoutes) continue
     for (const routeMeta of values(methodRoutes)) {
       if (routeMeta.pikkuFuncId === funcId) {
+        owned.add(routeMeta.route)
         routes.push({
           method: method.toUpperCase(),
           route: routeMeta.route,
           pikkuFuncId: funcId,
+        })
+      }
+    }
+  }
+
+  if (owned.size === 0 || isSyntheticHttpBridge(funcId)) {
+    return routes
+  }
+
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (
+        isSyntheticHttpBridge(routeMeta.pikkuFuncId) &&
+        owned.has(routeMeta.route)
+      ) {
+        const bridgeKey = `${method.toUpperCase()} ${routeMeta.route} ${routeMeta.pikkuFuncId}`
+        if (claimedSyntheticBridges) {
+          if (claimedSyntheticBridges.has(bridgeKey)) continue
+          claimedSyntheticBridges.add(bridgeKey)
+        }
+        routes.push({
+          method: method.toUpperCase(),
+          route: routeMeta.route,
+          pikkuFuncId: routeMeta.pikkuFuncId,
         })
       }
     }
