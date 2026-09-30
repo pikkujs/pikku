@@ -188,7 +188,7 @@ export const fabricCommands = defineCLICommands({
       },
       force: {
         description:
-          'Replace a link from FABRIC_PROJECT_ID or a legacy pikkufabric.config.json (a git-remote link cannot be replaced)',
+          'Replace a link from FABRIC_PROJECT_ID (a git-remote link cannot be replaced)',
         default: false,
       },
       apiUrl: { description: 'Override the fabric-api URL for this call' },

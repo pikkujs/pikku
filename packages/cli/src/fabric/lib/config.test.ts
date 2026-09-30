@@ -58,19 +58,9 @@ describe('resolveApiContext', () => {
     assert.equal(fromEnv.token, null)
   })
 
-  test('the flag beats everything, a legacy file beats env', async () => {
+  test('the flag beats env', async () => {
     const dir = await makeTmp()
-    await writeFile(
-      join(dir, 'pikkufabric.config.json'),
-      JSON.stringify({ projectId: 'p1', apiUrl: 'http://file:4002' })
-    )
     process.env.FABRIC_API_URL = 'http://env:4002'
-
-    const fromFile = await resolveApiContext({
-      startDir: dir,
-      resolveProject: false,
-    })
-    assert.equal(fromFile.apiUrlSource, 'config-file')
 
     const fromFlag = await resolveApiContext({
       startDir: dir,
@@ -83,37 +73,11 @@ describe('resolveApiContext', () => {
 
   test('resolveProject: false leaves the project unresolved', async () => {
     const dir = await makeTmp()
-    await writeFile(
-      join(dir, 'pikkufabric.config.json'),
-      JSON.stringify({ projectId: 'p1' })
-    )
     const ctx = await resolveApiContext({
       startDir: dir,
       resolveProject: false,
     })
     assert.equal(ctx.projectId, null)
     assert.equal(ctx.project, null)
-  })
-
-  test('logged out, a legacy file still links the project', async () => {
-    const dir = await makeTmp()
-    await mkdir(join(dir, 'sub'))
-    await writeFile(
-      join(dir, 'pikkufabric.config.json'),
-      JSON.stringify({ projectId: 'p1' })
-    )
-    const ctx = await resolveApiContext({ startDir: join(dir, 'sub') })
-    assert.equal(ctx.projectId, 'p1')
-    assert.equal(ctx.project?.source, 'config-file')
-  })
-
-  test('a placeholder projectId is not a link', async () => {
-    const dir = await makeTmp()
-    await writeFile(
-      join(dir, 'pikkufabric.config.json'),
-      JSON.stringify({ projectId: '__PROJECT_ID__' })
-    )
-    const ctx = await resolveApiContext({ startDir: dir })
-    assert.equal(ctx.projectId, null)
   })
 })

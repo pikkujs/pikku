@@ -1,11 +1,8 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import {
-  findProjectConfig,
-  isLinkedProjectId,
-  resolveApiContext,
-} from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
 import { matchRemoteProjects } from '../lib/project-link.js'
+import { readConfigProjectId } from '../lib/project-id.js'
 import { getFabricRPC } from '../lib/http.js'
 import { dim } from '../lib/output.js'
 import { FabricPreconditionError } from '../lib/errors.js'
@@ -55,15 +52,16 @@ export const FabricProjectsList = pikkuSessionlessFunc({
     // Every project on the matched remote is marked, not just one: when two
     // share a repo this is the listing that has to show the user both.
     const fromEnv = process.env.FABRIC_PROJECT_ID?.trim()
-    const [match] = fromEnv ? [] : await matchRemoteProjects(projects)
-    const legacy = fromEnv || match ? null : await findProjectConfig()
+    const fromConfig = fromEnv ? null : await readConfigProjectId()
+    const [match] =
+      fromEnv || fromConfig ? [] : await matchRemoteProjects(projects)
     const linkedIds = new Set(
       fromEnv
         ? [fromEnv]
-        : match
-          ? match.matches.map((project) => project.projectId)
-          : legacy && isLinkedProjectId(legacy.config.projectId)
-            ? [legacy.config.projectId]
+        : fromConfig
+          ? [fromConfig.projectId]
+          : match
+            ? match.matches.map((project) => project.projectId)
             : []
     )
 

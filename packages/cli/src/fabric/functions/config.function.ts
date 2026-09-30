@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { findProjectConfig, resolveApiContext } from '../lib/config.js'
+import { resolveApiContext } from '../lib/config.js'
 import { dim, keyValue } from '../lib/output.js'
 
 export const FabricConfigInput = z.object({
@@ -12,7 +12,7 @@ export const FabricConfigInput = z.object({
 
 const FabricConfigProject = z.object({
   projectId: z.string(),
-  source: z.enum(['env', 'remote', 'config-file']),
+  source: z.enum(['env', 'config', 'remote']),
   detail: z.string(),
   name: z.string().optional(),
   slug: z.string().optional(),
@@ -22,7 +22,7 @@ const FabricConfigProject = z.object({
 
 export const FabricConfigOutput = z.object({
   apiUrl: z.string(),
-  apiUrlSource: z.enum(['flag', 'config-file', 'env', 'login', 'default']),
+  apiUrlSource: z.enum(['flag', 'env', 'login', 'default']),
   loggedIn: z.boolean(),
   project: FabricConfigProject.nullable(),
   /** Why the project could not be resolved, when it could not. */
@@ -30,8 +30,6 @@ export const FabricConfigOutput = z.object({
   frontends: z.array(
     z.object({ slug: z.string(), cwd: z.string(), kind: z.string().optional() })
   ),
-  /** A pikkufabric.config.json still in the tree — no longer needed. */
-  legacyConfigFile: z.string().nullable(),
 })
 
 type FabricConfigResult = z.infer<typeof FabricConfigOutput>
@@ -90,7 +88,6 @@ export const FabricConfig = pikkuSessionlessFunc({
     } catch (error) {
       projectError = error instanceof Error ? error.message : String(error)
     }
-    const legacy = await findProjectConfig()
 
     return {
       apiUrl: base.apiUrl,
@@ -99,7 +96,6 @@ export const FabricConfig = pikkuSessionlessFunc({
       project,
       projectError,
       frontends: await readFrontends(process.cwd()),
-      legacyConfigFile: legacy?.path ?? null,
     }
   },
 })
@@ -109,8 +105,8 @@ const PROJECT_SOURCE_LABEL: Record<
   string
 > = {
   env: 'env',
+  config: 'pikku.config.json',
   remote: 'git remote',
-  'config-file': 'pikkufabric.config.json',
 }
 
 export const renderConfig = (_s: unknown, config: FabricConfigResult): void => {
@@ -153,11 +149,4 @@ export const renderConfig = (_s: unknown, config: FabricConfigResult): void => {
       : dim('(none in pikku.config.json)'),
   ])
   console.log(keyValue(rows))
-  if (config.legacyConfigFile) {
-    console.log(
-      dim(
-        `${config.legacyConfigFile} is no longer needed: the project is resolved from the git remote. Delete it once \`project\` above shows the git remote.`
-      )
-    )
-  }
 }

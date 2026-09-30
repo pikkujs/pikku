@@ -307,24 +307,6 @@ describe('pikku fabric validate', () => {
         await rm(tmp, { recursive: true, force: true })
       }
     })
-
-    test('a leftover pikkufabric.config.json → info that it is unneeded', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikkufabric.config.json'), {
-          projectId: 'proj-abc123',
-        })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true)
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-config-unneeded'
-        )
-        assert.strictEqual(finding?.severity, 'info')
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
   })
 
   describe('pikku.config.json', () => {

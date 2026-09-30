@@ -1,8 +1,8 @@
 import { FabricPreconditionError } from './errors.js'
+import { isTreeCleanBesidesProjectId } from './project-id.js'
 import {
   currentBranch,
   headSha,
-  isWorkingTreeClean,
   localBranchHeadSha,
   remoteHeadSha,
   upstreamBranch,
@@ -24,7 +24,7 @@ export interface DeploySafetyResult {
 export async function assertDeploySafety(
   cwd?: string
 ): Promise<DeploySafetyResult> {
-  if (!(await isWorkingTreeClean(cwd))) {
+  if (!(await isTreeCleanBesidesProjectId(cwd))) {
     throw new FabricPreconditionError(
       'Deployment blocked: uncommitted changes detected.\nCommit and push your changes before deploying.'
     )

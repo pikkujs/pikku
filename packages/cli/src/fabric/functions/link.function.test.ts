@@ -6,11 +6,11 @@ import * as httpLib from '../lib/http.js'
 import * as gitLib from '../../utils/git.js'
 import * as safetyLib from '../lib/deploy-safety.js'
 import * as orgLib from '../lib/organization.js'
+import * as projectIdLib from '../lib/project-id.js'
 
 /**
  * The command end to end, against a faked fabric and a faked git. What matters
- * is what it does NOT do: the repo is the link, so nothing is written to the
- * checkout and nothing is committed or pushed on the user's behalf — the only
+ * is what it does NOT do: nothing is committed or pushed on the user's behalf — the only
  * push is the first one into a repo `--gitea` just created.
  *
  * `mock.module` outlives this file (see changes-commands.test.ts), so every
@@ -21,6 +21,7 @@ const realHttp = { ...httpLib }
 const realGit = { ...gitLib }
 const realSafety = { ...safetyLib }
 const realOrg = { ...orgLib }
+const realProjectId = { ...projectIdLib }
 let override = true
 
 let context: { token: string | null; apiUrl: string; project: any }
@@ -69,6 +70,19 @@ mock.module('../lib/organization.js', () => ({
   ...realOrg,
   resolveOrganizationId: async (...args: any[]) =>
     override ? undefined : (realOrg.resolveOrganizationId as any)(...args),
+}))
+
+mock.module('../lib/project-id.js', () => ({
+  ...realProjectId,
+  isTreeCleanBesidesProjectId: async (...args: any[]) =>
+    override
+      ? clean
+      : (realProjectId.isTreeCleanBesidesProjectId as any)(...args),
+  writeConfigProjectId: async (...args: any[]) => {
+    if (!override) return (realProjectId.writeConfigProjectId as any)(...args)
+    order.push('writeConfigProjectId')
+    return true
+  },
 }))
 
 mock.module('../lib/deploy-safety.js', () => ({
@@ -129,7 +143,7 @@ describe('fabric link', () => {
     pushes.length = 0
   })
 
-  test('imports and deploys without writing or pushing anything', async () => {
+  test('imports, records the id uncommitted, and deploys without pushing', async () => {
     const result = await run()
 
     assert.deepStrictEqual(
@@ -138,6 +152,7 @@ describe('fabric link', () => {
     )
     assert.deepStrictEqual(order, [
       'rpc:importProject',
+      'writeConfigProjectId',
       'assertDeploySafety',
       'rpc:deployByStageKind',
     ])
@@ -150,10 +165,10 @@ describe('fabric link', () => {
     })
   })
 
-  test('refuses a repo that is already some project’s remote', async () => {
+  test('refuses a repo that already names a project', async () => {
     context.project = {
       projectId: 'proj_0',
-      source: 'remote',
+      source: 'config',
       detail: 'origin → https://gitea.test/acme/shop',
       name: 'shop',
     }

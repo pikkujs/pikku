@@ -518,6 +518,13 @@ export type PikkuCLIInput = {
   emailTemplatesDir?: string
 
   /**
+   * The Fabric project this checkout belongs to. Optional: without it the CLI
+   * finds the project from the git remote and writes the id here, uncommitted.
+   * `FABRIC_PROJECT_ID` overrides it.
+   */
+  projectId?: string
+
+  /**
    * Every frontend in the project, by name — the one list of apps. An entry
    * with `serve` is mounted on the pikku server; one with `native` is packaged
    * as an installable app. Managed by `pikku app`.

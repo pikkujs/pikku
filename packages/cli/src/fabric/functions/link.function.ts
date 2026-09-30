@@ -9,11 +9,14 @@ import {
   getRemoteUrl,
   hasCommits,
   hasRemote,
-  isWorkingTreeClean,
   branchFromHead,
   pushWithCredential,
   removeRemote,
 } from '../../utils/git.js'
+import {
+  isTreeCleanBesidesProjectId,
+  writeConfigProjectId,
+} from '../lib/project-id.js'
 import { assertDeploySafety } from '../lib/deploy-safety.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { resolveOrganizationId } from '../lib/organization.js'
@@ -46,7 +49,7 @@ const isGithubUrl = (url: string): boolean => /github\.com/i.test(url)
 
 export const FabricLink = pikkuSessionlessFunc({
   description:
-    'Register the current git repo as a fabric project and queue an initial deploy. The repo is the link: nothing is written to it.',
+    'Register the current git repo as a fabric project and queue an initial deploy. The project id is written to pikku.config.json, uncommitted.',
   input: FabricLinkInput,
   output: FabricLinkOutput,
   func: async (
@@ -61,7 +64,7 @@ export const FabricLink = pikkuSessionlessFunc({
     }
     // A second project on the same repo would make every later command unable
     // to tell which one this checkout means.
-    if (ctx.project?.source === 'remote') {
+    if (ctx.project && ctx.project.source !== 'env') {
       throw new FabricPreconditionError(
         `Already linked: ${ctx.project.detail} is the repo of ${ctx.project.name ?? ctx.project.projectId}.\nRun \`pikku fabric config\` to see it, or \`pikku fabric deploy\` to ship it.`
       )
@@ -84,7 +87,7 @@ export const FabricLink = pikkuSessionlessFunc({
         'Nothing to link: this repository has no commits yet. Commit your work first — fabric deploys a pushed commit, not a working directory.'
       )
     }
-    if (!(await isWorkingTreeClean())) {
+    if (!(await isTreeCleanBesidesProjectId())) {
       throw new FabricPreconditionError(
         'Deployment blocked: uncommitted changes detected.\nCommit and push your changes before deploying.'
       )
@@ -147,6 +150,12 @@ export const FabricLink = pikkuSessionlessFunc({
     console.log(
       `[fabric] linked ${project.projectSlug} projectId=${project.projectId}`
     )
+
+    if (await writeConfigProjectId(project.projectId)) {
+      console.log(
+        '[fabric] wrote projectId to pikku.config.json (not committed)'
+      )
+    }
 
     const safety = await assertDeploySafety()
 

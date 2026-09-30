@@ -1,4 +1,5 @@
 import { getRemoteUrl, git, isGitRepo } from '../../utils/git.js'
+import { readConfigProjectId, writeConfigProjectId } from './project-id.js'
 import { FabricPreconditionError } from './errors.js'
 import type { getFabricRPC } from './http.js'
 
@@ -10,7 +11,7 @@ import type { getFabricRPC } from './http.js'
  * fresh clone is linked without running anything. Nothing is written to the
  * repository, so linking never dirties the tree or needs a commit.
  */
-export type ProjectSource = 'env' | 'remote' | 'config-file'
+export type ProjectSource = 'env' | 'config' | 'remote'
 
 export interface LinkedProject {
   projectId: string
@@ -103,36 +104,37 @@ export const matchRemoteProjects = async (
  * The project this checkout is linked to, or null when nothing links it.
  *
  *   1. `FABRIC_PROJECT_ID` — CI, scripts, and anyone overriding the remote.
- *   2. A git remote whose repo is a fabric project in the session's org.
- *   3. `projectId` in a legacy `pikkufabric.config.json`, so a repo that
- *      committed one keeps working.
+ *   2. `projectId` in pikku.config.json.
+ *   3. A git remote whose repo is a fabric project in the session's org; the
+ *      id is then written into pikku.config.json (uncommitted), so the lookup
+ *      happens once.
  *
  * Two projects on one repo is refused rather than guessed between.
  */
 export const resolveLinkedProject = async ({
   rpc,
   cwd,
-  legacy,
 }: {
   rpc: ReturnType<typeof getFabricRPC> | null
   cwd?: string
-  legacy?: { projectId: string; path: string } | null
 }): Promise<LinkedProject | null> => {
   const fromEnv = process.env.FABRIC_PROJECT_ID?.trim()
   if (fromEnv) {
     return { projectId: fromEnv, source: 'env', detail: 'FABRIC_PROJECT_ID' }
   }
 
-  if (rpc && (await listRemotes(cwd)).length > 0) {
-    let projects: FabricProjectRow[] | null = null
-    try {
-      projects = (await rpc.invoke('fabricCliProjects', {})).projects
-    } catch (error) {
-      // The legacy file can still answer; without one, the lookup failing is
-      // the real error and hiding it behind "not linked" would mislead.
-      if (!legacy) throw error
+  const fromConfig = await readConfigProjectId(cwd)
+  if (fromConfig) {
+    return {
+      projectId: fromConfig.projectId,
+      source: 'config',
+      detail: fromConfig.path,
     }
-    if (projects) {
+  }
+
+  if (rpc && (await listRemotes(cwd)).length > 0) {
+    const { projects } = await rpc.invoke('fabricCliProjects', {})
+    {
       const [first] = await matchRemoteProjects(projects, cwd)
       if (first) {
         if (first.matches.length > 1) {
@@ -145,6 +147,7 @@ export const resolveLinkedProject = async ({
           )
         }
         const project = first.matches[0]!
+        await writeConfigProjectId(project.projectId, cwd)
         return {
           projectId: project.projectId,
           source: 'remote',
@@ -158,12 +161,5 @@ export const resolveLinkedProject = async ({
     }
   }
 
-  if (legacy) {
-    return {
-      projectId: legacy.projectId,
-      source: 'config-file',
-      detail: legacy.path,
-    }
-  }
   return null
 }

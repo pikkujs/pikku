@@ -47,7 +47,7 @@ export const FabricValidateOutput = z.object({
 async function findProjectRoot(startDir: string): Promise<string> {
   let dir = startDir
   while (true) {
-    if (existsSync(join(dir, 'pikkufabric.config.json'))) {
+    if (existsSync(join(dir, 'pikku.config.json'))) {
       return dir
     }
     if (existsSync(join(dir, 'package.json'))) {
@@ -470,19 +470,6 @@ export async function runValidate(
       lines(
         'Run `pikku fabric link` to create the project from this repo.',
         'If the project already exists under a different remote, set FABRIC_PROJECT_ID=<projectId> (see `pikku fabric projects`).'
-      )
-    )
-  }
-
-  const legacyConfigPath = join(root, 'pikkufabric.config.json')
-  if (existsSync(legacyConfigPath)) {
-    info(
-      'fabric-config-unneeded',
-      'pikkufabric.config.json is no longer needed — the project is resolved from the git remote, and frontends live in pikku.config.json',
-      legacyConfigPath,
-      lines(
-        'Check `pikku fabric config` shows the project from the git remote, then:',
-        '  git rm pikkufabric.config.json'
       )
     )
   }
@@ -1373,7 +1360,7 @@ export async function runValidate(
   }
 
   // ── declared frontends ────────────────────────────────────────────────
-  // pikkufabric.config.json is unvalidated JSON, so every field below is a
+  // pikku.config.json is unvalidated JSON, so every field below is a
   // claim, not a guarantee: a null entry or a non-string cwd used to throw on
   // property access and take down the whole validation run — the one thing that
   // was supposed to report the broken config. Shape-check the entries once here

@@ -1,6 +1,6 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { git } from '../../utils/git.js'
@@ -106,10 +106,37 @@ describe('resolveLinkedProject', () => {
   test('FABRIC_PROJECT_ID wins without asking fabric', async () => {
     process.env.FABRIC_PROJECT_ID = 'from-env'
     const { rpc, calls } = fakeRpc([])
-    const project = await resolveLinkedProject({ rpc, legacy: null })
+    const project = await resolveLinkedProject({ rpc })
     assert.equal(project?.projectId, 'from-env')
     assert.equal(project?.source, 'env')
     assert.deepEqual(calls, [])
+  })
+
+  test('projectId in pikku.config.json wins over the remote without asking fabric', async () => {
+    const dir = await repoWithRemotes({
+      origin: 'https://github.com/acme/shop.git',
+    })
+    await writeFile(join(dir, 'pikku.config.json'), '{"projectId":"cfg"}')
+    const { rpc, calls } = fakeRpc([
+      row('shop', 'https://github.com/acme/shop'),
+    ])
+    const project = await resolveLinkedProject({ rpc, cwd: dir })
+    assert.equal(project?.projectId, 'cfg')
+    assert.equal(project?.source, 'config')
+    assert.deepEqual(calls, [])
+  })
+
+  test('a remote match is written into pikku.config.json', async () => {
+    const dir = await repoWithRemotes({
+      origin: 'https://github.com/acme/shop.git',
+    })
+    await writeFile(join(dir, 'pikku.config.json'), '{\n  "outDir": "x"\n}\n')
+    const { rpc } = fakeRpc([row('shop', 'https://github.com/acme/shop')])
+    await resolveLinkedProject({ rpc, cwd: dir })
+    assert.match(
+      await readFile(join(dir, 'pikku.config.json'), 'utf8'),
+      /"projectId": "shop"/
+    )
   })
 
   test('the git remote names the project', async () => {
@@ -120,11 +147,7 @@ describe('resolveLinkedProject', () => {
       row('other', 'https://github.com/acme/other'),
       row('shop', 'https://github.com/acme/shop'),
     ])
-    const project = await resolveLinkedProject({
-      rpc,
-      cwd: dir,
-      legacy: { projectId: 'stale', path: '/x/pikkufabric.config.json' },
-    })
+    const project = await resolveLinkedProject({ rpc, cwd: dir })
     assert.equal(project?.projectId, 'shop')
     assert.equal(project?.source, 'remote')
     assert.equal(project?.name, 'name-shop')
@@ -140,60 +163,34 @@ describe('resolveLinkedProject', () => {
       row('b', 'git@github.com:acme/shop.git'),
     ])
     await assert.rejects(
-      resolveLinkedProject({ rpc, cwd: dir, legacy: null }),
+      resolveLinkedProject({ rpc, cwd: dir }),
       /2 fabric projects[\s\S]*FABRIC_PROJECT_ID/
     )
   })
 
-  test('no matching remote falls back to the legacy file', async () => {
-    const dir = await repoWithRemotes({
-      origin: 'https://github.com/acme/shop.git',
-    })
-    const { rpc } = fakeRpc([row('other', 'https://github.com/acme/other')])
-    const project = await resolveLinkedProject({
-      rpc,
-      cwd: dir,
-      legacy: { projectId: 'legacy', path: '/x/pikkufabric.config.json' },
-    })
-    assert.equal(project?.projectId, 'legacy')
-    assert.equal(project?.source, 'config-file')
-  })
-
-  test('no match and no file is unlinked', async () => {
+  test('no matching remote is unlinked', async () => {
     const dir = await repoWithRemotes({
       origin: 'https://github.com/acme/shop.git',
     })
     const { rpc } = fakeRpc([])
-    assert.equal(
-      await resolveLinkedProject({ rpc, cwd: dir, legacy: null }),
-      null
-    )
+    assert.equal(await resolveLinkedProject({ rpc, cwd: dir }), null)
   })
 
-  test('a failed lookup is reported unless the legacy file can answer', async () => {
+  test('a failed lookup is reported', async () => {
     const dir = await repoWithRemotes({
       origin: 'https://github.com/acme/shop.git',
     })
     const { rpc } = fakeRpc(new Error('fabric is down'))
     await assert.rejects(
-      resolveLinkedProject({ rpc, cwd: dir, legacy: null }),
+      resolveLinkedProject({ rpc, cwd: dir }),
       /fabric is down/
     )
-    const project = await resolveLinkedProject({
-      rpc,
-      cwd: dir,
-      legacy: { projectId: 'legacy', path: '/x/pikkufabric.config.json' },
-    })
-    assert.equal(project?.projectId, 'legacy')
   })
 
   test('a checkout with no remotes never asks fabric', async () => {
     const dir = await repoWithRemotes({})
     const { rpc, calls } = fakeRpc([])
-    assert.equal(
-      await resolveLinkedProject({ rpc, cwd: dir, legacy: null }),
-      null
-    )
+    assert.equal(await resolveLinkedProject({ rpc, cwd: dir }), null)
     assert.deepEqual(calls, [])
   })
 })
