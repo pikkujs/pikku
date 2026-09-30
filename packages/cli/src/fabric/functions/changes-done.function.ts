@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, resolveChangeId } from '../lib/changes.js'
-import { currentBranch, headSha, isGitRepo } from '../lib/git.js'
+import { currentBranch, headSha, isGitRepo } from '../../utils/git.js'
 import { dim, safe } from '../lib/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
 

@@ -10,7 +10,7 @@ import { join } from 'node:path'
 import { isExpectedError } from '@pikku/core/errors'
 
 import { FabricPreconditionError } from './errors.js'
-import { assertNamedBranchDeploySafety } from './git.js'
+import { assertNamedBranchDeploySafety } from './deploy-safety.js'
 
 /**
  * The refusals a user is meant to hit and act on have to read as instructions,

@@ -19,7 +19,7 @@ import {
   findProjectRoot,
   readJsonSafe,
 } from '../../functions/validate/validate.js'
-import { headSha, isWorkingTreeClean } from '../lib/git.js'
+import { headSha, isWorkingTreeClean } from '../../utils/git.js'
 import { added, changed, dim, removed } from '../lib/output.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 

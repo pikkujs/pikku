@@ -10,7 +10,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { envWithoutInheritedRepo } from '../../fabric/lib/git.js'
+import { envWithoutInheritedRepo } from '../../utils/git.js'
 import { pikkuReleaseInit, pikkuReleasePrepare } from './release.js'
 
 let root: string
