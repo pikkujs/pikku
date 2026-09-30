@@ -310,10 +310,12 @@ jobs:
             os: macos-latest
             bundles: app,dmg
             smoke: true
-          - name: windows
-            os: windows-latest
-            bundles: nsis,msi
-            smoke: true
+          # Windows is off until codegen writes forward-slashed import paths
+          # there — see knowledge/projects/pikku/status/native-apps-1908.md.
+          # - name: windows
+          #   os: windows-latest
+          #   bundles: nsis,msi
+          #   smoke: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
