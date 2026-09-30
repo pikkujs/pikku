@@ -261,8 +261,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      # The lock service's lease is judged by the database's clock, which only a
-      # real server has: PGlite and SQLite read the clock of the process asking.
+      # A lease is judged by the database's clock, which only a real server
+      # has: PGlite and SQLite read the clock of the process asking.
       mysql:
         image: mirror.gcr.io/library/mysql:8.4
         env:

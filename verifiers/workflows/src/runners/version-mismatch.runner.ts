@@ -51,7 +51,8 @@ async function createWorkflowService(backend: Backend): Promise<{
   cleanup: () => Promise<void>
 }> {
   if (backend === 'pg') {
-    const { PgKyselyWorkflowService } = await import('@pikku/kysely-postgres')
+    const { PgKyselyWorkflowService, PgKyselyLeaseService } =
+      await import('@pikku/kysely-postgres')
     const postgres = (await import('postgres')).default
     const { Kysely } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
@@ -59,7 +60,9 @@ async function createWorkflowService(backend: Backend): Promise<{
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),
     })
-    const workflowService = new PgKyselyWorkflowService(db)
+    const leaseService = new PgKyselyLeaseService(db)
+    await leaseService.init()
+    const workflowService = new PgKyselyWorkflowService(db, { leaseService })
     await workflowService.init()
     return {
       workflowService,
@@ -71,13 +74,18 @@ async function createWorkflowService(backend: Backend): Promise<{
   }
 
   if (backend === 'redis') {
-    const { RedisWorkflowService } = await import('@pikku/redis')
-    const workflowService = new RedisWorkflowService(undefined)
+    const { RedisWorkflowService, RedisLeaseService } =
+      await import('@pikku/redis')
+    const leaseService = new RedisLeaseService(undefined)
+    const workflowService = new RedisWorkflowService(undefined, {
+      leaseService,
+    })
     await workflowService.init()
     return {
       workflowService,
       cleanup: async () => {
         await workflowService.close()
+        await leaseService.close()
       },
     }
   }

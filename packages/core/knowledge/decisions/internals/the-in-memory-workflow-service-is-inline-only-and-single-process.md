@@ -1,14 +1,14 @@
 ---
 type: decision
 title: The in-memory workflow service is inline-only and single-process
-description: InMemoryWorkflowService wires no queues and implements withRunLock/withStepLock as pass-throughs, because inline execution has no second holder to exclude
+description: InMemoryWorkflowService wires no queues and implements withRunLease/withStepLock as pass-throughs, because inline execution has no second holder to exclude
 tags: services
 ---
 
 # The in-memory workflow service is inline-only and single-process
 
 `InMemoryWorkflowService` (`packages/core/src/services/in-memory-workflow-service.ts`)
-calls `super({ ...options, wireQueues: false })` and implements `withRunLock` and
+calls `super({ ...options, wireQueues: false })` and implements `withRunLease` and
 `withStepLock` as bare `return fn()`. Both look like unfinished work and neither
 is.
 

@@ -3,8 +3,9 @@
 Redis-backed implementations of the Pikku service interfaces — workflow state,
 agent runs, secrets, sessions, and the channel and event-hub stores.
 
-Uses `ioredis`. Distributed run locking is handled with `SET NX` plus a TTL, so
-concurrent workers can safely share a run.
+Uses `ioredis`. `RedisLeaseService` implements leases with `SET NX` plus a TTL,
+and the workflow service locks runs and steps on whichever `leaseService` it is
+given, so concurrent workers can safely share a run.
 
 ## Install
 
@@ -16,21 +17,23 @@ npm install @pikku/redis ioredis
 
 ```typescript
 import Redis from 'ioredis'
-import { RedisWorkflowService } from '@pikku/redis'
+import { RedisLeaseService, RedisWorkflowService } from '@pikku/redis'
 
-const workflowService = new RedisWorkflowService(
-  new Redis('redis://localhost:6379'),
-  queueService,
-  'workflows'
-)
+const redis = new Redis('redis://localhost:6379')
+const leaseService = new RedisLeaseService(redis)
+
+const workflowService = new RedisWorkflowService(redis, {
+  leaseService,
+  keyPrefix: 'workflows',
+})
 
 await workflowService.init()
 ```
 
 The first argument also accepts a connection string or an `ioredis` options
 object, in which case the service owns the connection and `close()` will end
-it. Omit `queueService` to run workflows inline, which is useful in tests. The
-third argument is the key prefix, defaulting to `workflows`.
+it. `keyPrefix` defaults to `workflows`. Register the same `leaseService` as the
+app's `leaseService`.
 
 ## Docs
 

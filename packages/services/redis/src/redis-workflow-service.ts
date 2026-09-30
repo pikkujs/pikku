@@ -1,8 +1,11 @@
 import type { SerializedError } from '@pikku/core/errors'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import {
+  PikkuWorkflowService,
+  WorkflowStepSupersededError,
+} from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
-  WorkflowQueueOptions,
+  WorkflowServiceOptions,
   WorkflowRun,
   WorkflowRunWire,
   StepState,
@@ -14,30 +17,77 @@ import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
 
 /**
+ * Writes a step's outcome only while it is still the attempt that wrote it.
+ * KEYS[1] is the step hash; ARGV is the stepId, the attempt (empty for an
+ * unfenced write), the field to clear, then field/value pairs to set.
+ * Returns the step's attempt, or -1 when a newer claim owns it.
+ */
+const FENCED_STEP_WRITE = `
+local stepId = redis.call('HGET', KEYS[1], 'stepId')
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+if ARGV[2] ~= '' and (stepId ~= ARGV[1] or current ~= tonumber(ARGV[2])) then
+  return -1
+end
+redis.call('HDEL', KEYS[1], ARGV[3])
+for i = 4, #ARGV, 2 do
+  redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+end
+return current
+`
+
+/**
+ * Renews or releases a step's lease, fenced like `FENCED_STEP_WRITE`. ARGV is
+ * the stepId, the attempt (empty when unfenced), and the new expiry in epoch
+ * milliseconds (empty to release). Returns 1 when the lease moved.
+ */
+const FENCED_LEASE_REFRESH = `
+local stepId = redis.call('HGET', KEYS[1], 'stepId')
+if stepId ~= ARGV[1] then
+  return 0
+end
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+if ARGV[2] ~= '' and current ~= tonumber(ARGV[2]) then
+  return 0
+end
+if ARGV[3] == '' then
+  redis.call('HDEL', KEYS[1], 'leaseExpiresAt')
+else
+  redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[3])
+end
+return 1
+`
+
+/**
  * Redis-based implementation of WorkflowStateService
  *
- * Stores workflow run state and step state in Redis with row-level locking.
+ * Stores workflow run state and step state in Redis. Runs and steps are locked
+ * on the app's `leaseService`, which need not be Redis-backed.
  *
  * @example
  * ```typescript
  * const redis = new Redis('redis://localhost:6379')
- * const workflowService = new RedisWorkflowService(redis, 'workflows')
+ * const leaseService = new RedisLeaseService(redis)
+ * const workflowService = new RedisWorkflowService(redis, { leaseService })
  * ```
  */
 export class RedisWorkflowService extends PikkuWorkflowService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
-  private lockTTL = 30000 // Lock TTL in milliseconds (30 seconds)
 
   /**
    * @param connectionOrConfig - ioredis Redis instance, RedisOptions config, or connection string
-   * @param keyPrefix - Redis key prefix (default: 'workflows')
+   * @param options.keyPrefix - Redis key prefix (default: 'workflows')
+   * @param options.leaseService - the app's lease service, which locks runs and steps
    */
   constructor(
     connectionOrConfig: Redis | RedisOptions | string | undefined,
-    keyPrefix = 'workflows',
-    options: WorkflowQueueOptions = {}
+    {
+      keyPrefix = 'workflows',
+      ...options
+    }: WorkflowServiceOptions & {
+      keyPrefix?: string
+    }
   ) {
     super(options)
     this.keyPrefix = keyPrefix
@@ -78,14 +128,6 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
   private stepHistoryKey(stepId: string): string {
     return `${this.keyPrefix}:step-history:${stepId}`
-  }
-
-  private lockKey(runId: string): string {
-    return `${this.keyPrefix}:lock:${runId}`
-  }
-
-  private stepLockKey(runId: string, stepName: string): string {
-    return `${this.keyPrefix}:step-lock:${runId}:${stepName}`
   }
 
   /**
@@ -399,6 +441,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       retries: data.retries ? Number(data.retries) : undefined,
       retryDelay: data.retryDelay,
       fromStepName: data.fromStepName || undefined,
+      leaseExpiresAt: data.leaseExpiresAt
+        ? new Date(Number(data.leaseExpiresAt))
+        : undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -561,159 +606,109 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
+  public override async refreshStepLease(
+    stepId: string,
+    leaseMs: number | null,
+    attempt?: number
+  ): Promise<boolean> {
+    const { runId, stepName } = this.parseStepId(stepId)
+    const moved = await this.redis.eval(
+      FENCED_LEASE_REFRESH,
+      1,
+      this.stepKey(runId, stepName),
+      stepId,
+      attempt?.toString() ?? '',
+      leaseMs === null ? '' : (Date.now() + leaseMs).toString()
+    )
+    return Number(moved) === 1
+  }
+
   protected async setStepResultImpl(
     stepId: string,
-    result: any
+    result: any,
+    attempt?: number
   ): Promise<void> {
-    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
-
-    const now = Date.now()
-    const key = this.stepKey(runId, stepName)
-
-    // Get current attempt count and retries config
-    const data = await this.redis.hgetall(key)
-    const attemptCount = Number(data.attemptCount || 1)
-    const retries = data.retries ? Number(data.retries) : undefined
-    const retryDelay = data.retryDelay
-
-    await this.redis.hmset(
-      key,
-      'status',
-      'succeeded',
-      'result',
-      JSON.stringify(result),
-      'updatedAt',
-      now.toString()
-    )
-
-    // Remove error field if it exists
-    await this.redis.hdel(key, 'error')
-
-    // Update current history record to succeeded (update in-place)
-    await this.updateCurrentHistoryRecord(
-      stepId,
-      stepName,
-      attemptCount,
-      'succeeded',
-      result,
-      undefined,
-      retries,
-      retryDelay
-    )
+    await this.writeStepOutcome(stepId, 'succeeded', attempt, result)
   }
 
   protected async setStepErrorImpl(
     stepId: string,
-    error: Error
+    error: Error,
+    attempt?: number
   ): Promise<void> {
-    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
-
-    const now = Date.now()
-    const key = this.stepKey(runId, stepName)
-
-    // Get current attempt count and retries config
-    const data = await this.redis.hgetall(key)
-    const attemptCount = Number(data.attemptCount || 1)
-    const retries = data.retries ? Number(data.retries) : undefined
-    const retryDelay = data.retryDelay
-
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-
-    await this.redis.hmset(
-      key,
-      'status',
+    await this.writeStepOutcome(
+      stepId,
       'failed',
-      'error',
-      JSON.stringify(serializedError),
-      'updatedAt',
-      now.toString()
+      attempt,
+      undefined,
+      serializedError
     )
+  }
 
-    // Remove result field if it exists
-    await this.redis.hdel(key, 'result')
+  /**
+   * Record a step's outcome and its current history attempt. With `attempt`,
+   * a step claimed again since throws `WorkflowStepSupersededError` and keeps
+   * the newer claim's state.
+   */
+  private async writeStepOutcome(
+    stepId: string,
+    status: 'succeeded' | 'failed',
+    attempt: number | undefined,
+    result?: any,
+    error?: SerializedError
+  ): Promise<void> {
+    const { runId, stepName } = this.parseStepId(stepId)
+    const key = this.stepKey(runId, stepName)
+    const outcome =
+      status === 'succeeded'
+        ? ['result', JSON.stringify(result)]
+        : ['error', JSON.stringify(error)]
 
-    // Update current history record to failed (update in-place)
+    const written = Number(
+      await this.redis.eval(
+        FENCED_STEP_WRITE,
+        1,
+        key,
+        stepId,
+        attempt?.toString() ?? '',
+        status === 'succeeded' ? 'error' : 'result',
+        'status',
+        status,
+        ...outcome,
+        'updatedAt',
+        Date.now().toString()
+      )
+    )
+    if (written === -1) {
+      throw new WorkflowStepSupersededError(stepId, attempt!)
+    }
+
+    const [retries, retryDelay] = await this.redis.hmget(
+      key,
+      'retries',
+      'retryDelay'
+    )
     await this.updateCurrentHistoryRecord(
       stepId,
       stepName,
-      attemptCount,
-      'failed',
-      undefined,
-      serializedError,
-      retries,
-      retryDelay
+      written,
+      status,
+      result,
+      error,
+      retries ? Number(retries) : undefined,
+      retryDelay ?? undefined
     )
   }
 
-  private async withLock<T>(
-    lockKey: string,
-    errorMessage: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const lockValue = randomUUID()
-    const maxRetries = 10
-    const retryDelay = 100 // ms
-
-    // Try to acquire lock with retries
-    for (let i = 0; i < maxRetries; i++) {
-      const acquired = await this.redis.set(
-        lockKey,
-        lockValue,
-        'PX',
-        this.lockTTL,
-        'NX'
-      )
-
-      if (acquired === 'OK') {
-        try {
-          // Lock acquired, execute function
-          return await fn()
-        } finally {
-          // Release lock using Lua script to ensure we only delete our own lock
-          await this.redis.eval(
-            `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`,
-            1,
-            lockKey,
-            lockValue
-          )
-        }
-      }
-
-      // Lock not acquired, wait and retry
-      await new Promise((resolve) => setTimeout(resolve, retryDelay))
-    }
-
-    throw new Error(`${errorMessage} after ${maxRetries} retries`)
-  }
-
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return this.withLock(
-      this.lockKey(id),
-      `Failed to acquire lock for run ${id}`,
-      fn
-    )
-  }
-
-  async withStepLock<T>(
-    runId: string,
-    stepName: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    return this.withLock(
-      this.stepLockKey(runId, stepName),
-      `Failed to acquire step lock for run ${runId}, step ${stepName}`,
-      fn
-    )
+  /** A stepId is `runId:stepName:timestamp`, and a step name may hold colons. */
+  private parseStepId(stepId: string): { runId: string; stepName: string } {
+    const parts = stepId.split(':')
+    return { runId: parts[0]!, stepName: parts.slice(1, -1).join(':') }
   }
 
   protected async createRetryAttemptImpl(
@@ -835,15 +830,19 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
-  async getStepInstances(
-    runId: string
-  ): Promise<
-    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  async getStepInstances(runId: string): Promise<
+    Array<{
+      stepName: string
+      status: StepStatus
+      fromStepName?: string
+      leaseExpiresAt?: Date
+    }>
   > {
     const instances: Array<{
       stepName: string
       status: StepStatus
       fromStepName?: string
+      leaseExpiresAt?: Date
     }> = []
     const pattern = `${this.keyPrefix}:step:${runId}:*`
     let cursor = '0'
@@ -857,10 +856,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       )
       cursor = newCursor
       for (const key of foundKeys) {
-        const [status, fromStepName] = await this.redis.hmget(
+        const [status, fromStepName, leaseExpiresAt] = await this.redis.hmget(
           key,
           'status',
-          'fromStepName'
+          'fromStepName',
+          'leaseExpiresAt'
         )
         const parts = key.split(':')
         const stepIndex = parts.lastIndexOf('step')
@@ -869,6 +869,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
           stepName: parts.slice(stepIndex + 2).join(':'),
           status: status as StepStatus,
           fromStepName: fromStepName || undefined,
+          leaseExpiresAt: leaseExpiresAt
+            ? new Date(Number(leaseExpiresAt))
+            : undefined,
         })
       }
     } while (cursor !== '0')

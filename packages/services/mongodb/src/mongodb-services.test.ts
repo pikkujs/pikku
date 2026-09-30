@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { MongoClient, type Db } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { defineServiceTests } from '@pikku/core/testing'
+import { InMemoryLeaseService } from '@pikku/core/services'
 
 import { MongoDBChannelStore } from './mongodb-channel-store.js'
 import { MongoDBEventHubStore } from './mongodb-eventhub-store.js'
@@ -29,7 +30,9 @@ function registerTests(name: string, getDb: () => Db) {
         return s
       },
       workflowService: async () => {
-        const s = new MongoDBWorkflowService(getDb())
+        const s = new MongoDBWorkflowService(getDb(), {
+          leaseService: new InMemoryLeaseService(),
+        })
         await s.init()
         return s
       },
@@ -57,6 +60,23 @@ function registerTests(name: string, getDb: () => Db) {
         const s = new MongoDBSessionStore(getDb())
         await s.init()
         return s
+      },
+      workflowFencing: async () => {
+        const service = new MongoDBWorkflowService(getDb(), {
+          leaseService: new InMemoryLeaseService(),
+        })
+        await service.init()
+        return {
+          service,
+          lapseLease: async (runId, stepName) => {
+            await getDb()
+              .collection('workflow_step')
+              .updateOne(
+                { workflowRunId: runId, stepName },
+                { $set: { leaseExpiresAt: new Date(1) } }
+              )
+          },
+        }
       },
     },
   })

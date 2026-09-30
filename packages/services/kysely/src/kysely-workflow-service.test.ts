@@ -3,10 +3,11 @@ import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import Database from 'better-sqlite3'
 
-import type { StepState } from '@pikku/core/workflow'
+import type { StepState, WorkflowServiceOptions } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
+import { InMemoryLeaseService } from '@pikku/core/services'
 import { applyPikkuSchemas, workflowSchema } from './schema/index.js'
 
 let db: Kysely<KyselyPikkuDB>
@@ -33,7 +34,10 @@ const createDb = () => {
 beforeEach(async () => {
   db = createDb()
   await applyPikkuSchemas(db, [workflowSchema])
-  service = new KyselyWorkflowService(db, { wireQueues: false } as any)
+  service = new KyselyWorkflowService(db, {
+    wireQueues: false,
+    leaseService: new InMemoryLeaseService(),
+  } as WorkflowServiceOptions)
   await service.init()
 })
 
@@ -130,7 +134,10 @@ describe('KyselyWorkflowService — schema indexes', () => {
     // A fresh instance, because `init()` returns at its `initialized` guard on
     // the same one — so calling it twice re-issues no DDL and never exercises
     // the duplicate-index path this is here to cover.
-    await new KyselyWorkflowService(db, { wireQueues: false } as any).init()
+    await new KyselyWorkflowService(db, {
+      wireQueues: false,
+      leaseService: new InMemoryLeaseService(),
+    } as WorkflowServiceOptions).init()
 
     const indexes = await listIndexes('workflow_step_history')
     assert.ok(indexes.length > 0)
@@ -310,6 +317,30 @@ describe('KyselyWorkflowService — attempt counting', () => {
       's5',
     ])
   })
+
+  // A replay decides from this snapshot whether a `running` step still has a
+  // worker on it. Without its lease the step reads as never claimed, and is
+  // scheduled and dispatched again while the first worker is still running it.
+  test('a replay reads a step exactly as getStepState does, lease included', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 'charge', 'charge:card', {})
+    const claimed = await (service as any).claimStepForExecution(
+      runId,
+      'charge',
+      'charge:card',
+      60_000
+    )
+    assert.ok(claimed)
+
+    const [replayed] = await (service as any).listStepStates(runId)
+    const { stepName, ...snapshot } = replayed
+    assert.equal(stepName, 'charge')
+    assert.ok(
+      snapshot.leaseExpiresAt,
+      "the replay lost the running step's lease"
+    )
+    assert.deepEqual(snapshot, await service.getStepState(runId, 'charge'))
+  })
 })
 
 describe('KyselyWorkflowService — run state writes', () => {
@@ -443,7 +474,8 @@ describe('KyselyWorkflowService — claiming a step for execution', () => {
     (service as any).claimStepForExecution(
       runId,
       stepName,
-      rpcName
+      rpcName,
+      60_000
     ) as Promise<StepState | null>
 
   test('two dispatches racing for the same pending step: exactly one wins', async () => {

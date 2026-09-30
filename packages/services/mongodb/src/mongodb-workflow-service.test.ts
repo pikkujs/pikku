@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 
 import type { StepState } from '@pikku/core/workflow'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
+import { InMemoryLeaseService } from '@pikku/core/services'
 
 let mongod: MongoMemoryServer
 let client: MongoClient
@@ -25,7 +26,9 @@ after(async () => {
 
 beforeEach(async () => {
   db = client.db(`wf-${++dbCount}`)
-  ws = new MongoDBWorkflowService(db)
+  ws = new MongoDBWorkflowService(db, {
+    leaseService: new InMemoryLeaseService(),
+  })
   await ws.init()
 })
 
@@ -132,7 +135,8 @@ describe('claiming a step for execution', () => {
     (ws as any).claimStepForExecution(
       runId,
       stepName,
-      rpcName
+      rpcName,
+      60_000
     ) as Promise<StepState | null>
 
   const seedRun = () =>
@@ -151,6 +155,25 @@ describe('claiming a step for execution', () => {
       `both dispatches claimed the step, so a side-effecting step would run twice: ${JSON.stringify(claims)}`
     )
     assert.equal((await ws.getStepState(runId, 's1')).status, 'running')
+  })
+
+  test('a step that failed on its last attempt is not claimed again', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(
+      runId,
+      's1',
+      'rpc.fn',
+      { x: 1 },
+      { retries: 0 }
+    )
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepError(step.stepId, new Error('boom'))
+
+    assert.equal(
+      await claim(runId, 's1'),
+      null,
+      'a redelivered message bought the step an attempt past its limit'
+    )
   })
 
   test('two dispatches racing to retry the same failed step: exactly one wins', async () => {

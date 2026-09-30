@@ -139,8 +139,8 @@ export class PikkuWorkflowDoClient implements WorkflowService {
     return Promise.reject(notSupported('createRun'))
   }
 
-  withRunLock<T>(_id: string, _fn: () => Promise<T>): Promise<T> {
-    return Promise.reject(notSupported('withRunLock'))
+  withRunLease<T>(_id: string, _fn: () => Promise<T>): Promise<T> {
+    return Promise.reject(notSupported('withRunLease'))
   }
 
   resumeWorkflow(_runId: string): Promise<void> {

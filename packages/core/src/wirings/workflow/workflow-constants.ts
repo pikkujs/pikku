@@ -22,7 +22,7 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
  * such a message is routine rather than exceptional: the queue is
  * at-least-once, the relay re-dispatches on purpose, and a run can settle
  * while a message for it is still in flight. Replaying one is not free —
- * `runWorkflowJob` takes the run lock and re-enters the workflow body, and a
+ * `runWorkflowJob` takes the run lease and re-enters the workflow body, and a
  * body re-entered after its run failed can park on a wait that nothing will
  * ever satisfy, holding the lock and the connection under it until something
  * external gives up. Every leaked advisory lock seen in production traced back
@@ -61,6 +61,40 @@ export const REDISPATCH_BACKOFF_MS = 30_000
 
 /** Ceiling on the doubling backoff, so a permanently stuck step still gets swept. */
 export const REDISPATCH_BACKOFF_MAX_MS = 10 * 60_000
+
+/**
+ * How long a claim on a step is good for when the queue it was dispatched
+ * through declares no duration of its own. Sits above the queue's own lock so
+ * the two never disagree about who owns the job.
+ */
+export const DEFAULT_STEP_LEASE_MS = 60_000
+
+/**
+ * The refresh interval below which a lease is short enough to be worth saying
+ * so. It is a warning threshold, not a floor: applied as one it would push the
+ * first refresh past the expiry of any lease under three times this, which is how a
+ * step ends up claimed twice.
+ */
+export const STEP_LEASE_REFRESH_MIN_MS = 1_000
+
+/**
+ * Whether a `running` step is still owned by the dispatch that claimed it.
+ *
+ * No lease at all counts as live: a store that records none has no way to tell
+ * an abandoned step from a working one, so it keeps the older, safer rule that
+ * a `running` step is never taken from underneath its holder.
+ */
+export const isStepLeaseLive = (
+  leaseExpiresAt: Date | null | undefined,
+  now: number = Date.now()
+): boolean => leaseExpiresAt == null || leaseExpiresAt.getTime() > now
+
+/**
+ * How long an orchestrator message that found its run held waits before it
+ * wakes the run again. Long enough for the holder's pass to finish, short
+ * enough that the run does not visibly stall behind it.
+ */
+export const RUN_LEASE_RETRY_MS = 1_000
 
 /** Bound on the in-process backoff map, so a long-lived process cannot grow it without bound. */
 export const REDISPATCH_BACKOFF_MAX_ENTRIES = 10_000

@@ -2,7 +2,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 
 export const leaseSchema: PikkuSchema = {
   name: 'lease',
-  ownedBy: ['leaseService'],
+  ownedBy: ['leaseService', 'workflowService'],
   statements: [
     (db) =>
       db.schema

@@ -41,7 +41,7 @@ export interface WorkflowService {
     output?: any,
     error?: SerializedError
   ): Promise<void>
-  withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
+  withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T>
   close(): Promise<void>
 
   resumeWorkflow(runId: string): Promise<void>

@@ -10,6 +10,7 @@ import type { CredentialService } from '../services/credential-service.js'
 import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { SessionStore } from '../services/session-store.js'
 import type { LeaseService } from '../services/lease-service.js'
+import type { WorkflowFencingHarness } from './service-tests/workflow-fencing-tests.js'
 
 export interface ServiceTestConfig {
   name: string
@@ -37,6 +38,8 @@ export interface ServiceTestConfig {
     }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>
     sessionStore?: () => Promise<SessionStore>
     leaseService?: () => Promise<LeaseService>
+    /** A workflow service that fences each step write to the claim that made it. */
+    workflowFencing?: () => Promise<WorkflowFencingHarness>
   }
 }
 
@@ -51,6 +54,7 @@ import { defineCredentialServiceTests } from './service-tests/credential-service
 import { defineAgentRunServiceTests } from './service-tests/agent-run-service-tests.js'
 import { defineSessionStoreTests } from './service-tests/session-store-tests.js'
 import { defineLeaseServiceTests } from './service-tests/lease-service-tests.js'
+import { defineWorkflowFencingTests } from './service-tests/workflow-fencing-tests.js'
 
 /**
  * The shared conformance suite every storage backend runs.
@@ -97,5 +101,8 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   }
   if (services.leaseService) {
     defineLeaseServiceTests(name, services.leaseService)
+  }
+  if (services.workflowFencing) {
+    defineWorkflowFencingTests(name, services.workflowFencing)
   }
 }

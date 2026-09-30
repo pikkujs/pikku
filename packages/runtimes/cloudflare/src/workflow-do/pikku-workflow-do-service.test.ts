@@ -363,8 +363,8 @@ describe('PikkuWorkflowDoService — workflow versions', () => {
 })
 
 describe('PikkuWorkflowDoService — locks', () => {
-  test('withRunLock is a no-op pass-through', async () => {
-    const out = await service.withRunLock('whatever', async () => 42)
+  test('withRunLease is a no-op pass-through', async () => {
+    const out = await service.withRunLease('whatever', async () => 42)
     assert.equal(out, 42)
   })
 

@@ -83,6 +83,7 @@ await holdLease(leaseService, 'nightly-report', async (lease, signal) => {
 ```typescript
 import {
   RedisChannelStore,
+  RedisLeaseService,
   RedisWorkflowService,
   RedisSecretService,
 } from '@pikku/redis'
@@ -91,12 +92,22 @@ const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()
 
   const channelStore = new RedisChannelStore(config.redisUrl)
-  const workflowService = new RedisWorkflowService(config.redisUrl)
+  const leaseService = new RedisLeaseService(config.redisUrl)
+  const workflowService = new RedisWorkflowService(config.redisUrl, {
+    leaseService,
+  })
 
   const secrets = new RedisSecretService(config.redisUrl, {
     key: config.kekPassphrase,
   })
 
-  return { config, logger, channelStore, workflowService, secrets }
+  return {
+    config,
+    logger,
+    channelStore,
+    leaseService,
+    workflowService,
+    secrets,
+  }
 })
 ```

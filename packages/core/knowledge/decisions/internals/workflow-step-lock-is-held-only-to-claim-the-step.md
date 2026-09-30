@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A workflow step lock is held only to claim the step, never across its execution
-description: Holding the advisory lock — and its pooled connection — across step work exhausted the connection pool and self-deadlocked
+description: Holding the step lock across step work exhausted the connection pool and self-deadlocked when it was an advisory lock; it stays claim-only on leases
 tags: workflow
 ---
 
@@ -15,10 +15,17 @@ lock is then released, and the actual work plus result persistence run outside
 it.
 
 The guard is what makes that safe — once a step is `running`, any concurrent
-worker returns early. The alternative was tried and failed: holding the advisory
-lock, and therefore its pooled connection, across `executeGraphStep` (network
-I/O plus further pool queries) let concurrent steps exhaust the connection pool
-and self-deadlock.
+worker returns early. The alternative was tried and failed: holding the
+then-advisory lock, and therefore its pooled connection, across
+`executeGraphStep` (network I/O plus further pool queries) let concurrent steps
+exhaust the connection pool and self-deadlock.
+
+`withStepLock` is now a lease on the app's `leaseService`
+(`workflow-step:<runId>:<step>`), so it pins no connection. It still stays
+claim-only: a lease held across the work would have to outlive it, and a taken
+step lease already means "another dispatch owns it", so the claim answers
+`null`. Kysely and MongoDB claim with a status-guarded conditional update and do
+not take it at all.
 
 **What this rules out:** widening the `withStepLock` callback to cover RPC
 invocation, child-workflow start, `setStepResult` or `resumeWorkflow` — the

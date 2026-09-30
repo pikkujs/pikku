@@ -18,6 +18,7 @@
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
+    "ioredis": "^6.0.0",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
     "mysql2": "^3.23.3",
@@ -48,7 +49,14 @@
     "test:retry-idempotency:redis": "npx tsx src/runners/retry-idempotency.runner.ts --redis",
     "test:cyclic-graph:pg": "bun run migrate && npx tsx src/runners/cyclic-graph.runner.ts --pg",
     "test:cyclic-graph:redis": "npx tsx src/runners/cyclic-graph.runner.ts --redis",
-    "test:db": "pikku && bun run migrate && npx tsx src/runners/cyclic-graph.runner.ts --redis && npx tsx src/runners/cyclic-graph.runner.ts --pg && npx tsx src/runners/retry-idempotency.runner.ts --redis && npx tsx src/runners/retry-idempotency.runner.ts --pg && npx tsx --test src/tests/lease-db.assert.ts",
-    "test:lease-db": "bun run migrate && npx tsx --test src/tests/lease-db.assert.ts"
+    "test:db": "pikku && bun run migrate && npx tsx src/runners/cyclic-graph.runner.ts --redis && npx tsx src/runners/cyclic-graph.runner.ts --pg && npx tsx src/runners/retry-idempotency.runner.ts --redis && npx tsx src/runners/retry-idempotency.runner.ts --pg && npx tsx --test src/tests/lease-db.assert.ts && npx tsx src/runners/run-lease.runner.ts && npx tsx --test src/tests/fencing-db.assert.ts && npx tsx src/runners/crash-reclaim.runner.ts && npx tsx src/runners/run-lease-contention.runner.ts --backend pgboss && npx tsx src/runners/run-lease-contention.runner.ts --backend bullmq && npx tsx src/runners/run-lease-contention.runner.ts --backend bullmq-mysql",
+    "test:run-lease:pg": "bun run migrate && npx tsx src/runners/run-lease.runner.ts",
+    "test:lease-db": "bun run migrate && npx tsx --test src/tests/lease-db.assert.ts",
+    "test:crash-reclaim:pg": "bun run migrate && npx tsx src/runners/crash-reclaim.runner.ts",
+    "test:fencing-db": "npx tsx --test src/tests/fencing-db.assert.ts",
+    "test:run-lease-contention:pg": "bun run migrate && npx tsx src/runners/run-lease-contention.runner.ts --backend pgboss",
+    "test:run-lease-contention:bullmq": "bun run migrate && npx tsx src/runners/run-lease-contention.runner.ts --backend bullmq",
+    "test:run-lease-contention:bullmq-mysql": "bun run migrate && npx tsx src/runners/run-lease-contention.runner.ts --backend bullmq-mysql",
+    "test:run-lease-contention:memory": "bun run migrate && npx tsx src/runners/run-lease-contention.runner.ts --backend memory"
   }
 }

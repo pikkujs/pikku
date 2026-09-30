@@ -7,7 +7,7 @@
  *   yarn test:bullmq --graph  - Run graph-based workflows (graph* prefix)
  */
 
-import { RedisWorkflowService } from '@pikku/redis'
+import { RedisLeaseService, RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { pikkuState } from '@pikku/core/state'
 
@@ -31,7 +31,10 @@ async function main(): Promise<void> {
   const bullFactory = new BullServiceFactory()
   await bullFactory.init()
 
-  const workflowService = new RedisWorkflowService(undefined)
+  const leaseService = new RedisLeaseService(undefined)
+  const workflowService = new RedisWorkflowService(undefined, {
+    leaseService,
+  })
   await workflowService.init()
 
   const singletonServices = await createSingletonServices(config, {
@@ -174,6 +177,7 @@ async function main(): Promise<void> {
 
   await queueWorkers.close()
   await workflowService.close()
+  await leaseService.close()
   await bullFactory.close()
 
   // Exit with appropriate code

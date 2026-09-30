@@ -27,6 +27,8 @@ import {
   applyPikkuSchemas,
   auditSchema,
   flagSchema,
+  KyselyLeaseService,
+  leaseSchema,
   webhookSchema,
   workflowSchema,
 } from '@pikku/kysely'
@@ -93,6 +95,7 @@ export const createSingletonServices = pikkuServices(
 
     let workflowService: any
     let workflowRunService: any
+    let leaseService: any
 
     if (backend === 'sqlite') {
       const { CamelCasePlugin, Kysely, SqliteDialect } = await import('kysely')
@@ -122,12 +125,14 @@ export const createSingletonServices = pikkuServices(
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
       })
       if (freshDb) {
-        await applyPikkuSchemas(db, [workflowSchema, agentSchema])
+        await applyPikkuSchemas(db, [workflowSchema, agentSchema, leaseSchema])
       }
       agentStorage = new SQLiteKyselyAgentStorageService(db)
       await agentStorage.init()
       agentRunService = new SQLiteKyselyAgentRunService(db)
-      workflowService = new SQLiteKyselyWorkflowService(db)
+      leaseService = new KyselyLeaseService(db)
+      await leaseService.init()
+      workflowService = new SQLiteKyselyWorkflowService(db, { leaseService })
       await workflowService.init()
       workflowRunService = new SQLiteKyselyWorkflowRunService(db)
     } else if (backend === 'postgres') {
@@ -135,6 +140,7 @@ export const createSingletonServices = pikkuServices(
         PikkuKysely,
         PgKyselyAgentStorageService,
         PgKyselyAgentRunService,
+        PgKyselyLeaseService,
         PgKyselyWorkflowService,
         PgKyselyWorkflowRunService,
       } = await import('@pikku/kysely-postgres')
@@ -146,7 +152,11 @@ export const createSingletonServices = pikkuServices(
       agentStorage = new PgKyselyAgentStorageService(pikkuKysely.kysely)
       await agentStorage.init()
       agentRunService = new PgKyselyAgentRunService(pikkuKysely.kysely)
-      workflowService = new PgKyselyWorkflowService(pikkuKysely.kysely)
+      leaseService = new PgKyselyLeaseService(pikkuKysely.kysely)
+      await leaseService.init()
+      workflowService = new PgKyselyWorkflowService(pikkuKysely.kysely, {
+        leaseService,
+      })
       await workflowService.init()
       workflowRunService = new PgKyselyWorkflowRunService(pikkuKysely.kysely)
     } else if (backend === 'mysql') {
@@ -155,6 +165,7 @@ export const createSingletonServices = pikkuServices(
       const {
         MySQLKyselyAgentStorageService,
         MySQLKyselyAgentRunService,
+        MySQLKyselyLeaseService,
         MySQLKyselyWorkflowService,
         MySQLKyselyWorkflowRunService,
       } = await import('@pikku/kysely-mysql')
@@ -167,7 +178,9 @@ export const createSingletonServices = pikkuServices(
       agentStorage = new MySQLKyselyAgentStorageService(db)
       await agentStorage.init()
       agentRunService = new MySQLKyselyAgentRunService(db)
-      workflowService = new MySQLKyselyWorkflowService(db)
+      leaseService = new MySQLKyselyLeaseService(db)
+      await leaseService.init()
+      workflowService = new MySQLKyselyWorkflowService(db, { leaseService })
       await workflowService.init()
       workflowRunService = new MySQLKyselyWorkflowRunService(db)
       // } else if (backend === 'redis') {
@@ -178,7 +191,7 @@ export const createSingletonServices = pikkuServices(
       // agentStorage = new RedisAgentStorageService(redis)
       // await agentStorage.init()
       // agentRunService = new RedisAgentRunService(redis)
-      // workflowService = new RedisWorkflowService(redis)
+      // workflowService = new RedisWorkflowService(redis, { leaseService })
       // await workflowService.init()
       // workflowRunService = new RedisWorkflowRunService(redis)
     } else {
@@ -365,6 +378,7 @@ export const createSingletonServices = pikkuServices(
       agentRunner,
       workflowService,
       workflowRunService,
+      leaseService,
       queueService,
       webhookService,
       audit,

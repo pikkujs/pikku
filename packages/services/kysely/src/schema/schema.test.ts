@@ -564,7 +564,19 @@ describe('requiredPikkuSchemas', () => {
       'secret',
       'deployment',
       'workflow',
+      'lease',
     ])
+  })
+
+  // The engine serialises a run's orchestration through `leaseService`, which
+  // no function destructures, so a workflow project would otherwise register
+  // a lease service against a table nothing migrated.
+  test('a workflow project gets the table its run lease needs', () => {
+    assert.ok(
+      requiredPikkuSchemas(new Set(['workflowService'])).some(
+        (s) => s.name === 'lease'
+      )
+    )
   })
 
   test('any one of a schema s owners is enough to ask for it', () => {

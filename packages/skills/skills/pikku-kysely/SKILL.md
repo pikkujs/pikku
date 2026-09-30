@@ -374,6 +374,7 @@ a log line or an audit row. See `pikku-services` for the reveal rules.
 import {
   PikkuKysely,
   PgKyselyChannelStore,
+  PgKyselyLeaseService,
   PgKyselyWorkflowService,
 } from '@pikku/kysely-postgres'
 
@@ -385,10 +386,22 @@ const createSingletonServices = pikkuServices(async (config) => {
   const channelStore = new PgKyselyChannelStore(db.kysely)
   await channelStore.init()
 
-  const workflowService = new PgKyselyWorkflowService(db.kysely)
+  const leaseService = new PgKyselyLeaseService(db.kysely)
+  await leaseService.init()
+
+  const workflowService = new PgKyselyWorkflowService(db.kysely, {
+    leaseService,
+  })
   await workflowService.init()
 
-  return { config, logger, database: db, channelStore, workflowService }
+  return {
+    config,
+    logger,
+    database: db,
+    channelStore,
+    leaseService,
+    workflowService,
+  }
 })
 ```
 
@@ -409,8 +422,20 @@ await channelStore.init()
 ### MySQL Setup
 
 ```typescript
-import { MySQLKyselyWorkflowService } from '@pikku/kysely-mysql'
+import {
+  MySQLKyselyLeaseService,
+  MySQLKyselyWorkflowService,
+} from '@pikku/kysely-mysql'
 
-const workflowService = new MySQLKyselyWorkflowService(kyselyInstance)
+const leaseService = new MySQLKyselyLeaseService(kyselyInstance)
+await leaseService.init()
+
+const workflowService = new MySQLKyselyWorkflowService(kyselyInstance, {
+  leaseService,
+})
 await workflowService.init()
 ```
+
+Every persistent workflow service takes a required `leaseService` and locks runs
+and steps on it. Pass the same instance you register as the app's
+`leaseService`.
