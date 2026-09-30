@@ -3,7 +3,7 @@ import { join, resolve } from 'path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
-import { ConsoleLogger } from '@pikku/core/services'
+import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -142,6 +142,7 @@ export const serve = pikkuSessionlessFunc<
         ...(agentRunner ? { agentRunner } : {}),
         metaService: new LocalMetaService(pikkuDir),
         schedulerService: new InMemorySchedulerService(),
+        triggerSourceStore: new InMemoryTriggerSourceStore(),
         eventHub: await devServerRunner.createEventHub(),
         content: localContent,
         getInspectorState,

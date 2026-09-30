@@ -184,6 +184,24 @@ const dbImportLines = (
 ]
 
 /**
+ * The trigger-source store the admin addon and the webhook source runner read.
+ * Database-backed when the app has one, dropped back to memory when its table
+ * is not migrated yet, so those functions work rather than throw.
+ */
+const triggerSourceStoreLines = (hasDb: boolean): string[] =>
+  hasDb
+    ? [
+        `  let triggerSourceStore: InMemoryTriggerSourceStore | KyselyTriggerSourceStore = new KyselyTriggerSourceStore(kysely)`,
+        `  try {`,
+        `    await triggerSourceStore.init()`,
+        `  } catch (error) {`,
+        `    logger.warn(\`Trigger source store falling back to memory: \${error instanceof Error ? error.message : String(error)}\`)`,
+        `    triggerSourceStore = new InMemoryTriggerSourceStore()`,
+        `  }`,
+      ]
+    : [`  const triggerSourceStore = new InMemoryTriggerSourceStore()`]
+
+/**
  * Opens the database before services are built, so `createSingletonServices`
  * receives `kysely` exactly as a hosted runtime would hand it over.
  *
@@ -525,7 +543,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return [
       `// Generated standalone entry — all functions in one process`,
       `import { LocalEventHubService } from '@pikku/core/channel/local'`,
-      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
+      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryTriggerSourceStore, InMemoryWorkflowService } from '@pikku/core/services'`,
+      ...(ctx.db
+        ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
+        : []),
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
@@ -567,6 +588,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines('node', ctx.db) : []),
+      ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines('node', ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
@@ -576,6 +598,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    workflowService,`,
       `    workflowRunService: workflowService,`,
       `    triggerService,`,
+      `    triggerSourceStore,`,
       `    eventHub,`,
       ...this.platformServicesSpreadLines(),
       `  })`,
@@ -625,7 +648,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   private generateBunEntrySource(ctx: EntryGenerationContext): string {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
-      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
+      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryTriggerSourceStore, InMemoryWorkflowService } from '@pikku/core/services'`,
+      ...(ctx.db
+        ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
+        : []),
       runtimeImport(ctx, 'bun'),
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
@@ -667,6 +693,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines('bun', ctx.db) : []),
+      ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines('bun', ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
@@ -676,6 +703,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    workflowService,`,
       `    workflowRunService: workflowService,`,
       `    triggerService,`,
+      `    triggerSourceStore,`,
       `    eventHub,`,
       ...this.platformServicesSpreadLines(),
       `  })`,

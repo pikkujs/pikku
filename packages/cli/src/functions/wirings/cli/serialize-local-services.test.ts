@@ -247,6 +247,7 @@ describe('the generated createLocalServices', async () => {
       'incomingWebhookService',
       'workflowService',
       'triggerService',
+      'triggerSourceStore',
       'agentRunState',
     ]) {
       assert.ok(services[name], `${name} is missing`)
