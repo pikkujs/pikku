@@ -117,7 +117,7 @@ async function main() {
       'templates-functions',
       'bundle.js'
     )
-    startProcess('standalone', 'node', [bundlePath], {
+    startProcess('standalone', 'bun', [bundlePath], {
       ...sharedRuntimeEnv,
       PORT: String(runtimeConfig.standalone.port),
       HOST: '127.0.0.1',
