@@ -1,151 +1,20 @@
 import React from 'react'
-import { Anchor, Box, Group, Stack, Switch, Text } from '@pikku/mantine/core'
+import { Box, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useQuery } from '@tanstack/react-query'
 import { Webhook } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { usePikkuRPC } from '../../context/PikkuRpcProvider'
-import { useNavigate } from '../../router'
 import {
   webhookSecretName,
   type WebhookSourcePair,
 } from '../../lib/webhook-source'
 import { toEnglishName } from '../../lib/strings'
-import {
-  registrationState,
-  useSetTriggerSourceEnabled,
-  useTriggerSources,
-  type RegistrationState,
-} from '../../hooks/useTriggerSources'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SectionLabel } from '../ui/SectionLabel'
 import { StatusBadge } from '../ui/StatusBadge'
-
-const SecretStatus: React.FC<{ source: string; name: string }> = ({
-  source,
-  name,
-}) => {
-  const rpc = usePikkuRPC()
-  const navigate = useNavigate()
-  const { data: stored, isLoading } = useQuery({
-    queryKey: ['credential-global-status', name],
-    queryFn: async () => {
-      const result = await rpc.invoke('admin:credentialStatus', {
-        names: [name],
-      })
-      return !!(result.statuses as Record<string, boolean> | undefined)?.[name]
-    },
-  })
-
-  return (
-    <Box>
-      <SectionLabel>{m.webhook_source_secret()}</SectionLabel>
-      {isLoading ? (
-        <Text size="sm" c="dimmed">
-          {m.webhook_source_secret_checking()}
-        </Text>
-      ) : (
-        <Stack gap={4}>
-          <Group gap="xs">
-            <StatusBadge tone={stored ? 'good' : 'warn'} size="sm">
-              {stored
-                ? m.webhook_source_secret_badge_stored()
-                : m.webhook_source_secret_badge_missing()}
-            </StatusBadge>
-          </Group>
-          <Text size="sm">
-            {stored
-              ? m.webhook_source_secret_stored({ source })
-              : m.webhook_source_secret_missing({ source })}
-          </Text>
-          {!stored && (
-            <Anchor
-              href="/credentials"
-              size="sm"
-              data-testid="webhook-source-secret-link"
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault()
-                navigate('/credentials')
-              }}
-            >
-              {m.webhook_source_secret_open()}
-            </Anchor>
-          )}
-        </Stack>
-      )}
-    </Box>
-  )
-}
-
-const REGISTRATION_TONE = {
-  pending: 'neutral',
-  off: 'neutral',
-  registered: 'good',
-  manual: 'warn',
-  failed: 'bad',
-} as const satisfies Record<RegistrationState, string>
-
-const Registration: React.FC<{ source: string; name: string }> = ({
-  source,
-  name,
-}) => {
-  const { data: rows, isError } = useTriggerSources()
-  const setEnabled = useSetTriggerSourceEnabled()
-  if (isError || !rows) return null
-  const row = rows.find((r) => r.name === name)
-  const state = registrationState(row)
-  const badge = {
-    pending: m.webhook_source_registration_badge_pending,
-    off: m.webhook_source_registration_badge_off,
-    registered: m.webhook_source_registration_badge_registered,
-    manual: m.webhook_source_registration_badge_manual,
-    failed: m.webhook_source_registration_badge_failed,
-  }[state]()
-  const text = {
-    pending: m.webhook_source_registration_pending,
-    off: m.webhook_source_registration_off,
-    registered: m.webhook_source_registration_registered,
-    manual: m.webhook_source_registration_manual,
-    failed: m.webhook_source_registration_failed,
-  }[state]({ source })
-
-  return (
-    <Box data-testid={`webhook-source-registration-${state}`}>
-      <SectionLabel>{m.webhook_source_registration()}</SectionLabel>
-      <Stack gap={4}>
-        <Group justify="space-between" wrap="nowrap">
-          <StatusBadge tone={REGISTRATION_TONE[state]} size="sm">
-            {badge}
-          </StatusBadge>
-          {row && (
-            <Switch
-              size="md"
-              label={m.webhook_source_registration_switch()}
-              labelPosition="left"
-              checked={row.enabled}
-              disabled={setEnabled.isPending}
-              data-testid="webhook-source-enabled"
-              onChange={(event) =>
-                setEnabled.mutate({
-                  name,
-                  enabled: event.currentTarget.checked,
-                })
-              }
-            />
-          )}
-        </Group>
-        <Text size="sm">{text}</Text>
-        {row?.detail && (state === 'manual' || state === 'failed') && (
-          <Text size="sm" c="dimmed">
-            {asI18n(row.detail)}
-          </Text>
-        )}
-      </Stack>
-    </Box>
-  )
-}
+import { WebhookSourceRegistration } from './WebhookSourceRegistration'
+import { WebhookSourceSecretStatus } from './WebhookSourceSecretStatus'
 
 /** A trigger source that arrives as an incoming webhook: where it is received, what it sends, what it does by itself. */
 export const WebhookSourceConfiguration: React.FC<{
@@ -247,9 +116,11 @@ export const WebhookSourceConfiguration: React.FC<{
         )}
       </Box>
 
-      <Registration source={sourceName} name={source} />
+      <WebhookSourceRegistration source={sourceName} name={source} />
 
-      {secretDeclared && <SecretStatus source={sourceName} name={secretName} />}
+      {secretDeclared && (
+        <WebhookSourceSecretStatus source={sourceName} name={secretName} />
+      )}
     </Stack>
   )
 }
