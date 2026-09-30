@@ -86,6 +86,7 @@ export class RedisWorkflowRunService implements WorkflowRunService {
         attemptCount: Number(data.attemptCount || 1),
         retries: data.retries ? Number(data.retries) : undefined,
         retryDelay: data.retryDelay || undefined,
+        childRunId: data.childRunId || undefined,
         createdAt: new Date(Number(data.createdAt)),
         updatedAt: new Date(Number(data.updatedAt)),
       })

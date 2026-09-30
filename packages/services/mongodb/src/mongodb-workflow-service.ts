@@ -258,6 +258,14 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    return this.runService.getRunSteps(runId)
+  }
+
   async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {

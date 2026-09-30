@@ -201,6 +201,30 @@ export class PikkuWorkflowDoService<
     return toStepState(step)
   }
 
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    this.assertOwn(runId)
+    const order = (await this.storage.get<string[]>(KEY_STEP_ORDER)) ?? []
+    if (order.length === 0) return []
+    const records = await this.storage.get<DoStepRecord>(order.map(stepKey))
+    const steps: Array<
+      StepState & { stepName: string; rpcName?: string; data?: any }
+    > = []
+    for (const id of order) {
+      const s = records.get(stepKey(id))
+      if (!s) continue
+      steps.push({
+        ...toStepState(s),
+        rpcName: s.rpcName ?? undefined,
+        data: s.data,
+      })
+    }
+    return steps
+  }
+
   async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {

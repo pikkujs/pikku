@@ -23,6 +23,7 @@ export type {
   SleepStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  MilestoneStepMeta,
   ApprovalStepMeta,
   SetStepMeta,
   SwitchCaseMeta,
@@ -74,7 +75,14 @@ export interface WorkflowPlannedStep {
 }
 
 export type WorkflowStatus =
-  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  | 'running'
+  | 'suspended'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'compensating'
+  | 'compensated'
+  | 'compensation_failed'
 
 export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
 
@@ -116,6 +124,8 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  /** True for the row that undoes `<stepName>` rather than running it. */
+  compensating?: boolean
   /**
    * When the dispatch that claimed this step stops owning it. The holder pushes
    * it forward while it is still working, so a lapsed lease means the worker is
@@ -144,6 +154,8 @@ export interface WorkflowRunStatus {
   }>
   output?: unknown
   error?: { message: string }
+  restedAt?: string
+  stuckSteps?: Array<{ stepName: string; error: string }>
 }
 
 export interface WorkflowRunService {

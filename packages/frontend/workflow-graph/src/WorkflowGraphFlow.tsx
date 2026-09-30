@@ -63,6 +63,9 @@ const REACHED = new Set([
   'failed',
   'suspended',
   'cancelled',
+  'compensating',
+  'compensated',
+  'compensation_failed',
 ])
 
 const STRUCTURAL = new Set([

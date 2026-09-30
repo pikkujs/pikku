@@ -229,6 +229,13 @@ export type CorePikkuFunctionConfig<
   approvalRequired?: boolean
   /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. Defaults to false (inline). */
   workflowQueued?: boolean
+  /**
+   * Undoes this function's effect when a workflow that called it unwinds. It
+   * receives the function's own input, and `wire.workflow.compensatingFor`
+   * carries the forward output (or the error, when the forward step failed).
+   * It is never callable on its own — only the workflow engine runs it.
+   */
+  compensate?: (services: any, data: any, wire: any) => Promise<any> | any
   /** Number of retry attempts when this function is used as a workflow step. */
   workflowRetries?: number
   /** Timeout for this function when used as a workflow step (e.g. '30s', '5m'). */

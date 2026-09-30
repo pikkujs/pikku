@@ -1,4 +1,5 @@
 import { beginChanges } from './abort-scope.js'
+import { forwardStepName, isCompensationStepName } from './compensation-name.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import {
   combineChannelMiddleware,
@@ -171,6 +172,23 @@ export const runPikkuFunc = async <In = any, Out = any>(
   let funcConfig = funcMap.get(funcName)
   const allMeta = pikkuState(packageName, 'function', 'meta')
   let funcMeta = allMeta[funcName]
+
+  if ((!funcConfig || !funcMeta) && isCompensationStepName(funcName)) {
+    const forwardName = forwardStepName(funcName)
+    const forward = funcMap.get(forwardName)
+    const forwardMeta = allMeta[forwardName]
+    if (forward?.compensate && forwardMeta) {
+      const { compensate, ...rest } = forward
+      funcConfig = { ...rest, func: compensate } as typeof forward
+      funcMeta = {
+        ...forwardMeta,
+        pikkuFuncId: funcName,
+        outputs: null,
+        expose: false,
+        compensate: undefined,
+      }
+    }
+  }
 
   if (!funcConfig || !funcMeta) {
     const { baseName, version } = parseVersionedId(funcName)

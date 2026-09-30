@@ -8,6 +8,7 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { collectInvokedRpcNames } from './add-rpc-invocations.js'
 import { collectStartedWorkflows } from './collect-started-workflows.js'
 import type { AuditDurability } from '@pikku/core/services'
@@ -980,7 +981,47 @@ export const addFunctions: AddWiring = (
     }
   }
 
-  const wires = extractUsedWires(handler, 2)
+  let wires = extractUsedWires(handler, 2)
+
+  // `compensate` runs as the function's own sibling step, deployed wherever the
+  // function is, so what it needs is what the function needs.
+  const compensateInitializer = objectNode
+    ? getPropertyAssignmentInitializer(objectNode, 'compensate', true, checker)
+    : undefined
+  const compensateNode =
+    compensateInitializer &&
+    (ts.isArrowFunction(compensateInitializer) ||
+    ts.isFunctionExpression(compensateInitializer)
+      ? compensateInitializer
+      : undefined)
+  if (compensateNode) {
+    const compensateServices = compensateNode.parameters[0]
+    if (compensateServices) {
+      if (ts.isObjectBindingPattern(compensateServices.name)) {
+        for (const elem of compensateServices.name.elements) {
+          const original =
+            elem.propertyName && ts.isIdentifier(elem.propertyName)
+              ? elem.propertyName.text
+              : ts.isIdentifier(elem.name)
+                ? elem.name.text
+                : undefined
+          if (original && !services.services.includes(original)) {
+            services.services.push(original)
+          }
+        }
+      } else if (
+        ts.isIdentifier(compensateServices.name) &&
+        !compensateServices.name.text.startsWith('_')
+      ) {
+        services.optimized = false
+      }
+    }
+    const compensateWires = extractUsedWires(compensateNode, 2)
+    wires = {
+      optimized: wires.optimized && compensateWires.optimized,
+      wires: [...new Set([...wires.wires, ...compensateWires.wires])],
+    }
+  }
 
   const invoked = collectInvokedRpcNames(handler.body)
   for (const call of invoked.dynamic) {
@@ -1411,6 +1452,7 @@ export const addFunctions: AddWiring = (
     workflowQueued: workflowQueued === true ? true : undefined,
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
+    compensate: compensateNode ? true : undefined,
     scenarioStepSurfaces,
     scenarioStepRequiresActor,
     // `persona` is the default reading of an unmarked step, so it is left off

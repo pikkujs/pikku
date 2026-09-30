@@ -73,7 +73,8 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
         mode: def?.mode,
         input: def?.input,
         next: def?.next,
-        onError: def?.onError,
+        recover: def?.recover,
+        compensate: def?.compensate,
         retries: def?.retries,
         retryDelay: def?.retryDelay,
       }
@@ -107,7 +108,11 @@ type GraphNodeConfigMap<
       template: TemplateFn,
       $item: ItemFn
     ) => InputWithRefs<ComputeNodeInputs<FuncMap, RPCMap>[K]>
-    onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
+    recover?:
+      | Extract<keyof FuncMap, string>
+      | Extract<keyof FuncMap, string>[]
+      | 'ignore'
+    compensate?: false
     retries?: number
     retryDelay?: string | number
     notes?: string

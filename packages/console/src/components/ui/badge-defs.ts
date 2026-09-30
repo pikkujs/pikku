@@ -116,6 +116,9 @@ export const statusDefs: Record<string, EnumBadgeDef> = {
   scheduled: { color: 'orange', label: 'scheduled' },
   skipped: { color: 'gray', label: 'skipped' },
   cancelled: { color: 'gray', label: 'cancelled' },
+  compensating: { color: 'blue', label: 'rolling back' },
+  compensated: { color: 'gray', label: 'rolled back' },
+  compensation_failed: { color: 'red', label: 'rollback stuck' },
 }
 
 export const dynamicDefs: Record<string, DynamicBadgeDef> = {

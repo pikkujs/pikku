@@ -1754,3 +1754,46 @@ describe('runPikkuFunc - secrets', () => {
     assert.ok(seen.error instanceof SecretAccessDeniedError)
   })
 })
+
+describe('runPikkuFunc - inline compensate', () => {
+  const run = (name: string, data: any, wire: any = {}) =>
+    runPikkuFunc('rpc', Math.random().toString(), name, {
+      singletonServices: mockSingletonServices,
+      getAllServices: () => mockServices,
+      data: () => data,
+      auth: false,
+      wire,
+    })
+
+  test('runs the declared compensate as <id>:compensate with the forward input', async () => {
+    const seen: any[] = []
+    addTestFunction('charge', {
+      func: async () => ({ chargeId: 'c1' }),
+      compensate: async (_s: any, data: any, wire: any) => {
+        seen.push({ data, compensatingFor: wire.workflow?.compensatingFor })
+        return { refunded: true }
+      },
+    })
+    const compensatingFor = { ok: true, output: { chargeId: 'c1' } }
+    const result = await run(
+      'charge:compensate',
+      { amount: 5 },
+      { workflow: { compensatingFor } }
+    )
+    assert.deepEqual(result, { refunded: true })
+    assert.deepEqual(seen, [{ data: { amount: 5 }, compensatingFor }])
+  })
+
+  test('the forward function still runs as itself', async () => {
+    addTestFunction('charge', {
+      func: async () => 'forward',
+      compensate: async () => 'undo',
+    })
+    assert.equal(await run('charge', {}), 'forward')
+  })
+
+  test('a function without compensate has no :compensate sibling', async () => {
+    addTestFunction('plain', { func: async () => 'x' })
+    await assert.rejects(run('plain:compensate', {}), /Function not found/)
+  })
+})

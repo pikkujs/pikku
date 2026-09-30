@@ -9,7 +9,7 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
-import { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
+import { DEFAULT_STEP_RETRIES, forwardStepName } from './workflow-constants.js'
 
 export type WorkflowQueueStrategy = 'per-workflow' | 'shared-groups'
 
@@ -63,7 +63,7 @@ export const stepWorkerQueueName = (
 ): string =>
   dedicatedQueueName(
     'wf-step-',
-    rpcName,
+    rpcName && forwardStepName(rpcName),
     strategy,
     resolveWorkflowConfig().stepWorkerQueueName
   )
@@ -90,7 +90,7 @@ export const stepDispatchTarget = async (
   stepName: string,
   parentIsInline: () => Promise<boolean>
 ): Promise<'queue' | 'inline'> => {
-  const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
+  const rpcFuncId = pikkuState(null, 'rpc', 'meta')[forwardStepName(rpcName)]
   const rpcMeta =
     typeof rpcFuncId === 'string'
       ? pikkuState(null, 'function', 'meta')[rpcFuncId]

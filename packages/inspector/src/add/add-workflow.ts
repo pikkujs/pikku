@@ -92,11 +92,6 @@ export function collectInvokedRPCs(
   for (const step of steps) {
     if (step.type === 'rpc' && step.rpcName) {
       rpcs.add(step.rpcName)
-      // The compensation handler is invoked at runtime too, so it has to be
-      // wired like any other step.
-      if (step.options?.onError) {
-        rpcs.add(step.options.onError)
-      }
     } else if (step.type === 'scenarioStep' && step.stepFunc) {
       // Steps are bundled like RPCs — the runner calls them through
       // runPikkuFunc — but they are deliberately never RPC-registered.

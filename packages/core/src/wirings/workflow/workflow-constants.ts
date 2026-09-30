@@ -6,6 +6,8 @@ export const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
   'failed',
   'cancelled',
   'suspended',
+  'compensated',
+  'compensation_failed',
 ])
 
 /** Statuses a run cannot leave at all. */
@@ -13,7 +15,19 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'completed',
   'failed',
   'cancelled',
+  'compensated',
+  'compensation_failed',
 ])
+
+export const NO_COMPENSATE_STATE_PREFIX = 'noCompensate:'
+
+export const MILESTONE_STEP_PREFIX = '__milestone__:'
+
+export const milestoneStepName = (name: string): string =>
+  `${MILESTONE_STEP_PREFIX}${name}`
+
+export const isMilestoneStepName = (stepName: string): boolean =>
+  stepName.startsWith(MILESTONE_STEP_PREFIX)
 
 /**
  * True for a run that will never move again, whatever arrives for it.
@@ -98,3 +112,10 @@ export const RUN_LEASE_RETRY_MS = 1_000
 
 /** Bound on the in-process backoff map, so a long-lived process cannot grow it without bound. */
 export const REDISPATCH_BACKOFF_MAX_ENTRIES = 10_000
+
+export {
+  COMPENSATION_STEP_SUFFIX,
+  compensationStepName,
+  forwardStepName,
+  isCompensationStepName,
+} from '../../function/compensation-name.js'

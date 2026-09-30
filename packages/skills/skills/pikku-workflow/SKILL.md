@@ -237,38 +237,52 @@ with `outcome: 'success' | 'denied'`, the decider under `userIdentity`, and the
 run, reason and refusal in `metadata`. Wire an `audit` service to keep it; a
 project without one records nothing and is otherwise unaffected.
 
-### Error handling: `onError`, never try/catch
+### Failure: `compensate`, never try/catch
 
 **Do not wrap steps in try/catch.** The DSL extractor serialises the body into a
 step graph, and a `catch` block is control flow it cannot represent — so the
-graph would no longer describe what actually runs, which is the whole point of
-the DSL mode. This is a settled design decision, not a temporary limitation.
+graph would no longer describe what actually runs. This is a settled design
+decision, not a temporary limitation.
 
-Use the `onError` step option instead: it names an RPC to invoke when the step
-has failed _after_ exhausting its retries.
+Declare how a function is undone **on the function itself**. When a later step
+fails (after its retries), the engine runs the `compensate` of every earlier
+step that completed, newest first, then the failed step's own:
 
 ```typescript
-await workflow.do(
-  'Charge',
-  'chargePayment',
-  { orderId },
-  {
-    retries: 3,
-    retryDelay: '1s',
-    onError: 'refundReservation', // compensation RPC
-  }
-)
+export const chargePayment = pikkuFunc({
+  func: async ({ payments }, { orderId }) => payments.charge(orderId),
+  compensate: async ({ payments }, { orderId }, { workflow }) => {
+    const { ok, output } = workflow!.compensatingFor!
+    // ok: false → the charge itself failed; output is null, `error` is set
+    if (ok) await payments.refund(output.chargeId)
+  },
+})
 ```
 
-The handler receives `{ error: { message } }`, and the original error is still
-thrown afterwards — so the workflow still fails. `onError` is **compensation, not
-recovery**: it exists to undo work, not to swallow the failure and carry on. If
-you genuinely need to branch on a failure, have the step return a result object
-(`{ success: false, reason }`) and branch on that, the way the `processOrder`
-example branches on `payment.success`.
+- `compensate` gets the **same input** as the forward call. `wire.workflow.compensatingFor`
+  is `{ ok: true, output, stepName }` or `{ ok: false, output: null, error, stepName }`.
+- It is never callable over HTTP, MCP or RPC — only the engine runs it, as the
+  durable step `<step>:compensate` with the same retry defaults as forward steps.
+- Opt a call site out with `{ compensate: false }` (graph nodes likewise).
+- A run ends `compensated` (everything undone), `compensation_failed` (a
+  compensation ran out of retries; `stuckSteps` names them — steps that ran
+  before a stuck one are not undone, parallel siblings still are) or `failed`
+  (nothing needed undoing).
+- `await workflow.milestone('paid')` bounds the unwind: steps finished before the
+  last milestone are kept, and the run ends `compensated` with `restedAt: 'paid'`.
+- A failing child workflow unwinds itself first; a stuck child makes the parent
+  `compensation_failed`. Cancelling a run (`cancelRun`) unwinds it the same way,
+  children first.
 
-Full step options: `description`, `retries`, `retryDelay`, `onError` (plus
-`actor`, which is scenario-only — see `pikku-scenario`).
+To **recover** instead of undo, use a graph node's `recover`:
+`recover: 'nodeId' | ['a','b'] | 'ignore'`. The failure is routed to those nodes
+(`'ignore'` continues to `next` with a null output) and the failing step is not
+compensated. The error arrives as `wire.graph.recoveringFrom`
+(`{ nodeId, stepName, error }`). The DSL has no recovery — branch on a result
+object (`{ success: false, reason }`) instead.
+
+Full step options: `description`, `retries`, `retryDelay`, `compensate: false`
+(plus `actor`, which is scenario-only — see `pikku-scenario`).
 
 ### Parallel fan-out
 

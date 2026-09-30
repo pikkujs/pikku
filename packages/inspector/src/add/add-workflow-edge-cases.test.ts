@@ -68,59 +68,6 @@ async function run(body: string): Promise<{
   }
 }
 
-describe('onError — edge cases', () => {
-  test('the handler is not also emitted as a step that always runs', async () => {
-    const { code } = await run(
-      [
-        "  await workflow.do('Charge', 'chargeCard', {}, { onError: 'refundOrder' })",
-        '  return { ok: true }',
-      ].join('\n')
-    )
-
-    const refundCalls = code.match(/'refundOrder'/g) ?? []
-    assert.equal(
-      refundCalls.length,
-      1,
-      `the handler must appear only as onError, never as its own sequential step, got:\n${code}`
-    )
-  })
-
-  test('a non-literal onError is reported, not silently ignored', async () => {
-    const { diags } = await run(
-      [
-        '  const target = data.handler',
-        "  await workflow.do('Charge', 'chargeCard', {}, { onError: target })",
-        '  return { ok: true }',
-      ].join('\n')
-    )
-
-    assert.ok(
-      diags.some((d) => d.includes('onError')),
-      `a non-literal onError must be diagnosed, got: ${JSON.stringify(diags)}`
-    )
-  })
-
-  test('onError inside a branch still resolves', async () => {
-    const { nodes } = await run(
-      [
-        '  if (data.paid) {',
-        "    await workflow.do('Charge', 'chargeCard', {}, { onError: 'refundOrder' })",
-        '  }',
-        '  return { ok: true }',
-      ].join('\n')
-    )
-
-    const charge = Object.values(nodes).find(
-      (n: any) => n.rpcName === 'chargeCard'
-    ) as any
-    assert.ok(
-      charge?.onError,
-      'a branch step should still carry its error route'
-    )
-    assert.equal((nodes[charge.onError] as any)?.rpcName, 'refundOrder')
-  })
-})
-
 describe('switch — fall-through to default', () => {
   test('a trailing empty case routes to the default body', async () => {
     const { nodes } = await run(

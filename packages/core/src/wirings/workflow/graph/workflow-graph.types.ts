@@ -34,9 +34,7 @@ export type TemplateFn = (
 export type ItemFn = (path?: string) => RefValue
 
 export type ForEachConfig<NodeIds extends string = string> =
-  | NodeIds
-  | RefValue
-  | ((ref: RefFn<NodeIds>) => RefValue)
+  NodeIds | RefValue | ((ref: RefFn<NodeIds>) => RefValue)
 
 export type ForEachMode = 'parallel' | 'sequential'
 
@@ -55,7 +53,14 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
     $item: ItemFn
   ) => Record<string, unknown>
   next?: NextConfig<NodeIds>
-  onError?: NodeIds | NodeIds[]
+  /**
+   * What happens when this node fails after its retries: run these nodes
+   * instead (the error is on `graph.recoveringFrom`), or `'ignore'` to carry
+   * on to `next` with a null output. A recovered failure is not compensated.
+   */
+  recover?: NodeIds | NodeIds[] | 'ignore'
+  /** Leave this node out of the saga unwind. */
+  compensate?: false
   retries?: number
   retryDelay?: string | number
   notes?: string
@@ -68,6 +73,14 @@ export interface PikkuGraphWire {
   branch: (key: string) => void
   setState: (name: string, value: unknown) => Promise<void>
   getState: () => Promise<Record<string, unknown>>
+  /** Set on a node that runs because another node failed and named it in `recover`. */
+  recoveringFrom?: GraphRecovery
+}
+
+export interface GraphRecovery {
+  nodeId: string
+  stepName: string
+  error: { message: string; stack?: string; code?: string; name?: string }
 }
 
 export interface GraphWireState {

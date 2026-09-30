@@ -119,21 +119,9 @@ function convertStepToNode(
           retries: step.options.retries,
           retryDelay: step.options.retryDelay,
         }
-      }
-      // An onError handler is written as an rpc name, but the graph routes to
-      // node ids — materialise a node for it so the console has something to
-      // draw the error edge to, exactly as in a hand-authored graph.
-      if (step.options?.onError) {
-        const handlerId = `${nodeId}_onError`
-        node.onError = handlerId
-        return [
-          node,
-          {
-            nodeId: handlerId,
-            rpcName: step.options.onError,
-            stepName: `${step.stepName} (on error)`,
-          } satisfies FunctionNode,
-        ]
+        if (step.options.compensate === false) {
+          node.compensate = false
+        }
       }
       return [node]
     }
@@ -193,6 +181,16 @@ function convertStepToNode(
         nodeId,
         flow: 'suspend',
         reason: step.reason,
+        next: nextNodeId,
+      }
+      return [node]
+    }
+
+    case 'milestone': {
+      const node: FlowNode = {
+        nodeId,
+        flow: 'milestone',
+        reason: step.name,
         next: nextNodeId,
       }
       return [node]

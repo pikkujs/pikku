@@ -8,6 +8,7 @@ import type {
   FanoutStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  MilestoneStepMeta,
   SleepStepMeta,
   ApprovalStepMeta,
   SetStepMeta,
@@ -32,6 +33,7 @@ import {
   extractActorFromOptions,
   isWorkflowSleepCall,
   isWorkflowSuspendCall,
+  isWorkflowMilestoneCall,
   isWorkflowApprovalCall,
   isThrowCancelException,
   extractCancelReason,
@@ -712,6 +714,10 @@ function extractExpressionStatement(
       return extractSuspendStep(call, context)
     }
 
+    if (isWorkflowMilestoneCall(call, context.checker)) {
+      return extractMilestoneStep(call, context)
+    }
+
     if (isWorkflowApprovalCall(call, context.checker)) {
       const step = extractApprovalStep(call, context, outputVar)
 
@@ -929,13 +935,13 @@ function extractStepOptions(
         } catch {
           // Ignore extraction errors for retryDelay
         }
-      } else if (propName === 'onError') {
-        if (ts.isStringLiteral(prop.initializer)) {
-          options.onError = prop.initializer.text
+      } else if (propName === 'compensate') {
+        if (prop.initializer.kind === ts.SyntaxKind.FalseKeyword) {
+          options.compensate = false
         } else {
           context.errors.push({
             message:
-              'onError must be a literal RPC name so it can be wired and drawn in the graph.',
+              "compensate on a call site can only be `false`: a step's compensation is declared on the function itself.",
             node: prop.initializer,
           })
         }
@@ -1024,6 +1030,30 @@ function extractSuspendStep(
   } catch (error) {
     context.errors.push({
       message: `Failed to extract suspend step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Extract milestone step from workflow.milestone() call
+ */
+function extractMilestoneStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): MilestoneStepMeta | null {
+  const args = call.arguments
+  if (args.length < 1) return null
+
+  try {
+    return {
+      type: 'milestone',
+      name: extractStringLiteral(args[0], context.checker),
+    }
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract milestone step: ${error instanceof Error ? error.message : String(error)}`,
       node: call,
     })
     return null
@@ -1396,7 +1426,13 @@ function extractArrayPredicate(
 function extractFanoutBodyStep(
   stmt: ts.Statement,
   childContext: ExtractionContext,
-  body: Array<RpcStepMeta | SleepStepMeta | SuspendStepMeta | ScenarioStepMeta>
+  body: Array<
+    | RpcStepMeta
+    | SleepStepMeta
+    | SuspendStepMeta
+    | ScenarioStepMeta
+    | MilestoneStepMeta
+  >
 ): void {
   if (ts.isVariableStatement(stmt)) {
     const declList = stmt.declarationList
@@ -1463,6 +1499,13 @@ function extractFanoutBodyStep(
       const suspendStep = extractSuspendStep(call, childContext)
       if (suspendStep && suspendStep.type === 'suspend') {
         body.push(suspendStep)
+      }
+      return
+    }
+    if (isWorkflowMilestoneCall(call, childContext.checker)) {
+      const milestoneStep = extractMilestoneStep(call, childContext)
+      if (milestoneStep) {
+        body.push(milestoneStep)
       }
       return
     }

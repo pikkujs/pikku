@@ -562,68 +562,6 @@ describe('graph-runner bugs', () => {
     delete metaState['testInlineCyclic']
   })
 
-  test('executeGraphStep should throw after queueing onError nodes', async () => {
-    const ws = new InMemoryWorkflowService()
-
-    pikkuState(null, 'package', 'singletonServices', {
-      queueService: {
-        add: async () => {},
-      },
-    } as any)
-
-    const metaState = pikkuState(null, 'workflows', 'meta')
-    metaState['testQueuedOnErrorThrow'] = {
-      name: 'testQueuedOnErrorThrow',
-      pikkuFuncId: 'testQueuedOnErrorThrow',
-      source: 'graph',
-      entryNodeIds: ['a'],
-      graphHash: 'queued-on-error-hash',
-      nodes: {
-        a: { nodeId: 'a', rpcName: 'doA', onError: 'onErr' },
-        onErr: { nodeId: 'onErr', rpcName: 'handleErr' },
-      },
-    }
-
-    const runId = await ws.createRun(
-      'testQueuedOnErrorThrow',
-      {},
-      false,
-      'queued-on-error-hash',
-      { type: 'test' }
-    )
-    const step = await ws.insertStepState(runId, 'a', 'doA', {})
-
-    const rpcService = {
-      rpcWithWire: async () => {
-        throw new Error('boom')
-      },
-    }
-
-    await assert.rejects(
-      () =>
-        executeGraphStep(
-          ws,
-          rpcService,
-          runId,
-          step.stepId,
-          'a',
-          'doA',
-          {},
-          'testQueuedOnErrorThrow'
-        ),
-      /boom/
-    )
-
-    const errorStep = await ws.getStepState(runId, 'onErr')
-    assert.notEqual(
-      errorStep.stepId,
-      '',
-      'onError node should be queued as a step'
-    )
-
-    delete metaState['testQueuedOnErrorThrow']
-  })
-
   test('executeWorkflowStep should mark graph step failed and suspend run on RPCNotFoundError', async () => {
     const ws = new InMemoryWorkflowService()
 

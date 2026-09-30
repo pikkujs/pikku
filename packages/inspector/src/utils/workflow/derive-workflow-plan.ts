@@ -86,6 +86,12 @@ function collectNamedSteps(steps: WorkflowStepMeta[]): WorkflowPlannedStep[] {
           displayName: reasonToLabel(step.reason),
         })
         break
+      case 'milestone':
+        planned.push({
+          stepName: `__milestone__:${step.name}`,
+          displayName: reasonToLabel(step.name),
+        })
+        break
       case 'approval':
         // Same as suspend, but namespaced `__workflow_approval:` to match the
         // runtime's separate step key.

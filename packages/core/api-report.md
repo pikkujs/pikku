@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3201 observable things**: 1067 exported names, plus
-2134 members on the classes and interfaces among them, reachable
+**3217 observable things**: 1068 exported names, plus
+2149 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -17,7 +17,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services` | 175 | 143 | 465 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
-| `./workflow` | 90 | 40 | 145 |
+| `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
@@ -40,12 +40,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
-| `./workflow/timeline` | 9 | 4 | 14 |
+| `./workflow/timeline` | 9 | 4 | 16 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./hmac` | 9 | 9 | 8 |
 | `./rpc` | 7 | 7 | 6 |
-| `./workflow/types` | 46 | 1 | 11 |
+| `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -581,6 +581,7 @@ export type CorePikkuFunctionConfig<
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   workflowQueued?: boolean
+  compensate?: (services: any, data: any, wire: any) => Promise<any> | any
   workflowRetries?: number
   workflowTimeout?: string
   surfaces?: ScenarioSurface[]
@@ -708,6 +709,7 @@ export type FunctionRuntimeMeta = {
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
+  compensate?: boolean
   workflowQueued?: boolean
   workflowRetries?: number
   workflowTimeout?: string
@@ -1067,9 +1069,7 @@ export interface FilterStepMeta {
   outputVar?: string
 }
 export type ForEachConfig<NodeIds extends string = string> =
-  | NodeIds
-  | RefValue
-  | ((ref: RefFn<NodeIds>) => RefValue)
+  NodeIds | RefValue | ((ref: RefFn<NodeIds>) => RefValue)
 export type ForEachMode = 'parallel' | 'sequential'
 export interface GraphNodeConfig<NodeIds extends string = string> {
   func: string
@@ -1077,7 +1077,8 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
   mode?: ForEachMode
   input?: (ref: RefFn<NodeIds>, template: TemplateFn, $item: ItemFn) => Record<string, unknown>
   next?: NextConfig<NodeIds>
-  onError?: NodeIds | NodeIds[]
+  recover?: NodeIds | NodeIds[] | 'ignore'
+  compensate?: false
   retries?: number
   retryDelay?: string | number
   notes?: string
@@ -1098,6 +1099,10 @@ isRef: (value: unknown) => value is RefValue
 isStepLeaseLive: (leaseExpiresAt: Date | null | undefined, now?: number) => boolean
 export type ItemFn = (path?: string) => RefValue
 leaseAttemptsExhausted: (stepState: StepState) => boolean
+export interface MilestoneStepMeta {
+  type: 'milestone'
+  name: string
+}
 export type OutputBinding =
   | { from: 'outputVar'; name: string; path?: string }
   | { from: 'stateVar'; name: string; path?: string }
@@ -1154,6 +1159,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async getRunTimeline(id: string): Promise<RunTimeline | null>
   public async reconstructRunStateAt(id: string, at?: number | Date): Promise<ReconstructedRunState | null>
   abstract getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
+  abstract getRunSteps(runId: string): Promise< Array<StepState & { stepName: string; rpcName?: string; data?: any }> >
   public async updateRunStatus(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
   protected abstract updateRunStatusImpl(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
   public async insertStepState(runId: string, stepName: string, rpcName: string | null, data: any, stepOptions?: WorkflowStepOptions, fromStepName?: string): Promise<StepState>
@@ -1207,6 +1213,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async waitBeforeNextRead(ms: number): Promise<void>
   protected async listStepStates(_runId: string): Promise<Array<StepState & { stepName: string }> | null>
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
+  public notifyChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   protected async onChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   public async executeWorkflowStep(runId: string, stepName: string, rpcName: string, data: any, rpcService: PikkuRPC): Promise<void>
   protected async claimStepForExecution(runId: string, stepName: string, rpcName: string, leaseMs: number): Promise<StepState | null>
@@ -1214,6 +1221,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async inlineStep(runId: string, logicalStepName: string, fn: Function, stepOptions?: WorkflowStepOptions, data: any = null, rpcName: string | null = null): Promise<any>
   public async approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
   public createWorkflowWire(name: string, runId: string, rpcService: PikkuRPC, addonNamespace?: string | null): PikkuWorkflowWire
+  public async failOrUnwind(run: WorkflowRun, error: Error & { code?: string }, rpcService: PikkuRPC): Promise<'unwinding' | 'finished' | 'failed'>
+  public async cancelRun(runId: string, rpcService: PikkuRPC): Promise<WorkflowStatus | undefined>
+  protected async markFailedUnlessUnwound(runId: string, error: SerializedError): Promise<void>
   protected verifyStepName(stepName: string): void
   protected getOrchestratorQueueName(workflowName?: string): string
   protected getStepWorkerQueueName(rpcName?: string): string
@@ -1224,6 +1234,7 @@ export interface PikkuWorkflowSleeperInput {
   stepId: string
 }
 export interface PikkuWorkflowWire {
+  compensatingFor?: CompensatingFor
   name: string
   runId: string
   pikkuUserId?: string
@@ -1231,6 +1242,7 @@ export interface PikkuWorkflowWire {
   do: WorkflowWireDoRPC & WorkflowWireDoInline
   sleep: WorkflowWireSleep
   suspend: WorkflowWireSuspend
+  milestone: WorkflowWireMilestone
   approval: WorkflowWireApproval
 }
 export interface ReconstructedRunState {
@@ -1289,6 +1301,7 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  compensating?: boolean
   leaseExpiresAt?: Date
   runningAt?: Date
   scheduledAt?: Date
@@ -1425,6 +1438,8 @@ export interface WorkflowRunStatus {
   steps: Array<{ name: string; status: StepStatus; duration?: number; attempts?: number }>
   output?: unknown
   error?: { message: string }
+  restedAt?: string
+  stuckSteps?: Array<{ stepName: string; error: string }>
 }
 export interface WorkflowRunWire {
   type: string
@@ -1490,7 +1505,14 @@ export type WorkflowsMeta = Record<
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
-  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  | 'running'
+  | 'suspended'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'compensating'
+  | 'compensated'
+  | 'compensation_failed'
 export interface WorkflowStatusStreamParams {
   workflowRunService: WorkflowRunService
   runId: string
@@ -1516,6 +1538,7 @@ export type WorkflowStepMeta =
   | SleepStepMeta
   | CancelStepMeta
   | SuspendStepMeta
+  | MilestoneStepMeta
   | ApprovalStepMeta
   | SwitchStepMeta
   | FilterStepMeta
@@ -1525,7 +1548,7 @@ export interface WorkflowStepOptions {
   description?: string
   retries?: number
   retryDelay?: string | number
-  onError?: string
+  compensate?: false
   actor?: ScenarioPersona
 }
 export interface WorkflowStepInput {
@@ -1839,6 +1862,7 @@ export interface ReconstructedRunState {
 }
 export interface ReconstructedStep {
   stepName: string
+  compensating: boolean
   status: StepStatus
   attemptCount: number
   fromStepName?: string
@@ -1854,6 +1878,7 @@ export interface RunTimelineEvent {
   at: Date
   type: Extract< StepStatus, 'pending' | 'scheduled' | 'running' | 'succeeded' | 'failed' >
   stepName: string
+  compensating: boolean
   attemptCount: number
   fromStepName?: string
   result?: unknown
@@ -1943,6 +1968,10 @@ export type InputSource =
   | { from: 'item'; path: string }
   | { from: 'literal'; value: unknown }
   | { from: 'template'; parts: string[]; expressions: InputSource[] }
+export interface MilestoneStepMeta {
+  type: 'milestone'
+  name: string
+}
 export type OutputBinding =
   | { from: 'outputVar'; name: string; path?: string }
   | { from: 'stateVar'; name: string; path?: string }
@@ -1959,6 +1988,7 @@ export interface PikkuWorkflow {
   cancelRun: (runId: string) => Promise<void>
 }
 export interface PikkuWorkflowWire {
+  compensatingFor?: CompensatingFor
   name: string
   runId: string
   pikkuUserId?: string
@@ -1966,6 +1996,7 @@ export interface PikkuWorkflowWire {
   do: WorkflowWireDoRPC & WorkflowWireDoInline
   sleep: WorkflowWireSleep
   suspend: WorkflowWireSuspend
+  milestone: WorkflowWireMilestone
   approval: WorkflowWireApproval
 }
 export interface ReturnStepMeta {
@@ -2008,6 +2039,7 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  compensating?: boolean
   leaseExpiresAt?: Date
   runningAt?: Date
   scheduledAt?: Date
@@ -2094,6 +2126,8 @@ export interface WorkflowRunStatus {
   steps: Array<{ name: string; status: StepStatus; duration?: number; attempts?: number }>
   output?: unknown
   error?: { message: string }
+  restedAt?: string
+  stuckSteps?: Array<{ stepName: string; error: string }>
 }
 export interface WorkflowRuntimeMeta {
   name: string
@@ -2172,7 +2206,14 @@ export type WorkflowsMeta = Record<
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
-  'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  | 'running'
+  | 'suspended'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'compensating'
+  | 'compensated'
+  | 'compensation_failed'
 export type WorkflowStepMeta =
   | RpcStepMeta
   | ScenarioStepMeta
@@ -2184,6 +2225,7 @@ export type WorkflowStepMeta =
   | SleepStepMeta
   | CancelStepMeta
   | SuspendStepMeta
+  | MilestoneStepMeta
   | ApprovalStepMeta
   | SwitchStepMeta
   | FilterStepMeta
@@ -2193,7 +2235,7 @@ export interface WorkflowStepOptions {
   description?: string
   retries?: number
   retryDelay?: string | number
-  onError?: string
+  compensate?: false
   actor?: ScenarioPersona
 }
 export interface WorkflowStepWire {

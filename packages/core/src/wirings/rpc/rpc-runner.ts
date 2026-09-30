@@ -3,6 +3,10 @@ import type {
   PikkuWire,
   PikkuRawWire,
 } from '../../types/core.types.js'
+import {
+  forwardStepName,
+  isCompensationStepName,
+} from '../../function/compensation-name.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
@@ -115,6 +119,14 @@ const resolvePikkuFunction = (
         pikkuFuncId: rootFunctionMeta.pikkuFuncId || rpcName,
         packageName: null,
       }
+    }
+  }
+  if (!rpcMeta && isCompensationStepName(rpcName)) {
+    const forward = forwardStepName(rpcName)
+    const forwardFunc = pikkuState(null, 'function', 'functions').get(forward)
+    const forwardId = rpc[forward] ?? (forwardFunc ? forward : undefined)
+    if (forwardId && forwardFunc?.compensate) {
+      return { pikkuFuncId: `${forwardId}:compensate`, packageName: null }
     }
   }
   if (!rpcMeta) {

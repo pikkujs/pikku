@@ -98,6 +98,7 @@ export interface NodeOptions {
 export type FlowType =
   | 'sleep'
   | 'suspend'
+  | 'milestone'
   | 'approval'
   | 'branch'
   | 'parallel'
@@ -130,8 +131,10 @@ interface BaseNode {
   stepName?: string
   /** Next node(s) - simple, parallel, or conditional */
   next?: SerializedNext
-  /** Error routing - node(s) to execute on error */
-  onError?: string | string[]
+  /** What to do when this node fails: run these nodes, or 'ignore' to carry on. */
+  recover?: string | string[] | 'ignore'
+  /** Leave this node out of the saga unwind. */
+  compensate?: false
   /** Execution options */
   options?: NodeOptions
   /** Free-text node documentation. Non-semantic — excluded from graphHash. */
