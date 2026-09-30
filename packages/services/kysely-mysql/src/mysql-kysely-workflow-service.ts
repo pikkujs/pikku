@@ -1,4 +1,5 @@
 import { KyselyWorkflowService } from '@pikku/kysely'
+import type { WorkflowVersionStatus } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
@@ -23,6 +24,30 @@ export class MySQLKyselyWorkflowService extends KyselyWorkflowService {
   /** Step leases are judged on the database's clock, which every worker shares. */
   protected override nowMs() {
     return mysqlNowMs()
+  }
+
+  /**
+   * MySQL has no `ON CONFLICT`; re-assigning the key to itself on a duplicate
+   * leaves the recorded version untouched, as `DO NOTHING` does elsewhere.
+   */
+  protected override async upsertWorkflowVersionImpl(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string,
+    status?: WorkflowVersionStatus
+  ): Promise<void> {
+    await this.db
+      .insertInto('workflowVersions')
+      .values({
+        workflowName: name,
+        graphHash,
+        graph: JSON.stringify(graph),
+        source,
+        status: status ?? 'active',
+      })
+      .onDuplicateKeyUpdate({ graphHash })
+      .execute()
   }
 
   async withStepLock<T>(
