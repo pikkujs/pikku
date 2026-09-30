@@ -500,10 +500,9 @@ value for the address being signed in as and compares, so a credential minted
 for one persona is refused for every other, and the root itself is never a valid
 credential. A root under 32 characters refuses the endpoint outright rather than
 deriving weak credentials from it (the server log names the problem; the client
-is not told which). Callers rarely derive by hand — `pikku dev` mints one per
-persona into `VITE_DEV_ACTOR_SECRETS` for the browser switcher, `pikku persona
-secret <id>` mints them for a run, and the two `PersonaSignIn` implementations
-derive on the fly.
+is not told which). Callers rarely derive by hand — `pikku persona secret <id>`
+mints them for a run, and the two `PersonaSignIn` implementations derive on the
+fly. The browser switcher holds none: it signs in through `/sign-in/persona`.
 
 **Which command is running decides whether it works, not whether a secret is
 set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
@@ -559,9 +558,11 @@ actor`. So the secret cannot take over a **real user's** account — the blast
   paragraph above. The comparison is constant-time and length-hiding, so a wrong
   credential leaks neither the length nor a prefix of the right one.
 
-This is the endpoint `pikku scenario` signs its actors in through, and the one
-the frontend dev switcher posts to — see `pikku-scenario` for declaring the
-actors and `pikku-react` for `useDevActors()`.
+This is the endpoint `pikku scenario` signs its actors in through. The frontend
+switcher does not use it: it lists from `/sign-in/personas` and posts a persona
+id to `/sign-in/persona`, both served by
+`pikkuActor({ personaSignIn: { personas, featureFlags } })` with no credential — see
+`pikku-scenario` for the setup and `pikku-react` for `useDevActors()`.
 
 ### Provisioning personas
 

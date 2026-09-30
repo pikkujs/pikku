@@ -5,50 +5,33 @@
 //~ lang: tsx
 
 //~ steps:
-//~ The hook returns an empty actor list unless the host supplied BOTH the personas and
-//~ their credentials, so a production bundle renders nothing without you testing for it.
-//~ Gate the env reads on the dev flag anyway — that is what keeps a credential out of the
-//~ production bundle in the first place, and this is the second line of defence, not the
-//~ first.
+//~ On Mantine, render `<DevActorSwitcher apiUrl={…} />` from `@pikku/mantine/dev`
+//~ instead of this; otherwise drive `useDevActors` with your own markup, as here.
+//~
+//~ The server half is `personaSignIn` on `pikkuActor` — see `src/auth.ts`. It
+//~ serves both the list and the sign-in, so without it the switcher silently
+//~ lists nobody. Pass it `featureFlags` so a stage can turn it on.
+//~
+//~ Only a persona's id and label reach the browser, so there is no credential to
+//~ keep out of the production bundle.
 // ===== FILE: src/components/dev-sign-in.tsx =====
 import { useDevActors } from '@pikku/react'
 
 export const DevSignIn = () => {
-  const { actors, signInAs, pendingEmail, error } = useDevActors({
-    //~ Spelled for the bundler you are on. This package deliberately does not
-    //~ read env itself: `import.meta.env` under Vite, `process.env.NEXT_PUBLIC_*`
-    //~ under Next, and a package that guesses gets it wrong for half its users.
-    actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-    secrets: import.meta.env.DEV
-      ? import.meta.env.VITE_DEV_ACTOR_SECRETS
-      : undefined,
+  const { actors, signInAs, isPending } = useDevActors({
     apiUrl: '/api',
-    onSignedIn: () => {
-      //~ A full reload rather than a router push. Everything on the page was
-      //~ fetched as nobody, so the cheapest correct thing is to start again as
-      //~ somebody.
-      window.location.assign('/')
-    },
+    //~ A full reload rather than a router push: everything on the page was
+    //~ fetched as nobody.
+    onSignedIn: () => window.location.assign('/'),
   })
 
-  if (actors.length === 0) return null
-
-  return (
-    <section>
-      <h2>Sign in as…</h2>
-      <ul>
-        {actors.map((actor) => (
-          <li key={actor.email}>
-            <button
-              onClick={() => signInAs(actor.email)}
-              disabled={pendingEmail !== null}
-            >
-              {actor.name} — {actor.jobTitle}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {error ? <p role="alert">{error.message}</p> : null}
-    </section>
-  )
+  return actors.map((actor) => (
+    <button
+      key={actor.id}
+      disabled={isPending}
+      onClick={() => signInAs(actor.id)}
+    >
+      {actor.name}
+    </button>
+  ))
 }

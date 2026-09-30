@@ -33,8 +33,8 @@ const Todos = () => {
 
 ## Dev actor sign-in
 
-`useDevActors()` powers the dev-only "Sign in as …" switcher: one click signs in
-as a declared scenario persona with no password, through Better Auth's actor
+`useDevActors()` powers the "Sign in as …" switcher: one click signs in as a
+declared scenario persona with no password, through Better Auth's persona
 endpoint. It is UI-free, so you can render it however you like — or use the
 ready-made `<DevActorSwitcher />` from `@pikku/mantine/dev`.
 
@@ -42,23 +42,19 @@ ready-made `<DevActorSwitcher />` from `@pikku/mantine/dev`.
 import { useDevActors } from '@pikku/react'
 
 const { actors, signInAs, isPending } = useDevActors({
-  // The sandbox dev server bakes these from your declared personas. Gate the
-  // reads on your bundler's dev flag so no credential reaches production.
-  actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-  secrets: import.meta.env.DEV
-    ? import.meta.env.VITE_DEV_ACTOR_SECRETS
-    : undefined,
   apiUrl: apiUrl(),
+  app: appSlug,
   onSignedIn: () => navigate({ to: '/' }),
 })
 ```
 
-`secrets` is `{ address: credential }`, not a single shared value: a credential
-opens the one persona it was minted for. `actors` is empty unless the host
-supplied both a list and the credentials for it, and an actor with no credential
-is not offered, so a production build renders nothing without you testing for
-it. The endpoint only accepts users flagged `actor: true`, so it can never
-impersonate a real user.
+No credential reaches the bundle. The hook lists personas from
+`/auth/sign-in/personas`, and `signInAs(id)` posts only the persona id to
+`/auth/sign-in/persona`. The server decides both: pass `personaSignIn` to
+`pikkuActor` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
+stage opts into actor sign-in and turns its `devSwitcher` flag on, and the
+endpoint only signs in users flagged `actor: true`, so it can never impersonate
+a real user.
 
 ## Locale store
 

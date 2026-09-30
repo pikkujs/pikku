@@ -6,7 +6,7 @@ import {
   ACTOR_ROOT_SECRET_MIN_LENGTH,
   verifyActorSecret,
 } from '@pikku/core/services'
-import type { Logger } from '@pikku/core/services'
+import type { FeatureFlagSource, Logger } from '@pikku/core/services'
 
 import {
   ACTOR_NOT_PROVISIONED_MESSAGE,
@@ -19,6 +19,8 @@ import {
   WEAK_ACTOR_ROOT_SECRET_MESSAGE,
   weakActorRootSecretMessage,
 } from './actor-sign-in-gate.js'
+import { devSwitcherOn, isSignInable, listDevActors } from './dev-actors.js'
+import type { DevActorPersona } from './dev-actors.js'
 
 export interface ActorPluginOptions {
   /**
@@ -44,13 +46,17 @@ export interface ActorPluginOptions {
    */
   allowSignIn?: string
   /**
-   * Opens `POST /sign-in/persona { id }`, which signs in as a declared persona
-   * without the caller presenting a credential — the switcher a reviewer uses on
-   * a preview. `allowed` is asked on every call, so the app can gate it on a flag.
+   * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/personas
+   * ?app=` lists the personas it may offer, and `POST /sign-in/persona { id }`
+   * signs in as one without the caller presenting a credential.
+   *
+   * Open under `pikku dev`; a deployed stage needs `allowSignIn` and the
+   * `devSwitcher` flag in `featureFlags`. `allowed` replaces that check.
    */
   personaSignIn?: {
-    personas: ReadonlyArray<{ id: string; email?: string; name?: string; runnable?: boolean }>
-    allowed: () => boolean | Promise<boolean>
+    personas: ReadonlyArray<DevActorPersona>
+    featureFlags?: FeatureFlagSource
+    allowed?: () => boolean | Promise<boolean>
   }
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
@@ -147,15 +153,15 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
     refusalAnnounced = true
   }
 
+  const personaAllowed = async () =>
+    options.personaSignIn?.allowed
+      ? options.personaSignIn.allowed()
+      : devSwitcherOn(options.personaSignIn?.featureFlags, options.allowSignIn)
+
   const signIn = async (ctx: any, email: string, name?: string) => {
-    type ActorUser = { id: string; actor?: boolean } & Record<
-      string,
-      unknown
-    >
-    const existing =
-      await ctx.context.internalAdapter.findUserByEmail(email)
-    let user: ActorUser | undefined = existing?.user as
-      ActorUser | undefined
+    type ActorUser = { id: string; actor?: boolean } & Record<string, unknown>
+    const existing = await ctx.context.internalAdapter.findUserByEmail(email)
+    let user: ActorUser | undefined = existing?.user as ActorUser | undefined
     if (user && !user.actor) {
       // Real user row — the secret must never impersonate real users
       throw new APIError('UNAUTHORIZED', {
@@ -186,9 +192,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
       }
     }
 
-    const session = await ctx.context.internalAdapter.createSession(
-      user.id
-    )
+    const session = await ctx.context.internalAdapter.createSession(user.id)
     if (!session) {
       throw new APIError('INTERNAL_SERVER_ERROR', {
         message: 'Failed to create actor session',
@@ -277,19 +281,35 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
       ),
       ...(options.personaSignIn
         ? {
+            listPersonas: createAuthEndpoint(
+              '/sign-in/personas',
+              {
+                method: 'GET',
+                query: z.object({ app: z.string().optional() }).optional(),
+              },
+              async (ctx) => {
+                const personaSignIn = options.personaSignIn!
+                const open = gate.enabled && (await personaAllowed())
+                return ctx.json({
+                  actors: open
+                    ? listDevActors(personaSignIn.personas, ctx.query?.app)
+                    : [],
+                })
+              }
+            ),
             signInPersona: createAuthEndpoint(
               '/sign-in/persona',
               { method: 'POST', body: z.object({ id: z.string() }) },
               async (ctx) => {
                 const personaSignIn = options.personaSignIn!
-                if (!gate.enabled || !(await personaSignIn.allowed())) {
+                if (!gate.enabled || !(await personaAllowed())) {
                   throw new APIError('UNAUTHORIZED', {
                     message: 'Persona sign-in is disabled',
                   })
                 }
                 const persona = personaSignIn.personas.find(
                   (candidate) =>
-                    candidate.id === ctx.body.id && candidate.runnable !== false
+                    candidate.id === ctx.body.id && isSignInable(candidate)
                 )
                 if (!persona?.email) {
                   throw new APIError('NOT_FOUND', {

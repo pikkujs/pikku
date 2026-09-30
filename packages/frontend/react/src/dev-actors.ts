@@ -1,175 +1,114 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 /**
- * One scenario persona the sandbox offers for one-click sign-in.
- *
- * These are the personas declared with `definePersonas` — the same source
- * `pikku scenario` and the console read. The address is not written down
- * anywhere: it is derived from the persona id and `scenarios.emailDomain`, and
- * the dev seed creates `actor: true` user rows at exactly those addresses.
+ * One scenario persona the switcher offers for one-click sign-in, as
+ * `GET /auth/sign-in/personas` lists it. No address and no credential: sign-in
+ * names the persona by id and the server resolves the rest.
  */
 export type DevActor = {
-  key: string
-  email: string
+  id: string
   name: string
-  jobTitle: string
+  jobTitle: string | null
 }
 
-/**
- * Parse the actor list a dev server bakes into the frontend bundle.
- *
- * The raw value is JSON, supplied by the host: `import.meta.env.VITE_DEV_ACTORS`
- * under Vite, `process.env.NEXT_PUBLIC_DEV_ACTORS` under Next. This package
- * deliberately does not read env itself — how env is spelled is a bundler fact,
- * and a package that guesses gets it wrong for half its consumers.
- *
- * Anything unparseable yields an empty list rather than throwing: a broken dev
- * affordance must not take the login screen down with it.
- */
-export const parseDevActors = (raw: unknown): DevActor[] => {
-  if (typeof raw !== 'string' || raw.length === 0) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (actor): actor is DevActor =>
-        !!actor &&
-        typeof actor === 'object' &&
-        typeof actor.key === 'string' &&
-        typeof actor.email === 'string' &&
-        // `name` and `jobTitle` are what the switcher DRAWS, so an entry missing
-        // either is not a usable actor — it is a menu row reading "undefined".
-        typeof actor.name === 'string' &&
-        typeof actor.jobTitle === 'string'
-    )
-  } catch {
-    return []
-  }
-}
-
-export type SignInAsActorOptions = {
-  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/actor` is appended. */
+export type SignInAsPersonaOptions = {
+  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/persona` is appended. */
   apiUrl: string
-  email: string
-  /** That address's own actor credential. Dev-only; never present in a production bundle. */
-  secret: string
+  id: string
 }
 
 /**
- * Sign in as a scenario actor through Better Auth's actor endpoint — no
- * password, using the credential the dev server minted for that address.
+ * Sign in as a declared persona through Better Auth's persona endpoint — no
+ * password and no credential in the bundle.
  *
- * The credential is bound to the address, so it signs in as that persona and
- * no other, and the endpoint only accepts rows flagged `actor: true` — so this
- * can never impersonate a real user however a credential leaks. See the `actor`
- * plugin in `@pikku/better-auth`.
+ * The server decides: `pikkuActor({ personaSignIn })` refuses unless its
+ * its gate is open, and only ever signs in rows flagged `actor: true`, so
+ * this can never reach a real user's account.
  */
-export const signInAsActor = async ({
+export const signInAsPersona = async ({
   apiUrl,
-  email,
-  secret,
-}: SignInAsActorOptions): Promise<void> => {
-  const response = await fetch(`${apiUrl}/auth/sign-in/actor`, {
+  id,
+}: SignInAsPersonaOptions): Promise<void> => {
+  const response = await fetch(`${apiUrl}/auth/sign-in/persona`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ email, secret }),
+    body: JSON.stringify({ id }),
   })
   if (!response.ok) {
-    throw new Error(`Unable to sign in as ${email} (${response.status})`)
+    throw new Error(`Unable to sign in as ${id} (${response.status})`)
   }
 }
 
-/** Address → that address's own actor credential. */
-export type DevActorSecrets = Record<string, string>
-
-/**
- * Parse the credential map a dev server bakes into the bundle
- * (`import.meta.env.VITE_DEV_ACTOR_SECRETS`). Unparseable yields none, for the
- * same reason a broken actor list does: the login screen must still render.
- */
-export const parseDevActorSecrets = (raw: unknown): DevActorSecrets => {
-  if (typeof raw === 'object' && raw !== null) return raw as DevActorSecrets
-  if (typeof raw !== 'string' || raw.length === 0) return {}
-  try {
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {}
-    }
-    return Object.fromEntries(
-      Object.entries(parsed as Record<string, unknown>).filter(
-        (entry): entry is [string, string] => typeof entry[1] === 'string'
-      )
-    )
-  } catch {
-    return {}
-  }
-}
-
-export type UseDevActorsOptions = {
-  /** Raw JSON actor list from the host's env, or an already-parsed list. */
-  actors: string | DevActor[] | undefined
-  /**
-   * One credential per persona, keyed by address — raw JSON from the host's
-   * env, or an already-parsed map. An actor with no credential here is not
-   * offered.
-   *
-   * A map rather than one value: the root secret every credential derives from
-   * is entitled to every persona, so a bundle must never hold it. `pikku dev`
-   * mints these and exports them as `VITE_DEV_ACTOR_SECRETS`.
-   */
-  secrets: string | DevActorSecrets | undefined
+export type ListDevActorsOptions = {
+  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/personas` is appended. */
   apiUrl: string
+  /** Narrows to this app's personas when it declares any. */
+  app?: string
+}
+
+/** The personas `pikkuActor({ personaSignIn })` will sign in — none wherever the switcher is off. */
+export const listDevActors = async ({
+  apiUrl,
+  app,
+}: ListDevActorsOptions): Promise<DevActor[]> => {
+  const query = app ? `?app=${encodeURIComponent(app)}` : ''
+  const response = await fetch(`${apiUrl}/auth/sign-in/personas${query}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) return []
+  return ((await response.json()) as { actors?: DevActor[] }).actors ?? []
+}
+
+export type UseDevActorsOptions = ListDevActorsOptions & {
   /** Called after a successful sign-in — the app owns where that lands. */
   onSignedIn?: () => void | Promise<void>
 }
 
 export type UseDevActorsResult = {
-  /** Empty whenever the host exposed no actors or no credentials — render nothing. */
+  /** Empty until loaded, and whenever the server offers none — render nothing. */
   actors: DevActor[]
-  signInAs: (email: string) => void
-  /** The address currently signing in, or null. */
-  pendingEmail: string | null
+  signInAs: (id: string) => void
+  /** The persona currently signing in, or null. */
+  pendingId: string | null
   isPending: boolean
   error: Error | null
 }
 
 /**
- * State for the dev-only "Sign in as …" switcher.
+ * State for the "Sign in as …" switcher.
  *
- * Returns an empty actor list unless the host supplied BOTH a list and the
- * credentials for it, so a production bundle — where neither env var is set —
- * renders nothing without the caller testing for it. Hosts should still gate
- * the env reads on their dev flag (`import.meta.env.DEV`) so no credential is
- * emitted into a production bundle in the first place; this is the second line,
- * not the first.
+ * A listing that fails leaves the list empty rather than surfacing an error:
+ * a broken dev affordance must not take the login screen down with it.
  */
 export const useDevActors = ({
-  actors: rawActors,
-  secrets: rawSecrets,
   apiUrl,
+  app,
   onSignedIn,
 }: UseDevActorsOptions): UseDevActorsResult => {
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [actors, setActors] = useState<DevActor[]>([])
+  const [pendingId, setPendingId] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
 
-  const secrets = useMemo(() => parseDevActorSecrets(rawSecrets), [rawSecrets])
-
-  const actors = useMemo(() => {
-    const declared = Array.isArray(rawActors)
-      ? rawActors
-      : parseDevActors(rawActors)
-    // An actor with no credential would render a row that 401s on click.
-    return declared.filter((actor) => !!secrets[actor.email])
-  }, [rawActors, secrets])
+  useEffect(() => {
+    let live = true
+    listDevActors({ apiUrl, app })
+      .then((listed) => {
+        if (live) setActors(listed)
+      })
+      .catch(() => {
+        if (live) setActors([])
+      })
+    return () => {
+      live = false
+    }
+  }, [apiUrl, app])
 
   const signInAs = useCallback(
-    (email: string) => {
-      const secret = secrets[email]
-      if (!secret) return
-      setPendingEmail(email)
+    (id: string) => {
+      setPendingId(id)
       setError(null)
-      signInAsActor({ apiUrl, email, secret })
+      signInAsPersona({ apiUrl, id })
         .then(async () => {
           await onSignedIn?.()
         })
@@ -177,17 +116,17 @@ export const useDevActors = ({
           setError(cause instanceof Error ? cause : new Error(String(cause)))
         })
         .finally(() => {
-          setPendingEmail(null)
+          setPendingId(null)
         })
     },
-    [apiUrl, secrets, onSignedIn]
+    [apiUrl, onSignedIn]
   )
 
   return {
     actors,
     signInAs,
-    pendingEmail,
-    isPending: pendingEmail !== null,
+    pendingId,
+    isPending: pendingId !== null,
     error,
   }
 }

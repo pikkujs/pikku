@@ -6,7 +6,7 @@ description: >-
   direct usePikkuRPC / usePikkuFetch calls, realtime subscriptions, agent and workflow hooks, and
   the dev actor switcher. TRIGGER when: writing a React component that fetches or mutates backend
   data, wiring PikkuProvider, paginating, running or tracking a workflow from the client, or
-  asking about useDevActors / VITE_DEV_ACTORS / quick login. DO NOT TRIGGER when: working on the
+  asking about useDevActors / DevActorSwitcher / quick login. DO NOT TRIGGER when: working on the
   backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), or writing
   user-facing copy (use pikku-i18n).
 installGroups: [client]

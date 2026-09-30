@@ -209,11 +209,79 @@ const signInPersona = (auth: ReturnType<typeof makeAuth>, id: string) =>
     })
   )
 
+const listPersonas = (auth: ReturnType<typeof makeAuth>, app?: string) =>
+  auth.handler(
+    new Request(
+      `http://localhost:3000/api/auth/sign-in/personas${app ? `?app=${app}` : ''}`
+    )
+  )
+
 describe('persona sign-in', () => {
   const personas = [
-    { id: 'customer', email: 'customer@actors.local', name: 'Customer' },
+    {
+      id: 'customer',
+      email: 'customer@actors.local',
+      name: 'Customer',
+      app: 'web',
+    },
+    { id: 'admin', email: 'admin@actors.local', name: 'Admin', app: 'admin' },
     { id: 'banned', email: 'banned@actors.local', runnable: false },
   ]
+
+  test('lists only the personas it will sign in, narrowed to the app', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [
+      { id: 'customer', name: 'Customer', jobTitle: null },
+      { id: 'admin', name: 'Admin', jobTitle: null },
+    ])
+    assert.deepEqual(
+      (await (await listPersonas(auth, 'admin')).json()).actors.map(
+        (actor: { id: string }) => actor.id
+      ),
+      ['admin']
+    )
+  })
+
+  test('without `allowed`, a deployed stage follows its devSwitcher flag', async () => {
+    clearGateEnv()
+    let enabled = false
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      allowSignIn: ACTOR_SIGN_IN_OPT_IN_VALUE,
+      personaSignIn: {
+        personas,
+        featureFlags: {
+          snapshot: async () => ({
+            devSwitcher: { enabled, rolloutPercent: null, overrides: {} },
+          }),
+        },
+      },
+    })
+
+    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [])
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    enabled = true
+    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
+  })
+
+  test('without `allowed` or flags, `pikku dev` is open', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas },
+    })
+    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
+  })
+
+  test('lists nobody when `allowed` refuses', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas, allowed: () => false },
+    })
+    const res = await listPersonas(auth)
+    assert.equal(res.status, 200)
+    assert.deepEqual((await res.json()).actors, [])
+  })
+
   beforeEach(() => {
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
   })
@@ -228,7 +296,10 @@ describe('persona sign-in', () => {
     const res = await signInPersona(auth, 'customer')
 
     assert.equal(res.status, 200)
-    assert.match(res.headers.getSetCookie().join('; '), /better-auth\.session_token=/)
+    assert.match(
+      res.headers.getSetCookie().join('; '),
+      /better-auth\.session_token=/
+    )
     assert.equal((await res.json()).user.email, 'customer@actors.local')
   })
 
