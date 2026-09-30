@@ -13,10 +13,8 @@ test('the native trees are what the native jobs exercise', () => {
     true
   )
   assert.equal(touchesNative(['packages/cli/src/functions/app/run.ts']), true)
-  assert.equal(
-    touchesNative(['e2e/packages/web/src-tauri/tauri.conf.json']),
-    true
-  )
+  assert.equal(touchesNative(['e2e/packages/web/src/main.tsx']), true)
+  assert.equal(touchesNative(['e2e/pikku.config.json']), true)
   assert.equal(
     touchesNative(['packages/deploy/deploy-standalone/src/adapter.ts']),
     false

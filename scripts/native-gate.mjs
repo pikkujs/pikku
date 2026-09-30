@@ -13,6 +13,7 @@ const NATIVE_PATHS = [
   /^packages\/cli\/src\/functions\/app\//,
   /^packages\/cli\/src\/functions\/commands\/app\.ts$/,
   /^e2e\/packages\/web\//,
+  /^e2e\/pikku\.config\.json$/,
   /^\.github\/workflows\/develop\.yml$/,
   /^scripts\/native-(gate|smoke)\.mjs$/,
 ]

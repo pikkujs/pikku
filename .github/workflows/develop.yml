@@ -285,10 +285,21 @@ jobs:
       - name: Build the web app for the native shell
         working-directory: e2e/packages/web
         run: bun run build:native
+      # Nothing native is committed: the Tauri project is written here from the
+      # `native` entry in e2e/pikku.config.json, then given the full icon set,
+      # exactly as `pikku app native init`'s next steps tell a user to.
+      - name: Create the native project
+        working-directory: e2e
+        run: npx pikku app native init web
+      - name: Generate the icon set
+        working-directory: e2e/packages/web
+        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png
       - uses: actions/upload-artifact@v7
         with:
           name: native-web-dist
-          path: e2e/packages/web/dist-native
+          path: |
+            e2e/packages/web/dist-native
+            e2e/packages/web/src-tauri
           if-no-files-found: error
           retention-days: 7
 
@@ -321,7 +332,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: native-web-dist
-          path: e2e/packages/web/dist-native
+          path: e2e/packages/web
       - name: Install the WebKitGTK toolchain
         if: ${{ matrix.name == 'linux' }}
         run: |
@@ -371,7 +382,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: native-web-dist
-          path: e2e/packages/web/dist-native
+          path: e2e/packages/web
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -441,7 +452,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: native-web-dist
-          path: e2e/packages/web/dist-native
+          path: e2e/packages/web
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios-sim
