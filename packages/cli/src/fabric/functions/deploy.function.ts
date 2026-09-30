@@ -3,11 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
-import {
-  branchFromHead,
-  currentBranch,
-  resolveRef,
-} from '../../utils/git.js'
+import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'

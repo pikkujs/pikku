@@ -1,12 +1,39 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import { mock } from 'bun:test'
 import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, rm, rename, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { diffMigrationSets } from '../lib/migration-base.js'
-import { runValidate } from './validate.function.js'
-import { guardMigrationHistory } from './deploy.function.js'
+
+type Ledger = {
+  stageId: string
+  branch: string
+  migrations: { name: string; hash: string | null; appliedAt: string }[]
+}[]
+
+// The deploy guard reads ~/.fabric/auth.json and the stage ledger, so HOME is
+// disposable and the ledger is whatever the test sets.
+process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
+const API_URL = 'http://fabric.test'
+process.env.FABRIC_API_URL = API_URL
+process.env.FABRIC_PROJECT_ID = '11111111-2222-3333-4444-555555555555'
+let ledger: Ledger | Error = []
+mock.module('../lib/http.js', () => ({
+  getFabricRPC: () => ({
+    invoke: async (name: string) => {
+      if (name !== 'listStageMigrationLedger')
+        throw new Error(`unexpected ${name}`)
+      if (ledger instanceof Error) throw ledger
+      return { stages: ledger }
+    },
+  }),
+}))
+const { writeAuthFile } = await import('../lib/config.js')
+await writeAuthFile({ tokens: { [API_URL]: 'token' } })
+const { runValidate, hashMigration } = await import('./validate.function.js')
+const { guardMigrationHistory } = await import('./deploy.function.js')
 
 describe('diffMigrationSets', () => {
   const base = new Map([
@@ -45,10 +72,6 @@ const sh = (cwd: string, ...args: string[]) =>
 
 async function makeRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-'))
-  await writeFile(
-    join(root, 'pikkufabric.config.json'),
-    JSON.stringify({ projectId: 'proj-abc123' })
-  )
   await writeFile(
     join(root, 'pikku.config.json'),
     JSON.stringify({ srcDirectories: ['packages/functions/src'] })
@@ -201,47 +224,127 @@ describe('deploy apply migration guard', () => {
       process.chdir(prev)
     }
   }
-
-  test('refuses and lists the findings; gap counts too', async () => {
+  const applied = (branch: string, name: string, sql: string): Ledger[0] => ({
+    stageId: `stage-${branch}`,
+    branch,
+    migrations: [
+      { name, hash: hashMigration(sql), appliedAt: '2026-09-01T00:00:00Z' },
+    ],
+  })
+  const refusal = async (root: string, target: string) => {
+    let message = ''
+    await inProject(root, async () => {
+      await assert.rejects(
+        () => guardMigrationHistory({}, target),
+        (err: Error) => {
+          message = err.message
+          return /Refusing to deploy/.test(err.message)
+        }
+      )
+    })
+    return message
+  }
+  const withRepo = async (fn: (root: string) => Promise<void>) => {
     const root = await makeRepo()
     try {
-      await writeFile(join(root, 'db/sqlite/0001-init.sql'), 'edited')
-      await writeFile(join(root, 'db/sqlite/0004-gap.sql'), 'SELECT 1;')
-      await inProject(root, async () => {
-        await assert.rejects(
-          () => guardMigrationHistory({}),
-          (err: Error) =>
-            /Refusing to deploy: 2 migration-history problems/.test(
-              err.message
-            ) &&
-            /migration-modified-after-base-0001-init-sql/.test(err.message) &&
-            /migration-gap/.test(err.message) &&
-            /--skip-migration-check/.test(err.message)
-        )
-      })
+      await fn(root)
     } finally {
+      ledger = []
       await rm(root, { recursive: true, force: true })
     }
-  })
+  }
 
-  test('passes on a clean history, and --skip-migration-check warns loudly', async () => {
-    const root = await makeRepo()
+  test('refuses and lists the findings; gap counts too', () =>
+    withRepo(async (root) => {
+      await writeFile(join(root, 'db/sqlite/0001-init.sql'), 'edited')
+      await writeFile(join(root, 'db/sqlite/0004-gap.sql'), 'SELECT 1;')
+      const message = await refusal(root, 'feature')
+      assert.match(message, /2 migration-history problems/)
+      assert.match(message, /migration-modified-after-base-0001-init-sql/)
+      assert.match(message, /migration-gap/)
+      assert.doesNotMatch(message, /--skip-migration-check|override/)
+    }))
+
+  test('passes on a clean history', () =>
+    withRepo(async (root) => {
+      await inProject(root, () => guardMigrationHistory({}, 'feature'))
+    }))
+
+  test('a branch-only migration its own stage applied cannot be edited', () =>
+    withRepo(async (root) => {
+      ledger = [
+        applied('feature', '0003-c.sql', 'CREATE TABLE c (id INTEGER);'),
+      ]
+      await writeFile(
+        join(root, 'db/sqlite/0003-c.sql'),
+        'CREATE TABLE c (id TEXT);'
+      )
+      assert.match(
+        await refusal(root, 'feature'),
+        /migration-drift-feature-0003-c-sql/
+      )
+    }))
+
+  test('production is checked whichever stage is deployed', () =>
+    withRepo(async (root) => {
+      ledger = [applied('main', '0003-c.sql', 'CREATE TABLE c (id INTEGER);')]
+      await writeFile(
+        join(root, 'db/sqlite/0003-c.sql'),
+        'CREATE TABLE c (id TEXT);'
+      )
+      assert.match(
+        await refusal(root, 'feature'),
+        /migration-drift-main-0003-c-sql/
+      )
+    }))
+
+  test("another branch's stage does not block this deploy", () =>
+    withRepo(async (root) => {
+      ledger = [applied('other', '0003-c.sql', 'CREATE TABLE c (id INTEGER);')]
+      await writeFile(
+        join(root, 'db/sqlite/0003-c.sql'),
+        'CREATE TABLE c (id TEXT);'
+      )
+      await inProject(root, () => guardMigrationHistory({}, 'feature'))
+    }))
+
+  test('a ledger that cannot be read refuses, where validate only notes it', () =>
+    withRepo(async (root) => {
+      ledger = new Error('fabric-api unreachable')
+      assert.match(
+        await refusal(root, 'feature'),
+        /migration-drift-unchecked.*fabric-api unreachable/
+      )
+      const { findings } = await runValidate(root, { skipTypecheck: true })
+      assert.equal(
+        findings.find((f) => f.id === 'migration-drift-unchecked')?.severity,
+        'info'
+      )
+    }))
+
+  test('a base that does not resolve refuses, where validate stays quiet', () =>
+    withRepo(async (root) => {
+      sh(root, 'branch', '-m', 'main', 'trunk')
+      assert.match(
+        await refusal(root, 'feature'),
+        /migration-base-unresolved.*origin\/main or main/
+      )
+      assert.deepEqual(await guardIds(root), [])
+    }))
+
+  test('outside a git repository the deploy refuses', async () => {
+    const plain = await mkdtemp(join(tmpdir(), 'pikku-migguard-plain-'))
     try {
-      await inProject(root, async () => {
-        await guardMigrationHistory({})
-        await writeFile(join(root, 'db/sqlite/0001-init.sql'), 'edited')
-        const errs: string[] = []
-        const orig = console.error
-        console.error = (...a: unknown[]) => errs.push(a.join(' '))
-        try {
-          await guardMigrationHistory({ skipMigrationCheck: true })
-        } finally {
-          console.error = orig
-        }
-        assert.match(errs.join('\n'), /WITHOUT checking migration history/)
-      })
+      await writeFile(
+        join(plain, 'pikku.config.json'),
+        JSON.stringify({ srcDirectories: ['packages/functions/src'] })
+      )
+      await mkdir(join(plain, 'packages/functions/src'), { recursive: true })
+      await mkdir(join(plain, 'db/sqlite'), { recursive: true })
+      await writeFile(join(plain, 'db/sqlite/0001-init.sql'), 'x')
+      assert.match(await refusal(plain, 'feature'), /migration-base-unresolved/)
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(plain, { recursive: true, force: true })
     }
   })
 })

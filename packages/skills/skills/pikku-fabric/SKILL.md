@@ -103,11 +103,15 @@ this:
   or `PIKKU_MIGRATIONS_BASE`) but was modified, deleted or renamed in the working
   tree. New files are fine. It is skipped outside a git repo or with no base ref.
   In CI use a full clone (`fetch-depth: 0`) so the base ref exists.
-- `pikku fabric deploy apply` runs the migration-history checks first
-  (`migration-applied-file-missing-*`, `migration-drift-*`, `migration-gap`,
-  `migration-modified-after-base-*`) and refuses to create a deployment if any
-  fail. `--skip-migration-check` overrides it with a loud warning — only when
-  you know the stage database already matches.
+- `pikku fabric deploy apply` runs the migration-history checks first and
+  refuses to create a deployment if any fail. It compares against the stage
+  being deployed and the production (`main`) stage's applied ledger, and against
+  the base ref — a branch stage can be reset at will, but main's history reaches
+  production. Findings: `migration-applied-file-missing-*`, `migration-drift-*`,
+  `migration-gap`, `migration-modified-after-base-*`. Unlike `validate`, a check
+  that cannot run refuses too: an unreadable ledger (`migration-drift-unchecked`)
+  or a base ref that does not resolve (`migration-base-unresolved`). There is no
+  override flag — fix the history.
 
 Fix a finding by restoring the file (`git checkout origin/main -- db/sqlite/<file>`)
 and putting the change in a new migration.
