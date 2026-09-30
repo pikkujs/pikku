@@ -1,3 +1,23 @@
+## 0.12.23
+
+### Patch Changes
+
+- a16b0ba: `RedisWorkflowService` and `MongoDBWorkflowService` now record a step's lease, so a step whose worker died is claimed again once the lease lapses, as it already was on Kysely. Both fence a step's result, error and lease renewal to the attempt that claimed it: a superseded worker's write throws `WorkflowStepSupersededError` and leaves the newer attempt's state alone. Redis does the check and the write in one Lua script. MongoDB now keeps the attempt number on the step document, advances it in the same guarded update that grants the lease, and tags every history document with the attempt it belongs to.
+- a16b0ba: The workflow run lease takes the app's `leaseService` (`holdLease(leaseService, 'workflow-run:<id>', …)`) in place of `pg_advisory_lock` / `GET_LOCK`, for DSL and graph runs alike. A message for a run already being orchestrated elsewhere wakes the run again a second later instead of failing, so a long pass never spends the retry budget the queue keeps for real failures. An inline run whose lease was lost after its body finished keeps the outcome it wrote. `PgWorkflowQueueOptions` and `RunLockHoldTimeoutError` are removed. `WorkflowService.withRunLock` is renamed `withRunLease`, since what it holds runs out unless renewed; a custom workflow service overriding it renames the method.
+
+  Pass the lease service to the workflow service — `new PgKyselyWorkflowService(db, { leaseService })` — register the same instance as the app's `leaseService`, and migrate `pikku_lease`.
+
+  A step lease is renewed by the same loop as the run lease. A graph node whose worker died is dispatched again once its lease lapses, instead of leaving the run waiting on it. A replayed step on Kysely now sees its lease, as `getStepState` does. The in-memory store refuses a superseded worker's outcome, as the database stores do. The MySQL workflow service can now record a workflow version; it used `ON CONFLICT`, which MySQL does not have.
+
+  `pikku db generate` now writes the `pikku_lease` table for any project that runs workflows, not only one that reaches `leaseService`, since every persistent workflow service holds its runs and steps there.
+
+- a16b0ba: Persistent workflow services take a required `leaseService` (`WorkflowServiceOptions`) and lock runs and steps on it. The Postgres advisory and MySQL `GET_LOCK` step locks, and Redis's own `SET NX` run and step locks, are removed; `RedisWorkflowService` now takes `(connection, { leaseService, keyPrefix? })`.
+- Updated dependencies [a16b0ba]
+- Updated dependencies [21e9c3a]
+- Updated dependencies [a16b0ba]
+- Updated dependencies [a16b0ba]
+  - @pikku/core@0.12.133
+
 ## 0.12.22
 
 ### Patch Changes

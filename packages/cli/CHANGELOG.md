@@ -1,3 +1,26 @@
+## 0.12.177
+
+### Patch Changes
+
+- fa83945: Server (container) entries now run on `@pikku/bun-server` and the generated Dockerfile uses `oven/bun`. The standalone provider is bun-only: the `--runtime` option and the node entry are removed. The remote job inbox is served by the `scaffold.remoteJobs` routes, so `@pikku/node-http-server` no longer carries the `dispatchJobs` / `dispatchSecret` shim.
+- 5a7443e: `pikku fabric deploy apply --reset` wipes a disposable stage's database and rebuilds it from the migrations and the dev seed as part of the deploy. It refuses production/`main` and `--deployment-id`, asks first (naming the app, the stage and that all data is wiped; `-y` skips the prompt but still prints it), and fails without wiping anything when the fabric server does not report the reset.
+- 3da0f0b: `pikku fabric validate` now errors (`migration-modified-after-base-*`) when a migration file that exists on the base ref (default `origin/main`, `--migrations-base` / `PIKKU_MIGRATIONS_BASE`) is modified, deleted or renamed. `pikku fabric deploy apply` runs the migration-history checks first and refuses to create a deployment while they fail, checking the stage being deployed, the production stage and the base ref. There is no override, and a check it cannot run (ledger unreadable, base ref unresolved, not a git repository) refuses rather than being skipped. The pikku-fabric skill documents the forward-only migration rule.
+- 920c6bc: Fabric commands refuse a plain-`http:` API URL for any host but `localhost`, `127.0.0.1` and `::1`, and name the URL and where it came from (`--api-url`, `FABRIC_API_URL` or the last login). Before, `deploy`, `logs`, `projects` and the rest sent the bearer token unencrypted to whatever URL resolved. The check is in `resolveApiContext`, so every command has it.
+- fa83945: `pikku validate` now fails when MCP is wired without `@pikku/modelcontextprotocol` or agents are wired without `@pikku/ai-vercel`, so deploy tooling no longer has to inject them.
+- Updated dependencies [fa83945]
+- Updated dependencies [5a7443e]
+- Updated dependencies [3da0f0b]
+- Updated dependencies [a16b0ba]
+- Updated dependencies [21e9c3a]
+- Updated dependencies [a16b0ba]
+- Updated dependencies [a16b0ba]
+  - @pikku/deploy-cloudflare@0.12.19
+  - @pikku/deploy-standalone@0.12.24
+  - @pikku/node-http-server@0.12.18
+  - @pikku/skills@0.12.46
+  - @pikku/core@0.12.133
+  - @pikku/kysely@0.13.33
+
 ## 0.12.176
 
 ### Patch Changes

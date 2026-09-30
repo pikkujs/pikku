@@ -1,5 +1,13 @@
 # @pikku/skills
 
+## 0.12.46
+
+### Patch Changes
+
+- 5a7443e: `pikku fabric deploy apply --reset` wipes a disposable stage's database and rebuilds it from the migrations and the dev seed as part of the deploy. It refuses production/`main` and `--deployment-id`, asks first (naming the app, the stage and that all data is wiped; `-y` skips the prompt but still prints it), and fails without wiping anything when the fabric server does not report the reset.
+- 3da0f0b: `pikku fabric validate` now errors (`migration-modified-after-base-*`) when a migration file that exists on the base ref (default `origin/main`, `--migrations-base` / `PIKKU_MIGRATIONS_BASE`) is modified, deleted or renamed. `pikku fabric deploy apply` runs the migration-history checks first and refuses to create a deployment while they fail, checking the stage being deployed, the production stage and the base ref. There is no override, and a check it cannot run (ledger unreadable, base ref unresolved, not a git repository) refuses rather than being skipped. The pikku-fabric skill documents the forward-only migration rule.
+- a16b0ba: Persistent workflow services take a required `leaseService` (`WorkflowServiceOptions`) and lock runs and steps on it. The Postgres advisory and MySQL `GET_LOCK` step locks, and Redis's own `SET NX` run and step locks, are removed; `RedisWorkflowService` now takes `(connection, { leaseService, keyPrefix? })`.
+
 ## 0.12.45
 
 ### Patch Changes
