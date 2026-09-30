@@ -311,4 +311,26 @@ describe('getFileImportRelativePath', () => {
       '@pikku/core/trigger'
     )
   })
+
+  test('reads top-level condition keys as the package root', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pikku-exports-'))
+    const pkg = join(root, 'packages', 'lib')
+    mkdirSync(join(pkg, 'dist'), { recursive: true })
+    writeFileSync(
+      join(pkg, 'package.json'),
+      JSON.stringify({
+        name: '@acme/lib',
+        exports: { types: './dist/index.d.ts', import: './dist/index.js' },
+      })
+    )
+
+    assert.strictEqual(
+      getFileImportRelativePath(
+        join(root, 'app', '.pikku', 'rpc.gen.d.ts'),
+        join(pkg, 'dist', 'types.d.ts'),
+        {}
+      ),
+      '@acme/lib'
+    )
+  })
 })

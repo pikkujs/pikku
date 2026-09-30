@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import {
   appendFileSync,
+  chmodSync,
   existsSync,
   readFileSync,
   writeFileSync,
@@ -113,6 +114,8 @@ export const reconcileDevWebhooks = async ({
   writeFileSync(file, `${JSON.stringify(registrations, null, 2)}\n`, {
     mode: 0o600,
   })
+  // `mode` applies only when the file is created, not to one that already exists.
+  chmodSync(file, 0o600)
 
   for (const outcome of result.outcomes) {
     if (outcome.status === 'unchanged') continue

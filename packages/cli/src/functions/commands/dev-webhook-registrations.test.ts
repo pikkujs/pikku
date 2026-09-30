@@ -103,6 +103,17 @@ test('registers once, ignores the file in git and keeps it private', async () =>
   )
 })
 
+test('tightens a registrations file that already exists', async () => {
+  const dir = gitDir()
+  const file = join(dir, WEBHOOK_REGISTRATIONS_FILE)
+  writeFileSync(file, '{}\n', { mode: 0o644 })
+  const { logger } = recordingLogger()
+
+  await reconcile(dir, logger)
+
+  assert.equal(statSync(file).mode & 0o777, 0o600)
+})
+
 test('refuses to write the file when git tracks it', async () => {
   const dir = gitDir()
   writeFileSync(join(dir, WEBHOOK_REGISTRATIONS_FILE), '{}\n')

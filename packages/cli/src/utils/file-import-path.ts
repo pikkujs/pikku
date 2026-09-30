@@ -16,7 +16,12 @@ const exportedSubpath = (to: string): string | undefined => {
     const { name, exports } = JSON.parse(readFileSync(packageJson, 'utf-8'))
     if (!name || !exports || typeof exports !== 'object') return undefined
     const fileDir = relative(dir, dirname(file)).replace(/\\/g, '/')
-    for (const [subpath, entry] of Object.entries<any>(exports)) {
+    // Condition keys at the top level (`{ "import": ... }`) describe `.` alone.
+    const subpaths = Object.keys(exports).some((key) => key.startsWith('.'))
+      ? exports
+      : { '.': exports }
+    for (const [subpath, entry] of Object.entries<any>(subpaths)) {
+      if (subpath !== '.' && !subpath.startsWith('./')) continue
       const target =
         typeof entry === 'string'
           ? entry
