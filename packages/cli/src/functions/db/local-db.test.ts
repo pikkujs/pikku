@@ -1537,7 +1537,7 @@ test('the same holds on postgres', async () => {
   assert.doesNotMatch(body, /REVIEW/)
   assert.match(
     body,
-    /ALTER TABLE person ADD COLUMN two_factor_enabled INTEGER;/
+    /ALTER TABLE "person" ADD COLUMN "two_factor_enabled" INTEGER;/
   )
 
   await migrateAndCodegen(resolved)
@@ -1775,13 +1775,70 @@ CREATE TABLE app.workflow_step (
 
   // The column the covered table is missing, as an alteration of the table in
   // `app` — not of whatever `workflow_step` resolves to.
-  assert.match(body, /ALTER TABLE "app"\.workflow_step ADD COLUMN/)
+  assert.match(body, /ALTER TABLE "app"\."workflow_step" ADD COLUMN/)
   assert.doesNotMatch(
     body,
-    /ALTER TABLE workflow_step /,
+    /ALTER TABLE "?workflow_step"? /,
     'an unqualified ALTER would land in whichever schema search_path finds'
   )
 
   // And the tables it does create wholesale are qualified as well.
   assert.match(body, /create table "app"\./i)
+})
+
+test('db generate quotes the table and column of a postgres ALTER, so a reserved word applies', async () => {
+  usePostgresProject({
+    migrationSql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY);\n',
+  })
+  const resolved = resolveDb({}, root, root)!
+
+  const dir = join(root, 'node_modules', 'addon-actor')
+  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'addon-actor', version: '1.0.0' })
+  )
+  writeFileSync(
+    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+    JSON.stringify({
+      postgres: {
+        sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, actor BOOLEAN DEFAULT FALSE);',
+        tables: {
+          user: [
+            {
+              name: 'id',
+              type: 'text',
+              notNull: true,
+              pk: true,
+              defaultValue: null,
+            },
+            {
+              name: 'actor',
+              type: 'boolean',
+              notNull: false,
+              pk: false,
+              defaultValue: 'false',
+            },
+          ],
+        },
+      },
+    } satisfies SchemaArtifact)
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-actor' }]
+  )
+
+  const migration = written.find((w) => w.source === 'addon-actor')
+  assert.ok(migration, 'the missing column was written')
+  const body = readFileSync(migration.file, 'utf8')
+  assert.match(
+    body,
+    /ALTER TABLE "user" ADD COLUMN "actor" boolean DEFAULT false;/
+  )
+  assert.doesNotMatch(body, /ALTER TABLE user /)
 })
