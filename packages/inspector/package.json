@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector",
-  "version": "0.12.96",
+  "version": "0.12.97",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -54,10 +54,10 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.130"
+    "@pikku/core": "^0.12.131"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.130",
+    "@pikku/core": "^0.12.131",
     "@types/node": "^24.13.3"
   },
   "engines": {

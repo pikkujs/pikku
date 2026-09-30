@@ -1,5 +1,13 @@
 # @pikku/deploy-standalone
 
+## 0.12.22
+
+### Patch Changes
+
+- 2dcc651: Native apps hang off `frontends`: `pikku app native init|add|upgrade|check <name>` writes and maintains a committed Tauri project per frontend (desktop and Android; bundled dist, a deployed URL, or a bundled server sidecar). App commands move under `pikku app` (`pikku app new`, `pikku app list`). The top-level `frontend` key is replaced by `frontends` in `pikku.config.json`, where the one entry with `serve` is what `pikku serve`/`dev`/standalone deploys mount. `deploy apply --desktop` is gone — a frontend's `native.bundleServer` asks for the sidecar instead.
+- 2dcc651: The Tauri shell is a library crate a mobile build can link (`[lib]` target, program in `lib.rs`, single-instance gated to desktop), and takes a `desktopNative` list of Tauri's own plugins — crates, initialisers, per-origin capability grants and iOS consent strings generated together.
+- 2dcc651: A generated native project packages on Windows: it ships a placeholder `icons/icon.ico` beside `icon.png` and lists both, where the Windows bundler refused to run with `Couldn't find a .ico icon`.
+
 ## 0.12.21
 
 ### Patch Changes

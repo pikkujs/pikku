@@ -1,3 +1,10 @@
+## 0.12.131
+
+### Patch Changes
+
+- 58cccc1: `wire.getCredential('name')` is typed by the project's own credentials, and is always on the wire. Function types were written from the setup-only inspection, which never sees `defineCredential`, so every project fell back to an untyped map; `pikku all` now rewrites them once the credentials leaf exists. `getCredential` and `getCredentials` are no longer optional on `PikkuWire`, since the function runner always sets them. Without a credentials map, `getCredential<string>('name')` returns `string` rather than `unknown`.
+- a26c60e: The workflow status stream sends a `suspended` frame with the run's reason when a run suspends, and stays open for the resume. It used to send nothing to say that no more progress was coming without action.
+
 ## 0.12.130
 
 ### Patch Changes
