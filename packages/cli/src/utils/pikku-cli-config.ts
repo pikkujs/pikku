@@ -1340,6 +1340,7 @@ const _getPikkuCLIConfig = async (
       result.authTypesFile = join(result.configDir, result.authTypesFile)
     }
 
+    result.tsconfig ??= 'tsconfig.json'
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }

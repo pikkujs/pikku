@@ -204,6 +204,18 @@ describe('getPikkuCLIConfig', () => {
     assert.equal(config.metaLocale, DEFAULT_META_LOCALE)
   })
 
+  test('tsconfig defaults to tsconfig.json in the root, as tsc does', async () => {
+    const root = await writeConfig({ tsconfig: undefined })
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(config.tsconfig, join(root, 'tsconfig.json'))
+  })
+
   test('a declared metaLocale survives the load, canonicalized', async () => {
     const root = await writeConfig({ metaLocale: 'de-de' })
 
