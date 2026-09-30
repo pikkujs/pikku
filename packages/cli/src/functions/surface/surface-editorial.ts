@@ -36,7 +36,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'create a function',
     skill: 'pikku-services',
     summary:
-      'The three factories a project declares exactly once — its config, its singleton services and its per-wire services. An addon declares the same three in its own flavour, handed the logger, variables and secrets the host application already built. Everything else on this page is imported by features; these are imported by bootstrap and then left alone.',
+      'The factories a project declares exactly once — its config, its singleton services and its per-wire services — and, for an application, the server lifecycle that runs work before and after the server starts and stops. An addon declares the first three in its own flavour, handed the logger, variables and secrets the host application already built, and has no lifecycle: it does not own a server. Everything else on this page is imported by features; these are imported by bootstrap and then left alone.',
   },
   function: {
     step: 'create a function',

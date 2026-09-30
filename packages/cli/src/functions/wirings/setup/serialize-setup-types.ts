@@ -1,6 +1,7 @@
 /**
- * Generates the setup surface — the three factories a project declares exactly
- * once, at the point the application is brought up. Grouping them apart from
+ * Generates the setup surface — the factories a project declares exactly once,
+ * at the point the application is brought up: config, singleton services,
+ * per-wire services and, for an application, the server lifecycle. Grouping them apart from
  * the function types keeps `#pikku/function` to what a feature imports every
  * day and `#pikku/setup` to what bootstrap imports and never touches again.
  */
@@ -9,14 +10,15 @@ export const serializeSetupTypes = (
   configTypeImport: string,
   configTypeName: string | undefined,
   requiredServicesTypeImport: string,
-  allowShadowedServices: string[] = []
+  allowShadowedServices: string[] = [],
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   return `/**
  * Config and service factory definitions, declared once per application
  */
 
 import { pikkuState as __pikkuState } from '@pikku/core/state'
-import { CreateWireServices } from '@pikku/core/types'
+import { CreateWireServices${addon ? '' : ', ServerLifecycle'} } from '@pikku/core/types'
 import type { SingletonServices } from '${functionTypesImportPath}'
 ${configTypeImport}
 ${requiredServicesTypeImport}
@@ -113,5 +115,29 @@ export const pikkuWireServices = (
   __pikkuState(null, 'package', 'factories', { ...factories, createWireServices: func as any })
   return func as unknown as CreateWireServices
 }
+${
+  addon
+    ? ''
+    : `
+/**
+ * Declares the work to run around the server's life: \`beforeStart\`,
+ * \`afterStart\`, \`beforeStop\` and \`afterStop\`. Each is optional and receives
+ * the singleton services, already created and already set, so startup work that
+ * needs a service — migrations, seeding, starting a queue consumer — belongs
+ * here rather than in the services factory.
+ *
+ * Export exactly one, from anywhere in \`srcDirectories\`. Only \`pikku dev\` and
+ * \`pikku serve\` run these hooks; a runtime that owns its own entrypoint does
+ * not.
+ *
+ * Order is beforeStart, the server starts, afterStart; on shutdown beforeStop,
+ * services stop, the server stops, afterStop. \`afterStop\` runs once the
+ * services are already stopped, so anything that needs a live service goes in
+ * \`beforeStop\`.
+ */
+export const pikkuServerLifecycle = (
+  lifecycle: ServerLifecycle<RequiredSingletonServices>
+): ServerLifecycle<RequiredSingletonServices> => lifecycle
 `
+}`
 }
