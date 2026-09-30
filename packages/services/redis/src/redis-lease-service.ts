@@ -79,16 +79,14 @@ export class RedisLeaseService implements LeaseService {
     connectionOrConfig: Redis | RedisOptions | string | undefined,
     config: RedisLeaseServiceConfig = {}
   ) {
-    if (
-      typeof connectionOrConfig === 'object' &&
-      connectionOrConfig !== null &&
-      'hgetall' in connectionOrConfig &&
-      'hset' in connectionOrConfig
-    ) {
-      this.redis = connectionOrConfig as Redis
+    if (connectionOrConfig instanceof Redis) {
+      this.redis = connectionOrConfig
       this.ownsConnection = false
+    } else if (typeof connectionOrConfig === 'string') {
+      this.redis = new Redis(connectionOrConfig)
+      this.ownsConnection = true
     } else {
-      this.redis = new Redis(connectionOrConfig as any)
+      this.redis = new Redis(connectionOrConfig ?? {})
       this.ownsConnection = true
     }
     this.keyPrefix = config.keyPrefix ?? 'pikku'
