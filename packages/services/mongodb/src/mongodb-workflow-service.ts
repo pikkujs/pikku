@@ -1,5 +1,6 @@
 import type { SerializedError } from '@pikku/core/errors'
 import {
+  leaseAttemptsExhausted,
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
 } from '@pikku/core/workflow'
@@ -443,10 +444,6 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return fn()
-  }
-
   /**
    * A pass-through: MongoDB has no advisory-lock primitive to build one on.
    * The one decision that must exclude — claiming a step to execute it — is
@@ -491,6 +488,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
 
     if (stepState.status === 'failed') {
+      // A step that has spent every attempt is settled; a redelivered message
+      // must not buy it another one.
+      if (leaseAttemptsExhausted(stepState)) {
+        return null
+      }
       if (!(await this.claimStepStatus(stepState.stepId, ['failed']))) {
         return null
       }

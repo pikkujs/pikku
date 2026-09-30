@@ -11,6 +11,7 @@ caller is entitled to assume.
 
 <!-- pikku:knowledge-index -->
 
+- [A held run is woken later, not retried](a-held-run-is-woken-later-not-retried.md) — An orchestrator message that finds its run held enqueues a fresh wake-up a second later instead of failing, because the queue's retry budget is for real failures and a long pass outlasts it
 - [A non-streaming agent run registers with aiRunState on the same terms as a streaming one](a-non-streaming-agent-run-registers-with-airunstate-too.md) — Otherwise interruptAIAgent finds the run, passes the ownership check, then cannot stop it — and reports that as if the run were on another host
 - [With scenarios.reset on, the dev seed is the fixture every assertion is written against](a-reset-suite-makes-the-dev-seed-the-fixture.md) — The rollback restores the database as the suite found it, so seed rows are the shared baseline — which makes an absolute date in the seed a test that expires
 - [A resumed turn is as interruptible as the first one](a-resumed-agent-turn-is-as-interruptible-as-the-first.md) — It is the same person listening to the same voice, and after an approval it is where most of the reply actually gets spoken

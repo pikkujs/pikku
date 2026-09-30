@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import { isExpectedError } from '../errors/error-handler.js'
+import { isStepLeaseLive } from '../wirings/workflow/workflow-constants.js'
 import type { SerializedError } from '../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
@@ -186,6 +187,24 @@ export class InMemoryWorkflowService
     }
   }
 
+  public override async refreshStepLease(
+    stepId: string,
+    leaseMs: number | null,
+    attempt?: number
+  ): Promise<boolean> {
+    for (const step of this.steps.values()) {
+      if (step.stepId === stepId) {
+        if (attempt !== undefined && step.attemptCount !== attempt) {
+          return false
+        }
+        step.leaseExpiresAt =
+          leaseMs === null ? undefined : new Date(Date.now() + leaseMs)
+        return true
+      }
+    }
+    return false
+  }
+
   protected async setStepScheduledImpl(stepId: string): Promise<void> {
     for (const step of this.steps.values()) {
       if (step.stepId === stepId) {
@@ -337,9 +356,9 @@ export class InMemoryWorkflowService
       if (
         steps.some(
           (step) =>
-            step.status === 'running' ||
             step.status === 'scheduled' ||
-            step.status === 'suspended'
+            step.status === 'suspended' ||
+            (step.status === 'running' && isStepLeaseLive(step.leaseExpiresAt))
         )
       ) {
         continue

@@ -388,7 +388,11 @@ describe('streamWorkflowRunStatus never runs two polls at once', () => {
       pollIntervalMs: 1,
     })
 
-    assert.equal(overlapped, false, 'two polls must never be in flight together')
+    assert.equal(
+      overlapped,
+      false,
+      'two polls must never be in flight together'
+    )
     assert.equal(
       sent.filter((f) => f.type === 'init').length,
       1,

@@ -443,7 +443,8 @@ describe('KyselyWorkflowService — claiming a step for execution', () => {
     (service as any).claimStepForExecution(
       runId,
       stepName,
-      rpcName
+      rpcName,
+      60_000
     ) as Promise<StepState | null>
 
   test('two dispatches racing for the same pending step: exactly one wins', async () => {

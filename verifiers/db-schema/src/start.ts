@@ -32,6 +32,7 @@ const MIGRATED = new Set([
   'secret',
   'deployment',
   'workflow',
+  'lease',
   'agent',
   'scope',
 ])

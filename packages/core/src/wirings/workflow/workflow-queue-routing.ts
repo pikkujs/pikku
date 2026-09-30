@@ -1,6 +1,10 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import type { JobGroup, JobOptions } from '../queue/queue.types.js'
+import type {
+  JobGroup,
+  JobOptions,
+  QueueService,
+} from '../queue/queue.types.js'
 import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
@@ -68,7 +72,7 @@ export const stepWorkerQueueName = (
  * How a step reaches its worker: on the queue, or here in the orchestrator.
  *
  * A step naming a workflow queues whenever a queue exists, even unmarked. Run
- * here, it holds the parent's run lock — and its lock connection — until the
+ * here, it holds the parent's run lease until the
  * child ends, and marks the child inline so the child's own `sleep` degrades
  * from a suspension into a real in-process wait. Workflows cannot opt in
  * through `workflowQueued`: that flag is read off `rpc` meta, and `addWorkflow`
@@ -113,6 +117,17 @@ export const jobGroupFor = (
   id?: string
 ): JobGroup | undefined =>
   id && strategy === 'shared-groups' ? { id, tier: id } : undefined
+
+/** The queue a remote run is driven through, or a clear account of its absence. */
+export const requireQueueService = (): QueueService => {
+  const queueService = getSingletonServices()?.queueService
+  if (!queueService) {
+    throw new Error(
+      'QueueService not configured. Remote workflows require a queue service.'
+    )
+  }
+  return queueService
+}
 
 export const stepJobOptions = (
   stepOptions?: WorkflowStepOptions

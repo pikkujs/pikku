@@ -50,6 +50,7 @@
     "wireChannel"
   ],
   "./workflow": [
+    "DEFAULT_STEP_LEASE_MS",
     "DEFAULT_STEP_RETRIES",
     "PikkuWorkflowService",
     "WorkflowApprovalForbiddenError",
@@ -60,6 +61,8 @@
     "WorkflowRunForbiddenError",
     "WorkflowRunNotFoundError",
     "WorkflowStepFunctionMismatchError",
+    "WorkflowStepLeaseExpiredError",
+    "WorkflowStepSupersededError",
     "WorkflowSuspendedException",
     "addWorkflow",
     "assertWorkflowRunOwner",
@@ -67,6 +70,8 @@
     "createGraph",
     "deriveInvocationId",
     "isRef",
+    "isStepLeaseLive",
+    "leaseAttemptsExhausted",
     "pikkuWorkflowGraph",
     "reconstructFinalState",
     "reconstructStateAt",

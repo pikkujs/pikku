@@ -153,6 +153,25 @@ describe('claiming a step for execution', () => {
     assert.equal((await ws.getStepState(runId, 's1')).status, 'running')
   })
 
+  test('a step that failed on its last attempt is not claimed again', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(
+      runId,
+      's1',
+      'rpc.fn',
+      { x: 1 },
+      { retries: 0 }
+    )
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepError(step.stepId, new Error('boom'))
+
+    assert.equal(
+      await claim(runId, 's1'),
+      null,
+      'a redelivered message bought the step an attempt past its limit'
+    )
+  })
+
   test('two dispatches racing to retry the same failed step: exactly one wins', async () => {
     const runId = await seedRun()
     const step = await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })

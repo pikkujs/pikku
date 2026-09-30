@@ -1,6 +1,4 @@
 export { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
-export type { PgWorkflowQueueOptions } from './pg-kysely-workflow-service.js'
-export { RunLockHoldTimeoutError } from './pg-kysely-workflow-service.js'
 export { PgKyselyLeaseService } from './pg-kysely-lease-service.js'
 export { PgKyselyDeploymentService } from './pg-kysely-deployment-service.js'
 export { PgKyselyAgentStorageService } from './pg-kysely-agent-storage-service.js'

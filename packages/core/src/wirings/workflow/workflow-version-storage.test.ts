@@ -86,6 +86,19 @@ describe('workflow version storage', () => {
     assert.equal(run?.status, 'completed')
   })
 
+  test('a graph run resumes on its own graph after the workflow became complex', async () => {
+    const { service, meta } = setup()
+    const runId = await createRun(service, 'hash-1')
+    await finishStepA(service, runId)
+
+    meta.flow = { ...v2, source: 'complex' }
+    await service.runWorkflowJob(runId, rpc)
+
+    const run = await service.getRun(runId)
+    assert.equal(run?.error?.code, undefined)
+    assert.equal(run?.status, 'completed')
+  })
+
   test('a run whose graph was never stored cannot resume after a change', async () => {
     const { service, meta } = setup()
     meta.flow = { ...v1, graphHash: 'hash-0' }

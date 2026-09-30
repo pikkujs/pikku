@@ -14,9 +14,17 @@ import {
 } from 'kysely'
 import { PGlite } from '@electric-sql/pglite'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
+import {
+  applyPikkuSchemas,
+  KyselyLeaseService,
+  leaseSchema,
+  workflowSchema,
+} from '@pikku/kysely'
+import { pikkuState } from '@pikku/core/state'
+import { RPCNotFoundError } from '@pikku/core/rpc'
 
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
+import { pgNowMs } from './pg-now-ms.js'
 
 /**
  * Kysely over an in-process Postgres.
@@ -24,7 +32,7 @@ import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
  * The Postgres workflow service had no coverage at all — its SQL only ever ran
  * against a real server, so a dialect mistake surfaced in production rather
  * than in CI. PGlite is genuine Postgres compiled to WASM, so `jsonb`,
- * advisory locks, transactional DDL and the real error codes all behave as
+ * advisory leases, transactional DDL and the real error codes all behave as
  * they do on a server, with no Docker to install.
  *
  * PGlite is a single session, so connections are handed out one at a time.
@@ -168,11 +176,15 @@ const seedRun = (name = 'wf') =>
     type: 'internal',
   } as any)
 
-const seedStep = async () => {
+const seedStep = async (stepOptions?: { retries?: number }) => {
   const runId = await seedRun()
-  const step = await service.insertStepState(runId, 'step-1', 'rpc.fn', {
-    x: 1,
-  })
+  const step = await service.insertStepState(
+    runId,
+    'step-1',
+    'rpc.fn',
+    { x: 1 },
+    stepOptions
+  )
   return { runId, step }
 }
 
@@ -357,25 +369,19 @@ describe('a step transition on Postgres', () => {
   })
 })
 
-describe('advisory locks', () => {
-  test('a run lock serialises its critical section', async () => {
-    const order: string[] = []
-    const hold = async (tag: string, ms: number) => {
-      await service.withRunLock('run-1', async () => {
-        order.push(`${tag}:in`)
-        await new Promise((r) => setTimeout(r, ms))
-        order.push(`${tag}:out`)
-      })
-    }
+describe('run and step leases', () => {
+  const withLeases = async () => {
+    await applyPikkuSchemas(db, [leaseSchema])
+    const leases = new KyselyLeaseService(db)
+    await leases.init()
+    pikkuState(null, 'package', 'singletonServices', {
+      leaseService: leases,
+    } as any)
+    return leases
+  }
 
-    await Promise.all([hold('a', 20), hold('b', 0)])
-
-    assert.deepEqual(order, ['a:in', 'a:out', 'b:in', 'b:out'])
-  })
-
-  test('a step lock returns its callback value', async () => {
-    const result = await service.withStepLock('run-1', 'step-1', async () => 42)
-    assert.equal(result, 42)
+  afterEach(() => {
+    pikkuState(null, 'package', 'singletonServices', {} as any)
   })
 
   const heldBody = () => {
@@ -397,247 +403,215 @@ describe('advisory locks', () => {
     }
   }
 
-  /** PGlite's single connection stands in for a saturated pool. */
-  test('a run lock on the query pool blocks unrelated queries', async () => {
-    let queryFinished = false
+  test('without a leaseService the run lease passes through', async () => {
+    pikkuState(null, 'package', 'singletonServices', {} as any)
+    assert.equal(await service.withRunLock('run-1', async () => 42), 42)
+  })
+
+  test('a second orchestration of a held run is refused', async () => {
+    await withLeases()
     const { run, bodyEntered, release } = heldBody()
 
     const held = service.withRunLock('run-1', run)
     await bodyEntered
-
-    const query = sql`select 1`.execute(db).then(() => {
-      queryFinished = true
-    })
-    await new Promise((r) => setImmediate(r))
-    assert.equal(queryFinished, false)
-
-    release()
-    await Promise.all([held, query])
-    assert.equal(queryFinished, true)
-  })
-
-  /**
-   * Each PGlite instance is its own single-session database, so this can only
-   * show the query pool staying free, not two workers contending for the lock.
-   */
-  test('a run lock on lockDb leaves the query pool free', async () => {
-    const lockDb = createDb()
-    const isolated = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockDb,
-    } as any)
-    await isolated.init()
-
-    const { run, bodyEntered, release } = heldBody()
-
-    const held = isolated.withRunLock('run-1', run)
-    await bodyEntered
-
-    const rows = await sql<{
-      one: number
-    }>`select 1 as one`.execute(db)
-    assert.equal(rows.rows[0]!.one, 1)
+    await assert.rejects(
+      service.withRunLock('run-1', async () => {}),
+      (err: Error) => err.name === 'LeaseTakenError'
+    )
 
     release()
     await held
+    assert.equal(await service.withRunLock('run-1', async () => 'next'), 'next')
   })
 
-  /**
-   * The bug this guards: the run lock used to be `pg_advisory_xact_lock` inside
-   * `lockDb.transaction()`, so a workflow body awaiting a build or an LLM left
-   * the connection `idle in transaction` for as long as it ran. On a shared
-   * pool that starves every other caller, and Postgres cannot vacuum past the
-   * pinned xid.
-   */
-  test('a run lock holds no transaction while the body runs', async () => {
+  test('a run lease holds no connection or transaction while the body runs', async () => {
+    await withLeases()
     const { run, bodyEntered, release } = heldBody()
 
     executedSql.length = 0
     const held = service.withRunLock('run-1', run)
     await bodyEntered
 
+    const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
+    assert.equal(rows.rows[0]!.one, 1, 'the run lease pinned the connection')
     assert.deepEqual(
       executedSql.filter((statement) => statement === 'begin'),
       [],
-      'the run lock opened a transaction around the workflow body'
-    )
-    assert.ok(
-      executedSql.some((statement) => statement.includes('pg_advisory_lock')),
-      'the run lock was never taken'
+      'the run lease opened a transaction around the workflow body'
     )
 
     release()
     await held
-
-    assert.ok(
-      executedSql.some((statement) => statement.includes('pg_advisory_unlock')),
-      'the run lock was never released'
-    )
   })
 
-  test('a lock timeout is reset before the connection goes back', async () => {
-    const timed = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockTimeoutMs: 250,
-    } as any)
-    await timed.init()
-
-    executedSql.length = 0
-    await timed.withRunLock('run-1', async () => 'done')
-
-    assert.ok(
-      executedSql.some((statement) => statement === 'SET lock_timeout = 250'),
-      'lock_timeout was never applied'
-    )
-    assert.ok(
-      executedSql.some((statement) => statement === 'RESET lock_timeout'),
-      'lock_timeout rode the connection back into the pool'
-    )
+  test('a step lock returns its callback value', async () => {
+    const result = await service.withStepLock('run-1', 'step-1', async () => 42)
+    assert.equal(result, 42)
   })
+})
+
+describe('a step lease on Postgres', () => {
+  const claim = (runId: string, leaseMs = 60_000) =>
+    (service as any).claimStepForExecution(runId, 'step-1', 'rpc.fn', leaseMs)
 
   /**
-   * The leak this guards, seen in production: a workflow body that never
-   * settles never reaches the `finally` that unlocks, so the session keeps the
-   * advisory lock and the pooled connection for as long as the process lives.
-   * Every later message for that run then blocks for the full `lock_timeout`
-   * before failing, and a bounded worker pool ends up entirely queued behind
-   * runs that will never finish.
+   * The worker died: nothing is left to push its lease forward. Written on the
+   * database's clock, which is the one the engine judges leases by.
    */
-  test(
-    'takes the lock back from a body that never settles',
-    { timeout: 10_000 },
-    async () => {
-      const bounded = new PgKyselyWorkflowService(db, {
-        wireQueues: false,
-        maxLockHoldMs: 100,
-      } as any)
-      await bounded.init()
+  const lapseTheLease = () =>
+    db
+      .updateTable('workflowStep')
+      .set({ leaseExpiresAt: sql<number>`${pgNowMs()} - 60000` })
+      .execute()
 
-      executedSql.length = 0
-      await assert.rejects(
-        bounded.withRunLock('run-1', () => new Promise<never>(() => {})),
-        (err: Error) => {
-          assert.equal(err.name, 'RunLockHoldTimeoutError')
-          return true
-        }
-      )
+  test('a live lease turns away a second dispatch', async () => {
+    const { runId } = await seedStep()
 
-      assert.ok(
-        executedSql.some((statement) =>
-          statement.includes('pg_advisory_unlock')
-        ),
-        'the abandoned body kept the run lock'
-      )
-      // The connection matters as much as the lock: PGlite's single session
-      // stands in for the pool the leak drains.
-      const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
-      assert.equal(rows.rows[0]!.one, 1, 'the lock connection never came back')
-    }
-  )
+    const first = await claim(runId)
+    const second = await claim(runId)
 
-  test('an unbounded hold is still the default', async () => {
-    const { run, bodyEntered, release } = heldBody()
-
-    const held = service.withRunLock('run-1', run)
-    await bodyEntered
-    await new Promise((r) => setTimeout(r, 150))
-
-    release()
-    assert.equal(await held, undefined, 'a slow body was cut short')
+    assert.ok(first)
+    assert.equal(second, null)
   })
 
-  /**
-   * `idle_session_timeout` is what reclaims a holder that went away without
-   * closing its connection, but on its own it cannot tell that holder from a
-   * body legitimately awaiting a twenty-minute build — both leave the session
-   * idle. The keepalive is what makes idleness mean something, so the two only
-   * ever ship together.
-   */
-  test('a keepalive keeps a long hold from reading as idle', async () => {
-    const kept = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockIdleTimeoutMs: 3_000,
-    } as any)
-    await kept.init()
-    const { run, bodyEntered, release } = heldBody()
+  test('a lapsed lease hands the step to the next dispatch', async () => {
+    const { runId } = await seedStep()
 
-    executedSql.length = 0
-    const held = kept.withRunLock('run-1', run)
-    await bodyEntered
-    await new Promise((r) => setTimeout(r, 2_200))
-    release()
-    await held
+    await claim(runId)
+    await lapseTheLease()
+    const second = await claim(runId)
 
-    assert.ok(
-      executedSql.some(
-        (statement) => statement === 'SET idle_session_timeout = 3000'
-      ),
-      'the idle timeout was never applied'
-    )
-    const beats = executedSql.filter((statement) =>
-      statement.includes('pikku run lock heartbeat')
-    )
-    assert.ok(
-      beats.length >= 2,
-      `a 2.2s hold under a 3s idle timeout sent ${beats.length} keepalives, so the session read as idle`
-    )
-    assert.ok(
-      executedSql.some(
-        (statement) => statement === 'RESET idle_session_timeout'
-      ),
-      'the idle timeout rode the connection back into the pool'
-    )
+    assert.ok(second, 'the abandoned step is claimable again')
+    assert.equal(second.attemptCount, 2, 're-claiming it counts as an attempt')
   })
 
-  /**
-   * A session lock outlives the statement that failed to release it, so an
-   * unlock that throws hands the next caller a pooled connection that still
-   * holds the run lock. Terminating our own backend is the release Postgres
-   * always honours.
-   */
-  test('a failed unlock kills the session rather than pool a held lock', async () => {
-    const brittle = createDb((statement) =>
-      statement.includes('pg_advisory_unlock')
-        ? 'throw'
-        : statement.includes('pg_terminate_backend')
-          ? 'skip'
-          : undefined
-    )
-    const unlucky = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockDb: brittle,
-      lockTimeoutMs: 250,
-    } as any)
-    await unlucky.init()
+  test('only the first dispatch to reach a lapsed lease gets the step', async () => {
+    const { runId } = await seedStep()
 
-    executedSql.length = 0
-    const result = await unlucky.withRunLock('run-1', async () => 'done')
+    await claim(runId)
+    await lapseTheLease()
+    await claim(runId)
+    const third = await claim(runId)
+
+    assert.equal(third, null, 'the re-claim took the lease with it')
+  })
+
+  // A worker that stalled rather than died wakes up after its step was claimed
+  // again. Neither its renewals nor its outcome may land on the newer attempt.
+  test('a superseded attempt can neither renew the lease nor record an outcome', async () => {
+    const { runId } = await seedStep()
+
+    const stale = await claim(runId)
+    await lapseTheLease()
+    const current = await claim(runId)
+    const leaseOf = async () =>
+      (await service.getStepState(runId, 'step-1')).leaseExpiresAt?.getTime()
+    const held = await leaseOf()
 
     assert.equal(
-      result,
-      'done',
-      "the body's outcome was replaced by the unlock's own failure"
-    )
-    assert.ok(
-      executedSql.some((statement) =>
-        statement.includes('pg_terminate_backend')
+      await service.refreshStepLease(
+        stale.stepId,
+        10 * 60_000,
+        stale.attemptCount
       ),
-      'a connection still holding the run lock went back to the pool'
+      false,
+      'the stale attempt was told it still holds the step'
     )
-    assert.ok(
-      !executedSql.includes('RESET lock_timeout'),
-      'a terminated session was issued on anyway'
+    assert.equal(await leaseOf(), held, 'the stale renewal changed nothing')
+
+    await assert.rejects(
+      service.setStepResult(stale.stepId, 'stale', stale.attemptCount),
+      (e: Error) => e.name === 'WorkflowStepSupersededError'
+    )
+    await service.setStepResult(current.stepId, 'fresh', current.attemptCount)
+    const step = await service.getStepState(runId, 'step-1')
+    assert.equal(step.status, 'succeeded')
+    assert.equal(step.result, 'fresh')
+  })
+
+  test('a superseded attempt that finds its RPC missing neither fails the step nor suspends the run', async () => {
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+    } as any)
+    const { runId } = await seedStep()
+    let current: { attemptCount: number } | undefined
+    const staleWorker = {
+      rpcWithWire: async () => {
+        await lapseTheLease()
+        current = await claim(runId)
+        throw new RPCNotFoundError('rpc.fn')
+      },
+    }
+
+    try {
+      const outcome = await service
+        .executeWorkflowStep(runId, 'step-1', 'rpc.fn', {}, staleWorker as any)
+        .catch((e: Error) => e)
+
+      const step = await service.getStepState(runId, 'step-1')
+      assert.equal(step.status, 'running', 'the stale attempt failed the step')
+      assert.equal(step.attemptCount, current!.attemptCount)
+      assert.notEqual(
+        (await service.getRun(runId))?.status,
+        'suspended',
+        'the stale attempt suspended the run'
+      )
+      assert.equal(outcome, undefined, 'a superseded dispatch ends quietly')
+    } finally {
+      pikkuState(null, 'package', 'singletonServices', {} as any)
+    }
+  })
+
+  test('a step that failed on its last attempt is not claimed again', async () => {
+    const { runId } = await seedStep({ retries: 0 })
+
+    const held = await claim(runId)
+    await service.setStepError(
+      held.stepId,
+      new Error('boom'),
+      held.attemptCount
+    )
+
+    assert.equal(
+      await claim(runId),
+      null,
+      'a redelivered message bought the step an attempt past its limit'
     )
   })
 
-  test('a non-finite lock timeout is rejected', () => {
-    assert.throws(
-      () =>
-        new PgKyselyWorkflowService(db, {
-          wireQueues: false,
-          lockTimeoutMs: Number.NaN,
-        } as any),
-      RangeError
-    )
+  // The dispatch read a lapsed lease, but the worker renewed it before the
+  // dispatch got round to failing the step for running out of attempts.
+  test('a lease renewed after it was read is not failed as exhausted', async () => {
+    const { runId } = await seedStep({ retries: 0 })
+    await claim(runId)
+
+    const read = service.getStepState.bind(service)
+    ;(service as any).getStepState = async (id: string, name: string) => ({
+      ...(await read(id, name)),
+      leaseExpiresAt: new Date(Date.now() - 60_000),
+    })
+    try {
+      assert.equal(await claim(runId), null)
+    } finally {
+      delete (service as any).getStepState
+    }
+
+    const step = await service.getStepState(runId, 'step-1')
+    assert.equal(step.status, 'running', 'a live worker had its step failed')
+  })
+
+  test('a run wedged on a lapsed lease is found as stalled', async () => {
+    const { runId } = await seedStep()
+    // Far enough ahead that the run and its step both read as idle, leaving
+    // what is in flight as the only thing the sweep is deciding on.
+    const longSinceIdle = new Date(Date.now() + 24 * 60 * 60_000)
+
+    await claim(runId)
+    const held = await (service as any).findStalledRunIds(longSinceIdle, 10)
+    await lapseTheLease()
+    const lapsed = await (service as any).findStalledRunIds(longSinceIdle, 10)
+
+    assert.deepEqual(held, [], 'a step under a live lease is still in flight')
+    assert.deepEqual(lapsed, [runId], 'a step with no worker on it is not')
   })
 })

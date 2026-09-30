@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Leases are judged by the database's clock
-description: A lease is written and compared in SQL against the server's own clock, stored as epoch milliseconds, so no worker's clock decides who holds anything
+description: A lease and a step lease are written and compared in SQL against the server's own clock, stored as epoch milliseconds, so no worker's clock decides who holds anything
 tags: [leases, workflows, kysely, clocks]
 ---
 
@@ -10,10 +10,10 @@ tags: [leases, workflows, kysely, clocks]
 A lease is only as good as the clock that decides it has lapsed. When each
 worker computed `new Date(Date.now() + ttl)` and compared against its own
 `Date.now()`, a worker whose clock ran an hour fast saw every live lease as
-expired and took it, and wrote leases that
+expired and took it — a lease and a step claim both — and wrote leases that
 outlived their ttl by the same hour for everyone else.
 
-So the lease is computed in SQL: `expires_at` is set to _now + ttl_ and
+So both leases are computed in SQL: `expires_at` is set to _now + ttl_ and
 compared against _now_, where _now_ is the database's —
 `clock_timestamp()` on Postgres, `utc_timestamp(6)` on MySQL. There is one clock,
 and every worker reads it. The columns are `bigint` epoch milliseconds rather
@@ -26,12 +26,14 @@ that zone falls back an hour, two real instants share one local time: the
 epoch stood still for an hour, then jumped, so a dead holder's lease lived an
 hour longer and every lease written in the repeated hour lapsed at once.
 
-`PgKyselyLeaseService` and `MySQLKyselyLeaseService` override `nowMs()`;
-`KyselyLeaseService` keeps the process clock, which is only correct when every process shares a host,
+`PgKyselyLeaseService`, `MySQLKyselyLeaseService` and the dialect workflow
+services override `nowMs()`; `KyselyLeaseService` and `KyselyWorkflowService`
+keep the process clock, which is only correct when every process shares a host,
 as they do on SQLite.
 
-**What this rules out:** comparing a lease in JavaScript after reading it —
-that check is exactly where a skewed worker decides wrongly.
+**What this rules out:** comparing a lease in JavaScript after reading it — the
+claim used to pre-check `isStepLeaseLive` in the app, and that check is exactly
+where a skewed worker decided wrongly.
 
 **Testing it:** PGlite runs in-process and takes its clock from the JS
 `Date.now`, so skewing `Date.now` skews the database too and a skew test on

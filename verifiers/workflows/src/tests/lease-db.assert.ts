@@ -1,15 +1,14 @@
 /**
- * The lease service against real databases.
+ * The lease service and the step lease against real databases.
  *
  * PGlite takes its clock from the JS process, so a worker whose clock is off
  * can only be exercised against a real server. Each lease service here runs the
  * whole `LeaseService` contract, then is raced and skewed: a lease is judged by
  * the database's clock, never by the clock of the worker asking.
  *
- * Postgres comes from `DATABASE_URL`, MySQL from `MYSQL_URL` and Redis from
- * `REDIS_URL`. Both tables are
- * created here: nothing this app wires reaches `leaseService`, so
- * `pikku db migrate` has no reason to, and pikku ships no MySQL migrations.
+ * Postgres comes from `DATABASE_URL` (migrated by `pikku db migrate`); MySQL
+ * from `MYSQL_URL`, whose table is created here because pikku ships no MySQL
+ * migrations; Redis from `REDIS_URL`.
  */
 import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,7 +18,10 @@ import postgres from 'postgres'
 import { createPool } from 'mysql2'
 import type { LeaseService } from '@pikku/core/services'
 import { defineServiceTests } from '@pikku/core/testing'
-import { PgKyselyLeaseService } from '@pikku/kysely-postgres'
+import {
+  PgKyselyLeaseService,
+  PgKyselyWorkflowService,
+} from '@pikku/kysely-postgres'
 import { MySQLKyselyLeaseService } from '@pikku/kysely-mysql'
 import { RedisLeaseService } from '@pikku/redis'
 import { connectionString } from '../config.js'
@@ -62,14 +64,6 @@ after(async () => {
 
 const backends: Record<string, () => Promise<LeaseService>> = {
   postgres: async () => {
-    await sql`
-      create table if not exists pikku_lease (
-        key text primary key,
-        holder text not null,
-        token integer not null,
-        expires_at bigint not null
-      )
-    `.execute(pg)
     await pg.deleteFrom('pikkuLease').execute()
     return new PgKyselyLeaseService(pg)
   },
@@ -131,6 +125,24 @@ for (const [name, create] of Object.entries(backends)) {
     })
   })
 }
+
+describe('a Postgres step lease under clock skew', () => {
+  test('a worker with a fast clock cannot claim a step another holds', async () => {
+    const service = new PgKyselyWorkflowService(pg)
+    await service.init()
+    const runId = await service.createRun('skew', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    await service.insertStepState(runId, 'step-1', 'rpc.fn', {})
+    const claim = () =>
+      (service as any).claimStepForExecution(runId, 'step-1', 'rpc.fn', 60_000)
+
+    assert.ok(await claim())
+    const second = await withSkewedClock(claim)
+
+    assert.equal(second, null, 'the step lease was judged by the worker clock')
+  })
+})
 
 describe('a MySQL lease across a daylight-saving fall-back', () => {
   // 2026-11-01 01:30 in New York happens twice: 05:30 UTC, then 06:30 UTC.
