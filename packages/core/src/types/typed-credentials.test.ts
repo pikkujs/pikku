@@ -39,6 +39,12 @@ const getCredential: NonNullable<TypedWire['getCredential']> = <T = unknown>(
 ) => (VALUES[name] ?? null) as T | null
 
 describe('wire.getCredential is typed by the generated CredentialsMap', () => {
+  test('is always on the wire, since the function runner always sets it', () => {
+    const required: {} extends Pick<TypedWire, 'getCredential'> ? false : true =
+      true
+    assert.ok(required)
+  })
+
   test('resolves a mapped name without an explicit type argument', async () => {
     const slack: { token: string } | null | Promise<{ token: string } | null> =
       getCredential('slack')
@@ -68,5 +74,12 @@ describe('wire.getCredential is typed by the generated CredentialsMap', () => {
     assert.deepEqual(await untyped<{ token: string }>('slack'), {
       token: 'xoxb-1',
     })
+  })
+
+  test('takes an explicit string type argument when no map is bound', async () => {
+    const untyped: GetCredential = <T = unknown>(name: string) =>
+      (VALUES[name] ?? 'whsec-1') as T | null
+    const secret: string | null = await untyped<string>('webhookSecret')
+    assert.equal(secret, 'whsec-1')
   })
 })

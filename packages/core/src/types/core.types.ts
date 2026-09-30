@@ -242,18 +242,25 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 /**
  * Reads a single credential. The first signature resolves the value type from
  * the project's generated `CredentialsMap`; the second keeps a name the map
- * does not know callable with an explicit type.
+ * does not know callable with an explicit type. Without a map, every name is a
+ * key, so the first signature would swallow an explicit type argument; only
+ * the second is offered then.
  *
  * `TCredentials` is unconstrained because the generated map is an interface,
  * which has no implicit index signature and so cannot satisfy
  * `Record<string, unknown>`.
  */
-export type GetCredential<TCredentials = Record<string, unknown>> = {
-  <K extends keyof TCredentials & string>(
-    name: K
-  ): TCredentials[K] | null | Promise<TCredentials[K] | null>
-  <T = unknown>(name: string): T | null | Promise<T | null>
-}
+export type GetCredential<TCredentials = Record<string, unknown>> =
+  string extends keyof TCredentials
+    ? <T = unknown>(
+        name: string
+      ) => NoInfer<T> | null | Promise<NoInfer<T> | null>
+    : {
+        <K extends keyof TCredentials & string>(
+          name: K
+        ): TCredentials[K] | null | Promise<TCredentials[K] | null>
+        <T = unknown>(name: string): T | null | Promise<T | null>
+      }
 
 export type PikkuWire<
   In = unknown,
@@ -274,6 +281,11 @@ export type PikkuWire<
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
   rpc: TypedRPC
+  /** Get a single credential by name — lazy-loads from CredentialService on first call, sync thereafter */
+  getCredential: GetCredential<TypedCredentials>
+  /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
+  getCredentials: () =>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
@@ -329,11 +341,6 @@ export type PikkuWire<
   pikkuUserId: string
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
-  /** Get a single credential by name — lazy-loads from CredentialService on first call, sync thereafter */
-  getCredential: GetCredential<TypedCredentials>
-  /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
-  getCredentials: () =>
-    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -353,8 +360,12 @@ export type PikkuWire<
   beginChanges: () => Promise<void>
 }>
 
-/** Wire as constructed by runners, before the function runner lazily adds `rpc`. */
-export type PikkuRawWire = Omit<PikkuWire, 'rpc'>
+/** Wire as constructed by runners, before the function runner adds `rpc` and the credential readers. */
+export type PikkuRawWire = Omit<
+  PikkuWire,
+  'rpc' | 'getCredential' | 'getCredentials'
+> &
+  Partial<Pick<PikkuWire, 'getCredential' | 'getCredentials'>>
 
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices

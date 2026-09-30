@@ -377,6 +377,20 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
+    // The function types were written from the setup-only inspection, which
+    // never visits `defineCredential`, so they fell back to an untyped
+    // CredentialsMap. Now that the credentials leaf exists, point them at it.
+    if (
+      config.credentialsFile &&
+      stateAfterScaffold.credentials?.definitions.length
+    ) {
+      await workflow.do(
+        'Function types (credentials)',
+        'pikkuFunctionTypesSplit',
+        {}
+      )
+    }
+
     // The generated credentials file registers the project's own credential
     // meta into pikku state, which is what lets `wire.getCredential` resolve a
     // credential the app declares rather than one an addon brought with it.

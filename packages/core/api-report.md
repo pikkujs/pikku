@@ -112,6 +112,9 @@ export type PikkuWire<
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
+  getCredential: GetCredential<TypedCredentials>
+  getCredentials: () =>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
@@ -146,9 +149,6 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: GetCredential<TypedCredentials>
-  getCredentials: () =>
-    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
@@ -259,12 +259,17 @@ export type CreateWireServices<
   services: SingletonServices,
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
-export type GetCredential<TCredentials = Record<string, unknown>> = {
-  <K extends keyof TCredentials & string>(
-    name: K
-  ): TCredentials[K] | null | Promise<TCredentials[K] | null>
-  <T = unknown>(name: string): T | null | Promise<T | null>
-}
+export type GetCredential<TCredentials = Record<string, unknown>> =
+  string extends keyof TCredentials
+    ? <T = unknown>(
+        name: string
+      ) => NoInfer<T> | null | Promise<NoInfer<T> | null>
+    : {
+        <K extends keyof TCredentials & string>(
+          name: K
+        ): TCredentials[K] | null | Promise<TCredentials[K] | null>
+        <T = unknown>(name: string): T | null | Promise<T | null>
+      }
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
@@ -300,6 +305,9 @@ export type PikkuWire<
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
+  getCredential: GetCredential<TypedCredentials>
+  getCredentials: () =>
+    Record<string, unknown> | Promise<Record<string, unknown>>
 } & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
@@ -334,9 +342,6 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: GetCredential<TypedCredentials>
-  getCredentials: () =>
-    Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
     durability: AuditDurability
   }
