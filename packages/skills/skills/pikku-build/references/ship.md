@@ -162,9 +162,8 @@ Everything above is open source. This is the contract that keeps
   entry with the right `cwd`, `kind` and `dev` (`command`, `port`); exactly one
   is `primary`; `serves` and `personas` name real personas from the personas
   section.
-- **`pikkufabric.config.json` holds only the link.** Leave `projectId` as
-  `__PROJECT_ID__` — that placeholder means "unlinked", and linking the project
-  writes the real one. Do not invent a value to make it look configured.
+- **No `pikkufabric.config.json`.** The checkout is linked through its git
+  remote, so do not create the file or invent a `projectId`.
 - **One `definePersonas` call**, every persona reachable through exactly one
   frontend. Fabric materialises these as its virtual users; a persona nobody
   serves imports as a person with no way in.
