@@ -61,6 +61,23 @@ function registerTests(name: string, getDb: () => Db) {
         await s.init()
         return s
       },
+      workflowFencing: async () => {
+        const service = new MongoDBWorkflowService(getDb(), {
+          leaseService: new InMemoryLeaseService(),
+        })
+        await service.init()
+        return {
+          service,
+          lapseLease: async (runId, stepName) => {
+            await getDb()
+              .collection('workflow_step')
+              .updateOne(
+                { workflowRunId: runId, stepName },
+                { $set: { leaseExpiresAt: new Date(1) } }
+              )
+          },
+        }
+      },
     },
   })
 

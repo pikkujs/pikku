@@ -9,13 +9,16 @@
  * Postgres comes from `DATABASE_URL` and gets a schema of its own, so the
  * tables `pikku db migrate` made for the other runners are left alone. MySQL
  * comes from `MYSQL_URL`, whose tables are created here because pikku ships no
- * MySQL migrations.
+ * MySQL migrations. Redis comes from `REDIS_URL`, and each harness writes
+ * under a key prefix of its own; ioredis-mock cannot stand in for it, as its
+ * `hgetall` reply breaks under ioredis 6.
  */
 import { after } from 'node:test'
 import { CamelCasePlugin, Kysely, MysqlDialect, sql } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import { createPool } from 'mysql2'
+import { Redis } from 'ioredis'
 import { defineServiceTests } from '@pikku/core/testing'
 import type { WorkflowFencingHarness } from '@pikku/core/testing'
 import type { KyselyWorkflowService } from '@pikku/kysely'
@@ -23,12 +26,14 @@ import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
 import { InMemoryLeaseService } from '@pikku/core/services'
 import { PgKyselyWorkflowService } from '@pikku/kysely-postgres'
 import { MySQLKyselyWorkflowService } from '@pikku/kysely-mysql'
+import { RedisWorkflowService } from '@pikku/redis'
 
 const pgUrl =
   process.env.DATABASE_URL ??
   'postgres://postgres:password@localhost:5432/pikku_queue'
 const mysqlUrl =
   process.env.MYSQL_URL ?? 'mysql://root:password@localhost:3306/pikku_leases'
+const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379'
 
 const PG_SCHEMA = 'pikku_fencing'
 
@@ -41,10 +46,15 @@ const mysql = new Kysely<any>({
   dialect: new MysqlDialect({ pool: createPool(mysqlUrl) as any }),
   plugins: [new CamelCasePlugin()],
 })
+const redis = new Redis(redisUrl)
+const REDIS_PREFIX = `pikku-fencing-${process.pid}`
 
 after(async () => {
   await pg.destroy()
   await mysql.destroy()
+  const keys = await redis.keys(`${REDIS_PREFIX}-*`)
+  if (keys.length > 0) await redis.del(...keys)
+  redis.disconnect()
 })
 
 const harness = (
@@ -161,6 +171,30 @@ defineServiceTests({
       })
       await service.init()
       return harness(mysql, service)
+    },
+  },
+})
+
+let redisHarnesses = 0
+defineServiceTests({
+  name: 'redis',
+  services: {
+    workflowFencing: async () => {
+      const keyPrefix = `${REDIS_PREFIX}-${++redisHarnesses}`
+      const service = new RedisWorkflowService(redis, {
+        keyPrefix,
+        leaseService: new InMemoryLeaseService(),
+      })
+      return {
+        service,
+        lapseLease: async (runId, stepName) => {
+          await redis.hset(
+            `${keyPrefix}:step:${runId}:${stepName}`,
+            'leaseExpiresAt',
+            '1'
+          )
+        },
+      }
     },
   },
 })

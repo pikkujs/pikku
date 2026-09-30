@@ -2064,6 +2064,9 @@
     "verifiers/db-schema/addon": {
       "name": "@pikku/verifier-db-addon",
       "version": "0.1.0",
+      "dependencies": {
+        "@pikku/kysely": "^0.13.31",
+      },
       "devDependencies": {
         "@pikku/cli": "*",
         "@pikku/core": "*",
@@ -2080,6 +2083,9 @@
     "verifiers/db-schema/remote-addon": {
       "name": "@pikku/verifier-db-remote-addon",
       "version": "0.1.0",
+      "dependencies": {
+        "@pikku/kysely": "^0.13.31",
+      },
       "devDependencies": {
         "@pikku/cli": "*",
         "@pikku/core": "*",
@@ -2445,6 +2451,7 @@
         "@pikku/queue-pg-boss": "workspace:*",
         "@pikku/redis": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
+        "ioredis": "^6.0.0",
         "kysely": "^0.29.5",
         "kysely-postgres-js": "^3.0.0",
         "mysql2": "^3.23.3",

@@ -135,7 +135,8 @@ describe('claiming a step for execution', () => {
     (ws as any).claimStepForExecution(
       runId,
       stepName,
-      rpcName
+      rpcName,
+      60_000
     ) as Promise<StepState | null>
 
   const seedRun = () =>

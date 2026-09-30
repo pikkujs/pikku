@@ -36,6 +36,7 @@ interface WorkflowStepDoc {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
+  attempt: number
   createdAt: Date
   updatedAt: Date
 }
@@ -46,6 +47,7 @@ interface WorkflowStepHistoryDoc {
   status: string
   result: any | null
   error: any | null
+  attempt: number
   createdAt: Date
   runningAt: Date | null
   scheduledAt: Date | null
@@ -114,19 +116,6 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       .sort({ createdAt: 1 })
       .toArray()
 
-    const stepIds = result.map((r) => r._id)
-    const historyCounts = await this.stepHistory
-      .aggregate<{
-        _id: string
-        count: number
-      }>([
-        { $match: { workflowStepId: { $in: stepIds } } },
-        { $group: { _id: '$workflowStepId', count: { $sum: 1 } } },
-      ])
-      .toArray()
-
-    const countMap = new Map(historyCounts.map((h) => [h._id, h.count]))
-
     return result.map((row) => ({
       stepId: row._id,
       stepName: row.stepName,
@@ -135,7 +124,7 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       status: row.status as StepState['status'],
       result: row.result ?? undefined,
       error: row.error ?? undefined,
-      attemptCount: countMap.get(row._id) ?? 1,
+      attemptCount: row.attempt,
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
       createdAt: new Date(row.createdAt),
@@ -153,14 +142,12 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
 
     const history = await this.stepHistory
       .find({ workflowStepId: { $in: stepIds } })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: 1, attempt: 1 })
       .toArray()
 
-    let attemptCounters: Record<string, number> = {}
     return history.map((row) => {
       const stepId = row.workflowStepId
       const step = stepMap.get(stepId)!
-      attemptCounters[stepId] = (attemptCounters[stepId] ?? 0) + 1
 
       return {
         stepId,
@@ -168,7 +155,7 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
         status: row.status as StepState['status'],
         result: row.result ?? undefined,
         error: row.error ?? undefined,
-        attemptCount: attemptCounters[stepId]!,
+        attemptCount: row.attempt,
         retries: step.retries != null ? Number(step.retries) : undefined,
         retryDelay: step.retryDelay ?? undefined,
         createdAt: new Date(row.createdAt),
