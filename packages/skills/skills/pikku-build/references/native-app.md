@@ -14,8 +14,8 @@ apps/customer/            ← frontends.customer.cwd
 
 ## The commands
 
-Every app command is under `pikku app`. There is no `pikku new app`, no
-`pikku native`, and no app flag on `pikku deploy`.
+Every app command is under `pikku app` — native included, as `pikku app native`.
+There is no `pikku new app`, and no app flag on `pikku deploy`.
 
 ```bash
 pikku app new <name>                  # a second frontend, from the starter template
