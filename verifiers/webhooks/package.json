@@ -20,6 +20,6 @@
   "scripts": {
     "tsc": "tsc --noEmit",
     "pikku": "pikku",
-    "test": "pikku && tsc --noEmit && node --import tsx --test src/webhook.assert.ts src/webhook-source.assert.ts"
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/webhook.assert.ts src/webhook-source.assert.ts src/webhook-source-switch.assert.ts && node --import tsx --test src/dev-registration.assert.ts"
   }
 }

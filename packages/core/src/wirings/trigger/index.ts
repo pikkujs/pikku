@@ -6,10 +6,18 @@ export {
   runWebhookSourceLifecycle,
   declaredTriggerSources,
   reconcileTriggerSources,
+  enableTriggerSource,
+  disableTriggerSource,
+  reconcileWebhookRegistrations,
   teardownTriggerSources,
   subscribedWebhookEvents,
 } from './webhook-source-runner.js'
-export type { WebhookSourceOutcome } from './webhook-source-runner.js'
+export type {
+  OrphanedWebhookRegistration,
+  WebhookRegistration,
+  WebhookRegistrations,
+  WebhookSourceOutcome,
+} from './webhook-source-runner.js'
 export { PIKKU_INCOMING_WEBHOOK_QUEUE_NAME } from './webhook-source.types.js'
 export type {
   CoreTriggerWebhookSource,

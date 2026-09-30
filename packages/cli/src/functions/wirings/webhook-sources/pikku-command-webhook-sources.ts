@@ -13,7 +13,8 @@ import {
 
 /**
  * Returns true when it wrote or removed wirings, so the caller re-inspects to
- * mount or unmount them.
+ * mount or unmount them. An addon mounts nothing: it publishes what it
+ * declares for the apps that wire it.
  */
 export const pikkuWebhookSources = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -21,6 +22,15 @@ export const pikkuWebhookSources = pikkuSessionlessFunc<void, boolean>({
     const meta = state.triggers.webhookSourceMeta
     const { webhookSourcesFile, webhookSourcesLifecycleFile, packageMappings } =
       config
+    if (config.addon) {
+      const file = config.webhookSourcesMetaJsonFile
+      if (Object.keys(meta).length > 0) {
+        await writeFileInDir(logger, file, JSON.stringify(meta, null, 2))
+      } else if (existsSync(file)) {
+        await rm(file)
+      }
+      return false
+    }
     const schemasFile = webhookSourcesFile.replace(
       /\.gen\.ts$/,
       '.schemas.gen.ts'

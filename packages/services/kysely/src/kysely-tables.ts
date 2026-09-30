@@ -270,7 +270,10 @@ export interface PikkuFeatureFlagsTable {
 export interface PikkuTriggerSourceTable {
   name: string
   kind: string
+  baseUrl: string | null
+  labelPrefix: string | null
   declared: Generated<boolean>
+  enabled: Generated<boolean>
   status: string | null
   /** The last setup's provider identifiers as JSON; never a secret. */
   state: string | null

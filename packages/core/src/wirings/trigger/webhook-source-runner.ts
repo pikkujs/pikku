@@ -7,7 +7,11 @@ import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import type { DeclaredTriggerSource } from '../../services/trigger-source-store.js'
+import type {
+  DeclaredTriggerSource,
+  TriggerSourceRow,
+  TriggerSourceStore,
+} from '../../services/trigger-source-store.js'
 import type {
   CoreTriggerWebhookSource,
   TriggerEvent,
@@ -129,7 +133,8 @@ const validateEvents = async (
 /**
  * The body of a webhook source's route: `receive`, validate, and queue every
  * event some trigger listens for. Events nobody listens for are answered and
- * dropped, so the provider does not retry them forever.
+ * dropped, so the provider does not retry them forever. With a
+ * `triggerSourceStore`, a source nobody enabled answers 404.
  */
 export const receiveWebhookSourceRequest = async (
   sourceName: string,
@@ -137,6 +142,10 @@ export const receiveWebhookSourceRequest = async (
 ): Promise<Response | { received: number }> => {
   const singletonServices = getSingletonServices()
   const meta = getSourceMeta(sourceName)
+  const store = singletonServices.triggerSourceStore
+  if (store && !(await store.getTriggerSource(sourceName))?.enabled) {
+    return new Response(null, { status: 404 })
+  }
   const source = pikkuState(null, 'trigger', 'webhookSources').get(sourceName)
   const request = await readRequest(wire.http)
 
@@ -261,15 +270,22 @@ type LifecycleInput = {
   labelPrefix: string
 }
 
+const sourceAddress = (
+  meta: WebhookSourceMeta,
+  { baseUrl, labelPrefix }: LifecycleInput
+) => ({
+  url: `${baseUrl.replace(/\/+$/, '')}${meta.route}`,
+  label: `${labelPrefix}:${meta.name}`,
+})
+
 const runSourceLifecycleStep = async (
   meta: WebhookSourceMeta,
   action: 'check' | 'setup' | 'teardown',
-  { baseUrl, labelPrefix }: LifecycleInput,
+  lifecycleInput: LifecycleInput,
   previous: WebhookSourceState | undefined,
   singletonServices: CoreSingletonServices
 ): Promise<WebhookSourceOutcome> => {
-  const url = `${baseUrl.replace(/\/+$/, '')}${meta.route}`
-  const label = `${labelPrefix}:${meta.name}`
+  const { url, label } = sourceAddress(meta, lifecycleInput)
   const input = {
     url,
     label,
@@ -378,19 +394,44 @@ const requireTriggerSourceStore = (
 }
 
 /** The trigger sources this app declares, as the store is synced to. */
-export const declaredTriggerSources = (): DeclaredTriggerSource[] =>
+export const declaredTriggerSources = (
+  address?: LifecycleInput
+): DeclaredTriggerSource[] =>
   Object.keys(pikkuState(null, 'trigger', 'webhookSourceMeta')).map((name) => ({
     name,
     kind: 'webhook',
+    ...address,
   }))
 
 const detailOf = (outcome: WebhookSourceOutcome) =>
   outcome.instructions ?? outcome.error ?? outcome.reason ?? null
 
+const registerTriggerSource = async (
+  store: TriggerSourceStore,
+  meta: WebhookSourceMeta,
+  input: LifecycleInput,
+  previous: WebhookSourceState | undefined,
+  singletonServices: CoreSingletonServices
+) => {
+  const outcome = await runSourceLifecycleStep(
+    meta,
+    'setup',
+    input,
+    previous,
+    singletonServices
+  )
+  await store.recordTriggerSource(meta.name, {
+    status: outcome.status,
+    ...(outcome.state ? { state: outcome.state } : {}),
+    detail: detailOf(outcome),
+  })
+  return outcome
+}
+
 /**
- * Registers every declared webhook source with its provider: `check`, then
+ * Registers every enabled webhook source with its provider: `check`, then
  * `setup` where it is missing or drifted, recording what was registered.
- * Run after a deployment goes live.
+ * A source nobody enabled is skipped. Run after a deployment goes live.
  */
 export const reconcileTriggerSources = async ({
   singletonServices = getSingletonServices(),
@@ -399,27 +440,233 @@ export const reconcileTriggerSources = async ({
   singletonServices?: CoreSingletonServices
 }): Promise<WebhookSourceOutcome[]> => {
   const store = requireTriggerSourceStore(singletonServices)
-  await store.syncTriggerSources(declaredTriggerSources())
+  await store.syncTriggerSources(
+    declaredTriggerSources({
+      baseUrl: input.baseUrl,
+      labelPrefix: input.labelPrefix,
+    })
+  )
   const outcomes: WebhookSourceOutcome[] = []
   for (const meta of Object.values(
     pikkuState(null, 'trigger', 'webhookSourceMeta')
   )) {
     const row = await store.getTriggerSource(meta.name)
+    if (!row?.enabled) {
+      outcomes.push({
+        source: meta.name,
+        url: sourceAddress(meta, input).url,
+        status: 'skipped',
+        reason: 'disabled',
+      })
+      continue
+    }
+    outcomes.push(
+      await registerTriggerSource(
+        store,
+        meta,
+        input,
+        row.state ?? undefined,
+        singletonServices
+      )
+    )
+  }
+  return outcomes
+}
+
+type SwitchInput = Partial<LifecycleInput> & {
+  name: string
+  singletonServices?: CoreSingletonServices
+}
+
+/** The address given, or the one the last deployment synced onto the row. */
+const switchAddress = (
+  row: TriggerSourceRow | null,
+  { baseUrl, labelPrefix, name }: SwitchInput
+): LifecycleInput => {
+  const address = {
+    baseUrl: baseUrl ?? row?.baseUrl,
+    labelPrefix: labelPrefix ?? row?.labelPrefix,
+  }
+  if (!address.baseUrl || !address.labelPrefix) {
+    throw new Error(
+      `Trigger source '${name}' has no address yet: pass baseUrl and labelPrefix, or deploy so reconcile records them.`
+    )
+  }
+  return address as LifecycleInput
+}
+
+/**
+ * Turns a declared webhook source on and registers it with its provider, at
+ * the address given or the one the last deployment recorded.
+ */
+export const enableTriggerSource = async ({
+  singletonServices = getSingletonServices(),
+  ...input
+}: SwitchInput): Promise<WebhookSourceOutcome> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const meta = getSourceMeta(input.name)
+  await store.syncTriggerSources(declaredTriggerSources())
+  const row = await store.getTriggerSource(input.name)
+  const address = switchAddress(row, input)
+  await store.setTriggerSourceEnabled(input.name, true)
+  return registerTriggerSource(
+    store,
+    meta,
+    address,
+    row?.state ?? undefined,
+    singletonServices
+  )
+}
+
+/**
+ * Turns a webhook source off: it stops receiving at once, then is removed
+ * from its provider. A failed teardown leaves it off and records the error.
+ */
+export const disableTriggerSource = async ({
+  singletonServices = getSingletonServices(),
+  ...input
+}: SwitchInput): Promise<WebhookSourceOutcome> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const meta = getSourceMeta(input.name)
+  const row = await store.getTriggerSource(input.name)
+  const address = switchAddress(row, input)
+  await store.setTriggerSourceEnabled(input.name, false)
+  const outcome = await runSourceLifecycleStep(
+    meta,
+    'teardown',
+    address,
+    row?.state ?? undefined,
+    singletonServices
+  )
+  await store.recordTriggerSource(input.name, {
+    status: outcome.status,
+    ...(outcome.status === 'failed' ? {} : { state: null }),
+    detail: detailOf(outcome),
+  })
+  return outcome
+}
+
+/** What one source registered with its provider, as a caller keeps it between runs. */
+export type WebhookRegistration = {
+  url: string
+  events: string[]
+  status: WebhookSourceOutcome['status']
+  state?: WebhookSourceState
+  /** The signing secrets `setup` stored, so a wiped credential store can be refilled without registering again. */
+  credentials?: Record<string, unknown>
+}
+
+export type WebhookRegistrations = Record<string, WebhookRegistration>
+
+export type OrphanedWebhookRegistration = {
+  source: string
+  url: string
+  label: string
+}
+
+/** The singleton credentials the package owning a source's `setup` declares: where its signing secret goes. */
+const sourceCredentialNames = (meta: WebhookSourceMeta): string[] => {
+  if (!meta.setup) return []
+  const namespace = meta.setup.includes(':') ? meta.setup.split(':')[0]! : ''
+  const packageName =
+    pikkuState(null, 'addons', 'packages').get(namespace)?.package ?? null
+  const declared = pikkuState(packageName, 'package', 'credentialsMeta') ?? {}
+  return Object.entries(declared)
+    .filter(
+      ([, credential]) => credential.type === 'singleton' && !credential.oauth2
+    )
+    .map(([name]) => name)
+}
+
+const sameEvents = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((event) => b.includes(event))
+
+/**
+ * Registers every declared webhook source against registrations the caller
+ * keeps rather than a `triggerSourceStore`, as `pikku dev` does in a file that
+ * outlives its database. A source whose url and events match what was
+ * registered is left alone without calling the provider, and its signing
+ * secrets are put back if the credential store lost them. Registrations no
+ * source declares any more are returned as orphans and kept, since only the
+ * code that set one up could tear it down.
+ */
+export const reconcileWebhookRegistrations = async ({
+  registrations,
+  singletonServices = getSingletonServices(),
+  ...input
+}: LifecycleInput & {
+  registrations: WebhookRegistrations
+  singletonServices?: CoreSingletonServices
+}): Promise<{
+  registrations: WebhookRegistrations
+  outcomes: WebhookSourceOutcome[]
+  orphans: OrphanedWebhookRegistration[]
+}> => {
+  const credentialService = singletonServices.credentialService
+  const sources = pikkuState(null, 'trigger', 'webhookSourceMeta')
+  const next: WebhookRegistrations = {}
+  const outcomes: WebhookSourceOutcome[] = []
+
+  for (const meta of Object.values(sources)) {
+    const { url } = sourceAddress(meta, input)
+    const events = subscribedWebhookEvents(meta.name)
+    const previous = registrations[meta.name]
+    const names = sourceCredentialNames(meta)
+
+    if (credentialService) {
+      for (const [name, value] of Object.entries(previous?.credentials ?? {})) {
+        if (!(await credentialService.has(name))) {
+          await credentialService.set(name, value)
+        }
+      }
+    }
+
+    if (
+      previous &&
+      previous.status !== 'failed' &&
+      previous.url === url &&
+      sameEvents(previous.events, events)
+    ) {
+      next[meta.name] = previous
+      outcomes.push({ source: meta.name, url, status: 'unchanged' })
+      continue
+    }
+
     const outcome = await runSourceLifecycleStep(
       meta,
       'setup',
       input,
-      row?.state ?? undefined,
+      previous?.state,
       singletonServices
     )
-    await store.recordTriggerSource(meta.name, {
+    const credentials: Record<string, unknown> = {}
+    for (const name of names) {
+      const value = await credentialService?.get(name)
+      if (value != null) credentials[name] = value
+    }
+    const state = outcome.state ?? previous?.state
+    next[meta.name] = {
+      url,
+      events,
       status: outcome.status,
-      ...(outcome.state ? { state: outcome.state } : {}),
-      detail: detailOf(outcome),
-    })
+      ...(state ? { state } : {}),
+      ...(Object.keys(credentials).length ? { credentials } : {}),
+    }
     outcomes.push(outcome)
   }
-  return outcomes
+
+  const orphans: OrphanedWebhookRegistration[] = []
+  for (const [source, registration] of Object.entries(registrations)) {
+    if (sources[source]) continue
+    next[source] = registration
+    orphans.push({
+      source,
+      url: registration.url,
+      label: `${input.labelPrefix}:${source}`,
+    })
+  }
+
+  return { registrations: next, outcomes, orphans }
 }
 
 /**

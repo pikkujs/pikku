@@ -14,8 +14,13 @@ export const triggerSourceSchema: PikkuSchema = {
         .createTable('pikkuTriggerSource')
         .addColumn('name', 'text', (col) => col.primaryKey())
         .addColumn('kind', 'text', (col) => col.notNull())
+        .addColumn('baseUrl', 'text')
+        .addColumn('labelPrefix', 'text')
         .addColumn('declared', 'boolean', (col) =>
           col.defaultTo(true).notNull()
+        )
+        .addColumn('enabled', 'boolean', (col) =>
+          col.defaultTo(false).notNull()
         )
         .addColumn('status', 'text')
         .addColumn('state', 'text')

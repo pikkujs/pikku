@@ -5,6 +5,7 @@ import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { TriggersListPanel } from '../components/triggers/TriggersListPanel'
+import { OrphanedWebhookSources } from '../components/triggers/OrphanedWebhookSources'
 import { useTriggerItems } from '../hooks/useTriggerItems'
 
 export type TriggersPageProps = {
@@ -41,6 +42,7 @@ export const TriggersPage: React.FC<TriggersPageProps> = ({ emptyHero }) => {
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage={m.triggers_select_item()}
       >
+        <OrphanedWebhookSources />
         <TriggersListPanel externalSearch={searchQuery} emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>

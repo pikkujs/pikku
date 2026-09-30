@@ -10,7 +10,8 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\nimport type { CoreTriggerWebhookSource, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'\n`}import {
+${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\n`}import type { CoreTriggerWebhookSource, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'
+import {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,${addon ? '' : `\n  CoreTrigger,`}
 } from '@pikku/core/trigger'
@@ -89,12 +90,13 @@ type TriggerSource<
   name: string
   func: PikkuTriggerFunctionConfig<TInput, TOutput>
 } & (unknown extends TInput ? { input?: TInput } : { input: TInput })
-
+`
+}
 /**
  * One step of a webhook source: inline, a pikku function, or \`ref('addon:fn')\`.
  */
 type WebhookSourceStep<In, Out> = {
-  func: (services: Omit<SingletonServices, 'secrets'>, data: In, wire: any) => Promise<Out>
+  func: ${addon ? '(services: any, data: In, wire: any) => Promise<Out | void>' : "(services: Omit<SingletonServices, 'secrets'>, data: In, wire: any) => Promise<Out>"}
 }
 
 /**
@@ -107,8 +109,7 @@ type TriggerWebhookSource<Events extends Record<string, StandardSchemaV1>> =
     setup?: WebhookSourceStep<WebhookLifecycleInput, WebhookSetupResult>
     teardown?: WebhookSourceStep<WebhookTeardownInput, WebhookTeardownResult>
   }
-`
-}
+
 /**
  * Creates a trigger function configuration.
  * Use this to define trigger functions that set up subscriptions.
@@ -164,7 +165,20 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
 
 ${
   addon
-    ? ''
+    ? `
+/**
+ * Declares a webhook source this addon ships. An app that wires the addon
+ * mounts its route and can register it with the provider, but the source
+ * stays off until someone turns it on. Declaration only: nothing runs here.
+ *
+ * @param source - Webhook source with name, events and its steps
+ */
+export const wireTriggerWebhookSource = <
+  Events extends Record<string, StandardSchemaV1> = Record<string, StandardSchemaV1>
+>(
+  _source: TriggerWebhookSource<Events>
+) => {}
+`
     : `
 /**
  * Registers a trigger with the Pikku framework.

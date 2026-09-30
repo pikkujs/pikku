@@ -502,6 +502,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('HTTP', 'pikkuCommandHTTP', null),
         workflow.do('Channels', 'pikkuCommandChannels', null),
         workflow.do('CLI', 'pikkuCLI', null),
+        workflow.do('Webhook sources', 'pikkuWebhookSources', null),
       ])
 
       // Written on every build, empty when the addon has no tables: the

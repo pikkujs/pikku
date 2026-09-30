@@ -3,10 +3,17 @@ import { ActionIcon, Anchor, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { ChevronRight, Zap } from 'lucide-react'
+import { ChevronRight, Webhook, Zap } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePanelUrl } from '../../hooks/usePanelUrl'
-import { useTriggerItems, type TriggerPair } from '../../hooks/useTriggerItems'
+import { useTriggerItems } from '../../hooks/useTriggerItems'
+import {
+  hasSource,
+  matchesTriggerQuery,
+  sourcePanelMetadata,
+  triggerCounts,
+  type TriggerPair,
+} from '../../lib/trigger-pairs'
 import { toEnglishName } from '../../lib/strings'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { CardsPage } from '../ui/CardsPage'
@@ -27,6 +34,8 @@ export interface TriggersListPanelProps {
 }
 
 const funcName = (pair: TriggerPair, side: 'source' | 'trigger') => {
+  if (side === 'source' && pair.webhook)
+    return toEnglishName(pair.webhook.source)
   const id = pair[side]?.pikkuFuncId as string | undefined
   return id ? toEnglishName(id) : undefined
 }
@@ -54,7 +63,7 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
     type: 'triggerSource',
     items: pairs,
     getId: (pair) => pair.name,
-    open: (id, pair) => openTriggerSource(id, pair.source),
+    open: (id, pair) => openTriggerSource(id, sourcePanelMetadata(pair)),
   })
 
   if (!loading && pairs.length === 0) {
@@ -71,23 +80,12 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
 
   const query = externalSearch.trim().toLowerCase()
   const open = (pair: TriggerPair) => {
-    if (pair.source) openTriggerSource(pair.name, pair.source)
+    if (pair.source || pair.webhook)
+      openTriggerSource(pair.name, sourcePanelMetadata(pair))
     else if (pair.trigger) openTrigger(pair.name, pair.trigger)
   }
-  const total = pairs.length
-  const listening = pairs.filter((p) => p.source).length
-  const running = pairs.filter((p) => p.trigger).length
-  const incomplete = pairs.filter((p) => !p.source || !p.trigger).length
-  const shown = pairs.filter(
-    (pair) =>
-      !query ||
-      [
-        pair.name,
-        toEnglishName(pair.name),
-        pair.source?.pikkuFuncId,
-        pair.trigger?.pikkuFuncId,
-      ].some((v) => v?.toLowerCase().includes(query))
-  )
+  const { total, listening, running, incomplete } = triggerCounts(pairs)
+  const shown = pairs.filter((pair) => matchesTriggerQuery(pair, query))
 
   return (
     <CardsPage>
@@ -147,15 +145,21 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
                 key: pair.name,
                 cells: [
                   <DevMono key="name" value={pair.name} copy />,
-                  pair.source ? (
+                  hasSource(pair) ? (
                     <Anchor
                       key="source"
                       component="button"
                       size="sm"
                       ff="monospace"
-                      onClick={() => openTriggerSource(pair.name, pair.source)}
+                      onClick={() =>
+                        openTriggerSource(pair.name, sourcePanelMetadata(pair))
+                      }
                     >
-                      {asI18n(pair.source.pikkuFuncId || pair.name)}
+                      {asI18n(
+                        pair.webhook
+                          ? `${pair.webhook.source} (${pair.webhook.meta.route})`
+                          : pair.source.pikkuFuncId || pair.name
+                      )}
                     </Anchor>
                   ) : (
                     <Text key="source" size="sm" c="dimmed">
@@ -199,10 +203,12 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
                   testId={`trigger-row-${pair.name}`}
                   leading={
                     <StatusTile tone={ready ? 'info' : 'warn'}>
-                      <Zap size={18} />
+                      {pair.webhook ? <Webhook size={18} /> : <Zap size={18} />}
                     </StatusTile>
                   }
-                  title={asI18n(toEnglishName(pair.name.replace(/[-_]+/g, ' ')))}
+                  title={asI18n(
+                    toEnglishName(pair.name.replace(/[-_]+/g, ' '))
+                  )}
                   badges={
                     <StatusBadge tone={ready ? 'good' : 'warn'} size="sm">
                       {ready
@@ -214,9 +220,20 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
                   }
                   meta={
                     <>
-                      {source
-                        ? m.trigger_page_row_listens({ source })
-                        : m.trigger_page_row_listens_none()}
+                      {pair.webhook && source
+                        ? pair.webhook.event
+                          ? m.trigger_page_row_listens_webhook({
+                              source,
+                              event: pair.webhook.event,
+                              route: pair.webhook.meta.route,
+                            })
+                          : m.trigger_page_row_listens_webhook_any({
+                              source,
+                              route: pair.webhook.meta.route,
+                            })
+                        : source
+                          ? m.trigger_page_row_listens({ source })
+                          : m.trigger_page_row_listens_none()}
                       {asI18n(' · ')}
                       {handler
                         ? m.trigger_page_row_runs({ handler })

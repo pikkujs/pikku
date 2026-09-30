@@ -48,6 +48,29 @@ describe('KyselyTriggerSourceStore', () => {
     assert.equal((await store.getTriggerSource('github'))!.declared, false)
   })
 
+  test('starts off and keeps the switch across a sync', async () => {
+    assert.equal((await store.getTriggerSource('stripe'))!.enabled, false)
+    await store.setTriggerSourceEnabled('stripe', true)
+    await store.syncTriggerSources([{ name: 'stripe', kind: 'webhook' }])
+    assert.equal((await store.getTriggerSource('stripe'))!.enabled, true)
+    await assert.rejects(store.setTriggerSourceEnabled('nope', true))
+  })
+
+  test('keeps the recorded address when a sync gives none', async () => {
+    await store.syncTriggerSources([
+      {
+        name: 'stripe',
+        kind: 'webhook',
+        baseUrl: 'https://shop.test',
+        labelPrefix: 'p',
+      },
+    ])
+    await store.syncTriggerSources([{ name: 'stripe', kind: 'webhook' }])
+    const row = await store.getTriggerSource('stripe')
+    assert.equal(row!.baseUrl, 'https://shop.test')
+    assert.equal(row!.labelPrefix, 'p')
+  })
+
   test('forgets a torn-down source', async () => {
     await store.deleteTriggerSource('github')
     assert.equal(await store.getTriggerSource('github'), null)
