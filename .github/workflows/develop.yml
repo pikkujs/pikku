@@ -94,19 +94,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
-    services:
-      mysql:
-        image: mirror.gcr.io/library/mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: pikku_db_schema
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -132,7 +119,6 @@ jobs:
       - run: bun run --filter @pikku/cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
-          PIKKU_TEST_MYSQL_URL: mysql://root:password@127.0.0.1:3306/mysql
 
   unit-tests-parallel:
     name: Unit Tests (parallel)
