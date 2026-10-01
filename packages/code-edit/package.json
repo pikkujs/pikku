@@ -62,6 +62,11 @@
       "types": "./dist/verify/index.d.ts",
       "import": "./dist/verify/index.js",
       "default": "./dist/verify/index.js"
+    },
+    "./emails": {
+      "types": "./dist/emails/index.d.ts",
+      "import": "./dist/emails/index.js",
+      "default": "./dist/emails/index.js"
     }
   },
   "scripts": {

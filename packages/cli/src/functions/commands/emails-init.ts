@@ -13,18 +13,18 @@ const DEFAULT_EMAIL_DIR = 'emails'
 const DEFAULT_THEME = {
   appName: 'Pikku App',
   previewText: 'Your app can render localized emails out of the box.',
-  colors: {
-    background: '#f5f7fb',
-    surface: '#ffffff',
-    text: '#101828',
-    muted: '#475467',
-    border: '#d0d5dd',
-    primary: '#7c3aed',
-    primaryText: '#ffffff',
-    footer: '#667085',
-  },
   fonts: {
     body: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  },
+  colors: {
+    canvas: '#f5f7fb',
+    surface: '#ffffff',
+    border: '#d0d5dd',
+    text: '#101828',
+    muted: '#475467',
+    accent: '#7c3aed',
+    button: '#7c3aed',
+    buttonText: '#ffffff',
   },
 }
 
@@ -37,6 +37,8 @@ const DEFAULT_EN_LOCALE = {
       'This starter template proves the pipeline works and gives you a place to shape your own visual language.',
     body: 'Chat to your AI to create new emails, refine the theme, or localize every message for your product.',
     cta: 'Open the email console',
+  },
+  common: {
     footer: 'Built with Pikku email templates.',
   },
 }
@@ -50,6 +52,8 @@ const DEFAULT_DE_LOCALE = {
       'Diese Startvorlage zeigt, dass die Pipeline funktioniert, und gibt dir einen Ausgangspunkt fuer dein eigenes Design.',
     body: 'Sprich mit deiner KI, um neue E-Mails zu erstellen, das Theme zu verfeinern oder jede Nachricht zu lokalisieren.',
     cta: 'E-Mail-Konsole oeffnen',
+  },
+  common: {
     footer: 'Erstellt mit Pikku-E-Mail-Vorlagen.',
   },
 }
@@ -62,8 +66,8 @@ function layoutTemplate() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{subject}}</title>
   </head>
-  <body style="margin:0;padding:32px 16px;background:{{theme.colors.background}};font-family:{{theme.fonts.body}};color:{{theme.colors.text}};">
-    <div style="max-width:640px;margin:0 auto;background:{{theme.colors.surface}};border:1px solid {{theme.colors.border}};border-radius:20px;overflow:hidden;">
+  <body style="margin:0;padding:32px 16px;background:{{theme.colors.canvas}};font-family:{{theme.fonts.body}};color:{{theme.colors.text}};">
+    <div style="max-width:640px;margin:0 auto;padding:32px;background:{{theme.colors.surface}};border:1px solid {{theme.colors.border}};border-radius:20px;">
       {{content}}
     </div>
   </body>
@@ -72,33 +76,31 @@ function layoutTemplate() {
 }
 
 function footerPartial() {
-  return `<div style="padding:24px 32px;border-top:1px solid {{theme.colors.border}};font-size:13px;line-height:1.6;color:{{theme.colors.footer}};">
-  <p style="margin:0;">{{t.helloWorld.footer}}</p>
-</div>
+  return `<p style="margin:32px 0 0;padding-top:24px;border-top:1px solid {{theme.colors.border}};font-size:13px;line-height:1.6;color:{{theme.colors.muted}};">
+  {{t.common.footer}}
+</p>
 `
 }
 
 function helloWorldHtml() {
-  return `<div style="padding:32px;">
-  <p style="margin:0 0 16px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:{{theme.colors.primary}};">
-    {{t.helloWorld.eyebrow}}
-  </p>
-  <h1 style="margin:0 0 16px;font-size:32px;line-height:1.15;color:{{theme.colors.text}};">
-    {{t.helloWorld.title}}
-  </h1>
-  <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:{{theme.colors.muted}};">
-    Hello {{userName}}. {{t.helloWorld.intro}}
-  </p>
-  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:{{theme.colors.muted}};">
-    {{t.helloWorld.body}}
-  </p>
-  <a
-    href="{{previewUrl}}"
-    style="display:inline-block;padding:14px 18px;border-radius:999px;background:{{theme.colors.primary}};color:{{theme.colors.primaryText}};font-weight:600;text-decoration:none;"
-  >
-    {{t.helloWorld.cta}}
-  </a>
-</div>
+  return `<p style="margin:0 0 16px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:{{theme.colors.accent}};">
+  {{t.helloWorld.eyebrow}}
+</p>
+<h1 style="margin:0 0 16px;font-size:32px;line-height:1.15;color:{{theme.colors.text}};">
+  {{t.helloWorld.title}}
+</h1>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:{{theme.colors.muted}};">
+  Hello {{userName}}. {{t.helloWorld.intro}}
+</p>
+<p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:{{theme.colors.muted}};">
+  {{t.helloWorld.body}}
+</p>
+<a
+  href="{{previewUrl}}"
+  style="display:inline-block;padding:14px 18px;border-radius:999px;background:{{theme.colors.button}};color:{{theme.colors.buttonText}};font-weight:600;text-decoration:none;"
+>
+  {{t.helloWorld.cta}}
+</a>
 {{> footer}}
 `
 }
