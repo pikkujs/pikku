@@ -36,6 +36,7 @@ import type {
   CompileResult,
 } from './bundler.interface.js'
 import { SERVICE_MODULE_MAP } from './service-module-map.js'
+import { formatBundleError } from './format-bundle-error.js'
 
 /**
  * Mapping of service name -> gen file pattern that should be stubbed
