@@ -43,7 +43,7 @@ const DEFAULT_QUALITY = 0.8
 export const fitWithin = (
   width: number,
   height: number,
-  maxEdge: number,
+  maxEdge: number
 ): { width: number; height: number } => {
   const longest = Math.max(width, height)
   if (!Number.isFinite(longest) || longest <= 0) {
@@ -68,7 +68,9 @@ export const fitWithin = (
  * it refuses — most often an iPhone HEIC picked out of the library rather than
  * taken with the camera, which Safari will happily decode through an element.
  */
-const decode = async (file: File): Promise<CanvasImageSource & { width: number; height: number }> => {
+const decode = async (
+  file: File
+): Promise<CanvasImageSource & { width: number; height: number }> => {
   if (typeof createImageBitmap === 'function') {
     try {
       return await createImageBitmap(file, { imageOrientation: 'from-image' })
@@ -99,12 +101,16 @@ const decode = async (file: File): Promise<CanvasImageSource & { width: number; 
  */
 export const prepareImage = async (
   file: File,
-  options: PrepareImageOptions = {},
+  options: PrepareImageOptions = {}
 ): Promise<PreparedImage> => {
   const mediaType = options.mediaType ?? 'image/jpeg'
   const quality = options.quality ?? DEFAULT_QUALITY
   const source = await decode(file)
-  const size = fitWithin(source.width, source.height, options.maxEdge ?? DEFAULT_MAX_EDGE)
+  const size = fitWithin(
+    source.width,
+    source.height,
+    options.maxEdge ?? DEFAULT_MAX_EDGE
+  )
 
   const canvas = document.createElement('canvas')
   canvas.width = size.width
@@ -126,7 +132,9 @@ export const prepareImage = async (
     width: size.width,
     height: size.height,
     // Base64 carries 3 bytes in every 4 characters, less the '=' padding.
-    bytes: Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0),
+    bytes:
+      Math.floor((data.length * 3) / 4) -
+      (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0),
     file,
   }
 }
@@ -170,7 +178,9 @@ export type UsePhotoCaptureResult = {
  * {photo ? <img src={photo.dataUrl} /> : null}
  * ```
  */
-export const usePhotoCapture = (options: UsePhotoCaptureOptions = {}): UsePhotoCaptureResult => {
+export const usePhotoCapture = (
+  options: UsePhotoCaptureOptions = {}
+): UsePhotoCaptureResult => {
   const [photo, setPhoto] = useState<PreparedImage | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [preparing, setPreparing] = useState(false)
@@ -203,7 +213,7 @@ export const usePhotoCapture = (options: UsePhotoCaptureOptions = {}): UsePhotoC
     const done = () => input.remove()
 
     input.addEventListener('cancel', done)
-    input.addEventListener('change', async () => {
+    const handleChange = async () => {
       const file = input.files?.[0]
       done()
       if (!file) return
@@ -216,13 +226,16 @@ export const usePhotoCapture = (options: UsePhotoCaptureOptions = {}): UsePhotoC
         if (live.current) setPhoto(prepared)
         settings.onPhoto?.(prepared)
       } catch (thrown) {
-        const failure = thrown instanceof Error ? thrown : new Error(String(thrown))
+        const failure =
+          thrown instanceof Error ? thrown : new Error(String(thrown))
         if (live.current) setError(failure)
         settings.onError?.(failure)
       } finally {
         if (live.current) setPreparing(false)
       }
-    })
+    }
+    // Errors from preparing the image are handled inside handleChange
+    input.addEventListener('change', () => void handleChange())
 
     input.click()
   }, [])

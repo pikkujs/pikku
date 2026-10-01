@@ -310,7 +310,8 @@ export function useElkLayout(
       }
     }
 
-    applyLayout()
+    // applyLayout catches all errors itself and falls back to the unlaid-out graph
+    void applyLayout()
 
     return () => {
       cancelled = true

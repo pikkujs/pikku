@@ -310,7 +310,7 @@ async function setupTemplate(cliOptions: CliOptions) {
     filterFilesByFeatures(functionsPath, supportedFeatures)
 
     // Merge and process files
-    lazymkdir(targetPath)
+    await lazymkdir(targetPath)
     mergeJsonFiles([functionsPath, templatePath], targetPath, 'package.json')
     mergeJsonFiles(
       [functionsPath, templatePath],
@@ -406,7 +406,7 @@ async function cloneRepo(
       repoDirPath,
       spinner
     )
-    lazymkdir(targetPath)
+    await lazymkdir(targetPath)
     mergeDirectories(repoDirPath, targetPath)
 
     try {
@@ -624,4 +624,7 @@ async function setupFabric(cliOptions: CliOptions) {
   }
 }
 
-run()
+run().catch((error) => {
+  console.error(chalk.red('Failed to create project:'), error)
+  process.exit(1)
+})
