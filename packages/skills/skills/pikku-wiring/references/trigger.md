@@ -112,9 +112,11 @@ subscribe to its events as `<source>:<event>`:
 - `events` maps each event name to a schema. An event that fails its schema is
   logged and dropped; so is one no `wireTrigger` listens for. Both still get a
   `200`, so the provider does not retry forever.
-- `receive(services, { body, headers, method, url, query })` gets the **raw
-  bytes** and only parses them: it returns `{ events: [{ name, id?, data }] }`,
-  or `{ respond: { status, body } }` for a handshake. Throwing
+- `receive(services, { body, headers, method, url, query }, { http })` gets the
+  **raw bytes** and only parses them: it returns `{ events: [{ name, id?, data }] }`.
+  A handshake returns nothing and answers through `http.response`
+  (`http.response.header('x-hook-secret', secret)`,
+  `http.response.json({ challenge })`), which is sent only then. Throwing
   rejects the request with the error's status (`UnauthorizedError` → 401).
   Omitted, the JSON body becomes one event dispatched to a trigger named just
   `<source>`.

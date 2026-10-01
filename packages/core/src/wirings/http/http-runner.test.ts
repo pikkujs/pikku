@@ -367,6 +367,29 @@ describe('http-runner helpers', () => {
     assert.equal(response.statusCode, 204)
   })
 
+  test('fetchData keeps a 200 the route set itself when it returns undefined', async () => {
+    setRouteMeta('/handshake')
+    const func = async (_services: any, _data: any, { http }: any) => {
+      http.response.status(200).json({ challenge: 'abc' })
+    }
+    addFunction('pikku_func_name', { func })
+    wireHTTP({
+      route: '/handshake',
+      method: 'get',
+      auth: false,
+      func: { func },
+    })
+    httpRouter.initialize()
+
+    const request = new TestRequest('/handshake', 'get')
+    const response = new TestResponse()
+
+    await fetchData(request, response)
+
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.jsonBody, { challenge: 'abc' })
+  })
+
   test('fetchData keeps a redirect status when the route returns undefined', async () => {
     setRouteMeta('/redirect')
     addFunction('pikku_func_name', {
@@ -521,13 +544,16 @@ describe('http-runner helpers', () => {
     const response = new TestResponse()
     await fetchData(new TestRequest('/sse-error', 'get'), response)
 
-    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
-      {
-        type: 'error',
-        errorText: 'The server cannot find the requested resource.',
-      },
-      { type: 'done' },
-    ])
+    assert.deepEqual(
+      response.frames.map((f) => JSON.parse(f as string)),
+      [
+        {
+          type: 'error',
+          errorText: 'The server cannot find the requested resource.',
+        },
+        { type: 'done' },
+      ]
+    )
   })
 
   test('a failed agui-protocol stream ends with a single RUN_ERROR frame', async () => {
@@ -549,11 +575,14 @@ describe('http-runner helpers', () => {
     const response = new TestResponse()
     await fetchData(new TestRequest('/sse-agui-error', 'get'), response)
 
-    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
-      {
-        type: 'RUN_ERROR',
-        message: 'The server cannot find the requested resource.',
-      },
-    ])
+    assert.deepEqual(
+      response.frames.map((f) => JSON.parse(f as string)),
+      [
+        {
+          type: 'RUN_ERROR',
+          message: 'The server cannot find the requested resource.',
+        },
+      ]
+    )
   })
 })

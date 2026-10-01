@@ -136,7 +136,9 @@ export function buildCurrentContracts(
   const result = new Map<string, ContractEntry>()
 
   for (const [funcId, meta] of Object.entries(functionsMeta)) {
-    if (meta.remote === true) {
+    // A webhook receive has no callers but its own route, so there is no
+    // contract for a version to protect.
+    if (meta.remote === true || meta.webhookReceive) {
       continue
     }
 
@@ -366,7 +368,7 @@ export function extractContractsFromMeta(
   const result = new Map<string, ContractEntry>()
 
   for (const [funcId, meta] of Object.entries(functionsMeta)) {
-    if (meta.remote === true || !meta.contractHash) {
+    if (meta.remote === true || meta.webhookReceive || !meta.contractHash) {
       continue
     }
 

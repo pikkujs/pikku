@@ -10,7 +10,8 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\n`}import type { CoreTriggerWebhookSource, WebhookVerify, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'
+${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore, wireTriggerWebhookSource as wireTriggerWebhookSourceCore } from '@pikku/core/trigger'\n`}import type { PikkuHTTP } from '@pikku/core/http'
+import type { CoreTriggerWebhookSource, WebhookVerify, WebhookRequest, WebhookReceiveResult, WebhookLifecycleInput, WebhookCheckResult, WebhookSetupResult, WebhookTeardownInput, WebhookTeardownResult } from '@pikku/core/trigger'
 import {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,${addon ? '' : `\n  CoreTrigger,`}
@@ -92,6 +93,9 @@ type TriggerSource<
 } & (unknown extends TInput ? { input?: TInput } : { input: TInput })
 `
 }
+/** A webhook source is only reached over HTTP, so its request and response are always there. */
+type WebhookHTTP = Required<Pick<PikkuHTTP, 'request' | 'response'>>
+
 /**
  * One step of a webhook source: inline, a pikku function, or \`ref('addon:fn')\`.
  */
@@ -105,7 +109,9 @@ type WebhookSourceStep<In, Out> = {
 type TriggerWebhookSource<Events extends Record<string, StandardSchemaV1>> =
   Omit<CoreTriggerWebhookSource<Events>, 'verify' | 'receive' | 'check' | 'setup' | 'teardown'> & {
     verify?: WebhookVerify<${addon ? 'any' : "Omit<SingletonServices, 'secrets'>"}>
-    receive?: WebhookSourceStep<WebhookRequest, WebhookReceiveResult>
+    receive?: {
+      func: ${addon ? '(services: any, data: WebhookRequest, wire: { http: WebhookHTTP }) => Promise<WebhookReceiveResult | void>' : "(services: Omit<SingletonServices, 'secrets'>, data: WebhookRequest, wire: { http: WebhookHTTP }) => Promise<WebhookReceiveResult | void>"}
+    }
     check?: WebhookSourceStep<WebhookLifecycleInput, WebhookCheckResult>
     setup?: WebhookSourceStep<WebhookLifecycleInput, WebhookSetupResult>
     teardown?: WebhookSourceStep<WebhookTeardownInput, WebhookTeardownResult>
@@ -166,7 +172,7 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
 
 /**
  * A webhook source's \`receive\`: reads the request into events, or answers a
- * handshake. It is public (\`auth: false\`) and only its source's route runs it,
+ * handshake through \`http.response\`. It is public (\`auth: false\`) and only its source's route runs it,
  * so it is never callable as an RPC. Signatures are the source's \`verify\`.
  *
  * @example snippet: pikkuWebhookReceive
@@ -178,8 +184,8 @@ export const pikkuWebhookReceive = (config: {
   description?: string
   /** Groups the function with others in the console and in \`pikku info\`. */
   tags?: string[]
-  /** Turns the raw request into \`{ events }\`, or \`{ respond }\` for a handshake. */
-  func: (services: Omit<SingletonServices, 'secrets'>, request: WebhookRequest, wire: any) => Promise<WebhookReceiveResult>
+  /** Turns the raw request into \`{ events }\`. A handshake returns nothing and answers through \`http.response\`. */
+  func: (services: Omit<SingletonServices, 'secrets'>, request: WebhookRequest, wire: { http: WebhookHTTP }) => Promise<WebhookReceiveResult | void>
 }) => ({ ...config, auth: false as const })
 
 ${

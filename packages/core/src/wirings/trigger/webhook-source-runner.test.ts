@@ -19,6 +19,7 @@ import {
   wireTriggerWebhookSource,
 } from './webhook-source-runner.js'
 import { addFunction } from '../../function/function-runner.js'
+import { PikkuFetchHTTPResponse } from '../http/pikku-fetch-http-response.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { IncomingWebhookService } from '../../services/incoming-webhook-service.js'
 import { InMemoryTriggerSourceStore } from '../../services/trigger-source-store.js'
@@ -73,6 +74,7 @@ const httpWire = (body: unknown) => {
         path: () => '/webhooks/shop',
         query: () => ({}),
       },
+      response: new PikkuFetchHTTPResponse(),
     } as any,
   }
 }
@@ -171,14 +173,18 @@ describe('receiveWebhookSourceRequest', () => {
 
   test('answers a handshake without queueing', async () => {
     setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
-    registerFunction('shop:receive', () => ({
-      respond: { status: 200, body: 'challenge' },
-    }))
+    registerFunction('shop:receive', (_services, _request, { http }) => {
+      http.response.header('x-hook-secret', 'shh').send('challenge')
+    })
+    const wire = httpWire({})
 
-    const result = await receiveWebhookSourceRequest('shop', httpWire({}))
+    const result = await receiveWebhookSourceRequest('shop', wire)
 
-    assert.ok(result instanceof Response)
-    assert.equal(await result.text(), 'challenge')
+    assert.equal(result, undefined)
+    const response = wire.http.response.toResponse()
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('x-hook-secret'), 'shh')
+    assert.equal(await response.text(), 'challenge')
     assert.equal(queued.length, 0)
   })
 
@@ -197,8 +203,8 @@ describe('receiveWebhookSourceRequest', () => {
 
     const result = await receiveWebhookSourceRequest('shop', wire)
 
-    assert.ok(result instanceof Response)
-    assert.equal(result.status, 200)
+    assert.equal(result, undefined)
+    assert.equal(wire.http.response.statusCode, 200)
     assert.equal(queued.length, 0)
   })
 
@@ -248,6 +254,7 @@ describe('receiveWebhookSourceRequest with verify', () => {
           path: () => '/webhooks/shop',
           query: () => ({}),
         },
+        response: new PikkuFetchHTTPResponse(),
       } as any,
     }
   }
@@ -398,20 +405,16 @@ describe('receiveWebhookSourceRequest with verify', () => {
     await withSecret('shh')
     setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
     wireTriggerMeta('shop', () => {})
-    let answer: 'respond' | 'events' = 'respond'
+    let answer: 'handshake' | 'events' = 'handshake'
     registerFunction('shop:receive', () =>
-      answer === 'respond'
-        ? { respond: { status: 200 } }
-        : { events: [{ name: '', data: {} }] }
+      answer === 'handshake' ? undefined : { events: [{ name: '', data: {} }] }
     )
     wireTriggerWebhookSource({ name: 'shop', verify: hmac })
 
-    const probe = await receiveWebhookSourceRequest(
-      'shop',
-      rawWire('', {}, 'get')
-    )
-    assert.ok(probe instanceof Response)
-    assert.equal(probe.status, 200)
+    const probeWire = rawWire('', {}, 'get')
+    const probe = await receiveWebhookSourceRequest('shop', probeWire)
+    assert.equal(probe, undefined)
+    assert.equal(probeWire.http.response.statusCode, 200)
 
     answer = 'events'
     await assert.rejects(
@@ -747,10 +750,11 @@ describe('enabling trigger sources', () => {
     })
     await store.syncTriggerSources([{ name: 'shop', kind: 'webhook' }])
 
-    const result = await receiveWebhookSourceRequest('shop', httpWire({}))
+    const wire = httpWire({})
+    const result = await receiveWebhookSourceRequest('shop', wire)
 
-    assert.ok(result instanceof Response)
-    assert.equal(result.status, 404)
+    assert.equal(result, undefined)
+    assert.equal(wire.http.response.statusCode, 404)
     assert.equal(received, 0)
 
     await store.setTriggerSourceEnabled('shop', true)
