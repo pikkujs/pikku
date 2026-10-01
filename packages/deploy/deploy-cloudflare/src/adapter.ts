@@ -777,14 +777,19 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     // the two in application code, it is equally unreachable on CF, and it
     // additionally reaches for `net`/`tls` and `pg-native`, which a worker
     // build cannot resolve at all.
+    //
+    // The built-ins match with or without the `node:` prefix. Bundlers run
+    // their resolve hooks on the specifier as written, and `getAliases()` only
+    // rewrites a bare `fs` to `node:fs` afterwards, so a `^node:fs$` pattern
+    // never sees the bare import and the alias then leaves it unresolvable.
     return [
       '^postgres$',
       '^kysely-postgres-js$',
       '^pg$',
       '^pg-native$',
-      '^node:fs$',
-      '^node:fs/promises$',
-      '^node:child_process$',
+      '^(node:)?fs$',
+      '^(node:)?fs/promises$',
+      '^(node:)?child_process$',
     ]
   }
 
