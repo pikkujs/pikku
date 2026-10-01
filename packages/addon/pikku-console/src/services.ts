@@ -13,6 +13,7 @@ import { WorkspaceFilesService } from '@pikku/code-edit/files'
 import { GitService } from '@pikku/code-edit/git'
 import { PagesService } from '@pikku/code-edit/routes'
 import { VerifyService } from '@pikku/code-edit/verify'
+import { BrandWorkspace } from '@pikku/code-edit/brand'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
@@ -67,6 +68,7 @@ export const createSingletonServices = pikkuAddonServices(
     let pagesService: PagesService | null = null
     let pageScreenshotService: PageScreenshotService | null = null
     let verifyService: VerifyService | null = null
+    let brandService: BrandWorkspace | null = null
     let scenarioRunStore: FileScenarioRunStore | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
@@ -85,6 +87,31 @@ export const createSingletonServices = pikkuAddonServices(
         projectRoot
       )
       verifyService = new VerifyService(projectRoot)
+      const brandSettings = async () => {
+        const names = ['UNSPLASH_ACCESS_KEY', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'] as const
+        const found: Partial<Record<(typeof names)[number], string>> = {
+          ...(await variables.getVariables<Record<(typeof names)[number], string>>([...names])),
+        }
+        try {
+          const stored = await secrets.getSecrets<Record<(typeof names)[number], string>>([
+            'UNSPLASH_ACCESS_KEY',
+            'CLOUDFLARE_ACCOUNT_ID',
+            'CLOUDFLARE_API_TOKEN',
+          ])
+          for (const name of names) {
+            const secret = stored[name]
+            if (secret) found[name] = secret.reveal()
+          }
+        } catch {}
+        return found
+      }
+      brandService = new BrandWorkspace(findWorkspaceRoot(projectRoot), {
+        unsplashAccessKey: async () => (await brandSettings()).UNSPLASH_ACCESS_KEY,
+        cloudflare: async () => {
+          const { CLOUDFLARE_ACCOUNT_ID: accountId, CLOUDFLARE_API_TOKEN: apiToken } = await brandSettings()
+          return accountId && apiToken ? { accountId, apiToken } : undefined
+        },
+      })
       // The same directory `pikku scenario run` writes to: the console reads
       // runs the CLI recorded, so the path is the contract between them.
       scenarioRunStore = new FileScenarioRunStore({
@@ -132,6 +159,7 @@ export const createSingletonServices = pikkuAddonServices(
       pagesService,
       pageScreenshotService,
       verifyService,
+      brandService,
       scenarioRunStore,
       auth,
     }

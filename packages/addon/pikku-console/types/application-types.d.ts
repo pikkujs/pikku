@@ -19,6 +19,7 @@ import type { WorkspaceFilesService } from '@pikku/code-edit/files'
 import type { GitService } from '@pikku/code-edit/git'
 import type { PagesService } from '@pikku/code-edit/routes'
 import type { VerifyService } from '@pikku/code-edit/verify'
+import type { BrandWorkspace } from '@pikku/code-edit/brand'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
@@ -49,6 +50,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   pagesService: PagesService | null
   pageScreenshotService: PageScreenshotService | null
   verifyService: VerifyService | null
+  brandService: BrandWorkspace | null
   /**
    * Past scenario runs and what they recorded. Declared as the interface rather
    * than the on-disk implementation: a hosted console keeps the same runs in a

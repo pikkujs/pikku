@@ -121,6 +121,13 @@ import {
   renderPagesList,
   renderPagesScreenshot,
 } from './functions/commands/pages.js'
+import {
+  pikkuDesignCrawl,
+  pikkuDesignExtract,
+  pikkuDesignFavicon,
+  pikkuDesignImages,
+  pikkuDesignPlaceholders,
+} from './functions/commands/design.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -787,6 +794,60 @@ wireCLI({
           parameters: '<name>',
           options: {
             out: { description: 'Write the files into this folder instead, skipping any that exist', type: 'string' },
+          },
+        }),
+      },
+    },
+    design: {
+      description: "The app's brand assets: placeholder names, icons, design tokens and imagery",
+      subcommands: {
+        placeholders: pikkuCLICommand({
+          func: pikkuDesignPlaceholders,
+          description:
+            "Report every place an app still uses a template's name: the wordmark, the tab title and the emails' sender",
+        }),
+        favicon: pikkuCLICommand({
+          func: pikkuDesignFavicon,
+          description:
+            "Render the favicon, apple-touch and PWA icons into the app's public/ from a logo or a glyph, and link them from the document head. Needs playwright's chromium",
+          options: {
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
+            source: { description: 'Logo image (SVG/PNG/JPG/WebP), relative to the app, its public/ or the workspace', type: 'string' },
+            emoji: { description: 'Emoji to draw instead of a logo', type: 'string' },
+            letter: { description: 'One or two letters to draw instead of a logo', type: 'string' },
+            background: { description: 'Background colour, as hex', type: 'string' },
+          },
+        }),
+        extract: pikkuCLICommand({
+          func: pikkuDesignExtract,
+          description:
+            'Reduce a live site (needs playwright) or a W3C design-tokens file to colours, fonts and structure, and the theme input they imply',
+          options: {
+            url: { description: 'Site to read the design off', type: 'string' },
+            file: { description: 'DTCG tokens.json to read instead', type: 'string' },
+            preset: { description: 'Preset the extracted colours and fonts layer over', type: 'string' },
+            apply: { description: 'Write the theme and make it active, as `pikku theme apply` does', default: false },
+          },
+        }),
+        images: pikkuCLICommand({
+          func: pikkuDesignImages,
+          description:
+            "Search Unsplash with your UNSPLASH_ACCESS_KEY and download photos into the app's public/stock/, with the credit Unsplash requires",
+          parameters: '<query>',
+          options: {
+            count: { description: 'How many photos, up to 30 (default 8)', type: 'string' },
+            orientation: { description: 'landscape, portrait or squarish', type: 'string' },
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
+          },
+        }),
+        crawl: pikkuCLICommand({
+          func: pikkuDesignCrawl,
+          description:
+            "Crawl a site on your own Cloudflare account (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN) and return each page as markdown, its images saved into the app's public/crawled/",
+          parameters: '<url>',
+          options: {
+            maxPages: { description: 'Most pages to crawl (default 20)', type: 'string' },
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
           },
         }),
       },

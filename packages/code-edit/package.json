@@ -28,6 +28,11 @@
       "import": "./dist/mantine-catalog.js",
       "default": "./dist/mantine-catalog.js"
     },
+    "./brand": {
+      "types": "./dist/brand/index.d.ts",
+      "import": "./dist/brand/index.js",
+      "default": "./dist/brand/index.js"
+    },
     "./i18n": {
       "types": "./dist/i18n.service.d.ts",
       "import": "./dist/i18n.service.js",
