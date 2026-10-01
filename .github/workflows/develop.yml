@@ -52,11 +52,15 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Type-aware lint (typescript/no-floating-promises, no-misused-promises)
+    # reads the built .d.ts of every workspace package. Without them each
+    # import from one resolves to an error type that acts as `any`, so the
+    # rules go blind exactly where a missing await hides, and a tsconfig that
+    # names a type package (@pikku/playwright) is reported as invalid.
+    needs: build
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-        with:
-          download-build: 'false'
       - name: Check formatting
         run: bun run prettier
       - name: Lint
