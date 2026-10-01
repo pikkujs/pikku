@@ -787,10 +787,19 @@ export type PikkuCLIInput = {
    * Per-rule severity for `pikku validate`, keyed by finding id. `'off'`
    * suppresses the rule, `'warn'` downgrades it, `'error'` is the default for
    * the scaffold-duplicates rules (`scaffold-output-outside-scaffold-dir`,
-   * `scaffold-addon-declared-twice`, `scaffold-dir-noncanonical`).
+   * `scaffold-addon-declared-twice`, `scaffold-dir-noncanonical`) and the
+   * oxlint rules (`oxlint-not-installed`, `oxlint-config-missing`,
+   * `oxlint-rule-missing`, `oxlint-type-aware-off`, `oxlint-run-failed`).
+   * Each diagnostic of the oxlint run has the id `oxlint-<plugin>-<rule>`
+   * (`oxlint-typescript-no-misused-promises`), and `oxlint-run: 'off'` skips
+   * the run entirely.
    */
   validate?: {
     rules?: Record<string, 'off' | 'warn' | 'error'>
+    oxlint?: {
+      /** How long the type-aware oxlint run may take. Defaults to 300. */
+      timeoutSeconds?: number
+    }
   }
 
   scaffold?: {
