@@ -1959,10 +1959,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   /** Stops an unfinished run, children first, and unwinds what it completed. */
   public async cancelRun(
     runId: string,
-    rpcService: PikkuRPC
+    rpcService: PikkuRPC,
+    reason?: string
   ): Promise<WorkflowStatus | undefined> {
     const api = this.compensationApi(rpcService)
-    return cancelAndUnwind(api, createUnwindHost(api), runId)
+    return cancelAndUnwind(api, createUnwindHost(api), runId, reason)
   }
 
   protected async markFailedUnlessUnwound(

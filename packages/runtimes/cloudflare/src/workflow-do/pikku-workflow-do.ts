@@ -135,15 +135,16 @@ export abstract class PikkuWorkflowDO<
 
   async cancel(reason?: string): Promise<void> {
     const service = this.getOrInitService()
-    await service.updateRunStatus(
+    const status = await service.cancelRun(
       this.ctx.id.toString(),
-      'cancelled',
-      undefined,
-      reason ? { message: reason } : undefined
+      this.getRPCService(),
+      reason
     )
-    await service.setRetentionAlarm(
-      this.options.retentionMs ?? DEFAULT_RETENTION_MS
-    )
+    if (status === 'cancelled') {
+      await service.setRetentionAlarm(
+        this.options.retentionMs ?? DEFAULT_RETENTION_MS
+      )
+    }
   }
 
   /** Called by the step worker after a step finishes successfully. */

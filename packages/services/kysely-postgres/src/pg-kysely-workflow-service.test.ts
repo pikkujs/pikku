@@ -631,6 +631,16 @@ describe('a step lease on Postgres', () => {
 defineServiceTests({
   name: 'PGlite',
   services: {
+    workflowCompensationQueued: async () => {
+      const compensated = createDb()
+      await applyPikkuSchemas(compensated, [workflowSchema])
+      const service = new PgKyselyWorkflowService(compensated, {
+        wireQueues: false,
+        leaseService: new InMemoryLeaseService(),
+      } as WorkflowServiceOptions)
+      await service.init()
+      return service
+    },
     workflowFencing: async () => {
       const fenced = createDb()
       await applyPikkuSchemas(fenced, [workflowSchema])

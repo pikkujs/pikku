@@ -485,7 +485,8 @@ export const failRunOrUnwind = async (
 export const cancelAndUnwind = async (
   api: CompensationApi,
   host: UnwindHost,
-  runId: string
+  runId: string,
+  reason?: string
 ): Promise<WorkflowStatus | undefined> => {
   const run = await api.getRun(runId)
   if (!run) return undefined
@@ -493,10 +494,12 @@ export const cancelAndUnwind = async (
     return run.status
   }
   for (const step of await host.getRunSteps(runId)) {
-    if (step.childRunId) await cancelAndUnwind(api, host, step.childRunId)
+    if (step.childRunId) {
+      await cancelAndUnwind(api, host, step.childRunId, reason)
+    }
   }
   const cause: SerializedError = {
-    message: 'Workflow cancelled',
+    message: reason || 'Workflow cancelled',
     stack: '',
     code: 'WORKFLOW_CANCELLED',
   }

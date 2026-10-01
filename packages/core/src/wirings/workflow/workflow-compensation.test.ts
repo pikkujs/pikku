@@ -766,6 +766,21 @@ describe('saga compensation — cancellation', () => {
     assert.deepEqual(log, ['do:reserve', 'undo:reserve'])
   })
 
+  test('the cancel reason is kept on the run', async () => {
+    register('look', ok())
+    defineWorkflow('reasoned', async (workflow) => {
+      await workflow.do('Look', 'look', {})
+      await workflow.suspend('wait')
+    })
+    const { ws, runId } = await suspendedRun('reasoned')
+
+    await ws.cancelRun(runId, rpc as any, 'customer withdrew')
+
+    const record = (await ws.getRun(runId))!
+    assert.equal(record.error?.message, 'customer withdrew')
+    assert.equal(record.error?.code, 'WORKFLOW_CANCELLED')
+  })
+
   test('cancelling a run with nothing to undo leaves it cancelled', async () => {
     register('look', ok())
     defineWorkflow('parkedPlain', async (workflow) => {

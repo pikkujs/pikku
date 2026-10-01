@@ -1,7 +1,7 @@
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import type { PikkuWorkflowService } from '../../wirings/workflow/pikku-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
-import { addWorkflow } from './dsl/workflow-runner.js'
-import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
+import { addWorkflow } from '../../wirings/workflow/dsl/workflow-runner.js'
+import type { CompensatingFor } from '../../wirings/workflow/dsl/workflow-dsl.types.js'
 
 export type Handler = {
   forward: (data: any, wire: any) => Promise<any> | any
@@ -28,15 +28,15 @@ export class QueuedWorkflowHarness {
   recovering: Array<{ rpc: string; from: any }> = []
   queue: Job[] = []
   jobsRun: Array<{ queue: string; step?: string }> = []
-  ws!: InMemoryWorkflowService
+  ws: PikkuWorkflowService
   /** Return true to drop the job instead of running it, simulating a worker that never ran. */
   dropWhen?: (job: Job) => boolean
   /** Make `queue.add` throw for a job, simulating the broker being unreachable. */
   rejectAddWhen?: (queue: string, data: any) => boolean
 
-  constructor() {
+  constructor(service: PikkuWorkflowService) {
     resetPikkuState()
-    this.ws = new InMemoryWorkflowService()
+    this.ws = service
     const queueService = {
       add: async (queue: string, data: any, options?: any) => {
         if (this.rejectAddWhen?.(queue, data)) {
@@ -49,7 +49,7 @@ export class QueuedWorkflowHarness {
       logger: { error() {}, info() {}, warn() {}, debug() {} },
       queueService,
       workflowService: this.ws,
-    } as any)
+    } as never)
   }
 
   readonly rpc = {
@@ -85,7 +85,7 @@ export class QueuedWorkflowHarness {
       permissions: [],
       workflowQueued: handler.queued !== false,
       ...(handler.compensate ? { compensate: true } : {}),
-    } as any
+    } as never
   }
 
   defineDsl(name: string, body: (workflow: any, input: any) => Promise<any>) {
@@ -94,16 +94,16 @@ export class QueuedWorkflowHarness {
       pikkuFuncId: name,
       source: 'dsl',
       graphHash: `${name}-hash`,
-    } as any
+    } as never
     pikkuState(null, 'function', 'meta')[name] = {
       name,
       sessionless: true,
       permissions: [],
-    } as any
+    } as never
     addWorkflow(name, {
       func: async (_services: any, input: any, wire: any) =>
         body(wire.workflow, input),
-    } as any)
+    } as never)
   }
 
   defineGraph(name: string, entry: string, nodes: Record<string, any>) {
@@ -119,7 +119,7 @@ export class QueuedWorkflowHarness {
           { nodeId: id, rpcName: id, retries: 0, ...node },
         ])
       ),
-    } as any
+    } as never
   }
 
   async start(name: string, input: any = {}): Promise<string> {
@@ -127,7 +127,7 @@ export class QueuedWorkflowHarness {
       name,
       input,
       { type: 'test' },
-      this.rpc as any
+      this.rpc as never
     )
     await this.pump()
     return runId
@@ -146,10 +146,10 @@ export class QueuedWorkflowHarness {
             job.data.stepName,
             job.data.rpcName,
             job.data.data,
-            this.rpc as any
+            this.rpc as never
           )
         } else {
-          await this.ws.orchestrateWorkflow(job.data.runId, this.rpc as any)
+          await this.ws.orchestrateWorkflow(job.data.runId, this.rpc as never)
         }
       } catch {
         job.attempt = (job.attempt ?? 1) + 1

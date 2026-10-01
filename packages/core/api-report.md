@@ -1222,7 +1222,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
   public createWorkflowWire(name: string, runId: string, rpcService: PikkuRPC, addonNamespace?: string | null): PikkuWorkflowWire
   public async failOrUnwind(run: WorkflowRun, error: Error & { code?: string }, rpcService: PikkuRPC): Promise<'unwinding' | 'finished' | 'failed'>
-  public async cancelRun(runId: string, rpcService: PikkuRPC): Promise<WorkflowStatus | undefined>
+  public async cancelRun(runId: string, rpcService: PikkuRPC, reason?: string): Promise<WorkflowStatus | undefined>
   protected async markFailedUnlessUnwound(runId: string, error: SerializedError): Promise<void>
   protected verifyStepName(stepName: string): void
   protected getOrchestratorQueueName(workflowName?: string): string
@@ -6391,7 +6391,7 @@ clearPikkuRuntimeState: () => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
-  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService>; workflowFencing?: () => Promise<WorkflowFencingHarness> }
+  services: { channelStore?: () => Promise<ChannelStore>; eventHubStore?: () => Promise<EventHubStore<Record<string, any>>>; workflowService?: () => Promise<PikkuWorkflowService>; workflowRunService?: () => Promise<WorkflowRunService>; deploymentService?: () => Promise< DeploymentService & { stop(): Promise<void> } >; agentStorageService?: () => Promise< AgentStorageService & AgentRunStateService >; agentRunService?: () => Promise<AgentRunService>; secretService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<SecretService & { rotateKEK?(): Promise<number> }>; credentialService?: (config: { key: string; keyVersion?: number; previousKey?: string }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>; sessionStore?: () => Promise<SessionStore>; leaseService?: () => Promise<LeaseService>; workflowFencing?: () => Promise<WorkflowFencingHarness>; workflowCompensationQueued?: () => Promise<PikkuWorkflowService>; workflowCompensationQueuedOptions?: QueuedCompensationOptions }
 }
 export type WorkflowFencingHarness = {
   service: PikkuWorkflowService

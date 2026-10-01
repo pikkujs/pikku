@@ -40,6 +40,9 @@ export interface ServiceTestConfig {
     leaseService?: () => Promise<LeaseService>
     /** A workflow service that fences each step write to the claim that made it. */
     workflowFencing?: () => Promise<WorkflowFencingHarness>
+    /** A workflow service to run saga compensation and graph `recover` against, driven through a queue. */
+    workflowCompensationQueued?: () => Promise<PikkuWorkflowService>
+    workflowCompensationQueuedOptions?: QueuedCompensationOptions
   }
 }
 
@@ -55,6 +58,10 @@ import { defineAgentRunServiceTests } from './service-tests/agent-run-service-te
 import { defineSessionStoreTests } from './service-tests/session-store-tests.js'
 import { defineLeaseServiceTests } from './service-tests/lease-service-tests.js'
 import { defineWorkflowFencingTests } from './service-tests/workflow-fencing-tests.js'
+import {
+  defineWorkflowCompensationQueuedTests,
+  type QueuedCompensationOptions,
+} from './service-tests/workflow-compensation-queued-tests.js'
 
 /**
  * The shared conformance suite every storage backend runs.
@@ -73,6 +80,13 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   }
   if (services.workflowService) {
     defineWorkflowServiceTests(name, services.workflowService)
+  }
+  if (services.workflowCompensationQueued) {
+    defineWorkflowCompensationQueuedTests(
+      name,
+      services.workflowCompensationQueued,
+      services.workflowCompensationQueuedOptions
+    )
   }
   if (services.workflowRunService) {
     defineWorkflowRunServiceTests(name, services.workflowRunService)
