@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { encodeBytes } from '../../bytes.js'
 
 export const ReadFileInput = z.object({
   bucket: z
@@ -33,7 +34,7 @@ export const readFile = pikkuSessionlessFunc({
       key,
     })
     return {
-      data: buffer.toString(encoding ?? 'utf8'),
+      data: encodeBytes(buffer, encoding ?? 'utf8'),
       bucket: resolvedBucket,
       key,
     }

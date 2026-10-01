@@ -23,6 +23,9 @@
   "files": [
     "dist"
   ],
+  "pikku": {
+    "runtime": "edge"
+  },
   "scripts": {
     "build": "./build.sh",
     "pikku": "./build.sh pikku",

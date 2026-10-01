@@ -3,6 +3,7 @@ import type { CredentialService } from '@pikku/core/services'
 import type { SecretService } from '@pikku/core/services'
 import { safeFetch } from '@pikku/core/safe-fetch'
 import type { MetaService } from '@pikku/core/services'
+import { toBase64, utf8Encode } from './bytes.js'
 
 /** How a credential is applied to a request. Carries names only, never values. */
 export type HttpRequestAuth = {
@@ -76,7 +77,7 @@ export class PikkuHttpRequesterService implements HttpRequesterService {
           break
         case 'basic':
           requestHeaders['Authorization'] =
-            `Basic ${Buffer.from(value).toString('base64')}`
+            `Basic ${toBase64(utf8Encode(value))}`
           break
       }
     }

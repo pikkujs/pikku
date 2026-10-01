@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
-import { createHash, createHmac, randomBytes, randomUUID } from 'crypto'
+import { decodeText, encodeBytes } from '../../bytes.js'
+import { hashText, hmacText } from '../../digest.js'
 
 export const CryptoInput = z.object({
   operation: z
@@ -51,44 +52,49 @@ export const crypto = pikkuSessionlessFunc({
 
     switch (data.operation) {
       case 'hash': {
-        const algorithm = data.algorithm ?? 'sha256'
-        const encoding = data.encoding ?? 'hex'
-        const hash = createHash(algorithm)
-        hash.update(data.data ?? '')
-        result = hash.digest(encoding)
+        result = await hashText(
+          data.algorithm ?? 'sha256',
+          data.data ?? '',
+          data.encoding ?? 'hex'
+        )
         break
       }
       case 'hmac': {
-        const algorithm = data.algorithm ?? 'sha256'
-        const encoding = data.encoding ?? 'hex'
-        const hmac = createHmac(algorithm, data.key ?? '')
-        hmac.update(data.data ?? '')
-        result = hmac.digest(encoding)
+        result = await hmacText(
+          data.algorithm ?? 'sha256',
+          data.key ?? '',
+          data.data ?? '',
+          data.encoding ?? 'hex'
+        )
         break
       }
       case 'randomBytes': {
-        const length = data.length ?? 32
-        result = randomBytes(length).toString('hex')
+        const bytes = new Uint8Array(data.length ?? 32)
+        // getRandomValues is capped at 65536 bytes per call.
+        for (let i = 0; i < bytes.length; i += 65536) {
+          globalThis.crypto.getRandomValues(bytes.subarray(i, i + 65536))
+        }
+        result = encodeBytes(bytes, 'hex')
         break
       }
       case 'uuid': {
-        result = randomUUID()
+        result = globalThis.crypto.randomUUID()
         break
       }
       case 'base64Encode': {
-        result = Buffer.from(data.data ?? '').toString('base64')
+        result = encodeBytes(decodeText(data.data ?? ''), 'base64')
         break
       }
       case 'base64Decode': {
-        result = Buffer.from(data.data ?? '', 'base64').toString('utf-8')
+        result = encodeBytes(decodeText(data.data ?? '', 'base64'))
         break
       }
       case 'hexEncode': {
-        result = Buffer.from(data.data ?? '').toString('hex')
+        result = encodeBytes(decodeText(data.data ?? ''), 'hex')
         break
       }
       case 'hexDecode': {
-        result = Buffer.from(data.data ?? '', 'hex').toString('utf-8')
+        result = encodeBytes(decodeText(data.data ?? '', 'hex'))
         break
       }
       default:
