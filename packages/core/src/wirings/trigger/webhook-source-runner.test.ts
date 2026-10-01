@@ -346,6 +346,34 @@ describe('receiveWebhookSourceRequest with verify', () => {
     )
   })
 
+  test('dispatches from a signed request without a body', async () => {
+    await withSecret('shh')
+    setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
+    wireTriggerMeta('shop', () => {})
+    registerFunction('shop:receive', () => ({
+      events: [{ name: '', data: {} }],
+    }))
+    wireTriggerWebhookSource({
+      name: 'shop',
+      verify: { token: { header: 'x-shop-token' } },
+    })
+
+    assert.deepEqual(
+      await receiveWebhookSourceRequest(
+        'shop',
+        rawWire('', { 'x-shop-token': 'shh' })
+      ),
+      { received: 1 }
+    )
+    await assert.rejects(
+      receiveWebhookSourceRequest(
+        'shop',
+        rawWire('', { 'x-shop-token': 'no' })
+      ),
+      /unsigned request/
+    )
+  })
+
   test('lets an unsigned request without a body be answered, never dispatched', async () => {
     await withSecret('shh')
     setWebhookSourceMeta({ name: 'shop', receive: 'shop:receive' })
