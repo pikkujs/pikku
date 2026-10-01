@@ -7,6 +7,7 @@ import type {
   ResolvedPersona,
   ScenarioPersonas,
 } from '../../services/personas-service.js'
+import { readEnvVariable } from '../../env.js'
 import { BadRequestError, ForbiddenError } from '../../errors/errors.js'
 import { prepareVirtualUserRun } from './prepare-virtual-user-run.js'
 import { runVirtualUser as runVirtualUserEngine } from './run-virtual-user.js'
@@ -245,7 +246,7 @@ export const startVirtualUserRun = async ({
   personas,
   config,
   environments,
-  environment = process.env.PIKKU_ENV,
+  environment = readEnvVariable('PIKKU_ENV'),
   persona: personaId,
   disposition: requested,
   seed: requestedSeed,
@@ -429,7 +430,7 @@ export const writeVirtualUserSchedule = async ({
   nextRunAt,
   config,
   environments,
-  environment = process.env.PIKKU_ENV,
+  environment = readEnvVariable('PIKKU_ENV'),
 }: WriteVirtualUserScheduleParams): Promise<VirtualUserScheduleRecord> => {
   const scheduleStore = requireVirtualUserScheduleStore(store)
   const declared = runnablePersona(personas, persona)

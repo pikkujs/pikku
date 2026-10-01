@@ -1,9 +1,16 @@
 import type { VariablesService } from './variables-service.js'
 
 export class LocalVariablesService implements VariablesService {
-  constructor(
-    private variables: Record<string, string | undefined> = process.env
-  ) {}
+  private variables: Record<string, string | undefined>
+
+  /**
+   * Defaults to `process.env`, resolved when the service is built rather than
+   * when this module loads, and guarded so a runtime without `process` gets an
+   * empty store instead of a ReferenceError.
+   */
+  constructor(variables?: Record<string, string | undefined>) {
+    this.variables = variables ?? (globalThis as any).process?.env ?? {}
+  }
 
   public getAll(): Record<string, string | undefined> {
     return this.variables || {}
