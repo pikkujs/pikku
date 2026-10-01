@@ -114,6 +114,7 @@ export abstract class WebhookService {
     signature: string,
     body: string
   ): Promise<boolean> {
+    if (!secret || !signature) return false
     return timingSafeStringEqual(await this.sign(secret, body), signature)
   }
 

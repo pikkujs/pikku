@@ -50,7 +50,8 @@ const base64ToBytes = (value: string): Uint8Array => {
 }
 
 /**
- * Constant-time signature comparison. Returns false on a length mismatch
+ * Constant-time string comparison (pure JS; for opaque tokens, not HMACs, which
+ * `verifyHmacSignature` checks with Web Crypto). Returns false on a length mismatch
  * (the lengths of the two values are not secret).
  */
 export function timingSafeStringEqual(a: string, b: string): boolean {
@@ -72,15 +73,21 @@ const HMAC_HASH: Record<HmacAlgorithm, string> = {
   sha512: 'SHA-512',
 }
 
+const rawSecretBytes = (
+  secret: string,
+  encoding: SecretEncoding
+): Uint8Array =>
+  encoding === 'hex'
+    ? hexToBytes(secret)
+    : encoding === 'base64'
+      ? base64ToBytes(secret)
+      : encoder.encode(secret)
+
 const secretBytes = (secret: string, encoding: SecretEncoding): Uint8Array => {
-  const bytes =
-    encoding === 'hex'
-      ? hexToBytes(secret)
-      : encoding === 'base64'
-        ? base64ToBytes(secret)
-        : encoder.encode(secret)
+  const bytes = rawSecretBytes(secret, encoding)
   // Web Crypto refuses a zero-length key. HMAC zero-pads the key to the block
-  // size, so a single zero byte is the same key as an empty one.
+  // size, so a single zero byte is the same key as an empty one. Only signing
+  // reaches here: verification refuses an empty key outright.
   return bytes.length ? bytes : new Uint8Array(1)
 }
 
@@ -126,7 +133,12 @@ export async function hmacDigest(
   return encoding === 'hex' ? bytesToHex(digest) : bytesToBase64(digest)
 }
 
-/** Whether `signature` is the HMAC of `payload` under `secret`, compared in constant time. */
+/**
+ * Whether `signature` is the HMAC of `payload` under `secret`. Fails closed on
+ * an empty secret (or one that decodes to an empty key) and on a missing or
+ * malformed signature. The comparison is `crypto.subtle.verify('HMAC', ...)`,
+ * so it runs in the platform's constant-time implementation.
+ */
 export async function verifyHmacSignature(
   secret: string,
   signature: string | undefined,
@@ -135,18 +147,41 @@ export async function verifyHmacSignature(
   encoding: 'hex' | 'base64',
   secretEncoding: SecretEncoding = 'utf8'
 ): Promise<boolean> {
-  return (
-    !!signature &&
-    timingSafeStringEqual(
-      signature,
-      await hmacDigest(secret, algorithm, payload, encoding, secretEncoding)
+  if (!secret || !signature) return false
+  try {
+    const hash = HMAC_HASH[algorithm]
+    if (!hash) return false
+    const keyBytes = rawSecretBytes(secret, secretEncoding)
+    if (!keyBytes.length) return false
+    if (encoding === 'hex' && !/^(?:[0-9a-fA-F]{2})+$/.test(signature)) {
+      return false
+    }
+    const sig =
+      encoding === 'hex' ? hexToBytes(signature) : base64ToBytes(signature)
+    if (!sig.length) return false
+    const key = await subtle().importKey(
+      'raw',
+      keyBytes as BufferSource,
+      { name: 'HMAC', hash },
+      false,
+      ['verify']
     )
-  )
+    const data = typeof payload === 'string' ? encoder.encode(payload) : payload
+    return await subtle().verify(
+      'HMAC',
+      key,
+      sig as BufferSource,
+      data as BufferSource
+    )
+  } catch {
+    return false
+  }
 }
 
 // DER prefixes of the SPKI algorithm identifiers we can import.
 const OID_RSA = '06092a864886f70d010101'
 const OID_EC = '06072a8648ce3d0201'
+const OID_ED25519 = '06032b6570'
 const EC_CURVES: Record<string, { name: string; size: number }> = {
   '06082a8648ce3d030107': { name: 'P-256', size: 32 },
   '06052b81040022': { name: 'P-384', size: 48 },
@@ -192,8 +227,8 @@ const derToP1363 = (der: Uint8Array, size: number): Uint8Array => {
 
 /**
  * Whether `signature` (base64) is `payload` signed by the private half of
- * `publicKey` (an RSA or EC PEM `SPKI` key). Ed25519 and RSA-PSS keys are not
- * supported and verify as false.
+ * `publicKey` (an RSA, EC or Ed25519 PEM `SPKI` key). RSA-PSS keys are not
+ * supported and verify as false. Ed25519 ignores `algorithm` and `dsaEncoding`.
  */
 export async function verifyPublicKeySignature(
   publicKey: string,
@@ -201,8 +236,26 @@ export async function verifyPublicKeySignature(
   payload: WebhookPayload,
   options: { algorithm?: string; dsaEncoding?: 'der' | 'ieee-p1363' } = {}
 ): Promise<boolean> {
-  if (!signature) return false
+  if (!publicKey || !signature) return false
   try {
+    const der0 = pemToDer(publicKey)
+    if (bytesToHex(der0).includes(OID_ED25519)) {
+      const key = await subtle().importKey(
+        'spki',
+        der0 as BufferSource,
+        { name: 'Ed25519' },
+        false,
+        ['verify']
+      )
+      return await subtle().verify(
+        { name: 'Ed25519' },
+        key,
+        base64ToBytes(signature) as BufferSource,
+        (typeof payload === 'string'
+          ? encoder.encode(payload)
+          : payload) as BufferSource
+      )
+    }
     const hash =
       SIGNATURE_HASH[
         (options.algorithm ?? 'sha256')

@@ -18,6 +18,9 @@ export async function verifySlackSignature(
   timestamp: string,
   body: string
 ): Promise<boolean> {
+  // Fail closed on a missing secret or signature
+  if (!signingSecret || !signature) return false
+
   // Reject requests older than 5 minutes to prevent replay attacks
   const now = Math.floor(Date.now() / 1000)
   if (Math.abs(now - Number(timestamp)) > 300) {

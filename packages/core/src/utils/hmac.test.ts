@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHmac, createSign, generateKeyPairSync } from 'node:crypto'
+import { createHmac, createSign, generateKeyPairSync, sign } from 'node:crypto'
 import {
   hmacDigest,
   timingSafeStringEqual,
@@ -156,5 +156,63 @@ describe('parity with node:crypto', () => {
         }
       }
     }
+  })
+
+  test('fails closed on an empty secret, even over an empty-key signature', async () => {
+    for (const algorithm of ['sha1', 'sha256', 'sha512'] as const) {
+      const hex = createHmac(algorithm, '').update(body).digest('hex')
+      assert.equal(
+        await verifyHmacSignature('', hex, algorithm, body, 'hex'),
+        false
+      )
+      assert.equal(
+        await verifyHmacSignature('', undefined, algorithm, body, 'hex'),
+        false
+      )
+    }
+    const b64 = createHmac('sha256', '').update(body).digest('base64')
+    assert.equal(
+      await verifyHmacSignature('', b64, 'sha256', body, 'base64'),
+      false
+    )
+    // A secret that decodes to no key bytes is empty too.
+    const zeroKey = createHmac('sha256', Buffer.alloc(0))
+      .update(body)
+      .digest('hex')
+    assert.equal(
+      await verifyHmacSignature('zz', zeroKey, 'sha256', body, 'hex', 'hex'),
+      false
+    )
+  })
+
+  test('rejects malformed or wrong-length signatures', async () => {
+    const hex = createHmac('sha256', 'shh').update(body).digest('hex')
+    for (const bad of [
+      hex.slice(0, -2),
+      hex + '00',
+      hex + 'z',
+      hex.slice(0, -1),
+      'zz',
+    ]) {
+      assert.equal(
+        await verifyHmacSignature('shh', bad, 'sha256', body, 'hex'),
+        false
+      )
+    }
+  })
+
+  test('verifies an Ed25519 signature', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519')
+    const signature = sign(null, Buffer.from(body), privateKey).toString(
+      'base64'
+    )
+    const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString()
+    assert.equal(await verifyPublicKeySignature(pem, signature, body), true)
+    assert.equal(
+      await verifyPublicKeySignature(pem, signature, body + ' '),
+      false
+    )
+    assert.equal(await verifyPublicKeySignature(pem, 'garbage', body), false)
+    assert.equal(await verifyPublicKeySignature('', signature, body), false)
   })
 })
