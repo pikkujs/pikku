@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import { isExpectedError } from '../errors/error-handler.js'
 import { isStepLeaseLive } from '../wirings/workflow/workflow-constants.js'
@@ -58,7 +57,7 @@ export class InMemoryWorkflowService
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
-    const runId = randomUUID()
+    const runId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const run: WorkflowRun = {
@@ -138,7 +137,7 @@ export class InMemoryWorkflowService
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
-    const stepId = randomUUID()
+    const stepId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const step: StepState & { stepName: string } = {
@@ -303,7 +302,7 @@ export class InMemoryWorkflowService
     }
 
     const failedStepData = this.stepData.get(failedStepId)
-    const newStepId = randomUUID()
+    const newStepId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const newStep: StepState & { stepName: string } = {

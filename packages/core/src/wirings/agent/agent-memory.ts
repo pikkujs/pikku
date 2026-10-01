@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto'
 import type { CoreSingletonServices } from '../../types/core.types.js'
 import type {
   CoreAgent,
@@ -139,7 +138,7 @@ export async function loadContextMessages(
     )
     const prompt = buildWorkingMemoryPrompt(workingMem, workingMemoryJsonSchema)
     contextMessages.push({
-      id: `wm-${randomUUID()}`,
+      id: `wm-${globalThis.crypto.randomUUID()}`,
       role: 'system',
       content: prompt,
       createdAt: new Date(),
@@ -170,9 +169,11 @@ export async function saveMessages(
 
     for (const step of result.steps) {
       if (step.toolCalls?.length) {
-        const toolCallIds = step.toolCalls.map(() => randomUUID())
+        const toolCallIds = step.toolCalls.map(() =>
+          globalThis.crypto.randomUUID()
+        )
         newMessages.push({
-          id: randomUUID(),
+          id: globalThis.crypto.randomUUID(),
           role: 'assistant',
           toolCalls: step.toolCalls.map((tc, i) => ({
             id: toolCallIds[i],
@@ -182,7 +183,7 @@ export async function saveMessages(
           createdAt: new Date(),
         })
         newMessages.push({
-          id: randomUUID(),
+          id: globalThis.crypto.randomUUID(),
           role: 'tool',
           toolResults: step.toolCalls.map((tc, i) => ({
             id: toolCallIds[i],
@@ -206,7 +207,7 @@ export async function saveMessages(
         : responseText
 
     newMessages.push({
-      id: randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       role: 'assistant',
       content: assistantContent || undefined,
       createdAt: new Date(),
