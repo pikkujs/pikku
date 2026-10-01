@@ -1,3 +1,15 @@
+## 0.12.178
+
+### Patch Changes
+
+- ce3e5f5: Saga compensation for workflows. A function declares `compensate` inline; when a workflow step fails, completed steps are undone newest-first as durable `<step>:compensate` steps. New run statuses `compensating`, `compensated` and `compensation_failed`, `workflow.milestone(name)` to bound the unwind, `{ compensate: false }` to opt a call out, nested-workflow unwinding, and `PikkuWorkflowService.cancelRun` which unwinds too. Graph nodes replace `onError` with `recover` (`nodeId`, `nodeId[]` or `'ignore'`), exposing the error as `wire.graph.recoveringFrom`. **Breaking:** the DSL `onError` step option and the graph `onError` node field are removed; `getRunSteps` is now abstract on `PikkuWorkflowService`.
+- 4117565: A unit's generated `package.json` no longer lists `bun:sqlite`, `bun:ffi` or `bun` as dependencies, which made `bun install` fail on the standalone image now that the standalone runtime is bun-only.
+- Updated dependencies [ce3e5f5]
+- Updated dependencies [fb36c37]
+  - @pikku/core@0.12.135
+  - @pikku/inspector@0.12.99
+  - @pikku/skills@0.12.47
+
 ## 0.12.177
 
 ### Patch Changes
