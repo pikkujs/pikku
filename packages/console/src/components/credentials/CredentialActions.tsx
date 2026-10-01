@@ -82,7 +82,12 @@ const ActionButtons: React.FC<{
       </Button>
     )}
     {error ? (
-      <Alert color="red" variant="light" icon={<AlertTriangle size={14} />} p="xs">
+      <Alert
+        color="red"
+        variant="light"
+        icon={<AlertTriangle size={14} />}
+        p="xs"
+      >
         {asI18n(String((error as Error)?.message || error))}
       </Alert>
     ) : null}
@@ -102,8 +107,10 @@ export const AppCredentialActions: React.FC<{
     mutationFn: async () => {
       await rpc.invoke('admin:credentialDelete', { name })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['credential-global-status'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['credential-global-status'],
+      })
     },
   })
   return (

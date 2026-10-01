@@ -16,7 +16,11 @@ import { useLocale } from '@/i18n/config'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, TriangleAlert } from 'lucide-react'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
-import { plainSummary, type InstalledAddonRow, type PackageMeta } from './packageMeta'
+import {
+  plainSummary,
+  type InstalledAddonRow,
+  type PackageMeta,
+} from './packageMeta'
 import { ForDevelopers } from '../ui/ForDevelopers'
 import { DevField, DevFields, DevLinks } from '../ui/DevDetail'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -137,9 +141,11 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
             namespace: namespace?.trim() || deriveNamespace(addon.name),
             version: addon.version,
           }),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['installed-addons'] }),
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+      ])
       // installOpenapiAddon reports no readiness — only a package install does.
       if (!isApi) {
         rememberInstallResult(
@@ -198,9 +204,7 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
   const secretNames = Object.keys(secretsRecord)
   const variableNames = Object.keys(variablesRecord)
   const channelNames = Object.keys(channelsRecord)
-  const agentNames = isApi
-    ? []
-    : Object.keys(pkg?.agents ?? addon.agents ?? {})
+  const agentNames = isApi ? [] : Object.keys(pkg?.agents ?? addon.agents ?? {})
   const description = pkg?.description ?? addon.description
   const tags = pkg?.tags ?? addon.tags ?? []
   const author = pkg?.author ?? addon.author
@@ -390,7 +394,11 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
             />
           )}
           {tags.length > 0 && (
-            <DevField label={m.dev_tags()} value={tags.join(' ')} copy={false} />
+            <DevField
+              label={m.dev_tags()}
+              value={tags.join(' ')}
+              copy={false}
+            />
           )}
           {isApi && (
             <DevField
@@ -403,7 +411,9 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
           )}
           {fnNames.length > 0 && (
             <DevField
-              label={asI18n(`${m.packages_tab_functions()} (${fnNames.length})`)}
+              label={asI18n(
+                `${m.packages_tab_functions()} (${fnNames.length})`
+              )}
               value={fnNames.join(', ')}
             />
           )}

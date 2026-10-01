@@ -28,7 +28,8 @@ export function useAgentCredentials(agentName?: string) {
   })
 
   const refetch = () => {
-    queryClient.invalidateQueries({
+    // invalidateQueries swallows refetch errors unless throwOnError is set
+    void queryClient.invalidateQueries({
       queryKey: ['agent-credentials', agentName],
     })
   }

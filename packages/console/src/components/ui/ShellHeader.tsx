@@ -137,7 +137,9 @@ export const ShellHeader = <T extends string = string>({
   // and the empty one.
   const candidates: Candidate[] = []
   if (title != null)
-    candidates.push(base({ showTitle: true, showCount: count != null && !slot }))
+    candidates.push(
+      base({ showTitle: true, showCount: count != null && !slot })
+    )
   if (title != null && count != null) candidates.push(base({ showTitle: true }))
   if (count != null && !slot) candidates.push(base({ showCount: true }))
   candidates.push(base({ actMode: 'label' }))
@@ -239,7 +241,7 @@ export const ShellHeader = <T extends string = string>({
   // Icon-less switches must show every label (the default only labels the active
   // option, relying on icons to distinguish the rest).
   const switchShowAllLabels =
-    !!selection && !selection.options.some((o) => o.icon)
+    !!selection && !selection.options.some((o) => !!o.icon)
 
   const { visible, hidden } = partitionFilters(filters, chosen.visCount)
   const searchInline = chosen.searchInline && !!search
@@ -316,48 +318,52 @@ export const ShellHeader = <T extends string = string>({
         style={{ minWidth: 0 }}
       >
         <Group wrap="nowrap" gap={2 * GAP} style={{ minWidth: 0 }}>
-        {leading != null && (
-          <>
-            <div
-              ref={(el) => void (measRef.current.leading = el)}
-              style={{ flexShrink: 0 }}
+          {leading != null && (
+            <>
+              <div
+                ref={(el) => void (measRef.current.leading = el)}
+                style={{ flexShrink: 0 }}
+              >
+                {leading}
+              </div>
+              <Divider
+                orientation="vertical"
+                h={28}
+                style={{ alignSelf: 'center' }}
+              />
+            </>
+          )}
+          {((chosen.showTitle && title != null) ||
+            (chosen.showCount && count != null)) && (
+            <Stack
+              gap={2}
+              justify="center"
+              style={{ flexShrink: 0, minWidth: 0 }}
             >
-              {leading}
-            </div>
-            <Divider orientation="vertical" h={28} style={{ alignSelf: 'center' }} />
-          </>
-        )}
-        {((chosen.showTitle && title != null) ||
-          (chosen.showCount && count != null)) && (
-          <Stack
-            gap={2}
-            justify="center"
-            style={{ flexShrink: 0, minWidth: 0 }}
-          >
-            {chosen.showTitle && title != null && (
-              <Text
-                component="div"
-                fz={15}
-                fw={600}
-                lh={1.3}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {titleNode}
-              </Text>
-            )}
-            {chosen.showCount && count != null && (
-              <Text
-                component="div"
-                fz={13.5}
-                c="dimmed"
-                lh={1.3}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {count}
-              </Text>
-            )}
-          </Stack>
-        )}
+              {chosen.showTitle && title != null && (
+                <Text
+                  component="div"
+                  fz={15}
+                  fw={600}
+                  lh={1.3}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {titleNode}
+                </Text>
+              )}
+              {chosen.showCount && count != null && (
+                <Text
+                  component="div"
+                  fz={13.5}
+                  c="dimmed"
+                  lh={1.3}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {count}
+                </Text>
+              )}
+            </Stack>
+          )}
         </Group>
 
         <Group

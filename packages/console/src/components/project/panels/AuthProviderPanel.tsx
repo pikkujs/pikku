@@ -31,6 +31,7 @@ import type {
   AuthProviderDef,
   AuthProviderField,
 } from '../../../pages/AuthProvidersPage'
+import { handleAsync } from '../../../lib/async'
 
 const Step: React.FC<{
   number: number
@@ -242,7 +243,7 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({
                 size="xs"
                 leftSection={<Trash2 size={13} />}
                 loading={removing}
-                onClick={handleRemove}
+                onClick={handleAsync(handleRemove)}
               >
                 {m.authproviders_remove()}
               </Button>
@@ -252,7 +253,7 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({
             <Button
               disabled={!hasAnyValue}
               loading={saving}
-              onClick={handleSave}
+              onClick={handleAsync(handleSave)}
             >
               {m.authproviders_save()}
             </Button>

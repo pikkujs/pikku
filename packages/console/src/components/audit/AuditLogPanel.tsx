@@ -26,6 +26,7 @@ import {
   formatOccurredAt,
   summariseMetadata,
 } from './audit-row'
+import { handleAsync } from '../../lib/async'
 
 const DOCS_HREF = 'https://pikku.dev/docs'
 const PAGE_SIZE = 50
@@ -155,7 +156,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
         emptyTitle={m.audit_empty_title()}
         emptyDescription={m.audit_empty_description()}
         emptyHero={emptyHero}
-        onLoadMore={fetchNextPage}
+        onLoadMore={handleAsync(() => fetchNextPage())}
         hasMore={hasNextPage}
         loadingMore={isFetchingNextPage}
         headerRight={

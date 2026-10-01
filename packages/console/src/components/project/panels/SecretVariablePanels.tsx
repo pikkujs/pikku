@@ -179,8 +179,8 @@ const OAuthConnectionSection: React.FC<{
     mutationFn: async () => {
       await rpc.invoke('admin:credentialDelete', { name: credentialName })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ['credential-status', credentialName],
       })
     },

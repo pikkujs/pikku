@@ -61,6 +61,7 @@ import {
   consoleLogoSrc,
   consoleTitle,
 } from '../../lib/branding'
+import { handleAsync } from '../../lib/async'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -316,7 +317,7 @@ export function ConsoleNavDock({
         Icon: RefreshCw,
         label: m.sidebar_refresh_metadata(),
         status: metaLoading ? 'busy' : undefined,
-        onSelect: () => refresh(),
+        onSelect: handleAsync(refresh),
       },
     ]
     if (canImpersonate) {

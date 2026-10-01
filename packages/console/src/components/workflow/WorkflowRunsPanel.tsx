@@ -8,6 +8,7 @@ import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useWorkflowSurface } from '../../context/WorkflowSurfaceContext'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { RunsPanel, type RunItem } from '../layout/RunsPanel'
+import { handleAsync } from '../../lib/async'
 
 /**
  * The run history for the surface's workflow. Mount anywhere under a
@@ -34,7 +35,7 @@ export const WorkflowRunsPanel: React.FC = () => {
       if (selectedRunId === runId) {
         setSelectedRunId(null)
       }
-      refetch()
+      await refetch()
     },
     [rpc, selectedRunId, setSelectedRunId, refetch]
   )
@@ -57,7 +58,7 @@ export const WorkflowRunsPanel: React.FC = () => {
       statusFilters={[]}
       onNewClick={editable ? handleNewClick : undefined}
       newButtonLabel={editable ? m.workflow_runs_new() : undefined}
-      onDelete={editable ? handleDelete : undefined}
+      onDelete={editable ? handleAsync(handleDelete) : undefined}
     />
   )
 }

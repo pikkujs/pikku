@@ -52,8 +52,8 @@ export function useDeleteScenarioRun() {
   return useMutation({
     mutationFn: (runId: string) =>
       rpc.invoke('console:deleteScenarioRun', { runId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: scenarioRunQueryKeys.allRuns(),
       })
     },
