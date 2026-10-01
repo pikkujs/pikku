@@ -103,7 +103,8 @@ codegen depends on; without it your first `db migrate` fails with
 
 Then, in this order — it is the order codegen depends on:
 
-1. **Migration** — SQL in `db/sqlite/`, numbered on from what is there. Apply
+1. **Migration** — SQL in `db/sqlite/` (or `db/postgres/`, `db/mysql/` when
+   `createConfig` sets `postgresUrl` or `mysqlUrl`), numbered on from what is there. Apply
    with `bunx --bun pikku db migrate`, which regenerates the Kysely types.
 2. **Seed** — rows in `db/sqlite-dev-seed.sql`. There is no seed command:
    `bunx --bun pikku db reset` wipes, migrates and seeds in one go, and is the

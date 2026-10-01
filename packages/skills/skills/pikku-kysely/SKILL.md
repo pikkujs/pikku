@@ -305,6 +305,25 @@ than the CamelCasePlugin, because it exists to back the stores below. Reach for
 `createNodeSqliteKysely` / `createBunSqliteKysely` for the instance your
 functions query.
 
+### MySQL and `pikku db`
+
+`mysqlUrl` in `createConfig` makes MySQL the third dialect the `pikku db`
+commands drive, with migrations in `db/mysql/` and the seed in
+`db/mysql-dev-seed.sql`. It behaves like the other two with four differences:
+
+- **No embedded engine.** Commands that need a throwaway database create and drop
+  a `pikku_scratch_<hex>` one on your server, so the account needs `CREATE` and
+  `DROP`.
+- **DDL is not transactional.** A migration that fails halfway is replayed from
+  the top, so write migrations that are safe to run twice.
+- **Inline `REFERENCES` is discarded** — declare foreign keys as
+  `FOREIGN KEY (...) REFERENCES ...` or none exists.
+- **A key column cannot be `TEXT`**, nor can a `TEXT` column have a literal
+  default. Use `varchar(n)`, or `DEFAULT ('...')` for an expression default.
+
+`db.schema` is refused (a MySQL schema is a database), and a standalone bundle
+cannot target MySQL yet.
+
 ### Available Services
 
 Each database variant exports these services with a prefix (`Pg`, `MySQL`, `SQLite`, or base `Kysely`):

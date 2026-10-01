@@ -116,7 +116,7 @@ export const openScopeService = async (
   )
   if (!resolved) {
     logger.error(
-      `${command}: no database configured — set sqliteDb or postgresUrl in your createConfig.`
+      `${command}: no database configured — set sqliteDb, postgresUrl or mysqlUrl in your createConfig.`
     )
     throw new Error('no database configured')
   }

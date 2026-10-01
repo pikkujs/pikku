@@ -32,6 +32,7 @@
   "exports": {
     ".": "./dist/src/index.js",
     "./sqlite": "./dist/src/sqlite/index.js",
-    "./postgres": "./dist/src/postgres/index.js"
+    "./postgres": "./dist/src/postgres/index.js",
+    "./mysql": "./dist/src/mysql/index.js"
   }
 }

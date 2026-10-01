@@ -1,4 +1,15 @@
-import { sql, type CompiledQuery, type Kysely, type RawBuilder } from 'kysely'
+import {
+  sql,
+  type ColumnDefinitionBuilder,
+  type CompiledQuery,
+  type CreateTableBuilder,
+  type Kysely,
+  type RawBuilder,
+} from 'kysely'
+
+type DataTypeExpression = Parameters<
+  CreateTableBuilder<any, any>['addColumn']
+>[1]
 
 /**
  * One DDL statement, bound to a database.
@@ -29,6 +40,12 @@ export type SchemaStatementFactory = (
  */
 export interface SchemaContext {
   /**
+   * Whether the connection is MySQL, which is the one engine the declarations
+   * cannot spell the same way: it refuses a `TEXT` column in a key or with a
+   * literal default, and quotes with backticks.
+   */
+  mysql: boolean
+  /**
    * A table as the surrounding DDL addresses it: `"app"."credentials"` on a
    * schema-bound connection, `"credentials"` otherwise.
    *
@@ -37,6 +54,42 @@ export interface SchemaContext {
    * physical names throughout and this is no exception.
    */
   table: (name: string) => RawBuilder<unknown>
+  /**
+   * The type of a text column that is part of a key — primary, foreign, unique
+   * or indexed. `text` everywhere but MySQL, where a key needs a bounded type.
+   */
+  key: DataTypeExpression
+  /**
+   * The type of free text of any length. `text` everywhere but MySQL, where
+   * `TEXT` stops at 64KB and these columns hold serialized state and payloads.
+   */
+  text: DataTypeExpression
+  /**
+   * A literal default for a text column. MySQL refuses one on `TEXT`, so it
+   * takes the parenthesised expression form (8.0.13+); everywhere else the
+   * literal itself.
+   */
+  defaultText: (value: string) => string | RawBuilder<unknown>
+  /**
+   * An inline `references ... on delete cascade` on a column.
+   *
+   * A no-op on MySQL, which parses an inline `REFERENCES` and discards it — the
+   * constraint never exists. There the same relationship is declared once, at
+   * table level, through `foreignKeys`.
+   */
+  references: (
+    column: ColumnDefinitionBuilder,
+    target: string
+  ) => ColumnDefinitionBuilder
+  /**
+   * The table-level foreign keys MySQL needs in place of inline `references`,
+   * keyed by local column to `table.column` target. Identity everywhere else,
+   * where `references` has already done the work.
+   */
+  foreignKeys: (
+    table: string,
+    keys: Record<string, string>
+  ) => <T extends CreateTableBuilder<any, any>>(builder: T) => T
 }
 
 /**
@@ -45,8 +98,45 @@ export interface SchemaContext {
  * The default everywhere a schema has not been asked for, which is every engine
  * but postgres and most postgres projects too.
  */
-export const unqualifiedContext: SchemaContext = {
-  table: (name) => sql.raw(`"${name}"`),
+export const unqualifiedContext: SchemaContext = buildContext(undefined, false)
+
+function buildContext(
+  schema: string | undefined,
+  mysql: boolean
+): SchemaContext {
+  const quote = mysql ? '`' : '"'
+  const name = (table: string) =>
+    schema
+      ? `${quote}${schema}${quote}.${quote}${table}${quote}`
+      : `${quote}${table}${quote}`
+  return {
+    mysql,
+    table: (table) => sql.raw(name(table)),
+    key: mysql ? sql.raw('varchar(255)') : 'text',
+    text: mysql ? sql.raw('longtext') : 'text',
+    defaultText: (value) => (mysql ? sql`(${sql.lit(value)})` : value),
+    references: (column, target) =>
+      mysql ? column : column.references(target).onDelete('cascade'),
+    foreignKeys: (table, keys) => (builder) =>
+      mysql
+        ? (Object.entries(keys).reduce(
+            (acc, [column, target]) => {
+              const [targetTable, targetColumn] = target.split('.') as [
+                string,
+                string,
+              ]
+              return acc.addForeignKeyConstraint(
+                `${table}_${column}_fk`,
+                [column],
+                targetTable,
+                [targetColumn],
+                (fk) => fk.onDelete('cascade')
+              )
+            },
+            builder as CreateTableBuilder<any, any>
+          ) as typeof builder)
+        : builder,
+  }
 }
 
 /**
@@ -55,10 +145,10 @@ export const unqualifiedContext: SchemaContext = {
  * Identifiers are quoted rather than interpolated bare so a schema named after
  * a reserved word still compiles.
  */
-export const schemaContext = (schema: string | undefined): SchemaContext =>
-  schema
-    ? { table: (name) => sql.raw(`"${schema}"."${name}"`) }
-    : unqualifiedContext
+export const schemaContext = (
+  schema: string | undefined,
+  options: { mysql?: boolean } = {}
+): SchemaContext => buildContext(schema, options.mysql ?? false)
 
 /**
  * The physical types of the columns named in `requires`, keyed `table.column`.

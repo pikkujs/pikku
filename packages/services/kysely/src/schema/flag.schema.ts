@@ -19,15 +19,15 @@ export const flagSchema: PikkuSchema = {
   name: 'flag',
   ownedBy: ['featureFlags'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuFeatureFlags')
-        .addColumn('name', 'text', (col) => col.primaryKey())
-        .addColumn('description', 'text')
+        .addColumn('name', ctx.key, (col) => col.primaryKey())
+        .addColumn('description', ctx.text)
         // The declared `anyOf` scope list, as JSON. Read by the console to say
         // who would see the feature; never read on the request path, where the
         // capability half comes from the session's own scopes.
-        .addColumn('anyOf', 'text')
+        .addColumn('anyOf', ctx.text)
         // Off until somebody turns it on. A flag exists so a feature can ship
         // dark, so the row a deploy creates has to start closed — the opposite
         // default would make merging the declaration the moment of launch.
@@ -44,34 +44,39 @@ export const flagSchema: PikkuSchema = {
         .addColumn('declared', 'boolean', (col) =>
           col.defaultTo(true).notNull()
         )
-        .addColumn('updatedBy', 'text')
+        .addColumn('updatedBy', ctx.text)
         // Why it was flipped. A kill switch is pulled during an incident, and
         // the one question afterwards is always who turned it off and why.
-        .addColumn('note', 'text')
+        .addColumn('note', ctx.text)
         .addColumn('updatedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuFeatureFlagOverrides')
-        .addColumn('flag', 'text', (col) =>
-          col.notNull().references('pikkuFeatureFlags.name').onDelete('cascade')
+        .addColumn('flag', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuFeatureFlags.name')
         )
-        .addColumn('subjectId', 'text', (col) => col.notNull())
+        .addColumn('subjectId', ctx.key, (col) => col.notNull())
         // Which id this is, for the console to render. Resolution keys on the
         // id alone, because that is all the resolver has: it prefers the
         // organization and falls back to the user, and by then the two are one
         // string.
-        .addColumn('subjectKind', 'text', (col) => col.notNull())
+        .addColumn('subjectKind', ctx.text, (col) => col.notNull())
         .addColumn('enabled', 'boolean', (col) => col.notNull())
-        .addColumn('grantedBy', 'text')
+        .addColumn('grantedBy', ctx.text)
         .addColumn('grantedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
         .addPrimaryKeyConstraint('pikku_feature_flag_overrides_pk', [
           'flag',
           'subjectId',
-        ]),
+        ])
+        .$call(
+          ctx.foreignKeys('pikkuFeatureFlagOverrides', {
+            flag: 'pikkuFeatureFlags.name',
+          })
+        ),
   ],
 }

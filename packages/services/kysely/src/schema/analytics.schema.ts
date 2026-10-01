@@ -19,34 +19,34 @@ export const analyticsSchema: PikkuSchema = {
   name: 'analytics',
   ownedBy: ['analyticsService'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuAnalyticsEvents')
-        .addColumn('eventId', 'text', (col) => col.primaryKey())
-        .addColumn('name', 'text', (col) => col.notNull())
-        .addColumn('occurredAt', 'text', (col) => col.notNull())
-        .addColumn('source', 'text', (col) => col.notNull())
-        .addColumn('functionId', 'text')
-        .addColumn('wireType', 'text')
-        .addColumn('traceId', 'text')
-        .addColumn('userId', 'text')
-        .addColumn('orgId', 'text')
-        .addColumn('pikkuUserId', 'text')
+        .addColumn('eventId', ctx.key, (col) => col.primaryKey())
+        .addColumn('name', ctx.key, (col) => col.notNull())
+        .addColumn('occurredAt', ctx.key, (col) => col.notNull())
+        .addColumn('source', ctx.text, (col) => col.notNull())
+        .addColumn('functionId', ctx.text)
+        .addColumn('wireType', ctx.text)
+        .addColumn('traceId', ctx.text)
+        .addColumn('userId', ctx.text)
+        .addColumn('orgId', ctx.text)
+        .addColumn('pikkuUserId', ctx.text)
         // The device id for a visitor with no session. Its own column beside
         // `userId` and not folded into it: the whole point of the anonymous id
         // is the traffic that has no user to be attributed to yet.
-        .addColumn('anonymousId', 'text')
-        .addColumn('vendorIds', 'text')
-        .addColumn('consent', 'text')
-        .addColumn('props', 'text'),
+        .addColumn('anonymousId', ctx.text)
+        .addColumn('vendorIds', ctx.text)
+        .addColumn('consent', ctx.text)
+        .addColumn('props', ctx.text),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_pikku_analytics_events_occurred_at')
         .on('pikkuAnalyticsEvents')
         .column('occurredAt'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_pikku_analytics_events_name')
         .on('pikkuAnalyticsEvents')

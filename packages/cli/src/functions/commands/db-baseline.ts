@@ -29,7 +29,7 @@ export const dbBaseline = pikkuSessionlessFunc<{}, void>({
     )
     if (!resolved) {
       logger.error(
-        'pikku db baseline: no database configured — set sqliteDb or postgresUrl in your createConfig.'
+        'pikku db baseline: no database configured — set sqliteDb, postgresUrl or mysqlUrl in your createConfig.'
       )
       throw new Error('no database configured')
     }

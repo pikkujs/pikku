@@ -17,7 +17,7 @@ export const SEED_LAYER = 'seed'
 export const FEATURE_LAYER = 'feature'
 export const LAYERS = [SEED_LAYER, FEATURE_LAYER]
 
-/** Postgres truncates identifiers at 63 bytes, silently colliding two tables. */
+/** MySQL's limit is 64 characters and Postgres truncates at 63 bytes, silently colliding two tables. */
 const MAX_IDENTIFIER_LENGTH = 63
 
 export interface ScenarioBaselineOptions {
@@ -82,11 +82,14 @@ export async function captureScenarioBaseline(
   // `isLocalUrl` on the environment's apiUrl says nothing about where the
   // database is: a local server can be configured against a remote postgres,
   // and this replaces every row it finds.
-  if (resolved.dialect === 'postgres' && resolved.mode === 'url') {
+  if (
+    resolved.dialect === 'mysql' ||
+    (resolved.dialect === 'postgres' && resolved.mode === 'url')
+  ) {
     const { isLocalUrl } = await import('../commands/environment.js')
     if (!isLocalUrl(resolved.connectionString ?? '')) {
       throw new Error(
-        `Scenario database reset refused: postgresUrl points at a host other than this machine. It rolls every table back to a copy taken at the start of the run, so it only runs against a database on this machine.`
+        `Scenario database reset refused: ${resolved.dialect === 'mysql' ? 'mysqlUrl' : 'postgresUrl'} points at a host other than this machine. It rolls every table back to a copy taken at the start of the run, so it only runs against a database on this machine.`
       )
     }
   }
@@ -97,6 +100,11 @@ export async function captureScenarioBaseline(
     const { captureSqliteScenarioBaseline } =
       await import('./sqlite/scenario-baseline.js')
     return captureSqliteScenarioBaseline(resolved, options)
+  }
+  if (resolved.dialect === 'mysql') {
+    const { captureMysqlScenarioBaseline } =
+      await import('./mysql/scenario-baseline.js')
+    return captureMysqlScenarioBaseline(resolved, options)
   }
   const { capturePostgresScenarioBaseline } =
     await import('./postgres/scenario-baseline.js')

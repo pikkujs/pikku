@@ -1,4 +1,4 @@
-import { CamelCasePlugin, type Kysely } from 'kysely'
+import { CamelCasePlugin, sql, type Kysely } from 'kysely'
 import {
   schemaContext,
   type PikkuSchema,
@@ -133,15 +133,37 @@ const bind = (db: Kysely<any>) => db.withPlugin(new CamelCasePlugin())
  * connection they are handed. A caller that had to remember to say the schema
  * twice would eventually say it once.
  */
-const boundSchema = (db: Kysely<any>): string | undefined =>
-  CREATE_TABLE.exec(
-    db.schema.createTable('pikkuSchemaProbe').addColumn('id', 'text').compile()
-      .sql
-  )?.[1]
+const probe = (db: Kysely<any>): string =>
+  db.schema.createTable('pikkuSchemaProbe').addColumn('id', 'text').compile()
+    .sql
 
-/** The context for statements compiled against `db`, matching its binding. */
-const contextFor = (db: Kysely<any>): SchemaContext =>
-  schemaContext(boundSchema(db))
+/**
+ * The context for statements compiled against `db`, matching its binding and
+ * its dialect — MySQL is recognised by the backtick it quotes with.
+ */
+const contextFor = (db: Kysely<any>): SchemaContext => {
+  const sql = probe(db)
+  return schemaContext(CREATE_TABLE.exec(sql)?.[1], {
+    mysql: sql.includes('`'),
+  })
+}
+
+/**
+ * A MySQL column's full declared type — `varchar(36)`, not the `varchar` the
+ * introspector reports. The length is part of the type a foreign key has to
+ * match, and a bare `varchar` is not a type MySQL accepts.
+ */
+const mysqlColumnType = async (
+  db: Kysely<any>,
+  table: string,
+  column: string
+): Promise<string> => {
+  const { rows } = await sql<{ type: string }>`
+    select column_type as type from information_schema.columns
+    where table_schema = database() and table_name = ${table} and column_name = ${column}
+  `.execute(db)
+  return rows[0]!.type
+}
 
 export interface UnmetRequirement {
   schema: PikkuSchema
@@ -170,6 +192,7 @@ export const resolveRequirements = async (
     ])
   )
 
+  const mysql = contextFor(bind(db)).mysql
   const types: RequiredTypes = {}
   const unmet: UnmetRequirement[] = []
   for (const schema of schemas) {
@@ -180,7 +203,9 @@ export const resolveRequirements = async (
       if (!column) {
         unmet.push({ schema, requirement })
       } else {
-        types[`${requirement.table}.${requirement.column}`] = column.dataType
+        types[`${requirement.table}.${requirement.column}`] = mysql
+          ? await mysqlColumnType(db, requirement.table, requirement.column)
+          : column.dataType
       }
     }
   }
@@ -313,7 +338,7 @@ const displayName = (table: DeclaredTable): string =>
  * connection's DDL as a table called `app`, which is no table at all.
  */
 const CREATE_TABLE =
-  /^\s*create table (?:if not exists\s+)?(?:"([^"]+)"\.)?"([^"]+)"/i
+  /^\s*create table (?:if not exists\s+)?(?:["`]([^"`]+)["`]\.)?["`]([^"`]+)["`]/i
 
 /**
  * The tables a schema creates, read back out of its own compiled SQL.

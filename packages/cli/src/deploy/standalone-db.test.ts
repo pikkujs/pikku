@@ -36,7 +36,7 @@ const writeConfig = (body: string) => {
   writeFileSync(join(projectDir, 'src', 'config.js'), body, 'utf-8')
 }
 
-const writeMigrations = (engine: 'sqlite' | 'postgres') => {
+const writeMigrations = (engine: 'sqlite' | 'postgres' | 'mysql') => {
   const dir = join(projectDir, 'db', engine)
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, '0001-init.sql'), 'select 1;', 'utf-8')
@@ -144,6 +144,19 @@ describe('resolveStandaloneDb', () => {
     writeMigrations('postgres')
 
     await assert.rejects(resolve, /both db\/sqlite and db\/postgres migrations/)
+  })
+
+  test('a MySQL project is refused, because the bundle has no MySQL driver', async () => {
+    writeMigrations('mysql')
+
+    await assert.rejects(resolve, /no MySQL driver/)
+  })
+
+  test('mysql alongside another dialect is refused as ambiguous', async () => {
+    writeMigrations('sqlite')
+    writeMigrations('mysql')
+
+    await assert.rejects(resolve, /both db\/sqlite and db\/mysql migrations/)
   })
 
   test('both dialects in createConfig are refused', async () => {

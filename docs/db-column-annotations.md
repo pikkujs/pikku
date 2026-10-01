@@ -28,7 +28,7 @@ Key files (all under `packages/cli/src/functions/db/`):
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `annotation-parser.ts`                          | `ColAnnotation` shape; `AnnotationKind`; `loadAnnotations()` reads + validates the sidecar  |
 | `db-introspector.ts`                            | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
-| `postgres/postgres-introspector.ts`, `sqlite/…` | per-dialect introspection                                                                   |
+| `postgres/postgres-introspector.ts`, `mysql/…`, `sqlite/…` | per-dialect introspection                                                                   |
 | `db-codegen.ts`                                 | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
 | `zod-codegen.ts`                                | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
 
@@ -109,8 +109,11 @@ Only auto-detection is dialect-specific, and deliberately so. Postgres has real
 `timestamp`/`uuid`/`enum`/`boolean` types, so `realKind()` (db-codegen.ts) and
 the enum resolver derive `Date`/`Uuid`/unions/`boolean` with **no annotation**.
 SQLite stores everything as TEXT/INTEGER and has none of those native types, so
-it stays `string`/`number` unless you set `kind`/`tsType` explicitly. Given the
-same explicit annotations, both dialects emit identical types.
+it stays `string`/`number` unless you set `kind`/`tsType` explicitly. MySQL sits
+between them: `DATETIME`/`TIMESTAMP`/`DATE` derive `Date` (mysql2 returns one),
+`ENUM('a','b')` derives a union, and everything else — including `TINYINT(1)`,
+which mysql2 returns as a number — stays as it is until annotated. Given the
+same explicit annotations, all three dialects emit identical types.
 
 ---
 

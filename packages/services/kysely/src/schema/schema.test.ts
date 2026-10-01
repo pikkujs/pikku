@@ -9,6 +9,9 @@ import {
   SqliteIntrospector,
   SqliteQueryCompiler,
   SqliteDialect,
+  MysqlAdapter,
+  MysqlIntrospector,
+  MysqlQueryCompiler,
   DummyDriver,
 } from 'kysely'
 import Database from 'better-sqlite3'
@@ -599,5 +602,55 @@ describe('requiredPikkuSchemas', () => {
       requiredPikkuSchemas(new Set(owners)).length,
       pikkuSchemas.length
     )
+  })
+})
+
+describe('compiling for MySQL', () => {
+  const compileMysql = () =>
+    compilePikkuSchemas(
+      new Kysely<any>({
+        dialect: {
+          createAdapter: () => new MysqlAdapter(),
+          createDriver: () => new DummyDriver(),
+          createIntrospector: (db: Kysely<any>) => new MysqlIntrospector(db),
+          createQueryCompiler: () => new MysqlQueryCompiler(),
+        },
+      })
+    )
+
+  test('declares foreign keys at table level, because MySQL discards inline references', () => {
+    const sql = compileMysql()
+
+    assert.doesNotMatch(
+      sql,
+      /`\w+` (?:varchar\(\d+\)|longtext)[^,]*\sreferences\s/
+    )
+    assert.match(
+      sql,
+      /constraint `workflow_step_workflow_run_id_fk` foreign key \(`workflow_run_id`\) references `workflow_runs` \(`workflow_run_id`\) on delete cascade/
+    )
+  })
+
+  test('never puts text in a key or gives it a literal default', () => {
+    const sql = compileMysql()
+
+    assert.doesNotMatch(sql, /`\w+` text primary key/)
+    assert.doesNotMatch(sql, /text[^,]*default '/i)
+    assert.match(sql, /`state` longtext default \('\{\}'\)/)
+  })
+
+  test('writes the expression index as a functional key part', () => {
+    assert.match(
+      compileMysql(),
+      /create unique index credentials_name_user_id_unique on `credentials` \(name, \(COALESCE\(user_id, ''\)\)\)/i
+    )
+  })
+
+  test('leaves the sqlite and postgres output on inline references', () => {
+    const pg = compilePikkuSchemas(
+      new Kysely<any>({ dialect: dialect('postgres') })
+    )
+    assert.match(pg, /references "workflow_runs" \("workflow_run_id"\)/)
+    assert.doesNotMatch(pg, /_fk"/)
   })
 })

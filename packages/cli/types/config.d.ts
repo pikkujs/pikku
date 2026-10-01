@@ -572,8 +572,19 @@ export type PikkuCLIInput = {
   }
 
   db?: {
-    engine?: 'sqlite' | 'postgres'
+    engine?: 'sqlite' | 'postgres' | 'mysql'
     pgVersion?: number
+
+    /**
+     * A MySQL server `pikku db export` may create and drop a scratch database on.
+     *
+     * Only an addon needs it, and only one that ships `db/mysql` migrations:
+     * MySQL has no embedded engine, so publishing the schema means applying the
+     * SQL to a real server and introspecting what it made. A project consuming
+     * MySQL configures its own server through `createConfig`'s `mysqlUrl`
+     * instead, and never reads this.
+     */
+    mysqlUrl?: string
 
     /**
      * The postgres schema the generated runtime migrations create their tables

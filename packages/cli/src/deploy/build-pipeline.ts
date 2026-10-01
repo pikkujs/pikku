@@ -167,6 +167,9 @@ async function loadConfiguredDb(
   }
 }
 
+const listAll = (names: string[]): string =>
+  `${names.length === 2 ? 'both' : 'all of'} ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+
 /**
  * The database a standalone bundle has to open for itself.
  *
@@ -218,32 +221,38 @@ export async function resolveStandaloneDb(
     }
   | undefined
 > {
-  const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
-  const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
+  const present = (['sqlite', 'postgres', 'mysql'] as const).filter((engine) =>
+    existsSync(join(projectDir, 'db', engine))
+  )
 
-  if (hasSqlite && hasPostgres) {
+  if (present.length > 1) {
     throw new Error(
-      'This project has both db/sqlite and db/postgres migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.'
+      `This project has ${listAll(present.map((engine) => `db/${engine}`))} migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.`
     )
   }
 
   const userConfig = await loadConfiguredDb(projectDir, srcDirectories, logger)
 
-  if (userConfig?.postgresUrl && userConfig?.sqliteDb) {
+  const configured = (
+    [
+      ['postgres', 'postgresUrl'],
+      ['sqlite', 'sqliteDb'],
+      ['mysql', 'mysqlUrl'],
+    ] as const
+  ).filter(([, key]) => userConfig?.[key])
+  if (configured.length > 1) {
     throw new Error(
-      'createConfig sets both postgresUrl and sqliteDb, so a standalone build cannot tell which database the app is meant to open. Configure exactly one database dialect.'
+      `createConfig sets ${listAll(configured.map(([, key]) => key))}, so a standalone build cannot tell which database the app is meant to open. Configure exactly one database dialect.`
     )
   }
 
-  const engine = userConfig?.postgresUrl
-    ? 'postgres'
-    : userConfig?.sqliteDb
-      ? 'sqlite'
-      : hasSqlite
-        ? 'sqlite'
-        : hasPostgres
-          ? 'postgres'
-          : undefined
+  const chosen = configured[0]?.[0] ?? present[0]
+  if (chosen === 'mysql') {
+    throw new Error(
+      'This project is on MySQL, and the standalone bundle has no MySQL driver yet — it opens a SQLite file or a postgres.js connection. Build it as a server deployment, or run it against sqlite or postgres.'
+    )
+  }
+  const engine = chosen
   if (!engine) return undefined
 
   // Absent for a database whose schema is created outside the migrator, which

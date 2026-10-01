@@ -20,21 +20,23 @@ export const workflowSchema: PikkuSchema = {
   name: 'workflow',
   ownedBy: ['workflowService', 'workflowRunService'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('workflowRuns')
-        .addColumn('workflowRunId', 'text', (col) => col.primaryKey())
-        .addColumn('workflow', 'text', (col) => col.notNull())
-        .addColumn('status', 'text', (col) => col.notNull())
-        .addColumn('input', 'text', (col) => col.notNull())
-        .addColumn('output', 'text')
-        .addColumn('error', 'text')
-        .addColumn('state', 'text', (col) => col.defaultTo('{}'))
+        .addColumn('workflowRunId', ctx.key, (col) => col.primaryKey())
+        .addColumn('workflow', ctx.key, (col) => col.notNull())
+        .addColumn('status', ctx.key, (col) => col.notNull())
+        .addColumn('input', ctx.text, (col) => col.notNull())
+        .addColumn('output', ctx.text)
+        .addColumn('error', ctx.text)
+        .addColumn('state', ctx.text, (col) =>
+          col.defaultTo(ctx.defaultText('{}'))
+        )
         .addColumn('inline', 'boolean', (col) => col.defaultTo(false))
-        .addColumn('graphHash', 'text')
+        .addColumn('graphHash', ctx.key)
         .addColumn('deterministic', 'boolean', (col) => col.defaultTo(false))
-        .addColumn('plannedSteps', 'text')
-        .addColumn('wire', 'text')
+        .addColumn('plannedSteps', ctx.text)
+        .addColumn('wire', ctx.text)
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
@@ -42,29 +44,26 @@ export const workflowSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('workflowStep')
-        .addColumn('workflowStepId', 'text', (col) => col.primaryKey())
-        .addColumn('workflowRunId', 'text', (col) =>
-          col
-            .notNull()
-            .references('workflowRuns.workflowRunId')
-            .onDelete('cascade')
+        .addColumn('workflowStepId', ctx.key, (col) => col.primaryKey())
+        .addColumn('workflowRunId', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'workflowRuns.workflowRunId')
         )
-        .addColumn('stepName', 'text', (col) => col.notNull())
-        .addColumn('rpcName', 'text')
-        .addColumn('data', 'text')
-        .addColumn('status', 'text', (col) =>
-          col.notNull().defaultTo('pending')
+        .addColumn('stepName', ctx.key, (col) => col.notNull())
+        .addColumn('rpcName', ctx.text)
+        .addColumn('data', ctx.text)
+        .addColumn('status', ctx.key, (col) =>
+          col.notNull().defaultTo(ctx.defaultText('pending'))
         )
-        .addColumn('result', 'text')
-        .addColumn('error', 'text')
-        .addColumn('childRunId', 'text')
-        .addColumn('branchTaken', 'text')
+        .addColumn('result', ctx.text)
+        .addColumn('error', ctx.text)
+        .addColumn('childRunId', ctx.text)
+        .addColumn('branchTaken', ctx.text)
         .addColumn('retries', 'integer')
-        .addColumn('retryDelay', 'text')
-        .addColumn('fromStepName', 'text')
+        .addColumn('retryDelay', ctx.text)
+        .addColumn('fromStepName', ctx.text)
         .addColumn('currentAttempt', 'integer')
         .addColumn('leaseExpiresAt', 'bigint')
         .addColumn('createdAt', 'timestamp', (col) =>
@@ -76,21 +75,23 @@ export const workflowSchema: PikkuSchema = {
         .addUniqueConstraint('workflow_step_run_name_unique', [
           'workflowRunId',
           'stepName',
-        ]),
+        ])
+        .$call(
+          ctx.foreignKeys('workflowStep', {
+            workflowRunId: 'workflowRuns.workflowRunId',
+          })
+        ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('workflowStepHistory')
-        .addColumn('historyId', 'text', (col) => col.primaryKey())
-        .addColumn('workflowStepId', 'text', (col) =>
-          col
-            .notNull()
-            .references('workflowStep.workflowStepId')
-            .onDelete('cascade')
+        .addColumn('historyId', ctx.key, (col) => col.primaryKey())
+        .addColumn('workflowStepId', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'workflowStep.workflowStepId')
         )
-        .addColumn('status', 'text', (col) => col.notNull())
-        .addColumn('result', 'text')
-        .addColumn('error', 'text')
+        .addColumn('status', ctx.key, (col) => col.notNull())
+        .addColumn('result', ctx.text)
+        .addColumn('error', ctx.text)
         .addColumn('attempt', 'integer')
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
@@ -98,16 +99,23 @@ export const workflowSchema: PikkuSchema = {
         .addColumn('runningAt', 'timestamp')
         .addColumn('scheduledAt', 'timestamp')
         .addColumn('succeededAt', 'timestamp')
-        .addColumn('failedAt', 'timestamp'),
+        .addColumn('failedAt', 'timestamp')
+        .$call(
+          ctx.foreignKeys('workflowStepHistory', {
+            workflowStepId: 'workflowStep.workflowStepId',
+          })
+        ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('workflowVersions')
-        .addColumn('workflowName', 'text', (col) => col.notNull())
-        .addColumn('graphHash', 'text', (col) => col.notNull())
-        .addColumn('graph', 'text', (col) => col.notNull())
-        .addColumn('source', 'text', (col) => col.notNull())
-        .addColumn('status', 'text', (col) => col.notNull().defaultTo('active'))
+        .addColumn('workflowName', ctx.key, (col) => col.notNull())
+        .addColumn('graphHash', ctx.key, (col) => col.notNull())
+        .addColumn('graph', ctx.text, (col) => col.notNull())
+        .addColumn('source', ctx.key, (col) => col.notNull())
+        .addColumn('status', ctx.key, (col) =>
+          col.notNull().defaultTo(ctx.defaultText('active'))
+        )
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
@@ -118,31 +126,31 @@ export const workflowSchema: PikkuSchema = {
 
     // The indexes trail the tables so that a table is never indexed before it
     // exists, whatever order the declarations are read in.
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_workflow_runs_status_created')
         .on('workflowRuns')
         .columns(['status', 'createdAt']),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_workflow_runs_workflow_created')
         .on('workflowRuns')
         .columns(['workflow', 'createdAt']),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_workflow_step_run_status')
         .on('workflowStep')
         .columns(['workflowRunId', 'status']),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_workflow_step_history_step')
         .on('workflowStepHistory')
         .columns(['workflowStepId', 'createdAt']),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_workflow_versions_source_status')
         .on('workflowVersions')

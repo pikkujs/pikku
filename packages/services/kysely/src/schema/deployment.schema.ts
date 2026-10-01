@@ -5,11 +5,11 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const deploymentSchema: PikkuSchema = {
   name: 'deployment',
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuDeployments')
-        .addColumn('deploymentId', 'text', (col) => col.primaryKey())
-        .addColumn('endpoint', 'text', (col) => col.notNull())
+        .addColumn('deploymentId', ctx.key, (col) => col.primaryKey())
+        .addColumn('endpoint', ctx.text, (col) => col.notNull())
         .addColumn('lastHeartbeat', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
@@ -17,28 +17,30 @@ export const deploymentSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuDeploymentFunctions')
-        .addColumn('deploymentId', 'text', (col) =>
-          col
-            .notNull()
-            .references('pikkuDeployments.deploymentId')
-            .onDelete('cascade')
+        .addColumn('deploymentId', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuDeployments.deploymentId')
         )
-        .addColumn('functionName', 'text', (col) => col.notNull())
+        .addColumn('functionName', ctx.key, (col) => col.notNull())
         .addPrimaryKeyConstraint('pikku_deployment_functions_pk', [
           'deploymentId',
           'functionName',
-        ]),
+        ])
+        .$call(
+          ctx.foreignKeys('pikkuDeploymentFunctions', {
+            deploymentId: 'pikkuDeployments.deploymentId',
+          })
+        ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_pikku_deployments_heartbeat')
         .on('pikkuDeployments')
         .column('lastHeartbeat'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_pikku_deployment_functions_name')
         .on('pikkuDeploymentFunctions')

@@ -35,7 +35,7 @@ export type SharedPikkuConfig = {
     remoteRpc?: unknown
   }
   db?: {
-    engine?: 'sqlite' | 'postgres'
+    engine?: 'sqlite' | 'postgres' | 'mysql'
   }
   lint?: {
     customServerBootstrap?: 'off' | 'warn' | 'error'
@@ -56,7 +56,7 @@ export type SharedCheckResult = {
   pikkuConfig: SharedPikkuConfig | null
   fnPkg: SharedFnPkg | null
   fnDir: string
-  dbEngine: 'sqlite' | 'postgres'
+  dbEngine: 'sqlite' | 'postgres' | 'mysql'
   migrationsDir: string
 }
 
@@ -919,10 +919,11 @@ export async function runSharedProjectChecks(
     // unconditionally failed every project using the layout the CLI expects.
     const hasConventionalDbAssets =
       existsSync(join(root, 'db', 'sqlite')) ||
-      existsSync(join(root, 'db', 'postgres'))
+      existsSync(join(root, 'db', 'postgres')) ||
+      existsSync(join(root, 'db', 'mysql'))
     if (
       authEnabled &&
-      dbEngine !== 'postgres' &&
+      dbEngine === 'sqlite' &&
       !/sqliteDb/.test(configText ?? '') &&
       !hasConventionalDbAssets
     ) {

@@ -11,6 +11,7 @@ import type { LabelsDB } from '@pikku/verifier-db-addon/types'
 export interface Config extends CoreConfig {
   sqliteDb?: string
   postgresUrl?: string
+  mysqlUrl?: string
 }
 
 /**

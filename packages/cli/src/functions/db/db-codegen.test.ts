@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
+import test, { describe } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -39,7 +39,8 @@ function fakeIntrospector(columns: ColumnInfo[]): DbIntrospector {
 
 async function run(
   columns: ColumnInfo[],
-  annotations?: Record<string, Record<string, unknown>>
+  annotations?: Record<string, Record<string, unknown>>,
+  dialect: 'postgres' | 'mysql' = 'postgres'
 ) {
   const dir = mkdtempSync(join(tmpdir(), 'db-codegen-'))
   if (annotations) {
@@ -53,7 +54,7 @@ async function run(
   return generateSchemaTypes(fakeIntrospector(columns), {
     outFile: join(dir, 'schema.gen.ts'),
     coercionFile: join(dir, 'coercion.gen.ts'),
-    dialect: 'postgres',
+    dialect,
     rootDir: dir,
   })
 }
@@ -529,4 +530,32 @@ test('coercion.gen.ts says what has to consume it', async () => {
   assert.match(generated, /Nothing applies this for you/)
   assert.match(generated, /createCoercionPlugin/)
   assert.match(generated, /createSingletonServices/)
+})
+
+describe('mysql typing', () => {
+  const generated = async (columns: ColumnInfo[]) => {
+    const result = await run(columns, undefined, 'mysql')
+    return readFileSync(result.outFile, 'utf8')
+  }
+
+  test('a DATETIME or TIMESTAMP column is a Date, because mysql2 hands one back', async () => {
+    const out = await generated([
+      col({ name: 'created_at', type: 'timestamp' }),
+      col({ name: 'starts_on', type: 'date' }),
+      col({ name: 'seen_at', type: 'datetime(3)' }),
+    ])
+    assert.match(out, /createdAt: ColumnType<Private<Date>/)
+    assert.match(out, /startsOn: ColumnType<Private<Date>/)
+    assert.match(out, /seenAt: ColumnType<Private<Date>/)
+  })
+
+  test('TINYINT(1) stays a number rather than being guessed a boolean', async () => {
+    const out = await generated([col({ name: 'active', type: 'tinyint(1)' })])
+    assert.match(out, /active: ColumnType<Private<number>/)
+  })
+
+  test('a text column is a string, and never derives a kind from its type', async () => {
+    const out = await generated([col({ name: 'body', type: 'varchar(255)' })])
+    assert.match(out, /body: ColumnType<Private<string>/)
+  })
 })

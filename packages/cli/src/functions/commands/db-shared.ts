@@ -5,6 +5,7 @@ import { loadUserModule } from './load-user-project.js'
 export interface UserConfigShape {
   sqliteDb?: string
   postgresUrl?: string
+  mysqlUrl?: string
   [key: string]: unknown
 }
 
@@ -38,11 +39,13 @@ export async function loadUserConfigForDb(
   const { config, logger } = options
   const hasSqliteDbAssets = existsSync(join(config.rootDir, 'db', 'sqlite'))
   const hasPostgresDbAssets = existsSync(join(config.rootDir, 'db', 'postgres'))
-  const hasConventionalDbAssets = hasSqliteDbAssets || hasPostgresDbAssets
+  const hasMysqlDbAssets = existsSync(join(config.rootDir, 'db', 'mysql'))
+  const hasConventionalDbAssets =
+    hasSqliteDbAssets || hasPostgresDbAssets || hasMysqlDbAssets
 
   const getFallbackConfig = (): UserConfigShape | null => {
     if (hasSqliteDbAssets) return { sqliteDb: '.pikku-runtime/dev.db' }
-    if (hasPostgresDbAssets) return {}
+    if (hasPostgresDbAssets || hasMysqlDbAssets) return {}
     return null
   }
 

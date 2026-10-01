@@ -13,12 +13,12 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const secretSchema: PikkuSchema = {
   name: 'secret',
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('secrets')
         .addColumn('key', 'varchar(255)', (col) => col.primaryKey())
-        .addColumn('ciphertext', 'text', (col) => col.notNull())
-        .addColumn('wrappedDek', 'text', (col) => col.notNull())
+        .addColumn('ciphertext', ctx.text, (col) => col.notNull())
+        .addColumn('wrappedDek', ctx.text, (col) => col.notNull())
         .addColumn('keyVersion', 'integer', (col) => col.notNull())
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
@@ -27,7 +27,7 @@ export const secretSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('secretKekSalts')
         .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
@@ -36,7 +36,7 @@ export const secretSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('secretsAudit')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
