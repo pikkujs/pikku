@@ -93,6 +93,7 @@ import {
 import { personaSync } from './functions/commands/persona-sync.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
+import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -638,6 +639,31 @@ wireCLI({
           func: pikkuEmails,
           description:
             'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+      },
+    },
+    theme: {
+      description: "The app's Mantine themes, in packages/mantine-theme",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuThemeList,
+          description: 'List the themes, the active one, and the presets and structures a theme can start from',
+        }),
+        apply: pikkuCLICommand({
+          func: pikkuThemeApply,
+          description:
+            'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
+          options: {
+            preset: { description: 'Preset id to start from (see `pikku theme list`)' },
+            structure: { description: 'Structure id for depth: shadows, radius, component defaults' },
+            primary: { description: 'Primary colour, as hex' },
+            secondary: { description: 'Secondary colour, as hex' },
+            accent: { description: 'Accent colour, as hex' },
+            fontHeading: { description: 'Heading font, a Google Fonts family' },
+            fontBody: { description: 'Body font, a Google Fonts family' },
+            page: { description: 'Light-mode page colour, as hex' },
+            ink: { description: 'Light-mode text colour, as hex' },
+          },
         }),
       },
     },

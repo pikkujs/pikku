@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/code-edit"
   },
-  "description": "Surgical edits to developer-owned Pikku source — locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
+  "description": "Surgical edits to developer-owned Pikku source \u2014 locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -17,6 +17,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "import": "./dist/theme/index.js",
+      "default": "./dist/theme/index.js"
     }
   },
   "scripts": {

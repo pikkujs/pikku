@@ -36,6 +36,22 @@ describe('DesignService', () => {
     await assert.rejects(design.setActiveTheme('../evil'))
   })
 
+  test('applies a preset with overrides and re-brands the emails', async () => {
+    const root = await workspace()
+    await mkdir(join(root, 'emails'), { recursive: true })
+    await writeFile(join(root, 'emails/theme.json'), JSON.stringify({ appName: 'Keep me' }))
+    const design = new DesignService(root)
+    const [preset] = design.presets()
+    const result = await design.applyTheme({ preset: preset!.id, colors: { primary: '#ff0000' } })
+    assert.deepStrictEqual(result, { activeId: preset!.id, emails: true })
+    const { spec } = await design.getThemeSpec()
+    assert.strictEqual(spec.brand?.colors?.primary, '#ff0000')
+    const emails = JSON.parse(await readFile(join(root, 'emails/theme.json'), 'utf-8'))
+    assert.strictEqual(emails.appName, 'Keep me')
+    assert.strictEqual(emails.colors.button, '#ff0000')
+    await assert.rejects(design.applyTheme({ preset: 'nope' }))
+  })
+
   test('merges component default props and drops nulls', async () => {
     const design = new DesignService(await workspace())
     await design.updateThemeSpec({

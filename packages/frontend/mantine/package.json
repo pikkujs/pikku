@@ -22,6 +22,10 @@
     "./dev": {
       "import": "./dist/esm/dev/index.js",
       "require": "./dist/cjs/dev/index.js"
+    },
+    "./theme-spec": {
+      "import": "./dist/esm/theme-spec/index.js",
+      "require": "./dist/cjs/theme-spec/index.js"
     }
   },
   "scripts": {
@@ -47,5 +51,9 @@
     "react": "^19",
     "react-dom": "^19",
     "tsx": "^4.23.12"
+  },
+  "dependencies": {
+    "@mantine/colors-generator": "^9.2.1",
+    "chroma-js": "^3.1.2"
   }
 }

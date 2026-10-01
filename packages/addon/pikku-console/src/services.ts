@@ -9,7 +9,7 @@ import { KnowledgeService } from './services/knowledge.service.js'
 import { DesignService } from './services/design.service.js'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
-import { findWorkspaceRoot } from './lib/find-workspace-root.js'
+import { findWorkspaceRoot } from '@pikku/code-edit/theme'
 import { join } from 'node:path'
 import { FileScenarioRunStore } from '@pikku/core/services'
 

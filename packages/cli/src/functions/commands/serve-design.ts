@@ -1,26 +1,12 @@
-import { readFileSync } from 'fs'
 import { createRequire } from 'module'
 import { createServer } from 'net'
-import { dirname, join } from 'path'
+import { join } from 'path'
 import { pathToFileURL } from 'url'
 
 import type { Logger } from '@pikku/core/services'
+import { findWorkspaceRoot } from '@pikku/code-edit/theme'
 
 export type DesignServer = { url: string; close: () => Promise<void> }
-
-/** The workspace root the design server renders: the nearest ancestor declaring `workspaces`. */
-function workspaceRoot(rootDir: string): string {
-  let dir = rootDir
-  while (true) {
-    try {
-      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
-      if (pkg.workspaces) return dir
-    } catch {}
-    const parent = dirname(dir)
-    if (parent === dir) return rootDir
-    dir = parent
-  }
-}
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -53,7 +39,7 @@ export async function startDesignServer(
   try {
     const { startDesignServer: start } = await import(pathToFileURL(entry).href)
     const server: DesignServer = await start({
-      root: workspaceRoot(rootDir),
+      root: findWorkspaceRoot(rootDir),
       port: await freePort(),
     })
     process.env.PIKKU_DESIGN_SERVER_URL = server.url
