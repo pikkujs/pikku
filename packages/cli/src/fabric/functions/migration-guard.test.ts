@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { mock } from 'bun:test'
 import { execFileSync } from 'node:child_process'
@@ -15,11 +15,18 @@ type Ledger = {
 }[]
 
 // The deploy guard reads ~/.fabric/auth.json and the stage ledger, so HOME is
-// disposable and the ledger is whatever the test sets.
-process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
+// disposable and the ledger is whatever the test sets. Test files that share a
+// process (config.test.ts swaps process.env and deletes these variables) undo
+// a one-time setup, so every test re-arms it.
+const home = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
 const API_URL = 'https://fabric.test'
-process.env.FABRIC_API_URL = API_URL
-process.env.FABRIC_PROJECT_ID = '11111111-2222-3333-4444-555555555555'
+const PROJECT_ID = '11111111-2222-3333-4444-555555555555'
+const arrangeEnv = () => {
+  process.env.HOME = home
+  process.env.FABRIC_API_URL = API_URL
+  process.env.FABRIC_PROJECT_ID = PROJECT_ID
+}
+arrangeEnv()
 let ledger: Ledger | Error = []
 const invoked: string[] = []
 await mock.module('../lib/http.js', () => ({
@@ -36,6 +43,10 @@ await mock.module('../lib/http.js', () => ({
 }))
 const { writeAuthFile } = await import('../lib/config.js')
 await writeAuthFile({ tokens: { [API_URL]: 'token' } })
+beforeEach(async () => {
+  arrangeEnv()
+  await writeAuthFile({ tokens: { [API_URL]: 'token' } })
+})
 const { runValidate, hashMigration } = await import('./validate.function.js')
 const { guardMigrationHistory, applyDeploy } =
   await import('./deploy.function.js')
