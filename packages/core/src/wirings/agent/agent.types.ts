@@ -6,6 +6,7 @@ import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
 } from '../../middleware/middleware.types.js'
+import type { AbortScope } from '../../function/abort-scope.js'
 import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { PermissionMetadata } from '../../function/function-meta.types.js'
 import type { AIProviderOptions } from '../../services/agent-runner-service.js'
@@ -179,7 +180,14 @@ export interface AgentToolDef extends Partial<ApprovalPolicy> {
   name: string
   description: string
   inputSchema: Record<string, unknown>
-  execute: (input: unknown) => Promise<unknown>
+  /**
+   * `options.abortScope` is supplied by the interrupt tracker and must be put
+   * on the wire of whatever this runs, so `beginChanges()` can observe it.
+   */
+  execute: (
+    input: unknown,
+    options?: { abortScope?: AbortScope }
+  ) => Promise<unknown>
   /**
    * Mirrors the pikku function's `readonly` flag. A read that gets interrupted
    * is discarded rather than reported: nothing changed, and by the next turn

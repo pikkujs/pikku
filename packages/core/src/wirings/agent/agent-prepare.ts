@@ -624,10 +624,11 @@ export async function buildToolDefs(
         needsApproval: needsApproval || undefined,
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
-        execute: async (toolInput: unknown) => {
+        execute: async (toolInput: unknown, options) => {
           const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
+          if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
             wire,
@@ -814,7 +815,7 @@ export async function buildToolDefs(
         name: workflowName,
         description: wfMeta.description || workflowName,
         inputSchema,
-        execute: async (toolInput: unknown) => {
+        execute: async (toolInput: unknown, options) => {
           const workflowService = singletonServices.workflowService
           if (!workflowService) {
             throw new Error(
@@ -824,6 +825,7 @@ export async function buildToolDefs(
           const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
+          if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
             wire,
@@ -842,9 +844,9 @@ export async function buildToolDefs(
 
   for (const tool of tools) {
     const originalExecute = tool.execute
-    tool.execute = async (toolInput: unknown) => {
+    tool.execute = async (toolInput: unknown, options) => {
       try {
-        return await originalExecute(toolInput)
+        return await originalExecute(toolInput, options)
       } catch (err: any) {
         if (err?.payload?.error === 'missing_credential') {
           return {
@@ -868,7 +870,7 @@ export async function buildToolDefs(
   if (hasToolHooks) {
     for (const tool of tools) {
       const originalExecute = tool.execute
-      tool.execute = async (toolInput: unknown) => {
+      tool.execute = async (toolInput: unknown, options) => {
         const toolCallId = randomUUID()
         let args = (toolInput ?? {}) as Record<string, unknown>
 
@@ -889,7 +891,7 @@ export async function buildToolDefs(
         let result: unknown
         let execError: unknown
         try {
-          result = await originalExecute(args)
+          result = await originalExecute(args, options)
         } catch (err: any) {
           execError = err
           if (err?.payload?.error === 'missing_credential') throw err
