@@ -5,7 +5,7 @@ import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
-import { FileScenarioRunStore } from '@pikku/core/services'
+import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
 import { createHttpPersonas } from '@pikku/core/persona'
 import {
   PikkuScenarioService,

@@ -20,7 +20,7 @@ import { DesignService } from './services/design.service.js'
 import { BrandWorkspace } from '@pikku/code-edit/brand'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { join } from 'node:path'
-import { FileScenarioRunStore } from '@pikku/core/services'
+import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
