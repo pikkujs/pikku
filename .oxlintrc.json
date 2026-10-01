@@ -14,6 +14,22 @@
     "unicorn/prefer-array-flat-map": "error",
     "unicorn/prefer-includes": "error",
     "unicorn/prefer-optional-catch-binding": "error",
-    "unicorn/throw-new-error": "error"
+    "unicorn/throw-new-error": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "package",
+            "package": "node:test",
+            "name": ["describe", "it", "test", "suite", "skip", "todo", "only"]
+          }
+        ]
+      }
+    ]
+  },
+  "options": {
+    "typeAware": true
   }
 }
