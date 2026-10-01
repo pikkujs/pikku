@@ -420,7 +420,7 @@ export function createScopedChannel(
     },
     close: () => {},
     sendBinary: (data) => parent.sendBinary(data),
-    send: (event: AgentStreamEvent) => {
+    send: async (event: AgentStreamEvent) => {
       if (event.type === 'done') return
       if (event.type === 'approval-request') {
         capturedApprovals.push({
@@ -441,9 +441,13 @@ export function createScopedChannel(
         event.type === 'usage' ||
         event.type === 'error'
       ) {
-        parent.send({ ...event, agent: agentName, session } as AgentStreamEvent)
+        await parent.send({
+          ...event,
+          agent: agentName,
+          session,
+        } as AgentStreamEvent)
       } else {
-        parent.send(event)
+        await parent.send(event)
       }
     },
     setState: (s) => parent.setState(s),
@@ -691,7 +695,7 @@ export async function buildToolDefs(
               streamContext.delegateState.delegated = true
             }
             const { channel } = streamContext
-            channel.send({
+            await channel.send({
               type: 'agent-call',
               agentName: subAgentName,
               session,
@@ -706,13 +710,13 @@ export async function buildToolDefs(
               ? subChannel
               : {
                   ...subChannel,
-                  send: (event: AgentStreamEvent) => {
+                  send: async (event: AgentStreamEvent) => {
                     if (
                       event.type === 'text-delta' ||
                       event.type === 'reasoning-delta'
                     )
                       return
-                    subChannel.send(event)
+                    await subChannel.send(event)
                   },
                 }
             const resultText = await streamAgent(
@@ -738,7 +742,7 @@ export async function buildToolDefs(
                 subApprovals: subChannel.approvals,
               }
             }
-            channel.send({
+            await channel.send({
               type: 'agent-result',
               agentName: subAgentName,
               session,

@@ -6,8 +6,10 @@ export class PikkuLocalChannelHandler<
   OpeningData = unknown,
   Out = unknown,
 > extends PikkuAbstractChannelHandler<OpeningData, Out> {
-  private onMessageCallback?: (message: unknown) => void
-  private onBinaryMessageCallback?: (data: BinaryData) => void
+  private onMessageCallback?: (message: unknown) => unknown
+  private onBinaryMessageCallback?: (
+    data: BinaryData
+  ) => Promise<BinaryData | void> | BinaryData | void
   private openCallBack?: () => Promise<void> | void
   private closeCallbacks: (() => Promise<void> | void)[] = []
   private sendCallback?: (message: Out, isBinary?: boolean) => void
@@ -28,6 +30,10 @@ export class PikkuLocalChannelHandler<
     this.openCallBack = callback
   }
 
+  // The base class declares `open(): void`; this override is intentionally
+  // async (callers already await it). Widening the exported base signature is
+  // a public API change, so the rule is suppressed for this one override.
+  // oxlint-disable-next-line typescript/no-misused-promises
   public async open(): Promise<void> {
     this.getChannel().state = 'open'
     if (this.openCallBack) {
@@ -63,7 +69,7 @@ export class PikkuLocalChannelHandler<
     if (this.getChannel().state === 'closed') {
       return
     }
-    super.close()
+    await super.close()
     const results = await Promise.allSettled(
       this.closeCallbacks.map((cb) => cb())
     )

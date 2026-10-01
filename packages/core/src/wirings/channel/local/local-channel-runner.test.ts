@@ -159,7 +159,7 @@ test('runChannel should return a channel handler if channel matches and no auth 
 
   assert.ok(result, 'Should return a PikkuChannelHandler instance')
 
-  result.open()
+  await result.open()
 })
 
 test('runChannel should close wire services once when channel closes', async () => {
@@ -201,11 +201,11 @@ test('runChannel should close wire services once when channel closes', async () 
   assert.ok(result)
   assert.equal(closeCount, 0)
 
-  result.close()
+  await result.close()
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(closeCount, 1)
 
-  result.close()
+  await result.close()
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(closeCount, 1)
 })
@@ -221,7 +221,7 @@ test('runChannel should run HTTP middleware on websocket upgrade and establish s
     '*',
     [
       pikkuMiddleware(async (_services, { setSession }, next) => {
-        setSession?.({ userId: 'user-1' } as any)
+        await setSession?.({ userId: 'user-1' } as any)
         await next()
       }),
     ],
@@ -323,10 +323,10 @@ test('a message handler that returns nothing does not attempt to send', async ()
     route: '/quiet-channel',
   })
   assert.ok(handler)
-  handler.registerOnSend(async (message: unknown) => {
+  handler.registerOnSend((message: unknown) => {
     sent.push(message)
   })
-  handler.open()
+  await handler.open()
 
   await handler.message(JSON.stringify({ text: 'hello' }))
 

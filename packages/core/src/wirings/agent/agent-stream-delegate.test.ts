@@ -90,8 +90,8 @@ const delegatingRunner = (
     stream: async (params: AgentRunnerParams, channel: AgentStreamChannel) => {
       const subTool = params.tools.find((t) => t.name === 'sub')
       if (!subTool) {
-        channel.send({ type: 'text-delta', text: 'specialist output' })
-        channel.send({
+        await channel.send({ type: 'text-delta', text: 'specialist output' })
+        await channel.send({
           type: 'usage',
           tokens: { input: 1, output: 1 },
         } as AgentStreamEvent)
@@ -99,12 +99,12 @@ const delegatingRunner = (
       }
 
       if (parentStep++ === 0) {
-        channel.send({ type: 'text-delta', text: script.preHandoff })
+        await channel.send({ type: 'text-delta', text: script.preHandoff })
 
         await subTool.execute!({ message: 'do phase two', session: 's1' })
 
-        channel.send({ type: 'text-delta', text: script.postHandoff })
-        channel.send({
+        await channel.send({ type: 'text-delta', text: script.postHandoff })
+        await channel.send({
           type: 'usage',
           tokens: { input: 1, output: 1 },
         } as AgentStreamEvent)
@@ -128,11 +128,11 @@ const delegatingRunner = (
         })
       }
 
-      channel.send({
+      await channel.send({
         type: 'text-delta',
         text: 'Done. <working_memory>{"phase":"three"}</working_memory>',
       })
-      channel.send({
+      await channel.send({
         type: 'usage',
         tokens: { input: 1, output: 1 },
       } as AgentStreamEvent)

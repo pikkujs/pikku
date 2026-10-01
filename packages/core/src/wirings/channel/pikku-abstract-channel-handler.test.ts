@@ -45,8 +45,8 @@ test('getChannel should return a channel with initial state', () => {
   )
 })
 
-test('open should change channel state to open', () => {
-  handler.open()
+test('open should change channel state to open', async () => {
+  await handler.open()
   const channel = handler.getChannel()
   assert.equal(
     channel.state,
@@ -55,8 +55,8 @@ test('open should change channel state to open', () => {
   )
 })
 
-test('close should change channel state to closed', () => {
-  handler.close()
+test('close should change channel state to closed', async () => {
+  await handler.close()
   const channel = handler.getChannel()
   assert.equal(
     channel.state,
@@ -98,14 +98,14 @@ describe('channel.remote', () => {
     })
 
     assert.deepEqual(await call, { sha: 'deadbeef' })
-    handler.close()
+    await handler.close()
   })
 
   test('a closing channel fails what the peer still owed an answer to', async () => {
     const channel = handler.getChannel()
     const call = channel.remote('localCheckout')
 
-    handler.close()
+    await handler.close()
 
     await assert.rejects(call, (e: ChannelRPCError) => {
       assert.equal(e.reason, 'closed')
@@ -116,7 +116,7 @@ describe('channel.remote', () => {
   test('a second connection does not inherit the first transport', async () => {
     const first = handler.getChannel()
     const call = first.remote('localCheckout')
-    handler.close()
+    await handler.close()
     await assert.rejects(call)
 
     const reconnected = new TestChannelHandler(
@@ -129,7 +129,7 @@ describe('channel.remote', () => {
     // Ids restart, which is only safe because the closed transport was
     // forgotten rather than reused.
     assert.equal((reconnected.sent[0] as { id: string }).id, '1')
-    reconnected.close()
+    await reconnected.close()
     await assert.rejects(second)
   })
 })
