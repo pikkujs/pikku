@@ -113,8 +113,8 @@ subscribe to its events as `<source>:<event>`:
   logged and dropped; so is one no `wireTrigger` listens for. Both still get a
   `200`, so the provider does not retry forever.
 - `receive(services, { body, headers, method, url, query })` gets the **raw
-  bytes** — verify the signature over those — and returns `{ events: [{ name,
-id?, data }] }`, or `{ respond: { status, body } }` for a handshake. Throwing
+  bytes** and only parses them: it returns `{ events: [{ name, id?, data }] }`,
+  or `{ respond: { status, body } }` for a handshake. Throwing
   rejects the request with the error's status (`UnauthorizedError` → 401).
   Omitted, the JSON body becomes one event dispatched to a trigger named just
   `<source>`.
@@ -129,12 +129,31 @@ id?, data }] }`, or `{ respond: { status, body } }` for a handshake. Throwing
   even on queues that ignore job ids, and records each attempt and its last
   error. Its `webhookReceipt` table comes from `pikku db generate`; `pikku dev`
   and `pikku serve` use it when a Kysely database is configured.
-- `receive` sees singleton services without `secrets`. Declare the signing
-  secret with `defineCredential({ type: 'singleton', ... })` and hold it as
-  `WebhookSigningSecret.fromCredential(provider, credentialService, name)`
-  from `@pikku/core/hmac`; `receive` calls `await signingSecret.load()` and
-  checks against what it returns. A handshake that hands over the secret
-  (Asana) stores it with `credentialService.set`.
+- Signature checks belong in `verify`, never in `receive`. pikku runs it on
+  every request against the secret in the credential
+  `<name>WebhookSecret` (camelCased: `microsoft-outlook` →
+  `microsoftOutlookWebhookSecret`; `credential` overrides it). Declaring
+  `verify` declares that credential as a singleton string, so there is no
+  `defineCredential` and no service holding the secret; `credentialDescription`
+  tells whoever sets it where to find it. Pick the declared form that matches
+  the provider:
+  - `{ hmac: { header, prefix?, algorithm, encoding, secretEncoding? } }`:
+    a signature over the raw body in one header (GitHub, Shopify, Linear).
+  - `{ token: { header, prefix? } }`: the provider echoes the shared secret
+    (GitLab, Telegram).
+  - `{ publicKey: { header, algorithm?, dsaEncoding? } }`: signed with the
+    provider's private key; the stored secret is its PEM public key (Wise).
+  - Anything else (a timestamp in the signed payload, a signature in the body
+    or query, a URL in the signed string) is a function
+    `(request, secret, services) => boolean`, built from `hmacDigest`,
+    `verifyHmacSignature`, `verifyPublicKeySignature` and
+    `timingSafeStringEqual` in `@pikku/core/hmac`.
+
+  A request with a body that fails is refused with a 401. A bodiless request
+  that fails (a HEAD probe, a validation token in the query) still reaches
+  `receive` so it can answer the handshake, but any events it returns are
+  refused. A handshake that hands over the secret (Asana) stores it with
+  `credentialService.set` under the same credential name.
 
 `check`, `setup` and `teardown` register the route with the provider. Each gets
 `{ url, label, events, previous? }`, where `events` are only the ones some

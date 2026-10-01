@@ -130,8 +130,13 @@ const signedWith = async (
     return value?.startsWith(prefix) ? value.slice(prefix.length) : undefined
   }
   if ('hmac' in verify) {
-    const { header: name, prefix, algorithm, encoding, secretEncoding } =
-      verify.hmac
+    const {
+      header: name,
+      prefix,
+      algorithm,
+      encoding,
+      secretEncoding,
+    } = verify.hmac
     return verifyHmacSignature(
       secret,
       header(name, prefix),
@@ -150,9 +155,11 @@ const signedWith = async (
 }
 
 /**
- * Whether the request was checked against the source's signing secret. Throws
- * when it was checked and failed. A source without `verify` checks in its own
- * `receive`, and a request without a body has nothing signed to check.
+ * Whether the request was signed with the source's secret. A request with a
+ * body is refused when it was not. A request without one — a HEAD probe, a
+ * validation token in the query — only comes back unverified, so `receive`
+ * can answer it but not dispatch from it. A source without `verify` checks in
+ * its own `receive`.
  */
 const verifyRequest = async (
   source: CoreTriggerWebhookSource | undefined,
@@ -160,19 +167,27 @@ const verifyRequest = async (
   services: CoreSingletonServices
 ): Promise<boolean> => {
   if (!source?.verify) return true
-  if (request.body.length === 0) return false
+  const bodiless = request.body.length === 0
   const secret = await services.credentialService?.get<string>(
     source.credential ?? webhookSecretCredentialName(source.name)
   )
   if (typeof secret !== 'string' || !secret) {
+    if (bodiless) return false
     throw new UnauthorizedError(
       `The ${source.name} webhook source has no signing secret`
     )
   }
-  if (!(await signedWith(source.verify, request, secret, services))) {
-    throw new UnauthorizedError(`Invalid ${source.name} webhook signature`)
-  }
-  return true
+  const signed = await signedWith(
+    source.verify,
+    request,
+    secret,
+    services
+  ).catch((error) => {
+    if (bodiless) return false
+    throw error
+  })
+  if (signed || bodiless) return signed
+  throw new UnauthorizedError(`Invalid ${source.name} webhook signature`)
 }
 
 const validateEvents = async (

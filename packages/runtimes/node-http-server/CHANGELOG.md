@@ -1,5 +1,16 @@
 # @pikku/node-http-server
 
+## 0.12.18
+
+### Patch Changes
+
+- fa83945: Server (container) entries now run on `@pikku/bun-server` and the generated Dockerfile uses `oven/bun`. The standalone provider is bun-only: the `--runtime` option and the node entry are removed. The remote job inbox is served by the `scaffold.remoteJobs` routes, so `@pikku/node-http-server` no longer carries the `dispatchJobs` / `dispatchSecret` shim.
+- Updated dependencies [a16b0ba]
+- Updated dependencies [21e9c3a]
+- Updated dependencies [a16b0ba]
+- Updated dependencies [a16b0ba]
+  - @pikku/core@0.12.133
+
 ## 0.12.17
 
 ### Patch Changes

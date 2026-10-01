@@ -1,5 +1,17 @@
 # @pikku/kysely-sqlite
 
+## 0.12.16
+
+### Patch Changes
+
+- a16b0ba: Persistent workflow services take a required `leaseService` (`WorkflowServiceOptions`) and lock runs and steps on it. The Postgres advisory and MySQL `GET_LOCK` step locks, and Redis's own `SET NX` run and step locks, are removed; `RedisWorkflowService` now takes `(connection, { leaseService, keyPrefix? })`.
+- Updated dependencies [a16b0ba]
+- Updated dependencies [21e9c3a]
+- Updated dependencies [a16b0ba]
+- Updated dependencies [a16b0ba]
+  - @pikku/core@0.12.133
+  - @pikku/kysely@0.13.33
+
 ## 0.12.15
 
 ### Patch Changes
