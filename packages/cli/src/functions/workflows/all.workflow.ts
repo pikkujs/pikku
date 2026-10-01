@@ -229,6 +229,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuVariableDefinitionTypes',
         null
       ),
+      workflow.do('Utils types', 'pikkuUtilsTypes', null),
     ])
 
     await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})

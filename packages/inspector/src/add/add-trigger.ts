@@ -307,6 +307,14 @@ export const validateWebhookSourceTriggers = (
   state: Parameters<AddWiring>[3]
 ) => {
   const sources = state.triggers.webhookSourceMeta
+  for (const source of Object.values(sources)) {
+    const meta = source.receive && state.functions.meta[source.receive]
+    if (meta && meta.funcWrapper && !meta.webhookReceive) {
+      logger.error(
+        `Webhook source '${source.name}' receives with '${source.receive}', a ${meta.funcWrapper}. Declare it with pikkuWebhookReceive so it is never callable as an RPC.`
+      )
+    }
+  }
   for (const trigger of Object.keys(state.triggers.meta)) {
     const colon = trigger.indexOf(':')
     if (colon === -1) continue

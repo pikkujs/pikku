@@ -74,6 +74,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
   },
+  utils: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'Small helpers a function body reaches for, such as `parseJson`, which turns text or bytes into JSON or refuses with a 400.',
+  },
   credentials: {
     step: 'enhance it',
     skill: null,

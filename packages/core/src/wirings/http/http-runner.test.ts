@@ -346,25 +346,32 @@ describe('http-runner helpers', () => {
     assert.deepEqual(execution, ['global'])
   })
 
-  test('fetchData sets 204 when a route returns undefined', async () => {
-    setRouteMeta('/no-content')
+  test('fetchData keeps what a route wrote when it returns undefined', async () => {
+    setRouteMeta('/handshake')
     addFunction('pikku_func_name', {
-      func: async () => undefined,
+      func: async (_services: any, _data: any, { http }: any) => {
+        http.response.json({ challenge: 'abc' })
+      },
     })
     wireHTTP({
-      route: '/no-content',
+      route: '/handshake',
       method: 'get',
       auth: false,
-      func: { func: async () => undefined },
+      func: {
+        func: async (_services: any, _data: any, { http }: any) => {
+          http.response.json({ challenge: 'abc' })
+        },
+      },
     })
     httpRouter.initialize()
 
-    const request = new TestRequest('/no-content', 'get')
+    const request = new TestRequest('/handshake', 'get')
     const response = new TestResponse()
 
     await fetchData(request, response)
 
-    assert.equal(response.statusCode, 204)
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.jsonBody, { challenge: 'abc' })
   })
 
   test('fetchData keeps a redirect status when the route returns undefined', async () => {

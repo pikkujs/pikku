@@ -572,6 +572,7 @@
     "isSerializable",
     "isVersionedId",
     "parseDurationString",
+    "parseJson",
     "parseVersionedId",
     "pikkuServerLifecycle",
     "stopSingletonServices"

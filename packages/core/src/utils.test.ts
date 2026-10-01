@@ -6,8 +6,10 @@ import {
   isSerializable,
   getTagGroups,
   freezeDedupe,
+  parseJson,
   stopSingletonServices,
 } from './utils.js'
+import { BadRequestError } from './errors/errors.js'
 import {
   resetPikkuState,
   pikkuState,
@@ -355,5 +357,20 @@ describe('stopSingletonServices', () => {
       'singletonServices'
     )
     assert.strictEqual(addonServices, null)
+  })
+})
+
+describe('parseJson', () => {
+  test('parses text and UTF-8 bytes', () => {
+    assert.deepStrictEqual(parseJson('{"a":1}'), { a: 1 })
+    assert.deepStrictEqual(
+      parseJson(new TextEncoder().encode('{"name":"Zoë"}')),
+      { name: 'Zoë' }
+    )
+  })
+
+  test('refuses anything that is not JSON with a BadRequestError', () => {
+    assert.throws(() => parseJson('not json'), BadRequestError)
+    assert.throws(() => parseJson(new Uint8Array()), BadRequestError)
   })
 })

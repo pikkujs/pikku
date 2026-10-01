@@ -107,17 +107,30 @@ subscribe to its events as `<source>:<event>`:
 - The route is `POST /webhooks/<name>` unless `method`/`route` say otherwise.
   `method` may be a list, e.g. `['get', 'post']` for a provider that verifies
   the URL with a GET and delivers events with a POST, or `['head', 'post']`
-  for one that checks the URL with a HEAD.
-  It needs no session.
+  for one that checks the URL with a HEAD. A HEAD is answered with a `200`
+  before `verify` or `receive` run. It needs no session.
 - `events` maps each event name to a schema. An event that fails its schema is
   logged and dropped; so is one no `wireTrigger` listens for. Both still get a
   `200`, so the provider does not retry forever.
-- `receive(services, { body, headers, method, url, query })` gets the **raw
-  bytes** and only parses them: it returns `{ events: [{ name, id?, data }] }`,
-  or `{ respond: { status, body } }` for a handshake. Throwing
+- `receive(services, { body, headers, method, url, query }, { http })` gets the
+  **raw bytes** and only parses them: it returns `{ events: [{ name, id?, data }] }`.
+  A handshake returns nothing and answers through `http.response`
+  (`http.response.header('x-hook-secret', secret)`,
+  `http.response.json({ challenge })`), which is sent only then. Throwing
   rejects the request with the error's status (`UnauthorizedError` → 401).
   Omitted, the JSON body becomes one event dispatched to a trigger named just
   `<source>`.
+- A named `receive` is declared with `pikkuWebhookReceive` from `#pikku/trigger`
+  (`#pikku/addon/trigger` in an addon), never `pikkuSessionlessFunc`: it is
+  public, typed to the request, and never callable as an RPC. The inspector
+  rejects any other wrapper. `parseJson` from `#pikku/utils`
+  (`#pikku/addon/utils`) parses the bytes and answers a body that is not JSON
+  with a 400:
+
+  ```ts snippet:pikkuWebhookReceive
+
+  ```
+
 - Every accepted event is queued on `pikku-incoming-webhooks` and run by a
   generated worker, so the provider is answered quickly and a failing trigger is
   retried by the queue. This needs a `queueService` and an
@@ -150,7 +163,7 @@ subscribe to its events as `<source>:<event>`:
     `timingSafeStringEqual` in `@pikku/core/hmac`.
 
   A request with a body that fails is refused with a 401. A bodiless request
-  that fails (a HEAD probe, a validation token in the query) still reaches
+  that fails (a validation token in the query) still reaches
   `receive` so it can answer the handshake, but any events it returns are
   refused. A handshake that hands over the secret (Asana) stores it with
   `credentialService.set` under the same credential name.

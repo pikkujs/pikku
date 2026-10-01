@@ -6,6 +6,7 @@ import type {
 import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { parseJson } from '../../utils.js'
 import {
   PikkuMissingMetaError,
   UnauthorizedError,
@@ -89,13 +90,14 @@ const runSourceStep = <Out>(
   singletonServices: CoreSingletonServices,
   source: string,
   funcId: string,
-  data: unknown
+  data: unknown,
+  wire: PikkuRawWire = {}
 ) =>
   runPikkuFunc<unknown, Out>('trigger', source, funcId, {
     singletonServices,
     auth: false,
     data: () => data,
-    wire: {},
+    wire,
   })
 
 const readRequest = async (http: PikkuHTTP | undefined) => {
@@ -223,44 +225,43 @@ const validateEvents = async (
 export const receiveWebhookSourceRequest = async (
   sourceName: string,
   wire: { http?: PikkuHTTP }
-): Promise<Response | { received: number }> => {
+): Promise<{ received: number } | void> => {
   const singletonServices = getSingletonServices()
   const meta = getSourceMeta(sourceName)
   const store = singletonServices.triggerSourceStore
   if (store && !(await store.getTriggerSource(sourceName))?.enabled) {
-    return new Response(null, { status: 404 })
+    wire.http?.response?.status(404)
+    return
   }
   const source = pikkuState(null, 'trigger', 'webhookSources').get(sourceName)
   const request = await readRequest(wire.http)
+  // A HEAD is a provider checking the URL is live. It carries no events, so
+  // it is answered here rather than in every source's `receive`.
+  if (request.method.toLowerCase() === 'head') {
+    wire.http?.response?.status(200)
+    return
+  }
   const verified = await verifyRequest(source, request, singletonServices)
 
-  const result: WebhookReceiveResult = meta.receive
-    ? await runSourceStep<WebhookReceiveResult>(
+  const result: WebhookReceiveResult | void = meta.receive
+    ? await runSourceStep<WebhookReceiveResult | void>(
         singletonServices,
         sourceName,
         meta.receive,
-        request
+        request,
+        wire
       )
     : {
         events: [
           {
             name: '',
-            data: request.body.length
-              ? JSON.parse(new TextDecoder().decode(request.body))
-              : undefined,
+            data: request.body.length ? parseJson(request.body) : undefined,
           },
         ],
       }
 
-  if ('respond' in result) {
-    const { status, body, headers } = result.respond
-    const text =
-      body === undefined
-        ? null
-        : typeof body === 'string'
-          ? body
-          : JSON.stringify(body)
-    return new Response(text, { status, headers })
+  if (!result) {
+    return
   }
   if (!verified && result.events.length > 0) {
     throw new UnauthorizedError(

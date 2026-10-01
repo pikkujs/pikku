@@ -26,16 +26,11 @@ export type WebhookRequest = {
   query: Record<string, string>
 }
 
-export type WebhookReceiveResult =
-  | { events: TriggerEvent[] }
-  /** A handshake, such as Slack's `url_verification`: answered directly, nothing is dispatched. */
-  | {
-      respond: {
-        status: number
-        body?: unknown
-        headers?: Record<string, string>
-      }
-    }
+/**
+ * The events a request carries. A handshake returns nothing and answers
+ * through `http.response` instead, which is sent only then.
+ */
+export type WebhookReceiveResult = { events: TriggerEvent[] }
 
 export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 
@@ -141,7 +136,7 @@ export type CoreTriggerWebhookSource<
    */
   verify?: WebhookVerify
   /** Omitted: the JSON body is one event dispatched to the trigger named `<name>`. */
-  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
+  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult | void>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
   setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
   teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>

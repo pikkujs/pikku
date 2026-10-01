@@ -337,9 +337,7 @@ const executeRoute = async (
     if (result instanceof Response) {
       await applyWebResponse(http!.response!, result)
     } else if (result === undefined || result === null) {
-      if (!statusSetByRoute) {
-        http?.response?.status(204)
-      }
+      // Nothing returned: the response keeps the status the function left on it.
     } else if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)
     } else {
