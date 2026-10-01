@@ -9,7 +9,7 @@ export class LocalVariablesService implements VariablesService {
    * empty store instead of a ReferenceError.
    */
   constructor(variables?: Record<string, string | undefined>) {
-    this.variables = variables ?? (globalThis as any).process?.env ?? {}
+    this.variables = variables ?? globalThis.process?.env ?? {}
   }
 
   public getAll(): Record<string, string | undefined> {
