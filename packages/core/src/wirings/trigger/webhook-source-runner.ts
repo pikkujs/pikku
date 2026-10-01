@@ -124,6 +124,8 @@ const signedWith = async (
   secret: string,
   services: CoreSingletonServices
 ): Promise<boolean> => {
+  // Fail closed: an empty secret never verifies, whatever the scheme.
+  if (!secret) return false
   if (typeof verify === 'function') {
     return await verify(request, secret, services)
   }
