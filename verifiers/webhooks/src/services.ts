@@ -7,7 +7,6 @@ import {
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
-import { WebhookSigningSecret } from '@pikku/core/hmac'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { FileCredentialService } from './file-credential-service.js'
@@ -54,11 +53,6 @@ export const createSingletonServices = pikkuServices(
         existingServices?.incomingWebhookService ||
         new IncomingWebhookService(queueService, 1),
       credentialService,
-      shopSigningSecret: WebhookSigningSecret.fromCredential(
-        'shop',
-        credentialService,
-        'shopWebhookSecret'
-      ),
     }
   }
 )

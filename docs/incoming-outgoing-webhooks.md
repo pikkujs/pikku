@@ -169,10 +169,12 @@ Run by the CLI at deploy, never by the route:
 tagged and listed (Stripe metadata). `previous` is what the last `setup`
 returned, for providers that do not: the caller stores it between deploys.
 
-A signing secret the provider issues is written by `setup` to the credential
-store (`credentialService.set`) and removed by `teardown`; `receive` reads it
-per delivery through `WebhookSigningSecret.fromCredential`. A new secret takes
-effect without a deploy and never passes through the CLI.
+The source declares how deliveries are signed with `verify`, and pikku checks
+every request against the secret in the credential `<name>WebhookSecret`
+(camelCased) before `receive` sees it. A signing secret the provider issues is
+written by `setup` to that credential (`credentialService.set`) and removed by
+`teardown`. A new secret takes effect without a deploy and never passes
+through the CLI.
 
 ### Running it
 

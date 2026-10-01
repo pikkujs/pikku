@@ -15,19 +15,16 @@ wireTriggerWebhookSource({
     'order.paid': z.object({ orderId: z.string(), total: z.number() }),
     'order.refunded': z.object({ orderId: z.string() }),
   },
+  verify: {
+    hmac: { header: 'x-shop-signature', algorithm: 'sha256', encoding: 'hex' },
+  },
+  credentialDescription: 'Signs the shop webhook source; stored by its setup',
   receive: {
-    func: async ({ shopSigningSecret }, request) => {
+    func: async (_services, request) => {
       const body = JSON.parse(new TextDecoder().decode(request.body))
       if (body.type === 'url_verification') {
         return { respond: { status: 200, body: { challenge: body.challenge } } }
       }
-      const secret = await shopSigningSecret.load()
-      secret.verifyHmac(
-        request.headers['x-shop-signature'],
-        'sha256',
-        request.body,
-        'hex'
-      )
       return { events: [{ name: body.type, id: body.id, data: body.data }] }
     },
   },

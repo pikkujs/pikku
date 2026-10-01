@@ -60,13 +60,22 @@ wireTriggerSource({
  * `warehouse:<event>`, so the warehouse is answered at once and a failing
  * handler is retried by the queue rather than by the sender.
  *
- * `receive` turns the raw request into events. A real provider signs its body:
- * verify that here, through a service, before trusting it. Addons such as
- * Stripe export a `receive` that does, used as `receive: ref('stripe:…')`.
+ * `verify` refuses any delivery whose body is not signed with the secret in
+ * the `warehouseWebhookSecret` credential, before `receive` turns the raw
+ * request into events. Declaring it declares that credential too.
  */
 wireTriggerWebhookSource({
   name: 'warehouse',
   events: { 'stock.low': LowStockPayload },
+  verify: {
+    hmac: {
+      header: 'x-warehouse-signature',
+      algorithm: 'sha256',
+      encoding: 'hex',
+    },
+  },
+  credentialDescription:
+    'The signing secret from the warehouse webhook settings',
   receive: {
     func: async (_services, { body }) => {
       const event = JSON.parse(new TextDecoder().decode(body))
