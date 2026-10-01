@@ -20,6 +20,8 @@ import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
+import { getDeadGenFilePatterns } from './bundler/bundler.js'
+import { verifyUnitsRuntime } from './runtime-verifier.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
 import {
@@ -662,10 +664,28 @@ export async function runBuildPipeline(options: {
     const aggregated: BundleResult[] = []
     const aggregatedErrors: Array<{ unitName: string; error: string }> = []
 
+    // Runtime-tier check, on a bundle of its own and ahead of the real one: the
+    // provider's aliases and stubs would otherwise hide a Node-only import. A
+    // unit that fails is reported and not bundled.
+    const tierFailures = await verifyUnitsRuntime({
+      provider,
+      units: manifest.units,
+      entryFiles: serverlessEntryFiles,
+      projectDir,
+      deadPatternsFor: (unit) =>
+        getDeadGenFilePatterns(join(unitsDir, unit.name)),
+    })
+    for (const warning of tierFailures.warnings) logger.info(warning)
+    const tierFailed = new Set(tierFailures.failures.map((f) => f.unitName))
+    aggregatedErrors.push(...tierFailures.failures)
+    for (const name of tierFailed) serverlessEntryFiles.delete(name)
+
     if (serverlessEntryFiles.size > 0) {
       const serverlessManifestForBundle = {
         ...manifest,
-        units: manifest.units.filter((u) => u.target !== 'server'),
+        units: manifest.units.filter(
+          (u) => u.target !== 'server' && !tierFailed.has(u.name)
+        ),
       }
       const result = await bundler.bundleUnits(
         projectDir,
