@@ -42,8 +42,14 @@ describe('isProduction on Node', () => {
     assert.equal(isProduction(), false)
   })
 
-  test('a registered variables service wins over process.env', () => {
+  test('process.env wins over a registered variables service', () => {
     process.env.NODE_ENV = 'development'
+    registerVariables(new LocalVariablesService({ NODE_ENV: 'production' }))
+    assert.equal(isProduction(), false)
+  })
+
+  test('a registered variables service answers when NODE_ENV is unset', () => {
+    delete process.env.NODE_ENV
     registerVariables(new LocalVariablesService({ NODE_ENV: 'production' }))
     assert.equal(isProduction(), true)
   })

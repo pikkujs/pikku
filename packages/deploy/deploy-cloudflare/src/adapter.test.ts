@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { build, type Plugin } from 'esbuild'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 
@@ -275,5 +275,52 @@ describe('CloudflareProviderAdapter MCP entries', () => {
       /export default createCloudflareWorkerHandler\(\{ createConfig/
     )
     assert.equal(source.includes('@pikku/cloudflare/mcp'), false)
+  })
+})
+
+describe('NODE_ENV on Workers', () => {
+  // Core's `isProduction()` gates whether a 5xx response carries the error
+  // message and stack. Under nodejs_compat a Worker has a `process` but no
+  // NODE_ENV, so without a pin `isProduction()` is false and every 500 leaks.
+  // This runs core's real `env.ts`, built with and without the adapter define.
+  const envSource = new URL('../../../core/src/env.ts', import.meta.url)
+    .pathname
+
+  const isProductionBuiltWith = async (
+    define: Record<string, string> | undefined
+  ): Promise<boolean> => {
+    const result = await build({
+      stdin: {
+        contents: `export { isProduction } from ${JSON.stringify(envSource)}`,
+        resolveDir: dirname(envSource),
+        loader: 'ts',
+      },
+      bundle: true,
+      write: false,
+      format: 'esm',
+      platform: 'neutral',
+      conditions: ['workerd', 'worker', 'browser'],
+      define,
+    })
+    const code = result.outputFiles[0]!.text
+    const original = process.env.NODE_ENV
+    delete process.env.NODE_ENV
+    try {
+      const mod = await import(
+        `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
+      )
+      return mod.isProduction()
+    } finally {
+      if (original !== undefined) process.env.NODE_ENV = original
+    }
+  }
+
+  test('without the define an unset NODE_ENV is not production', async () => {
+    assert.equal(await isProductionBuiltWith(undefined), false)
+  })
+
+  test('the adapter define makes the bundle production', async () => {
+    const adapter = new CloudflareProviderAdapter({})
+    assert.equal(await isProductionBuiltWith(adapter.getDefine()), true)
   })
 })
