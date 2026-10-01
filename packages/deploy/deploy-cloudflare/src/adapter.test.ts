@@ -1,5 +1,9 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { build, type Plugin } from 'esbuild'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 
 import { CloudflareProviderAdapter } from './adapter.js'
@@ -123,12 +127,91 @@ describe('node builtins on Workers', () => {
     assert.ok(!externals.includes('node:*'))
     assert.ok(!externals.includes('node:fs'))
     assert.ok(externals.includes('node:path'))
-    assert.ok(adapter.getStubModules().includes('^node:fs$'))
-    assert.ok(adapter.getStubModules().includes('^node:fs/promises$'))
+    assert.ok(adapter.getStubModules().includes('^(node:)?fs$'))
+    assert.ok(adapter.getStubModules().includes('^(node:)?fs/promises$'))
   })
 
   test('fs still aliases to its prefixed form so the stub can match it', () => {
     assert.equal(new CloudflareProviderAdapter().getAliases()['fs'], 'node:fs')
+  })
+
+  // Mirrors the dead-module stub plugin in the CLI's NodeBundler: esbuild runs
+  // its `onResolve` hooks on the specifier as written, before `alias` rewrites
+  // it, so a stub pattern has to match the bare form as well as `node:`.
+  const stubPlugin = (patterns: string[]): Plugin => ({
+    name: 'pikku-dead-module-stub',
+    setup(b) {
+      const filter = new RegExp(patterns.join('|'))
+      b.onResolve({ filter }, (args) => ({
+        path: args.path,
+        namespace: 'pikku-stub',
+      }))
+      b.onLoad({ filter: /.*/, namespace: 'pikku-stub' }, () => ({
+        contents: 'module.exports = {}',
+        loader: 'js',
+      }))
+    },
+  })
+
+  const bundle = async (specifiers: string[]) => {
+    const adapter = new CloudflareProviderAdapter()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-cf-stub-'))
+    try {
+      await mkdir(dir, { recursive: true })
+      const entry = join(dir, 'entry.mjs')
+      await writeFile(
+        entry,
+        specifiers
+          .map((s, i) => `import * as m${i} from '${s}'\nconsole.log(m${i})`)
+          .join('\n')
+      )
+      const result = await build({
+        entryPoints: [entry],
+        bundle: true,
+        write: false,
+        platform: 'neutral',
+        format: 'esm',
+        logLevel: 'silent',
+        external: adapter.getExternals(),
+        alias: adapter.getAliases(),
+        plugins: [stubPlugin(adapter.getStubModules())],
+      })
+      return result.outputFiles[0].text
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  }
+
+  test('unsupported builtins are stubbed in both bare and node: form', async () => {
+    const specifiers = [
+      'fs',
+      'node:fs',
+      'fs/promises',
+      'node:fs/promises',
+      'child_process',
+      'node:child_process',
+    ]
+    const output = await bundle(specifiers)
+
+    for (const s of specifiers) {
+      assert.ok(
+        !new RegExp(`from\\s*["']${s}["']|import\\s*["']${s}["']`).test(output),
+        `${s} must not be imported by the bundle`
+      )
+    }
+    assert.doesNotMatch(
+      output,
+      /(?:from|import)\s*["'](?:node:)?(?:fs|child_process)/
+    )
+  })
+
+  test('supported builtins are still left external', async () => {
+    const supported = ['path', 'stream', 'crypto', 'async_hooks']
+    const output = await bundle(supported.flatMap((s) => [s, `node:${s}`]))
+
+    for (const s of supported) {
+      assert.match(output, new RegExp(`from\\s*["']node:${s}["']`))
+    }
   })
 })
 
