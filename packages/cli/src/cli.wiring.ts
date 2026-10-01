@@ -48,6 +48,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -729,15 +730,21 @@ wireCLI({
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuThemeList,
-          description: 'List the themes, the active one, and the presets and structures a theme can start from',
+          description:
+            'List the themes, the active one, and the presets and structures a theme can start from',
         }),
         apply: pikkuCLICommand({
           func: pikkuThemeApply,
           description:
             'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
           options: {
-            preset: { description: 'Preset id to start from (see `pikku theme list`)' },
-            structure: { description: 'Structure id for depth: shadows, radius, component defaults' },
+            preset: {
+              description: 'Preset id to start from (see `pikku theme list`)',
+            },
+            structure: {
+              description:
+                'Structure id for depth: shadows, radius, component defaults',
+            },
             primary: { description: 'Primary colour, as hex' },
             secondary: { description: 'Secondary colour, as hex' },
             accent: { description: 'Accent colour, as hex' },
@@ -1142,6 +1149,27 @@ wireCLI({
       render: renderValidate,
       description:
         'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+    }),
+    verify: pikkuCLICommand({
+      func: pikkuVerify,
+      render: renderPikkuVerify,
+      description:
+        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
+      options: {
+        skipCodegen: {
+          description:
+            'Check the tree as it stands, without running codegen first',
+          default: false,
+        },
+        skipTypecheck: {
+          description: 'Skip the backend type-check',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
+          default: false,
+        },
+      },
     }),
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',

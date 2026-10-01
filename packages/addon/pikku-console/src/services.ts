@@ -12,6 +12,7 @@ import { I18nService } from '@pikku/code-edit/i18n'
 import { WorkspaceFilesService } from '@pikku/code-edit/files'
 import { GitService } from '@pikku/code-edit/git'
 import { PagesService } from '@pikku/code-edit/routes'
+import { VerifyService } from '@pikku/code-edit/verify'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
@@ -65,6 +66,7 @@ export const createSingletonServices = pikkuAddonServices(
     let gitService: GitService | null = null
     let pagesService: PagesService | null = null
     let pageScreenshotService: PageScreenshotService | null = null
+    let verifyService: VerifyService | null = null
     let scenarioRunStore: FileScenarioRunStore | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
@@ -82,6 +84,7 @@ export const createSingletonServices = pikkuAddonServices(
         pagesService,
         projectRoot
       )
+      verifyService = new VerifyService(projectRoot)
       // The same directory `pikku scenario run` writes to: the console reads
       // runs the CLI recorded, so the path is the contract between them.
       scenarioRunStore = new FileScenarioRunStore({
@@ -128,6 +131,7 @@ export const createSingletonServices = pikkuAddonServices(
       gitService,
       pagesService,
       pageScreenshotService,
+      verifyService,
       scenarioRunStore,
       auth,
     }
