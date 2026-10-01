@@ -198,6 +198,18 @@ const ToolCallDisplay: FunctionComponent<{
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
 
+  // onClick expects a void handler: surface approval failures instead of leaving a rejected promise
+  const respond = (approved: boolean) => {
+    setResponded(approved ? 'approved' : 'denied')
+    handleApproval(toolCallId, approved)
+      .then((ok) => {
+        if (ok) addResult?.({ approved })
+      })
+      .catch((err) => {
+        console.error('Failed to send approval response', err)
+      })
+  }
+
   // Hide responded approval tool calls
   if (isApproval && responded && shouldHideToolCall(hideToolCalls, toolName)) {
     return null
@@ -255,12 +267,7 @@ const ToolCallDisplay: FunctionComponent<{
         </pre>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={async () => {
-              setResponded('approved')
-              if (await handleApproval(toolCallId, true)) {
-                addResult?.({ approved: true })
-              }
-            }}
+            onClick={() => respond(true)}
             style={{
               padding: '4px 12px',
               fontSize: 12,
@@ -274,12 +281,7 @@ const ToolCallDisplay: FunctionComponent<{
             Approve
           </button>
           <button
-            onClick={async () => {
-              setResponded('denied')
-              if (await handleApproval(toolCallId, false)) {
-                addResult?.({ approved: false })
-              }
-            }}
+            onClick={() => respond(false)}
             style={{
               padding: '4px 12px',
               fontSize: 12,

@@ -53,7 +53,7 @@ export function mergeDirectories(srcDir: string, destDir: string): void {
     const destPath = path.join(destDir, file)
 
     if (fs.statSync(srcPath).isDirectory()) {
-      lazymkdir(destPath)
+      fs.mkdirSync(destPath, { recursive: true })
       mergeDirectories(srcPath, destPath)
     } else {
       fs.renameSync(srcPath, destPath)

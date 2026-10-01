@@ -279,7 +279,8 @@ export class CorePikkuFetch {
       }
     }
 
-    run()
+    // run() catches every error internally and routes it to onError
+    void run()
     return {
       close: () => {
         closed = true
