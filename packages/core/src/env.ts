@@ -40,12 +40,27 @@ export const readEnvVariable = (name: string): string | undefined => {
 const hasProcessEnv = (): boolean => typeof globalThis.process?.env === 'object'
 
 /**
+ * The literal `process.env.NODE_ENV`, kept as a literal on purpose: a deploy
+ * adapter pins it with a bundler `define` (a Cloudflare Worker is always
+ * production), and `define` only rewrites this exact expression, not
+ * `process.env[name]`. Without that define it reads the real value, and on a
+ * runtime with no `process` the ReferenceError means "unknown".
+ */
+const buildTimeNodeEnv = (): string | undefined => {
+  try {
+    return process.env.NODE_ENV
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * `NODE_ENV` decides whether error details are exposed. With neither a
  * variables service nor `process` to say, this is production: failing closed
  * means an edge deployment never leaks error details by accident.
  */
 export const isProduction = (): boolean => {
-  const nodeEnv = readEnvVariable('NODE_ENV')
+  const nodeEnv = buildTimeNodeEnv() ?? readEnvVariable('NODE_ENV')
   if (nodeEnv !== undefined) return nodeEnv === 'production'
   return !hasProcessEnv()
 }

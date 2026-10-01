@@ -812,6 +812,10 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     return {
       'process.versions.electron': 'undefined',
       'process.versions.node': '"22.0.0"',
+      // A deployed Worker is always production, whatever the host did or did
+      // not set. Without this `isProduction()` is false and every 500 carries
+      // the error message and stack trace.
+      'process.env.NODE_ENV': '"production"',
     }
   }
 
