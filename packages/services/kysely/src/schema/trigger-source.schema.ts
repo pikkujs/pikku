@@ -9,22 +9,22 @@ export const triggerSourceSchema: PikkuSchema = {
   name: 'trigger-source',
   ownedBy: ['triggerSourceStore'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuTriggerSource')
-        .addColumn('name', 'text', (col) => col.primaryKey())
-        .addColumn('kind', 'text', (col) => col.notNull())
-        .addColumn('baseUrl', 'text')
-        .addColumn('labelPrefix', 'text')
+        .addColumn('name', ctx.key, (col) => col.primaryKey())
+        .addColumn('kind', ctx.text, (col) => col.notNull())
+        .addColumn('baseUrl', ctx.text)
+        .addColumn('labelPrefix', ctx.text)
         .addColumn('declared', 'boolean', (col) =>
           col.defaultTo(true).notNull()
         )
         .addColumn('enabled', 'boolean', (col) =>
           col.defaultTo(false).notNull()
         )
-        .addColumn('status', 'text')
-        .addColumn('state', 'text')
-        .addColumn('detail', 'text')
+        .addColumn('status', ctx.text)
+        .addColumn('state', ctx.text)
+        .addColumn('detail', ctx.text)
         .addColumn('updatedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),

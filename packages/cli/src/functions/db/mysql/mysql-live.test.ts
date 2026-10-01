@@ -16,6 +16,7 @@ import {
   computeSchemaDrift,
   createKysely,
   devSeed,
+  generateMigrations,
   migrateAndCodegen,
   reset,
   resolveDb,
@@ -321,6 +322,94 @@ describe('mysql, against a real server', { skip: !SERVER_URL }, () => {
       await withMysqlClient(resolved, (c) =>
         c.exec(`DROP DATABASE \`${other}\``)
       )
+    }
+  })
+
+  test('a required column its source stopped declaring is relaxed, keeping the data', async () => {
+    const other = `pikku_t_${randomBytes(5).toString('hex')}`
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-mysql-orphan-'))
+    await withMysqlClient(resolved, (c) =>
+      c.exec(`CREATE DATABASE \`${other}\``)
+    )
+    try {
+      const target = resolveDb(
+        { mysqlUrl: urlFor(other) },
+        dir,
+        join(dir, '.pikku')
+      ) as ResolvedMysqlDb
+      mkdirSync(join(dir, 'db/mysql'), { recursive: true })
+      writeFileSync(
+        join(dir, 'db/mysql/0001-todos.sql'),
+        `CREATE TABLE todos (
+  id INT PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  issuer VARCHAR(64) NOT NULL
+);`
+      )
+      const addon = join(dir, 'node_modules', 'addon-auth')
+      mkdirSync(join(addon, '.pikku', 'db'), { recursive: true })
+      writeFileSync(
+        join(addon, 'package.json'),
+        JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
+      )
+      const column = (name: string, type: string, pk = false) => ({
+        name,
+        type,
+        notNull: true,
+        pk,
+        defaultValue: null,
+      })
+      writeFileSync(
+        join(addon, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+        JSON.stringify({
+          mysql: {
+            sql: 'CREATE TABLE todos (id INT PRIMARY KEY, title VARCHAR(100) NOT NULL);',
+            tables: {
+              todos: [
+                column('id', 'int', true),
+                column('title', 'varchar(100)'),
+              ],
+            },
+          },
+        })
+      )
+      await migrateAndCodegen(target)
+      await withMysqlClient(target, (c) =>
+        c.exec("INSERT INTO todos (id, title, issuer) VALUES (1, 'a', 'x')")
+      )
+
+      const { written } = await generateMigrations(
+        target,
+        dir,
+        ['src'],
+        { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+        [{ package: 'addon-auth' }]
+      )
+      const migration = written.find((w) => w.source === 'addon-auth')
+      assert.ok(migration, 'the orphaned column got a migration')
+      assert.deepEqual(migration.orphaned, ['todos.issuer'])
+      assert.match(
+        readFileSync(migration.file, 'utf8'),
+        /ALTER TABLE todos MODIFY COLUMN issuer varchar\(64\) NULL;/
+      )
+
+      await migrateAndCodegen(target)
+      await withMysqlClient(target, async (c) => {
+        await c.exec("INSERT INTO todos (id, title) VALUES (2, 'b')")
+        const { rows } = await c.query<{ issuer: string | null }>(
+          'SELECT issuer FROM todos ORDER BY id'
+        )
+        assert.deepEqual(
+          rows.map((r) => r.issuer),
+          ['x', null],
+          'the existing value stays, and an insert that never names the column works'
+        )
+      })
+    } finally {
+      await withMysqlClient(resolved, (c) =>
+        c.exec(`DROP DATABASE \`${other}\``)
+      )
+      rmSync(dir, { recursive: true, force: true })
     }
   })
 

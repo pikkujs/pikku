@@ -321,7 +321,9 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => process.exit(130))
 }
 
-rmSync(MIGRATIONS_DIR, { recursive: true, force: true })
+for (const other of ['sqlite', 'postgres', 'mysql']) {
+  rmSync(join(here, 'db', other), { recursive: true, force: true })
+}
 rmSync(join(here, '.pikku'), { recursive: true, force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
 rmSync(join(remoteAddonDir, '.pikku'), { recursive: true, force: true })
