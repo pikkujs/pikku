@@ -4,7 +4,7 @@ import { join } from 'path'
 import { pathToFileURL } from 'url'
 
 import type { Logger } from '@pikku/core/services'
-import { findWorkspaceRoot } from '@pikku/code-edit/theme'
+import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 
 export type DesignServer = { url: string; close: () => Promise<void> }
 

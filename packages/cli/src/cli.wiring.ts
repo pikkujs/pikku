@@ -57,6 +57,16 @@ import {
   renderExamplesShow,
 } from './functions/commands/examples.js'
 import {
+  i18nAdd,
+  i18nDefault,
+  i18nList,
+  i18nSync,
+  renderI18nAdd,
+  renderI18nDefault,
+  renderI18nList,
+  renderI18nSync,
+} from './functions/commands/i18n.js'
+import {
   knowledgeValidate,
   renderKnowledgeValidate,
 } from './functions/commands/knowledge-validate.js'
@@ -882,6 +892,53 @@ wireCLI({
               description:
                 'Which frontend a screen belongs to, for a project with more than one',
               short: 'a',
+            },
+          },
+        }),
+      },
+    },
+    i18n: {
+      description:
+        "Manage the frontends' Paraglide message catalogs: locales, missing keys and the locale each app opens in",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: i18nList,
+          render: renderI18nList,
+          description:
+            "Report each frontend's catalog, locales and untranslated count",
+        }),
+        add: pikkuCLICommand({
+          func: i18nAdd,
+          render: renderI18nAdd,
+          description:
+            'Add a locale seeded from the base locale, every value marked to translate',
+          parameters: '<locale>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+          },
+        }),
+        sync: pikkuCLICommand({
+          func: i18nSync,
+          render: renderI18nSync,
+          description:
+            'Add base keys a locale is missing and report keys only it has',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+          },
+        }),
+        default: pikkuCLICommand({
+          func: i18nDefault,
+          render: renderI18nDefault,
+          description:
+            'Set the locale a frontend opens in for a first-time visitor',
+          parameters: '<locale>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
             },
           },
         }),

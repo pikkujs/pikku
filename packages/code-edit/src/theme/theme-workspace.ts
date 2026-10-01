@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { composeTheme, type ThemeInput } from './compose.js'
 import { applyEmailTheme } from './email-theme.js'
 import { THEME_ID_RE, type Theme } from './presets.js'
@@ -214,18 +214,5 @@ export class ThemeWorkspace {
       ].join('\n'),
       'utf-8'
     )
-  }
-}
-
-/** The nearest ancestor of `projectRoot` whose package.json declares `workspaces`, else `projectRoot`. */
-export function findWorkspaceRoot(projectRoot: string): string {
-  let dir = projectRoot
-  while (true) {
-    try {
-      if (JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8')).workspaces) return dir
-    } catch {}
-    const parent = dirname(dir)
-    if (parent === dir) return projectRoot
-    dir = parent
   }
 }

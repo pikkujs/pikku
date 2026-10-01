@@ -3,8 +3,8 @@ import {
   LISTED_PRESETS,
   STRUCTURES,
   ThemeWorkspace,
-  findWorkspaceRoot,
 } from '@pikku/code-edit/theme'
+import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 
 export const pikkuThemeList = pikkuSessionlessFunc<null, void>({
   func: async ({ config }) => {
