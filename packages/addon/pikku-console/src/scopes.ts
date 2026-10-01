@@ -129,6 +129,13 @@ defineScope({
               read: { description: 'Read the knowledge notes' },
             },
           },
+          design: {
+            description: 'The design system: themes and component props',
+            scopes: {
+              read: { description: 'Read themes and component props' },
+              write: { description: 'Edit themes and component props' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {

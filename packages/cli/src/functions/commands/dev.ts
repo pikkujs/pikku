@@ -44,6 +44,7 @@ import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
+import { startDesignServer } from './serve-design.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { clearDevAddress, writeDevAddress } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
@@ -425,6 +426,11 @@ export const dev = pikkuSessionlessFunc<
       )
     }
 
+    const designServer = await startDesignServer(config.rootDir, logger)
+    if (designServer) {
+      logger.info(`Pikku Design available at ${designServer.url}`)
+    }
+
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own
     // dev server owns dev; it proxies its API calls back to this port.
@@ -460,6 +466,7 @@ export const dev = pikkuSessionlessFunc<
         await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
+        await designServer?.close()
         await pikkuServer.stop()
         await lifecycle?.afterStop?.(resolvedServices)
       } finally {
