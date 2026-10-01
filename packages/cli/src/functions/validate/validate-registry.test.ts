@@ -76,6 +76,7 @@ describe('validation planning', () => {
         'app-project:.',
         'core-import:.',
         'pikku-barrel:.',
+        'scaffold-duplicates:.',
         'workspace-exports:.',
       ])
     } finally {
@@ -106,6 +107,7 @@ describe('validation planning', () => {
         'pikku-barrel:.',
         'pikku-barrel:p/one',
         'pikku-barrel:p/two',
+        'scaffold-duplicates:.',
         'workspace-exports:.',
       ])
     } finally {
