@@ -1,0 +1,16 @@
+{
+  "name": "UserCardImage",
+  "title": "User card with cover image",
+  "description": "A profile card with a cover banner, overlapping avatar, name, role, follower stats and a follow button. Props-driven user data. Use in social or team directories.",
+  "tags": ["user"],
+  "files": ["UserCardImage.tsx", "UserCardImage.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "usercardimage__role": "Fullstack engineer",
+    "usercardimage__followers": "Followers",
+    "usercardimage__follows": "Follows",
+    "usercardimage__posts": "Posts",
+    "usercardimage__follow": "Follow"
+  }
+}

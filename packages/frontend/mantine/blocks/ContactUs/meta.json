@@ -1,0 +1,24 @@
+{
+  "name": "ContactUs",
+  "title": "Contact form with gradient panel",
+  "description": "Two-column contact section: a gradient panel with contact details and social links beside a card with email/name/message fields. Use as a full contact block on a landing or contact page.",
+  "tags": ["contact"],
+  "files": ["ContactUs.tsx", "ContactUs.module.css", "ContactIcons.tsx", "ContactIcons.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "contactus__title": "Contact us",
+    "contactus__description": "Leave your email and we will get back to you within 24 hours",
+    "contactus__email_label": "Email",
+    "contactus__email_placeholder": "your@email.com",
+    "contactus__name_label": "Name",
+    "contactus__name_placeholder": "John Doe",
+    "contactus__message_label": "Your message",
+    "contactus__message_placeholder": "I want to order your goods",
+    "contactus__send": "Send message",
+    "contactus__contact_email": "Email",
+    "contactus__contact_phone": "Phone",
+    "contactus__contact_address": "Address",
+    "contactus__contact_hours": "Working hours"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "UsersRolesTable",
+  "title": "Users table with role selector",
+  "description": "A table of people showing avatar, name/email, an inline role Select, last-active time, and an active/disabled status badge. Pass live rows via the `data` prop. Use for member/role administration.",
+  "tags": ["tables"],
+  "files": ["UsersRolesTable.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "usersrolestable__employee": "Employee",
+    "usersrolestable__role": "Role",
+    "usersrolestable__last_active": "Last active",
+    "usersrolestable__status": "Status",
+    "usersrolestable__active": "Active",
+    "usersrolestable__disabled": "Disabled"
+  }
+}

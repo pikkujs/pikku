@@ -1,0 +1,23 @@
+{
+  "name": "FeaturesGrid",
+  "title": "Feature grid with theme icons",
+  "description": "Centered heading and intro over a responsive grid of features, each a light theme-icon with a title and description. Use for a clean 3-across capability overview.",
+  "tags": ["features"],
+  "files": ["FeaturesGrid.tsx", "FeaturesGrid.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "featuresgrid__title": "Integrate effortlessly with any technology stack",
+    "featuresgrid__description": "Every once in a while, you'll see a Golbat that's missing some fangs. This happens when hunger drives it to try biting a Steel-type Pokémon.",
+    "featuresgrid__f1_title": "Extreme performance",
+    "featuresgrid__f1_description": "This dust is actually a powerful poison that will even make a pro wrestler sick, Regice cloaks itself with frigid air of -328 degrees Fahrenheit",
+    "featuresgrid__f2_title": "Privacy focused",
+    "featuresgrid__f2_description": "People say it can run at the same speed as lightning striking, Its icy body is so cold, it will not melt even if it is immersed in magma",
+    "featuresgrid__f3_title": "No third parties",
+    "featuresgrid__f3_description": "They're popular, but they're rare. Trainers who show them off recklessly may be targeted by thieves",
+    "featuresgrid__f4_title": "Secure by default",
+    "featuresgrid__f4_description": "Although it still can't fly, its jumping power is outstanding, in Alola the mushrooms on Paras don't grow up quite right",
+    "featuresgrid__f5_title": "24/7 Support",
+    "featuresgrid__f5_description": "Rapidash usually can be seen casually cantering in the fields and plains, Skitty is known to chase around after its own tail"
+  }
+}

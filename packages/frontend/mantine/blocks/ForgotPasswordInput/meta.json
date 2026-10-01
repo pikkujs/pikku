@@ -1,0 +1,14 @@
+{
+  "name": "ForgotPasswordInput",
+  "title": "Password field with inline forgot link",
+  "description": "A password input whose label row carries an inline “Forgot your password?” link on the right. Use inside a login form to expose recovery without a separate row.",
+  "tags": ["auth"],
+  "files": ["ForgotPasswordInput.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "forgotpasswordinput__label": "Your password",
+    "forgotpasswordinput__forgot": "Forgot your password?",
+    "forgotpasswordinput__placeholder": "Your password"
+  }
+}

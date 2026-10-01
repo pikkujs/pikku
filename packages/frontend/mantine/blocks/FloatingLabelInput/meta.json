@@ -1,0 +1,13 @@
+{
+  "name": "FloatingLabelInput",
+  "title": "Text input with floating label",
+  "description": "A text input whose label starts as a placeholder and animates up into a compact floating label on focus or when filled. Use for clean, space-saving forms.",
+  "tags": ["inputs"],
+  "files": ["FloatingLabelInput.tsx", "FloatingLabelInput.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "floatinglabelinput__label": "Floating label",
+    "floatinglabelinput__placeholder": "OMG, it also has a placeholder"
+  }
+}

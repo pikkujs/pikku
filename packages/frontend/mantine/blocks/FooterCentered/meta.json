@@ -1,0 +1,17 @@
+{
+  "name": "FooterCentered",
+  "title": "Centered footer with social icons",
+  "description": "A footer with the brand wordmark, a centered row of text links, and social action icons on the right, stacking centered on small screens. Use for marketing or landing pages.",
+  "tags": ["footers"],
+  "files": ["FooterCentered.tsx", "FooterCentered.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "footercentered__contact": "Contact",
+    "footercentered__privacy": "Privacy",
+    "footercentered__blog": "Blog",
+    "footercentered__store": "Store",
+    "footercentered__careers": "Careers"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "GetInTouch",
+  "title": "Get in touch split card",
+  "description": "Paper card split into a colored contact-info panel with details and a form with name/email/subject/message fields. Use for a compact contact section on a page.",
+  "tags": ["contact"],
+  "files": [
+    "GetInTouch.tsx",
+    "GetInTouch.module.css",
+    "ContactIcons.tsx",
+    "ContactIcons.module.css"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "getintouch__contact_info": "Contact information",
+    "getintouch__title": "Get in touch",
+    "getintouch__name_label": "Your name",
+    "getintouch__name_placeholder": "Your name",
+    "getintouch__email_label": "Your email",
+    "getintouch__email_placeholder": "hello@mantine.dev",
+    "getintouch__subject_label": "Subject",
+    "getintouch__subject_placeholder": "Subject",
+    "getintouch__message_label": "Your message",
+    "getintouch__message_placeholder": "Please include all relevant information",
+    "getintouch__send": "Send message",
+    "getintouch__contact_email": "Email",
+    "getintouch__contact_phone": "Phone",
+    "getintouch__contact_address": "Address",
+    "getintouch__contact_hours": "Working hours"
+  }
+}

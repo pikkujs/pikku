@@ -1,0 +1,16 @@
+{
+  "name": "ButtonMenu",
+  "title": "Create-new dropdown button",
+  "description": "A primary button that opens a menu of create actions, each with a colored leading icon and a keyboard-shortcut hint. Use as a compact 'new item' action in toolbars.",
+  "tags": ["buttons"],
+  "files": ["ButtonMenu.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "buttonmenu__create_new": "Create new",
+    "buttonmenu__project": "Project",
+    "buttonmenu__task": "Task",
+    "buttonmenu__team": "Team",
+    "buttonmenu__event": "Event"
+  }
+}

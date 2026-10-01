@@ -1,0 +1,16 @@
+{
+  "name": "SplitButton",
+  "title": "Split action button",
+  "description": "A primary action button fused with an adjacent dropdown caret that reveals secondary actions in a menu. Use when one action is the default but related actions should stay one click away.",
+  "tags": ["buttons"],
+  "files": ["SplitButton.tsx", "SplitButton.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "splitbutton__send": "Send",
+    "splitbutton__more_options": "More options",
+    "splitbutton__schedule": "Schedule for later",
+    "splitbutton__save_draft": "Save draft",
+    "splitbutton__delete": "Delete"
+  }
+}

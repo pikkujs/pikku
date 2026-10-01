@@ -1,0 +1,18 @@
+{
+  "name": "InputTooltip",
+  "title": "Inputs with tooltips",
+  "description": "Two patterns: an info icon in a field's right section that reveals a tooltip on hover, and a password field that shows a validation tooltip on focus. Use to attach contextual help or live validation hints to inputs.",
+  "tags": ["inputs"],
+  "files": ["InputTooltip.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "inputtooltip__store_securely": "We store your data securely",
+    "inputtooltip__icon_label": "Tooltip shown on icon hover",
+    "inputtooltip__email_placeholder": "Your email",
+    "inputtooltip__all_good": "All good!",
+    "inputtooltip__min_chars": "Password must include at least 6 characters",
+    "inputtooltip__focus_label": "Tooltip shown onFocus",
+    "inputtooltip__password_placeholder": "Your password"
+  }
+}

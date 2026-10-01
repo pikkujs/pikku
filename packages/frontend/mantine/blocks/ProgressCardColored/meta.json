@@ -1,0 +1,13 @@
+{
+  "name": "ProgressCardColored",
+  "title": "Colored progress goal card",
+  "description": "A filled-blue variant of the progress goal card with an uppercase label, amount/goal figure and a white progress bar. Use to draw attention to a headline goal.",
+  "tags": ["cards"],
+  "files": ["ProgressCardColored.tsx", "ProgressCardColored.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "progresscardcolored__monthly_goal": "Monthly goal",
+    "progresscardcolored__progress_label": "Monthly goal progress"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "HeroImageRight",
+  "title": "Dark hero with side-faded image",
+  "description": "Dark hero with a photo fading in from the right behind a gradient-highlighted title, description and gradient CTA. Use for bold, image-backed product intros.",
+  "tags": ["heroes"],
+  "files": ["HeroImageRight.tsx", "HeroImageRight.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "heroimageright__title_start": "A ",
+    "heroimageright__title_highlight": "fully featured",
+    "heroimageright__title_end": " React components library",
+    "heroimageright__description": "Build fully functional accessible web applications with ease – Mantine includes more than 100 customizable components and hooks to cover you in any situation",
+    "heroimageright__get_started": "Get started"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "ImageCard",
+  "title": "Overlay image card",
+  "description": "A linked card with a full-bleed background image that zooms on hover, a dark gradient overlay, and title, author, views and comments pinned to the bottom. Use as a gallery or featured link tile.",
+  "tags": ["cards"],
+  "files": ["ImageCard.tsx", "ImageCard.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "imagecard__title": "Journey to Swiss Alps"
+  }
+}

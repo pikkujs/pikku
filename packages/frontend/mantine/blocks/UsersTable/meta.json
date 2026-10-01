@@ -1,0 +1,18 @@
+{
+  "name": "UsersTable",
+  "title": "Users table with actions",
+  "description": "A table of people showing avatar, name, a colored job-title badge, email, phone, and per-row edit/delete action icons. Pass live rows via the `data` prop. Use for team or user-management screens.",
+  "tags": ["tables"],
+  "files": ["UsersTable.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "userstable__employee": "Employee",
+    "userstable__job_title": "Job title",
+    "userstable__email": "Email",
+    "userstable__phone": "Phone",
+    "userstable__actions": "Actions",
+    "userstable__edit_user": "Edit user",
+    "userstable__delete_user": "Delete user"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "AuthenticationForm",
+  "title": "Login / register form with social buttons",
+  "description": "A bordered card that toggles between login and register, with Google/Twitter social buttons, an email/password form, validation, and a terms checkbox. Use as a drop-in auth panel.",
+  "tags": ["auth"],
+  "files": ["AuthenticationForm.tsx", "GoogleButton.tsx", "TwitterButton.tsx"],
+  "dependsOn": [],
+  "npmDeps": ["@mantine/form"],
+  "i18nKeys": {
+    "authenticationform__welcome_login": "Welcome to Acme, login with",
+    "authenticationform__welcome_register": "Welcome to Acme, register with",
+    "authenticationform__google": "Google",
+    "authenticationform__twitter": "Twitter",
+    "authenticationform__or_continue": "Or continue with email",
+    "authenticationform__name": "Name",
+    "authenticationform__name_placeholder": "Your name",
+    "authenticationform__email": "Email",
+    "authenticationform__email_placeholder": "hello@example.com",
+    "authenticationform__password": "Password",
+    "authenticationform__password_placeholder": "Your password",
+    "authenticationform__terms": "I accept terms and conditions",
+    "authenticationform__toggle_to_login": "Already have an account? Login",
+    "authenticationform__toggle_to_register": "Don't have an account? Register",
+    "authenticationform__login": "Login",
+    "authenticationform__register": "Register",
+    "authenticationform__invalid_email": "Invalid email",
+    "authenticationform__password_too_short": "Password should include at least 6 characters"
+  }
+}

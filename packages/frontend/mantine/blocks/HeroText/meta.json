@@ -1,0 +1,17 @@
+{
+  "name": "HeroText",
+  "title": "Centered hero with dotted accents",
+  "description": "Centered marketing hero with a large highlighted title, supporting paragraph, two call-to-action buttons and decorative dot-grid corners. Use as a landing-page opener.",
+  "tags": ["heroes"],
+  "files": ["HeroText.tsx", "Dots.tsx", "HeroText.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "herotext__title_start": "Automated AI ",
+    "herotext__title_highlight": "code reviews",
+    "herotext__title_end": " for any stack",
+    "herotext__description": "Build more reliable software with AI companion. AI is also trained to detect lazy developers who do nothing and just complain on Twitter.",
+    "herotext__book_demo": "Book a demo",
+    "herotext__purchase_license": "Purchase a license"
+  }
+}
