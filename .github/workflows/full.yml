@@ -316,6 +316,35 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
 
+  # MySQL has no embedded engine, so the scratch databases db generate, check
+  # and export need are created on this server, and only here does the auth
+  # config get a `varchar(36)` user.id the scope tables' foreign key must match.
+  # It gets a database of its own: the run drops every table in it.
+  verifiers-db-schema-mysql:
+    name: Verifiers (db-schema, mysql)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    services:
+      mysql:
+        image: mirror.gcr.io/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: pikku_db_schema
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: cd verifiers/db-schema && bun run test:mysql
+    env:
+      MYSQL_URL: mysql://root:password@127.0.0.1:3306/pikku_db_schema
+
   verifier-coverage:
     name: Verifier Coverage
     runs-on: ubuntu-latest
@@ -339,6 +368,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build
+    services:
+      mysql:
+        image: mirror.gcr.io/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: pikku_db_schema
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -358,6 +400,7 @@ jobs:
         # cap first appears as every open PR going red together.
         env:
           NODE_OPTIONS: --enable-source-maps
+          PIKKU_TEST_MYSQL_URL: mysql://root:password@127.0.0.1:3306/mysql
         run: |
           : > unit-test-failures.txt
           while IFS= read -r script; do
