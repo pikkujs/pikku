@@ -532,7 +532,6 @@
     "wrapDEK"
   ],
   "./hmac": [
-    "WebhookSigningSecret",
     "hmacDigest",
     "hmacSha256Hex",
     "timingSafeStringEqual",
