@@ -32,6 +32,16 @@
       "types": "./dist/workspace-root.d.ts",
       "import": "./dist/workspace-root.js",
       "default": "./dist/workspace-root.js"
+    },
+    "./files": {
+      "types": "./dist/workspace-files.d.ts",
+      "import": "./dist/workspace-files.js",
+      "default": "./dist/workspace-files.js"
+    },
+    "./git": {
+      "types": "./dist/git.service.d.ts",
+      "import": "./dist/git.service.js",
+      "default": "./dist/git.service.js"
     }
   },
   "scripts": {

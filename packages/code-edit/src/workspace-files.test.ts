@@ -1,0 +1,64 @@
+import assert from 'node:assert'
+import { mkdtemp, mkdir, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, test } from 'node:test'
+import {
+  WorkspaceFileNotFoundError,
+  WorkspaceFilesService,
+  WorkspacePathError,
+} from './workspace-files.js'
+
+const workspace = async (): Promise<string> => {
+  const root = await mkdtemp(join(tmpdir(), 'pikku-files-'))
+  await mkdir(join(root, 'src/lib'), { recursive: true })
+  await mkdir(join(root, 'node_modules/x'), { recursive: true })
+  await writeFile(join(root, 'README.md'), '# hi\n')
+  await writeFile(join(root, 'src/index.ts'), 'export {}\n')
+  await writeFile(join(root, 'src/blob.bin'), Buffer.from([1, 0, 2]))
+  return root
+}
+
+describe('WorkspaceFilesService', () => {
+  test('lists directories first and hides ignored names', async () => {
+    const files = new WorkspaceFilesService(await workspace())
+    assert.deepStrictEqual(await files.list('/'), [
+      { name: 'src', path: 'src', type: 'directory' },
+      { name: 'README.md', path: 'README.md', type: 'file' },
+    ])
+    assert.deepStrictEqual(
+      (await files.list('src')).map((e) => e.path),
+      ['src/lib', 'src/blob.bin', 'src/index.ts']
+    )
+  })
+
+  test('a directory that does not exist yet lists as empty', async () => {
+    const files = new WorkspaceFilesService(await workspace())
+    assert.deepStrictEqual(await files.list('artifacts'), [])
+  })
+
+  test('reads text, flags binary and truncates large files', async () => {
+    const root = await workspace()
+    const files = new WorkspaceFilesService(root, { maxFileBytes: 3 })
+    const text = await files.read('/README.md')
+    assert.strictEqual(text.content, '# h')
+    assert.strictEqual(text.truncated, true)
+    const binary = await files.read('src/blob.bin')
+    assert.strictEqual(binary.binary, true)
+    assert.strictEqual(binary.content, '')
+    await assert.rejects(files.read('src'), WorkspaceFileNotFoundError)
+    await assert.rejects(files.read('nope.ts'), WorkspaceFileNotFoundError)
+  })
+
+  test('rejects paths that leave the workspace', async () => {
+    const root = await workspace()
+    const outside = await mkdtemp(join(tmpdir(), 'pikku-outside-'))
+    await writeFile(join(outside, 'secret'), 'x')
+    await symlink(outside, join(root, 'link'))
+    const files = new WorkspaceFilesService(root)
+    await assert.rejects(files.read('../../etc/passwd'), WorkspacePathError)
+    await assert.rejects(files.list('src/../..'), WorkspacePathError)
+    await assert.rejects(files.read('link/secret'), WorkspacePathError)
+    await assert.rejects(files.list('.git'), WorkspacePathError)
+  })
+})

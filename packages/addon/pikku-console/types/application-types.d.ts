@@ -14,6 +14,8 @@ import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { DesignService } from '../src/services/design.service.js'
 import type { I18nService } from '@pikku/code-edit/i18n'
+import type { WorkspaceFilesService } from '@pikku/code-edit/files'
+import type { GitService } from '@pikku/code-edit/git'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
@@ -38,6 +40,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   knowledgeService: KnowledgeService | null
   designService: DesignService | null
   i18nService: I18nService | null
+  workspaceFilesService: WorkspaceFilesService | null
+  gitService: GitService | null
   /**
    * Past scenario runs and what they recorded. Declared as the interface rather
    * than the on-disk implementation: a hosted console keeps the same runs in a

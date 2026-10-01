@@ -144,6 +144,23 @@ defineScope({
               write: { description: 'Edit, add and remove locales' },
             },
           },
+          files: {
+            description: 'The project files on disk',
+            scopes: {
+              read: { description: 'Browse and read project files' },
+            },
+          },
+          git: {
+            description: 'The project git repository',
+            scopes: {
+              read: { description: 'Read status, history and diffs' },
+              write: { description: 'Commit chosen files' },
+              sync: {
+                description:
+                  'Pull from and push to the remote with your own git credentials',
+              },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {
