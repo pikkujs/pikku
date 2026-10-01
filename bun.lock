@@ -534,7 +534,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.133",
+      "version": "0.12.134",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -1610,13 +1610,13 @@
       "version": "0.0.0",
       "devDependencies": {
         "@pikku/cli": "^0.12.177",
-        "@pikku/core": "^0.12.133",
+        "@pikku/core": "^0.12.134",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.133",
+        "@pikku/core": "^0.12.134",
         "zod": "^4",
       },
     },
