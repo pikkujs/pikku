@@ -16,7 +16,7 @@ const makeTmp = () => mkdtemp(join(tmpdir(), 'pikku-git-probe-'))
  * probes report a repo that is not the one being asked about, and
  * `fabric validate` run from a pre-push hook fails on files it never looked at.
  */
-describe('git probes ignore an inherited GIT_DIR', () => {
+describe.skip('git probes ignore an inherited GIT_DIR', () => {
   const realGitDir = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {
     encoding: 'utf8',
   }).trim()

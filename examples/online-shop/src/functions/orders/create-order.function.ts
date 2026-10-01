@@ -28,7 +28,7 @@ export const createOrder = pikkuFunc({
   input: CreateOrderInput,
   output: CreateOrderOutput,
   func: async (
-    { kysely, queueService, audit },
+    { kysely, queueService, audit, analytics },
     { basketId, shippingAddress, cardToken },
     { session, rpc }
   ) => {
@@ -149,6 +149,13 @@ export const createOrder = pikkuFunc({
         metadata: { orderId, userId },
       })
       // @snippet end auditDispatch
+      // @snippet start checkoutCompleted
+      await analytics.record({
+        name: 'checkout_completed',
+        amount: totalCents / 100,
+        currency: 'GBP',
+      })
+      // @snippet end checkoutCompleted
     }
 
     return { orderId, status: orderStatus, totalCents }

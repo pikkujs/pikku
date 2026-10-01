@@ -32,6 +32,8 @@ export interface AnonymousAnalyticsIdentityOptions {
  * browser script needs it, and a cookie scripts cannot touch is both harder to
  * misuse and not subject to the seven-day cap browsers place on script-set
  * ones. An app that wants a vendor SDK to read it must opt out deliberately.
+ *
+ * @example snippet: analyticsIdentity
  */
 export const anonymousAnalyticsIdentity = (
   options: AnonymousAnalyticsIdentityOptions = {}

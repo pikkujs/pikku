@@ -8,6 +8,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
  * and saying so here fails at the declaration rather than in generated code.
  */
 export type AnalyticsEventPropsSchema = StandardSchemaV1 & {
+  /** The object schema's fields, which the CLI reads to list an event's props. */
   shape: Record<string, unknown>
 }
 
@@ -24,6 +25,8 @@ export type AnalyticsEventDefinitions = Record<
  * It must stay an exported const — the schema pipeline reads the value by name.
  * It registers nothing at runtime: where events go is an `AnalyticsService` on
  * singleton services.
+ *
+ * @example snippet: analyticsEvents
  */
 export const defineAnalyticsEvents = <
   const Events extends AnalyticsEventDefinitions,

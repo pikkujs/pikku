@@ -1219,6 +1219,9 @@ const _getPikkuCLIConfig = async (
     if (!result.flagsFile) {
       result.flagsFile = join(scopesDir, 'pikku-flags.gen.ts')
     }
+    if (!result.flagsManifestFile) {
+      result.flagsManifestFile = join(scopesDir, 'pikku-flags-manifest.gen.ts')
+    }
     if (!result.flagsMetaJsonFile) {
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }

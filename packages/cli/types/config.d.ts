@@ -284,8 +284,11 @@ export interface PikkuCLICoreOutputFiles {
   // System roles metadata JSON
   rolesMetaJsonFile: string
 
-  // Feature flags (FeatureFlagName union + declared flag set)
+  // Feature flags (FeatureFlagName union)
   flagsFile: string
+
+  // Feature flags manifest (declared flag set, meta, fallback) — imported by path, not through the leaf
+  flagsManifestFile: string
 
   // Feature flags metadata JSON
   flagsMetaJsonFile: string

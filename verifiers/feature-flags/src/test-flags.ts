@@ -26,10 +26,10 @@ import { RemoteFlagSource } from './remote-source.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 import type { FeatureFlagName } from '#pikku/scopes'
 import {
-  FEATURE_FLAGS,
-  FEATURE_FLAGS_META,
-  FEATURE_FLAGS_FALLBACK,
-} from '#pikku/scopes'
+  declaredFeatureFlags,
+  featureFlagsMeta,
+  featureFlagsFallback,
+} from '#pikku/scopes/pikku-flags-manifest.gen.js'
 
 // ============================================================================
 // Compile-time assertions — an undeclared flag must not type-check
@@ -68,30 +68,30 @@ void ('nightlyReindex' satisfies FeatureFlagName)
 // ============================================================================
 
 assert.deepEqual(
-  FEATURE_FLAGS.map((flag) => flag.name).sort(),
+  declaredFeatureFlags.map((flag) => flag.name).sort(),
   ['nightlyReindex', 'sandboxes'],
   'every declared flag must survive codegen'
 )
 
 assert.equal(
-  FEATURE_FLAGS_META['sandboxes']!.description,
+  featureFlagsMeta['sandboxes']!.description,
   'The sandbox workspace',
   'descriptions must survive codegen'
 )
 assert.deepEqual(
-  FEATURE_FLAGS_META['sandboxes']!.anyOf,
+  featureFlagsMeta['sandboxes']!.anyOf,
   ['sandboxes:read', 'sandboxes:admin'],
   'anyOf must survive codegen'
 )
 assert.equal(
-  FEATURE_FLAGS_META['nightlyReindex']!.anyOf,
+  featureFlagsMeta['nightlyReindex']!.anyOf,
   undefined,
   'a flag with no capability constraint must not gain one'
 )
 
 // The compiled fallback is every declared flag on: a store that cannot be read
 // must not take the product down with it.
-assert.deepEqual(FEATURE_FLAGS_FALLBACK['sandboxes'], {
+assert.deepEqual(featureFlagsFallback['sandboxes'], {
   enabled: true,
   rolloutPercent: null,
   overrides: {},
@@ -117,7 +117,7 @@ const invoke = (
 
 const reader = { userId: 'u1', orgId: 'acme', scopes: ['sandboxes:read'] }
 
-await featureFlags.syncFlags(FEATURE_FLAGS)
+await featureFlags.syncFlags(declaredFeatureFlags)
 
 // A newly declared flag registers off — a dark launch, not a deploy that ships
 // the feature to everyone the moment the declaration lands.
@@ -228,7 +228,7 @@ assert.deepEqual(
 // ============================================================================
 
 const snapshot = await featureFlags.snapshot()
-const anyOf = FEATURE_FLAGS_META['sandboxes']!.anyOf
+const anyOf = featureFlagsMeta['sandboxes']!.anyOf
 
 // Availability and capability are independent, and `show` is the AND.
 assert.deepEqual(resolveFlagForClient('sandboxes', anyOf, reader, snapshot), {
@@ -251,12 +251,16 @@ assert.deepEqual(
 // against one snapshot. Bare booleans — a client that could tell `available`
 // from `capable` would be reading the roadmap.
 assert.deepEqual(
-  resolveFlagsForClient(FEATURE_FLAGS, reader, snapshot),
+  resolveFlagsForClient(declaredFeatureFlags, reader, snapshot),
   { sandboxes: true, nightlyReindex: true },
   'one call resolves the whole declared set for a caller'
 )
 assert.deepEqual(
-  resolveFlagsForClient(FEATURE_FLAGS, { userId: 'u2', scopes: [] }, snapshot),
+  resolveFlagsForClient(
+    declaredFeatureFlags,
+    { userId: 'u2', scopes: [] },
+    snapshot
+  ),
   { sandboxes: false, nightlyReindex: true },
   'an uncapable caller gets false, not an absent key'
 )
@@ -328,7 +332,7 @@ await featureFlags.setRollout('sandboxes', null)
 await featureFlags.setEnabled('nightlyReindex', false)
 await featureFlags.setRollout('sandboxes', 25)
 await featureFlags.setOverride('sandboxes', { organizationId: 'acme' }, true)
-await featureFlags.syncFlags(FEATURE_FLAGS)
+await featureFlags.syncFlags(declaredFeatureFlags)
 
 const afterResync = await featureFlags.listFlags()
 assert.equal(
@@ -350,7 +354,7 @@ assert.equal(
 // Removing a declaration marks the row; it does not switch a feature off on
 // deploy. Pruning is the only removal.
 await featureFlags.syncFlags(
-  FEATURE_FLAGS.filter((flag) => flag.name !== 'nightlyReindex')
+  declaredFeatureFlags.filter((flag) => flag.name !== 'nightlyReindex')
 )
 assert.deepEqual(await featureFlags.findStaleFlags(), ['nightlyReindex'])
 assert.equal(
@@ -371,7 +375,10 @@ assert.equal(
 // A read-only source — what a third-party provider implements
 // ============================================================================
 
-const remote = new RemoteFlagSource({ ttlMs: 0, declared: FEATURE_FLAGS })
+const remote = new RemoteFlagSource({
+  ttlMs: 0,
+  declared: declaredFeatureFlags,
+})
 const remoteServices = { ...singletonServices, featureFlags: remote }
 
 const invokeRemote = (
@@ -422,7 +429,10 @@ await assert.rejects(
 // Only a cold start with no read to fall back on reaches the compiled
 // declaration, where every flag is on: there is nothing better to say, and
 // taking the product down is worse than shipping it.
-const coldRemote = new RemoteFlagSource({ ttlMs: 0, declared: FEATURE_FLAGS })
+const coldRemote = new RemoteFlagSource({
+  ttlMs: 0,
+  declared: declaredFeatureFlags,
+})
 coldRemote.failing = true
 assert.equal(
   await runPikkuFunc('rpc', 'openSandbox', 'openSandbox', {

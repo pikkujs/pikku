@@ -2,7 +2,7 @@ import { applyPikkuSchemas, scopeSchema } from '@pikku/kysely'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
-import { FEATURE_FLAGS } from '#pikku/scopes/pikku-flags.gen.js'
+import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
 import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
 import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
 
@@ -84,7 +84,7 @@ export const seedScopes = async (services: SingletonServices) => {
   // Additive on the same terms as the two syncs above, and run beside them for
   // the same reason: the declared vocabulary is registered once the store's
   // tables exist, and nothing an operator set is touched.
-  await featureFlags.syncFlags(FEATURE_FLAGS)
+  await featureFlags.syncFlags(declaredFeatureFlags)
 
   // A synced flag starts off, so a feature ships dark. Two of the three are
   // switched on here to give the suite a working feature to contrast against;

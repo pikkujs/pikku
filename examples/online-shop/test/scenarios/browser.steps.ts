@@ -468,8 +468,8 @@ export const PostsToInput = z.object({
    * Highest status treated as success.
    *
    * Defaulted rather than optional because the first version of this step
-   * returned the status and asserted nothing — so a 403 from the analytics
-   * origin lock passed exactly like a 204, and the step could not fail.
+   * returned the status and asserted nothing — so a rejection passed exactly
+   * like a 204, and the step could not fail.
    */
   maxStatus: z.number().default(299),
   /**
@@ -501,9 +501,8 @@ export const PostsToOutput = z.object({
  * could reach them, would weaken exactly the boundary they demonstrate.
  *
  * Issued from the browser context rather than from Node so the request carries
- * the real session cookie and the real `Origin` header. The analytics ingest
- * rejects a request without one, and a test that cannot produce a correct
- * Origin cannot prove the ingest works.
+ * the real session cookie and the real `Origin` header — which is what makes
+ * it the same request the app itself would send.
  */
 export const postsTo = pikkuScenarioStep({
   name: 'postsTo',

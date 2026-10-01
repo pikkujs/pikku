@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url'
 import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
-import { createScenarioRunner, type ScenarioSurface } from '#pikku/scenario'
+import type { ScenarioSurface } from '#pikku/scenario'
+import { createScenarioRunner } from '@pikku/core/scenario'
 import type { ScenarioPersona } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 

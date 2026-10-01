@@ -1,5 +1,6 @@
 import { defineHTTPRoutes, wireHTTP, wireHTTPRoutes } from '#pikku/http'
-import { addHTTPMiddleware } from '#pikku/middleware'
+import { addHTTPMiddleware, requireOrigin } from '#pikku/middleware'
+import { allowedOrigins } from '../lib/cors-origins.js'
 import { startExport } from './shop.queue.js'
 import { conditionalReport } from './shop.cron.js'
 import { listCategories } from '../functions/categories/list-categories.function.js'
@@ -65,7 +66,18 @@ export const shopRoutes = defineHTTPRoutes({
 
     // Basket (sessionless — works for guests too)
     getBasket: { method: 'get', route: '/basket', func: getBasket },
-    addToBasket: { method: 'post', route: '/basket/items', func: addToBasket },
+    // @snippet start requireOrigin
+    addToBasket: {
+      method: 'post',
+      route: '/basket/items',
+      func: addToBasket,
+      middleware: [
+        requireOrigin({
+          origins: ({ variables }) => allowedOrigins(variables),
+        }),
+      ],
+    },
+    // @snippet end requireOrigin
     removeFromBasket: {
       method: 'delete',
       route: '/basket/items/:itemId',

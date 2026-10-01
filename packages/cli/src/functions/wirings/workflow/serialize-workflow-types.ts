@@ -195,7 +195,10 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   }
 }
 
-type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
+type NextConfig<NodeIds extends string> =
+  | NodeIds
+  | NodeIds[]
+  | Record<string, NodeIds | NodeIds[]>
 
 /**
  * Declares a workflow as an explicit node graph, for a genuine cyclic

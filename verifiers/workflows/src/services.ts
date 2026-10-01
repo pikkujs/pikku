@@ -6,7 +6,6 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 /**
@@ -14,7 +13,7 @@ import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
  * It's important to use the types here, as the pikku CLI uses them to improve the development experience!
  */
 export const createSingletonServices = pikkuServices(
-  async (config, existingServices): Promise<RequiredSingletonServices> => {
+  async (config, existingServices) => {
     const variables = existingServices?.variables || new LocalVariablesService()
     const secrets =
       existingServices?.secrets || new LocalSecretService(variables)

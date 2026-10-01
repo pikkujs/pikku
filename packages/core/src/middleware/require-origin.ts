@@ -40,6 +40,8 @@ export const isAllowedOrigin = (
  * before the function body. It stops another site's page from posting to an unauthed
  * route — it is not flood control, because `Origin` is trusted from nobody but a browser.
  * A missing `Origin` is rejected too: a real browser sets one on a cross-origin-capable POST.
+ *
+ * @example snippet: requireOrigin
  */
 export const requireOrigin = pikkuMiddlewareFactory<{
   /** Extra allowed origins beyond the request's own host, or a resolver for them. */

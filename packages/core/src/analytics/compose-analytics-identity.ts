@@ -16,6 +16,8 @@ type Resolved = Pick<AnalyticsIdentity, 'vendorIds' | 'consent'>
  *
  * A later resolver wins a key it sets, so a minter's freshly created id
  * replaces the absent one the cookie reader could not find.
+ *
+ * @example snippet: analyticsIdentity
  */
 export const composeAnalyticsIdentity = (
   ...resolvers: AnalyticsIdentityResolver[]

@@ -97,7 +97,16 @@ const coreImports = (file: string) => {
  * distinct surface from wiring, so they reach the app through their own
  * sub-entry rather than crowding the main hub.
  */
-const scenarioSubpaths = new Set(['@pikku/core/scenario', '@pikku/core/persona'])
+const scenarioSubpaths = new Set([
+  '@pikku/core/scenario',
+  '@pikku/core/persona',
+])
+
+/**
+ * Names the scenario leaf no longer carries, because only the framework calls
+ * them — a verifier driving the engine directly imports them from core.
+ */
+const frameworkOnlyScenarioNames = new Set(['createScenarioRunner'])
 
 /**
  * A relative path into the generated scenario barrel reaches the same file the
@@ -139,6 +148,9 @@ describe('the #pikku alias is the app surface', () => {
     for (const file of appSourceFiles()) {
       for (const { specifier, line, names } of coreImports(file)) {
         if (!scenarioSubpaths.has(specifier)) continue
+        if (names.every((name) => frameworkOnlyScenarioNames.has(name))) {
+          continue
+        }
         offenders.push(
           `${relative(repoRoot, file)}:${line}  ${names.join(', ')}  from '${specifier}'`
         )

@@ -24,6 +24,10 @@ describe('serializeScenarioTypes', () => {
     )
   })
 
+  test('leaves the runner constructor to the harness that builds one', () => {
+    assert.doesNotMatch(emit(), /createScenarioRunner/)
+  })
+
   describe('scenario steps', () => {
     test('emits the pikkuScenarioStep factory', () => {
       assert.match(emit(), /export function pikkuScenarioStep/)

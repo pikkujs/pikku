@@ -39,7 +39,8 @@
     "scenarios": true,
     "virtualUser": true,
     "events": true,
-    "webhook": true
+    "webhook": true,
+    "analytics": true
   },
   "scenarios": {
     "emailDomain": "actors.local",

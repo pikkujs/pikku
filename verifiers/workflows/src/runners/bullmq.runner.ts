@@ -10,6 +10,7 @@
 import { RedisLeaseService, RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { pikkuState } from '@pikku/core/state'
+import { rpcService } from '@pikku/core/rpc'
 
 import { createSingletonServices } from '../services.js'
 import { createConfig } from '../config.js'
@@ -68,6 +69,12 @@ async function main(): Promise<void> {
     duration: number
   }> = []
 
+  const rpc = rpcService.getContextRPCService(
+    singletonServices as any,
+    {},
+    false
+  )
+
   for (const workflowName of workflowNames) {
     // For graph workflows, look up test data using the DSL workflow name
     // e.g., graphAutoRestockWorkflow -> autoRestockWorkflow
@@ -96,7 +103,7 @@ async function main(): Promise<void> {
         workflowName,
         testData,
         { type: 'test' },
-        null
+        rpc
       )
 
       let run = await workflowService.getRun(runId)

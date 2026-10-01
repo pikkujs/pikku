@@ -17,18 +17,6 @@ import type { CoreFeatureFlags } from './flag.types.js'
  * the same reason: a mid-deploy revocation is not something a code edit should
  * be able to cause.
  *
- * @example
- * ```typescript
- * defineFeatureFlags({
- *   takeInBike: {
- *     description: 'Book a bike in at the counter',
- *     anyOf: ['bikes:intake'],
- *   },
- *   aiAssistant: {
- *     description: 'The assistant panel',
- *     // no anyOf — the switch is the whole answer
- *   },
- * })
- * ```
+ * @example snippet: defineFeatureFlags
  */
 export const defineFeatureFlags = (_config: CoreFeatureFlags): void => {}

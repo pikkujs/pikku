@@ -2,7 +2,10 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 import { mintCookie, randomDigits } from './mint-cookie.js'
 
-const wireWith = (cookies: Record<string, string> = {}, withResponse = true) => {
+const wireWith = (
+  cookies: Record<string, string> = {},
+  withResponse = true
+) => {
   const written: Array<{ name: string; value: string }> = []
   const wire = {
     http: {
@@ -27,14 +30,20 @@ describe('mintCookie', () => {
   test('returns the existing cookie without writing one', () => {
     const { wire, written } = wireWith({ pikku_aid: 'already' })
 
-    assert.equal(mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'), 'already')
+    assert.equal(
+      mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'),
+      'already'
+    )
     assert.equal(written.length, 0)
   })
 
   test('mints and sets one when absent', () => {
     const { wire, written } = wireWith()
 
-    assert.equal(mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'), 'fresh')
+    assert.equal(
+      mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'),
+      'fresh'
+    )
     assert.deepEqual(written, [{ name: 'pikku_aid', value: 'fresh' }])
   })
 
@@ -54,7 +63,10 @@ describe('mintCookie', () => {
   test('writes nothing where there is no response to write it on', () => {
     const { wire } = wireWith({}, false)
 
-    assert.equal(mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'), undefined)
+    assert.equal(
+      mintCookie(wire, 'pikku_aid', { cookie }, () => 'fresh'),
+      undefined
+    )
   })
 
   test('refuses to store before consent, which is the act consent governs', () => {
@@ -117,7 +129,12 @@ describe('mintCookie', () => {
     const { wire } = wireWith({ _fbp: 'already' })
 
     assert.equal(
-      mintCookie(wire, '_fbp', { cookie, requires: ['ads'], consent: {} }, () => 'fresh'),
+      mintCookie(
+        wire,
+        '_fbp',
+        { cookie, requires: ['ads'], consent: {} },
+        () => 'fresh'
+      ),
       'already'
     )
   })

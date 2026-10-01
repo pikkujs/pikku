@@ -39,7 +39,7 @@ describe('definition types', () => {
   test('the analytics leaf carries defineAnalyticsEvents', () => {
     assert.match(
       serializeAnalyticsDefinitionTypes(),
-      /export \{ defineAnalyticsEvents,/
+      /export \{\s*defineAnalyticsEvents,/
     )
   })
 
@@ -56,12 +56,21 @@ describe('definition types', () => {
       'AnalyticsIdentity',
       'AnalyticsClientContext',
       'AnalyticsLog',
+      'AnalyticsSink',
       'LoggerAnalyticsService',
+      'fanOutAnalytics',
     ]) {
       assert.ok(
         analytics.includes(name),
         `${name} is not reachable through #pikku/analytics`
       )
     }
+  })
+
+  test('the analytics leaf leaves out what only the framework calls', () => {
+    assert.doesNotMatch(
+      serializeAnalyticsDefinitionTypes(),
+      /flattenAnalyticsEvent/
+    )
   })
 })

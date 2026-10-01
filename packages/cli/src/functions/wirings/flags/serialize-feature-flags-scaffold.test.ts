@@ -4,6 +4,7 @@ import ts from 'typescript'
 import { serializeFeatureFlagsScaffold } from './serialize-feature-flags-scaffold.js'
 
 const leaf = (name: string) => `#pikku/${name}`
+const manifestPath = '#pikku/scopes/pikku-flags-manifest.gen.js'
 
 const parseErrors = (source: string) => {
   const file = ts.createSourceFile(
@@ -18,14 +19,22 @@ const parseErrors = (source: string) => {
 
 describe('serializeFeatureFlagsScaffold', () => {
   test('emits syntactically valid TypeScript', () => {
-    assert.deepEqual(parseErrors(serializeFeatureFlagsScaffold(leaf)), [])
+    assert.deepEqual(
+      parseErrors(serializeFeatureFlagsScaffold(leaf, manifestPath)),
+      []
+    )
   })
 
   test('types the response with the generated union', () => {
-    const source = serializeFeatureFlagsScaffold(leaf)
-    assert.match(source, /from '#pikku\/scopes'/)
-    assert.match(source, /FEATURE_FLAGS,/)
-    assert.match(source, /type FeatureFlagName,/)
+    const source = serializeFeatureFlagsScaffold(leaf, manifestPath)
+    assert.match(
+      source,
+      /import type \{ FeatureFlagName \} from '#pikku\/scopes'/
+    )
+    assert.match(
+      source,
+      /import \{\n  declaredFeatureFlags,\n  featureFlagsFallback,\n\} from '#pikku\/scopes\/pikku-flags-manifest\.gen\.js'/
+    )
     assert.match(source, /Record<FeatureFlagName, boolean>/)
   })
 
@@ -33,13 +42,13 @@ describe('serializeFeatureFlagsScaffold', () => {
     // Returning a bare `true` for everything here would hand a scope-gated
     // flag to a caller who cannot hold it — the fallback fails open on the
     // switch, but `anyOf` is still read off the session.
-    const source = serializeFeatureFlagsScaffold(leaf)
-    assert.match(source, /: FEATURE_FLAGS_FALLBACK/)
+    const source = serializeFeatureFlagsScaffold(leaf, manifestPath)
+    assert.match(source, /: featureFlagsFallback/)
     assert.doesNotMatch(source, /\[flag\.name, true\]/)
   })
 
   test('reads the session off the wire, never off the body', () => {
-    const source = serializeFeatureFlagsScaffold(leaf)
+    const source = serializeFeatureFlagsScaffold(leaf, manifestPath)
     // A caller who could name a subject would be asking what someone else
     // sees, and overrides are keyed on exactly that.
     assert.match(source, /_data, \{ session \}/)
@@ -49,16 +58,19 @@ describe('serializeFeatureFlagsScaffold', () => {
   test('answers anonymously', () => {
     // A signed-out visitor still renders a page. `capable` is false for
     // anything scope-gated, so the map is honest without a session.
-    assert.match(serializeFeatureFlagsScaffold(leaf), /auth: false/)
+    assert.match(
+      serializeFeatureFlagsScaffold(leaf, manifestPath),
+      /auth: false/
+    )
   })
 
   test('honours the global HTTP prefix', () => {
     assert.match(
-      serializeFeatureFlagsScaffold(leaf, '/api'),
+      serializeFeatureFlagsScaffold(leaf, manifestPath, '/api'),
       /route: '\/api\/feature-flags'/
     )
     assert.match(
-      serializeFeatureFlagsScaffold(leaf),
+      serializeFeatureFlagsScaffold(leaf, manifestPath),
       /route: '\/feature-flags'/
     )
   })
