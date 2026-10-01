@@ -18,7 +18,7 @@ const setSessionFromHeader: CorePikkuMiddleware = async (
   // fails closed without one, so its success path would be untestable.
   const orgId = wire.http?.request?.header('x-org-id')
   if (userId || orgId) {
-    wire.setSession?.({
+    await wire.setSession?.({
       ...(userId ? { userId } : {}),
       ...(orgId ? { orgId } : {}),
     })

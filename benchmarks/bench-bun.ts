@@ -58,7 +58,7 @@ async function main() {
     console.log('')
   }
 
-  server.stop()
+  await server.stop()
   process.exit(0)
 }
 

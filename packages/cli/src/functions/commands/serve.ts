@@ -231,7 +231,7 @@ export const serve = pikkuSessionlessFunc<
 
     logger.info(serverReadyLine(hostname, boundPort))
 
-    process.once('SIGINT', async () => {
+    const onSigint = async () => {
       logger.info('Stopping server...')
       try {
         await lifecycle?.beforeStop?.(resolvedServices)
@@ -241,7 +241,10 @@ export const serve = pikkuSessionlessFunc<
       } finally {
         process.exit(0)
       }
-    })
+    }
+    // Fire-and-forget signal handler: the finally block always exits the process,
+    // so there is no caller to propagate a rejection to.
+    process.once('SIGINT', () => void onSigint())
 
     await new Promise(() => {})
   },

@@ -330,13 +330,13 @@ async function main(): Promise<void> {
       sentToClient.push(message)
     })
 
-    channelHandler!.open()
+    await channelHandler!.open()
 
     await channelHandler!.message(
       JSON.stringify({ senderId: 'ws-user', text: 'hello via ws' })
     )
 
-    channelHandler!.close()
+    await channelHandler!.close()
 
     // The gateway handler returns { text: 'echo: hello via ws' }
     // which gets sent via channel.send() by the websocket gateway handler
@@ -367,14 +367,14 @@ async function main(): Promise<void> {
         sentToClient.push(message)
       })
 
-      channelHandler!.open()
+      await channelHandler!.open()
 
       // Send data without 'text' — adapter.parse() returns null
       await channelHandler!.message(
         JSON.stringify({ type: 'typing_indicator' })
       )
 
-      channelHandler!.close()
+      await channelHandler!.close()
 
       // No auto-response should be sent for ignored events
       // (the channel may still send an empty result, but adapter.send should not be called)

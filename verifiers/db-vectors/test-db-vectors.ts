@@ -252,15 +252,19 @@ async function serve(
       clearTimeout(timeout)
       reject(new Error(`Server exited early (code ${code}):\n${tail(output)}`))
     })
-    const interval = setInterval(async () => {
-      try {
-        await fetch(url)
-        clearInterval(interval)
-        clearTimeout(timeout)
-        resolve()
-      } catch {
-        /* not listening yet */
-      }
+    const interval = setInterval(() => {
+      ;(async () => {
+        try {
+          await fetch(url)
+          clearInterval(interval)
+          clearTimeout(timeout)
+          resolve()
+        } catch {
+          /* not listening yet */
+        }
+      })().catch((error) => {
+        console.error(error)
+      })
     }, 200)
   })
 

@@ -28,9 +28,9 @@ class MockAgentRunner implements AgentRunnerService {
     _params: AgentRunnerParams,
     channel: AgentStreamChannel
   ): Promise<AgentStepResult> {
-    channel.send({ type: 'text-delta', text: 'Hello' })
-    channel.send({ type: 'text-delta', text: ' world' })
-    channel.send({
+    await channel.send({ type: 'text-delta', text: 'Hello' })
+    await channel.send({ type: 'text-delta', text: ' world' })
+    await channel.send({
       type: 'usage',
       tokens: { input: 10, output: 5 },
       model: 'test',

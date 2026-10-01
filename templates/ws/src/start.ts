@@ -36,13 +36,18 @@ async function main(): Promise<void> {
       console.log(`Server running at http://${hostname}:${port}/`)
     })
 
-    process.removeAllListeners('SIGINT').on('SIGINT', async () => {
-      console.log('Stopping server...')
-      await stopSingletonServices()
-      wss.close()
-      server.close()
-      console.log('Server stopped')
-      process.exit(0)
+    process.removeAllListeners('SIGINT').on('SIGINT', () => {
+      ;(async () => {
+        console.log('Stopping server...')
+        await stopSingletonServices()
+        wss.close()
+        server.close()
+        console.log('Server stopped')
+        process.exit(0)
+      })().catch((error) => {
+        console.error(error)
+        process.exit(1)
+      })
     })
   } catch (e: any) {
     console.error(e.toString())
@@ -50,4 +55,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

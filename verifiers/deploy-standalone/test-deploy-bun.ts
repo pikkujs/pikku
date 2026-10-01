@@ -235,15 +235,19 @@ async function startBinary(): Promise<void> {
     })
     // Readiness = the server is listening (any HTTP response), independent of
     // auth/DB so the probe doesn't hang when a request happens to 500.
-    const interval = setInterval(async () => {
-      try {
-        await fetch(`http://${clientHost}:${port}/todos`)
-        clearInterval(interval)
-        clearTimeout(timeout)
-        resolve()
-      } catch {
-        /* not listening yet */
-      }
+    const interval = setInterval(() => {
+      ;(async () => {
+        try {
+          await fetch(`http://${clientHost}:${port}/todos`)
+          clearInterval(interval)
+          clearTimeout(timeout)
+          resolve()
+        } catch {
+          /* not listening yet */
+        }
+      })().catch((error) => {
+        console.error(error)
+      })
     }, 200)
   })
 }

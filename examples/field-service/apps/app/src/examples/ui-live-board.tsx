@@ -29,7 +29,9 @@ export const LiveBoard = ({ companyId }: { companyId: string }) => {
     //~ return value verbatim. Forgetting it leaks a handler per mount, which is
     //~ how a board ends up refetching six times per event.
     return realtime.subscribe(`board:${companyId}`, () => {
-      queryClient.invalidateQueries({ queryKey: ['listJobs'] })
+      // Not awaited: the subscriber callback is synchronous. A failed refetch
+      // surfaces through the query's own error state, so nothing is lost.
+      void queryClient.invalidateQueries({ queryKey: ['listJobs'] })
     })
   }, [realtime, queryClient, companyId])
 

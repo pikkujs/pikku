@@ -51,4 +51,4 @@ async function runSSETest() {
   }, 20000)
 }
 
-runSSETest()
+await runSSETest()

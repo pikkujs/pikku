@@ -97,15 +97,19 @@ async function bootDev(): Promise<string> {
         )
       )
     })
-    const interval = setInterval(async () => {
-      try {
-        await fetch(`http://localhost:${PORT}/todos`)
-        clearInterval(interval)
-        clearTimeout(timeout)
-        resolve()
-      } catch {
-        /* not listening yet */
-      }
+    const interval = setInterval(() => {
+      ;(async () => {
+        try {
+          await fetch(`http://localhost:${PORT}/todos`)
+          clearInterval(interval)
+          clearTimeout(timeout)
+          resolve()
+        } catch {
+          /* not listening yet */
+        }
+      })().catch((error) => {
+        console.error(error)
+      })
     }, 300)
   })
 
