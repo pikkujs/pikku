@@ -10,6 +10,7 @@ import {
 } from 'node:path'
 import { blankComments } from '../../fabric/lib/blank-comments.js'
 import type { ValidateFinding } from './persona-checks.js'
+import { applyRuleSeverity } from './rule-severity.js'
 
 /**
  * Everything `pikku all` writes into the scaffold directory, keyed the way
@@ -350,12 +351,5 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   // Per-rule severity from `validate.rules`; 'off' drops the finding.
-  const rules = config.validate?.rules ?? {}
-  return findings.flatMap((f) => {
-    const level = rules[f.id]
-    if (level === 'off') return []
-    if (level === 'warn' || level === 'error')
-      return [{ ...f, severity: level }]
-    return [f]
-  })
+  return applyRuleSeverity(findings, config.validate?.rules)
 }
