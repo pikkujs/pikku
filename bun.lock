@@ -446,8 +446,15 @@
         "typescript": "^6.0.3",
       },
       "devDependencies": {
+        "@pikku/mantine": "workspace:^",
         "@types/node": "^24.13.3",
       },
+      "peerDependencies": {
+        "@pikku/mantine": "^0.12.16",
+      },
+      "optionalPeers": [
+        "@pikku/mantine",
+      ],
     },
     "packages/console": {
       "name": "@pikku/console",

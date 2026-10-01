@@ -85,4 +85,23 @@ describe('DesignService', () => {
     assert.match(source, /<Button variant="filled" size=\{3\} color="red">/)
     await assert.rejects(design.readJsxProps('../outside.tsx', 1, 0))
   })
+
+  test('serves component meta for the installed Mantine and the block library', async () => {
+    const root = await workspace()
+    await mkdir(join(root, 'apps/app/node_modules/@mantine/core'), { recursive: true })
+    await writeFile(
+      join(root, 'apps/app/node_modules/@mantine/core/package.json'),
+      JSON.stringify({ name: '@mantine/core', version: '9.4.1' })
+    )
+    const design = new DesignService(root)
+    const meta = await design.componentMeta('Button')
+    assert.strictEqual(meta.source, 'manifest')
+    assert.ok(meta.variantOptions.includes('filled'))
+    assert.ok((await design.mantineComponents()).components.includes('Stack'))
+    const { tags, blocks } = await design.listBlocks()
+    assert.ok(tags.length > 0 && blocks.length > 0)
+    const block = await design.getBlock(blocks[0]!.name)
+    assert.ok(Object.keys(block.files).length > 0)
+    await assert.rejects(design.getBlock('NoSuchBlock'))
+  })
 })

@@ -23,6 +23,11 @@
       "import": "./dist/theme/index.js",
       "default": "./dist/theme/index.js"
     },
+    "./mantine": {
+      "types": "./dist/mantine-catalog.d.ts",
+      "import": "./dist/mantine-catalog.js",
+      "default": "./dist/mantine-catalog.js"
+    },
     "./i18n": {
       "types": "./dist/i18n.service.d.ts",
       "import": "./dist/i18n.service.js",
@@ -55,8 +60,17 @@
   "dependencies": {
     "typescript": "^6.0.3"
   },
+  "peerDependencies": {
+    "@pikku/mantine": "^0.12.16"
+  },
+  "peerDependenciesMeta": {
+    "@pikku/mantine": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "@types/node": "^24.13.3"
+    "@types/node": "^24.13.3",
+    "@pikku/mantine": "workspace:^"
   },
   "engines": {
     "node": ">=24"

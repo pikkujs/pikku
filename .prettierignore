@@ -20,3 +20,9 @@ packages/core/api-report.md
 # recipe is a fragment prettier cannot even parse. Formatting them also rewrites the exact
 # text `pikku examples add` writes into a user's project.
 packages/cli/examples/
+
+# Generated Mantine catalogs (one large literal each), and the block sources they bundle,
+# which ship verbatim into apps.
+packages/frontend/mantine/src/component-meta/meta.gen.ts
+packages/frontend/mantine/src/blocks/blocks.gen.ts
+packages/frontend/mantine/blocks/

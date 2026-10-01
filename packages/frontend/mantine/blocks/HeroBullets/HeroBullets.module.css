@@ -1,0 +1,49 @@
+.inner {
+  display: flex;
+  justify-content: space-between;
+  padding-top: calc(var(--mantine-spacing-xl) * 4);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 4);
+}
+
+.content {
+  max-width: 30rem;
+  margin-right: calc(var(--mantine-spacing-xl) * 3);
+
+  @media (max-width: 62em) {
+    max-width: 100%;
+    margin-right: 0;
+  }
+}
+
+.title {
+  color: var(--mantine-color-text);
+  font-size: 2.75rem;
+  line-height: 1.2;
+  font-weight: 500;
+
+  @media (max-width: 36em) {
+    font-size: 1.75rem;
+  }
+}
+
+.control {
+  @media (max-width: 36em) {
+    flex: 1;
+  }
+}
+
+.image {
+  width: 23.5rem;
+  height: 22.25rem;
+
+  @media (max-width: 62em) {
+    display: none;
+  }
+}
+
+.highlight {
+  position: relative;
+  background-color: var(--mantine-primary-color-light);
+  border-radius: var(--mantine-radius-sm);
+  padding: 0.25rem 0.75rem;
+}

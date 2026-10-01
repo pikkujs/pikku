@@ -1,0 +1,10 @@
+.title {
+  font-weight: 500;
+}
+
+.subtitle {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  text-align: center;
+  margin-top: 0.3125rem;
+}

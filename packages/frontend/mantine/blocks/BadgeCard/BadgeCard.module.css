@@ -1,0 +1,22 @@
+.card {
+  background-color: var(--mantine-color-body);
+}
+
+.section {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding-left: var(--mantine-spacing-md);
+  padding-right: var(--mantine-spacing-md);
+  padding-bottom: var(--mantine-spacing-md);
+}
+
+.like {
+  color: var(--mantine-color-error);
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.label {
+  text-transform: uppercase;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+}

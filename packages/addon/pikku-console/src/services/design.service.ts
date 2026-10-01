@@ -10,6 +10,8 @@ import {
   type ThemeInput,
   type ThemeSpecPatch,
 } from '@pikku/code-edit/theme'
+import { MantineCatalog, MantineNotInstalledError } from '@pikku/code-edit/mantine'
+import type { ComponentMeta, MantineBlock, ResolvedMantineBlock } from '@pikku/code-edit/mantine'
 
 export type {
   ThemeEntry,
@@ -19,7 +21,15 @@ export type {
   ThemeInput,
 } from '@pikku/code-edit/theme'
 
+export type { ComponentMeta, MantineManifestProp } from '@pikku/code-edit/mantine'
+
 export type JsxPropValue = string | number | boolean
+
+export type BlockSummary = Pick<MantineBlock, 'name' | 'title' | 'description' | 'tags'>
+
+export type BlockDetail = BlockSummary &
+  Pick<MantineBlock, 'usage'> &
+  Pick<ResolvedMantineBlock, 'composes' | 'files' | 'i18nKeys' | 'npmDeps'>
 
 export type ThemePreset = {
   id: string
@@ -34,15 +44,52 @@ const toPikkuError = (error: unknown): never => {
     throw error.kind === 'missing' ? new NotFoundError(error.message) : new BadRequestError(error.message)
   }
   if (error instanceof Error && error.message.startsWith('No ')) throw new BadRequestError(error.message)
+  if (error instanceof MantineNotInstalledError) throw new NotFoundError(error.message)
   throw error
 }
 
 /** The project's theme package and literal JSX props in its source, for the console's Design page. */
 export class DesignService {
   private themes: ThemeWorkspace
+  private mantine: MantineCatalog
 
   constructor(private workspaceRoot: string) {
     this.themes = new ThemeWorkspace(workspaceRoot)
+    this.mantine = new MantineCatalog(workspaceRoot)
+  }
+
+  componentMeta(componentName: string): Promise<ComponentMeta> {
+    return this.mantine.componentMeta(componentName).catch(toPikkuError)
+  }
+
+  mantineComponents(): Promise<{ mantineVersion: string | null; components: string[] }> {
+    return this.mantine.componentNames().catch(toPikkuError)
+  }
+
+  async listBlocks(tag?: string): Promise<{ tags: Array<{ tag: string; count: number }>; blocks: BlockSummary[] }> {
+    const { blockTags, listBlocks } = await this.mantine.blocks().catch(toPikkuError)
+    return {
+      tags: blockTags(),
+      blocks: listBlocks(tag).map(({ name, title, description, tags }) => ({ name, title, description, tags })),
+    }
+  }
+
+  async getBlock(name: string): Promise<BlockDetail> {
+    const { resolveBlock } = await this.mantine.blocks().catch(toPikkuError)
+    const resolved = resolveBlock(name)
+    if (!resolved) throw new NotFoundError(`No block named ${name}`)
+    const { block, composes, files, i18nKeys, npmDeps } = resolved
+    return {
+      name: block.name,
+      title: block.title,
+      description: block.description,
+      tags: block.tags,
+      usage: block.usage,
+      composes,
+      files,
+      i18nKeys,
+      npmDeps,
+    }
   }
 
   listThemes() {

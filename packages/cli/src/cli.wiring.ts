@@ -108,6 +108,12 @@ import {
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
+import {
+  pikkuBlocksList,
+  pikkuBlocksShow,
+  pikkuComponentsList,
+  pikkuComponentsShow,
+} from './functions/commands/mantine-catalog.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -677,6 +683,41 @@ wireCLI({
             fontBody: { description: 'Body font, a Google Fonts family' },
             page: { description: 'Light-mode page colour, as hex' },
             ink: { description: 'Light-mode text colour, as hex' },
+          },
+        }),
+      },
+    },
+    components: {
+      description: "Mantine component props, variants and sizes for the app's installed Mantine",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuComponentsList,
+          description: 'List the Mantine components the bundled metadata covers',
+        }),
+        show: pikkuCLICommand({
+          func: pikkuComponentsShow,
+          description: "One component's props, variants, sizes and Styles API parts, with the active theme's custom variants",
+          parameters: '<name>',
+        }),
+      },
+    },
+    blocks: {
+      description: 'Ready-made, i18n-safe Mantine page sections to copy into an app',
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuBlocksList,
+          description: 'List the blocks and their tags',
+          options: {
+            tag: { description: 'Only blocks with this tag (e.g. headers, heroes, auth)', type: 'string' },
+          },
+        }),
+        show: pikkuCLICommand({
+          func: pikkuBlocksShow,
+          description:
+            'Print a block with every block it composes: its files, the i18n keys to add and any npm packages it needs',
+          parameters: '<name>',
+          options: {
+            out: { description: 'Write the files into this folder instead, skipping any that exist', type: 'string' },
           },
         }),
       },

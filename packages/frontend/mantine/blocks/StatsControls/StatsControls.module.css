@@ -1,0 +1,117 @@
+.root {
+  background-image: linear-gradient(
+    -60deg,
+    var(--mantine-primary-color-filled) 0%,
+    var(--mantine-primary-color-filled-hover) 100%
+  );
+  padding: var(--mantine-spacing-xl);
+  border-radius: var(--mantine-radius-md);
+  display: flex;
+}
+
+@media (max-width: 36em) {
+  .root {
+    flex-direction: column;
+  }
+}
+
+.icon {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: var(--mantine-spacing-lg);
+  color: var(--mantine-primary-color-filled);
+}
+
+.stat {
+  min-width: 6.125rem;
+  padding-top: var(--mantine-spacing-xl);
+  min-height: 8.75rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: var(--mantine-color-white);
+}
+
+.label {
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+  line-height: 1.2;
+}
+
+.value {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  color: var(--mantine-color-black);
+}
+
+.count {
+  color: var(--mantine-color-dimmed);
+}
+
+.day {
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: var(--mantine-color-white);
+  line-height: 1;
+  text-align: center;
+  margin-bottom: 0.3125rem;
+}
+
+.month {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-white);
+  line-height: 1;
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  margin-right: calc(var(--mantine-spacing-xl) * 2);
+}
+
+@media (max-width: 36em) {
+  .controls {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 0;
+    margin-bottom: var(--mantine-spacing-xl);
+  }
+}
+
+.date {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.control {
+  height: 1.75rem;
+  width: 100%;
+  color: var(--mantine-primary-color-light);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--mantine-radius-md);
+  transition: background-color 50ms ease;
+}
+
+.control:hover {
+  background-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
+}
+
+@media (max-width: 36em) {
+  .control {
+    height: 2.125rem;
+    width: 2.125rem;
+  }
+
+  .controlIcon {
+    transform: rotate(-90deg);
+  }
+}
