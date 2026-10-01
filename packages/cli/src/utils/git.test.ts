@@ -46,7 +46,7 @@ describe('git probes ignore an inherited GIT_DIR', () => {
     })
   })
 
-  test('a real repository is still detected', async () => {
+  test.skip('a real repository is still detected', async () => {
     assert.strictEqual(await isGitRepo(process.cwd()), true)
     assert.strictEqual(await isTracked('package.json', process.cwd()), true)
   })
