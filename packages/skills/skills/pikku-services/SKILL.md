@@ -79,6 +79,16 @@ service's paths and size limit; omitting it does not disable it.
   function enriches the event with the function id, wire type, trace id and user
   identity; an `insertInto('audit_log')` of your own gets none of that, and a
   write inside a transaction that later rolls back records nothing.
+- **Do not reach for `node:os` (`tmpdir()`, `homedir()`) or hand-roll `mkdtemp`
+  to get a scratch file.** `node:os` is missing from the Cloudflare Workers
+  runtime, so one import fails the whole worker at upload, even if the code path
+  never runs there. `TemporaryFileService` (`@pikku/core/services/temporary-file-service`)
+  is a **wire service**, not a singleton: build it in `pikkuWireServices` with
+  `new TemporaryFileService(singletonServices.logger, tempDir).createInstance()`
+  and return the `TemporaryFileInstance`, so each invocation owns its own files.
+  Use `writeFile(key, stream)`, `getTempFileAbsolutePath(key)` when a subprocess
+  needs a path, and `cleanup()` in a `finally`. Do not construct it in
+  `pikkuServices` and close over it in a singleton — pass the instance in per call.
 - **Do not log an unrevealed secret.** Every logger argument is `Safe<>`-guarded,
   so a `SecretValue` nested anywhere in the call collapses it to `never` and it
   stops compiling. That is deliberate — it would have printed `[secret]` anyway.
