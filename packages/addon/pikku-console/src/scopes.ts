@@ -136,6 +136,18 @@ defineScope({
               write: { description: 'Edit themes and component props' },
             },
           },
+          pages: {
+            description: "The frontends' pages, read from their route files",
+            scopes: {
+              read: {
+                description: 'List each page, its route file and params',
+              },
+              screenshot: {
+                description:
+                  'Open each page of a running frontend in a browser and photograph it',
+              },
+            },
+          },
           i18n: {
             description:
               'The message catalogs the frontends are translated with',

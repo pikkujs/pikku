@@ -114,6 +114,12 @@ import {
   pikkuComponentsList,
   pikkuComponentsShow,
 } from './functions/commands/mantine-catalog.js'
+import {
+  pagesList,
+  pagesScreenshot,
+  renderPagesList,
+  renderPagesScreenshot,
+} from './functions/commands/pages.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -662,6 +668,62 @@ wireCLI({
         }),
       },
     },
+    pages: {
+      description:
+        "The frontends' pages, read from their TanStack Router route files",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pagesList,
+          render: renderPagesList,
+          description: 'List every page: app, route path, route file and params',
+          options: {
+            app: {
+              description: 'Only this frontend, by its directory (e.g. apps/app)',
+              type: 'string',
+            },
+          },
+        }),
+        screenshot: pikkuCLICommand({
+          func: pagesScreenshot,
+          render: renderPagesScreenshot,
+          description:
+            "Photograph one frontend's pages on a running server, signed out or as a persona",
+          options: {
+            baseUrl: {
+              description: 'Where the frontend is served, e.g. http://localhost:7104',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+            out: {
+              description:
+                'Directory for the PNGs. Defaults to <outDir>/pages/screenshots/<app>',
+              type: 'string',
+            },
+            params: {
+              description:
+                'Values for route params, as name=value,name=value. $lang and $locale default to en',
+              type: 'string',
+            },
+            as: {
+              description: 'Sign in as this persona first, the way scenario actors do',
+              type: 'string',
+            },
+            environment: {
+              description:
+                'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+              type: 'string',
+            },
+            viewport: {
+              description: 'Capture the viewport only, not the whole page',
+              type: 'boolean',
+            },
+          },
+        }),
+      },
+    },
     theme: {
       description: "The app's Mantine themes, in packages/mantine-theme",
       subcommands: {
@@ -1169,7 +1231,7 @@ wireCLI({
           options: {
             routes: {
               description:
-                'Comma-separated app routes, to list the ones no scenario opens',
+                "Comma-separated app routes, to list the ones no scenario opens. Defaults to every frontend's TanStack file routes",
             },
           },
         }),

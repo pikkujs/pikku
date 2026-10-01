@@ -13,9 +13,11 @@ import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { DesignService } from '../src/services/design.service.js'
+import type { PageScreenshotService } from '../src/services/page-screenshot.service.js'
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { WorkspaceFilesService } from '@pikku/code-edit/files'
 import type { GitService } from '@pikku/code-edit/git'
+import type { PagesService } from '@pikku/code-edit/routes'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
@@ -42,6 +44,9 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   i18nService: I18nService | null
   workspaceFilesService: WorkspaceFilesService | null
   gitService: GitService | null
+  /** Every frontend's pages, read from its TanStack route files; null outside local development. */
+  pagesService: PagesService | null
+  pageScreenshotService: PageScreenshotService | null
   /**
    * Past scenario runs and what they recorded. Declared as the interface rather
    * than the on-disk implementation: a hosted console keeps the same runs in a

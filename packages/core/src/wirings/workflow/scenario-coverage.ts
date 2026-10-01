@@ -51,7 +51,7 @@ export interface ScenarioCoverage {
     covered: number
     uncovered: UncoveredMutation[]
   }
-  /** Paths a scenario opens; `unvisited` only when the caller knows the app's routes. */
+  /** Paths a scenario opens; `unvisited` only when the caller knows the app's routes, which may carry `$param` segments. */
   routes: {
     visited: string[]
     total: number | null
@@ -71,7 +71,25 @@ const isFrameworkTagged = (tags?: string[]) =>
 
 const isGenerated = (sourceFile?: string) => /\.gen\.ts$/.test(sourceFile ?? '')
 
-const normalisePath = (path: string) => path.replace(/\/+$/, '') || '/'
+const normalisePath = (path: string) =>
+  path.split(/[?#]/)[0]!.replace(/\/+$/, '') || '/'
+
+/** Whether a concrete path is served by a route pattern: `$name` matches one segment, a bare `$` the rest, `{-$name}` one or none. */
+export function routeMatchesPath(route: string, path: string): boolean {
+  const pattern = normalisePath(route).split('/').filter(Boolean)
+  const segments = normalisePath(path).split('/').filter(Boolean)
+  const match = (i: number, j: number): boolean => {
+    if (i === pattern.length) return j === segments.length
+    const part = pattern[i]!
+    if (part === '$' || part === '*') return true
+    if (/^\{-\$.+\}$/.test(part))
+      return match(i + 1, j) || (j < segments.length && match(i + 1, j + 1))
+    if (j === segments.length) return false
+    if (part.startsWith('$') || part === segments[j]) return match(i + 1, j + 1)
+    return false
+  }
+  return match(0, 0)
+}
 
 const pct = (covered: number, total: number) =>
   total === 0 ? 100 : Math.round((covered / total) * 100)
@@ -246,7 +264,11 @@ export async function readScenarioCoverage(
     routes: {
       visited,
       total: known ? known.length : null,
-      unvisited: known ? known.filter((path) => !visited.includes(path)) : null,
+      unvisited: known
+        ? known.filter(
+            (route) => !visited.some((path) => routeMatchesPath(route, path))
+          )
+        : null,
     },
   }
 }

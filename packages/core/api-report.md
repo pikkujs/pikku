@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3235 observable things**: 1075 exported names, plus
+**3236 observable things**: 1076 exported names, plus
 2160 members on the classes and interfaces among them, reachable
 through 57 entry points.
 
@@ -35,7 +35,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
-| `./scenario/coverage` | 7 | 7 | 19 |
+| `./scenario/coverage` | 8 | 8 | 19 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
 | `./utils` | 22 | 21 | 2 |
@@ -1854,6 +1854,7 @@ export interface TestIdSelector {
 ```ts
 aggregateScenarioCoverageGaps: (file: ScenarioCoverageFile) => ScenarioCoverageGap[]
 readScenarioCoverage: (metaService: MetaService, { routes }?: { routes?: string[] | undefined; }) => Promise<ScenarioCoverage>
+routeMatchesPath: (route: string, path: string) => boolean
 export interface ScenarioCoverage {
   api: { generatedAt: string; environment: string; pct: number; covered: number; total: number; gaps: ScenarioCoverageGap[] } | null
   mutations: { required: number; covered: number; uncovered: UncoveredMutation[] }

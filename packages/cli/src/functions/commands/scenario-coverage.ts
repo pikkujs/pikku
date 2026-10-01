@@ -6,22 +6,27 @@ import {
   readScenarioCoverage,
   type ScenarioCoverage,
 } from '@pikku/core/scenario/coverage'
+import { discoverRoutes } from '@pikku/code-edit/routes'
+import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 import { dim } from '../../fabric/lib/output.js'
 
 export const scenarioCoverage = pikkuSessionlessFunc<
   { routes?: string },
   ScenarioCoverage
 >({
-  func: async ({ config }, { routes }) =>
-    readScenarioCoverage(
+  func: async ({ config }, { routes }) => {
+    const given = routes
+      ?.split(',')
+      .map((route) => route.trim())
+      .filter(Boolean)
+    const discovered = given?.length
+      ? given
+      : await discoverRoutes(findWorkspaceRoot(config.rootDir))
+    return readScenarioCoverage(
       new LocalMetaService(resolve(config.rootDir, config.outDir)),
-      {
-        routes: routes
-          ?.split(',')
-          .map((route) => route.trim())
-          .filter(Boolean),
-      }
-    ),
+      discovered.length ? { routes: discovered } : {}
+    )
+  },
 })
 
 const MAX_LISTED = 25
@@ -71,7 +76,7 @@ export const renderScenarioCoverage = (
 
   lines.push(
     routes.total === null
-      ? `Pages      ${routes.visited.length} opened by a scenario ${dim('— pass --routes to see the ones none opens')}`
+      ? `Pages      ${routes.visited.length} opened by a scenario ${dim('— no TanStack route files found; pass --routes to see the ones none opens')}`
       : `Pages      ${routes.total - routes.unvisited!.length}/${routes.total} opened by a scenario`
   )
   if (routes.unvisited?.length) lines.push(...listed(routes.unvisited))

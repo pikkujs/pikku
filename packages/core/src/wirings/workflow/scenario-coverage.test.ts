@@ -8,6 +8,7 @@ import { LocalMetaService } from '../../services/meta-service.js'
 import {
   aggregateScenarioCoverageGaps,
   readScenarioCoverage,
+  routeMatchesPath,
 } from './scenario-coverage.js'
 
 const writeJson = async (dir: string, file: string, value: unknown) => {
@@ -129,6 +130,15 @@ describe('readScenarioCoverage', () => {
       (await readScenarioCoverage(meta, { routes: ['/', '/todos'] })).routes,
       { visited: ['/todos'], total: 2, unvisited: ['/'] }
     )
+  })
+
+  test('a route with params is visited by any path it serves', () => {
+    assert.equal(routeMatchesPath('/todos/$id', '/todos/7'), true)
+    assert.equal(routeMatchesPath('/todos/$id', '/todos'), false)
+    assert.equal(routeMatchesPath('/files/$', '/files/a/b'), true)
+    assert.equal(routeMatchesPath('/{-$lang}/about', '/about'), true)
+    assert.equal(routeMatchesPath('/{-$lang}/about', '/de/about'), true)
+    assert.equal(routeMatchesPath('/app/', '/app?tab=1'), true)
   })
 
   test('reads line coverage once a covered run has recorded it', async () => {

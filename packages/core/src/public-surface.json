@@ -101,7 +101,8 @@
   ],
   "./scenario/coverage": [
     "aggregateScenarioCoverageGaps",
-    "readScenarioCoverage"
+    "readScenarioCoverage",
+    "routeMatchesPath"
   ],
   "./workflow/timeline": [
     "buildRunTimeline",
