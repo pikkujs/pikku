@@ -20,6 +20,7 @@ import {
   useDeleteRole,
   useSetRoleScopes,
 } from '../../hooks/useScopes'
+import { handleAsync } from '../../lib/async'
 
 export type EditableRole = {
   name: string
@@ -117,7 +118,7 @@ export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
               color="red"
               variant={confirmingDelete ? 'filled' : 'subtle'}
               leftSection={<Trash2 size={14} />}
-              onClick={remove}
+              onClick={handleAsync(remove)}
               loading={deleteRole.isPending}
               data-testid="role-delete"
             >
@@ -129,7 +130,7 @@ export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
             <span />
           )}
           <Button
-            onClick={save}
+            onClick={handleAsync(save)}
             loading={pending && !deleteRole.isPending}
             data-testid="role-save"
           >

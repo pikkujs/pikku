@@ -14,6 +14,7 @@ import { ConsolePanel } from '../shell/ConsolePanel'
 import type { AuthUser } from '../../context/AuthContext'
 import { useUserAdmin } from '../../context/UserAdminContext'
 import type { UserAction } from './user-actions'
+import { handleAsync } from '../../lib/async'
 
 type UserActionPanelProps = {
   action: UserAction | null
@@ -129,7 +130,7 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
             color={destructive ? 'red' : undefined}
             loading={running}
             disabled={action === 'password' && password.length === 0}
-            onClick={run}
+            onClick={handleAsync(run)}
             data-testid="user-action-confirm"
           >
             {confirmLabel}

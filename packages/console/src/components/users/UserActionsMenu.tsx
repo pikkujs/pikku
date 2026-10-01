@@ -12,6 +12,7 @@ import { m } from '@/i18n/messages'
 import type { AuthUser } from '../../context/AuthContext'
 import { useUserAdmin } from '../../context/UserAdminContext'
 import { USER_ACTION_SCOPE, type UserAction } from './user-actions'
+import { handleAsync } from '../../lib/async'
 
 type UserActionsMenuProps = {
   user: AuthUser
@@ -68,7 +69,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
           (user.banned ? (
             <Menu.Item
               leftSection={<Undo2 size={14} />}
-              onClick={unban}
+              onClick={handleAsync(unban)}
               data-testid="user-action-unban"
             >
               {m.users_unban_action()}

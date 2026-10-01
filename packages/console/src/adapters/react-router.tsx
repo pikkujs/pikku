@@ -6,6 +6,7 @@ import {
   useSearchParams as useRRSearchParams,
 } from 'react-router'
 import type { ConsoleRouter, LinkProps } from '../router'
+import { reportAsyncError } from '../lib/async'
 
 const Link = forwardRef<HTMLAnchorElement, LinkProps>(
   ({ to, children, ...rest }, ref) => (
@@ -20,7 +21,10 @@ export const reactRouterAdapter: ConsoleRouter = {
   Link,
   useNavigate: () => {
     const nav = useRRNavigate()
-    return (to: string) => nav(to)
+    // navigate may return a promise (data routers); a rejection is reported
+    return (to: string) => {
+      Promise.resolve(nav(to)).catch(reportAsyncError)
+    }
   },
   useLocation: () => {
     const loc = useRRLocation()

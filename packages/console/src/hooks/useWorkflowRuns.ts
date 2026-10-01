@@ -137,8 +137,10 @@ export function useStartWorkflowRun() {
       workflowName: string
       input?: any
     }) => rpc.startWorkflow(workflowName as never, input as never),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workflowQueryKeys.allRuns() })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: workflowQueryKeys.allRuns(),
+      })
     },
   })
 }
@@ -167,24 +169,30 @@ export function useWorkflowRunRefresh() {
 
   const refreshRun = useCallback(
     (runId: string) => {
-      queryClient.invalidateQueries({
-        queryKey: workflowQueryKeys.run(runId),
-        exact: true,
-      })
-      queryClient.invalidateQueries({
-        queryKey: workflowQueryKeys.runSteps(runId),
-        exact: true,
-      })
-      queryClient.invalidateQueries({
-        queryKey: workflowQueryKeys.runHistory(runId),
-        exact: true,
-      })
+      // invalidateQueries swallows refetch errors unless throwOnError is set
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: workflowQueryKeys.run(runId),
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: workflowQueryKeys.runSteps(runId),
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: workflowQueryKeys.runHistory(runId),
+          exact: true,
+        }),
+      ])
     },
     [queryClient]
   )
 
   const refreshRuns = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: workflowQueryKeys.allRuns() })
+    // invalidateQueries swallows refetch errors unless throwOnError is set
+    void queryClient.invalidateQueries({
+      queryKey: workflowQueryKeys.allRuns(),
+    })
   }, [queryClient])
 
   const refreshAll = useCallback(

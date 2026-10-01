@@ -386,9 +386,11 @@ export const PackageDetailPage: React.FC<{
         namespace,
         version,
       }),
-    onSuccess: (result, { packageName }) => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    onSuccess: async (result, { packageName }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['installed-addons'] }),
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+      ])
       rememberInstallResult(
         queryClient,
         packageName,
@@ -412,9 +414,11 @@ export const PackageDetailPage: React.FC<{
         swaggerUrl,
         credential,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['installed-addons'] }),
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+      ])
     },
   })
 
