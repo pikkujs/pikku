@@ -14,6 +14,7 @@ import {
 } from './runtime-profile.js'
 import {
   tierFitsWithin,
+  weakestTier,
   type PackageTier,
   type RuntimeTier,
 } from './runtime-tier.js'
@@ -183,10 +184,70 @@ export function analyzeUnit(input: AnalyzeUnitInput): UnitAnalysis {
     { name: string; tier: RuntimeTier; declared: boolean }
   >()
   const seenPackageViolations = new Set<string>()
+
+  // A file no export names (`mcp-auth.js`, imported by `fetch.js`) gets the
+  // package-wide tier from the lookup, which condemns an edge entry for the
+  // helpers it was written with. It is reachable in this bundle only through
+  // the files that import it, so it takes the tier of those: the most demanding
+  // one among its importers in the same package. A server-tier entry that is
+  // also in the bundle is reported on its own file.
+  const owners = new Map<string, OwningPackage>()
+  const importersOf = new Map<string, string[]>()
+  // An importer may have been tree-shaken to nothing (a re-export barrel such
+  // as `fetch.js`) and still be what decides the tier of what it pulled in.
+  const ownerOf = (file: string): OwningPackage | undefined => {
+    if (!owners.has(file) && isRealInput(file)) {
+      try {
+        const owner = lookup(file)
+        if (owner) owners.set(file, owner)
+      } catch {
+        return undefined
+      }
+    }
+    return owners.get(file)
+  }
   for (const [file, size] of bytes) {
     if (size === 0 || !isRealInput(file)) continue
-    const owner = lookup(file)
+    ownerOf(file)
+  }
+  for (const [from, { imports }] of Object.entries(metafile.inputs)) {
+    for (const edge of imports) {
+      if (edge.external) continue
+      const list = importersOf.get(edge.path)
+      if (list) list.push(from)
+      else importersOf.set(edge.path, [from])
+    }
+  }
+  const resolved = new Map<string, PackageTier>()
+  const effectiveTier = (file: string, trail: Set<string>): PackageTier => {
+    const owner = owners.get(file)!
+    const cached = resolved.get(file)
+    if (cached) return cached
+    if (owner.tier.via === 'subpath' || !owner.tier.declared) return owner.tier
+    if (trail.has(file)) return owner.tier
+    trail.add(file)
+    const parents = (importersOf.get(file) ?? []).filter(
+      (importer) => ownerOf(importer)?.name === owner.name
+    )
+    let result = owner.tier
+    if (parents.length > 0) {
+      const tiers = parents.map((parent) => effectiveTier(parent, trail))
+      const demanding = weakestTier(tiers.map((t) => t.tier))
+      result =
+        tiers.find((t) => t.tier === demanding && t.via === 'subpath') ??
+        tiers.find((t) => t.tier === demanding) ??
+        owner.tier
+    }
+    trail.delete(file)
+    resolved.set(file, result)
+    return result
+  }
+
+  for (const [file, size] of bytes) {
+    if (size === 0) continue
+    const owner = owners.get(file)
     if (!owner) continue
+    owner.tier = effectiveTier(file, new Set())
     packages.set(owner.name, {
       name: owner.name,
       tier: owner.tier.tier,

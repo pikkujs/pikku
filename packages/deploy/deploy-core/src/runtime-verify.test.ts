@@ -264,3 +264,90 @@ describe('importChain / findInMemoryClasses', () => {
     )
   })
 })
+
+describe('analyzeUnit: files no export names', () => {
+  // mcp: root is server, `./fetch` is edge, and `mcp-auth.js` is exported by
+  // neither. Reached only through fetch.js, it is as portable as fetch.js.
+  const mcpLookup: PackageLookup = (file) => {
+    if (!file.includes('modelcontextprotocol')) return undefined
+    return file.endsWith('fetch.js')
+      ? {
+          name: '@pikku/modelcontextprotocol',
+          tier: {
+            tier: 'edge',
+            declared: true,
+            via: 'subpath',
+            matchedSubpath: './fetch',
+          },
+        }
+      : {
+          name: '@pikku/modelcontextprotocol',
+          tier: { tier: 'server', declared: true, via: 'package' },
+        }
+  }
+  const bundle = (importers: string[]): MetafileLike => {
+    const all: MetafileLike['inputs'] = {
+      'entry.ts': { imports: importers.map((path) => ({ path })) },
+      'node_modules/modelcontextprotocol/fetch.js': {
+        imports: [{ path: 'node_modules/modelcontextprotocol/mcp-auth.js' }],
+      },
+      'node_modules/modelcontextprotocol/index.js': {
+        imports: [{ path: 'node_modules/modelcontextprotocol/mcp-auth.js' }],
+      },
+      'node_modules/modelcontextprotocol/mcp-auth.js': { imports: [] },
+    }
+    // A real metafile lists only what was bundled.
+    const included = [
+      'entry.ts',
+      'node_modules/modelcontextprotocol/mcp-auth.js',
+      ...importers,
+    ]
+    return {
+      inputs: Object.fromEntries(
+        Object.entries(all).filter(([file]) => included.includes(file))
+      ),
+      outputs: {
+        'verify.js': {
+          entryPoint: 'entry.ts',
+          // fetch.js is a re-export barrel: bundled, but tree-shaken to nothing.
+          inputs: Object.fromEntries(
+            included.map((f) => [
+              f,
+              { bytesInOutput: f.endsWith('fetch.js') ? 0 : 10 },
+            ])
+          ),
+        },
+      },
+    }
+  }
+  const run = (importers: string[]) =>
+    analyzeUnit({
+      unitName: 'u',
+      unitTier: 'edge',
+      profile,
+      metafile: bundle(importers),
+      builtinImports: [],
+      lookup: mcpLookup,
+    })
+
+  it('takes the tier of the export that imports it', () => {
+    assert.deepEqual(
+      run(['node_modules/modelcontextprotocol/fetch.js']).violations,
+      []
+    )
+  })
+
+  it('still fails when the server-tier entry is in the bundle too', () => {
+    const a = run([
+      'node_modules/modelcontextprotocol/fetch.js',
+      'node_modules/modelcontextprotocol/index.js',
+    ])
+    assert.equal(a.violations.length, 1)
+    assert.equal(a.violations[0]!.kind, 'package-tier')
+  })
+
+  it('stays at the package tier when only a server-tier file imports it', () => {
+    const a = run(['node_modules/modelcontextprotocol/index.js'])
+    assert.ok(a.violations.length >= 1)
+  })
+})
