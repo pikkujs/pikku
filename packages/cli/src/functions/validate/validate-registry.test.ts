@@ -75,10 +75,32 @@ describe('validation planning', () => {
       assert.deepStrictEqual(planned(await planValidation(tmp)), [
         'app-project:.',
         'core-import:.',
+        'oxlint-run:.',
+        'oxlint-setup:.',
         'pikku-barrel:.',
         'scaffold-duplicates:.',
         'workspace-exports:.',
       ])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the oxlint run is planned after every other check', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(tmp, 'package.json', '{"name":"root","workspaces":["p/*"]}')
+      await write(tmp, 'pikku.config.json', '{}')
+      await write(tmp, 'p/app/package.json', '{"name":"app"}')
+      await write(tmp, 'p/app/pikku.config.json', '{}')
+      const order = (await planValidation(tmp)).map((p) => p.check.id)
+      const first = order.indexOf('oxlint-run')
+      assert.ok(first > -1)
+      assert.deepStrictEqual(
+        order.slice(first),
+        ['oxlint-run', 'oxlint-run'],
+        'only oxlint-run entries follow the first oxlint-run'
+      )
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
@@ -104,6 +126,8 @@ describe('validation planning', () => {
         'core-import:.',
         'core-import:p/one',
         'core-import:p/two',
+        'oxlint-run:.',
+        'oxlint-setup:.',
         'pikku-barrel:.',
         'pikku-barrel:p/one',
         'pikku-barrel:p/two',
