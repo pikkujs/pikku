@@ -460,7 +460,9 @@ export class LocalMetaService implements MetaService {
     if (this.rpcMetaCache) return this.rpcMetaCache
 
     try {
-      const content = await this.readFile('rpc/pikku-rpc-wirings-meta.gen.json')
+      const content = await this.readFile(
+        'rpc/pikku-rpc-wirings-meta.internal.gen.json'
+      )
       this.rpcMetaCache = content ? JSON.parse(content) : {}
       return this.rpcMetaCache!
     } catch (error) {

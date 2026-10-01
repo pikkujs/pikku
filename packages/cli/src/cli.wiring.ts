@@ -91,6 +91,10 @@ import {
   personaSecret,
 } from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
+import {
+  renderScenarioCoverage,
+  scenarioCoverage,
+} from './functions/commands/scenario-coverage.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
@@ -1058,6 +1062,18 @@ wireCLI({
         list: pikkuCLICommand({
           func: scenarioList,
           description: 'List scenarios with names and descriptions',
+        }),
+        coverage: pikkuCLICommand({
+          func: scenarioCoverage,
+          description:
+            'What the suite exercises: lines no scenario reaches (from the last `scenario run --coverage`), mutations no scenario drives, and pages no scenario opens',
+          render: renderScenarioCoverage,
+          options: {
+            routes: {
+              description:
+                'Comma-separated app routes, to list the ones no scenario opens',
+            },
+          },
         }),
         guide: pikkuCLICommand({
           func: scenarioGuide,

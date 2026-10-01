@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Center, Stack, Text } from '@pikku/mantine/core'
 import { asI18n, type I18nString } from '@pikku/react'
-import { CircleSlash } from 'lucide-react'
+import { CircleSlash, PencilOff } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
@@ -14,6 +14,7 @@ import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
 import { useDeleteScenarioRun } from '../../hooks/useScenarioRuns'
+import { useScenarioCoverage } from '../../hooks/useScenarioCoverage'
 import {
   AS_WRITTEN,
   useScenarioLens,
@@ -43,7 +44,8 @@ const runOptionLabel = (
   locale: string
 ): I18nString => {
   const when = runAgo(summary.startedAt, locale)
-  if (summary.status === 'running') return m.scenarios_run_option_running({ when })
+  if (summary.status === 'running')
+    return m.scenarios_run_option_running({ when })
   if (summary.failed > 0)
     return m.scenarios_run_option_failed({ when, count: summary.failed })
   return m.scenarios_run_option_passed({ when, count: summary.passed })
@@ -133,6 +135,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   })
 
   const showing = selected ? [selected] : features
+  const coverage = useScenarioCoverage().data
   const declared = features.reduce(
     (sum, feature) => sum + feature.scenarios.length,
     0
@@ -263,6 +266,40 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
                 </Stack>
               </SectionCard>
             )}
+            {!run && !selected && coverage?.mutations.uncovered.length ? (
+              <SectionCard
+                title={m.scenarios_untested_title()}
+                subtitle={
+                  coverage.api
+                    ? m.scenarios_untested_lines({
+                        covered: coverage.api.covered,
+                        total: coverage.api.total,
+                      })
+                    : undefined
+                }
+                blurb={m.scenarios_untested_blurb()}
+                testId="scenario-coverage-untested"
+              >
+                <Stack gap="xs" mt="md">
+                  {coverage.mutations.uncovered.map((mutation) => (
+                    <CardRow
+                      key={mutation.id}
+                      leading={
+                        <StatusTile tone="warn">
+                          <PencilOff size={18} />
+                        </StatusTile>
+                      }
+                      title={asI18n(mutation.id)}
+                      meta={
+                        mutation.sourceFile
+                          ? asI18n(mutation.sourceFile)
+                          : undefined
+                      }
+                    />
+                  ))}
+                </Stack>
+              </SectionCard>
+            ) : null}
           </CardsPage>
         )}
       </ResizablePanelLayout>
