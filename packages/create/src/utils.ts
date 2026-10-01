@@ -499,6 +499,59 @@ export function updatePackageJSONScripts(
 }
 
 /**
+ * Versions of the lint tooling `pikku validate` requires. Keep in step with
+ * OXLINT_VERSION / OXLINT_TSGOLINT_VERSION in packages/cli
+ * (src/functions/validate/oxlint-enable.ts): oxlint 1.86 peers
+ * `oxlint-tsgolint >=7.0.2003`.
+ */
+export const OXLINT_VERSION = '^1.86.0'
+export const OXLINT_TSGOLINT_VERSION = '^7.0.2003'
+
+/**
+ * Sets a new app up so `pikku validate` passes its oxlint checks: both
+ * packages as devDependencies, a `.oxlintrc.json` with the type-aware promise
+ * rules at error (a forgotten `await` on an async webhook verifier is a truthy
+ * Promise), and a `lint` script. Existing files are never overwritten.
+ */
+export function ensureOxlintSetup(targetPath: string): void {
+  const packageFilePath = path.join(targetPath, 'package.json')
+  const packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
+  packageJson.devDependencies = {
+    ...packageJson.devDependencies,
+    oxlint: packageJson.devDependencies?.oxlint ?? OXLINT_VERSION,
+    'oxlint-tsgolint':
+      packageJson.devDependencies?.['oxlint-tsgolint'] ??
+      OXLINT_TSGOLINT_VERSION,
+  }
+  packageJson.scripts = {
+    ...packageJson.scripts,
+    lint: packageJson.scripts?.lint ?? 'oxlint --type-aware',
+  }
+  fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
+
+  const configPath = path.join(targetPath, '.oxlintrc.json')
+  if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          $schema: './node_modules/oxlint/configuration_schema.json',
+          plugins: ['typescript', 'unicorn', 'oxc'],
+          options: { typeAware: true },
+          rules: {
+            'typescript/no-misused-promises': 'error',
+            'typescript/no-floating-promises': 'error',
+          },
+          ignorePatterns: ['**/*.gen.ts', '**/.pikku/**'],
+        },
+        null,
+        2
+      ) + '\n'
+    )
+  }
+}
+
+/**
  * Removes version constraints from @pikku/* packages when using yarn link.
  * This prevents yarn from trying to fetch unreleased versions from npm.
  * Also adds resolutions for shared dependencies to avoid type mismatches.
