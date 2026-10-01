@@ -203,7 +203,12 @@ export function resolveDb(
   ).filter(([, value]) => value)
   if (configured.length > 1) {
     throw new Error(
-      `Both ${configured.map(([key]) => key).join(' and ')} are set. Configure exactly one database dialect.`
+      `${configured.length === 2 ? 'Both' : 'All of'} ${configured
+        .slice(0, -1)
+        .map(([key]) => key)
+        .join(
+          ', '
+        )} and ${configured.at(-1)![0]} are set. Configure exactly one database dialect.`
     )
   }
 

@@ -57,6 +57,19 @@ test('resolveDb refuses mysqlUrl beside another dialect, naming both', () => {
         ),
       /Both sqliteDb and mysqlUrl are set/
     )
+    assert.throws(
+      () =>
+        resolveDb(
+          {
+            postgresUrl: 'postgres://x/y',
+            sqliteDb: 'a.db',
+            mysqlUrl: 'mysql://root@localhost/app',
+          },
+          root,
+          root
+        ),
+      /All of postgresUrl, sqliteDb and mysqlUrl are set/
+    )
   })
 })
 
