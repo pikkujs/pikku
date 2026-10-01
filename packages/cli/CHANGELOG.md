@@ -1,3 +1,27 @@
+## 0.12.179
+
+### Patch Changes
+
+- 80c94f9: MySQL is a third dialect for the `pikku db` commands, beside sqlite and postgres.
+
+  Set `mysqlUrl` in `createConfig` and `db migrate`, `generate`, `check`, `baseline`, `reset`, `codegen` and the dev seed behave as they do elsewhere, with migrations in `db/mysql/` and the seed in `db/mysql-dev-seed.sql`. MySQL has no embedded engine, so a command that needs a throwaway database creates and drops a `pikku_scratch_<hex>` one on your server — the account needs `CREATE` and `DROP`. DDL is not transactional there, so a migration that fails halfway is replayed from the top. `db.schema` is refused, because a MySQL schema is a database.
+
+  `@pikku/migrator-sql` gains `@pikku/migrator-sql/mysql`. The runtime schemas in `@pikku/kysely` now compile for MySQL without changing what sqlite and postgres get: keys are `varchar(255)`, free text is `longtext`, literal text defaults are expressions, and foreign keys are table-level constraints, because MySQL parses an inline `REFERENCES` and silently drops it. A foreign key onto a column another source owns takes that column's full type (`varchar(36)`), not the bare `varchar` the introspector reports.
+
+  An addon that ships `db/mysql` migrations needs `db.mysqlUrl` in its `pikku.config.json` for `pikku all` to publish them. The standalone bundle does not support MySQL yet and refuses a MySQL project by name.
+
+- 149faae: Webhook `receive` steps lose their boilerplate. `pikkuWebhookReceive` (from `#pikku/trigger` or `#pikku/addon/trigger`) declares one: it is public, typed to the raw request with a required `http`, and never registered as an RPC, and the inspector rejects a `receive` declared with any other wrapper. `parseJson` (in `@pikku/core/utils`, generated as `#pikku/utils` and `#pikku/addon/utils`) parses text or bytes and answers a body that is not JSON with a 400. A webhook source whose `method` includes `'head'` answers HEAD probes itself with a 200.
+
+  `receive` no longer returns `{ respond }`: a handshake returns nothing and writes its answer to `http.response`, like any other HTTP function. The webhook route no longer returns a fetch `Response` either. An HTTP function that returns nothing is now answered with whatever status its response has (200 unless it set another), no longer a forced 204. A webhook receive is also left out of contract versioning, since nothing but its own route calls it.
+
+- Updated dependencies [80c94f9]
+- Updated dependencies [149faae]
+  - @pikku/migrator-sql@0.12.7
+  - @pikku/kysely@0.13.34
+  - @pikku/skills@0.12.48
+  - @pikku/core@0.12.136
+  - @pikku/inspector@0.12.100
+
 ## 0.12.178
 
 ### Patch Changes
