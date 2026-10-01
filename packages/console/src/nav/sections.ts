@@ -18,6 +18,7 @@ import {
   GitCompare,
   Globe,
   KeyRound,
+  Languages,
   ListOrdered,
   Lock,
   Mail,
@@ -165,7 +166,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'copy',
           title: m.nav_group_copy(),
-          items: [item(m.nav_emails(), '/emails', Mail)],
+          items: [
+            item(m.nav_emails(), '/emails', Mail),
+            item(m.nav_translations(), '/translations', Languages),
+          ],
         },
         {
           id: 'reference',

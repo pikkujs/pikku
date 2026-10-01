@@ -136,6 +136,14 @@ defineScope({
               write: { description: 'Edit themes and component props' },
             },
           },
+          i18n: {
+            description:
+              'The message catalogs the frontends are translated with',
+            scopes: {
+              read: { description: 'Read message catalogs and locales' },
+              write: { description: 'Edit, add and remove locales' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {

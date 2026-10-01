@@ -1,26 +1,13 @@
-import { readFileSync } from 'fs'
 import { createRequire } from 'module'
 import { createServer } from 'net'
-import { dirname, join } from 'path'
+import { join } from 'path'
 import { pathToFileURL } from 'url'
 
 import type { Logger } from '@pikku/core/services'
 
-export type DesignServer = { url: string; close: () => Promise<void> }
+import { workspaceRoot } from '../../utils/workspace-root.js'
 
-/** The workspace root the design server renders: the nearest ancestor declaring `workspaces`. */
-function workspaceRoot(rootDir: string): string {
-  let dir = rootDir
-  while (true) {
-    try {
-      const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
-      if (pkg.workspaces) return dir
-    } catch {}
-    const parent = dirname(dir)
-    if (parent === dir) return rootDir
-    dir = parent
-  }
-}
+export type DesignServer = { url: string; close: () => Promise<void> }
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
