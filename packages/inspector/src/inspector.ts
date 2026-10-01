@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { applyDeclaredScopes } from './add/add-scope.js'
 import { performance } from 'perf_hooks'
 import { dirname, relative, resolve } from 'path'
 import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
@@ -568,6 +569,7 @@ export const inspect = async (
     validateCredentialOverrides(logger, state)
     validateRemoteAddonDependencies(logger, state)
     validateRemoteAddonAuth(logger, state)
+    applyDeclaredScopes(state)
     validateScopeReferences(logger, state)
     validateSystemRoleScopes(logger, state)
     validatePersonaRoles(logger, state)
