@@ -14,7 +14,6 @@ import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-hand
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
-import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > implements DurableObject {
@@ -37,7 +36,7 @@ export abstract class CloudflareWebSocketHibernationServer<
     const request = new PikkuFetchHTTPRequest(cloudflareRequest as any)
     const response = new PikkuFetchHTTPResponse()
 
-    const channelId = crypto.randomUUID().toString()
+    const channelId = globalThis.crypto.randomUUID()
     const params = await this.getAllParams(server)
 
     try {
