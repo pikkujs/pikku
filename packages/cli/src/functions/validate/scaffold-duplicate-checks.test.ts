@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { getPikkuCLIConfig } from '../../utils/pikku-cli-config.js'
@@ -170,14 +170,63 @@ describe('scaffold duplicate checks', () => {
     assert.match(findings[0]!.message, /scaffold\/console\/console\.gen\.ts/)
   })
 
-  test('warns when the scaffold dir is not <srcDirectory>/scaffold', async () => {
+  test('errors by default when the scaffold dir is not <srcDirectory>/scaffold', async () => {
     const root = await project({ pikkuDir: 'packages/functions/src/pikku' })
     const findings = await runScaffoldDuplicateChecks(root)
-    assert.ok(
-      findings.some(
-        (f) => f.id === 'scaffold-dir-noncanonical' && f.severity === 'warn'
+    const f = findings.find((x) => x.id === 'scaffold-dir-noncanonical')
+    assert.equal(f?.severity, 'error')
+    assert.match(f!.message, /src\/pikku/)
+    assert.match(f!.message, /src\/scaffold/)
+    assert.match(f!.fixHint, /pikku all/)
+  })
+
+  test('an explicit pikkuDir equal to the default passes', async () => {
+    const root = await project({ pikkuDir: 'packages/functions/src/scaffold' })
+    assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
+  })
+
+  test("validate.rules 'warn' downgrades and 'off' suppresses", async () => {
+    const root = await project({ pikkuDir: 'packages/functions/src/pikku' })
+    const setRules = async (rules: Record<string, string>) => {
+      const cfg = JSON.parse(
+        await readFile(join(root, 'pikku.config.json'), 'utf8')
       )
+      await write(
+        root,
+        'pikku.config.json',
+        JSON.stringify({ ...cfg, validate: { rules } })
+      )
+    }
+    const noncanonical = async () =>
+      (await runScaffoldDuplicateChecks(root)).filter(
+        (f) => f.id === 'scaffold-dir-noncanonical'
+      )
+    await setRules({ 'scaffold-dir-noncanonical': 'warn' })
+    assert.equal((await noncanonical())[0]!.severity, 'warn')
+    await setRules({ 'scaffold-dir-noncanonical': 'off' })
+    assert.deepEqual(await noncanonical(), [])
+  })
+
+  test('validate.rules applies to the other scaffold-duplicates rules', async () => {
+    const root = await project()
+    await write(
+      root,
+      'packages/functions/src/pikku/console/console.gen.ts',
+      CONSOLE_WIRING
     )
+    await write(
+      root,
+      'pikku.config.json',
+      JSON.stringify({
+        srcDirectories: ['packages/functions/src'],
+        scaffold: {
+          pikkuDir: 'packages/functions/src/scaffold',
+          console: true,
+        },
+        validate: { rules: { 'scaffold-output-outside-scaffold-dir': 'off' } },
+      })
+    )
+    assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
   })
 
   test('ignores generated output under .pikku and node_modules', async () => {

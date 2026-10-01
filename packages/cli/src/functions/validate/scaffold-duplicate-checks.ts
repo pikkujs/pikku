@@ -109,6 +109,7 @@ type ScaffoldCheckConfig = {
   rootDir?: unknown
   srcDirectories?: unknown
   scaffold?: Record<string, unknown>
+  validate?: { rules?: Record<string, unknown> }
   [field: string]: unknown
 }
 
@@ -338,12 +339,23 @@ export const runScaffoldDuplicateChecks = async (
   if (canonical && resolve(scaffoldDir) !== canonical) {
     findings.push({
       id: 'scaffold-dir-noncanonical',
-      severity: 'warn',
-      message: `scaffold.pikkuDir resolves to ${rel(scaffoldDir)}, not ${rel(canonical)} — tooling that looks for the scaffold at the canonical path will miss it`,
+      severity: 'error',
+      message: `scaffold.pikkuDir resolves to ${rel(scaffoldDir)}, not ${rel(canonical)} — the scaffold is generated output with one canonical home, and tooling that looks for it there misses this copy`,
       path: join(root, 'pikku.config.json'),
-      fixHint: `Set "pikkuDir" to "${rel(canonical)}" (or remove it), move the generated files, and run \`pikku all\`.`,
+      fixHint: [
+        `Set scaffold.pikkuDir to "${rel(canonical)}" (or delete the key), run \`pikku all\`, and delete the old generated dir ${rel(scaffoldDir)}.`,
+        'To accept the layout deliberately, set "validate": { "rules": { "scaffold-dir-noncanonical": "off" } } in pikku.config.json.',
+      ].join('\n'),
     })
   }
 
-  return findings
+  // Per-rule severity from `validate.rules`; 'off' drops the finding.
+  const rules = config.validate?.rules ?? {}
+  return findings.flatMap((f) => {
+    const level = rules[f.id]
+    if (level === 'off') return []
+    if (level === 'warn' || level === 'error')
+      return [{ ...f, severity: level }]
+    return [f]
+  })
 }

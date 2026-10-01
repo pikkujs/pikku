@@ -790,6 +790,16 @@ export type PikkuCLIInput = {
     }
   }
 
+  /**
+   * Per-rule severity for `pikku validate`, keyed by finding id. `'off'`
+   * suppresses the rule, `'warn'` downgrades it, `'error'` is the default for
+   * the scaffold-duplicates rules (`scaffold-output-outside-scaffold-dir`,
+   * `scaffold-addon-declared-twice`, `scaffold-dir-noncanonical`).
+   */
+  validate?: {
+    rules?: Record<string, 'off' | 'warn' | 'error'>
+  }
+
   scaffold?: {
     addonDir?: string
     functionDir?: string
