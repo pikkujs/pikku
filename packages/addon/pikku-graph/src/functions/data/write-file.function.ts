@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { decodeText } from '../../bytes.js'
 
 export const WriteFileInput = z.object({
   bucket: z
@@ -26,7 +27,7 @@ export const writeFile = pikkuSessionlessFunc({
   output: WriteFileOutput,
   func: async ({ content }, { bucket, key, data, encoding }) => {
     const resolvedBucket = bucket ?? ''
-    const bytes = new Uint8Array(Buffer.from(data, encoding ?? 'utf8'))
+    const bytes = decodeText(data, encoding ?? 'utf8')
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(bytes)
