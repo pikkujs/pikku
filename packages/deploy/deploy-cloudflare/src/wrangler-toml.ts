@@ -8,15 +8,18 @@
  * Fabric's own deploy pipeline uses the CF API directly for speed,
  * but these files ensure every unit is also deployable via wrangler.
  */
-import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
-
-const COMPAT_DATE = '2024-12-18'
-const COMPAT_FLAGS = ['nodejs_compat_v2']
+import type {
+  DeploymentManifest,
+  DeploymentUnit,
+  RuntimeProfile,
+} from '@pikku/deploy'
+import { getCloudflareRuntimeProfile } from './runtime-profile.js'
 
 export function generateWranglerToml(
   unit: DeploymentUnit,
   manifest: DeploymentManifest,
-  projectId: string
+  projectId: string,
+  profile: RuntimeProfile = getCloudflareRuntimeProfile()
 ): string {
   const lines: string[] = []
   const workerName = `${projectId}-${unit.name}`
@@ -25,9 +28,9 @@ export function generateWranglerToml(
   lines.push(`#:schema node_modules/wrangler/config-schema.json`)
   lines.push(`name = "${workerName}"`)
   lines.push(`main = "bundle.js"`)
-  lines.push(`compatibility_date = "${COMPAT_DATE}"`)
+  lines.push(`compatibility_date = "${profile.compatDate}"`)
   lines.push(
-    `compatibility_flags = [${COMPAT_FLAGS.map((f) => `"${f}"`).join(', ')}]`
+    `compatibility_flags = [${profile.compatFlags.map((f) => `"${f}"`).join(', ')}]`
   )
   lines.push('')
   lines.push('[observability]')
