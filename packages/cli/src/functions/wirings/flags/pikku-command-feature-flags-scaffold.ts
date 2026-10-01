@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -12,7 +13,11 @@ export const pikkuFeatureFlagsScaffold = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
-    if (!config.scaffold?.featureFlags || !config.featureFlagsFile) {
+    if (
+      !config.scaffold?.featureFlags ||
+      !config.featureFlagsFile ||
+      !config.flagsManifestFile
+    ) {
       return false
     }
 
@@ -35,7 +40,15 @@ export const pikkuFeatureFlagsScaffold = pikkuSessionlessFunc<void, boolean>({
     await writeFileInDir(
       logger,
       config.featureFlagsFile,
-      serializeFeatureFlagsScaffold(leaf, config.globalHTTPPrefix || '')
+      serializeFeatureFlagsScaffold(
+        leaf,
+        getFileImportRelativePath(
+          config.featureFlagsFile,
+          config.flagsManifestFile,
+          config.packageMappings
+        ),
+        config.globalHTTPPrefix || ''
+      )
     )
     await removeLegacyScaffoldFile(config.featureFlagsFile)
     return true

@@ -1,4 +1,9 @@
-import { pikkuAuth, pikkuPermission } from '#pikku/auth'
+import {
+  addGlobalPermission,
+  pikkuAuth,
+  pikkuPermission,
+  pikkuPermissionFactory,
+} from '#pikku/auth'
 
 // @snippet start shopIsAuthenticated
 export const isAuthenticated = pikkuAuth(
@@ -20,6 +25,25 @@ export const isOrderOwner = pikkuPermission(
 )
 // @snippet end permissionFunction
 // @snippet end shopIsOrderOwner
+
+// @snippet start permissionFactory
+export const hasProfileRole = pikkuPermissionFactory<{
+  role: 'customer' | 'support' | 'admin'
+}>(({ role }) =>
+  pikkuPermission(
+    async (_services, _data, { session }) => session?.role === role
+  )
+)
+// @snippet end permissionFactory
+
+// @snippet start globalPermission
+addGlobalPermission([
+  pikkuPermission(
+    async (_services, _data, { session }) =>
+      session === undefined || Boolean(session.userId)
+  ),
+])
+// @snippet end globalPermission
 
 // @snippet start permissionsCompact
 // scopes: ['orders:cancel']            AND — every scope required

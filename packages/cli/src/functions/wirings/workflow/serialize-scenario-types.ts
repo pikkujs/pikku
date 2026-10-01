@@ -59,7 +59,6 @@ export type { TypedPersonas }
  */
 export {
   createCookieJar,
-  createScenarioRunner,
   pollUntil,
   requireScenarioEnv,
 } from '@pikku/core/scenario'

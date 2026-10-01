@@ -1,8 +1,23 @@
 import { z } from 'zod'
-import { pikkuFunc } from '#pikku/function'
-import { isOrderOwner } from '../../wirings/shop.security.js'
+import { pikkuApprovalDescription, pikkuFunc } from '#pikku/function'
+import { hasProfileRole, isOrderOwner } from '../../wirings/shop.security.js'
 
 export const CancelOrderInput = z.object({ orderId: z.string() })
+
+// @snippet start approvalDescription
+export const describeCancelOrder = pikkuApprovalDescription<
+  z.infer<typeof CancelOrderInput>
+>(async ({ kysely }, { orderId }) => {
+  const order = await kysely
+    .selectFrom('order')
+    .select(['status', 'totalCents'])
+    .where('orderId', '=', orderId)
+    .executeTakeFirst()
+  return order
+    ? `Cancel order ${orderId} (${order.status}, £${(order.totalCents / 100).toFixed(2)}) and return its stock`
+    : `Cancel order ${orderId}`
+})
+// @snippet end approvalDescription
 
 // @snippet start cancelOrder
 export const cancelOrder = pikkuFunc({
@@ -20,7 +35,10 @@ export const cancelOrder = pikkuFunc({
   scopes: ['orders:cancel'],
   permissions: {
     owner: isOrderOwner,
+    support: hasProfileRole({ role: 'support' }),
   },
+  approvalRequired: true,
+  approvalDescription: describeCancelOrder,
   // `node` describes this function as a step someone can drop into a visual
   // flow: what to call it, where it files, and whether it starts a flow
   // ('trigger'), continues one ('action') or ends it ('end'). Without it the

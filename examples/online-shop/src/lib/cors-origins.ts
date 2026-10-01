@@ -1,6 +1,6 @@
 import { defineVariable } from '#pikku/variables'
 import { z } from 'zod'
-import type { SingletonServices } from '#pikku/function'
+import type { VariablesService } from '@pikku/core/services'
 
 // The CLI requires `schema` to be a named export, not an inline `z.string()`.
 export const CorsOriginsSchema = z.string()
@@ -40,7 +40,7 @@ defineVariable({
  * exactly the list CORS advertises; two lists would drift and disagree.
  */
 export async function allowedOrigins(
-  variables: SingletonServices['variables']
+  variables: Pick<VariablesService, 'get'>
 ): Promise<string[]> {
   const configured = await variables.get('CORS_ORIGINS')
   if (configured) {

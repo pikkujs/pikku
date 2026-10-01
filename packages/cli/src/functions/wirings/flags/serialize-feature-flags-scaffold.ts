@@ -12,6 +12,7 @@
  */
 export const serializeFeatureFlagsScaffold = (
   leaf: (name: string) => string,
+  flagsManifestPath: string,
   globalHTTPPrefix: string = ''
 ): string => `/**
  * Auto-generated feature flag read wire
@@ -19,11 +20,11 @@ export const serializeFeatureFlagsScaffold = (
  */
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTP } from '${leaf('http')}'
+import type { FeatureFlagName } from '${leaf('scopes')}'
 import {
-  FEATURE_FLAGS,
-  FEATURE_FLAGS_FALLBACK,
-  type FeatureFlagName,
-} from '${leaf('scopes')}'
+  declaredFeatureFlags,
+  featureFlagsFallback,
+} from '${flagsManifestPath}'
 import { resolveFlagsForClient } from '@pikku/core/flag'
 
 /**
@@ -57,9 +58,9 @@ export const featureFlagsForCaller = pikkuSessionlessFunc<
     // session, so a scoped flag is not handed to a caller who cannot hold it.
     const snapshot = featureFlags
       ? await featureFlags.snapshot()
-      : FEATURE_FLAGS_FALLBACK
+      : featureFlagsFallback
     return resolveFlagsForClient(
-      FEATURE_FLAGS,
+      declaredFeatureFlags,
       session,
       snapshot
     ) as Record<FeatureFlagName, boolean>
