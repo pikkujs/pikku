@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3217 observable things**: 1068 exported names, plus
-2149 members on the classes and interfaces among them, reachable
+**3208 observable things**: 1067 exported names, plus
+2141 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -43,7 +43,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./hmac` | 9 | 9 | 8 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
@@ -56,6 +55,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
 | `./webhook` | 7 | 7 | 1 |
+| `./hmac` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
@@ -6228,16 +6228,6 @@ timingSafeStringEqual: (a: string, b: string) => boolean
 verifyHmacSignature: (secret: string, signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => boolean
 verifyPublicKeySignature: (publicKey: string, signature: string | undefined, payload: WebhookPayload, options?: { algorithm?: string | undefined; dsaEncoding?: "der" | "ieee-p1363" | undefined; }) => boolean
 export type WebhookPayload = string | Uint8Array
-export class WebhookSigningSecret {
-  constructor(private readonly provider: string, private readonly secret: SecretSource)
-  static fromCredential(provider: string, credentials: CredentialService | undefined, name: string): WebhookSigningSecret
-  get configured(): boolean
-  async load(): Promise<WebhookSigningSecret>
-  hmac(algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): string
-  verifyHmac(signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): void
-  verifyToken(token: string | undefined): void
-  verifyPublicKey(signature: string | undefined, payload: WebhookPayload, options: { algorithm?: string; dsaEncoding?: 'der' | 'ieee-p1363' } = {}): void
-}
 ```
 
 ## ./state
