@@ -37,7 +37,7 @@ export const resolveConfig = (
 ): DeepInfraConfig => ({
   baseURL: (settings.baseURL ?? DEEPINFRA_BASE_URL).replace(/\/+$/, ''),
   headers: () => {
-    const apiKey = settings.apiKey ?? process.env.DEEPINFRA_API_KEY
+    const apiKey = settings.apiKey ?? globalThis.process?.env?.DEEPINFRA_API_KEY
     if (!apiKey) {
       throw new Error(
         'DeepInfra API key is missing. Pass `apiKey` to createDeepInfra(), or set DEEPINFRA_API_KEY.'

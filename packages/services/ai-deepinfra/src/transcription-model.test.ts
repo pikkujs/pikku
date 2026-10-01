@@ -66,6 +66,49 @@ describe('DeepInfraTranscriptionModel', () => {
     assert.deepEqual(new Uint8Array(await part.arrayBuffer()), audio)
   })
 
+  test('decodes base64 like Buffer: padded, unpadded, url-safe, wrapped', async () => {
+    const bytes = new Uint8Array(300)
+    for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37 + 250) % 256
+    for (const length of [0, 1, 2, 3, 4, 5, 255, 300]) {
+      const sample = bytes.slice(0, length)
+      const buffer = Buffer.from(sample)
+      for (const encoded of [
+        buffer.toString('base64'),
+        buffer.toString('base64').replace(/=+$/, ''),
+        buffer.toString('base64url'),
+        buffer.toString('base64').replace(/(.{8})/g, '$1\n'),
+      ]) {
+        const { fetch, calls } = stubFetch({ text: 'hello' })
+        const model = createDeepInfra({ apiKey: 'k', fetch }).transcription('m')
+        await model.doGenerate({ audio: encoded, mediaType: 'audio/wav' })
+        const part = (calls[0]!.init.body as FormData).get('audio') as File
+        assert.deepEqual(
+          new Uint8Array(await part.arrayBuffer()),
+          sample,
+          `${length} bytes as ${JSON.stringify(encoded.slice(0, 12))}`
+        )
+      }
+    }
+  })
+
+  test('reads the key without process.env on a runtime that has no process', async () => {
+    const { fetch, calls } = stubFetch({ text: 'hello' })
+    const realProcess = globalThis.process
+    const model = createDeepInfra({ fetch }).transcription('m')
+    delete (globalThis as any).process
+    try {
+      await assert.rejects(
+        () => model.doGenerate({ audio, mediaType: 'audio/wav' }),
+        /DEEPINFRA_API_KEY/
+      )
+      const keyed = createDeepInfra({ apiKey: 'k', fetch }).transcription('m')
+      await keyed.doGenerate({ audio, mediaType: 'audio/wav' })
+    } finally {
+      globalThis.process = realProcess
+    }
+    assert.equal(calls.length, 1)
+  })
+
   test('maps text, language, segments and duration', async () => {
     const { fetch } = stubFetch({
       text: 'the transcribed spoken words',
