@@ -79,7 +79,7 @@ export async function executeCLIViaChannel({
   return new Promise((resolve, reject) => {
     const commandRoute = pikkuWS.getRoute('command')
 
-    const responseHandler = (response: any) => {
+    const responseHandler = async (response: any) => {
       if (
         response?.action === 'cli-control' &&
         response?.event === 'complete'
@@ -92,7 +92,11 @@ export async function executeCLIViaChannel({
 
       // A CLI channel response is rendered off-process: there are no services
       // to hand the renderer, and every CLI renderer ignores the argument.
-      renderer(null as never, response, undefined)
+      try {
+        await renderer(null as never, response, undefined)
+      } catch (error) {
+        reject(error)
+      }
     }
 
     commandRoute.subscribe(commandId, responseHandler)

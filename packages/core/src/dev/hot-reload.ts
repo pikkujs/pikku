@@ -144,14 +144,17 @@ export async function pikkuDevReloader(
   const scheduleReload = (filePath: string) => {
     pendingChanges.add(filePath)
     if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(async () => {
+    const flush = async () => {
       const files = [...pendingChanges]
       pendingChanges.clear()
       for (const file of files) {
         postCodegenQueue.add(file)
         await safeHandleFileChange(file)
       }
-    }, 50)
+    }
+    // Fire-and-forget timer callback: safeHandleFileChange catches and logs
+    // every error, so nothing can reject here.
+    debounceTimer = setTimeout(() => void flush(), 50)
   }
 
   for (const srcDir of absSrcDirs) {

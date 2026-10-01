@@ -830,7 +830,10 @@ describe('CLI Runner', () => {
     })
   })
   describe('--json output', () => {
-    const wireGreet = (renderers: Record<string, any>, defaultRenderer: any) => {
+    const wireGreet = (
+      renderers: Record<string, any>,
+      defaultRenderer: any
+    ) => {
       pikkuState(null, 'cli', 'meta', {
         programs: {
           'test-cli': {

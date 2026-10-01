@@ -35,13 +35,13 @@ function find<T = any>(
 }
 
 describe('wrapChannelWithAGUI — text streaming', () => {
-  it('sends TEXT_MESSAGE_START only once for consecutive text-deltas', () => {
+  it('sends TEXT_MESSAGE_START only once for consecutive text-deltas', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'a' } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: 'b' } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: 'c' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'a' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'b' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'c' } as AgentStreamEvent)
 
     assert.equal(
       events.filter((e: any) => e.type === 'TEXT_MESSAGE_START').length,
@@ -53,13 +53,19 @@ describe('wrapChannelWithAGUI — text streaming', () => {
     )
   })
 
-  it('uses the same messageId for START, all CONTENTs, and END', () => {
+  it('uses the same messageId for START, all CONTENTs, and END', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'hello' } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: ' world' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'hello',
+    } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: ' world',
+    } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const start = find(events, 'TEXT_MESSAGE_START')
     const end = find(events, 'TEXT_MESSAGE_END')
@@ -75,32 +81,35 @@ describe('wrapChannelWithAGUI — text streaming', () => {
     }
   })
 
-  it('closes open text message when done arrives', () => {
+  it('closes open text message when done arrives', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.ok(find(events, 'TEXT_MESSAGE_END'))
   })
 
-  it('closes open text message when error arrives', () => {
+  it('closes open text message when error arrives', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'partial' } as AgentStreamEvent)
-    wrapped.send({ type: 'error', message: 'oops' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'partial',
+    } as AgentStreamEvent)
+    await wrapped.send({ type: 'error', message: 'oops' } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('RUN_ERROR'))
   })
 
-  it('does not emit TEXT_MESSAGE_END when no text was sent', () => {
+  it('does not emit TEXT_MESSAGE_END when no text was sent', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.equal(
       events.filter((e: any) => e.type === 'TEXT_MESSAGE_END').length,
@@ -110,15 +119,15 @@ describe('wrapChannelWithAGUI — text streaming', () => {
 })
 
 describe('wrapChannelWithAGUI — reasoning streaming', () => {
-  it('sends THINKING_TEXT_MESSAGE_START only once for consecutive reasoning-deltas', () => {
+  it('sends THINKING_TEXT_MESSAGE_START only once for consecutive reasoning-deltas', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'step 1',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'step 2',
     } as AgentStreamEvent)
@@ -135,15 +144,18 @@ describe('wrapChannelWithAGUI — reasoning streaming', () => {
     )
   })
 
-  it('closes thinking message and opens text message when switching', () => {
+  it('closes thinking message and opens text message when switching', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'thinking',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: 'answer' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'answer',
+    } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(t.includes('THINKING_TEXT_MESSAGE_END'))
@@ -152,15 +164,15 @@ describe('wrapChannelWithAGUI — reasoning streaming', () => {
     )
   })
 
-  it('closes thinking message before tool-call', () => {
+  it('closes thinking message before tool-call', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'reasoning',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'fn',
@@ -173,15 +185,15 @@ describe('wrapChannelWithAGUI — reasoning streaming', () => {
     )
   })
 
-  it('uses consistent messageId across THINKING START, CONTENT, END', () => {
+  it('uses consistent messageId across THINKING START, CONTENT, END', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'reason',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const start = find(events, 'THINKING_TEXT_MESSAGE_START')
     const end = find(events, 'THINKING_TEXT_MESSAGE_END')
@@ -194,12 +206,15 @@ describe('wrapChannelWithAGUI — reasoning streaming', () => {
 })
 
 describe('wrapChannelWithAGUI — tool calls', () => {
-  it('closes text message before TOOL_CALL_START', () => {
+  it('closes text message before TOOL_CALL_START', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'preamble' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'preamble',
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'myTool',
@@ -210,11 +225,11 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('TOOL_CALL_START'))
   })
 
-  it('emits TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END in sequence', () => {
+  it('emits TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END in sequence', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'search',
@@ -230,11 +245,11 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.equal(endIdx, argsIdx + 1)
   })
 
-  it('propagates toolCallId and toolCallName to START, ARGS and END', () => {
+  it('propagates toolCallId and toolCallName to START, ARGS and END', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'abc',
       toolName: 'myFunc',
@@ -251,17 +266,17 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.equal(end.toolCallId, 'abc')
   })
 
-  it('handles multiple tool calls in sequence', () => {
+  it('handles multiple tool calls in sequence', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'fn1',
       args: {},
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc2',
       toolName: 'fn2',
@@ -276,11 +291,11 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.equal(starts[1].toolCallId, 'tc2')
   })
 
-  it('converts object tool-result to JSON string in content', () => {
+  it('converts object tool-result to JSON string in content', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-result',
       toolCallId: 'tc1',
       toolName: 'fn',
@@ -292,11 +307,11 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.equal(r.role, 'tool')
   })
 
-  it('passes string tool-result through unchanged', () => {
+  it('passes string tool-result through unchanged', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-result',
       toolCallId: 'tc1',
       toolName: 'fn',
@@ -309,16 +324,16 @@ describe('wrapChannelWithAGUI — tool calls', () => {
 })
 
 describe('wrapChannelWithAGUI — run lifecycle', () => {
-  it('emits RUN_FINISHED with full usage fields', () => {
+  it('emits RUN_FINISHED with full usage fields', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 100, output: 50 },
       model: 'claude-3-5',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const f = find(events, 'RUN_FINISHED')
     assert.ok(f)
@@ -328,51 +343,54 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
     assert.equal(f.usage.totalTokens, 150)
   })
 
-  it('emits RUN_FINISHED exactly once when both usage and done arrive', () => {
+  it('emits RUN_FINISHED exactly once when both usage and done arrive', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 1, output: 1 },
       model: 'm',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.equal(events.filter((e: any) => e.type === 'RUN_FINISHED').length, 1)
   })
 
-  it('emits RUN_FINISHED on done when there was no usage event', () => {
+  it('emits RUN_FINISHED on done when there was no usage event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.ok(find(events, 'RUN_FINISHED'))
   })
 
-  it('usage event closes any open text message before RUN_FINISHED', () => {
+  it('usage event closes any open text message before RUN_FINISHED', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 1, output: 1 },
       model: 'm',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('RUN_FINISHED'))
   })
 
-  it('emits RUN_ERROR and closes open text on error', () => {
+  it('emits RUN_ERROR and closes open text on error', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'partial' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'partial',
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'error',
       message: 'network timeout',
     } as AgentStreamEvent)
@@ -384,15 +402,15 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('RUN_ERROR'))
   })
 
-  it('emits RUN_ERROR and closes open thinking message on error', () => {
+  it('emits RUN_ERROR and closes open thinking message on error', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'thinking',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'error', message: 'fail' } as AgentStreamEvent)
+    await wrapped.send({ type: 'error', message: 'fail' } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(t.indexOf('THINKING_TEXT_MESSAGE_END') < t.indexOf('RUN_ERROR'))
@@ -400,11 +418,11 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
 })
 
 describe('wrapChannelWithAGUI — step events', () => {
-  it('emits STEP_STARTED for step-start with the agent in the step name', () => {
+  it('emits STEP_STARTED for step-start with the agent in the step name', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'step-start',
       stepNumber: 1,
       agent: 'researcher',
@@ -417,11 +435,14 @@ describe('wrapChannelWithAGUI — step events', () => {
     )
   })
 
-  it('emits STEP_STARTED with a defined stepName when agent is absent', () => {
+  it('emits STEP_STARTED with a defined stepName when agent is absent', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'step-start', stepNumber: 1 } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 1,
+    } as AgentStreamEvent)
 
     const s = find(events, 'STEP_STARTED')
     assert.ok(s)
@@ -430,11 +451,11 @@ describe('wrapChannelWithAGUI — step events', () => {
 })
 
 describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
-  it('emits CUSTOM pikku:approval-request with all fields', () => {
+  it('emits CUSTOM pikku:approval-request with all fields', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'approval-request',
       toolCallId: 'tc1',
       toolName: 'deleteUser',
@@ -454,15 +475,15 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.equal(c.value.session, 'sess-1')
   })
 
-  it('closes open text message before emitting approval-request', () => {
+  it('closes open text message before emitting approval-request', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'text-delta',
       text: 'about to ask',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'approval-request',
       toolCallId: 'tc1',
       toolName: 'fn',
@@ -473,11 +494,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('CUSTOM'))
   })
 
-  it('emits CUSTOM pikku:credential-request with all fields', () => {
+  it('emits CUSTOM pikku:credential-request with all fields', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'credential-request',
       toolCallId: 'tc2',
       toolName: 'githubSearch',
@@ -498,11 +519,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.equal(c.value.toolCallId, 'tc2')
   })
 
-  it('emits CUSTOM pikku:generative-ui', () => {
+  it('emits CUSTOM pikku:generative-ui', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'generative-ui',
       spec: { component: 'Chart', props: { data: [1, 2] } },
     } as AgentStreamEvent)
@@ -515,11 +536,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     })
   })
 
-  it('emits CUSTOM pikku:data', () => {
+  it('emits CUSTOM pikku:data', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'data',
       name: 'search-results',
       data: [{ title: 'foo' }],
@@ -531,11 +552,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.deepEqual(c.value.data, [{ title: 'foo' }])
   })
 
-  it('emits CUSTOM pikku:agent-call', () => {
+  it('emits CUSTOM pikku:agent-call', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'agent-call',
       agentName: 'sub-agent',
       session: 'sess-2',
@@ -549,11 +570,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.deepEqual(c.value.input, { query: 'hello' })
   })
 
-  it('emits CUSTOM pikku:agent-result', () => {
+  it('emits CUSTOM pikku:agent-result', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'agent-result',
       agentName: 'sub-agent',
       session: 'sess-2',
@@ -566,11 +587,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
     assert.equal(c.value.result, 'done')
   })
 
-  it('emits CUSTOM pikku:suspended', () => {
+  it('emits CUSTOM pikku:suspended', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'suspended',
       reason: 'rpc-missing',
       missingRpcs: ['stripe.charge'],
@@ -584,11 +605,11 @@ describe('wrapChannelWithAGUI — Pikku CUSTOM events', () => {
 })
 
 describe('wrapChannelWithAGUI — speech', () => {
-  it('forwards audio-delta as a CUSTOM event', () => {
+  it('forwards audio-delta as a CUSTOM event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'audio-delta',
       data: 'base64abc',
       format: 'mp3',
@@ -602,20 +623,20 @@ describe('wrapChannelWithAGUI — speech', () => {
     assert.deepEqual(custom.value, { data: 'base64abc', format: 'mp3' })
   })
 
-  it('forwards audio-done as a CUSTOM event', () => {
+  it('forwards audio-done as a CUSTOM event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'audio-done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'audio-done' } as AgentStreamEvent)
 
     assert.ok(find(events, 'CUSTOM', 'pikku:audio-done'))
   })
 
-  it('forwards the transcript as a CUSTOM event', () => {
+  it('forwards the transcript as a CUSTOM event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'transcript',
       text: 'what the user said',
     } as AgentStreamEvent)
@@ -627,17 +648,23 @@ describe('wrapChannelWithAGUI — speech', () => {
     assert.deepEqual(custom.value, { text: 'what the user said' })
   })
 
-  it('leaves an open text message open, so speech cannot split a reply', () => {
+  it('leaves an open text message open, so speech cannot split a reply', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'text-delta', text: 'hello' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'hello',
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'audio-delta',
       data: 'abc',
       format: 'mp3',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: ' there' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: ' there',
+    } as AgentStreamEvent)
 
     // Audio arrives interleaved with the text it is saying. Ending the message
     // around it would render one reply as several.
@@ -655,7 +682,7 @@ describe('wrapChannelWithAGUI — channel proxy', () => {
     assert.equal(wrapped.channelId, 'test-id')
   })
 
-  it('delegates setState / getState / clearState to inner', () => {
+  it('delegates setState / getState / clearState to inner', async () => {
     let stored: unknown
     const { channel } = makeChannel()
     channel.setState = (v) => {
@@ -667,23 +694,23 @@ describe('wrapChannelWithAGUI — channel proxy', () => {
     }
 
     const wrapped = wrapChannelWithAGUI(channel)
-    wrapped.setState('my-state')
+    await wrapped.setState('my-state')
     assert.equal(wrapped.getState(), 'my-state')
-    wrapped.clearState()
+    await wrapped.clearState()
     assert.equal(wrapped.getState(), undefined)
   })
 
-  it('delegates sendBinary to inner', () => {
+  it('delegates sendBinary to inner', async () => {
     const binaries: unknown[] = []
     const { channel } = makeChannel()
     channel.sendBinary = (d) => binaries.push(d)
 
     const wrapped = wrapChannelWithAGUI(channel)
-    wrapped.sendBinary(new Uint8Array([1, 2, 3]))
+    await wrapped.sendBinary(new Uint8Array([1, 2, 3]))
     assert.equal(binaries.length, 1)
   })
 
-  it('delegates close to inner', () => {
+  it('delegates close to inner', async () => {
     let closed = false
     const { channel } = makeChannel()
     channel.close = () => {
@@ -691,7 +718,7 @@ describe('wrapChannelWithAGUI — channel proxy', () => {
     }
 
     const wrapped = wrapChannelWithAGUI(channel)
-    wrapped.close()
+    await wrapped.close()
     assert.ok(closed)
   })
 
@@ -800,15 +827,15 @@ function assertClientAcceptsStream(events: any[]): void {
 }
 
 describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
-  it('emits RUN_STARTED with threadId and runId as the first event', () => {
+  it('emits RUN_STARTED with threadId and runId as the first event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel, {
       threadId: 'thread-1',
       runId: 'run-1',
     })
 
-    wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const first = events[0] as any
     assert.equal(first.type, 'RUN_STARTED')
@@ -816,53 +843,59 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assert.equal(first.runId, 'run-1')
   })
 
-  it('carries the same threadId and runId on RUN_FINISHED', () => {
+  it('carries the same threadId and runId on RUN_FINISHED', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel, {
       threadId: 'thread-1',
       runId: 'run-1',
     })
 
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const f = find(events, 'RUN_FINISHED')
     assert.equal(f.threadId, 'thread-1')
     assert.equal(f.runId, 'run-1')
   })
 
-  it('does not emit RUN_FINISHED on mid-run usage; accumulates into final RUN_FINISHED', () => {
+  it('does not emit RUN_FINISHED on mid-run usage; accumulates into final RUN_FINISHED', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'step-start', stepNumber: 0 } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 0,
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'listTodos',
       args: {},
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-result',
       toolCallId: 'tc1',
       toolName: 'listTodos',
       result: ['a'],
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 10, output: 5 },
       model: 'gpt-4o',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'step-start', stepNumber: 1 } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 1,
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'text-delta',
       text: 'You have 1 todo',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 20, output: 8 },
       model: 'gpt-4o',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const finishes = (events as any[]).filter((e) => e.type === 'RUN_FINISHED')
     assert.equal(finishes.length, 1)
@@ -878,28 +911,28 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assertClientAcceptsStream(events as any[])
   })
 
-  it('swallows events after done so nothing follows RUN_FINISHED', () => {
+  it('swallows events after done so nothing follows RUN_FINISHED', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 1, output: 1 },
       model: 'm',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: 'late' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'late' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
     assert.equal(events.filter((e: any) => e.type === 'RUN_FINISHED').length, 1)
   })
 
-  it('gives TOOL_CALL_RESULT a messageId', () => {
+  it('gives TOOL_CALL_RESULT a messageId', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-result',
       toolCallId: 'tc1',
       toolName: 'fn',
@@ -910,11 +943,11 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assert.ok(r.messageId, 'TOOL_CALL_RESULT requires a messageId')
   })
 
-  it('streams tool args via TOOL_CALL_ARGS between START and END', () => {
+  it('streams tool args via TOOL_CALL_ARGS between START and END', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'addTodo',
@@ -930,13 +963,19 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assert.equal(args.delta, '{"text":"buy milk"}')
   })
 
-  it('wraps thinking messages in THINKING_START / THINKING_END', () => {
+  it('wraps thinking messages in THINKING_START / THINKING_END', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'reasoning-delta', text: 'hmm' } as AgentStreamEvent)
-    wrapped.send({ type: 'text-delta', text: 'answer' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'reasoning-delta',
+      text: 'hmm',
+    } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'answer',
+    } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(
@@ -948,18 +987,24 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assertClientAcceptsStream(events as any[])
   })
 
-  it('closes the open step before RUN_FINISHED and keeps step names unique', () => {
+  it('closes the open step before RUN_FINISHED and keeps step names unique', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'step-start', stepNumber: 0 } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 0,
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'step-start',
       stepNumber: 0,
       agent: 'todoAgent',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'step-start', stepNumber: 1 } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 1,
+    } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const startNames = (events as any[])
       .filter((e) => e.type === 'STEP_STARTED')
@@ -968,7 +1013,7 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     assertClientAcceptsStream(events as any[])
   })
 
-  it('accepts the full multi-agent delegate wire sequence', () => {
+  it('accepts the full multi-agent delegate wire sequence', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel, {
       threadId: 't1',
@@ -976,70 +1021,70 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     })
 
     const send = (e: any) => wrapped.send(e as AgentStreamEvent)
-    send({ type: 'step-start', stepNumber: 0 })
-    send({
+    await send({ type: 'step-start', stepNumber: 0 })
+    await send({
       type: 'tool-call',
       toolCallId: 'p1',
       toolName: 'todoAgent',
       args: { message: 'list' },
     })
-    send({
+    await send({
       type: 'agent-call',
       agentName: 'todoAgent',
       session: 's',
       input: 'list',
     })
-    send({ type: 'step-start', stepNumber: 0, agent: 'todoAgent' })
-    send({
+    await send({ type: 'step-start', stepNumber: 0, agent: 'todoAgent' })
+    await send({
       type: 'tool-call',
       toolCallId: 'c1',
       toolName: 'todos__listTodos',
       args: {},
     })
-    send({
+    await send({
       type: 'tool-result',
       toolCallId: 'c1',
       toolName: 'todos__listTodos',
       result: ['x'],
     })
-    send({
+    await send({
       type: 'usage',
       tokens: { input: 5, output: 2 },
       model: 'gpt-4o-mini',
     })
-    send({ type: 'step-start', stepNumber: 1, agent: 'todoAgent' })
+    await send({ type: 'step-start', stepNumber: 1, agent: 'todoAgent' })
     for (const chunk of ['You ', 'have ', 'one ', 'todo']) {
-      send({ type: 'text-delta', text: chunk })
+      await send({ type: 'text-delta', text: chunk })
     }
-    send({
+    await send({
       type: 'usage',
       tokens: { input: 7, output: 9 },
       model: 'gpt-4o-mini',
     })
-    send({
+    await send({
       type: 'agent-result',
       agentName: 'todoAgent',
       session: 's',
       result: 'You have one todo',
     })
-    send({
+    await send({
       type: 'tool-result',
       toolCallId: 'p1',
       toolName: 'todoAgent',
       result: 'You have one todo',
     })
-    send({
+    await send({
       type: 'usage',
       tokens: { input: 11, output: 3 },
       model: 'gpt-4o-mini',
     })
-    send({ type: 'step-start', stepNumber: 1 })
-    send({
+    await send({ type: 'step-start', stepNumber: 1 })
+    await send({
       type: 'usage',
       tokens: { input: 4, output: 1 },
       model: 'gpt-4o-mini',
     })
-    send({ type: 'done' })
+    await send({ type: 'done' })
 
     assertClientAcceptsStream(events as any[])
     assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
@@ -1051,18 +1096,21 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     )
   })
 
-  it('approval flow ends with CUSTOM approval-request then RUN_FINISHED', () => {
+  it('approval flow ends with CUSTOM approval-request then RUN_FINISHED', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({ type: 'step-start', stepNumber: 0 } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'step-start',
+      stepNumber: 0,
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'addTodo',
       args: { text: 'x' },
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'approval-request',
       toolCallId: 'tc1',
       toolName: 'addTodo',
@@ -1070,7 +1118,7 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
       reason: 'Add a todo',
       runId: 'run-9',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assertClientAcceptsStream(events as any[])
     const c = find(events, 'CUSTOM', 'pikku:approval-request')
@@ -1081,40 +1129,40 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
 })
 
 describe('wrapChannelWithAGUI — realistic full turn', () => {
-  it('handles think → text → tool-call → tool-result → usage → done sequence', () => {
+  it('handles think → text → tool-call → tool-result → usage → done sequence', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
-    wrapped.send({
+    await wrapped.send({
       type: 'reasoning-delta',
       text: 'let me search',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'text-delta',
       text: 'I will look that up.',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-call',
       toolCallId: 'tc1',
       toolName: 'search',
       args: { q: 'pikku' },
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'tool-result',
       toolCallId: 'tc1',
       toolName: 'search',
       result: 'found it',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'text-delta',
       text: 'Here is what I found.',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'usage',
       tokens: { input: 200, output: 80 },
       model: 'gpt-4o',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const t = types(events)
     assert.ok(t.includes('THINKING_TEXT_MESSAGE_START'))
@@ -1131,7 +1179,7 @@ describe('wrapChannelWithAGUI — realistic full turn', () => {
 })
 
 describe('wrapChannelWithAGUI — late-bound runId', () => {
-  it('resolves getRunId at the first event, not at wrap time', () => {
+  it('resolves getRunId at the first event, not at wrap time', async () => {
     const { channel, events } = makeChannel()
     let runId: string | undefined
     const wrapped = wrapChannelWithAGUI(channel, {
@@ -1140,8 +1188,8 @@ describe('wrapChannelWithAGUI — late-bound runId', () => {
     })
 
     runId = 'run-from-state-service'
-    wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'text-delta', text: 'hi' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     const started = find(events, 'RUN_STARTED')
     const finished = find(events, 'RUN_FINISHED')
@@ -1149,16 +1197,16 @@ describe('wrapChannelWithAGUI — late-bound runId', () => {
     assert.equal(finished.runId, 'run-from-state-service')
   })
 
-  it('prefers an explicit runId over getRunId and falls back to a UUID', () => {
+  it('prefers an explicit runId over getRunId and falls back to a UUID', async () => {
     const explicit = makeChannel()
-    wrapChannelWithAGUI(explicit.channel, {
+    await wrapChannelWithAGUI(explicit.channel, {
       runId: 'explicit-run',
       getRunId: () => 'ignored',
     }).send({ type: 'done' } as AgentStreamEvent)
     assert.equal(find(explicit.events, 'RUN_STARTED').runId, 'explicit-run')
 
     const fallback = makeChannel()
-    wrapChannelWithAGUI(fallback.channel, {
+    await wrapChannelWithAGUI(fallback.channel, {
       getRunId: () => undefined,
     }).send({ type: 'done' } as AgentStreamEvent)
     const started = find(fallback.events, 'RUN_STARTED')
@@ -1168,15 +1216,15 @@ describe('wrapChannelWithAGUI — late-bound runId', () => {
 })
 
 describe('wrapChannelWithAGUI — interruption', () => {
-  it('closes the open text message and forwards the fragment as a custom event', () => {
+  it('closes the open text message and forwards the fragment as a custom event', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel, { threadId: 't', runId: 'r' })
 
-    wrapped.send({
+    await wrapped.send({
       type: 'text-delta',
       text: 'I will delete the ',
     } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
       type: 'interrupted',
       runId: 'r',
       text: 'I will delete the ',
@@ -1194,18 +1242,21 @@ describe('wrapChannelWithAGUI — interruption', () => {
     })
   })
 
-  it('still ends the run exactly once, so an interrupted run is not terminal on its own', () => {
+  it('still ends the run exactly once, so an interrupted run is not terminal on its own', async () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel, { threadId: 't', runId: 'r' })
 
-    wrapped.send({ type: 'text-delta', text: 'partial' } as AgentStreamEvent)
-    wrapped.send({
+    await wrapped.send({
+      type: 'text-delta',
+      text: 'partial',
+    } as AgentStreamEvent)
+    await wrapped.send({
       type: 'interrupted',
       runId: 'r',
       text: 'partial',
       reason: 'speech',
     } as AgentStreamEvent)
-    wrapped.send({ type: 'done' } as AgentStreamEvent)
+    await wrapped.send({ type: 'done' } as AgentStreamEvent)
 
     assert.equal(events.filter((e: any) => e.type === 'RUN_FINISHED').length, 1)
     assert.equal(events.filter((e: any) => e.type === 'RUN_ERROR').length, 0)

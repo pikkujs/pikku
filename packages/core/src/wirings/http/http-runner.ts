@@ -265,17 +265,17 @@ const executeRoute = async (
       const channelRef = channel
       const channelHandler = {
         getChannel: () => channelRef,
-        send: (data: unknown, isBinary?: boolean) => {
-          if (isBinary) channelRef.sendBinary(data as BinaryData)
-          else channelRef.send(data)
+        send: async (data: unknown, isBinary?: boolean) => {
+          if (isBinary) await channelRef.sendBinary(data as BinaryData)
+          else await channelRef.send(data)
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
       }
       singletonServices.eventHub.onChannelOpened(channelHandler)
       const originalClose = channel.close
-      channel.close = () => {
+      channel.close = async () => {
         singletonServices.eventHub.onChannelClosed(channelId)
-        originalClose()
+        await originalClose()
       }
     }
   }
@@ -324,7 +324,7 @@ const executeRoute = async (
           http?.response?.arrayBuffer(JSON.stringify(frame))
         }
       } catch {}
-      channel?.close()
+      await channel?.close()
       return { result }
     }
     throw e

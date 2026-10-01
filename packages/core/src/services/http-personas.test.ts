@@ -16,7 +16,7 @@ const startTarget = async () => {
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
-    req.on('end', async () => {
+    const handleRequest = async () => {
       const body = chunks.length
         ? JSON.parse(Buffer.concat(chunks).toString())
         : {}
@@ -102,6 +102,11 @@ const startTarget = async () => {
         return
       }
       res.writeHead(404).end()
+    }
+    req.on('end', () => {
+      handleRequest().catch((e) => {
+        res.writeHead(500).end(String(e))
+      })
     })
   })
   await new Promise<void>((resolve) => server.listen(0, resolve))

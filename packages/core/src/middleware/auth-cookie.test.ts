@@ -117,7 +117,7 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        SessionService.set(mockUserSession)
+        await SessionService.set(mockUserSession)
       }
     )
 
@@ -163,7 +163,7 @@ describe('authCookie middleware', () => {
       } as any,
       async () => {
         // The logout handler clears the session.
-        SessionService.clear()
+        await SessionService.clear()
       }
     )
 
@@ -430,7 +430,7 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        SessionService.set(mockUserSession)
+        await SessionService.set(mockUserSession)
       }
     )
 
@@ -473,7 +473,7 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        SessionService.set(mockUserSession)
+        await SessionService.set(mockUserSession)
       }
     )
 
@@ -514,7 +514,7 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        SessionService.set({ ...mockUserSession, extra: 'data' })
+        await SessionService.set({ ...mockUserSession, extra: 'data' })
       }
     )
 
@@ -553,7 +553,7 @@ describe('authCookie middleware', () => {
         },
       } as any,
       async () => {
-        SessionService.set(mockUserSession)
+        await SessionService.set(mockUserSession)
       }
     )
 

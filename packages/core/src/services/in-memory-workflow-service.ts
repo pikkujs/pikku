@@ -90,7 +90,7 @@ export class InMemoryWorkflowService
     stepId: string,
     duration: number
   ): Promise<boolean> {
-    const timer = setTimeout(async () => {
+    const resume = async () => {
       this.sleepTimers.delete(timer)
       try {
         await this.executeWorkflowSleepCompleted(runId, stepId)
@@ -99,7 +99,9 @@ export class InMemoryWorkflowService
           `Failed to resume workflow sleep for runId ${runId}: ${error?.message ?? error}`
         )
       }
-    }, duration)
+    }
+    // Fire-and-forget timer callback: resume catches and logs every error.
+    const timer = setTimeout(() => void resume(), duration)
     this.sleepTimers.add(timer)
     return true
   }
