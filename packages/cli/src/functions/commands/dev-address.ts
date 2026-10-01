@@ -24,6 +24,13 @@ export interface DevAddress {
   apiUrl: string
   pid: number
   startedAt: string
+  codegen?: DevCodegenOutcome
+}
+
+export interface DevCodegenOutcome {
+  ok: boolean
+  at: string
+  error?: string
 }
 
 const addressPath = (runtimeDir: string): string =>
@@ -38,6 +45,20 @@ export const writeDevAddress = (runtimeDir: string, apiUrl: string): void => {
     startedAt: new Date().toISOString(),
   }
   writeFileSync(path, `${JSON.stringify(address, null, 2)}\n`, 'utf8')
+}
+
+/** Records the last watch-triggered codegen pass, so `pikku dev status` can say why the server is serving stale code. */
+export const recordDevCodegen = (
+  runtimeDir: string,
+  outcome: { ok: true } | { ok: false; error: string }
+): void => {
+  const path = addressPath(runtimeDir)
+  try {
+    const address = JSON.parse(readFileSync(path, 'utf8')) as DevAddress
+    if (address.pid !== process.pid) return
+    address.codegen = { ...outcome, at: new Date().toISOString() }
+    writeFileSync(path, `${JSON.stringify(address, null, 2)}\n`, 'utf8')
+  } catch {}
 }
 
 export const clearDevAddress = (runtimeDir: string): void => {
