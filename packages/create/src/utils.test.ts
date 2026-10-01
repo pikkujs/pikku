@@ -15,6 +15,7 @@ import {
   wranglerChanges,
   serverlessChanges,
   updatePackageJSONScripts,
+  ensureOxlintSetup,
   deepMerge,
   filterFilesByFeatures,
   withNetworkRetry,
@@ -382,6 +383,35 @@ describe('Functions Test Suite', () => {
       ),
       'policy ARN should be updated'
     )
+  })
+
+  test('ensureOxlintSetup: adds deps, config and lint script, keeps existing ones', () => {
+    const testDir = path.join(tempRoot, 'oxlintSetup')
+    fs.mkdirSync(testDir, { recursive: true })
+    const pkgPath = path.join(testDir, 'package.json')
+    fs.writeFileSync(
+      pkgPath,
+      JSON.stringify({ scripts: { build: 'tsc' }, devDependencies: { x: '1' } })
+    )
+
+    ensureOxlintSetup(testDir)
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    assert.equal(pkg.scripts.lint, 'oxlint --type-aware')
+    assert.equal(pkg.scripts.build, 'tsc')
+    assert.equal(pkg.devDependencies.x, '1')
+    assert.ok(pkg.devDependencies.oxlint)
+    assert.ok(pkg.devDependencies['oxlint-tsgolint'])
+    const configPath = path.join(testDir, '.oxlintrc.json')
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    assert.equal(config.options.typeAware, true)
+    assert.equal(config.rules['typescript/no-misused-promises'], 'error')
+    assert.equal(config.rules['typescript/no-floating-promises'], 'error')
+
+    // second run, and a user-owned file: nothing is overwritten
+    fs.writeFileSync(configPath, '{"mine":true}')
+    ensureOxlintSetup(testDir)
+    assert.equal(fs.readFileSync(configPath, 'utf-8'), '{"mine":true}')
+    assert.deepEqual(JSON.parse(fs.readFileSync(pkgPath, 'utf-8')), pkg)
   })
 
   test('updatePackageJSONScripts: updates package.json content', () => {

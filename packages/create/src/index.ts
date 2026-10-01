@@ -26,6 +26,7 @@ import {
   replaceFunctionReferences,
   serverlessChanges,
   updatePackageJSONScripts,
+  ensureOxlintSetup,
   withNetworkRetry,
   wranglerChanges,
 } from './utils.js'
@@ -334,6 +335,7 @@ async function setupTemplate(cliOptions: CliOptions) {
       supportedFeatures,
       cliOptions.stackblitz
     )
+    ensureOxlintSetup(targetPath)
 
     if (cliOptions.stackblitz) {
       try {
