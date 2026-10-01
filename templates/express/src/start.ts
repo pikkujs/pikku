@@ -13,7 +13,7 @@ async function main(): Promise<void> {
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
 
