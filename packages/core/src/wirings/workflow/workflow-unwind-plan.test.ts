@@ -97,11 +97,11 @@ describe('planUnwind', () => {
     assert.equal(p.compensated, false)
   })
 
-  test('a running compensation keeps the plan open', () => {
+  test('a running compensation keeps the plan open and stays ready to re-drive', () => {
     const records = [step('a', 0, 10), step('a:compensate', 11, 11, 'running')]
     const p = plan(records)
     assert.equal(p.settled, false)
-    assert.equal(p.states.get('a'), 'running')
+    assert.deepEqual(names(p.ready), ['a'])
   })
 
   test('a failed step is a candidate and is compensated as the newest', () => {
@@ -201,10 +201,18 @@ describe('planUnwind', () => {
     assert.equal(p.settled, true)
   })
 
-  test('scheduled and pending compensations count as running', () => {
-    for (const status of ['pending', 'scheduled'] as StepStatus[]) {
-      const p = plan([step('a', 0, 10), step('a:compensate', 11, 11, status)])
-      assert.equal(p.states.get('a'), 'running')
-    }
+  test('a scheduled compensation counts as running', () => {
+    const p = plan([
+      step('a', 0, 10),
+      step('a:compensate', 11, 11, 'scheduled'),
+    ])
+    assert.equal(p.states.get('a'), 'running')
+    assert.deepEqual(p.ready, [])
+  })
+
+  test('a pending compensation was never dispatched, so it is ready again', () => {
+    const p = plan([step('a', 0, 10), step('a:compensate', 11, 11, 'pending')])
+    assert.deepEqual(names(p.ready), ['a'])
+    assert.equal(p.settled, false)
   })
 })

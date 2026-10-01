@@ -225,7 +225,7 @@ export const childCompensationError = (
   status: WorkflowStatus,
   output: unknown,
   error: SerializedError | undefined
-): Error => {
+): Error & { childCompensation: ChildCompensationInfo } => {
   const source = output as
     { restedAt?: string; stuckSteps?: Array<{ stepName: string }> } | undefined
   const message =
@@ -233,7 +233,7 @@ export const childCompensationError = (
       ? `Sub-workflow compensation failed at ${source?.stuckSteps?.map((s) => s.stepName).join(', ')}`
       : error?.message || 'Sub-workflow failed'
   return Object.assign(new Error(message), {
-    childCompensation: { status, ...(source ?? {}) },
+    childCompensation: { status, ...(source ?? {}) } as ChildCompensationInfo,
   })
 }
 
@@ -393,13 +393,42 @@ export const childRunFailure = (childRun: WorkflowRun): Error | null => {
   }
 }
 
+/**
+ * The error carrying a child's compensation outcome does not survive a step
+ * boundary, so a queued parent finds it again from the failed child step.
+ */
+const failedChildCompensation = async (
+  api: CompensationApi,
+  runId: string
+): Promise<ChildCompensationInfo | undefined> => {
+  const steps = await api.getRunSteps(runId)
+  let rested: ChildCompensationInfo | undefined
+  for (const step of steps) {
+    if (step.status !== 'failed' || !step.childRunId) continue
+    const child = await api.getRun(step.childRunId)
+    if (child?.status === 'compensation_failed') {
+      return childCompensationError(child.status, child.output, child.error)
+        .childCompensation
+    }
+    if (child?.status === 'compensated') {
+      rested ??= childCompensationError(
+        child.status,
+        child.output,
+        child.error
+      ).childCompensation
+    }
+  }
+  return rested
+}
+
 export const beginUnwind = async (
   api: CompensationApi,
   host: UnwindHost,
   run: WorkflowRun,
   cause: UnwindCause
 ): Promise<'unwinding' | 'finished' | 'not-needed'> => {
-  const child = cause.childCompensation
+  const child =
+    cause.childCompensation ?? (await failedChildCompensation(api, run.id))
   if (child?.status === 'compensation_failed') {
     await host.finish(
       run,

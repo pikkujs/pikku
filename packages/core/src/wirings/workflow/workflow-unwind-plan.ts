@@ -124,7 +124,7 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
       state = restedAt ? 'rested' : 'done'
     } else if (comp?.status === 'failed') {
       state = 'stuck'
-    } else if (comp && IN_FLIGHT.has(comp.status)) {
+    } else if (comp?.status === 'scheduled') {
       state = 'running'
     } else {
       const deps = dependents(x).map(resolve)
