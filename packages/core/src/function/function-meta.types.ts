@@ -65,6 +65,8 @@ export type FunctionRuntimeMeta = {
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
+  /** The function declares a `compensate`, run as the sibling `<id>:compensate` when a workflow unwinds. */
+  compensate?: boolean
   /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. */
   workflowQueued?: boolean
   /** Retry count when this function is used as a workflow step. */

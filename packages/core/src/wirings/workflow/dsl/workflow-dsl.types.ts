@@ -5,6 +5,7 @@
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
+import type { SerializedError } from '../../../errors/serialized-error.js'
 import type { WorkflowRun } from '../workflow.types.js'
 import type { ScenarioPersona } from '../../../services/personas-service.js'
 import type {
@@ -24,12 +25,11 @@ export interface WorkflowStepOptions {
   /** Delay between retry attempts (e.g., '1s', '2s', '2min') */
   retryDelay?: string | number
   /**
-   * RPC to invoke for compensation when this step fails after exhausting its
-   * retries. Mirrors a graph node's `onError`: the handler receives
-   * `{ error: { message } }` and the original error is still thrown, so the
-   * workflow fails — this is compensation, not recovery.
+   * Set to `false` to leave this step out of an unwind even though its
+   * function declares a `compensate`. It cannot substitute a different
+   * compensation.
    */
-  onError?: string
+  compensate?: false
   /**
    * Run this step as an actor (scenarios). The RPC is sent through the
    * actor's authenticated client over the REAL transport — never dispatched
@@ -127,6 +127,11 @@ export type WorkflowWireSleep = (
  * loops, like dynamic `do()` step names.
  */
 export type WorkflowWireSuspend = (reason: string) => Promise<void>
+
+/**
+ * Type signature for workflow.milestone() - used by inspector.
+ */
+export type WorkflowWireMilestone = (name: string) => Promise<void>
 
 /**
  * Who is allowed to answer an approval gate, relative to the user who started
@@ -474,6 +479,15 @@ export interface SuspendStepMeta {
 }
 
 /**
+ * Milestone step metadata (workflow.milestone())
+ */
+export interface MilestoneStepMeta {
+  type: 'milestone'
+  /** Name passed to workflow.milestone() — where a compensating run rests */
+  name: string
+}
+
+/**
  * Approval step metadata (workflow.approval())
  */
 export interface ApprovalStepMeta {
@@ -536,6 +550,7 @@ export type WorkflowStepMeta =
   | SleepStepMeta
   | CancelStepMeta
   | SuspendStepMeta
+  | MilestoneStepMeta
   | ApprovalStepMeta
   | SwitchStepMeta
   | FilterStepMeta
@@ -577,7 +592,16 @@ export interface WorkflowStepWire {
  * Workflow wire object for DSL workflows
  * Provides workflow-specific capabilities to function execution
  */
+export type CompensatingFor<Out = unknown> =
+  | { ok: true; output: Out; stepName?: string }
+  | { ok: false; output: null; error: SerializedError; stepName?: string }
+
 export interface PikkuWorkflowWire {
+  /**
+   * Set only while a function's `compensate` is running: the outcome of the
+   * forward call being undone. `undefined` on a forward run.
+   */
+  compensatingFor?: CompensatingFor
   /** The workflow name */
   name: string
   /** The current run ID */
@@ -595,6 +619,12 @@ export interface PikkuWorkflowWire {
 
   /** Suspend workflow until explicitly resumed */
   suspend: WorkflowWireSuspend
+
+  /**
+   * A named checkpoint. On failure the unwind stops at the last milestone
+   * reached and the run rests there. The name must be a string literal.
+   */
+  milestone: WorkflowWireMilestone
 
   /** Suspend workflow until a human records a decision against this gate */
   approval: WorkflowWireApproval

@@ -9,7 +9,7 @@ import {
   Group,
   ActionIcon,
   Button,
-  UnstyledButton
+  UnstyledButton,
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
@@ -31,6 +31,9 @@ const statusColors: Record<string, string> = {
   completed: 'green',
   failed: 'red',
   cancelled: 'gray',
+  compensating: 'blue',
+  compensated: 'gray',
+  compensation_failed: 'red',
 }
 
 const formatDateTime = (dateStr: string) => {

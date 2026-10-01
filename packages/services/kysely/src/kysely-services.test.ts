@@ -115,6 +115,14 @@ function registerTests(
         await s.init()
         return s
       },
+      workflowCompensationQueued: async () => {
+        const s = new KyselyWorkflowService(getDb(), {
+          wireQueues: false,
+          leaseService: new InMemoryLeaseService(),
+        })
+        await s.init()
+        return s
+      },
       workflowFencing: async () => {
         const service = new KyselyWorkflowService(getDb(), {
           leaseService: new InMemoryLeaseService(),

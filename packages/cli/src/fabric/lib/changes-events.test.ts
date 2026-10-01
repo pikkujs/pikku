@@ -57,6 +57,33 @@ describe('subscribeToChanges', () => {
     events.close()
   })
 
+  test('an event that arrives while nobody is waiting is not lost', async () => {
+    const body = stream()
+    const events = subscribeToChanges({
+      apiUrl: 'https://api.example.test',
+      token: 'tok',
+      projectId: PROJECT,
+      fetch: (async () =>
+        new Response(body.body, { status: 200 })) as unknown as typeof fetch,
+    })
+    await tick()
+
+    body.write('data: {"type":"filed"}\n\n')
+    await tick()
+
+    let woke = false
+    const next = events.next().then(() => (woke = true))
+    await tick()
+    assert.strictEqual(woke, true)
+    await next
+
+    let again = false
+    void events.next().then(() => (again = true))
+    await tick()
+    assert.strictEqual(again, false, 'one event wakes one call')
+    events.close()
+  })
+
   test('a dropped stream stops counting as live, wakes the waiter, and reconnects', async () => {
     const first = stream()
     const second = stream()

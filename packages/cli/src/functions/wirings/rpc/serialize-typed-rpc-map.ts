@@ -109,7 +109,7 @@ export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
 export type TypedWorkflowStatus = (
   workflowName: string,
   runId: string
-) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'; output?: unknown; error?: { message?: string } }>
+) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'; output?: unknown; error?: { message?: string } }>
 
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
   ? (name: string, input: AgentInput) => Promise<any>

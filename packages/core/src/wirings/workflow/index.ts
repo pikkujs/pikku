@@ -95,6 +95,7 @@ export type {
   SleepStepMeta,
   CancelStepMeta,
   SuspendStepMeta,
+  MilestoneStepMeta,
   ApprovalStepMeta,
   SetStepMeta,
   SwitchCaseMeta,

@@ -217,6 +217,14 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return rows.map((row) => ({ ...toStepState(row), stepName: row.stepName }))
   }
 
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    return this.runService.getRunSteps(runId)
+  }
+
   async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {

@@ -16,12 +16,18 @@ describe('generateMermaidDiagram', () => {
     assert.ok(result.includes('start --> end'))
   })
 
-  it('shows error edges with dotted lines', () => {
+  it('shows recover edges with dotted lines', () => {
     const nodes = {
-      start: { rpcName: 'toolA', onError: 'handler' },
+      start: { rpcName: 'toolA', recover: 'handler' },
       handler: { rpcName: 'toolB' },
     }
     const result = generateMermaidDiagram('test-wf', nodes, ['start'])
-    assert.ok(result.includes('start -.->|error| handler'))
+    assert.ok(result.includes('start -.->|recover| handler'))
+  })
+
+  it("draws no recover edge for recover: 'ignore'", () => {
+    const nodes = { start: { rpcName: 'toolA', recover: 'ignore' } }
+    const result = generateMermaidDiagram('test-wf', nodes, ['start'])
+    assert.ok(!result.includes('ignore'))
   })
 })

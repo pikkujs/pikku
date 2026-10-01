@@ -1,3 +1,4 @@
+import { WORKFLOW_TERMINAL_STATES } from './workflow-constants.js'
 import type { HistoryEntry } from './run-timeline.js'
 import type {
   StepStatus,
@@ -10,7 +11,7 @@ export function summarizeRunStatus(
   run: WorkflowRun,
   history: HistoryEntry[]
 ): WorkflowRunStatus {
-  const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
+  const terminalStatuses = WORKFLOW_TERMINAL_STATES
 
   const stepMap = new Map<
     string,
@@ -55,5 +56,21 @@ export function summarizeRunStatus(
     error: run.error
       ? { message: run.error.message ?? 'Unknown error' }
       : undefined,
+    ...compensationOutcome(run),
   }
+}
+
+function compensationOutcome(
+  run: WorkflowRun
+): Pick<WorkflowRunStatus, 'restedAt' | 'stuckSteps'> {
+  const output = run.output as
+    | { restedAt?: string; stuckSteps?: WorkflowRunStatus['stuckSteps'] }
+    | undefined
+  if (run.status === 'compensated' && output?.restedAt) {
+    return { restedAt: output.restedAt }
+  }
+  if (run.status === 'compensation_failed' && output?.stuckSteps) {
+    return { stuckSteps: output.stuckSteps }
+  }
+  return {}
 }

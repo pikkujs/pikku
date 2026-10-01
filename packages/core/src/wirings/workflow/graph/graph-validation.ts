@@ -31,9 +31,10 @@ export function generateMermaidDiagram(
       lines.push(`  ${nodeId} --> ${target}`)
     }
 
-    const errorTargets = normalizeTargets(node.onError)
+    const errorTargets =
+      node.recover === 'ignore' ? [] : normalizeTargets(node.recover)
     for (const target of errorTargets) {
-      lines.push(`  ${nodeId} -.->|error| ${target}`)
+      lines.push(`  ${nodeId} -.->|recover| ${target}`)
     }
   }
 

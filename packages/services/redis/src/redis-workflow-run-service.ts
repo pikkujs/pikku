@@ -75,9 +75,19 @@ export class RedisWorkflowRunService implements WorkflowRunService {
       const data = await this.redis.hgetall(key)
       if (!data.stepId) continue
 
+      const settled = data.status === 'succeeded' || data.status === 'failed'
+      const [latest] = settled
+        ? await this.redis.zrange(this.stepHistoryKey(data.stepId), '-1', '-1')
+        : []
+      const finished = latest ? JSON.parse(latest) : undefined
+
       steps.push({
         stepId: data.stepId,
         stepName: this.extractStepName(key, runId),
+        succeededAt: finished?.succeededAt
+          ? new Date(finished.succeededAt)
+          : undefined,
+        failedAt: finished?.failedAt ? new Date(finished.failedAt) : undefined,
         rpcName: data.rpcName || undefined,
         data: data.data ? JSON.parse(data.data) : undefined,
         status: data.status as any,
@@ -86,6 +96,7 @@ export class RedisWorkflowRunService implements WorkflowRunService {
         attemptCount: Number(data.attemptCount || 1),
         retries: data.retries ? Number(data.retries) : undefined,
         retryDelay: data.retryDelay || undefined,
+        childRunId: data.childRunId || undefined,
         createdAt: new Date(Number(data.createdAt)),
         updatedAt: new Date(Number(data.updatedAt)),
       })

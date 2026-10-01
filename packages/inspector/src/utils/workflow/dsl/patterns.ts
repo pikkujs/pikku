@@ -186,6 +186,24 @@ export function isWorkflowSuspendCall(
 }
 
 /**
+ * Check if a call expression is workflow.milestone()
+ */
+export function isWorkflowMilestoneCall(
+  node: ts.CallExpression,
+  _checker: ts.TypeChecker
+): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  const propAccess = node.expression
+  return (
+    propAccess.name.text === 'milestone' &&
+    isWorkflowWireIdentifier(propAccess.expression)
+  )
+}
+
+/**
  * Check if a call expression is workflow.approval()
  */
 export function isWorkflowApprovalCall(

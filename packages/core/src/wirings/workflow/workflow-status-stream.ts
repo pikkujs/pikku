@@ -16,6 +16,8 @@ const TERMINAL: ReadonlySet<string> = new Set<WorkflowStatus>([
   'completed',
   'failed',
   'cancelled',
+  'compensated',
+  'compensation_failed',
 ])
 
 const DEFAULT_POLL_INTERVAL_MS = 500

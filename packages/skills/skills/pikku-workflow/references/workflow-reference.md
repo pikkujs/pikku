@@ -2,7 +2,7 @@
 
 ## Step execution: inline vs queue dispatch
 
-Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`onError`.
+Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`compensate: false`.
 
 - **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
 - **`workflowQueued: true` opts a function out.** Set it on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. `workflowRetries` and `workflowTimeout` sit alongside it.

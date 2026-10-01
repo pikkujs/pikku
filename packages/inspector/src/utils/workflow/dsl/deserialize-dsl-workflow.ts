@@ -204,7 +204,13 @@ function fanoutBodyToCode(
       const stepName = node.stepName || `Call ${node.rpcName}`
       const input = (node.input || {}) as Record<string, unknown>
       const inputCode = inputToCode(input, indent, itemVar)
-      const options = node.options ? optionsToCode(node.options) : ''
+      const options =
+        node.options || (node as any).compensate === false
+          ? optionsToCode(
+              node.options ?? {},
+              (node as any).compensate === false ? false : undefined
+            )
+          : ''
       const doCall = `await workflow.do('${escapeSingleQuotes(stepName)}', '${node.rpcName}', ${inputCode}${options ? `, ${options}` : ''})`
       lines.push(
         node.outputVar
@@ -233,18 +239,6 @@ function collectChildNodeIds(
   nodes: Record<string, SerializedGraphNode>
 ): Set<string> {
   const owned = new Set<string>()
-
-  // An error handler belongs to the step that routes to it, not to the main
-  // flow — emitting it top-level would turn compensation into a step that
-  // always runs.
-  for (const node of Object.values(nodes)) {
-    const onError = (node as any).onError
-    if (typeof onError === 'string') {
-      owned.add(onError)
-    } else if (Array.isArray(onError)) {
-      for (const handlerId of onError) owned.add(handlerId)
-    }
-  }
 
   const walk = (entry: string | undefined, exit: string | undefined) => {
     const seen = new Set<string>()
@@ -306,24 +300,6 @@ function bindingPrefix(outputVar: unknown): string {
 }
 
 /**
- * Resolve a node's `onError` node id back to the rpc name the DSL author wrote.
- */
-function onErrorRpcNameOf(
-  node: SerializedGraphNode,
-  nodes: Record<string, SerializedGraphNode>
-): string | undefined {
-  const onError = (node as any).onError
-  const handlerId = Array.isArray(onError) ? onError[0] : onError
-  if (typeof handlerId !== 'string') {
-    return undefined
-  }
-  const handler = nodes[handlerId]
-  return handler && 'rpcName' in handler
-    ? (handler.rpcName as string)
-    : undefined
-}
-
-/**
  * A duration is `string | number` ('5s' or 5000). Quoting a number would change
  * the value the runtime parses, so only strings get quotes.
  */
@@ -349,17 +325,17 @@ function caseValueToCode(value: unknown): string {
  */
 function optionsToCode(
   options: Record<string, unknown>,
-  onErrorRpcName?: string
+  compensate?: false
 ): string {
   const parts: string[] = []
-  if (onErrorRpcName) {
-    parts.push(`onError: '${escapeSingleQuotes(onErrorRpcName)}'`)
-  }
   if (options.retries !== undefined) {
     parts.push(`retries: ${options.retries}`)
   }
   if (options.retryDelay !== undefined) {
     parts.push(`retryDelay: ${durationToCode(options.retryDelay)}`)
+  }
+  if (compensate === false) {
+    parts.push('compensate: false')
   }
   return parts.length > 0 ? `{ ${parts.join(', ')} }` : ''
 }
@@ -575,9 +551,9 @@ function nodeToCode(
     let doCall = `await workflow.do('${stepName}', '${node.rpcName}', ${inputCode}`
 
     // Add options if present
-    const onErrorRpc = onErrorRpcNameOf(node, nodes)
-    if ((node as any).options || onErrorRpc) {
-      const optCode = optionsToCode((node as any).options ?? {}, onErrorRpc)
+    const noCompensate = (node as any).compensate === false ? false : undefined
+    if ((node as any).options || noCompensate === false) {
+      const optCode = optionsToCode((node as any).options ?? {}, noCompensate)
       if (optCode) {
         doCall += `, ${optCode}`
       }
@@ -617,6 +593,13 @@ function nodeToCode(
       case 'suspend':
         lines.push(
           `${indent}await workflow.suspend('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
+        )
+        lines.push('')
+        break
+
+      case 'milestone':
+        lines.push(
+          `${indent}await workflow.milestone('${escapeSingleQuotes(String(flowNode.reason ?? ''))}')`
         )
         lines.push('')
         break
@@ -748,8 +731,11 @@ function nodeToCode(
           const input = (childNode.input || {}) as Record<string, unknown>
           const inputCode = inputToCode(input, indent + '  ')
           let call = `workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode}`
-          if (childNode.options) {
-            const optCode = optionsToCode(childNode.options)
+          if (childNode.options || (childNode as any).compensate === false) {
+            const optCode = optionsToCode(
+              childNode.options ?? {},
+              (childNode as any).compensate === false ? false : undefined
+            )
             if (optCode) {
               call += `, ${optCode}`
             }
@@ -1361,13 +1347,20 @@ export function deserializeGraphWorkflow(
       }
     }
 
-    // onError, retries and retryDelay are all honoured by the graph runner,
-    // so dropping them here silently changes how the workflow behaves.
-    if ('onError' in node && node.onError) {
-      const onErrorCode = nextToCode(node.onError, workflow.nodes, flowNodeIds)
-      if (onErrorCode) {
-        configParts.push(`onError: ${onErrorCode}`)
+    // recover, compensate, retries and retryDelay are all honoured by the
+    // graph runner, so dropping them here silently changes how the workflow
+    // behaves.
+    if ('recover' in node && node.recover) {
+      const recoverCode =
+        node.recover === 'ignore'
+          ? `'ignore'`
+          : nextToCode(node.recover, workflow.nodes, flowNodeIds)
+      if (recoverCode) {
+        configParts.push(`recover: ${recoverCode}`)
       }
+    }
+    if ('compensate' in node && node.compensate === false) {
+      configParts.push('compensate: false')
     }
 
     if ('options' in node && node.options) {

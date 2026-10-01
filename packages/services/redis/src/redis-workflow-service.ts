@@ -1,3 +1,4 @@
+import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
 import {
   PikkuWorkflowService,
@@ -447,6 +448,16 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
+  }
+
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    return new RedisWorkflowRunService(this.redis, this.keyPrefix).getRunSteps(
+      runId
+    )
   }
 
   async getRunHistory(

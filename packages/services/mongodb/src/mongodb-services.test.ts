@@ -36,6 +36,14 @@ function registerTests(name: string, getDb: () => Db) {
         await s.init()
         return s
       },
+      workflowCompensationQueued: async () => {
+        const s = new MongoDBWorkflowService(getDb(), {
+          wireQueues: false,
+          leaseService: new InMemoryLeaseService(),
+        })
+        await s.init()
+        return s
+      },
       workflowRunService: async () => new MongoDBWorkflowRunService(getDb()),
       deploymentService: async () => {
         const s = new MongoDBDeploymentService(

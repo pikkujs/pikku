@@ -177,9 +177,7 @@ export class PikkuWorkflowDoService<
     }
     await this.storage.put(stepKey(stepId), step)
     await this.storage.put(stepNameKey(stepName), stepId)
-    const order = (await this.storage.get<string[]>(KEY_STEP_ORDER)) ?? []
-    order.push(stepId)
-    await this.storage.put(KEY_STEP_ORDER, order)
+    await this.appendToOrder(KEY_STEP_ORDER, stepId)
     await this.appendHistory(stepId, 'pending')
     return toStepState(step)
   }
@@ -199,6 +197,30 @@ export class PikkuWorkflowDoService<
       )
     }
     return toStepState(step)
+  }
+
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    this.assertOwn(runId)
+    const order = (await this.storage.get<string[]>(KEY_STEP_ORDER)) ?? []
+    if (order.length === 0) return []
+    const records = await this.storage.get<DoStepRecord>(order.map(stepKey))
+    const steps: Array<
+      StepState & { stepName: string; rpcName?: string; data?: any }
+    > = []
+    for (const id of order) {
+      const s = records.get(stepKey(id))
+      if (!s) continue
+      steps.push({
+        ...toStepState(s),
+        rpcName: s.rpcName ?? undefined,
+        data: s.data,
+      })
+    }
+    return steps
   }
 
   async getRunHistory(
@@ -618,9 +640,20 @@ export class PikkuWorkflowDoService<
       createdAt: Date.now(),
     }
     await this.storage.put(historyKey(historyId), record)
-    const order = (await this.storage.get<string[]>(KEY_HISTORY_ORDER)) ?? []
-    order.push(historyId)
-    await this.storage.put(KEY_HISTORY_ORDER, order)
+    await this.appendToOrder(KEY_HISTORY_ORDER, historyId)
+  }
+
+  private orderQueue: Promise<unknown> = Promise.resolve()
+
+  private appendToOrder(key: string, id: string): Promise<void> {
+    const append = async () => {
+      const order = (await this.storage.get<string[]>(key)) ?? []
+      order.push(id)
+      await this.storage.put(key, order)
+    }
+    const next = this.orderQueue.then(append, append)
+    this.orderQueue = next
+    return next
   }
 
   /**

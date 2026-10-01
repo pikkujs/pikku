@@ -27,7 +27,15 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
         channel.send({ type: 'update', run, steps })
       }
 
-      if (['completed', 'failed', 'cancelled'].includes(run.status)) {
+      if (
+        [
+          'completed',
+          'failed',
+          'cancelled',
+          'compensated',
+          'compensation_failed',
+        ].includes(run.status)
+      ) {
         channel.send({ type: 'done', status: run.status })
         channel.close()
         return false

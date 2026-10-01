@@ -106,14 +106,14 @@ describe('DSL round-trip — an unbound array step must not emit a broken bindin
 })
 
 describe('graph round-trip — runtime-honoured node config must survive', () => {
-  test('onError routing is preserved', () => {
+  test('recover routing is preserved', () => {
     const code = deserializeGraphWorkflow(
       graph({
         start: {
           nodeId: 'start',
           rpcName: 'charge',
           next: 'ship',
-          onError: 'refund',
+          recover: 'refund',
         },
         ship: { nodeId: 'ship', rpcName: 'ship' },
         refund: { nodeId: 'refund', rpcName: 'refund' },
@@ -121,7 +121,7 @@ describe('graph round-trip — runtime-honoured node config must survive', () =>
     )
 
     assert.ok(
-      code.includes("onError: 'refund'"),
+      code.includes("recover: 'refund'"),
       `error routing is honoured at runtime and must not be dropped, got:\n${code}`
     )
   })

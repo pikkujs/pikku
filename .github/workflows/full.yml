@@ -463,7 +463,7 @@ jobs:
             # ai-postgres,
             bun,
           ]
-        package-manager: [yarn, bun]
+        package-manager: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["bun"]' || '["yarn","bun"]') }}
         exclude:
           - package-manager: bun
             template: uws
@@ -532,7 +532,7 @@ jobs:
       matrix:
         version: [24]
         template: [cli, tanstack]
-        package-manager: [yarn]
+        package-manager: [bun]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

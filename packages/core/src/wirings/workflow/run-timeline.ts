@@ -1,4 +1,5 @@
 import type { SerializedError } from '../../errors/serialized-error.js'
+import { isCompensationStepName } from './workflow-constants.js'
 import type { StepState, StepStatus } from './workflow.types.js'
 
 export interface RunTimelineEvent {
@@ -9,6 +10,7 @@ export interface RunTimelineEvent {
     'pending' | 'scheduled' | 'running' | 'succeeded' | 'failed'
   >
   stepName: string
+  compensating: boolean
   attemptCount: number
   fromStepName?: string
   result?: unknown
@@ -33,6 +35,8 @@ export function buildRunTimeline(history: HistoryEntry[]): RunTimeline {
   history.forEach((entry, order) => {
     const base = {
       stepName: entry.stepName,
+      compensating:
+        entry.compensating ?? isCompensationStepName(entry.stepName),
       attemptCount: entry.attemptCount,
       order,
     }
@@ -80,6 +84,7 @@ export function buildRunTimeline(history: HistoryEntry[]): RunTimeline {
 
 export interface ReconstructedStep {
   stepName: string
+  compensating: boolean
   status: StepStatus
   attemptCount: number
   fromStepName?: string
@@ -128,6 +133,7 @@ export function reconstructStateAt(
     if (!step) {
       step = {
         stepName: event.stepName,
+        compensating: event.compensating,
         status: event.type,
         attemptCount: event.attemptCount,
         fromStepName: event.fromStepName,

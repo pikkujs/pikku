@@ -3,7 +3,11 @@ import {
   WorkflowAsyncException,
   WorkflowSuspendedException,
 } from '../workflow-errors.js'
-import { DEFAULT_STEP_RETRIES } from '../workflow-constants.js'
+import {
+  DEFAULT_STEP_RETRIES,
+  NO_COMPENSATE_STATE_PREFIX,
+} from '../workflow-constants.js'
+import { childRunFailure } from '../workflow-compensation.js'
 import { runningStepLease } from '../workflow-step-lease.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
@@ -108,6 +112,7 @@ interface GraphFireInstruction {
   instanceKey: string
   fromStepName?: string
   itemIndex?: number
+  recoveringFrom?: { nodeId: string; stepName: string }
 }
 
 function planGraphTransitions(
@@ -116,7 +121,8 @@ function planGraphTransitions(
   branchByStep: Record<string, string>,
   entryNodeIds: string[],
   graphName: string,
-  fanoutWidths: Record<string, number> = {}
+  fanoutWidths: Record<string, number> = {},
+  recovered: ReadonlySet<string> = new Set()
 ): {
   toFire: GraphFireInstruction[]
   hasInFlight: boolean
@@ -142,13 +148,15 @@ function planGraphTransitions(
   const fanoutComplete = (nodeId: string) => {
     const width = fanoutWidths[nodeId]
     if (width === undefined) return false
-    const succeeded = (instancesByLogical[nodeId] ?? []).filter(
-      (i) => i.status === 'succeeded'
-    ).length
+    const succeeded = (instancesByLogical[nodeId] ?? []).filter(isDone).length
     return succeeded >= width
   }
 
-  const completed = instances.filter((i) => i.status === 'succeeded')
+  const ignored = (name: string) =>
+    recovered.has(name) && nodes[toLogical(name)]?.recover === 'ignore'
+  const isDone = (i: { stepName: string; status: string }) =>
+    i.status === 'succeeded' || ignored(i.stepName)
+  const completed = instances.filter(isDone)
   const completedLogical = new Set<string>()
   for (const inst of completed) {
     const logical = toLogical(inst.stepName)
@@ -163,9 +171,23 @@ function planGraphTransitions(
     fromKey: string
     fromLogical?: string
     target: string
+    recoveringFrom?: { nodeId: string; stepName: string }
   }> = []
   for (const entryId of entryNodeIds) {
     edges.push({ fromKey: ENTRY_FROM, target: entryId })
+  }
+  for (const inst of instances) {
+    if (!recovered.has(inst.stepName)) continue
+    const fromLogical = toLogical(inst.stepName)
+    for (const target of recoverTargets(nodes[fromLogical])) {
+      edges.push({
+        from: inst.stepName,
+        fromKey: inst.stepName,
+        fromLogical,
+        target,
+        recoveringFrom: { nodeId: fromLogical, stepName: inst.stepName },
+      })
+    }
   }
   const fannedEdgesEmitted = new Set<string>()
   for (const inst of completed) {
@@ -200,12 +222,28 @@ function planGraphTransitions(
     }
   }
 
+  const deadLogical = new Set(
+    instances
+      .filter((i) => recovered.has(i.stepName) && !isDone(i))
+      .map((i) => toLogical(i.stepName))
+  )
+  const readsDeadNode = (nodeId: string) =>
+    nodeDependencies(nodes[nodeId] ?? {}).some((dep) => deadLogical.has(dep))
+
   const toFire: GraphFireInstruction[] = []
   const plannedFanout = new Set<string>()
   let blockedWaiting = false
   for (const edge of edges) {
     const target = edge.target
     const edgeKey = `${edge.fromKey}->${target}`
+
+    // A node reading the output of a failure that was recovered without
+    // `'ignore'` has no output to read and never will; waiting on it would
+    // leave the run unable to finish.
+    if (readsDeadNode(target)) {
+      consumed.add(edgeKey)
+      continue
+    }
 
     if (isFanned(target)) {
       if (plannedFanout.has(target)) continue
@@ -266,6 +304,7 @@ function planGraphTransitions(
       logical: target,
       instanceKey: visits === 0 ? target : `${target}#${visits}`,
       fromStepName: edge.from,
+      recoveringFrom: edge.recoveringFrom,
     })
     countByLogical[target] = visits + 1
     consumed.add(edgeKey)
@@ -273,7 +312,9 @@ function planGraphTransitions(
 
   return {
     toFire,
-    hasInFlight: instances.some((i) => i.status !== 'succeeded'),
+    hasInFlight: instances.some(
+      (i) => !isDone(i) && !recovered.has(i.stepName)
+    ),
     blockedWaiting,
   }
 }
@@ -471,6 +512,12 @@ const IGNORED_REFS = new Set(['trigger', '$item', 'unknown'])
 
 const FOREACH_MODES = new Set(['parallel', 'sequential'])
 
+const recoverTargets = (node: { recover?: unknown }): string[] =>
+  node.recover === 'ignore' ? [] : normalizeNodeTargets(node.recover)
+
+const recoversFailure = (node: { recover?: unknown } | undefined): boolean =>
+  !!node?.recover
+
 function normalizeNodeTargets(value: unknown): string[] {
   if (!value) return []
   if (typeof value === 'string') return [value]
@@ -546,11 +593,10 @@ function validateGraphReferences(
       }
     }
 
-    const errorTargets = normalizeNodeTargets(node.onError)
-    for (const errorId of errorTargets) {
+    for (const errorId of recoverTargets(node)) {
       if (!nodeIds.has(errorId)) {
         throw new Error(
-          `Workflow graph '${graphName}': node '${nodeId}' onError targets unknown node '${errorId}'`
+          `Workflow graph '${graphName}': node '${nodeId}' recover targets unknown node '${errorId}'`
         )
       }
     }
@@ -698,6 +744,93 @@ async function createGraphResultReader(
   }
 }
 
+const splitFailures = (
+  rawFailed: string[],
+  nodes: Record<string, any>,
+  graphName: string
+): { recovered: Set<string>; unrecovered: string[] } => {
+  const logical = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+  const recovered = new Set<string>()
+  const unrecovered: string[] = []
+  rawFailed.forEach((stepName, i) => {
+    if (recoversFailure(nodes[logical[i]!])) recovered.add(stepName)
+    else unrecovered.push(logical[i]!)
+  })
+  return { recovered, unrecovered }
+}
+
+async function failGraphRun(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  failedNode: string,
+  rpcService?: any
+): Promise<void> {
+  await failGraphRunWith(
+    workflowService,
+    runId,
+    new Error(`Graph node '${failedNode}' failed after exhausting retries`),
+    rpcService
+  )
+}
+
+async function failGraphRunWith(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  cause: Error,
+  rpcService?: any
+): Promise<void> {
+  const error = Object.assign(cause, { code: 'GRAPH_NODE_FAILED' })
+  const run = await workflowService.getRun(runId)
+  if (run && rpcService) {
+    await workflowService.failOrUnwind(run, error, rpcService)
+    return
+  }
+  await workflowService.updateRunStatus(runId, 'failed', undefined, {
+    message: error.message,
+    stack: error.stack ?? '',
+    code: 'GRAPH_NODE_FAILED',
+  })
+  if (run) await workflowService.notifyChildWorkflowFailed(run, error)
+}
+
+const RECOVERING_FROM_STATE_PREFIX = 'recoveringFrom:'
+
+async function prepareFire(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  fire: GraphFireInstruction,
+  node: { compensate?: unknown }
+): Promise<void> {
+  if (node.compensate === false) {
+    await workflowService.updateRunState(
+      runId,
+      `${NO_COMPENSATE_STATE_PREFIX}${fire.instanceKey}`,
+      true
+    )
+  }
+  const from = fire.recoveringFrom
+  if (!from) {
+    await workflowService.updateRunState(
+      runId,
+      `${RECOVERING_FROM_STATE_PREFIX}${fire.instanceKey}`,
+      null
+    )
+    return
+  }
+  const steps = await workflowService.getRunSteps(runId)
+  const failed = steps.find((step) => step.stepName === from.stepName)
+  await workflowService.updateRunState(
+    runId,
+    `${RECOVERING_FROM_STATE_PREFIX}${fire.instanceKey}`,
+    { ...from, error: failed?.error ?? { message: 'step failed' } }
+  )
+  await workflowService.updateRunState(
+    runId,
+    `${NO_COMPENSATE_STATE_PREFIX}${from.stepName}`,
+    true
+  )
+}
+
 const graphStepOptions = (nodeConfig?: {
   retries?: number
   retryDelay?: string | number
@@ -739,7 +872,8 @@ export async function continueGraph(
   workflowService: PikkuWorkflowService,
   runId: string,
   graphName: string,
-  overrideMeta?: WorkflowRuntimeMeta
+  overrideMeta?: WorkflowRuntimeMeta,
+  rpcService?: any
 ): Promise<void> {
   const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -756,15 +890,10 @@ export async function continueGraph(
   } = await workflowService.getCompletedGraphState(runId)
   remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
   remapBranchKeys(branchByStep, nodes, graphName)
-  const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+  const { recovered, unrecovered } = splitFailures(rawFailed, nodes, graphName)
 
-  if (failedNodeIds.length > 0) {
-    const failedNode = failedNodeIds[0]!
-    await workflowService.updateRunStatus(runId, 'failed', undefined, {
-      message: `Graph node '${failedNode}' failed after exhausting retries`,
-      stack: '',
-      code: 'GRAPH_NODE_FAILED',
-    })
+  if (unrecovered.length > 0) {
+    await failGraphRun(workflowService, runId, unrecovered[0]!, rpcService)
     return
   }
 
@@ -789,7 +918,8 @@ export async function continueGraph(
     branchByStep,
     meta.entryNodeIds ?? [],
     graphName,
-    reader.fanoutWidths
+    reader.fanoutWidths,
+    recovered
   )
 
   const resolveNodeInput = async (logical: string, itemIndex?: number) => {
@@ -844,6 +974,7 @@ export async function continueGraph(
 
     const resolvedInput = await resolveNodeInput(fire.logical, fire.itemIndex)
 
+    await prepareFire(workflowService, runId, fire, node)
     await queueGraphNode(
       workflowService,
       runId,
@@ -878,6 +1009,9 @@ async function invokeGraphNodeRpc(
     setState: (name: string, value: unknown) =>
       workflowService.updateRunState(runId, name, value),
     getState: () => workflowService.getRunState(runId),
+    recoveringFrom: (await workflowService.getRunState(runId))[
+      `${RECOVERING_FROM_STATE_PREFIX}${nodeId}`
+    ] as PikkuGraphWire['recoveringFrom'],
   }
 
   const result = await rpcService.rpcWithWire(rpcName, input, {
@@ -928,12 +1062,8 @@ export async function executeGraphStep(
 
       if (shouldInline) {
         const childRun = await workflowService.getRun(childRunId)
-        if (childRun?.status === 'failed') {
-          throw new Error(childRun.error?.message || 'Sub-workflow failed')
-        }
-        if (childRun?.status === 'cancelled') {
-          throw new Error('Sub-workflow was cancelled')
-        }
+        const failure = childRun && childRunFailure(childRun)
+        if (failure) throw failure
         result = childRun?.output
       } else {
         throw new ChildWorkflowStartedException(runId, stepId, childRunId)
@@ -972,30 +1102,6 @@ export async function executeGraphStep(
       })
       throw error
     }
-    const meta = getWorkflowMeta(graphName)
-    if (meta?.nodes) {
-      const node = meta.nodes[nodeId]
-      if (node?.onError) {
-        const errorNodes = Array.isArray(node.onError)
-          ? node.onError
-          : [node.onError]
-        for (const errorNodeId of errorNodes) {
-          const errorNode = meta.nodes[errorNodeId]
-          if (errorNode) {
-            await queueGraphNode(
-              workflowService,
-              runId,
-              graphName,
-              errorNodeId,
-              errorNode.rpcName,
-              { error: { message: (error as Error).message } },
-              errorNode
-            )
-          }
-        }
-        throw error
-      }
-    }
     throw error
   }
 }
@@ -1006,7 +1112,7 @@ export async function runFromMeta(
   meta: WorkflowRuntimeMeta,
   _rpcService: any
 ): Promise<void> {
-  await continueGraph(workflowService, runId, meta.name, meta)
+  await continueGraph(workflowService, runId, meta.name, meta, _rpcService)
 }
 
 async function executeGraphNodeInline(
@@ -1059,12 +1165,8 @@ async function executeGraphNodeInline(
       )
       await workflowService.setStepChildRunId(stepState.stepId, childRunId)
       const childRun = await workflowService.getRun(childRunId)
-      if (childRun?.status === 'failed') {
-        throw new Error(childRun.error?.message || 'Sub-workflow failed')
-      }
-      if (childRun?.status === 'cancelled') {
-        throw new Error('Sub-workflow was cancelled')
-      }
+      const failure = childRun && childRunFailure(childRun)
+      if (failure) throw failure
       result = childRun?.output
     } else if (agentMeta) {
       const agentRun = await rpcService.agent.run(rpcName, input)
@@ -1100,27 +1202,7 @@ async function executeGraphNodeInline(
     }
     await workflowService.setStepError(stepState.stepId, error as Error)
 
-    if (node?.onError) {
-      const errorNodes = Array.isArray(node.onError)
-        ? node.onError
-        : [node.onError]
-      await Promise.all(
-        errorNodes.map((errorNodeId: string) =>
-          executeGraphNodeInline(
-            workflowService,
-            rpcService,
-            runId,
-            graphName,
-            errorNodeId,
-            errorNodeId,
-            { error: { message: (error as Error).message } },
-            nodes,
-            nodeId
-          )
-        )
-      )
-      return
-    }
+    if (recoversFailure(node)) return
     throw error
   }
 }
@@ -1142,15 +1224,14 @@ async function continueGraphInline(
     } = await workflowService.getCompletedGraphState(runId)
     remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
     remapBranchKeys(branchByStep, nodes, graphName)
-    const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+    const { recovered, unrecovered } = splitFailures(
+      rawFailed,
+      nodes,
+      graphName
+    )
 
-    if (failedNodeIds.length > 0) {
-      const failedNode = failedNodeIds[0]!
-      await workflowService.updateRunStatus(runId, 'failed', undefined, {
-        message: `Graph node '${failedNode}' failed after exhausting retries`,
-        stack: '',
-        code: 'GRAPH_NODE_FAILED',
-      })
+    if (unrecovered.length > 0) {
+      await failGraphRun(workflowService, runId, unrecovered[0]!, rpcService)
       return
     }
 
@@ -1174,7 +1255,8 @@ async function continueGraphInline(
       branchByStep,
       entryNodeIds,
       graphName,
-      reader.fanoutWidths
+      reader.fanoutWidths,
+      recovered
     )
 
     if (plan.toFire.length === 0) {
@@ -1205,6 +1287,7 @@ async function continueGraphInline(
         const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
         executed++
+        await prepareFire(workflowService, runId, fire, node)
         await executeGraphNodeInline(
           workflowService,
           rpcService,
@@ -1367,11 +1450,12 @@ export async function runWorkflowGraph(
         ) {
           return
         }
-        await workflowService.updateRunStatus(runId, 'failed', undefined, {
-          message: (error as Error).message,
-          stack: (error as Error).stack || '',
-          code: 'GRAPH_NODE_FAILED',
-        })
+        await failGraphRunWith(
+          workflowService,
+          runId,
+          error as Error,
+          rpcService
+        )
       } finally {
         workflowService.unregisterInlineRun(runId)
       }

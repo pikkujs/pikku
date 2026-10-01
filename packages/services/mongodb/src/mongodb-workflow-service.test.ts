@@ -259,3 +259,29 @@ describe('claiming a step for execution', () => {
     assert.equal((await ws.getStepState(runId, 's1')).status, 'pending')
   })
 })
+
+describe('run state and steps the unwind depends on', () => {
+  test('state keys with spaces and punctuation round-trip', async () => {
+    const { runId } = await seedStep()
+
+    await ws.updateRunState(runId, 'noCompensate:Charge card.v2', true)
+    await ws.updateRunState(runId, 'plain_key', 1)
+
+    assert.deepEqual(await ws.getRunState(runId), {
+      'noCompensate:Charge card.v2': true,
+      plain_key: 1,
+    })
+  })
+
+  test('getRunSteps carries the child run and the outcome time', async () => {
+    const { runId, step } = await seedStep()
+    await ws.setStepChildRunId(step.stepId, 'child-1')
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepResult(step.stepId, { ok: true })
+
+    const [row] = await ws.getRunSteps(runId)
+
+    assert.equal(row!.childRunId, 'child-1')
+    assert.ok(row!.succeededAt, 'the unwind orders steps by when they finished')
+  })
+})

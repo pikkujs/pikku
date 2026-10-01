@@ -37,6 +37,12 @@ const STATUS: Record<
   running: { tone: 'info', label: m.workflows_status_running },
   suspended: { tone: 'warn', label: m.workflows_status_suspended },
   cancelled: { tone: 'neutral', label: m.workflows_status_cancelled },
+  compensating: { tone: 'info', label: m.workflows_status_compensating },
+  compensated: { tone: 'neutral', label: m.workflows_status_compensated },
+  compensation_failed: {
+    tone: 'bad',
+    label: m.workflows_status_compensation_failed,
+  },
 }
 
 export const WorkflowsWorkspace: React.FC<{
@@ -205,7 +211,10 @@ export const WorkflowsWorkspace: React.FC<{
               const status = statusOf(w.index)
               const badge =
                 status === null
-                  ? { tone: 'neutral' as const, label: m.workflows_status_never() }
+                  ? {
+                      tone: 'neutral' as const,
+                      label: m.workflows_status_never(),
+                    }
                   : status
                     ? STATUS[status] && {
                         tone: STATUS[status].tone,

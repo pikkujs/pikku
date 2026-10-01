@@ -42,7 +42,10 @@ function serializeInputMapping(
  */
 function serializeForEach(
   forEach: unknown,
-  createRef: (nodeId: string, path?: string) => { nodeId: string; path?: string }
+  createRef: (
+    nodeId: string,
+    path?: string
+  ) => { nodeId: string; path?: string }
 ): DataRef | undefined {
   if (forEach === undefined) return undefined
   if (typeof forEach === 'string') return { $ref: forEach }
@@ -93,11 +96,17 @@ export function serializeWorkflowGraph(
       string,
       {
         func: { name?: string }
-        input?: (ref: any, template?: any, $item?: any) => Record<string, unknown>
-        forEach?: string | { nodeId: string; path?: string } | ((ref: any) => unknown)
+        input?: (
+          ref: any,
+          template?: any,
+          $item?: any
+        ) => Record<string, unknown>
+        forEach?:
+          string | { nodeId: string; path?: string } | ((ref: any) => unknown)
         mode?: 'parallel' | 'sequential'
         next?: string | string[] | Record<string, string | string[]>
-        onError?: string | string[]
+        recover?: string | string[] | 'ignore'
+        compensate?: false
         notes?: string
       }
     >
@@ -160,7 +169,8 @@ export function serializeWorkflowGraph(
       rpcName,
       input,
       next: serializeNext(node.next),
-      onError: node.onError,
+      recover: node.recover,
+      compensate: node.compensate,
     }
     const forEach = serializeForEach(node.forEach, createRef)
     if (forEach) {
@@ -204,7 +214,8 @@ export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
       rpcName: string
       input: Record<string, unknown | DataRef>
       next?: SerializedNext
-      onError?: string | string[]
+      recover?: string | string[] | 'ignore'
+      compensate?: false
     }
   >
   entryNodeIds: string[]
@@ -215,7 +226,8 @@ export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
       rpcName: string
       input: Record<string, unknown | DataRef>
       next?: SerializedNext
-      onError?: string | string[]
+      recover?: string | string[] | 'ignore'
+      compensate?: false
     }
   > = {}
 
@@ -227,7 +239,8 @@ export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
         rpcName: funcNode.rpcName,
         input: funcNode.input ?? {},
         next: funcNode.next,
-        onError: funcNode.onError,
+        recover: funcNode.recover,
+        compensate: funcNode.compensate,
       }
     }
   }

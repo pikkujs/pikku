@@ -1,7 +1,15 @@
 import React, { createContext, useContext } from 'react'
 
 export type WorkflowStepStatus =
-  'pending' | 'running' | 'completed' | 'failed' | 'suspended' | 'cancelled'
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'suspended'
+  | 'cancelled'
+  | 'compensating'
+  | 'compensated'
+  | 'compensation_failed'
 
 export interface WorkflowGraphStepState {
   status?: WorkflowStepStatus | string
