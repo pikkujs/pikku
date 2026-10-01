@@ -149,7 +149,7 @@ function createBunResolvePlugin(opts: {
         // Provider externals (cloudflare:*, declared npm deps).
         if (externalMatchers.some((m) => m(path))) {
           // Only real npm packages are install-time deps (skip scheme imports).
-          if (!path.includes(':')) captured.add(pkgHead(path))
+          if (!path.includes(':') && path !== 'bun') captured.add(pkgHead(path))
           return { path, external: true }
         }
         // Unreachable: the filter above is built from these same three lists.

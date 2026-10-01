@@ -50,6 +50,10 @@ export function parsePackageName(specifier: string): string | null {
   if (specifier.startsWith('node:')) {
     return null
   }
+  // Skip Bun builtins (bun:sqlite, bun:ffi, bun) — the runtime provides them
+  if (specifier === 'bun' || specifier.startsWith('bun:')) {
+    return null
+  }
   const builtins = new Set([
     'assert',
     'buffer',
