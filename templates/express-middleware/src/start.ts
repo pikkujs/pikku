@@ -27,4 +27,7 @@ async function main(): Promise<void> {
   await scheduler.start()
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

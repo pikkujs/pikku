@@ -36,10 +36,14 @@ const render = async () => {
   )
 }
 
-$('add').addEventListener('click', async () => {
-  await post('/notes', { text: $('new-note').value })
-  $('new-note').value = ''
-  await render()
+$('add').addEventListener('click', () => {
+  ;(async () => {
+    await post('/notes', { text: $('new-note').value })
+    $('new-note').value = ''
+    await render()
+  })().catch((error) => {
+    console.error(error)
+  })
 })
 
 await render()

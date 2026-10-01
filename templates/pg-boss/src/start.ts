@@ -30,12 +30,25 @@ async function main(): Promise<void> {
       process.exit(0)
     }
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'))
-    process.on('SIGINT', () => shutdown('SIGINT'))
+    process.on('SIGTERM', () => {
+      shutdown('SIGTERM').catch((error) => {
+        console.error(error)
+        process.exit(1)
+      })
+    })
+    process.on('SIGINT', () => {
+      shutdown('SIGINT').catch((error) => {
+        console.error(error)
+        process.exit(1)
+      })
+    })
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

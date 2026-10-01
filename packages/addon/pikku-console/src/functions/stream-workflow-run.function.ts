@@ -46,13 +46,20 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
     const shouldContinue = await poll()
     if (!shouldContinue) return
 
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(async () => {
-        const cont = await poll()
-        if (!cont) {
-          clearInterval(interval)
-          resolve()
-        }
+    await new Promise<void>((resolve, reject) => {
+      const interval = setInterval(() => {
+        poll().then(
+          (cont) => {
+            if (!cont) {
+              clearInterval(interval)
+              resolve()
+            }
+          },
+          (error) => {
+            clearInterval(interval)
+            reject(error)
+          }
+        )
       }, 1000)
     })
   },

@@ -34,16 +34,26 @@ async function main() {
     if (useHTTP) {
       const port = parseInt(process.env.MCP_PORT || '3000', 10)
       const { close } = await server.connectHTTP({ port })
-      process.on('SIGINT', async () => {
-        await close()
-        process.exit(0)
+      process.on('SIGINT', () => {
+        ;(async () => {
+          await close()
+          process.exit(0)
+        })().catch((error) => {
+          console.error(error)
+          process.exit(1)
+        })
       })
     } else {
       await server.connectStdio()
       singletonServices.logger = server.createMCPLogger()
-      process.on('SIGINT', async () => {
-        await server.stop()
-        process.exit(0)
+      process.on('SIGINT', () => {
+        ;(async () => {
+          await server.stop()
+          process.exit(0)
+        })().catch((error) => {
+          console.error(error)
+          process.exit(1)
+        })
       })
     }
   } catch (error) {
@@ -52,4 +62,7 @@ async function main() {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

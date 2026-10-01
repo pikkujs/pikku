@@ -59,7 +59,7 @@ export async function testMCPResourceWiring(
         {
           mcp: {
             uri: 'test-resource',
-            sendResourceUpdated: async () => {},
+            sendResourceUpdated: () => {},
             enableTools: async () => true,
             enablePrompts: async () => true,
             enableResources: async () => true,

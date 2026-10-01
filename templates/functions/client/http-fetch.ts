@@ -65,11 +65,13 @@ async function check() {
     process.exit(1)
   }
 
-  setTimeout(check, RETRY_INTERVAL)
+  setTimeout(() => {
+    check().catch((error) => console.error(error))
+  }, RETRY_INTERVAL)
 }
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 pikkuFetch.setServerUrl(url)
 console.log('Starting HTTP fetch test with url:', url)
 
-check()
+await check()

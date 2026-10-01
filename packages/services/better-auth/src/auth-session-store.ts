@@ -166,7 +166,7 @@ export const betterAuthStoreSession = (
           mapSession
         )
         if (impersonated) {
-          setSession(
+          await setSession(
             await withResolvedScopes(impersonated, services as CoreServices)
           )
           return next()
@@ -177,7 +177,7 @@ export const betterAuthStoreSession = (
         ? await mapSession(stored, services as CoreServices)
         : defaultSession(stored)
 
-      setSession(
+      await setSession(
         await withResolvedScopes(
           stampActorFlag(mapped, stored.user),
           services as CoreServices

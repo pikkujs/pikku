@@ -30,10 +30,16 @@ async function main() {
   console.log('Press Ctrl+C to stop the server')
 
   // Keep server running
-  process.on('SIGINT', async () => {
-    console.log('\nStopping server...')
-    await server.stop()
-    process.exit(0)
+  // Fire-and-forget signal handler: the finally block always exits the process.
+  process.on('SIGINT', () => {
+    void (async () => {
+      console.log('\nStopping server...')
+      try {
+        await server.stop()
+      } finally {
+        process.exit(0)
+      }
+    })()
   })
 }
 

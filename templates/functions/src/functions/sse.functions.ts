@@ -43,19 +43,23 @@ export const todoStream = pikkuSessionlessFunc({
 
     if (channel) {
       let count = 0
-      const interval = setInterval(async () => {
-        const todos = todoStore.getTodosByUser(uid, { completed: false })
-        channel.send({
-          todos,
-          timestamp: new Date().toISOString(),
-          count: todos.length,
-        })
-        count++
+      const interval = setInterval(() => {
+        ;(async () => {
+          const todos = todoStore.getTodosByUser(uid, { completed: false })
+          channel.send({
+            todos,
+            timestamp: new Date().toISOString(),
+            count: todos.length,
+          })
+          count++
 
-        if (count >= 6) {
-          clearInterval(interval)
-          channel.close()
-        }
+          if (count >= 6) {
+            clearInterval(interval)
+            channel.close()
+          }
+        })().catch((error) => {
+          console.error(error)
+        })
       }, 5000)
     }
 

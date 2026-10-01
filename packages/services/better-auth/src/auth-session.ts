@@ -132,7 +132,7 @@ export const betterAuthSession = (
             )
           }
           if (mapped) {
-            setSession(
+            await setSession(
               await withResolvedScopes(mapped, services as CoreServices)
             )
           }
@@ -178,7 +178,7 @@ export const betterAuthSession = (
           if (impersonated) {
             // Scopes resolve for the impersonated userId, not the admin's — an
             // impersonated session runs as the target, with the target's rights.
-            setSession(
+            await setSession(
               await withResolvedScopes(impersonated, services as CoreServices)
             )
             return next()
@@ -191,7 +191,7 @@ export const betterAuthSession = (
         const mapped = mapSession
           ? await mapSession(result, services as CoreServices)
           : defaultSession(result)
-        setSession(
+        await setSession(
           await withResolvedScopes(
             stampActorFlag(mapped, result.user),
             services as CoreServices

@@ -31,7 +31,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
       `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
     )
 
-    watcher.on('ready', async () => {
+    const onReady = async () => {
       const handle = async () => {
         try {
           const start = Date.now()
@@ -82,18 +82,27 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
         if (timeout) {
           clearTimeout(timeout)
         }
-        timeout = setTimeout(runHandle, 1000)
+        timeout = setTimeout(() => void runHandle(), 1000)
       }
 
       watcher.on('change', deduped)
       watcher.on('add', deduped)
       watcher.on('unlink', deduped)
-    })
+    }
+    // Fire-and-forget listener: errors are handled inside (handle() catches and
+    // logs them), so a rejection cannot escape.
+    watcher.on('ready', () => void onReady())
 
-    process.once('SIGINT', async () => {
-      await watcher.close()
-      process.exit(0)
-    })
+    const onSigint = async () => {
+      try {
+        await watcher.close()
+      } finally {
+        process.exit(0)
+      }
+    }
+    // Fire-and-forget signal handler: the finally block always exits the process,
+    // so there is no caller to propagate a rejection to.
+    process.once('SIGINT', () => void onSigint())
 
     // Without this the command returns the moment the handlers are registered and
     // the process exits, taking the watcher with it — chokidar's `ready` never
