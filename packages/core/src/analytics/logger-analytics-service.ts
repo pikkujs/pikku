@@ -9,8 +9,10 @@ import type { AnalyticsRecord, AnalyticsService } from './analytics.types.js'
  * At `debug` so attaching a real store does not report every event twice.
  */
 export class LoggerAnalyticsService implements AnalyticsService {
+  /** @param logger Receives each event at `debug`. */
   constructor(private readonly logger: Logger) {}
 
+  /** Logs each record in the batch at `debug`. */
   async write(batch: AnalyticsRecord[]): Promise<void> {
     for (const event of batch) {
       this.logger.debug(`analytics: ${event.name}`, {

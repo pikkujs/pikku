@@ -12,7 +12,10 @@ import type {
  * wires, and narrowing it here would make the generic useless for anyone whose
  * events carry more than a fixed set of props.
  */
-export type AnalyticsEventBase = { name: string } & Record<string, unknown>
+export type AnalyticsEventBase = {
+  /** The event name, as declared in `defineAnalyticsEvents`. */
+  name: string
+} & Record<string, unknown>
 
 export interface AnalyticsEventInput {
   name: string
@@ -25,8 +28,11 @@ export interface AnalyticsEventInput {
  * which is what makes an unauthenticated ingest safe to expose.
  */
 export interface AnalyticsIdentity {
+  /** The session's user id, or null for a visitor with no session. */
   userId: string | null
+  /** The session's organization, when it has one. */
   orgId?: string
+  /** The pikku user the session resolves to; absent without a session. */
   pikkuUserId?: string
   /**
    * Identifiers a destination keys on that pikku does not mint — GA4's
@@ -90,14 +96,23 @@ export type AnalyticsIdentityResolver = (
  * through, so a sink never has to trust — or re-derive — any of them.
  */
 export interface AnalyticsRecord {
+  /** The event name. */
   name: string
+  /** The validated props the event carried. */
   props?: Record<string, unknown>
+  /** When the server accepted the event, as an ISO timestamp. */
   occurredAt: string
+  /** When a browser says it happened, in epoch milliseconds; only on relayed events. */
   at?: number
+  /** Who the event is attributed to, stamped from the session and cookies. */
   userIdentity: AnalyticsIdentity
+  /** The trace the emitting invocation belongs to. */
   traceId?: string
+  /** The function that recorded the event, when one did. */
   functionId?: string
+  /** The kind of wire the event came in on. */
   wireType?: PikkuWiringTypes
+  /** `client` when relayed from a browser, `server` when a function recorded it. */
   source: 'server' | 'client'
 }
 
@@ -111,6 +126,7 @@ export interface AnalyticsRecord {
  * to implement and every caller had to choose between.
  */
 export interface AnalyticsService {
+  /** Delivers one batch of accepted records; a rejection is logged, never surfaced to the caller. */
   write(batch: AnalyticsRecord[]): Promise<void>
 }
 
@@ -123,7 +139,9 @@ export interface AnalyticsService {
  * should look like once it gets there is the sink's, and lives in its mapper.
  */
 export interface AnalyticsSink {
+  /** The destination the filtered records are written to. */
   service: AnalyticsService
+  /** Returns true for the records this destination should get; omit to send everything. */
   accepts?: (record: AnalyticsRecord) => boolean
 }
 
@@ -132,6 +150,7 @@ export interface AnalyticsSink {
  * beacon is free to omit `at`.
  */
 export interface AnalyticsClientContext {
+  /** When the browser says the event happened, in epoch milliseconds. */
   at?: number
 }
 
@@ -143,8 +162,11 @@ export interface AnalyticsClientContext {
 export interface AnalyticsLog<
   Events extends AnalyticsEventBase = AnalyticsEventBase,
 > {
+  /** Buffers an event for the invocation; pass `client` when relaying one from a browser. */
   record(event: Events, client?: AnalyticsClientContext): Promise<void>
+  /** Writes what is buffered to the service now, rather than when the invocation ends. */
   flush(): Promise<void>
+  /** Flushes and stops accepting events; called for you when the invocation ends. */
   close(): Promise<void>
 }
 

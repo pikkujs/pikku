@@ -16,6 +16,8 @@ import type {
  * is down must not cost the others their events. A destination that throws is
  * reported by the caller's existing flush guard, which already treats analytics
  * as best-effort.
+ *
+ * @example snippet: shopServices
  */
 export const fanOutAnalytics = (
   sinks: ReadonlyArray<AnalyticsSink | AnalyticsService>

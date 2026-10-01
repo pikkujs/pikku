@@ -70,6 +70,11 @@ export const clearPermissionsCache = () => {
   }
 }
 
+/**
+ * Applies permissions to every function, ahead of the per-function ones.
+ *
+ * @example snippet: globalPermission
+ */
 export const addGlobalPermission = (
   permissions: CorePermissionGroup | CorePikkuPermission[],
   packageName: string | null = null

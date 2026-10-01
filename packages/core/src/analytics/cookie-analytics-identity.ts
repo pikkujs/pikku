@@ -24,6 +24,8 @@ const DENIALS = new Set(['0', 'false', 'denied', 'deny', 'no'])
  * Resolves nothing off an HTTP wire, which is correct: a cron task and a queue
  * worker have no browser behind them, so any vendor id they produced would be
  * invented.
+ *
+ * @example snippet: analyticsIdentity
  */
 export const cookieAnalyticsIdentity = (
   options: CookieAnalyticsIdentityOptions

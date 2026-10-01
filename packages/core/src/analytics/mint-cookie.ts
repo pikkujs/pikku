@@ -14,6 +14,7 @@ export interface MintCookieOptions {
    * is answered has already done the thing the send gate was meant to prevent.
    */
   requires?: string[]
+  /** What the visitor agreed to, as resolved by an earlier resolver; `requires` is checked against it. */
   consent?: Record<string, boolean>
   /**
    * Replace the cookie already on the device rather than returning it.
@@ -50,6 +51,8 @@ const permitted = (
  * has been sent; a cron task and a queue worker have no browser to store it,
  * and a stream's headers are long gone. Both return undefined rather than
  * pretending.
+ *
+ * @example snippet: mintVendorCookie
  */
 export const mintCookie = (
   wire: AnyWire,
@@ -57,9 +60,7 @@ export const mintCookie = (
   options: MintCookieOptions,
   mint: () => string
 ): string | undefined => {
-  const existing = options.overwrite
-    ? null
-    : wire.http?.request?.cookie(name)
+  const existing = options.overwrite ? null : wire.http?.request?.cookie(name)
   if (existing) return existing
 
   const cache = minted.get(wire) ?? new Map<string, string>()
@@ -77,7 +78,11 @@ export const mintCookie = (
   return value
 }
 
-/** Cryptographically random digits, the shape both vendor formats use. */
+/**
+ * Cryptographically random digits, the shape both vendor formats use.
+ *
+ * @example snippet: mintVendorCookie
+ */
 export const randomDigits = (length: number): string => {
   const bytes = new Uint8Array(length)
   crypto.getRandomValues(bytes)

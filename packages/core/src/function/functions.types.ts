@@ -93,6 +93,12 @@ export type CorePikkuPermissionFactory<
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (input: In) => CorePikkuPermission<any, Services, Wire>
 
+/**
+ * Declares a permission that takes configuration, so one check serves many
+ * call sites: `hasProfileRole({ role: 'support' })`.
+ *
+ * @example snippet: permissionFactory
+ */
 export const pikkuPermissionFactory = <In = any>(
   factory: CorePikkuPermissionFactory<In>
 ): CorePikkuPermissionFactory<In> => {
@@ -109,6 +115,11 @@ export type CorePikkuApprovalDescription<
     CoreSecretlessSingletonServices,
 > = (services: Services, data: In) => Promise<string>
 
+/**
+ * Declares the approval prompt a function shows in place of its raw arguments.
+ *
+ * @example snippet: approvalDescription
+ */
 export const pikkuApprovalDescription = <
   In = any,
   Services extends CoreSecretlessSingletonServices =
