@@ -8,6 +8,7 @@ import {
 import { runCoreImportChecks } from './core-import-checks.js'
 import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
 import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
+import { runScaffoldDuplicateChecks } from './scaffold-duplicate-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
@@ -101,6 +102,15 @@ export const CHECKS: ValidateCheck[] = [
       existsSync(join(dir, 'pikku.config.json')) &&
       !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
+  },
+  {
+    id: 'scaffold-duplicates',
+    subject: 'scaffolded output elsewhere in the project',
+    // An addon has no scaffold to duplicate.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
   },
   {
     id: 'pikku-barrel',
