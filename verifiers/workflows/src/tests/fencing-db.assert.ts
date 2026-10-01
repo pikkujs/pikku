@@ -8,8 +8,8 @@
  *
  * Postgres comes from `DATABASE_URL` and gets a schema of its own, so the
  * tables `pikku db migrate` made for the other runners are left alone. MySQL
- * comes from `MYSQL_URL`, whose tables are created here because pikku ships no
- * MySQL migrations. Redis comes from `REDIS_URL`, and each harness writes
+ * comes from `MYSQL_URL`, whose tables are created here from the same declared
+ * schema, as no migration runs for it. Redis comes from `REDIS_URL`, and each harness writes
  * under a key prefix of its own; ioredis-mock cannot stand in for it, as its
  * `hgetall` reply breaks under ioredis 6.
  */
@@ -86,65 +86,11 @@ const migrateMysql = async () => {
     'workflow_step_history',
     'workflow_step',
     'workflow_runs',
+    'workflow_versions',
   ]) {
     await sql`drop table if exists ${sql.table(table)}`.execute(mysql)
   }
-  await sql`
-    create table workflow_runs (
-      workflow_run_id varchar(255) primary key,
-      workflow text not null,
-      status varchar(32) not null,
-      input text not null,
-      output text,
-      error text,
-      state text,
-      \`inline\` boolean default false,
-      graph_hash text,
-      \`deterministic\` boolean default false,
-      planned_steps text,
-      wire text,
-      created_at timestamp(3) not null default current_timestamp(3),
-      updated_at timestamp(3) not null default current_timestamp(3)
-    )
-  `.execute(mysql)
-  await sql`
-    create table workflow_step (
-      workflow_step_id varchar(255) primary key,
-      workflow_run_id varchar(255) not null,
-      step_name varchar(255) not null,
-      rpc_name text,
-      data text,
-      status varchar(32) not null default 'pending',
-      result text,
-      error text,
-      child_run_id text,
-      branch_taken text,
-      retries integer,
-      retry_delay text,
-      from_step_name text,
-      current_attempt integer,
-      lease_expires_at bigint,
-      created_at timestamp(3) not null default current_timestamp(3),
-      updated_at timestamp(3) not null default current_timestamp(3),
-      unique (workflow_run_id, step_name)
-    )
-  `.execute(mysql)
-  await sql`
-    create table workflow_step_history (
-      history_id varchar(255) primary key,
-      workflow_step_id varchar(255) not null,
-      status varchar(32) not null,
-      result text,
-      error text,
-      attempt integer,
-      created_at timestamp(3) not null default current_timestamp(3),
-      running_at timestamp(3) null,
-      scheduled_at timestamp(3) null,
-      succeeded_at timestamp(3) null,
-      failed_at timestamp(3) null,
-      index (workflow_step_id)
-    )
-  `.execute(mysql)
+  await applyPikkuSchemas(mysql, [workflowSchema])
 }
 
 defineServiceTests({
