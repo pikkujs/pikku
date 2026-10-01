@@ -155,7 +155,11 @@ public because receivers share the scheme:
 ```ts
 const raw = await request.text()
 if (
-  !webhookService.verify(secret, request.headers.get('x-pikku-signature')!, raw)
+  !(await webhookService.verify(
+    secret,
+    request.headers.get('x-pikku-signature')!,
+    raw
+  ))
 ) {
   throw new UnauthorizedError()
 }

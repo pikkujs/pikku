@@ -158,9 +158,10 @@ subscribe to its events as `<source>:<event>`:
     provider's private key; the stored secret is its PEM public key (Wise).
   - Anything else (a timestamp in the signed payload, a signature in the body
     or query, a URL in the signed string) is a function
-    `(request, secret, services) => boolean`, built from `hmacDigest`,
+    `(request, secret, services) => boolean | Promise<boolean>`, built from `hmacDigest`,
     `verifyHmacSignature`, `verifyPublicKeySignature` and
-    `timingSafeStringEqual` in `@pikku/core/hmac`.
+    `timingSafeStringEqual` in `@pikku/core/hmac` (all but the last are
+    async: `await` them).
 
   A request with a body that fails is refused with a 401. A bodiless request
   that fails (a validation token in the query) still reaches

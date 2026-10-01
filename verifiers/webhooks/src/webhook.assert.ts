@@ -71,7 +71,7 @@ describe('outgoing webhook delivery (scaffolded pikku-outgoing-webhooks queue wo
     assert.equal(request.headers['x-verifier-signature'], expectedSignature)
     assert.equal(request.headers['x-pikku-signature'], undefined)
     assert.ok(
-      webhookService.verify(SIGNING_KEY, expectedSignature, request.body),
+      await webhookService.verify(SIGNING_KEY, expectedSignature, request.body),
       'the receiver-side verify() accepts the signature it sent'
     )
   })

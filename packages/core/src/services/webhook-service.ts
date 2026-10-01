@@ -104,13 +104,17 @@ export abstract class WebhookService {
   ): Promise<SendWebhookResult>
 
   /** Produces the header value, `sha256=<hex>`, not the bare digest. */
-  protected sign(secret: string, body: string): string {
-    return `sha256=${hmacSha256Hex(secret, body)}`
+  protected async sign(secret: string, body: string): Promise<string> {
+    return `sha256=${await hmacSha256Hex(secret, body)}`
   }
 
   /** Public because receivers verify with it; they share the signing scheme. */
-  public verify(secret: string, signature: string, body: string): boolean {
-    return timingSafeStringEqual(this.sign(secret, body), signature)
+  public async verify(
+    secret: string,
+    signature: string,
+    body: string
+  ): Promise<boolean> {
+    return timingSafeStringEqual(await this.sign(secret, body), signature)
   }
 
   /**

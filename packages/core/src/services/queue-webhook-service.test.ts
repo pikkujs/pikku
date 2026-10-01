@@ -143,7 +143,7 @@ describe('QueueWebhookService.send', () => {
 
     const { data } = added[0]!
     assert.ok(
-      webhookService.verify(
+      await webhookService.verify(
         'resolved-key',
         data.headers['X-Pikku-Signature']!,
         data.body
@@ -165,7 +165,7 @@ describe('QueueWebhookService.send', () => {
 
     const { data } = added[0]!
     assert.ok(
-      webhookService.verify(
+      await webhookService.verify(
         'shhh',
         data.headers['X-Acme-Signature']!,
         data.body
@@ -185,7 +185,7 @@ describe('QueueWebhookService.send', () => {
 })
 
 describe('WebhookService signing', () => {
-  test('sign/verify round-trips and rejects tampering', () => {
+  test('sign/verify round-trips and rejects tampering', async () => {
     const { queueService } = setupServices()
     // sign() is protected — reach it the way a subclass would.
     const webhookService = new (class extends QueueWebhookService {
@@ -193,13 +193,22 @@ describe('WebhookService signing', () => {
         this.sign(secret, body)
     })(queueService as any)
 
-    const signature = webhookService.signBody('key', '{"a":1}')
+    const signature = await webhookService.signBody('key', '{"a":1}')
 
     assert.ok(signature.startsWith('sha256='))
-    assert.equal(webhookService.verify('key', signature, '{"a":1}'), true)
-    assert.equal(webhookService.verify('key', signature, '{"a":2}'), false)
-    assert.equal(webhookService.verify('other', signature, '{"a":1}'), false)
-    assert.equal(webhookService.verify('key', 'sha256=nope', '{"a":1}'), false)
+    assert.equal(await webhookService.verify('key', signature, '{"a":1}'), true)
+    assert.equal(
+      await webhookService.verify('key', signature, '{"a":2}'),
+      false
+    )
+    assert.equal(
+      await webhookService.verify('other', signature, '{"a":1}'),
+      false
+    )
+    assert.equal(
+      await webhookService.verify('key', 'sha256=nope', '{"a":1}'),
+      false
+    )
   })
 })
 

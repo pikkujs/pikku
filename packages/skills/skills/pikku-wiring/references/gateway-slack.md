@@ -102,7 +102,7 @@ const tokens = await exchangeSlackOAuthCode({
 ```typescript
 import { verifySlackSignature } from '@pikku/gateway-slack'
 
-verifySlackSignature(signingSecret, signature, timestamp, body): boolean
+verifySlackSignature(signingSecret, signature, timestamp, body): Promise<boolean>
 ```
 
 **Signature before timestamp** — the two middle arguments are both strings, so
