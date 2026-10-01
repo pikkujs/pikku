@@ -1,4 +1,4 @@
-export { defineScope } from './define-scope.js'
+export { defineScope, declareScopes } from './define-scope.js'
 export {
   flattenScopeDefinitions,
   validateAndBuildScopeDefinitionsMeta,

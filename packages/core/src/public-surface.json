@@ -322,6 +322,7 @@
     "validateAndBuildCredentialDefinitionsMeta"
   ],
   "./scope": [
+    "declareScopes",
     "defineScope",
     "flattenScopeDefinitions",
     "hasScopes",

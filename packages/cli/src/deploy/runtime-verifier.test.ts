@@ -67,6 +67,18 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       {},
       'import { readFileSync } from "fs"\nexport const read = () => readFileSync("/x")'
     )
+    // Stand-ins for `@pikku/core/scope` (declareScopes is a no-op) and the
+    // server-tier console addon.
+    await pkg(
+      'scope-lib',
+      { pikku: { runtime: 'edge' } },
+      'export const declareScopes = () => {}'
+    )
+    await pkg(
+      '@pikku/addon-console',
+      { pikku: { runtime: 'server' } },
+      'import { hostname } from "node:os"\nexport const consoleHost = () => hostname()'
+    )
     await pkg(
       'memory-lib',
       { pikku: { runtime: 'edge' } },
@@ -109,6 +121,30 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       a.violations.some(
         (v) => v.kind === 'builtin' && v.specifier === 'node:os'
       )
+    )
+  })
+
+  it('keeps @pikku/addon-console out of a unit that only declares pikku:console', async () => {
+    const a = await verify(
+      'scope-only',
+      'import { declareScopes } from "scope-lib"\ndeclareScopes(["pikku:console"])',
+      'serverless'
+    )
+    assert.deepEqual(a.violations, [])
+  })
+
+  it('fails a unit that wires @pikku/addon-console', async () => {
+    const a = await verify(
+      'scope-wired',
+      'import { consoleHost } from "@pikku/addon-console"\nconsole.log(consoleHost())',
+      'serverless'
+    )
+    assert.ok(
+      a.violations.some(
+        (v) =>
+          v.kind === 'package-tier' && v.packageName === '@pikku/addon-console'
+      ),
+      JSON.stringify(a.violations)
     )
   })
 
