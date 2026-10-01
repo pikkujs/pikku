@@ -16,6 +16,7 @@
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
+    "mysql2": "^3.24.5",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
   "scripts": {
     "tsc": "tsc --noEmit",
     "test": "node run.mjs",
-    "test:db": "node run.mjs --postgres"
+    "test:db": "node run.mjs --postgres",
+    "test:mysql": "node run.mjs --mysql"
   }
 }

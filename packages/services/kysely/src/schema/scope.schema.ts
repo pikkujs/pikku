@@ -22,20 +22,20 @@ export const scopeSchema: PikkuSchema = {
   ownedBy: ['scopeService'],
   requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuScopes')
-        .addColumn('name', 'text', (col) => col.primaryKey())
-        .addColumn('description', 'text')
+        .addColumn('name', ctx.key, (col) => col.primaryKey())
+        .addColumn('description', ctx.text)
         .addColumn('declared', 'boolean', (col) =>
           col.defaultTo(true).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuRoles')
-        .addColumn('name', 'text', (col) => col.primaryKey())
-        .addColumn('description', 'text')
+        .addColumn('name', ctx.key, (col) => col.primaryKey())
+        .addColumn('description', ctx.text)
         // Declared in code with `defineSystemRole` rather than composed by an
         // admin. What it buys is the refusals: a system role cannot be renamed,
         // re-scoped or deleted from the console, and a console role cannot be
@@ -54,54 +54,72 @@ export const scopeSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuRoleScopes')
-        .addColumn('role', 'text', (col) =>
-          col.notNull().references('pikkuRoles.name').onDelete('cascade')
+        .addColumn('role', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuRoles.name')
         )
-        .addColumn('scope', 'text', (col) =>
-          col.notNull().references('pikkuScopes.name').onDelete('cascade')
+        .addColumn('scope', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuScopes.name')
         )
-        .addPrimaryKeyConstraint('pikku_role_scopes_pk', ['role', 'scope']),
+        .addPrimaryKeyConstraint('pikku_role_scopes_pk', ['role', 'scope'])
+        .$call(
+          ctx.foreignKeys('pikkuRoleScopes', {
+            role: 'pikkuRoles.name',
+            scope: 'pikkuScopes.name',
+          })
+        ),
 
-    (db, types) =>
+    (db, types, ctx) =>
       db.schema
         .createTable('pikkuUserRole')
         .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-          col.notNull().references('user.id').onDelete('cascade')
+          ctx.references(col.notNull(), 'user.id')
         )
-        .addColumn('role', 'text', (col) =>
-          col.notNull().references('pikkuRoles.name').onDelete('cascade')
+        .addColumn('role', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuRoles.name')
         )
-        .addColumn('grantedBy', 'text')
+        .addColumn('grantedBy', ctx.text)
         .addColumn('grantedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
-        .addPrimaryKeyConstraint('pikku_user_role_pk', ['userId', 'role']),
+        .addPrimaryKeyConstraint('pikku_user_role_pk', ['userId', 'role'])
+        .$call(
+          ctx.foreignKeys('pikkuUserRole', {
+            userId: 'user.id',
+            role: 'pikkuRoles.name',
+          })
+        ),
 
-    (db, types) =>
+    (db, types, ctx) =>
       db.schema
         .createTable('pikkuUserScope')
         .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
-          col.notNull().references('user.id').onDelete('cascade')
+          ctx.references(col.notNull(), 'user.id')
         )
-        .addColumn('scope', 'text', (col) =>
-          col.notNull().references('pikkuScopes.name').onDelete('cascade')
+        .addColumn('scope', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'pikkuScopes.name')
         )
-        .addColumn('grantedBy', 'text')
+        .addColumn('grantedBy', ctx.text)
         .addColumn('grantedAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
-        .addPrimaryKeyConstraint('pikku_user_scope_pk', ['userId', 'scope']),
+        .addPrimaryKeyConstraint('pikku_user_scope_pk', ['userId', 'scope'])
+        .$call(
+          ctx.foreignKeys('pikkuUserScope', {
+            userId: 'user.id',
+            scope: 'pikkuScopes.name',
+          })
+        ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('pikku_role_scopes_scope_idx')
         .on('pikkuRoleScopes')
         .column('scope'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('pikku_user_role_role_idx')
         .on('pikkuUserRole')

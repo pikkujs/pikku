@@ -519,7 +519,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         )
       if (!resolved) {
         throw new Error(
-          `scenarios.reset is on but no database is configured — set sqliteDb or postgresUrl in your createConfig.`
+          `scenarios.reset is on but no database is configured — set sqliteDb, postgresUrl or mysqlUrl in your createConfig.`
         )
       }
       databaseBaseline = await captureScenarioBaseline(

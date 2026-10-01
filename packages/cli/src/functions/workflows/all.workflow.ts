@@ -527,7 +527,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         config.rootDir,
         config.outDir,
         config.db?.pgliteExtensions,
-        config.db?.sqliteExtensions
+        config.db?.sqliteExtensions,
+        config.db?.mysqlUrl
       )
     }
 

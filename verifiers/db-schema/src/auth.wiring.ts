@@ -43,7 +43,11 @@ export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) => {
     baseURL: 'http://localhost',
     database: {
       db: kysely,
-      type: config.postgresUrl ? 'postgres' : 'sqlite',
+      type: config.mysqlUrl
+        ? 'mysql'
+        : config.postgresUrl
+          ? 'postgres'
+          : 'sqlite',
     },
     emailAndPassword: { enabled: true },
     advanced: { database: { generateId: 'uuid' } },

@@ -5,11 +5,11 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 export const sessionSchema: PikkuSchema = {
   name: 'session',
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('pikkuUserSessions')
-        .addColumn('pikkuUserId', 'text', (col) => col.primaryKey())
-        .addColumn('session', 'text', (col) => col.notNull())
+        .addColumn('pikkuUserId', ctx.key, (col) => col.primaryKey())
+        .addColumn('session', ctx.text, (col) => col.notNull())
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )

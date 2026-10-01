@@ -6,15 +6,15 @@ export const webhookSchema: PikkuSchema = {
   name: 'webhook',
   ownedBy: ['webhookService'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('webhookDelivery')
-        .addColumn('deliveryId', 'text', (col) => col.primaryKey())
-        .addColumn('organizationId', 'text')
-        .addColumn('url', 'text', (col) => col.notNull())
-        .addColumn('event', 'text')
-        .addColumn('status', 'text', (col) =>
-          col.defaultTo('pending').notNull()
+        .addColumn('deliveryId', ctx.key, (col) => col.primaryKey())
+        .addColumn('organizationId', ctx.key)
+        .addColumn('url', ctx.text, (col) => col.notNull())
+        .addColumn('event', ctx.text)
+        .addColumn('status', ctx.text, (col) =>
+          col.defaultTo(ctx.defaultText('pending')).notNull()
         )
         .addColumn('attempts', 'integer', (col) => col.defaultTo(0).notNull())
         .addColumn('createdAt', 'timestamp', (col) =>
@@ -25,31 +25,33 @@ export const webhookSchema: PikkuSchema = {
         )
         .addColumn('deliveredAt', 'timestamp'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('webhookDeliveryAttempt')
-        .addColumn('attemptId', 'text', (col) => col.primaryKey())
-        .addColumn('deliveryId', 'text', (col) =>
-          col
-            .notNull()
-            .references('webhookDelivery.deliveryId')
-            .onDelete('cascade')
+        .addColumn('attemptId', ctx.key, (col) => col.primaryKey())
+        .addColumn('deliveryId', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'webhookDelivery.deliveryId')
         )
         .addColumn('attemptNumber', 'integer', (col) => col.notNull())
         .addColumn('statusCode', 'integer')
-        .addColumn('responseBody', 'text')
-        .addColumn('error', 'text')
+        .addColumn('responseBody', ctx.text)
+        .addColumn('error', ctx.text)
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+        )
+        .$call(
+          ctx.foreignKeys('webhookDeliveryAttempt', {
+            deliveryId: 'webhookDelivery.deliveryId',
+          })
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_webhook_delivery_org')
         .on('webhookDelivery')
         .column('organizationId'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_webhook_delivery_attempt_delivery')
         .on('webhookDeliveryAttempt')

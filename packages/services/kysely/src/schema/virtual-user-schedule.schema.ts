@@ -17,7 +17,7 @@ export const virtualUserScheduleSchema: PikkuSchema = {
   name: 'virtual-user-schedule',
   ownedBy: ['virtualUserScheduleStore'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('virtualUserSchedule')
         .addColumn('persona', 'varchar(255)', (col) => col.primaryKey())
@@ -26,8 +26,10 @@ export const virtualUserScheduleSchema: PikkuSchema = {
         // everywhere. Off by default, so creating the table spends nothing.
         .addColumn('enabled', 'integer', (col) => col.defaultTo(0).notNull())
         .addColumn('disposition', 'varchar(50)', (col) => col.notNull())
-        .addColumn('goals', 'text', (col) => col.defaultTo('[]').notNull())
-        .addColumn('budget', 'text')
+        .addColumn('goals', ctx.text, (col) =>
+          col.defaultTo(ctx.defaultText('[]')).notNull()
+        )
+        .addColumn('budget', ctx.text)
         // The gap to the next run is drawn between these rather than fixed, so
         // the persona does not keep an appointment.
         .addColumn('minIntervalMs', 'bigint', (col) => col.notNull())
@@ -39,7 +41,7 @@ export const virtualUserScheduleSchema: PikkuSchema = {
         .addColumn('lastRunAt', 'timestamp'),
 
     // The only read that matters at speed: which rows are due, on every tick.
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_virtual_user_schedule_due')
         .on('virtualUserSchedule')

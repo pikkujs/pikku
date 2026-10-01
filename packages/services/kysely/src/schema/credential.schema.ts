@@ -15,13 +15,13 @@ export const credentialSchema: PikkuSchema = {
   name: 'credential',
   ownedBy: ['credentialService'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('credentials')
         .addColumn('name', 'varchar(255)', (col) => col.notNull())
         .addColumn('userId', 'varchar(255)')
-        .addColumn('ciphertext', 'text', (col) => col.notNull())
-        .addColumn('wrappedDek', 'text', (col) => col.notNull())
+        .addColumn('ciphertext', ctx.text, (col) => col.notNull())
+        .addColumn('wrappedDek', ctx.text, (col) => col.notNull())
         .addColumn('keyVersion', 'integer', (col) => col.notNull())
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
@@ -31,11 +31,11 @@ export const credentialSchema: PikkuSchema = {
         ),
 
     rawStatement(
-      ({ table }) =>
-        sql`CREATE UNIQUE INDEX credentials_name_user_id_unique ON ${table('credentials')} (name, COALESCE(user_id, ''))`
+      ({ table, mysql }) =>
+        sql`CREATE UNIQUE INDEX credentials_name_user_id_unique ON ${table('credentials')} (name, ${mysql ? sql`(COALESCE(user_id, ''))` : sql`COALESCE(user_id, '')`})`
     ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('credentialKekSalts')
         .addColumn('keyVersion', 'integer', (col) => col.primaryKey())
@@ -44,7 +44,7 @@ export const credentialSchema: PikkuSchema = {
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('credentialsAudit')
         .addColumn('id', 'varchar(36)', (col) => col.primaryKey())

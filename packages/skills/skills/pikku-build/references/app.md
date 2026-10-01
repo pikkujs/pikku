@@ -436,7 +436,8 @@ covered_. A stack of half-milestones cannot be reviewed and cannot be handed
 over, and an uncovered function is a half-milestone whether or not the note says
 `built`.
 
-1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
+1. **Migration.** SQL in `db/sqlite/` at the project root (`db/postgres/` or
+   `db/mysql/` when `createConfig` sets `postgresUrl` or `mysqlUrl`), numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
    regenerates the Kysely types your functions import. **Neither `pikku all` nor
    restarting `pikku dev` applies a migration** — so a new column reads as

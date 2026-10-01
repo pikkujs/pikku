@@ -20,7 +20,7 @@ import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 type Classification = 'public' | 'private' | 'pii' | 'secret'
 type ColumnForm = 'plain' | 'hashed' | 'wrapped' | 'sealed'
-type Dialect = 'sqlite' | 'postgres'
+type Dialect = 'sqlite' | 'postgres' | 'mysql'
 
 /**
  * The column kind implied by the *real* DB type, dialect-aware. Postgres has
@@ -30,6 +30,11 @@ type Dialect = 'sqlite' | 'postgres'
  * detect name↔type contradictions for warnings.
  */
 function realKind(dialect: Dialect, sqlType: string): AnnotationKind | null {
+  if (dialect === 'mysql') {
+    // mysql2 hands DATETIME/TIMESTAMP/DATE back as `Date`, but TINYINT(1) as a
+    // number and there is no uuid type, so only the temporal ones are trusted.
+    return /^(datetime|timestamp|date)\b/i.test(sqlType) ? 'date' : null
+  }
   if (dialect !== 'postgres') return null
   const u = sqlType.toUpperCase()
   // Array types carry no scalar kind — an array of timestamps is not a `date`.

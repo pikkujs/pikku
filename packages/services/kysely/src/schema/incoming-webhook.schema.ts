@@ -6,18 +6,18 @@ export const incomingWebhookSchema: PikkuSchema = {
   name: 'incoming-webhook',
   ownedBy: ['incomingWebhookService'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('webhookReceipt')
-        .addColumn('receiptId', 'text', (col) => col.primaryKey())
-        .addColumn('source', 'text', (col) => col.notNull())
-        .addColumn('event', 'text', (col) => col.notNull())
-        .addColumn('providerEventId', 'text')
-        .addColumn('status', 'text', (col) =>
-          col.defaultTo('pending').notNull()
+        .addColumn('receiptId', ctx.key, (col) => col.primaryKey())
+        .addColumn('source', ctx.key, (col) => col.notNull())
+        .addColumn('event', ctx.key, (col) => col.notNull())
+        .addColumn('providerEventId', ctx.key)
+        .addColumn('status', ctx.text, (col) =>
+          col.defaultTo(ctx.defaultText('pending')).notNull()
         )
         .addColumn('attempts', 'integer', (col) => col.defaultTo(0).notNull())
-        .addColumn('lastError', 'text')
+        .addColumn('lastError', ctx.text)
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )

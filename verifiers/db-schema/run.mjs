@@ -15,7 +15,10 @@
  * to make. The unit tests pass `remote: true` in by hand; only here does it come
  * from `wireRemoteAddon` in source, through the inspector, to the registry.
  *
- * `node run.mjs` uses sqlite. `node run.mjs --postgres` uses the server at
+ * `node run.mjs` uses sqlite. `node run.mjs --mysql` uses the server at
+ * `MYSQL_URL`, which has no embedded engine and so is the one dialect whose
+ * scratch work — generate, check, export — creates and drops databases on that
+ * server. `node run.mjs --postgres` uses the server at
  * `DATABASE_URL`, which is worth running separately rather than trusting sqlite
  * to stand in: the auth config asks for uuid keys, which postgres honours and
  * sqlite cannot, so only there does the scope tables' foreign key to `user.id`
@@ -49,10 +52,12 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { cpSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import postgres from 'postgres'
+import mysql from 'mysql2/promise'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '../..')
@@ -71,13 +76,22 @@ const REMOTE_TABLE = 'notes'
 const TRACKING_TABLE = 'sql_migrations'
 
 const usePostgres = process.argv.includes('--postgres')
+const useMysql = process.argv.includes('--mysql')
 const postgresUrl = process.env.DATABASE_URL
+const mysqlUrl = process.env.MYSQL_URL
 if (usePostgres && !postgresUrl) {
   console.error('✗ --postgres needs DATABASE_URL to point at a postgres server')
   process.exit(1)
 }
+if (useMysql && !mysqlUrl) {
+  console.error('✗ --mysql needs MYSQL_URL to point at a MySQL server')
+  process.exit(1)
+}
 
-const dialect = usePostgres ? 'postgres' : 'sqlite'
+const dialect = useMysql ? 'mysql' : usePostgres ? 'postgres' : 'sqlite'
+
+/** An identifier as this dialect's DDL quotes it. */
+const q = (name) => (useMysql ? `\`${name}\`` : `"${name}"`)
 const MIGRATIONS_DIR = join(here, 'db', dialect)
 const SQLITE_FILE = join(here, '.pikku-runtime', 'dev.db')
 
@@ -85,9 +99,11 @@ const SQLITE_FILE = join(here, '.pikku-runtime', 'dev.db')
  * The environment the CLI and the runtime both read to pick a dialect, so the
  * two passes differ in the database and nothing else.
  */
-const env = usePostgres
-  ? { ...process.env, PIKKU_VERIFIER_POSTGRES_URL: postgresUrl }
-  : { ...process.env, PIKKU_VERIFIER_POSTGRES_URL: undefined }
+const env = {
+  ...process.env,
+  PIKKU_VERIFIER_POSTGRES_URL: usePostgres ? postgresUrl : undefined,
+  PIKKU_VERIFIER_MYSQL_URL: useMysql ? mysqlUrl : undefined,
+}
 
 let failures = 0
 
@@ -145,83 +161,169 @@ function expectFailure(label, args, cwd = here) {
  * to empty, read or clear the migrator's own tracking table, and ask whether a
  * table is there.
  */
-const store = usePostgres
+const store = useMysql
   ? (() => {
-      const sql = postgres(postgresUrl, { max: 1 })
+      const connect = () =>
+        mysql.createConnection({ uri: mysqlUrl, multipleStatements: true })
+      const one = async (sql) => {
+        const conn = await connect()
+        try {
+          const [rows] = await conn.query(sql)
+          return rows
+        } finally {
+          await conn.end()
+        }
+      }
       return {
         reset: async () => {
-          await sql.unsafe('DROP SCHEMA IF EXISTS public CASCADE')
-          await sql.unsafe('CREATE SCHEMA public')
+          const conn = await connect()
+          try {
+            await conn.query('SET FOREIGN_KEY_CHECKS = 0')
+            const [tables] = await conn.query(
+              'SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()'
+            )
+            for (const { name } of tables) {
+              await conn.query(`DROP TABLE IF EXISTS \`${name}\``)
+            }
+          } finally {
+            await conn.end()
+          }
         },
         clearHistory: async () => {
-          await sql.unsafe(`DELETE FROM ${TRACKING_TABLE}`)
+          await one(`DELETE FROM ${TRACKING_TABLE}`)
         },
         appliedCount: async () => {
-          const [row] = await sql.unsafe(
-            `SELECT count(*)::int AS n FROM information_schema.tables
-             WHERE table_schema = 'public' AND table_name = '${TRACKING_TABLE}'`
-          )
-          if (row.n === 0) return 0
-          const [applied] = await sql.unsafe(
-            `SELECT count(*)::int AS n FROM ${TRACKING_TABLE}`
-          )
-          return applied.n
+          if (!(await store.hasTable(TRACKING_TABLE))) return 0
+          const [row] = await one(`SELECT COUNT(*) AS n FROM ${TRACKING_TABLE}`)
+          return Number(row.n)
         },
         hasTable: async (table) => {
-          const [row] = await sql.unsafe(
-            `SELECT count(*)::int AS n FROM information_schema.tables
-             WHERE table_schema = 'public' AND table_name = '${table}'`
+          const [row] = await one(
+            `SELECT COUNT(*) AS n FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = '${table}'`
           )
-          return row.n > 0
+          return Number(row.n) > 0
         },
-        close: async () => await sql.end(),
+        close: async () => {},
       }
     })()
-  : {
-      reset: async () => {
-        rmSync(join(here, '.pikku-runtime'), { recursive: true, force: true })
-      },
-      clearHistory: async () => {
-        const db = new DatabaseSync(SQLITE_FILE)
-        db.exec(`DELETE FROM ${TRACKING_TABLE}`)
-        db.close()
-      },
-      appliedCount: async () => {
-        if (!existsSync(SQLITE_FILE)) return 0
-        const db = new DatabaseSync(SQLITE_FILE)
-        try {
-          const { n } = db
-            .prepare(
-              `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+  : usePostgres
+    ? (() => {
+        const sql = postgres(postgresUrl, { max: 1 })
+        return {
+          reset: async () => {
+            await sql.unsafe('DROP SCHEMA IF EXISTS public CASCADE')
+            await sql.unsafe('CREATE SCHEMA public')
+          },
+          clearHistory: async () => {
+            await sql.unsafe(`DELETE FROM ${TRACKING_TABLE}`)
+          },
+          appliedCount: async () => {
+            const [row] = await sql.unsafe(
+              `SELECT count(*)::int AS n FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = '${TRACKING_TABLE}'`
             )
-            .get(TRACKING_TABLE)
-          if (n === 0) return 0
-          return db.prepare(`SELECT count(*) AS n FROM ${TRACKING_TABLE}`).get()
-            .n
-        } finally {
-          db.close()
-        }
-      },
-      hasTable: async (table) => {
-        if (!existsSync(SQLITE_FILE)) return false
-        const db = new DatabaseSync(SQLITE_FILE)
-        try {
-          const { n } = db
-            .prepare(
-              `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+            if (row.n === 0) return 0
+            const [applied] = await sql.unsafe(
+              `SELECT count(*)::int AS n FROM ${TRACKING_TABLE}`
             )
-            .get(table)
-          return n > 0
-        } finally {
-          db.close()
+            return applied.n
+          },
+          hasTable: async (table) => {
+            const [row] = await sql.unsafe(
+              `SELECT count(*)::int AS n FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = '${table}'`
+            )
+            return row.n > 0
+          },
+          close: async () => await sql.end(),
         }
-      },
-      close: async () => {},
-    }
+      })()
+    : {
+        reset: async () => {
+          rmSync(join(here, '.pikku-runtime'), { recursive: true, force: true })
+        },
+        clearHistory: async () => {
+          const db = new DatabaseSync(SQLITE_FILE)
+          db.exec(`DELETE FROM ${TRACKING_TABLE}`)
+          db.close()
+        },
+        appliedCount: async () => {
+          if (!existsSync(SQLITE_FILE)) return 0
+          const db = new DatabaseSync(SQLITE_FILE)
+          try {
+            const { n } = db
+              .prepare(
+                `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+              )
+              .get(TRACKING_TABLE)
+            if (n === 0) return 0
+            return db
+              .prepare(`SELECT count(*) AS n FROM ${TRACKING_TABLE}`)
+              .get().n
+          } finally {
+            db.close()
+          }
+        },
+        hasTable: async (table) => {
+          if (!existsSync(SQLITE_FILE)) return false
+          const db = new DatabaseSync(SQLITE_FILE)
+          try {
+            const { n } = db
+              .prepare(
+                `SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = ?`
+              )
+              .get(table)
+            return n > 0
+          } finally {
+            db.close()
+          }
+        },
+        close: async () => {},
+      }
 
 console.log(`\n══ db-schema verifier (${dialect}) ══`)
 
-rmSync(MIGRATIONS_DIR, { recursive: true, force: true })
+/**
+ * The addons' MySQL migrations exist only in a MySQL run. An addon that ships
+ * `db/mysql` has to be exported against a server, so leaving them in place would
+ * make every other dialect's run need one — and the artifact would then name a
+ * dialect that run is not about.
+ */
+const ADDON_PKG_DIRS = [addonDir, remoteAddonDir]
+for (const dir of ADDON_PKG_DIRS) {
+  rmSync(join(dir, 'db', 'mysql'), { recursive: true, force: true })
+  if (useMysql)
+    cpSync(join(dir, 'fixtures', 'mysql'), join(dir, 'db', 'mysql'), {
+      recursive: true,
+    })
+}
+const ADDON_CONFIGS = ADDON_PKG_DIRS.map((dir) =>
+  join(dir, 'pikku.config.json')
+)
+const SAVED_CONFIGS = ADDON_CONFIGS.map((file) => readFileSync(file, 'utf8'))
+if (useMysql) {
+  ADDON_CONFIGS.forEach((file, i) => {
+    writeFileSync(
+      file,
+      `${JSON.stringify({ ...JSON.parse(SAVED_CONFIGS[i]), db: { mysqlUrl } }, null, 2)}\n`
+    )
+  })
+}
+const restoreAddonConfigs = () => {
+  ADDON_CONFIGS.forEach((file, i) => writeFileSync(file, SAVED_CONFIGS[i]))
+  for (const dir of ADDON_PKG_DIRS) {
+    rmSync(join(dir, 'db', 'mysql'), { recursive: true, force: true })
+  }
+}
+process.on('exit', restoreAddonConfigs)
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => process.exit(130))
+}
+
+for (const other of ['sqlite', 'postgres', 'mysql']) {
+  rmSync(join(here, 'db', other), { recursive: true, force: true })
+}
 rmSync(join(here, '.pikku'), { recursive: true, force: true })
 rmSync(join(addonDir, '.pikku'), { recursive: true, force: true })
 rmSync(join(remoteAddonDir, '.pikku'), { recursive: true, force: true })
@@ -238,9 +340,7 @@ run('addon: pikku all', 'node', [PIKKU, 'all'], addonDir)
 // as a package that cannot say whether it ships tables, so an addon must never
 // depend on the author remembering a second command for the file to exist.
 check(
-  existsSync(
-    join(addonDir, '.pikku', 'addon', 'db', 'pikku-db-meta.gen.json')
-  ),
+  existsSync(join(addonDir, '.pikku', 'addon', 'db', 'pikku-db-meta.gen.json')),
   'pikku all published the schema artifact on its own'
 )
 run('addon: pikku db export', 'node', [PIKKU, 'db', 'export'], addonDir)
@@ -266,7 +366,8 @@ const artifactPath = join(
 check(existsSync(artifactPath), 'pikku db export wrote .pikku/addon/db')
 const artifact = JSON.parse(readFileSync(artifactPath, 'utf8'))
 check(
-  Object.keys(artifact).sort().join(',') === 'postgres,sqlite',
+  Object.keys(artifact).sort().join(',') ===
+    (useMysql ? 'mysql,postgres,sqlite' : 'postgres,sqlite'),
   `every dialect the addon has migrations for is published (${Object.keys(artifact).join(',') || 'none'})`
 )
 const exported = artifact[dialect]
@@ -360,17 +461,17 @@ const sqlOf = (file) => readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
 console.log('\n▶ assert: the auth migration is what Better Auth materialized')
 const authSql = sqlOf(authFile)
 for (const table of ['user', 'session', 'account', 'verification']) {
-  contains(authSql, `"${table}"`, 'core table')
+  contains(authSql, q(table), 'core table')
 }
 for (const table of ['organization', 'member', 'invitation']) {
-  contains(authSql, `"${table}"`, 'organization() table')
+  contains(authSql, q(table), 'organization() table')
 }
-contains(authSql, '"two_factor"', 'twoFactor() table')
+contains(authSql, q('two_factor'), 'twoFactor() table')
 for (const column of [
-  '"banned"',
-  '"ban_reason"',
-  '"ban_expires"',
-  '"two_factor_enabled"',
+  q('banned'),
+  q('ban_reason'),
+  q('ban_expires'),
+  q('two_factor_enabled'),
 ]) {
   contains(authSql, column, 'plugin column on an existing table')
 }
@@ -378,22 +479,29 @@ for (const column of [
 // These are the columns it used to add. `user.role` is checked inside the user
 // statement rather than across the file, because `organization()` legitimately
 // puts a `role` on `member`.
-const userStatement = /create table "user" \([^;]*/i.exec(authSql)?.[0]
+const userStatement = new RegExp(
+  `create table ${q('user')} \\([^;]*`,
+  'i'
+).exec(authSql)?.[0]
 check(
-  Boolean(userStatement) && !userStatement.includes('"role"'),
+  Boolean(userStatement) && !userStatement.includes(q('role')),
   'no admin() column on user: "role"'
 )
 check(
-  !authSql.includes('"impersonated_by"'),
+  !authSql.includes(q('impersonated_by')),
   'no admin() column on session: "impersonated_by"'
 )
+const userIdType = usePostgres ? 'uuid' : useMysql ? 'varchar\\(36\\)' : 'text'
 check(
-  usePostgres
-    ? /create table "user" \("id" uuid\b/i.test(authSql)
-    : /create table "user" \("id" text\b/i.test(authSql),
+  new RegExp(
+    `create table ${q('user')} \\(${q('id')} ${userIdType}[\\s,]`,
+    'i'
+  ).test(authSql),
   usePostgres
     ? 'postgres made user.id a uuid, as generateId: uuid asks'
-    : 'sqlite made user.id text — it has no uuid type to ask for'
+    : useMysql
+      ? 'mysql made user.id a varchar(36) — it has no uuid type to ask for'
+      : 'sqlite made user.id text — it has no uuid type to ask for'
 )
 
 // 6. The cross-source assertion: these two exist only because the auth source
@@ -408,13 +516,20 @@ for (const table of ['pikku_user_role', 'pikku_user_scope']) {
 }
 check(
   new RegExp(
-    `"user_id" ${usePostgres ? 'uuid' : 'text'} not null references "user"`,
+    `${q('user_id')} ${userIdType} not null${useMysql ? '' : ` references ${q('user')}`}`,
     'i'
   ).test(runtimeSql),
   usePostgres
     ? 'user_id took its type from user.id (uuid), not the text it used to declare'
-    : 'user_id took its type from user.id (text)'
+    : `user_id took its type from user.id (${useMysql ? 'varchar(36)' : 'text'})`
 )
+if (useMysql) {
+  contains(
+    runtimeSql,
+    'foreign key (`user_id`) references `user` (`id`) on delete cascade',
+    'MySQL discards an inline references, so the key to user.id is a table constraint'
+  )
+}
 for (const table of ['workflow_runs', 'agent_run', 'secrets']) {
   contains(runtimeSql, table, 'runtime table')
 }
@@ -430,7 +545,7 @@ for (const table of [
   'virtual_user_run',
 ]) {
   check(
-    !new RegExp(`create table "${table}"`, 'i').test(runtimeSql),
+    !new RegExp(`create table ${q(table)}`, 'i').test(runtimeSql),
     `${table} is absent — no service here owns it`
   )
 }

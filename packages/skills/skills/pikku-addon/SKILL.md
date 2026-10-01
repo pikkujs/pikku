@@ -292,7 +292,13 @@ Author the DDL per dialect:
 ```text
 db/sqlite/0001-labels.sql
 db/postgres/0001-labels.sql
+db/mysql/0001-labels.sql
 ```
+
+`db/mysql` is the one that needs a server to publish: MySQL has no embedded
+engine, so `pikku all` applies the SQL to a scratch database on the server named
+by `db.mysqlUrl` in the addon's `pikku.config.json`, and refuses to build
+without one. Use `varchar(n)` for a key column — MySQL rejects `TEXT` there.
 
 `pikku all` publishes `<outDir>/db/pikku-db-meta.gen.json` on every build — per
 dialect, the SQL verbatim plus a table/column map — and writes it **empty** when

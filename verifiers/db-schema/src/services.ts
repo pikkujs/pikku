@@ -6,9 +6,10 @@ import {
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import Database from 'better-sqlite3'
-import { Kysely, SqliteDialect } from 'kysely'
+import { Kysely, MysqlDialect, SqliteDialect } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
+import { createPool } from 'mysql2'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import type { LabelsDB } from '@pikku/verifier-db-addon/types'
 
@@ -27,18 +28,23 @@ type DB = KyselyPikkuDB & LabelsDB
 const openDatabase = (config: {
   sqliteDb?: string
   postgresUrl?: string
+  mysqlUrl?: string
 }): Kysely<DB> =>
-  config.postgresUrl
+  config.mysqlUrl
     ? new Kysely<DB>({
-        dialect: new PostgresJSDialect({
-          postgres: postgres(config.postgresUrl, { max: 4 }),
-        }),
+        dialect: new MysqlDialect({ pool: createPool(config.mysqlUrl) }),
       })
-    : new Kysely<DB>({
-        dialect: new SqliteDialect({
-          database: new Database(config.sqliteDb!),
-        }),
-      })
+    : config.postgresUrl
+      ? new Kysely<DB>({
+          dialect: new PostgresJSDialect({
+            postgres: postgres(config.postgresUrl, { max: 4 }),
+          }),
+        })
+      : new Kysely<DB>({
+          dialect: new SqliteDialect({
+            database: new Database(config.sqliteDb!),
+          }),
+        })
 
 export const createSingletonServices = pikkuServices(
   async (config, existingServices) => {

@@ -6,33 +6,38 @@ export const channelSchema: PikkuSchema = {
   name: 'channel',
   ownedBy: ['channelStore', 'eventHub'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('channels')
-        .addColumn('channelId', 'text', (col) => col.primaryKey())
-        .addColumn('channelName', 'text', (col) => col.notNull())
+        .addColumn('channelId', ctx.key, (col) => col.primaryKey())
+        .addColumn('channelName', ctx.text, (col) => col.notNull())
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )
-        .addColumn('openingData', 'text', (col) =>
-          col.notNull().defaultTo('{}')
+        .addColumn('openingData', ctx.text, (col) =>
+          col.notNull().defaultTo(ctx.defaultText('{}'))
         )
-        .addColumn('pikkuUserId', 'text')
-        .addColumn('state', 'text')
+        .addColumn('pikkuUserId', ctx.text)
+        .addColumn('state', ctx.text)
         .addColumn('lastWire', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         ),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('channelSubscriptions')
-        .addColumn('channelId', 'text', (col) =>
-          col.notNull().references('channels.channelId').onDelete('cascade')
+        .addColumn('channelId', ctx.key, (col) =>
+          ctx.references(col.notNull(), 'channels.channelId')
         )
-        .addColumn('topic', 'text', (col) => col.notNull())
+        .addColumn('topic', ctx.key, (col) => col.notNull())
         .addPrimaryKeyConstraint('channel_subscriptions_pk', [
           'channelId',
           'topic',
-        ]),
+        ])
+        .$call(
+          ctx.foreignKeys('channelSubscriptions', {
+            channelId: 'channels.channelId',
+          })
+        ),
   ],
 }

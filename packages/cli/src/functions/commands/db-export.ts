@@ -19,12 +19,13 @@ export const dbExport = pikkuSessionlessFunc<{}, void>({
       config.rootDir,
       config.outDir,
       config.db?.pgliteExtensions,
-      config.db?.sqliteExtensions
+      config.db?.sqliteExtensions,
+      config.db?.mysqlUrl
     )
 
     if (dialects.length === 0) {
       logger.info(
-        `db export: no db/sqlite or db/postgres migrations — wrote ${file} empty, ` +
+        `db export: no db/sqlite, db/postgres or db/mysql migrations — wrote ${file} empty, ` +
           'which is how a consumer tells "no tables" from "never published"'
       )
       return

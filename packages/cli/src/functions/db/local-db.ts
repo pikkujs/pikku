@@ -48,6 +48,13 @@ import {
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
+import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
+import { MysqlIntrospector } from './mysql/mysql-introspector.js'
+import {
+  createMysqlKysely,
+  withMysqlClient,
+  withScratchMysqlDatabase,
+} from './mysql/mysql-client.js'
 import { PostgresIntrospector } from './postgres/postgres-introspector.js'
 import type { UserConfigShape } from '../commands/db-shared.js'
 
@@ -109,27 +116,41 @@ export interface ResolvedPostgresDb extends ResolvedDbBase {
   schema?: string
 }
 
-export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb
+/**
+ * A MySQL server, always by URL: there is no embedded MySQL to fall back to the
+ * way sqlite has a file and postgres has PGlite, so a project on MySQL needs a
+ * server running to migrate, generate or reset.
+ */
+export interface ResolvedMysqlDb extends ResolvedDbBase {
+  dialect: 'mysql'
+  connectionString: string
+  runtimeDir: string
+  devSeedFile: string
+}
+
+export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb | ResolvedMysqlDb
 
 // ─── Resolution ───────────────────────────────────────────────────────────────
 
 /**
  * Parse a DATABASE_URL string into the subset of UserConfigShape that resolveDb understands.
  * - postgres(ql):// → { postgresUrl }
+ * - mysql:// → { mysqlUrl }
  * - libsql:// or http(s):// → {} (remote, not handled by the CLI layer)
  * - anything else → { sqliteDb } (local file path)
  */
 export function parseDatabaseUrl(
   url: string
-): Pick<UserConfigShape, 'sqliteDb' | 'postgresUrl'> {
+): Pick<UserConfigShape, 'sqliteDb' | 'postgresUrl' | 'mysqlUrl'> {
   if (/^postgres(ql)?:\/\//.test(url)) return { postgresUrl: url }
+  if (/^mysql:\/\//.test(url)) return { mysqlUrl: url }
   if (/^(libsql|https?):\/\//.test(url)) return {}
   return { sqliteDb: url }
 }
 
 /**
  * Resolve a UserConfigShape into an absolute-path descriptor.
- * Returns null when neither sqliteDb nor postgresUrl is configured.
+ * Returns null when none of sqliteDb, postgresUrl or mysqlUrl is configured.
  */
 export function resolveDb(
   userConfig: UserConfigShape,
@@ -173,10 +194,39 @@ export function resolveDb(
     defaultSchema,
   })
 
-  if (userConfig.postgresUrl && userConfig.sqliteDb) {
+  const configured = (
+    [
+      ['postgresUrl', userConfig.postgresUrl],
+      ['sqliteDb', userConfig.sqliteDb],
+      ['mysqlUrl', userConfig.mysqlUrl],
+    ] as const
+  ).filter(([, value]) => value)
+  if (configured.length > 1) {
     throw new Error(
-      'Both postgresUrl and sqliteDb are set. Configure exactly one database dialect.'
+      `${configured.length === 2 ? 'Both' : 'All of'} ${configured
+        .slice(0, -1)
+        .map(([key]) => key)
+        .join(
+          ', '
+        )} and ${configured.at(-1)![0]} are set. Configure exactly one database dialect.`
     )
+  }
+
+  if (userConfig.mysqlUrl) {
+    if (schema) {
+      throw new Error(
+        `db.schema is set to '${schema}', but the resolved database is mysql. ` +
+          'mysql calls a schema a database and the connection URL already names it, ' +
+          'so there is no second level to qualify into. Remove db.schema, or configure postgres.'
+      )
+    }
+    return {
+      dialect: 'mysql',
+      connectionString: userConfig.mysqlUrl,
+      runtimeDir: resolvedRuntimeDir,
+      devSeedFile: resolveAgainst(rootDir, 'db/mysql-dev-seed.sql'),
+      ...base('db/mysql'),
+    }
   }
 
   const pgliteExtensions =
@@ -219,6 +269,13 @@ export function resolveDb(
       ...sqliteExtensionContext(rootDir, dbConfig),
       ...base('db/sqlite'),
     }
+  }
+
+  if (existsSync(join(rootDir, 'db/mysql'))) {
+    throw new Error(
+      'db/mysql exists but no mysqlUrl is configured. MySQL has no embedded ' +
+        'database to run against, so set mysqlUrl in createConfig to a server you can reach.'
+    )
   }
 
   if (existsSync(join(rootDir, 'db/postgres'))) {
@@ -575,7 +632,8 @@ export interface MigrateAndCodegenOptions {
    * before deploy-time migrations, on a machine with no database at all.
    *
    * SQLite uses `:memory:`; Postgres uses an embedded PGlite (real Postgres,
-   * and it needs no `CREATEDB` privilege anywhere).
+   * and it needs no `CREATEDB` privilege anywhere). MySQL has nothing embedded,
+   * so it creates and drops a database on the configured server.
    */
   scratch?: boolean
 }
@@ -626,6 +684,30 @@ export async function migrateAndCodegen(
     } finally {
       db.close()
     }
+  } else if (resolved.dialect === 'mysql') {
+    const withClient = options.scratch
+      ? withScratchMysqlDatabase
+      : withMysqlClient
+    await withClient(resolved, async (client) => {
+      const introspector = new MysqlIntrospector(client)
+      migrateResult = await migrate(
+        new MysqlMigrationExecutor(client),
+        resolved.migrationsDir
+      )
+      codegenResult = await generateSchemaTypes(introspector, {
+        outFile: resolved.schemaFile,
+        coercionFile: resolved.coercionFile,
+        manifestFile: resolved.manifestFile,
+        classificationMapFile: resolved.classificationMapFile,
+        schemaJsonFile: resolved.schemaJsonFile,
+        enumsFile: resolved.enumsFile,
+        camelCase: resolved.camelCase,
+        defaultSchema: resolved.defaultSchema,
+        rootDir: resolved.rootDir,
+        dialect: 'mysql',
+        migrationsDir: resolved.migrationsDir,
+      })
+    })
   } else {
     const withClient = options.scratch
       ? <T>(
@@ -722,13 +804,21 @@ export async function devSeed(resolved: ResolvedDb): Promise<DevSeedResult> {
     return { applied: false, bytes: 0 }
   }
 
-  await withPostgresClient(resolved, async (client) => {
+  const run = async (client: {
+    exec?: (sql: string) => Promise<unknown>
+    query: (sql: string) => Promise<unknown>
+  }) => {
     if (typeof client.exec === 'function') {
       await client.exec(sql)
     } else {
       await client.query(sql)
     }
-  })
+  }
+  if (resolved.dialect === 'mysql') {
+    await withMysqlClient(resolved, run)
+  } else {
+    await withPostgresClient(resolved, run)
+  }
 
   return { applied: true, bytes: Buffer.byteLength(sql) }
 }
@@ -753,6 +843,20 @@ export async function reset(
     if (existsSync(resolved.dbFile)) {
       rmSync(resolved.dbFile)
     }
+    return
+  }
+
+  if (resolved.dialect === 'mysql') {
+    await withMysqlClient(resolved, async (client) => {
+      const { rows } = await client.query<{ table_name: string }>(
+        `SELECT table_name AS table_name FROM information_schema.tables
+         WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'`
+      )
+      if (rows.length === 0) return
+      await client.exec(
+        `SET FOREIGN_KEY_CHECKS = 0; DROP TABLE ${rows.map((r) => quoteMysqlIdentifier(r.table_name)).join(', ')}; SET FOREIGN_KEY_CHECKS = 1`
+      )
+    })
     return
   }
 
@@ -914,6 +1018,14 @@ export async function createKysely<DB>(
     })
   }
 
+  if (resolved.dialect === 'mysql') {
+    return createMysqlKysely<DB>({
+      url: resolved.connectionString,
+      camelCase: resolved.camelCase,
+      plugins,
+    })
+  }
+
   if (resolved.mode === 'url') {
     const { Pool } = await import('pg')
     const pool = new Pool({
@@ -1033,6 +1145,11 @@ function qualifiedTableKey(schema: string, table: string): string {
   return schema === 'public' ? table : `${schema}.${table}`
 }
 
+/** A MySQL identifier, backtick-quoted. */
+function quoteMysqlIdentifier(name: string): string {
+  return `\`${name.replace(/`/g, '``')}\``
+}
+
 /** A PostgreSQL identifier, quoted so its casing survives the parser. */
 function quoteIdentifier(name: string): string {
   return `"${name.replace(/"/g, '""')}"`
@@ -1078,6 +1195,12 @@ function isPostgresAuthDatabase(options: {
   database?: { type?: string }
 }): boolean {
   return options.database?.type === 'postgres'
+}
+
+function isMysqlAuthDatabase(options: {
+  database?: { type?: string }
+}): boolean {
+  return options.database?.type === 'mysql'
 }
 
 // The scratch database is a throwaway used only to compute the desired Better
@@ -1152,6 +1275,35 @@ async function desiredPostgresAuthSchema(
   })
 }
 
+async function desiredMysqlAuthSchema(
+  resolved: ResolvedMysqlDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<DesiredAuthSchema | null> {
+  return withScratchMysqlDatabase(resolved, async (scratchDb) => {
+    const kysely = await createMysqlKysely<any>({ url: scratchDb.url })
+    try {
+      const options = await loadAuthOptions({
+        rootDir,
+        srcDirectories,
+        kysely,
+        logger,
+      })
+      if (!options) return null
+
+      const { runMigrations, compileMigrations } =
+        await getAuthMigrations(options)
+      await runMigrations()
+      const tables = await introspectorToMap(new MysqlIntrospector(scratchDb))
+      const sql = await compileMigrations()
+      return { tables, sql }
+    } finally {
+      await kysely.destroy()
+    }
+  })
+}
+
 export async function desiredAuthSchema(
   resolved: ResolvedDb,
   rootDir: string,
@@ -1169,6 +1321,14 @@ export async function desiredAuthSchema(
       logger,
     })
     if (!options) return null
+    if (isMysqlAuthDatabase(options)) {
+      if (resolved.dialect !== 'mysql') {
+        throw new Error(
+          'Better Auth database.type is mysql, but the resolved app database is not mysql.'
+        )
+      }
+      return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
+    }
     if (isPostgresAuthDatabase(options)) {
       if (resolved.dialect !== 'postgres') {
         throw new Error(
@@ -1312,6 +1472,24 @@ export async function desiredRuntimeSchema(
     }
   }
 
+  if (resolved.dialect === 'mysql') {
+    return withScratchMysqlDatabase(resolved, async (db) => {
+      const kysely = await createMysqlKysely<any>({ url: db.url })
+      try {
+        const { tables, schemas, types } = await collect(kysely, () =>
+          introspectorToMap(new MysqlIntrospector(db))
+        )
+        return {
+          tables,
+          sql: compilePikkuSchemas(kysely, schemas, types),
+          skipped,
+        }
+      } finally {
+        await kysely.destroy()
+      }
+    })
+  }
+
   return withScratchPostgresDatabase(resolved, async (db) => {
     const kysely = createPGliteKysely<any>({
       db: db.__pglite!,
@@ -1342,6 +1520,11 @@ export async function introspectSchema(
     } finally {
       db.close()
     }
+  }
+  if (resolved.dialect === 'mysql') {
+    return withMysqlClient(resolved, (client) =>
+      introspectorToMap(new MysqlIntrospector(client))
+    )
   }
   return withPostgresClient(resolved, async (client) => {
     const intro = new PostgresIntrospector(client)
@@ -1403,6 +1586,35 @@ function collectSqliteColumnIndexes(
   }
 }
 
+async function coveredMysqlSchema(
+  migrationsDir: string,
+  resolved: Pick<ResolvedMysqlDb, 'connectionString'>
+): Promise<SchemaMap> {
+  return withScratchMysqlDatabase(resolved, async (client) => {
+    await migrate(new MysqlMigrationExecutor(client), migrationsDir)
+    return introspectorToMap(new MysqlIntrospector(client))
+  })
+}
+
+/** The schema the migrations alone define, on whichever dialect `resolved` is. */
+async function coveredSchema(
+  resolved: ResolvedDb,
+  columnIndexes?: Map<string, string[]>
+): Promise<SchemaMap> {
+  switch (resolved.dialect) {
+    case 'sqlite':
+      return coveredSqliteSchema(
+        resolved.migrationsDir,
+        resolved,
+        columnIndexes
+      )
+    case 'mysql':
+      return coveredMysqlSchema(resolved.migrationsDir, resolved)
+    case 'postgres':
+      return coveredPostgresSchema(resolved.migrationsDir, resolved)
+  }
+}
+
 async function coveredPostgresSchema(
   migrationsDir: string,
   context: PGliteExtensionContext
@@ -1458,10 +1670,7 @@ export async function computeSchemaDrift(
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
 ): Promise<SchemaDriftResult> {
-  const covered =
-    resolved.dialect === 'sqlite'
-      ? await coveredSqliteSchema(resolved.migrationsDir, resolved)
-      : await coveredPostgresSchema(resolved.migrationsDir, resolved)
+  const covered = await coveredSchema(resolved)
   const actual = await introspectSchema(resolved)
 
   const { missingTables, missingColumns } = diffSchemas(covered, actual)
@@ -1545,6 +1754,16 @@ export async function baseline(
     } finally {
       db.close()
     }
+  }
+
+  if (resolved.dialect === 'mysql') {
+    return withMysqlClient(resolved, async (client) => {
+      const recorded = await baselineMigrations(
+        new MysqlMigrationExecutor(client),
+        resolved.migrationsDir
+      )
+      return { status: 'recorded', recorded }
+    })
   }
 
   return withPostgresClient(resolved, async (client) => {
@@ -1717,7 +1936,8 @@ const concatMigrations = (migrationsDir: string): string =>
 export async function exportSchema(
   rootDir: string,
   pgliteExtensions: string[] = [],
-  sqliteExtensions?: string[]
+  sqliteExtensions?: string[],
+  mysqlUrl?: string
 ): Promise<SchemaArtifact> {
   const artifact: SchemaArtifact = {}
 
@@ -1744,6 +1964,23 @@ export async function exportSchema(
     }
   }
 
+  const mysqlDir = join(rootDir, 'db', 'mysql')
+  if (existsSync(mysqlDir)) {
+    if (!mysqlUrl) {
+      throw new Error(
+        'This package has db/mysql migrations, and MySQL has no embedded engine to materialize ' +
+          'them on. Set db.mysqlUrl in pikku.config.json to a server it may create and drop a ' +
+          'scratch database on.'
+      )
+    }
+    artifact.mysql = {
+      sql: concatMigrations(mysqlDir),
+      tables: serializeSchemaMap(
+        await coveredMysqlSchema(mysqlDir, { connectionString: mysqlUrl })
+      ),
+    }
+  }
+
   return artifact
 }
 
@@ -1759,12 +1996,14 @@ export async function writeSchemaArtifact(
   rootDir: string,
   outDir: string,
   pgliteExtensions?: string[],
-  sqliteExtensions?: string[]
+  sqliteExtensions?: string[],
+  mysqlUrl?: string
 ): Promise<{ file: string; dialects: string[] }> {
   const artifact = await exportSchema(
     rootDir,
     pgliteExtensions,
-    sqliteExtensions
+    sqliteExtensions,
+    mysqlUrl
   )
   const file = join(outDir, 'db', 'pikku-db-meta.gen.json')
   mkdirSync(dirname(file), { recursive: true })
@@ -1992,12 +2231,12 @@ function addColumnStatements(
 /**
  * The statements that stop an orphaned required column failing every insert.
  *
- * PostgreSQL relaxes it — the column and what it holds stay, only the constraint
- * goes. SQLite cannot change a column's constraints, so it is dropped, indexes
- * first (SQLite refuses to drop a column an index still names).
+ * PostgreSQL and MySQL relax it — the column and what it holds stay, only the
+ * constraint goes. SQLite cannot change a column's constraints, so it is
+ * dropped, indexes first (SQLite refuses to drop a column an index still names).
  */
 function orphanedColumnStatements(
-  dialect: 'sqlite' | 'postgres',
+  dialect: ResolvedDb['dialect'],
   qualified: string,
   table: string,
   columns: ColumnInfo[],
@@ -2012,6 +2251,12 @@ function orphanedColumnStatements(
     if (dialect === 'postgres') {
       statements.push(
         `${note}ALTER TABLE ${qualified} ALTER COLUMN ${quote(column.name)} DROP NOT NULL;`
+      )
+      continue
+    }
+    if (dialect === 'mysql') {
+      statements.push(
+        `${note}ALTER TABLE ${qualified} MODIFY COLUMN ${quote(column.name)} ${column.type} NULL;`
       )
       continue
     }
@@ -2088,14 +2333,7 @@ export async function generateMigrations(
     // Re-read after each write: a migration just written for an earlier source
     // is part of what the next one is compared against.
     const columnIndexes = new Map<string, string[]>()
-    const covered =
-      resolved.dialect === 'sqlite'
-        ? await coveredSqliteSchema(
-            resolved.migrationsDir,
-            resolved,
-            columnIndexes
-          )
-        : await coveredPostgresSchema(resolved.migrationsDir, resolved)
+    const covered = await coveredSchema(resolved, columnIndexes)
 
     const { missingTables, missingColumns } = diffSchemas(
       source.desired.tables,

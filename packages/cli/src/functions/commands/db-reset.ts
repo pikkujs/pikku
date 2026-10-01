@@ -32,7 +32,7 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
     )
     if (!resolved) {
       logger.error(
-        'pikku db reset: no database configured — set sqliteDb or postgresUrl in your createConfig.'
+        'pikku db reset: no database configured — set sqliteDb, postgresUrl or mysqlUrl in your createConfig.'
       )
       throw new Error('no database configured')
     }
@@ -41,9 +41,11 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
     logger.info(
       resolved.dialect === 'sqlite'
         ? `db reset: removed ${resolved.dbFile}`
-        : resolved.mode === 'pglite'
-          ? `db reset: removed ${resolved.pgliteDir}`
-          : 'db reset: cleared non-system Postgres schemas'
+        : resolved.dialect === 'mysql'
+          ? 'db reset: dropped every table in the MySQL database'
+          : resolved.mode === 'pglite'
+            ? `db reset: removed ${resolved.pgliteDir}`
+            : 'db reset: cleared non-system Postgres schemas'
     )
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)

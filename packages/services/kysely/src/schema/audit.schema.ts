@@ -19,39 +19,42 @@ export const auditSchema: PikkuSchema = {
   name: 'audit',
   ownedBy: ['audit', 'auditLog'],
   statements: [
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createTable('audit')
-        .addColumn('auditId', 'text', (col) => col.primaryKey())
-        .addColumn('occurredAt', 'text', (col) => col.notNull())
-        .addColumn('type', 'text', (col) => col.notNull())
-        .addColumn('source', 'text', (col) => col.defaultTo('auto').notNull())
-        .addColumn('outcome', 'text')
-        .addColumn('functionId', 'text')
-        .addColumn('wireType', 'text')
-        .addColumn('traceId', 'text')
-        .addColumn('transactionId', 'text')
-        .addColumn('queryId', 'text')
-        .addColumn('userId', 'text')
-        .addColumn('orgId', 'text')
-        .addColumn('pikkuUserId', 'text')
-        .addColumn('tables', 'text')
-        .addColumn('changedCols', 'text')
-        .addColumn('event', 'text')
-        .addColumn('old', 'text')
-        .addColumn('data', 'text'),
+        .addColumn('auditId', ctx.key, (col) => col.primaryKey())
+        .addColumn('occurredAt', ctx.key, (col) => col.notNull())
+        .addColumn('type', ctx.key, (col) => col.notNull())
+        .addColumn('source', ctx.text, (col) =>
+          col.defaultTo(ctx.defaultText('auto')).notNull()
+        )
+        .addColumn('outcome', ctx.text)
+        .addColumn('functionId', ctx.text)
+        .addColumn('wireType', ctx.text)
+        .addColumn('traceId', ctx.text)
+        .addColumn('transactionId', ctx.text)
+        .addColumn('queryId', ctx.text)
+        .addColumn('userId', ctx.key)
+        .addColumn('orgId', ctx.text)
+        .addColumn('pikkuUserId', ctx.text)
+        .addColumn('tables', ctx.text)
+        .addColumn('changedCols', ctx.text)
+        .addColumn('event', ctx.text)
+        .addColumn('old', ctx.text)
+        .addColumn('data', ctx.text),
 
     // The trail is only ever read newest-first, and the two filters the console
     // offers are user and type.
-    (db) =>
+    (db, _types, ctx) =>
       db.schema
         .createIndex('idx_audit_occurred_at')
         .on('audit')
         .column('occurredAt'),
 
-    (db) =>
+    (db, _types, ctx) =>
       db.schema.createIndex('idx_audit_user_id').on('audit').column('userId'),
 
-    (db) => db.schema.createIndex('idx_audit_type').on('audit').column('type'),
+    (db, _types, ctx) =>
+      db.schema.createIndex('idx_audit_type').on('audit').column('type'),
   ],
 }
