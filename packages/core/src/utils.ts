@@ -5,6 +5,7 @@ import type {
   WireServices,
 } from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
+import { BadRequestError } from './errors/errors.js'
 
 export const closeWireServices = async (
   logger: Logger,
@@ -60,6 +61,22 @@ export const getTagGroups = <T>(
     colonIdx = parent.lastIndexOf(':')
   }
   return results
+}
+
+/**
+ * `JSON.parse` of text or UTF-8 bytes, refusing anything that is not JSON with
+ * a 400 rather than a 500.
+ *
+ * @example snippet: pikkuWebhookReceive
+ */
+export const parseJson = <T = any>(input: string | Uint8Array): T => {
+  const text =
+    typeof input === 'string' ? input : new TextDecoder().decode(input)
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new BadRequestError('Body is not valid JSON')
+  }
 }
 
 const EMPTY_ARRAY = Object.freeze([])

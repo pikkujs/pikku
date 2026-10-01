@@ -6,6 +6,7 @@ import type {
 import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { parseJson } from '../../utils.js'
 import {
   PikkuMissingMetaError,
   UnauthorizedError,
@@ -232,6 +233,11 @@ export const receiveWebhookSourceRequest = async (
   }
   const source = pikkuState(null, 'trigger', 'webhookSources').get(sourceName)
   const request = await readRequest(wire.http)
+  // A HEAD is a provider checking the URL is live. It carries no events, so
+  // it is answered here rather than in every source's `receive`.
+  if (request.method.toLowerCase() === 'head') {
+    return new Response(null, { status: 200 })
+  }
   const verified = await verifyRequest(source, request, singletonServices)
 
   const result: WebhookReceiveResult = meta.receive
@@ -245,9 +251,7 @@ export const receiveWebhookSourceRequest = async (
         events: [
           {
             name: '',
-            data: request.body.length
-              ? JSON.parse(new TextDecoder().decode(request.body))
-              : undefined,
+            data: request.body.length ? parseJson(request.body) : undefined,
           },
         ],
       }

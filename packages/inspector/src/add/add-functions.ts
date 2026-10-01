@@ -525,6 +525,7 @@ export const addFunctions: AddWiring = (
   if (
     !pikkuFuncPattern.test(expression.text) &&
     expression.text !== 'pikkuScenario' &&
+    expression.text !== 'pikkuWebhookReceive' &&
     !SCENARIO_STEP_KINDS.has(expression.text)
   ) {
     return
@@ -540,6 +541,11 @@ export const addFunctions: AddWiring = (
   // analyzer can tell it apart from an application workflow without having to
   // reach into the workflow graph.
   const isScenario = expression.text === 'pikkuScenario'
+
+  // A webhook source's `receive`. Only its source's route runs it, with the
+  // raw request, so like a scenario step it is bundled but never RPC-registered.
+  const isWebhookReceive = expression.text === 'pikkuWebhookReceive'
+  const notRpc = isScenarioStep || isWebhookReceive
 
   // only handle calls like pikkuFunc(...)
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
@@ -1111,6 +1117,8 @@ export const addFunctions: AddWiring = (
       inputTypes = result.types
     }
   }
+  // A receive's input is always the raw request, which no schema describes.
+  if (isWebhookReceive) inputNames = []
 
   // --- Output Extraction ---
   let outputNames: string[] = []
@@ -1438,11 +1446,16 @@ export const addFunctions: AddWiring = (
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
-    auth: typeof auth === 'boolean' ? auth : undefined,
+    auth: isWebhookReceive
+      ? false
+      : typeof auth === 'boolean'
+        ? auth
+        : undefined,
     permissionsInBody: permissionsInBody || undefined,
     audit,
     remote: remote || undefined,
     scenarioStep: isScenarioStep || undefined,
+    webhookReceive: isWebhookReceive || undefined,
     scenario: isScenario || undefined,
     mcp: mcpEnabled || undefined,
     readonly: readonly_ || undefined,
@@ -1573,7 +1586,7 @@ export const addFunctions: AddWiring = (
       return
     }
 
-    if (remote && !isScenarioStep) {
+    if (remote && !notRpc) {
       state.rpc.invokedFunctions.add(pikkuFuncId)
       // The consumer-facing surface a wireRemoteAddon imports (mirrors exposedMeta)
       state.rpc.remoteMeta[name] = pikkuFuncId
@@ -1583,7 +1596,7 @@ export const addFunctions: AddWiring = (
       })
     }
 
-    if (expose && !isScenarioStep) {
+    if (expose && !notRpc) {
       state.rpc.exposedMeta[name] = pikkuFuncId
       state.rpc.exposedFiles.set(name, {
         path: node.getSourceFile().fileName,
@@ -1593,7 +1606,7 @@ export const addFunctions: AddWiring = (
       state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     }
 
-    if (!isScenarioStep) {
+    if (!notRpc) {
       // We add it to internal meta to allow autocomplete for everything
       state.rpc.internalMeta[name] = pikkuFuncId
 

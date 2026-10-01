@@ -15,6 +15,11 @@ export const serializeVariableDefinitionTypes = () => {
 `
 }
 
+export const serializeUtilsTypes = () => {
+  return `export { parseJson } from '@pikku/core/utils'
+`
+}
+
 export const serializeAnalyticsDefinitionTypes = () => {
   return `export { defineAnalyticsEvents, LoggerAnalyticsService, flattenAnalyticsEvent } from '@pikku/core/analytics'
 export type {

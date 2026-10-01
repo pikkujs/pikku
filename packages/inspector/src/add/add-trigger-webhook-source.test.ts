@@ -139,7 +139,8 @@ describe('wireTriggerWebhookSource verify', () => {
 
   test('declares nothing without verify', async () => {
     const { state } = await inspectSource(
-      HEADER + `wireTriggerWebhookSource({ name: 'shop' })
+      HEADER +
+        `wireTriggerWebhookSource({ name: 'shop' })
 `
     )
 
@@ -164,5 +165,41 @@ describe('wireTriggerWebhookSource method shorthand', () => {
       'get',
       'post',
     ])
+  })
+})
+
+describe('pikkuWebhookReceive', () => {
+  test('is public, marked as a receive and never RPC-registered', async () => {
+    const { state, errors } = await inspectSource(
+      HEADER +
+        `declare const pikkuWebhookReceive: (config: any) => any
+export const shopReceive = pikkuWebhookReceive({
+  func: async (_services: any, _request: any) => ({ events: [] }),
+})
+wireTriggerWebhookSource({ name: 'shop', receive: shopReceive })
+`
+    )
+
+    assert.deepEqual(errors, [])
+    assert.equal(state.triggers.webhookSourceMeta.shop?.receive, 'shopReceive')
+    assert.equal(state.functions.meta.shopReceive?.webhookReceive, true)
+    assert.equal(state.functions.meta.shopReceive?.auth, false)
+    assert.equal(state.rpc.internalMeta.shopReceive, undefined)
+  })
+
+  test('rejects a receive declared as an ordinary function', async () => {
+    const { errors } = await inspectSource(
+      HEADER +
+        `declare const pikkuSessionlessFunc: (config: any) => any
+export const shopReceive = pikkuSessionlessFunc({
+  auth: false,
+  func: async (_services: any, _request: any) => ({ events: [] }),
+})
+wireTriggerWebhookSource({ name: 'shop', receive: shopReceive })
+`
+    )
+
+    assert.equal(errors.length, 1)
+    assert.match(errors[0]!, /Declare it with pikkuWebhookReceive/)
   })
 })

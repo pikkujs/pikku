@@ -164,6 +164,24 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
   return triggerOrConfig
 }
 
+/**
+ * A webhook source's \`receive\`: reads the request into events, or answers a
+ * handshake. It is public (\`auth: false\`) and only its source's route runs it,
+ * so it is never callable as an RPC. Signatures are the source's \`verify\`.
+ *
+ * @example snippet: pikkuWebhookReceive
+ */
+export const pikkuWebhookReceive = (config: {
+  /** A short name for the function in the console. */
+  title?: string
+  /** What this receive reads, shown wherever the function is listed. */
+  description?: string
+  /** Groups the function with others in the console and in \`pikku info\`. */
+  tags?: string[]
+  /** Turns the raw request into \`{ events }\`, or \`{ respond }\` for a handshake. */
+  func: (services: Omit<SingletonServices, 'secrets'>, request: WebhookRequest, wire: any) => Promise<WebhookReceiveResult>
+}) => ({ ...config, auth: false as const })
+
 ${
   addon
     ? `

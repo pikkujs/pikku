@@ -212,7 +212,7 @@ export class ContextAwareRPCService {
           functionMeta.expose
         )
       : functionMeta.expose
-    if (!exposed || functionMeta.scenarioStep) {
+    if (!exposed || functionMeta.scenarioStep || functionMeta.webhookReceive) {
       throw new RPCNotFoundError(funcName)
     }
     return await this.rpc(funcName, data)

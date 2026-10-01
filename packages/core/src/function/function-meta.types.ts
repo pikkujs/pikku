@@ -57,6 +57,11 @@ export type FunctionRuntimeMeta = {
    */
   scenarioStep?: boolean
   /**
+   * A webhook source's `receive` step, declared with `pikkuWebhookReceive`.
+   * Only its source's route runs it, so it is never RPC-callable.
+   */
+  webhookReceive?: boolean
+  /**
    * The body of a `pikkuScenario(...)`. Only ever run by `pikku scenario run`,
    * so it is held back from the app bootstrap and from every deployed unit.
    */

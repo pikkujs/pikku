@@ -123,7 +123,15 @@ them instead.
 
 `(services, { body, headers, method, url, query }) → { events } | { respond }`
 
+Declared with `pikkuWebhookReceive`, which makes it public, types it to the
+request and keeps it off the RPC surface; the inspector rejects any other
+wrapper.
+
 - `body` is the raw bytes: providers sign those, not re-serialised JSON.
+  `parseJson(body)` from `#pikku/utils` parses them and answers a body that is
+  not JSON with a 400.
+- A HEAD (for a source whose `method` includes `'head'`) is answered with a
+  `200` before `receive` runs.
 - Returns one or more events (some providers batch), or `respond` for a
   handshake (Slack `url_verification`, Meta `hub.challenge`).
 - Throwing rejects the request with the error's own status

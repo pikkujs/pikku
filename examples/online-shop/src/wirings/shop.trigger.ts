@@ -10,6 +10,7 @@ import {
 } from '../functions/on-low-stock.function.js'
 import { sweepLowStock } from '../functions/sweep-low-stock.function.js'
 import { warehouseStockFeed } from '../functions/warehouse-stock-feed.function.js'
+import { warehouseWebhookReceive } from '../functions/warehouse-webhook-receive.function.js'
 
 // @snippet start wireTrigger
 wireTrigger({
@@ -76,12 +77,7 @@ wireTriggerWebhookSource({
   },
   credentialDescription:
     'The signing secret from the warehouse webhook settings',
-  receive: {
-    func: async (_services, { body }) => {
-      const event = JSON.parse(new TextDecoder().decode(body))
-      return { events: [{ name: event.type, id: event.id, data: event.data }] }
-    },
-  },
+  receive: warehouseWebhookReceive,
 })
 
 wireTrigger({

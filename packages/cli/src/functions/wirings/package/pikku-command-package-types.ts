@@ -5,6 +5,7 @@ import {
   serializeAnalyticsDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
+  serializeUtilsTypes,
   serializeVariableDefinitionTypes,
 } from './serialize-package-types.js'
 
@@ -60,6 +61,18 @@ export const pikkuAnalyticsDefinitionTypes = pikkuVoidFunc({
     logCommandInfoAndTime({
       commandStart: 'Creating Analytics definition types',
       commandEnd: 'Created Analytics definition types',
+    }),
+  ],
+})
+
+export const pikkuUtilsTypes = pikkuVoidFunc({
+  func: async ({ logger, config }) => {
+    await writeFileInDir(logger, config.utilsTypesFile, serializeUtilsTypes())
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating utils types',
+      commandEnd: 'Created utils types',
     }),
   ],
 })

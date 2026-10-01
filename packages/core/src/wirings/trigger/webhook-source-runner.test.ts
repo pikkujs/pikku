@@ -182,6 +182,26 @@ describe('receiveWebhookSourceRequest', () => {
     assert.equal(queued.length, 0)
   })
 
+  test('answers a HEAD probe with 200 without verifying or receiving', async () => {
+    setWebhookSourceMeta({
+      name: 'shop',
+      method: ['head', 'post'],
+      receive: 'shop:receive',
+    })
+    registerFunction('shop:receive', () => {
+      throw new Error('receive must not run for HEAD')
+    })
+    const wire = httpWire({})
+    wire.http.request.method = () => 'head'
+    wire.http.request.arrayBuffer = async () => new ArrayBuffer(0)
+
+    const result = await receiveWebhookSourceRequest('shop', wire)
+
+    assert.ok(result instanceof Response)
+    assert.equal(result.status, 200)
+    assert.equal(queued.length, 0)
+  })
+
   test('drops unlistened and invalid events, keys jobs by event id', async () => {
     setWebhookSourceMeta({
       name: 'shop',
@@ -388,14 +408,14 @@ describe('receiveWebhookSourceRequest with verify', () => {
 
     const probe = await receiveWebhookSourceRequest(
       'shop',
-      rawWire('', {}, 'head')
+      rawWire('', {}, 'get')
     )
     assert.ok(probe instanceof Response)
     assert.equal(probe.status, 200)
 
     answer = 'events'
     await assert.rejects(
-      receiveWebhookSourceRequest('shop', rawWire('', {}, 'head')),
+      receiveWebhookSourceRequest('shop', rawWire('', {}, 'get')),
       /unsigned request/
     )
     assert.equal(queued.length, 0)
