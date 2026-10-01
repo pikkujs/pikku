@@ -376,10 +376,10 @@ describe('tool results that outlive an interrupt', () => {
       [
         {
           name: 'deploy',
-          execute: async () => {
+          execute: async (_input, options) => {
             // Interruptible work first, then the point of no return.
             await new Promise((resolve) => setImmediate(resolve))
-            await beginChanges()
+            await beginChanges(options?.abortScope)
             return 'deployed'
           },
         },
@@ -829,5 +829,33 @@ describe('interruptAgent authorization', () => {
       () => interruptAgent({ runId: 'nope' }, session('alice') as any),
       /No run found for runId nope/
     )
+  })
+
+  test("two interleaved runs never see each other's scope", async () => {
+    const a = registerInterruptibleRun('run-iso-a')
+    const b = registerInterruptibleRun('run-iso-b')
+    const make = (handle: typeof a) =>
+      trackToolExecution(
+        [
+          {
+            name: 'deploy',
+            execute: async (_input: unknown, options?: any) => {
+              await new Promise((resolve) => setImmediate(resolve))
+              await beginChanges(options?.abortScope)
+              return 'deployed'
+            },
+          },
+        ],
+        handle
+      )[0]!
+
+    const callA = make(a).execute({})
+    const callB = make(b).execute({})
+    signalRunInterrupt('run-iso-a', { reason: 'speech' })
+
+    await assert.rejects(() => callA, AbandonedError)
+    assert.equal(await callB, 'deployed')
+    a.release()
+    b.release()
   })
 })

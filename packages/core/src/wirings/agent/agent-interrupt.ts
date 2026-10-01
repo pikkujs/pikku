@@ -1,9 +1,5 @@
 import { randomUUID } from './agent-utils.js'
-import {
-  AbandonedError,
-  runInAbortScope,
-  type AbortScope,
-} from '../../function/abort-scope.js'
+import { AbandonedError, type AbortScope } from '../../function/abort-scope.js'
 import type { AgentStorageService } from '../../services/agent-storage-service.js'
 
 /**
@@ -266,7 +262,7 @@ export const trackToolExecution = <
   T extends {
     name: string
     readonly?: boolean
-    execute: (input: any) => Promise<any>
+    execute: (input: any, options?: { abortScope?: AbortScope }) => Promise<any>
   },
 >(
   tools: T[],
@@ -288,7 +284,7 @@ export const trackToolExecution = <
 
     return {
       ...tool,
-      execute: (input: unknown) => {
+      execute: (input: unknown, options?: { abortScope?: AbortScope }) => {
         // Assumed to have changed something unless it says otherwise — the tool
         // that never declares its checkpoint is the one that cannot be assumed
         // harmless. `beginChanges()` can only ever make this more precise.
@@ -307,7 +303,7 @@ export const trackToolExecution = <
         return handle.trackTool(
           tool.name,
           randomUUID(),
-          () => runInAbortScope(scope, () => tool.execute(input)),
+          () => tool.execute(input, { ...options, abortScope: scope }),
           {
             get collectResult() {
               return call.mutating
