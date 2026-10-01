@@ -128,7 +128,7 @@ interface WorkerMetadataPayload {
   compatibility_flags: string[]
 }
 
-function buildWorkerMetadataPayload(
+export function buildWorkerMetadataPayload(
   bindings: WorkerBinding[],
   compatibilityDate?: string
 ): WorkerMetadataPayload {
