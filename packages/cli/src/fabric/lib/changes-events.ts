@@ -11,7 +11,8 @@ export interface ChangeEvents {
   /**
    * Resolves on the next event, and also when the stream connects or drops,
    * so a caller sleeping on the slow safety interval notices it has lost its
-   * signal. Never rejects.
+   * signal. An event that arrived while nobody was waiting, such as during a
+   * re-read, resolves the next call at once. Never rejects.
    */
   next(): Promise<void>
   close(): void
@@ -54,6 +55,7 @@ export function subscribeToChanges(options: SubscribeOptions): ChangeEvents {
 
   let live = false
   let waiters: (() => void)[] = []
+  let unheard = false
   const wake = () => {
     const woken = waiters
     waiters = []
@@ -74,7 +76,10 @@ export function subscribeToChanges(options: SubscribeOptions): ChangeEvents {
       while ((end = buffer.indexOf('\n\n')) !== -1) {
         const block = buffer.slice(0, end)
         buffer = buffer.slice(end + 2)
-        if (block.split('\n').some((line) => line.startsWith('data:'))) wake()
+        if (block.split('\n').some((line) => line.startsWith('data:'))) {
+          if (waiters.length === 0) unheard = true
+          wake()
+        }
       }
     }
   }
@@ -124,10 +129,14 @@ export function subscribeToChanges(options: SubscribeOptions): ChangeEvents {
     get live() {
       return live
     },
-    next: () =>
-      controller.signal.aborted
-        ? new Promise<void>(() => {})
-        : new Promise<void>((resolve) => waiters.push(resolve)),
+    next: () => {
+      if (controller.signal.aborted) return new Promise<void>(() => {})
+      if (unheard) {
+        unheard = false
+        return Promise.resolve()
+      }
+      return new Promise<void>((resolve) => waiters.push(resolve))
+    },
     close: () => {
       controller.abort()
       waiters = []

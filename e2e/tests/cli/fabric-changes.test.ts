@@ -349,7 +349,11 @@ describe('pikku fabric changes, against fabric-api over HTTP', () => {
 
   test('next is woken by a change event, not by its poll interval', async () => {
     const next = cli(['next', '--interval', '60', '--timeout', '45'])
-    await until(() => fabric.streams.size > 0)
+    await until(
+      () =>
+        fabric.streams.size > 0 &&
+        fabric.calls.some((c) => c.name === 'listChanges')
+    )
     const listsBefore = fabric.calls.filter(
       (c) => c.name === 'listChanges'
     ).length
