@@ -62,7 +62,7 @@ export class QueueWebhookService extends WebhookService {
     if (secret) {
       const signatureHeader =
         webhookConfig?.signatureHeader ?? DEFAULT_WEBHOOK_SIGNATURE_HEADER
-      headers[signatureHeader] = this.sign(secret, body)
+      headers[signatureHeader] = await this.sign(secret, body)
     }
 
     const jobData: WebhookJobData = {

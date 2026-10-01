@@ -147,12 +147,12 @@ export class SlackGatewayAdapter implements GatewayAdapter {
     }
     const rawBody = new TextDecoder().decode(await request.arrayBuffer())
     if (
-      !verifySlackSignature(
+      !(await verifySlackSignature(
         this.options.signingSecret,
         signature,
         timestamp,
         rawBody
-      )
+      ))
     ) {
       throw new UnauthorizedError('Invalid Slack request signature')
     }

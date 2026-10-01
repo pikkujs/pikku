@@ -139,7 +139,7 @@ const signedWith = async (
       encoding,
       secretEncoding,
     } = verify.hmac
-    return verifyHmacSignature(
+    return await verifyHmacSignature(
       secret,
       header(name, prefix),
       algorithm,
@@ -153,7 +153,12 @@ const signedWith = async (
     return !!token && timingSafeStringEqual(token, secret)
   }
   const { header: name, ...options } = verify.publicKey
-  return verifyPublicKeySignature(secret, header(name), request.body, options)
+  return await verifyPublicKeySignature(
+    secret,
+    header(name),
+    request.body,
+    options
+  )
 }
 
 /**
