@@ -9,6 +9,8 @@ import type {
   ContentService,
   EmailService,
 } from '@pikku/core/services'
+import type { AnalyticsLog } from '#pikku/analytics'
+import type { AnalyticsEvent } from './scaffold/analytics/analytics.gen.js'
 import type { Kysely } from 'kysely'
 import type { DB } from '#pikku/db/schema.gen.js'
 import type { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
@@ -54,6 +56,13 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   // block in pikku.config.json, so declare it REQUIRED for the same reason as
   // emailService above — optional here would force a guard on every upload.
   content: ContentService
+  // Per-invocation analytics buffer, injected into every function by the
+  // runtime. Narrowed to THIS app's declared union (registry.ts) so
+  // `analytics.record({ name: 'checkout_completed', ... })` is checked against
+  // the props the event declares — unnarrowed it accepts any object with a
+  // name, which is how a typo silently forks a series. Declared REQUIRED for
+  // the same reason as emailService above.
+  analytics: AnalyticsLog<AnalyticsEvent>
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

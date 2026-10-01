@@ -131,15 +131,10 @@ describe('analyticsSpecifier', () => {
     )
   })
 
-  test('the leaf carries the runtime, so one specifier serves analytics', () => {
+  test('the scaffold carries only the event union; the runtime is on the leaf', () => {
     const { functions } = serializeAnalytics(leaf, [declaration()])
 
-    assert.match(functions, /fanOutAnalytics/)
-    assert.match(functions, /cookieAnalyticsIdentity/)
-    assert.match(
-      functions,
-      /from '@pikku\/core\/analytics'/,
-      'the leaf re-exports core rather than redeclaring it'
-    )
+    assert.match(functions, /export type \{ AnalyticsEvent \}/)
+    assert.doesNotMatch(functions, /fanOutAnalytics|cookieAnalyticsIdentity/)
   })
 })

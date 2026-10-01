@@ -45,9 +45,12 @@ describe('anonymousAnalyticsIdentity', () => {
   test('waits for the purpose it was told to require', () => {
     const { wire, written } = wireWith()
 
-    const identity = anonymousAnalyticsIdentity({ requires: ['analytics'] })(wire, {
-      consent: { analytics: false },
-    })
+    const identity = anonymousAnalyticsIdentity({ requires: ['analytics'] })(
+      wire,
+      {
+        consent: { analytics: false },
+      }
+    )
 
     assert.equal(identity, undefined)
     assert.equal(written.length, 0)
@@ -56,9 +59,12 @@ describe('anonymousAnalyticsIdentity', () => {
   test('mints once the purpose is granted', () => {
     const { wire } = wireWith()
 
-    const identity = anonymousAnalyticsIdentity({ requires: ['analytics'] })(wire, {
-      consent: { analytics: true },
-    })
+    const identity = anonymousAnalyticsIdentity({ requires: ['analytics'] })(
+      wire,
+      {
+        consent: { analytics: true },
+      }
+    )
 
     assert.equal(typeof identity?.anonymousId, 'string')
   })

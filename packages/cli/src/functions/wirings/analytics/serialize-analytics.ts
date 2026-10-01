@@ -123,30 +123,12 @@ import {
   AnalyticsIngestOutput,
 } from './analytics.schemas.gen.js'
 
-export type { AnalyticsEvent } from './analytics.schemas.gen.js'
-
 /**
- * Re-exported so an app reaches the whole analytics surface through one
- * specifier. Where events go is wired next to where they are declared, and
- * making that import '@pikku/core/analytics' while the event type comes from
- * '#pikku/analytics' splits one concern across two names.
+ * The app's own event union. Everything else an app needs to wire analytics —
+ * sinks, identity resolvers, the service types — comes from the '#pikku/analytics'
+ * leaf, which is written whether or not an ingest was scaffolded.
  */
-export {
-  fanOutAnalytics,
-  cookieAnalyticsIdentity,
-  composeAnalyticsIdentity,
-  anonymousAnalyticsIdentity,
-  mintCookie,
-  randomDigits,
-  LoggerAnalyticsService,
-} from '@pikku/core/analytics'
-export type {
-  AnalyticsIdentity,
-  AnalyticsIdentityResolver,
-  AnalyticsRecord,
-  AnalyticsService,
-  AnalyticsSink,
-} from '@pikku/core/analytics'
+export type { AnalyticsEvent } from './analytics.schemas.gen.js'
 
 /**
  * Unauthenticated by necessity: anonymous visitors are most of what this
