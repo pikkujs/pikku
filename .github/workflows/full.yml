@@ -463,7 +463,7 @@ jobs:
             # ai-postgres,
             bun,
           ]
-        package-manager: [yarn, bun]
+        package-manager: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["bun"]' || '["yarn","bun"]') }}
         exclude:
           - package-manager: bun
             template: uws
