@@ -46,7 +46,11 @@ import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
-import { clearDevAddress, writeDevAddress } from './dev-address.js'
+import {
+  clearDevAddress,
+  recordDevCodegen,
+  writeDevAddress,
+} from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
@@ -523,8 +527,13 @@ export const dev = pikkuSessionlessFunc<
               message: `✓ Generated in ${Date.now() - start}ms`,
               type: 'timing',
             })
+            recordDevCodegen(resolvedRuntimeDir, { ok: true })
           } catch (err) {
             logger.error(`Error running watch: ${err}`)
+            recordDevCodegen(resolvedRuntimeDir, {
+              ok: false,
+              error: err instanceof Error ? err.message : String(err),
+            })
           }
         }
 
