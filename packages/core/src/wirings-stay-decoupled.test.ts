@@ -38,9 +38,7 @@ const ALLOWED: Record<string, string[]> = {
   rpc: ['addon'],
   gateway: ['http'],
   mcp: ['rpc'],
-  // A webhook source is an HTTP route, so a handshake's answer is buffered in
-  // an HTTP response and applied to the real one.
-  trigger: ['rpc', 'http'],
+  trigger: ['rpc'],
   // A workflow step is dispatched to a queue, invoked over rpc, or slept on.
   workflow: ['queue', 'rpc', 'scheduler'],
   // A virtual user drives a scenario, which is a workflow, as a persona.

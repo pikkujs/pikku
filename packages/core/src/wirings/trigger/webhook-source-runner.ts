@@ -7,8 +7,6 @@ import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { parseJson } from '../../utils.js'
-import { PikkuFetchHTTPResponse } from '../http/pikku-fetch-http-response.js'
-import { applyWebResponse } from '../http/web-request.js'
 import {
   PikkuMissingMetaError,
   UnauthorizedError,
@@ -245,17 +243,13 @@ export const receiveWebhookSourceRequest = async (
   }
   const verified = await verifyRequest(source, request, singletonServices)
 
-  // What `receive` writes to `http.response` is buffered and sent only when it
-  // returns nothing, so a handshake answers in whatever shape the provider
-  // wants without each adapter's write order getting in the way.
-  const response = new PikkuFetchHTTPResponse()
   const result: WebhookReceiveResult | void = meta.receive
     ? await runSourceStep<WebhookReceiveResult | void>(
         singletonServices,
         sourceName,
         meta.receive,
         request,
-        { http: { request: wire.http!.request, response } }
+        wire
       )
     : {
         events: [
@@ -267,9 +261,6 @@ export const receiveWebhookSourceRequest = async (
       }
 
   if (!result) {
-    if (wire.http?.response) {
-      await applyWebResponse(wire.http.response, response.toResponse())
-    }
     return
   }
   if (!verified && result.events.length > 0) {

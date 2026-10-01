@@ -291,17 +291,6 @@ const executeRoute = async (
   }
 
   const statusBeforeRoute = http?.response?.statusCode
-  // A route that sets the status it already had (a 200 over the default 200)
-  // has still chosen it, so the call counts, not only a changed value.
-  let statusCalledByRoute = false
-  const response = http?.response
-  if (response) {
-    const originalStatus = response.status
-    response.status = (code: number) => {
-      statusCalledByRoute = true
-      return originalStatus.call(response, code)
-    }
-  }
 
   try {
     result = await runPikkuFunc(
@@ -343,15 +332,12 @@ const executeRoute = async (
   if (matchedRoute.route.sse) {
     http?.response?.flushHeaders?.()
   } else {
-    const statusSetByRoute =
-      statusCalledByRoute || http?.response?.statusCode !== statusBeforeRoute
+    const statusSetByRoute = http?.response?.statusCode !== statusBeforeRoute
 
     if (result instanceof Response) {
       await applyWebResponse(http!.response!, result)
     } else if (result === undefined || result === null) {
-      if (!statusSetByRoute) {
-        http?.response?.status(204)
-      }
+      // Nothing returned: the response keeps the status the function left on it.
     } else if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)
     } else {
