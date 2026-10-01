@@ -4,6 +4,7 @@ import {
   wireTriggerWebhookSource,
 } from '#pikku/trigger/pikku-trigger-types.gen.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { parseJson } from '#pikku/utils'
 import { readEndpoints, writeEndpoints } from './fake-provider.js'
 
 export const firedOrders: Array<{ orderId: string; total: number }> = []
@@ -20,10 +21,11 @@ wireTriggerWebhookSource({
   },
   credentialDescription: 'Signs the shop webhook source; stored by its setup',
   receive: {
-    func: async (_services, request) => {
-      const body = JSON.parse(new TextDecoder().decode(request.body))
+    func: async (_services, request, { http }) => {
+      const body = parseJson(request.body)
       if (body.type === 'url_verification') {
-        return { respond: { status: 200, body: { challenge: body.challenge } } }
+        http.response.json({ challenge: body.challenge })
+        return
       }
       return { events: [{ name: body.type, id: body.id, data: body.data }] }
     },

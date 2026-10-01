@@ -40,5 +40,8 @@
     "@standard-schema/spec": "^1.1.0",
     "kysely": "^0.29.5",
     "zod": "^4"
+  },
+  "dependencies": {
+    "@pikku/kysely": "^0.13.33"
   }
 }
