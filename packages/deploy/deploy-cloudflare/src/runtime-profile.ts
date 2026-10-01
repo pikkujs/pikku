@@ -93,9 +93,9 @@ export function getCloudflareRuntimeProfile(
     // ahead of an `onResolve` hook, so listing it would let the import through
     // before the stub plugin ever saw it.
     externals: [
-      ...allowedBuiltins
-        .filter((b) => !STUBBED_BUILTINS.includes(b))
-        .flatMap((b) => [`node:${b}`, `node:${b}/*`]),
+      ...allowedBuiltins.flatMap((b) =>
+        STUBBED_BUILTINS.includes(b) ? [] : [`node:${b}`, `node:${b}/*`]
+      ),
       'cloudflare:*',
       'uWebSockets.js',
     ],

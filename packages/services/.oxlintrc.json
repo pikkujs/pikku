@@ -1,0 +1,3 @@
+{
+  "extends": ["../../oxlint-backlog.json"]
+}
