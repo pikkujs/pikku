@@ -15,6 +15,7 @@
     "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js"
   },
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",

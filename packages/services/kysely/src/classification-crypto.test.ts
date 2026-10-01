@@ -141,3 +141,46 @@ describe('KEK scoping', () => {
     assert.equal(await crypto.decryptColumn(envelope), 'v')
   })
 })
+
+describe('keyId encoding parity with Buffer base64url', () => {
+  const keyIds = [
+    DEFAULT_KEY_ID,
+    '',
+    'a',
+    'ab',
+    'abc',
+    'tenant.with.dots',
+    'tenant/with+symbols?=&',
+    'héllo wörld',
+    '日本語-🔑',
+    'ÿþ>>>???',
+  ]
+
+  test('encrypted envelopes carry the Buffer-encoded keyId and parse back', async () => {
+    for (const keyId of keyIds) {
+      const crypto = new ClassificationCrypto({ resolveKEK: testResolver() })
+      const stored = await crypto.encryptColumn(keyId, 'v')
+      const encoded = (stored as string).split('.')[1]
+      assert.equal(encoded, Buffer.from(keyId, 'utf8').toString('base64url'))
+      assert.equal(parseColumnEnvelope(stored)?.keyId, keyId)
+    }
+  })
+
+  test('decodes envelopes written with Buffer, padded or not', () => {
+    for (const keyId of keyIds) {
+      for (const encoded of [
+        Buffer.from(keyId, 'utf8').toString('base64url'),
+        Buffer.from(keyId, 'utf8').toString('base64'),
+      ]) {
+        assert.equal(
+          parseColumnEnvelope(`pikku1.${encoded}.1.dek.cipher`)?.keyId,
+          keyId
+        )
+      }
+    }
+  })
+
+  test('refuses an envelope whose keyId is not base64', () => {
+    assert.equal(parseColumnEnvelope('pikku1.%%%.1.dek.cipher'), null)
+  })
+})
