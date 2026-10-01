@@ -3913,7 +3913,9 @@ wireAgentScorerQueueWorkers: () => void
 export interface AnalyticsClientContext {
   at?: number
 }
-export type AnalyticsEventBase = { name: string } & Record<string, unknown>
+export type AnalyticsEventBase = {
+  name: string
+} & Record<string, unknown>
 export type AnalyticsEventDefinitions = Record<
   string,
   AnalyticsEventPropsSchema
