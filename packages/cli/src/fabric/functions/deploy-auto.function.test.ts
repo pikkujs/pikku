@@ -21,7 +21,7 @@ let context: { token: string | null; projectId: string | null }
 let responses: Record<string, unknown>
 const invoked: { name: string; data: unknown }[] = []
 
-mock.module('../lib/config.js', () => ({
+await mock.module('../lib/config.js', () => ({
   ...realConfig,
   resolveApiContext: async (opts?: any) =>
     override
@@ -29,7 +29,7 @@ mock.module('../lib/config.js', () => ({
       : realConfig.resolveApiContext(opts),
 }))
 
-mock.module('../lib/http.js', () => ({
+await mock.module('../lib/http.js', () => ({
   ...realHttp,
   getFabricRPC: (opts: any) =>
     override
@@ -42,7 +42,7 @@ mock.module('../lib/http.js', () => ({
       : realHttp.getFabricRPC(opts),
 }))
 
-mock.module('../lib/stage.js', () => ({
+await mock.module('../lib/stage.js', () => ({
   ...realStage,
   resolveStage: async (rpc: any, projectId: string, requested?: string) =>
     override

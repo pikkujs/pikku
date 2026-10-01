@@ -35,7 +35,7 @@ async function main(): Promise<void> {
       { ...config, port: PORT, hostname: 'localhost' },
       services.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
 

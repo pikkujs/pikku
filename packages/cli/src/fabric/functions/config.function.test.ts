@@ -23,7 +23,7 @@ let responses: Record<string, unknown>
 let failing: Record<string, Error>
 const invoked: { name: string; data: unknown }[] = []
 
-mock.module('../lib/config.js', () => ({
+await mock.module('../lib/config.js', () => ({
   ...realConfig,
   resolveApiContext: async (opts?: any) =>
     override
@@ -36,7 +36,7 @@ mock.module('../lib/config.js', () => ({
       : realConfig.resolveApiContext(opts),
 }))
 
-mock.module('../lib/http.js', () => ({
+await mock.module('../lib/http.js', () => ({
   ...realHttp,
   getFabricRPC: (opts: any) =>
     override

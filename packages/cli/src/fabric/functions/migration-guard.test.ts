@@ -22,7 +22,7 @@ process.env.FABRIC_API_URL = API_URL
 process.env.FABRIC_PROJECT_ID = '11111111-2222-3333-4444-555555555555'
 let ledger: Ledger | Error = []
 const invoked: string[] = []
-mock.module('../lib/http.js', () => ({
+await mock.module('../lib/http.js', () => ({
   getFabricRPC: () => ({
     invoke: async (name: string) => {
       invoked.push(name)

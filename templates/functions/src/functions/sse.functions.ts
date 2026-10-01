@@ -19,10 +19,10 @@ export const processTodosProgress = pikkuFunc({
     logger.info(`Processing ${total} todos for user ${session.userId}`)
 
     if (channel) {
-      channel.send({ status: 'started', processed: 0, total })
+      await channel.send({ status: 'started', processed: 0, total })
       for (let i = 0; i < todos.length; i++) {
         logger.info(`Processing todo: ${todos[i]!.title}`)
-        channel.send({ status: 'processing', processed: i + 1, total })
+        await channel.send({ status: 'processing', processed: i + 1, total })
       }
     }
 
@@ -46,7 +46,7 @@ export const todoStream = pikkuSessionlessFunc({
       const interval = setInterval(() => {
         ;(async () => {
           const todos = todoStore.getTodosByUser(uid, { completed: false })
-          channel.send({
+          await channel.send({
             todos,
             timestamp: new Date().toISOString(),
             count: todos.length,
@@ -55,7 +55,7 @@ export const todoStream = pikkuSessionlessFunc({
 
           if (count >= 6) {
             clearInterval(interval)
-            channel.close()
+            await channel.close()
           }
         })().catch((error) => {
           console.error(error)

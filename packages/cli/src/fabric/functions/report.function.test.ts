@@ -12,7 +12,7 @@ import { readHeld, runIdFor } from '../lib/held-findings.js'
 const invoked: { name: string; data: any }[] = []
 let status = 200
 
-mock.module('../lib/finding.js', () => ({
+await mock.module('../lib/finding.js', () => ({
   ...findingLib,
   findingRPC: () => ({
     invoke: async (name: string, data: unknown) => {
