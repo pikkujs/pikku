@@ -34,11 +34,10 @@ export const readEnvVariable = (name: string): string | undefined => {
   } catch {
     // A faulty variables service must not take error handling down with it.
   }
-  return hasProcessEnv() ? (globalThis as any).process.env[name] : undefined
+  return hasProcessEnv() ? globalThis.process.env[name] : undefined
 }
 
-const hasProcessEnv = (): boolean =>
-  typeof (globalThis as any).process?.env === 'object'
+const hasProcessEnv = (): boolean => typeof globalThis.process?.env === 'object'
 
 /**
  * `NODE_ENV` decides whether error details are exposed. With neither a
