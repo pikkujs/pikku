@@ -49,7 +49,7 @@ export class InMemorySchedulerService extends SchedulerService {
     const taskId = `inmem-${++this.idCounter}-${Date.now()}`
     const scheduledFor = new Date(Date.now() + delayMs)
 
-    const timer = setTimeout(async () => {
+    const run = async () => {
       this.delayedTasks.delete(taskId)
       try {
         // An RPC, not a cron task. `runScheduledTask` looks the name up in the
@@ -76,6 +76,10 @@ export class InMemorySchedulerService extends SchedulerService {
       } catch (err: unknown) {
         getLogger().error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }
+    }
+    // `run` catches and logs every error itself, so nothing can reject
+    const timer = setTimeout(() => {
+      void run()
     }, delayMs)
 
     this.delayedTasks.set(taskId, {
@@ -145,7 +149,7 @@ export class InMemorySchedulerService extends SchedulerService {
    */
   async stop(): Promise<void> {
     for (const [, job] of this.cronJobs) {
-      job.stop()
+      await job.stop()
     }
     this.cronJobs.clear()
   }
@@ -154,9 +158,13 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
-        getLogger().info(`Running scheduled task: ${name}`)
-        await runScheduledTask({ name })
-        getLogger().debug(`Completed scheduled task: ${name}`)
+        try {
+          getLogger().info(`Running scheduled task: ${name}`)
+          await runScheduledTask({ name })
+          getLogger().debug(`Completed scheduled task: ${name}`)
+        } catch (err: unknown) {
+          getLogger().error(`Scheduled task '${name}' failed: ${err}`)
+        }
       },
       null,
       true
