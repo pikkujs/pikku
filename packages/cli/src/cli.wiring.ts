@@ -134,6 +134,10 @@ import {
   enableRemoteJobs,
   enableWebhook,
 } from './functions/commands/enable.js'
+import {
+  enableOxlint,
+  renderEnableOxlint,
+} from './functions/commands/enable-oxlint.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { binary } from './functions/commands/binary.js'
 import { deployPlan } from './functions/commands/deploy-plan.js'
@@ -1212,6 +1216,19 @@ wireCLI({
           func: enableRemoteRpc,
           description:
             'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
+        }),
+        oxlint: pikkuCLICommand({
+          func: enableOxlint,
+          render: renderEnableOxlint,
+          description:
+            'Set up oxlint for validate: devDependencies, a config with the type-aware promise rules at error, and a lint script. Config and dependencies only, never source.',
+          options: {
+            dryRun: {
+              description:
+                'Print the plan and diffs; write and install nothing',
+              default: false,
+            },
+          },
         }),
         webhook: pikkuCLICommand({
           func: enableWebhook,

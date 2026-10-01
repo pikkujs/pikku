@@ -137,7 +137,7 @@ const ancestors = (dir: string): string[] => {
   }
 }
 
-type Project = {
+export type Project = {
   root: string
   config: OxlintConfigShape
   /** Directory `rootDir` resolves to; every config path is relative to it. */
@@ -151,7 +151,7 @@ type Project = {
   installDir: string
 }
 
-const loadProject = async (root: string): Promise<Project | null> => {
+export const loadProject = async (root: string): Promise<Project | null> => {
   const config = await readJson<OxlintConfigShape>(
     join(root, 'pikku.config.json')
   )
@@ -214,7 +214,7 @@ const loadProject = async (root: string): Promise<Project | null> => {
   }
 }
 
-type Located = {
+export type Located = {
   /** Absolute path of the oxlint executable, if one is installed. */
   bin?: string
   tsgolintInstalled: boolean
@@ -227,7 +227,7 @@ type Located = {
  * root while the pikku config sits in a member. Never a global install: `bun
  * run`/CI has none, and a global one would pass here and fail there.
  */
-const locateOxlint = async (project: Project): Promise<Located> => {
+export const locateOxlint = async (project: Project): Promise<Located> => {
   const dirs = [
     ...new Set([
       ...project.packages.map((p) => p.dir),
@@ -284,7 +284,7 @@ const locateOxlint = async (project: Project): Promise<Located> => {
 }
 
 /** The directory oxlint is run from: the nearest one at or above the app with a config. */
-const findOxlintConfig = (
+export const findOxlintConfig = (
   project: Project
 ): { dir: string; file: string } | undefined => {
   for (const dir of ancestors(project.configRoot)) {
@@ -295,15 +295,28 @@ const findOxlintConfig = (
   return undefined
 }
 
-const installCommand = (project: Project, names: string[]): string => {
-  const has = (f: string) => existsSync(join(project.installDir, f))
-  if (has('bun.lock') || has('bun.lockb'))
-    return `bun add -d ${names.join(' ')}`
-  if (has('pnpm-lock.yaml')) return `pnpm add -D ${names.join(' ')}`
-  if (has('yarn.lock')) return `yarn add -D ${names.join(' ')}`
-  if (has('package-lock.json')) return `npm install -D ${names.join(' ')}`
-  return `bun add -d ${names.join(' ')}`
+export type PackageManager = 'bun' | 'pnpm' | 'yarn' | 'npm'
+
+/** The package manager the lockfile at the install directory belongs to; bun when there is none. */
+export const detectPackageManager = (installDir: string): PackageManager => {
+  const has = (f: string) => existsSync(join(installDir, f))
+  if (has('bun.lock') || has('bun.lockb')) return 'bun'
+  if (has('pnpm-lock.yaml')) return 'pnpm'
+  if (has('yarn.lock')) return 'yarn'
+  if (has('package-lock.json')) return 'npm'
+  return 'bun'
 }
+
+const installCommand = (project: Project, names: string[]): string => {
+  const pm = detectPackageManager(project.installDir)
+  const list = names.join(' ')
+  if (pm === 'bun') return `bun add -d ${list}`
+  if (pm === 'pnpm') return `pnpm add -D ${list}`
+  if (pm === 'yarn') return `yarn add -D ${list}`
+  return `npm install -D ${list}`
+}
+
+const ENABLE_HINT = 'Run `pikku enable oxlint`'
 
 const rel = (root: string, p: string): string => relative(root, p) || '.'
 
@@ -338,7 +351,7 @@ const levelOf = (value: unknown): string | undefined => {
   if (typeof v === 'number') return ['allow', 'warn', 'deny'][v]
   return typeof v === 'string' ? v : undefined
 }
-const isError = (value: unknown) => {
+export const isError = (value: unknown) => {
   const level = levelOf(value)
   return level === 'error' || level === 'deny'
 }
@@ -410,6 +423,7 @@ export const runOxlintSetupChecks = async (
       fixHint: [
         `Add the devDependencies to ${rel(root, pkgPath)}: ${installCommand(project, names)}`,
         'Then run the install so node_modules/.bin/oxlint and node_modules/oxlint-tsgolint exist.',
+        ENABLE_HINT,
       ].join('\n'),
     })
   }
@@ -426,6 +440,7 @@ export const runOxlintSetupChecks = async (
         `Create ${rel(root, join(project.installDir, '.oxlintrc.json'))} containing at least:`,
         CONFIG_SNIPPET,
         'Merge these keys into an existing config (for example under a different name) rather than adding a second file: oxlint refuses a directory holding both .oxlintrc.json and .oxlintrc.jsonc.',
+        ENABLE_HINT,
       ].join('\n'),
     })
   }
@@ -493,6 +508,7 @@ export const runOxlintSetupChecks = async (
           `In ${rel(root, config.file)} (and anything it extends) make sure these are set:`,
           CONFIG_SNIPPET,
           'Remove any "overrides" entry that sets these rules to "off" or "warn", keep "typescript" in "plugins" if "plugins" is set, and do not pass { "checksConditionals": false } to typescript/no-misused-promises.',
+          ENABLE_HINT,
         ].join('\n'),
       })
     }
@@ -515,6 +531,7 @@ export const runOxlintSetupChecks = async (
         fixHint: [
           `Set "options": { "typeAware": true } in ${rel(root, config.file)} (oxlint 1.79+),`,
           'or pass --type-aware in the lint script, e.g. "lint": "oxlint --type-aware apps packages".',
+          ENABLE_HINT,
         ].join('\n'),
       })
     }
