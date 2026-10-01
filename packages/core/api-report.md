@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3208 observable things**: 1067 exported names, plus
+**3209 observable things**: 1068 exported names, plus
 2141 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
@@ -37,8 +37,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
+| `./utils` | 22 | 21 | 2 |
 | `./crypto-utils` | 20 | 20 | 2 |
-| `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./services/local-content` | 3 | 3 | 15 |
@@ -704,6 +704,7 @@ export type FunctionRuntimeMeta = {
   permissionsInBody?: boolean
   remote?: boolean
   scenarioStep?: boolean
+  webhookReceive?: boolean
   scenario?: boolean
   mcp?: boolean
   readonly?: boolean
@@ -3025,7 +3026,7 @@ export type CoreTriggerWebhookSource<
   credential?: string
   credentialDescription?: string
   verify?: WebhookVerify
-  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
+  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult | void>
   check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
   setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
   teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>
@@ -3049,7 +3050,7 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown) => Promise<void>): Promise<TriggerInstance>
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
 }
-receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<Response | { received: number; }>
+receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<void | { received: number; }>
 reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 reconcileWebhookRegistrations: ({ registrations, singletonServices, ...input }: LifecycleInput & { registrations: WebhookRegistrations; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<{ registrations: WebhookRegistrations; outcomes: WebhookSourceOutcome[]; orphans: OrphanedWebhookRegistration[]; }>
 runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
@@ -3075,15 +3076,7 @@ export type WebhookLifecycleInput = {
   events: string[]
   previous?: WebhookSourceState
 }
-export type WebhookReceiveResult =
-  | { events: TriggerEvent[] }
-  | {
-      respond: {
-        status: number
-        body?: unknown
-        headers?: Record<string, string>
-      }
-    }
+export type WebhookReceiveResult = { events: TriggerEvent[] }
 export type WebhookRegistration = {
   url: string
   events: string[]
@@ -6349,6 +6342,7 @@ export type JSONValue =
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
 parseDurationString: (duration: string) => number
+parseJson: <T = any>(input: string | Uint8Array<ArrayBufferLike>) => T
 parseVersionedId: (id: string) => { baseName: string; version: number | null; }
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
