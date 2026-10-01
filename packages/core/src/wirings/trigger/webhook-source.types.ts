@@ -133,10 +133,11 @@ export type CoreTriggerWebhookSource<
   /** What the secret is and where to find it, shown to whoever has to set it. */
   credentialDescription?: string
   /**
-   * Checked before `receive` on every request with a body. A request is
+   * Checked before `receive` on every request. A request with a body is
    * refused when the credential is not set or the signature does not match.
-   * A request without a body — a HEAD probe, a validation token in the query —
-   * reaches `receive` unchecked, and may be answered but dispatches nothing.
+   * A request without a body that fails the check — a HEAD probe, a
+   * validation token in the query — still reaches `receive`, which may answer
+   * it, but any events it returns are refused.
    */
   verify?: WebhookVerify
   /** Omitted: the JSON body is one event dispatched to the trigger named `<name>`. */
