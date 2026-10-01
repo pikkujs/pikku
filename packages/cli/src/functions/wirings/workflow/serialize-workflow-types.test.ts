@@ -35,7 +35,7 @@ describe('serializeWorkflowTypes', () => {
     assert.match(result, /mode\?: 'parallel' \| 'sequential'/)
   })
 
-  test("$item is appended after template so neither existing input shape shifts", () => {
+  test('$item is appended after template so neither existing input shape shifts', () => {
     const result = emit()
     assert.match(
       result,
@@ -76,5 +76,14 @@ describe('serializeWorkflowTypes', () => {
       emit(),
       /export interface TypedWorkflow extends PikkuWorkflowWire/
     )
+  })
+
+  test('a graph node routes by named branch, as core accepts', () => {
+    const result = emit()
+    assert.match(
+      result,
+      /type NextConfig<NodeIds extends string> =\s*\| NodeIds\s*\| NodeIds\[\]\s*\| Record<string, NodeIds \| NodeIds\[\]>/
+    )
+    assert.doesNotMatch(result, /then: NodeIds/)
   })
 })

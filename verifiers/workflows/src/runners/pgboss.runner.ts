@@ -10,6 +10,7 @@ import {
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { pikkuState } from '@pikku/core/state'
+import { rpcService } from '@pikku/core/rpc'
 import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
@@ -40,7 +41,7 @@ async function main(): Promise<void> {
   const workflowService = new PgKyselyWorkflowService(db, { leaseService })
   await workflowService.init()
 
-  await createSingletonServices(config, {
+  const singletonServices = await createSingletonServices(config, {
     queueService: pgBossFactory.getQueueService(),
     schedulerService: pgBossFactory.getSchedulerService(),
     workflowService,
@@ -61,6 +62,12 @@ async function main(): Promise<void> {
     error?: string
     duration: number
   }> = []
+
+  const rpc = rpcService.getContextRPCService(
+    singletonServices as any,
+    {},
+    false
+  )
 
   for (const workflowName of workflowNames) {
     const testData = workflowTestData[workflowName]
@@ -83,7 +90,7 @@ async function main(): Promise<void> {
         workflowName,
         testData,
         { type: 'test' },
-        null
+        rpc
       )
 
       let run = await workflowService.getRun(runId)
