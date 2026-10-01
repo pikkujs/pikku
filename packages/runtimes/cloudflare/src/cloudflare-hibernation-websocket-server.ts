@@ -104,7 +104,7 @@ export abstract class CloudflareWebSocketHibernationServer<
       ...params,
       channelId,
     })
-    this.eventHub?.onChannelClosed(channelId)
+    await this.eventHub?.onChannelClosed(channelId)
   }
 
   private async getAllParams(websocket: WebSocket) {
