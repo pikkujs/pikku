@@ -20,7 +20,7 @@ class WorkerEntrypointStub {
 // first is what lets the real fetch() routing run outside workerd.
 if (typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined') {
   const { mock } = await import('bun:test')
-  mock.module('cloudflare:workers', () => ({
+  await mock.module('cloudflare:workers', () => ({
     WorkerEntrypoint: WorkerEntrypointStub,
   }))
 } else {
