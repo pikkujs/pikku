@@ -56,6 +56,12 @@ export interface DeploymentUnit {
   role: DeploymentUnitRole
   /** Deploy target: serverless (CF Worker / Lambda) or server (container) */
   target: 'serverless' | 'server'
+  /**
+   * The runtime tier this unit must fit (`edge`, `serverless`). Absent means the
+   * project's own `pikku.runtime` declaration, else the provider's default. Not
+   * consulted for `target: 'server'` units, which may use anything.
+   */
+  runtime?: 'edge' | 'serverless' | 'server'
   /** Functions bundled in this unit (for function/workflow-step units) */
   functionIds: string[]
   services: ServiceRequirement[]
