@@ -70,6 +70,22 @@ describe('WorkspaceFilesService', () => {
     assert.strictEqual((await files.read('.env.example')).content, 'KEY=')
   })
 
+  test('writes text files and refuses secrets, ignored folders and directories', async () => {
+    const root = await workspace()
+    const files = new WorkspaceFilesService(root)
+    assert.deepStrictEqual(await files.write('src/index.ts', 'export const a = 1\n'), {
+      path: 'src/index.ts',
+      size: 19,
+    })
+    assert.strictEqual((await files.read('src/index.ts')).content, 'export const a = 1\n')
+    await files.write('src/new/file.md', '# new')
+    assert.strictEqual((await files.read('src/new/file.md')).content, '# new')
+    await assert.rejects(files.write('.env', 'K=1'), WorkspaceFileNotFoundError)
+    await assert.rejects(files.write('node_modules/x/a.js', ''), WorkspaceFileNotFoundError)
+    await assert.rejects(files.write('src', ''), WorkspaceFileNotFoundError)
+    await assert.rejects(files.write('../escape.txt', ''), WorkspacePathError)
+  })
+
   test('rejects paths that leave the workspace', async () => {
     const root = await workspace()
     const outside = await mkdtemp(join(tmpdir(), 'pikku-outside-'))

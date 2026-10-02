@@ -1,4 +1,5 @@
-import { open, readdir, stat } from 'node:fs/promises'
+import { mkdir, open, readdir, stat, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { resolveWorkspacePath } from './workspace-path.js'
 
 export { WorkspacePathError, resolveWorkspacePath } from './workspace-path.js'
@@ -101,5 +102,18 @@ export class WorkspaceFilesService {
       binary,
       truncated: info.size > length,
     }
+  }
+
+  /** Writes a text file, creating it and its folders if needed; secrets and ignored folders are refused. */
+  async write(path: string, content: string): Promise<{ path: string; size: number }> {
+    const { abs, rel } = resolveWorkspacePath(this.root, path)
+    if (!rel || rel.split('/').some((part) => this.hidden(part)))
+      throw new WorkspaceFileNotFoundError(`cannot write ${rel || '/'}`)
+    const info = await stat(abs).catch(() => null)
+    if (info?.isDirectory())
+      throw new WorkspaceFileNotFoundError(`${rel} is a directory`)
+    await mkdir(dirname(abs), { recursive: true })
+    await writeFile(abs, content, 'utf-8')
+    return { path: rel, size: Buffer.byteLength(content) }
   }
 }

@@ -1,174 +1,184 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Box, Button, Group, Text, useMantineColorScheme } from '@pikku/mantine/core'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import Editor, { type OnMount } from '@monaco-editor/react'
+import { FileCode, Save } from 'lucide-react'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { asI18n } from '@pikku/react'
-import { FolderGit2, TriangleAlert } from 'lucide-react'
-import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
-import {
-  ChangeDetailCards,
-  FileDetailCards,
-  baseName,
-  parentOf,
-} from '../components/code/CodeCards'
-import { CodeSavePanel } from '../components/code/CodeSavePanel'
-import {
-  errorText,
-  isNotARepo,
-  useGitDiff,
-  useGitStatus,
-  useProjectFile,
-} from '../hooks/useProjectCode'
 import { useSearchParams } from '../router'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { usePageOptionsDismiss } from '../context/PageOptionsProvider'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { CardsPage } from '../components/ui/CardsPage'
+import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { ConsoleLoading } from '../components/ui/ConsoleLoading'
-import { CodeOverview, codeSelection, type CodeView } from './CodeOverview'
+import { FileTree } from '../components/code/FileTree'
 
-const CODE_DOCS_HREF = 'https://pikku.dev/docs'
-
-const VIEWS: CodeView[] = ['files', 'changes', 'history']
-
-const isLocalOnly = (error: unknown) =>
-  /local development/i.test(errorText(error))
-
-export interface CodePageProps {
-  headerRight?: React.ReactNode
+function languageFromPath(path: string): string {
+  const ext = path.split('.').pop() ?? ''
+  const map: Record<string, string> = {
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    json: 'json',
+    md: 'markdown',
+    css: 'css',
+    html: 'html',
+    yaml: 'yaml',
+    yml: 'yaml',
+    sh: 'shell',
+    toml: 'toml',
+    sql: 'sql',
+    env: 'plaintext',
+  }
+  return map[ext] ?? 'plaintext'
 }
 
-export const CodePage: React.FC<CodePageProps> = ({ headerRight }) => {
+const FileTreeRail: React.FC<{
+  selectedPath: string | null
+  onSelect: (path: string) => void
+}> = ({ selectedPath, onSelect }) => {
+  const dismiss = usePageOptionsDismiss()
+  return (
+    <Box p="xs" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <FileTree
+        dirPath=""
+        depth={0}
+        selectedPath={selectedPath}
+        onSelect={(path) => {
+          onSelect(path)
+          dismiss()
+        }}
+      />
+    </Box>
+  )
+}
+
+export const CodePage: React.FC = () => {
   useLocale()
+  const rpc = usePikkuRPC()
+  const { colorScheme } = useMantineColorScheme()
   const [searchParams, setSearchParams] = useSearchParams()
-  const rawView = searchParams.get('view') as CodeView | null
-  const view: CodeView = rawView && VIEWS.includes(rawView) ? rawView : 'files'
-  const file = searchParams.get('file') || undefined
-  const dir = searchParams.get('dir') ?? (file ? parentOf(file) : '')
+  const selectedPath = searchParams.get('file')
 
-  const status = useGitStatus()
-  const change = status.data?.files.find((entry) => entry.path === file)
-  const showFile = view === 'files' && !!file
-  const showChange = view === 'changes' && !!change
-  const fileQuery = useProjectFile(showFile ? file : undefined)
-  const diff = useGitDiff(showChange ? file : undefined)
+  const queryClient = useQueryClient()
+  const { data: fileData, isLoading: fileLoading } = useQuery({
+    queryKey: ['project-file', selectedPath],
+    queryFn: () => rpc.invoke('console:readProjectFile', { path: selectedPath! }),
+    enabled: !!selectedPath,
+    staleTime: 10_000,
+  })
 
-  const go = (params: Record<string, string>) => setSearchParams(params)
-  const onView = (next: CodeView) =>
-    go(next === 'files' ? (dir ? { dir } : {}) : { view: next })
-  const openFile = (path: string) => go({ dir: parentOf(path), file: path })
-  const openChange = (path: string) => go({ view: 'changes', file: path })
+  const [draft, setDraft] = useState<string | null>(null)
+  useEffect(() => setDraft(null), [selectedPath, fileData?.content])
+  const saved = fileData?.content ?? ''
+  const dirty = draft !== null && draft !== saved
+  const editable = !!fileData && !fileData.binary && !fileData.truncated
 
-  if (status.isLoading) {
-    return (
-      <ConsoleSurface>
-        <ResizablePanelLayout
-          hidePanel
-          header={<ListPageHeader title={m.code_page_title()} />}
-        >
-          <ConsoleLoading />
-        </ResizablePanelLayout>
-      </ConsoleSurface>
-    )
+  const save = useMutation({
+    mutationFn: (content: string) =>
+      rpc.invoke('console:writeProjectFile', { path: selectedPath!, content }),
+    onSuccess: (_, content) =>
+      queryClient.setQueryData(['project-file', selectedPath], { ...fileData!, content }),
+  })
+  const saveRef = useRef<() => void>(() => {})
+  saveRef.current = () => {
+    if (dirty && editable && !save.isPending) save.mutate(draft!)
+  }
+  const onMount: OnMount = (editor, monaco) => {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current())
   }
 
-  if (status.error && isLocalOnly(status.error)) {
-    return (
-      <ConsoleSurface>
-        <ResizablePanelLayout
-          hidePanel
-          header={<ListPageHeader title={m.code_page_title()} />}
-        >
-          <EmptyStatePlaceholder
-            icon={FolderGit2}
-            title={m.code_unavailable_title()}
-            description={m.code_unavailable_description()}
-            docsHref={CODE_DOCS_HREF}
-          />
-        </ResizablePanelLayout>
-      </ConsoleSurface>
-    )
-  }
+  const editorBody = !selectedPath ? (
+    <EmptyStatePlaceholder
+      icon={FileCode}
+      title={m.code_select_file_title()}
+      description={m.code_select_file_subtitle()}
+      docsHref="https://pikku.dev/docs"
+    />
+  ) : fileLoading ? (
+    <ConsoleLoading />
+  ) : (
+    <Editor
+      key={selectedPath}
+      height="100%"
+      path={selectedPath}
+      language={languageFromPath(selectedPath)}
+      defaultValue={saved}
+      onChange={(value) => setDraft(value ?? '')}
+      onMount={onMount}
+      theme={colorScheme === 'dark' ? 'vs-dark' : 'vs'}
+      options={{
+        readOnly: !editable,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        fontSize: 13,
+        lineNumbers: 'on',
+        wordWrap: 'on',
+        contextmenu: false,
+        renderLineHighlight: 'line',
+        scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
+      }}
+    />
+  )
 
-  const blocked = status.error ? (
-    isNotARepo(status.error) ? (
-      <EmptyStatePlaceholder
-        icon={FolderGit2}
-        title={m.code_not_repo_title()}
-        description={m.code_not_repo_description()}
-        code="git init"
-        docsHref={CODE_DOCS_HREF}
-      />
-    ) : (
-      <EmptyStatePlaceholder
-        icon={TriangleAlert}
-        title={m.code_error_title()}
-        description={m.code_error_description()}
-        docsHref={CODE_DOCS_HREF}
-      />
-    )
-  ) : undefined
-
-  if (!showFile && !showChange) {
-    return (
-      <ConsoleSurface>
-        <CodeOverview
-          view={view}
-          dir={dir}
-          status={status.data}
-          blocked={blocked}
-          onView={onView}
-          onOpenDir={(next) => go(next ? { dir: next } : {})}
-          onOpenFile={openFile}
-          onOpenChange={openChange}
-          headerRight={headerRight}
-        />
-      </ConsoleSurface>
-    )
-  }
-
-  const path = file!
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
-        surface="cards"
-        sidePanel={
-          showChange && status.data ? (
-            <CodeSavePanel files={status.data.files} />
-          ) : undefined
+        flushBody
+        leftDrawer={
+          <FileTreeRail
+            selectedPath={selectedPath}
+            onSelect={(file) => setSearchParams({ file })}
+          />
         }
-        sidePanelWidth={320}
-        sidePanelLabel={m.code_save_panel()}
+        leftDrawerWidth={264}
+        leftDrawerLabel={m.code_files_label()}
         header={
           <ListPageHeader
-            title={m.code_page_title()}
-            item={asI18n(baseName(path))}
-            onTitle={() => onView(view)}
-            selection={codeSelection(view, status.data, onView)}
-            filters={headerRight}
+            title={m.nav_code()}
+            item={selectedPath ? asI18n(selectedPath) : undefined}
+            onTitle={selectedPath ? () => setSearchParams({}) : undefined}
+            filters={
+              selectedPath && editable ? (
+                <Group gap="sm" wrap="nowrap">
+                  {save.isError && (
+                    <Text size="xs" c="red">
+                      {m.code_save_failed()}
+                    </Text>
+                  )}
+                  <Button
+                    size="xs"
+                    data-testid="code-save"
+                    leftSection={<Save size={14} />}
+                    disabled={!dirty}
+                    loading={save.isPending}
+                    onClick={() => saveRef.current()}
+                  >
+                    {dirty ? m.code_save() : m.code_saved()}
+                  </Button>
+                </Group>
+              ) : undefined
+            }
           />
         }
       >
-        <CardsPage>
-          {showChange && change ? (
-            <ChangeDetailCards
-              change={change}
-              diff={diff.data}
-              loading={diff.isLoading}
-              error={diff.error}
-              onOpenFile={() => openFile(path)}
-            />
-          ) : (
-            <FileDetailCards
-              path={path}
-              file={fileQuery.data}
-              loading={fileQuery.isLoading}
-              error={fileQuery.error}
-              change={change}
-              onSeeChanges={() => openChange(path)}
-            />
-          )}
-        </CardsPage>
+        <Box
+          style={{
+            height: '100%',
+            minWidth: 0,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {editorBody}
+        </Box>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

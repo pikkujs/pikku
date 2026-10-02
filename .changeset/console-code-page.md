@@ -1,5 +1,7 @@
 ---
 '@pikku/console': patch
+'@pikku/addon-console': patch
+'@pikku/code-edit': patch
 ---
 
-A Code page at `/code`: browse the project's files and read one, see what changed since the last save with a diff per file, save (commit) the chosen files with a message from the side panel, get the latest (pull), send (push), and read the history. Plain words for app owners; git detail sits under For developers.
+A Code page at `/code`, the same as fabric's: a collapsible file tree beside a Monaco editor. Files open editable, and Save or ⌘S writes them to disk through the new `console:writeProjectFile` RPC (`files:write` scope, local only). Binary and cut-short files open read-only. Writes to `.env` files, `.dev.vars` and ignored folders are refused.

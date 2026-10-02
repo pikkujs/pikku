@@ -52,6 +52,7 @@
     "@mantine/hooks": "^9.5.1",
     "@mantine/notifications": "^9.5.1",
     "@mantine/spotlight": "^9.5.1",
+    "@monaco-editor/react": "^4.7.0",
     "@pikku/assistant-ui": "^0.12.13",
     "@pikku/better-auth": "^0.12.50",
     "@pikku/fetch": "^0.12.11",

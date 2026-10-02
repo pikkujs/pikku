@@ -160,6 +160,7 @@ defineScope({
             description: 'The project files on disk',
             scopes: {
               read: { description: 'Browse and read project files' },
+              write: { description: 'Edit project files' },
             },
           },
           git: {
