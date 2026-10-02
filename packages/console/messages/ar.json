@@ -1023,5 +1023,6 @@
   "webhook_source_registration_switch": "استقبال الأحداث",
   "webhook_source_orphan_badge": "لم يعد في تطبيقك",
   "webhook_source_orphan_body": "قد يظل {source} يرسل أحداثًا إلى هنا. أزِل الخطاف في {source} ثم أكّد.",
-  "webhook_source_orphan_forget": "لقد أزلته"
+  "webhook_source_orphan_forget": "لقد أزلته",
+  "nav_checks": "الفحوصات"
 }

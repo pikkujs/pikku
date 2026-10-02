@@ -1023,5 +1023,6 @@
   "webhook_source_registration_switch": "接收事件",
   "webhook_source_orphan_badge": "已不在你的应用中",
   "webhook_source_orphan_body": "{source} 可能仍在向这里发送事件。请在 {source} 中删除该 webhook，然后确认。",
-  "webhook_source_orphan_forget": "我已删除"
+  "webhook_source_orphan_forget": "我已删除",
+  "nav_checks": "检查"
 }
