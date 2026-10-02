@@ -13,6 +13,7 @@ import {
   DoorOpen,
   Database,
   FlaskConical,
+  FolderGit2,
   FunctionSquare,
   GitBranch,
   GitCompare,
@@ -262,7 +263,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'changed',
           title: m.nav_group_what_changed(),
-          items: [item(m.nav_changes(), '/changes', GitCompare)],
+          items: [
+            item(m.nav_changes(), '/changes', GitCompare),
+            item(m.nav_code(), '/code', FolderGit2),
+          ],
         },
       ],
     },

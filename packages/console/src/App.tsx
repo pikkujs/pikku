@@ -19,6 +19,7 @@ import { TriggersPage } from './pages/TriggersPage'
 import { RuntimePage } from './pages/RuntimePage'
 import { EmailsPage } from './pages/EmailsPage'
 import { PagesPage } from './pages/PagesPage'
+import { CodePage } from './pages/CodePage'
 import { WebhooksPage } from './pages/WebhooksPage'
 import { SecretsPage } from './pages/SecretsPage'
 import { VariablesPage } from './pages/VariablesPage'
@@ -83,6 +84,7 @@ export const App: React.FC = () => {
           <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
           <Route path="/scorers" element={<ScorersPage />} />
           <Route path="/changes" element={<ChangesPage />} />
+          <Route path="/code" element={<CodePage />} />
           <Route path="/scenarios" element={<ScenariosPage />} />
           <Route path="/personas" element={<PersonasPage />} />
           <Route path="/virtual-users" element={<VirtualUsersPage />} />
