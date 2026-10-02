@@ -97,4 +97,14 @@ describe('WorkspaceFilesService', () => {
     await assert.rejects(files.read('link/secret'), WorkspacePathError)
     await assert.rejects(files.list('.git'), WorkspacePathError)
   })
+  test('paths lists every visible file without git', async () => {
+    const root = await workspace()
+    await writeFile(join(root, '.env'), 'SECRET=1\n')
+    const files = new WorkspaceFilesService(root)
+    assert.deepStrictEqual((await files.paths()).paths.sort(), [
+      'README.md',
+      'src/blob.bin',
+      'src/index.ts',
+    ])
+  })
 })

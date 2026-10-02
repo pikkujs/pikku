@@ -2499,5 +2499,7 @@
   "code_select_file_subtitle": "Choose a file from the tree to view its contents.",
   "code_save": "Save",
   "code_saved": "Saved",
-  "code_save_failed": "Could not save"
+  "code_save_failed": "Could not save",
+  "code_picker_placeholder": "Go to file…",
+  "code_picker_nothing_found": "No matching files"
 }

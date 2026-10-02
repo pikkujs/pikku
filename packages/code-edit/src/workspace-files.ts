@@ -1,5 +1,7 @@
 import { mkdir, open, readdir, stat, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { execFile } from 'node:child_process'
+import { dirname, join } from 'node:path'
+import { promisify } from 'node:util'
 import { resolveWorkspacePath } from './workspace-path.js'
 
 export { WorkspacePathError, resolveWorkspacePath } from './workspace-path.js'
@@ -76,6 +78,39 @@ export class WorkspaceFilesService {
             : 1
           : a.name.localeCompare(b.name)
       )
+  }
+
+  /** Every file path in the workspace, for a quick-open picker; uses git's view when the root is a repo so ignored output stays out. */
+  async paths(limit = 50_000): Promise<{ paths: string[]; truncated: boolean }> {
+    const fromGit = await promisify(execFile)(
+      'git',
+      ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+      { cwd: this.root, maxBuffer: 256 * 1024 * 1024 }
+    )
+      .then(({ stdout }) => stdout.split('\0').filter(Boolean))
+      .catch(() => null)
+    const all = fromGit ?? (await this.walk(''))
+    const visible = all.filter(
+      (path) => !path.split('/').some((part) => this.hidden(part))
+    )
+    return {
+      paths: visible.slice(0, limit),
+      truncated: visible.length > limit,
+    }
+  }
+
+  private async walk(rel: string): Promise<string[]> {
+    const entries = await readdir(join(this.root, rel), {
+      withFileTypes: true,
+    }).catch(() => [])
+    const out: string[] = []
+    for (const e of entries) {
+      if (this.hidden(e.name) || e.isSymbolicLink()) continue
+      const path = rel ? `${rel}/${e.name}` : e.name
+      if (e.isDirectory()) out.push(...(await this.walk(path)))
+      else if (e.isFile()) out.push(path)
+    }
+    return out
   }
 
   /** A file's text, cut at `maxFileBytes`; binary files come back with empty content. */

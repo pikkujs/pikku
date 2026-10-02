@@ -15,6 +15,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 import { FileTree } from '../components/code/FileTree'
+import { FilePicker, filePicker } from '../components/code/FilePicker'
 
 function languageFromPath(path: string): string {
   const ext = path.split('.').pop() ?? ''
@@ -104,6 +105,7 @@ export const CodePage: React.FC = () => {
   }
   const onMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current())
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => filePicker.open())
   }
 
   const editorBody = !selectedPath ? (
@@ -141,6 +143,7 @@ export const CodePage: React.FC = () => {
 
   return (
     <ConsoleSurface>
+      <FilePicker onSelect={(file) => setSearchParams({ file })} />
       <ResizablePanelLayout
         hidePanel
         flushBody
