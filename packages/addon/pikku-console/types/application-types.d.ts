@@ -17,6 +17,7 @@ import type { PageScreenshotService } from '../src/services/page-screenshot.serv
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { WorkspaceFilesService } from '@pikku/code-edit/files'
 import type { GitService } from '@pikku/code-edit/git'
+import type { TypeScriptService } from '@pikku/code-edit/typescript'
 import type { PagesService } from '@pikku/code-edit/routes'
 import type { VerifyService } from '@pikku/code-edit/verify'
 import type { BrandWorkspace } from '@pikku/code-edit/brand'
@@ -46,6 +47,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   i18nService: I18nService | null
   workspaceFilesService: WorkspaceFilesService | null
   gitService: GitService | null
+  typeScriptService: TypeScriptService | null
   /** Every frontend's pages, read from its TanStack route files; null outside local development. */
   pagesService: PagesService | null
   pageScreenshotService: PageScreenshotService | null

@@ -11,6 +11,7 @@ import { PageScreenshotService } from './services/page-screenshot.service.js'
 import { I18nService } from '@pikku/code-edit/i18n'
 import { WorkspaceFilesService } from '@pikku/code-edit/files'
 import { GitService } from '@pikku/code-edit/git'
+import { TypeScriptService } from '@pikku/code-edit/typescript'
 import { PagesService } from '@pikku/code-edit/routes'
 import { VerifyService } from '@pikku/code-edit/verify'
 import { BrandWorkspace } from '@pikku/code-edit/brand'
@@ -65,6 +66,7 @@ export const createSingletonServices = pikkuAddonServices(
     let i18nService: I18nService | null = null
     let workspaceFilesService: WorkspaceFilesService | null = null
     let gitService: GitService | null = null
+    let typeScriptService: TypeScriptService | null = null
     let pagesService: PagesService | null = null
     let pageScreenshotService: PageScreenshotService | null = null
     let verifyService: VerifyService | null = null
@@ -81,6 +83,7 @@ export const createSingletonServices = pikkuAddonServices(
         findWorkspaceRoot(projectRoot)
       )
       gitService = new GitService(findWorkspaceRoot(projectRoot))
+      typeScriptService = new TypeScriptService(findWorkspaceRoot(projectRoot))
       pagesService = new PagesService(findWorkspaceRoot(projectRoot))
       pageScreenshotService = new PageScreenshotService(
         pagesService,
@@ -156,6 +159,7 @@ export const createSingletonServices = pikkuAddonServices(
       i18nService,
       workspaceFilesService,
       gitService,
+      typeScriptService,
       pagesService,
       pageScreenshotService,
       verifyService,

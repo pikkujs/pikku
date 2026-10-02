@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Group, Text, useMantineColorScheme } from '@pikku/mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import Editor, { type OnMount } from '@monaco-editor/react'
-import { FileCode, Save } from 'lucide-react'
+import Editor, { type BeforeMount, type OnMount } from '@monaco-editor/react'
+import { ChevronRight, FileCode, Save } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -52,6 +52,34 @@ function languageFromPath(path: string): string {
   return map[ext] ?? 'plaintext'
 }
 
+/** The open file's path as a breadcrumb: folders dimmed, the file name bright; display only. */
+const PathCrumbs: React.FC<{ path: string }> = ({ path }) => {
+  const parts = path.split('/')
+  return (
+    <Group component="span" gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+      {parts.map((part, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && (
+            <ChevronRight
+              size={14}
+              style={{ flexShrink: 0, color: 'var(--mantine-color-dimmed)' }}
+            />
+          )}
+          <Text
+            component="span"
+            fz={15}
+            fw={i === parts.length - 1 ? 600 : 400}
+            c={i === parts.length - 1 ? undefined : 'dimmed'}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {asI18n(part)}
+          </Text>
+        </React.Fragment>
+      ))}
+    </Group>
+  )
+}
+
 const FileTreeRail: React.FC<{
   selectedPath: string | null
   onSelect: (path: string) => void
@@ -99,11 +127,66 @@ export const CodePage: React.FC = () => {
     onSuccess: (_, content) =>
       queryClient.setQueryData(['project-file', selectedPath], { ...fileData!, content }),
   })
+  const [mounted, setMounted] = useState<Parameters<OnMount> | null>(null)
+  useEffect(() => {
+    const model = mounted?.[0].getModel()
+    if (!mounted || !model || !selectedPath || !editable) return
+    const monaco = mounted[1]
+    let cancelled = false
+    const timer = setTimeout(
+      () =>
+        rpc
+          .invoke('console:getFileDiagnostics', {
+            path: selectedPath,
+            content: draft ?? undefined,
+          })
+          .then(({ diagnostics }) => {
+            if (cancelled || model.isDisposed()) return
+            monaco.editor.setModelMarkers(
+              model,
+              'pikku-ts',
+              diagnostics.map((d) => ({
+                message: d.message,
+                code: String(d.code),
+                source: 'ts',
+                severity:
+                  d.severity === 'error'
+                    ? monaco.MarkerSeverity.Error
+                    : d.severity === 'warning'
+                      ? monaco.MarkerSeverity.Warning
+                      : monaco.MarkerSeverity.Info,
+                startLineNumber: d.startLine,
+                startColumn: d.startColumn,
+                endLineNumber: d.endLine,
+                endColumn: d.endColumn,
+              }))
+            )
+          })
+          .catch(() => {}),
+      draft === null ? 0 : 400
+    )
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [mounted, selectedPath, draft, saved, editable, rpc])
+
   const saveRef = useRef<() => void>(() => {})
   saveRef.current = () => {
     if (dirty && editable && !save.isPending) save.mutate(draft!)
   }
+  const beforeMount: BeforeMount = (monaco) => {
+    for (const defaults of [
+      monaco.languages.typescript.typescriptDefaults,
+      monaco.languages.typescript.javascriptDefaults,
+    ])
+      defaults.setDiagnosticsOptions({
+        noSemanticValidation: true,
+        noSyntaxValidation: true,
+      })
+  }
   const onMount: OnMount = (editor, monaco) => {
+    setMounted([editor, monaco])
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current())
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => filePicker.open())
   }
@@ -125,6 +208,7 @@ export const CodePage: React.FC = () => {
       language={languageFromPath(selectedPath)}
       defaultValue={saved}
       onChange={(value) => setDraft(value ?? '')}
+      beforeMount={beforeMount}
       onMount={onMount}
       theme={colorScheme === 'dark' ? 'vs-dark' : 'vs'}
       options={{
@@ -158,7 +242,7 @@ export const CodePage: React.FC = () => {
         header={
           <ListPageHeader
             title={m.nav_code()}
-            item={selectedPath ? asI18n(selectedPath) : undefined}
+            item={selectedPath ? <PathCrumbs path={selectedPath} /> : undefined}
             onTitle={selectedPath ? () => setSearchParams({}) : undefined}
             filters={
               selectedPath && editable ? (

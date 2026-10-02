@@ -53,6 +53,11 @@
       "import": "./dist/git.service.js",
       "default": "./dist/git.service.js"
     },
+    "./typescript": {
+      "types": "./dist/typescript.service.d.ts",
+      "import": "./dist/typescript.service.js",
+      "default": "./dist/typescript.service.js"
+    },
     "./routes": {
       "types": "./dist/routes.d.ts",
       "import": "./dist/routes.js",
