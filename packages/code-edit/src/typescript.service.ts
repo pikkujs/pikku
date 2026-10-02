@@ -13,6 +13,8 @@ export type TypeDiagnostic = {
   endColumn: number
 }
 
+const MAX_PROJECTS = 4
+
 const CHECKED = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/
 
 const INFERRED: ts.CompilerOptions = {
@@ -90,11 +92,18 @@ export class TypeScriptService {
 
   private projectFor(file: string): Project {
     const configPath = this.configFor(file)
-    const key = configPath ?? `inferred:${dirname(file)}`
+    const key = configPath ?? `inferred:${this.packageDir(file)}`
     let project = this.projects.get(key)
     if (!project || (!configPath && !project.fileNames.has(file))) {
+      project?.service.dispose()
       project = this.createProject(configPath, file)
-      this.projects.set(key, project)
+    }
+    this.projects.delete(key)
+    this.projects.set(key, project)
+    for (const [old, { service }] of this.projects) {
+      if (this.projects.size <= MAX_PROJECTS) break
+      service.dispose()
+      this.projects.delete(old)
     }
     return project
   }
@@ -123,6 +132,8 @@ export class TypeScriptService {
     seen.add(configPath)
     const parsed = this.parse(configPath)
     if (!parsed) return undefined
+    const raw = parsed.raw as Record<string, unknown> | undefined
+    if (!raw?.include && !raw?.files && !raw?.extends) return undefined
     if (parsed.fileNames.some((f) => resolve(f) === resolve(file)))
       return configPath
     for (const ref of parsed.projectReferences ?? []) {
@@ -144,11 +155,31 @@ export class TypeScriptService {
     )
   }
 
+  /** The nearest folder with a package.json, for a file no tsconfig claims. */
+  private packageDir(file: string): string {
+    let dir = dirname(file)
+    while (dir.startsWith(this.root) && dir !== this.root) {
+      if (ts.sys.fileExists(`${dir}/package.json`)) return dir
+      dir = dirname(dir)
+    }
+    return dirname(file)
+  }
+
+  private packageFiles(file: string): string[] {
+    return ts.sys.readDirectory(
+      this.packageDir(file),
+      ['.ts', '.tsx', '.mts', '.cts', '.d.ts'],
+      ['**/node_modules', '**/dist']
+    )
+  }
+
   private createProject(configPath: string | undefined, file: string): Project {
     const parsed = configPath ? this.parse(configPath) : undefined
     const options = { ...(parsed?.options ?? INFERRED), noEmit: true }
     const fileNames = new Set(
-      (parsed?.fileNames ?? [file]).map((f) => resolve(f).replace(/\\/g, '/'))
+      (parsed?.fileNames ?? [file, ...this.packageFiles(file)]).map((f) =>
+        resolve(f).replace(/\\/g, '/')
+      )
     )
     const host: ts.LanguageServiceHost = {
       getCompilationSettings: () => options,

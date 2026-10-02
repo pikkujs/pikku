@@ -62,4 +62,20 @@ describe('TypeScriptService', () => {
     const ts = new TypeScriptService(await project())
     assert.deepStrictEqual(ts.diagnostics('package.json'), [])
   })
+  test('a catch-all base tsconfig does not claim files, so JSX still works', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-ts-'))
+    await writeFile(
+      join(root, 'tsconfig.json'),
+      JSON.stringify({ compilerOptions: { strict: true } })
+    )
+    await mkdir(join(root, 'web'), { recursive: true })
+    await writeFile(
+      join(root, 'web/main.tsx'),
+      'export const el = <div data-testid="x" />\n'
+    )
+    const codes = new TypeScriptService(root)
+      .diagnostics('web/main.tsx')
+      .map((d) => d.code)
+    assert.ok(!codes.includes(17004), `got ${codes}`)
+  })
 })
