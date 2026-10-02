@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createPackageLookup } from './runtime-package-lookup.js'
+import type { CloudSupportData } from './cloudsupport.js'
 
 describe('createPackageLookup', () => {
   let dir: string
@@ -55,5 +56,68 @@ describe('createPackageLookup', () => {
       () => createPackageLookup(dir)('node_modules/bad/index.js'),
       /Invalid "pikku" runtime declaration/
     )
+  })
+
+  describe('with cloudsupport data', () => {
+    const support = (
+      versions: string,
+      edge: false | string[],
+      serverless: boolean
+    ): CloudSupportData => ({
+      schemaVersion: 1,
+      packages: { lib: [{ versions, cloud: { edge, serverless } }] },
+    })
+
+    const write = async (version: string) =>
+      writeFile(
+        join(dir, 'node_modules', 'lib', 'package.json'),
+        JSON.stringify({
+          name: 'lib',
+          version,
+          exports: { '.': './dist/index.js', './dev': './dist/dev.js' },
+          // Would say edge for everything; the data must win.
+          pikku: { runtime: 'edge' },
+        })
+      )
+
+    it('takes the tier from the data over the package.json block', async () => {
+      await write('1.2.3')
+      const r = createPackageLookup(
+        dir,
+        undefined,
+        support('>=1', false, true)
+      )('node_modules/lib/dist/index.js')
+      assert.equal(r?.tier.tier, 'serverless')
+      assert.equal(r?.declaredIn, 'cloudsupport lib@>=1')
+    })
+
+    it('falls back to the package.json block when no range matches', async () => {
+      await write('0.5.0')
+      const r = createPackageLookup(
+        dir,
+        undefined,
+        support('>=1', false, true)
+      )('node_modules/lib/dist/index.js')
+      assert.equal(r?.tier.tier, 'edge')
+      assert.ok(r?.declaredIn?.endsWith('package.json'))
+    })
+
+    it('ignores an invalid package.json block when the data covers it', async () => {
+      await writeFile(
+        join(dir, 'node_modules', 'lib', 'package.json'),
+        JSON.stringify({
+          name: 'lib',
+          version: '1.0.0',
+          pikku: { runtime: 'cloud' },
+        })
+      )
+      const r = createPackageLookup(
+        dir,
+        undefined,
+        support('*', false, false)
+      )('node_modules/lib/dist/index.js')
+      assert.equal(r?.tier.tier, 'server')
+      assert.equal(r?.tier.declared, true)
+    })
   })
 })

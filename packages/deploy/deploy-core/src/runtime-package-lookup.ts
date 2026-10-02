@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 
+import { cloudSupportFor, type CloudSupportData } from './cloudsupport.js'
+import { CLOUDSUPPORT } from './cloudsupport.data.js'
 import {
   parseRuntimeDeclaration,
   resolvePackageTier,
@@ -14,6 +16,8 @@ interface PackageRecord {
   name: string
   exports: unknown
   declaration?: RuntimeDeclaration
+  /** Where the declaration came from, for messages. */
+  declaredIn?: string
   problems: string[]
 }
 
@@ -25,14 +29,19 @@ interface PackageRecord {
  * workspace package is symlinked, so esbuild reports its real path with no
  * `node_modules` in it.
  *
- * An invalid declaration throws: a typo'd tier silently becoming the `server`
- * default is exactly the failure this exists to prevent.
+ * The tier comes from the cloudsupport data (by name and installed version)
+ * first, then from a `pikku` block in the package's own `package.json`, then it
+ * is undeclared.
+ *
+ * An invalid `package.json` declaration throws: a typo'd tier silently becoming
+ * the `server` default is exactly the failure this exists to prevent.
  */
 export function createPackageLookup(
   /** Absolute directory input keys are relative to (esbuild's absWorkingDir). */
   baseDir: string,
   readJson: (path: string) => unknown = (p) =>
-    JSON.parse(readFileSync(p, 'utf-8'))
+    JSON.parse(readFileSync(p, 'utf-8')),
+  support: CloudSupportData = CLOUDSUPPORT
 ): PackageLookup {
   const byDir = new Map<string, PackageRecord | null>()
 
@@ -53,13 +62,23 @@ export function createPackageLookup(
         pkg = undefined
       }
       if (pkg && typeof pkg.name === 'string') {
-        const { declaration, problems } = parseRuntimeDeclaration(pkg)
+        const vetted = cloudSupportFor(
+          support,
+          pkg.name,
+          typeof pkg.version === 'string' ? pkg.version : undefined
+        )
+        const own = vetted ? undefined : parseRuntimeDeclaration(pkg)
         record = {
           dir,
           name: pkg.name,
           exports: pkg.exports,
-          declaration,
-          problems,
+          declaration: vetted?.declaration ?? own?.declaration,
+          declaredIn: vetted
+            ? vetted.source
+            : own?.declaration
+              ? join(dir, 'package.json')
+              : undefined,
+          problems: own?.problems ?? [],
         }
         byDir.set(dir, record)
         trail.pop()
@@ -91,9 +110,7 @@ export function createPackageLookup(
     return {
       name: record.name,
       tier: resolvePackageTier(record.declaration, subpath),
-      declaredIn: record.declaration
-        ? join(record.dir, 'package.json')
-        : undefined,
+      declaredIn: record.declaredIn,
     }
   }
 }

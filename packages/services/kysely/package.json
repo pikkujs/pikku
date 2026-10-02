@@ -15,9 +15,6 @@
     "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js"
   },
   "type": "module",
-  "pikku": {
-    "runtime": "edge"
-  },
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",

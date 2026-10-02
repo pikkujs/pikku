@@ -17,9 +17,6 @@
   "files": [
     "dist/"
   ],
-  "pikku": {
-    "runtime": "edge"
-  },
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",

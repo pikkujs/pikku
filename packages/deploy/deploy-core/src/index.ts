@@ -100,3 +100,13 @@ export type {
 } from './runtime-verify.js'
 
 export { createPackageLookup } from './runtime-package-lookup.js'
+export {
+  cloudSupportFor,
+  entryToDeclaration,
+  tierOfCloud,
+  type CloudSupportBlock,
+  type CloudSupportData,
+  type CloudSupportEntry,
+  type CloudSupportMatch,
+} from './cloudsupport.js'
+export { CLOUDSUPPORT } from './cloudsupport.data.js'

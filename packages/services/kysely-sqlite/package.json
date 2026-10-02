@@ -12,9 +12,6 @@
   "module": "dist/src/index.js",
   "main": "dist/src/index.js",
   "type": "module",
-  "pikku": {
-    "runtime": "edge"
-  },
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",

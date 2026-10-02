@@ -10,21 +10,6 @@
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
-  "pikku": {
-    "runtime": "edge",
-    "exports": {
-      "./services/local-meta": "server",
-      "./services/v8-coverage": "server",
-      "./services/istanbul-coverage": "server",
-      "./services/local-content": "server",
-      "./services/local-content-request-handler": "server",
-      "./services/temporary-file-service": "server",
-      "./services/file-scenario-run-store": "server",
-      "./node-host-resolver": "server",
-      "./testing": "server",
-      "./dev": "server"
-    }
-  },
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.type-tests.json",
     "build": "tsc -b",
