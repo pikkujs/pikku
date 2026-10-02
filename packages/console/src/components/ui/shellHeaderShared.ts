@@ -36,6 +36,8 @@ export interface ShellHeaderFilter {
    *  option. The bar renders every chip a second time off-screen to measure it,
    *  and the measuring copy carries neither. */
   testId?: string
+  /** Stamps `data-help` on the chip so help copy can point at it. */
+  helpAnchor?: string
 }
 
 export interface ShellHeaderSearch {

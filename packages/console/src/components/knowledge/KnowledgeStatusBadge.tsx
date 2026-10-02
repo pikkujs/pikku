@@ -1,11 +1,11 @@
 import React from 'react'
-import { Badge } from '@pikku/mantine/core'
 import { asI18n, type I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import { StatusBadge, type StatusTone } from '../ui/StatusBadge'
 
 type KnowledgeStatusBadgeProps = {
   status: string
-  size?: string
+  size?: 'sm' | 'lg'
 }
 
 /**
@@ -20,23 +20,20 @@ const LABEL: Record<string, () => I18nString> = {
   built: m.knowledge_status_built,
 }
 
-const COLOR: Record<string, string> = {
-  proposed: 'gray',
-  dispatched: 'blue',
-  built: 'teal',
+const TONE: Record<string, StatusTone> = {
+  proposed: 'neutral',
+  dispatched: 'info',
+  built: 'good',
 }
+
+export const knowledgeStatusTone = (status: string | undefined): StatusTone =>
+  status ? (TONE[status] ?? 'warn') : 'neutral'
 
 export const KnowledgeStatusBadge: React.FC<KnowledgeStatusBadgeProps> = ({
   status,
-  size = 'xs',
+  size = 'sm',
 }) => (
-  <Badge
-    size={size}
-    variant="light"
-    radius="sm"
-    tt="none"
-    color={COLOR[status] ?? 'orange'}
-  >
+  <StatusBadge tone={knowledgeStatusTone(status)} size={size}>
     {LABEL[status]?.() ?? asI18n(status)}
-  </Badge>
+  </StatusBadge>
 )

@@ -1,13 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import {
-  Badge,
-  Box,
-  Chip,
-  Group,
-  SegmentedControl,
-  Stack,
-  Text,
-} from '@pikku/mantine/core'
+import { Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
 import { FunctionSquare } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -17,19 +9,18 @@ import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { SectionCard } from '../ui/SectionCard'
-import classes from '../ui/console.module.css'
-import {
-  KIND_ORDER,
-  kindLabel,
-  kindOf,
-  reachLabel,
-  type FunctionKind,
-} from './functionLabels'
+import { kindLabel, kindOf, reachLabel } from './functionLabels'
 import { StatusBadge, type StatusTone } from '../ui/StatusBadge'
 import {
   useFilteredFunctions,
   useFunctionsMeta,
 } from '../../hooks/useFunctionsMeta'
+import {
+  narrowFunctions,
+  testsFor,
+  type Attention,
+  type KindFilter,
+} from './useFunctionFilters'
 import { toEnglishName } from '../../lib/strings'
 
 export interface FunctionExtraColumn {
@@ -64,9 +55,6 @@ const TEST_TONE: Record<FunctionTestData['status'], StatusTone> = {
   unknown: 'neutral',
 }
 
-type KindFilter = 'all' | FunctionKind
-type Attention = 'none' | 'untested'
-
 const funcIdOf = (func: any): string => func.pikkuFuncName || func.pikkuFuncId
 
 export interface FunctionsListPanelProps {
@@ -77,8 +65,10 @@ export interface FunctionsListPanelProps {
   extraColumns?: FunctionExtraColumn[]
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
-  search?: React.ReactNode
-  actions?: React.ReactNode
+  /** Lists only functions of this kind. */
+  kind?: KindFilter
+  /** Lists only functions no scenario exercises. */
+  attention?: Attention
 }
 
 /**
@@ -86,8 +76,9 @@ export interface FunctionsListPanelProps {
  * {@link ConsoleSurface} — selecting a row opens it in the inspector.
  *
  * Fetches its own list, so a host needs nothing but the surface above it. The
- * search box and the Pikku-internals toggle stay with whoever owns the header;
- * their values arrive as props.
+ * search box, the filters and the Pikku-internals toggle stay with whoever owns
+ * the header — {@link useFunctionFilters} builds them — and their values arrive
+ * as props.
  */
 export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
   searchQuery = '',
@@ -95,15 +86,13 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
   extraColumns = [],
   testsByFunction,
   emptyHero,
-  search,
-  actions,
+  kind = 'all',
+  attention = 'none',
 }) => {
   useLocale()
   const { openFunction, activePanel } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
   const { data: rawFunctions } = useFunctionsMeta()
-  const [kindFilter, setKindFilter] = useState<KindFilter>('all')
-  const [attention, setAttention] = useState<Attention>('none')
   const visibleTotal = useFilteredFunctions(
     rawFunctions,
     '',
@@ -127,8 +116,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
   })
 
   const testsOf = useCallback(
-    (func: any): FunctionTestData | undefined =>
-      func.tests ?? testsByFunction?.[funcIdOf(func)],
+    (func: any) => testsFor(func, testsByFunction),
     [testsByFunction]
   )
 
@@ -145,72 +133,11 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
 
   const hasTests = searched.some((func) => !!testsOf(func))
   const hasVersions = searched.some((func) => func.version != null)
-
-  const kindCounts = useMemo(() => {
-    const counts = new Map<FunctionKind, number>()
-    for (const func of searched) {
-      const kind = kindOf(func)
-      counts.set(kind, (counts.get(kind) ?? 0) + 1)
-    }
-    return counts
-  }, [searched])
-
-  const untested = (func: any) => {
-    const tests = testsOf(func)
-    return (
-      !tests || tests.status === 'uncovered' || tests.scenarios.length === 0
-    )
-  }
-
-  const ofKind = searched.filter(
-    (func) => kindFilter === 'all' || kindOf(func) === kindFilter
-  )
-  const untestedCount = hasTests ? ofKind.filter(untested).length : 0
-  const activeAttention: Attention =
-    attention === 'untested' && untestedCount > 0 ? attention : 'none'
-  const functions =
-    activeAttention === 'untested' ? ofKind.filter(untested) : ofKind
-
-  const kindOptions = KIND_ORDER.filter((kind) => kindCounts.has(kind))
-
-  const toolbar = (
-    <Group gap="sm" wrap="wrap">
-      {kindOptions.length > 1 && (
-        <SegmentedControl
-          size="sm"
-          withItemsBorders={false}
-          bg="transparent"
-          bd="1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
-          classNames={{
-            root: classes.segmentedQuiet,
-            label: classes.segmentedLabel,
-          }}
-          value={kindFilter}
-          onChange={(value) => setKindFilter(value as KindFilter)}
-          data={[
-            {
-              value: 'all',
-              label: m.functions_filter_all({ count: searched.length }),
-            },
-            ...kindOptions.map((kind) => ({
-              value: kind,
-              label: asI18n(`${kindLabel(kind)} ${kindCounts.get(kind)}`),
-            })),
-          ]}
-        />
-      )}
-      {untestedCount > 0 && (
-        <Chip
-          size="xs"
-          color="red"
-          checked={activeAttention === 'untested'}
-          onChange={(on) => setAttention(on ? 'untested' : 'none')}
-        >
-          {m.functions_filter_untested({ count: untestedCount })}
-        </Chip>
-      )}
-    </Group>
-  )
+  const { functions } = narrowFunctions(searched, {
+    kind,
+    attention,
+    testsByFunction,
+  })
 
   const columns = [
     {
@@ -362,14 +289,9 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
       title={m.functions_card_title()}
       subtitle={m.functions_count({ count: visibleTotal })}
       blurb={m.functions_card_blurb()}
-      right={actions}
       testId="functions-card"
     >
       <Stack gap="sm" mt="md" style={{ flex: 1, minHeight: 0 }}>
-        <Group gap="sm" wrap="wrap" align="center">
-          <Box style={{ flex: 1, minWidth: 220 }}>{search}</Box>
-          {toolbar}
-        </Group>
         {table}
         <Text size="xs" c="dimmed">
           {m.functions_showing({

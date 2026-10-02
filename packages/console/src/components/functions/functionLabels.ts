@@ -3,7 +3,8 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { wiringTypeDefs } from '../ui/badge-defs'
 
-export type FunctionKind = 'function' | 'assistant' | 'channel' | 'workflow' | 'trigger'
+export type FunctionKind =
+  'function' | 'assistant' | 'channel' | 'workflow' | 'trigger'
 
 const KIND_BY_WRAPPER: Record<string, FunctionKind> = {
   pikkuFunc: 'function',

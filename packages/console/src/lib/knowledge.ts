@@ -68,7 +68,7 @@ export const knowledgeSelectionId = (selection: KnowledgeSelection): string =>
  * Reads an `?id=` back into a selection. The id may drop the `knowledge/`
  * prefix, and may name a milestone's `.plan.json` — the plan is drawn on its
  * milestone note, so that is the note it opens. An id naming no note is null,
- * which leaves the reader on the entry point rather than a blank document.
+ * which leaves the reader browsing the base rather than on a blank document.
  */
 export const resolveKnowledgeId = (
   id: string | null,

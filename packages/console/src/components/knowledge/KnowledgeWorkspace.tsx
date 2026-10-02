@@ -1,19 +1,19 @@
 import React from 'react'
-import { Box, Center, Text } from '@pikku/mantine/core'
 import { BookOpen } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { SectionCard } from '../ui/SectionCard'
 import { KnowledgeFindings } from './KnowledgeFindings'
 import { KnowledgeNoteDocument } from './KnowledgeNoteDocument'
-import { KnowledgeNoteNavigator } from './KnowledgeNoteNavigator'
+import { KnowledgeNoteList } from './KnowledgeNoteList'
+import { KnowledgeOverview } from './KnowledgeOverview'
+import { knowledgeSectionTitle } from './knowledge-section-title'
 import { useKnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
 import type { KnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
-import { findingsForNote } from '../../lib/knowledge'
-import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
-import classes from '../ui/console.module.css'
+import { findingsForNote, toNavSections } from '../../lib/knowledge'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
@@ -24,8 +24,8 @@ const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
  * `pikku knowledge validate` has to say about the base as a whole.
  */
 export interface KnowledgeWorkspaceProps {
-  /** Browse state owned by the host (see `useKnowledgeBrowse`). Supplying it
-   *  means the host mounts the note rail itself, so this drops its own. */
+  /** Browse state owned by the host (see `useKnowledgeBrowse`), so a note rail
+   *  the host mounts itself drives the same selection as this page. */
   browse?: KnowledgeBrowse
 }
 
@@ -37,7 +37,6 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
   // state wins when there is one, and the two share one query cache.
   const ownBrowse = useKnowledgeBrowse()
   const browse = hostBrowse ?? ownBrowse
-  const dismiss = usePageOptionsDismiss()
   const {
     groups,
     findings,
@@ -54,6 +53,8 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
   } = browse
 
   const titleFor = (path: string): string | undefined => byPath.get(path)?.title
+  const openNote = (path: string) => setSelection({ kind: 'note', path })
+  const backToBrowse = () => setSelection(null)
 
   const header = (
     <ListPageHeader
@@ -70,7 +71,10 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
       search={{
         placeholder: m.knowledge_search_placeholder(),
         value: search,
-        onChange: setSearch,
+        onChange: (value) => {
+          setSearch(value)
+          if (selected) setSelection(null)
+        },
       }}
     />
   )
@@ -96,47 +100,75 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
     )
   }
 
+  const renderNote = () => {
+    if (!selectedNote) return null
+    const section = toNavSections(groups).find(
+      (candidate) => candidate.section === selectedNote.section
+    )
+    const sectionTitle = knowledgeSectionTitle(
+      selectedNote.section,
+      section?.indexPath ? byPath.get(section.indexPath) : undefined
+    )
+    const siblings = (
+      groups.find((group) => group.section === selectedNote.section)?.notes ??
+      []
+    ).filter((note) => note.path !== selectedNote.path)
+
+    return (
+      <KnowledgeNoteDocument
+        note={selectedNote}
+        findings={findingsForNote(findings, selectedNote.path)}
+        titleFor={titleFor}
+        onOpenNote={openNote}
+        plan={plans[selectedNote.path]}
+        sectionTitle={sectionTitle}
+        onBack={backToBrowse}
+        related={
+          siblings.length > 0 ? (
+            <SectionCard
+              testId="knowledge-note-related"
+              title={m.knowledge_more_in({ section: sectionTitle })}
+              subtitle={
+                siblings.length === 1
+                  ? m.knowledge_section_count_one()
+                  : m.knowledge_section_count({ count: siblings.length })
+              }
+              blurb={m.knowledge_more_in_blurb()}
+            >
+              <KnowledgeNoteList
+                notes={siblings}
+                plans={plans}
+                findings={findings}
+                onOpen={openNote}
+              />
+            </SectionCard>
+          ) : undefined
+        }
+      />
+    )
+  }
+
   return (
-    <ResizablePanelLayout
-      header={header}
-      hidePanel
-      leftDrawerLabel={m.pane_notes()}
-      leftDrawer={
-        hostBrowse ? null : (
-          <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
-            <KnowledgeNoteNavigator
-              groups={groups}
-              findings={findings}
-              selected={selected}
-              onSelect={(selection) => {
-                setSelection(selection)
-                dismiss()
-              }}
-            />
-          </Box>
-        )
-      }
-    >
+    <ResizablePanelLayout header={header} hidePanel surface="cards">
       {selected?.kind === 'findings' ? (
         <KnowledgeFindings
           findings={findings}
           notePaths={new Set(byPath.keys())}
-          onOpenNote={(path) => setSelection({ kind: 'note', path })}
+          onOpenNote={openNote}
+          onBack={backToBrowse}
         />
       ) : selectedNote ? (
-        <KnowledgeNoteDocument
-          note={selectedNote}
-          findings={findingsForNote(findings, selectedNote.path)}
-          titleFor={titleFor}
-          onOpenNote={(path) => setSelection({ kind: 'note', path })}
-          plan={plans[selectedNote.path]}
-        />
+        renderNote()
       ) : (
-        <Center p="xl">
-          <Text size="sm" c="dimmed">
-            {m.knowledge_no_matches()}
-          </Text>
-        </Center>
+        <KnowledgeOverview
+          groups={groups}
+          findings={findings}
+          plans={plans}
+          stats={stats}
+          searching={search.trim() !== ''}
+          onOpenNote={openNote}
+          onOpenFindings={() => setSelection({ kind: 'findings' })}
+        />
       )}
     </ResizablePanelLayout>
   )

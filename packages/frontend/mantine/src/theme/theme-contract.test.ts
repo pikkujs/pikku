@@ -13,7 +13,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve as resolvePath } from 'node:path'
-import { cssVariablesResolver } from './index.ts'
+import { cssVariablesResolver, theme } from './index.ts'
 
 const schemes = cssVariablesResolver({} as never)
 const dark = schemes.dark as Record<string, string>
@@ -565,4 +565,36 @@ test('every --app-* token referenced anywhere is defined', () => {
     .map(([token, path]) => `${token} (first seen ${path})`)
     .sort()
   assert.deepEqual(undefinedTokens, [], `\n  ${undefinedTokens.join('\n  ')}\n`)
+})
+
+test('type is Geist throughout: sans for copy and headings, Geist Mono for code', () => {
+  assert.match(theme.fontFamily!, /^Geist,/)
+  assert.match(theme.fontFamilyMonospace!, /^"Geist Mono",/)
+  assert.equal(theme.headings!.fontFamily, theme.fontFamily)
+})
+
+test('badges and field labels read as sentence-case sans, not uppercase mono', () => {
+  const badge = (
+    theme.components!.Badge!.styles as { root: Record<string, unknown> }
+  ).root
+  assert.equal(badge.textTransform, 'none')
+  assert.equal(badge.fontFamily, 'var(--mantine-font-family)')
+  for (const name of ['TextInput', 'PasswordInput', 'Select', 'NativeSelect']) {
+    const styles = theme.components![name]!.styles as Record<
+      string,
+      Record<string, unknown>
+    >
+    for (const part of Object.values(styles)) {
+      assert.notEqual(
+        part.textTransform,
+        'uppercase',
+        `${name} uppercases a part`
+      )
+      assert.notEqual(
+        part.fontFamily,
+        'var(--mantine-font-family-monospace)',
+        `${name} sets a part in mono`
+      )
+    }
+  }
 })

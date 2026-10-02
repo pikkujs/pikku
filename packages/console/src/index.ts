@@ -726,6 +726,8 @@ export {
   useFunctionsMeta,
   useFilteredFunctions,
   isPikkuFunction,
+  isScenarioFunction,
+  isBuiltInFunction,
 } from './hooks/useFunctionsMeta'
 export { useAdminUsers } from './hooks/useAdminUsers'
 export { useAgentEntries } from './hooks/useAgentEntries'

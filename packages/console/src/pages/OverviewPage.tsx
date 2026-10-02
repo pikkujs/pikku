@@ -177,6 +177,7 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <PageContainer
+      surface="cards"
       header={
         <ListPageHeader
           title={m.overview_title()}

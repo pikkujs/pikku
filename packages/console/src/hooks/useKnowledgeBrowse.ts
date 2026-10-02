@@ -3,7 +3,6 @@ import { useKnowledge } from './useKnowledge'
 import { applyUrlParams } from './url-state'
 import { useOptionalConsoleRouter } from '../router'
 import {
-  entryPointNote,
   groupNotesBySection,
   issuesToFix,
   knowledgeSelectionId,
@@ -24,10 +23,10 @@ export interface KnowledgeBrowse {
   findings: KnowledgeFinding[]
   search: string
   setSearch: (search: string) => void
-  /** What the reader picked, or the entry-point note when they have picked
-   *  nothing yet. */
+  /** What the reader picked; null while they are browsing the whole base. */
   selected: KnowledgeSelection | null
-  setSelected: (selection: KnowledgeSelection) => void
+  /** Null goes back to browsing. */
+  setSelected: (selection: KnowledgeSelection | null) => void
   selectedNote: KnowledgeNote | undefined
   /** Every note by path, for resolving link titles in the document. */
   byPath: Map<string, KnowledgeNote>
@@ -44,12 +43,12 @@ export interface KnowledgeBrowse {
  * that mounts the knowledge pages outside the router keeps it in memory. The
  * router is fixed for the life of a mount, so the branch never changes hooks.
  */
-const useSelectedId = (): [string | null, (id: string) => void] => {
+const useSelectedId = (): [string | null, (id: string | null) => void] => {
   const router = useOptionalConsoleRouter()
   if (!router) return useState<string | null>(null)
   const [searchParams, setSearchParams] = router.useSearchParams()
   const set = useCallback(
-    (id: string) =>
+    (id: string | null) =>
       setSearchParams((prev) => applyUrlParams(prev, { id }), {
         replace: true,
       }),
@@ -93,21 +92,17 @@ export const useKnowledgeBrowse = (): KnowledgeBrowse => {
     [notes]
   )
 
-  const selection = useMemo(
+  // A search that hides the selected note leaves the selection alone — it is
+  // still what the reader is reading, and narrowing the list is not deselecting.
+  const selected = useMemo(
     () => resolveKnowledgeId(selectedId, byPath.keys()),
     [selectedId, byPath]
   )
   const setSelection = useCallback(
-    (next: KnowledgeSelection) => setSelectedId(knowledgeSelectionId(next)),
+    (next: KnowledgeSelection | null) =>
+      setSelectedId(next ? knowledgeSelectionId(next) : null),
     [setSelectedId]
   )
-
-  // A search that hides the selected note leaves the selection alone — it is
-  // still what the reader is reading, and narrowing the list is not deselecting.
-  const fallback = entryPointNote(matching)
-  const selected =
-    selection ??
-    (fallback ? { kind: 'note' as const, path: fallback.path } : null)
   const selectedNote =
     selected?.kind === 'note' ? byPath.get(selected.path) : undefined
 

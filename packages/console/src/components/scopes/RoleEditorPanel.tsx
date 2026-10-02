@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  Box,
+  Alert,
   Button,
-  Divider,
   Group,
   Stack,
   Text,
@@ -14,6 +13,7 @@ import { Trash2 } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import type { DeclaredScope } from './scope-tree'
 import { ScopeTreeSelector } from './ScopeTreeSelector'
+import { coveredPermissionCount, declaredPermissions } from './role-model'
 import { ConsolePanel } from '../shell/ConsolePanel'
 import {
   useCreateRole,
@@ -97,6 +97,9 @@ export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
     onClose()
   }
 
+  const covered = coveredPermissionCount(selected, declaredScopes)
+  const total = declaredPermissions(declaredScopes).length
+
   const error = (createRole.error ||
     setRoleScopes.error ||
     deleteRole.error) as Error | null
@@ -128,17 +131,25 @@ export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
           ) : (
             <span />
           )}
-          <Button
-            onClick={save}
-            loading={pending && !deleteRole.isPending}
-            data-testid="role-save"
-          >
-            {m.common_save()}
-          </Button>
+          <Group gap="sm">
+            <Button variant="subtle" onClick={onClose} disabled={pending}>
+              {m.common_cancel()}
+            </Button>
+            <Button
+              onClick={save}
+              loading={pending && !deleteRole.isPending}
+              data-testid="role-save"
+            >
+              {isNew ? m.scopes_create_role() : m.roles_editor_save()}
+            </Button>
+          </Group>
         </Group>
       }
     >
       <Stack gap="md" data-testid="role-editor">
+        <Text size="sm" c="dimmed">
+          {isNew ? m.roles_editor_new_body() : m.roles_editor_edit_body()}
+        </Text>
         <TextInput
           label={m.scopes_name()}
           placeholder={m.scopes_name_placeholder()}
@@ -165,18 +176,25 @@ export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
           autosize
           minRows={1}
         />
-        <Divider label={m.scopes_in_this_role()} labelPosition="left" />
-        <Box mah={360} style={{ overflowY: 'auto' }}>
-          <ScopeTreeSelector
-            scopes={declaredScopes}
-            selected={selected}
-            onChange={setSelected}
-          />
-        </Box>
-        {error && (
-          <Text c="red" size="sm">
-            {asI18n(error.message)}
+        <Stack gap={4} mt="xs">
+          <Text fw={600}>{m.roles_editor_allows()}</Text>
+          <Text size="sm" c="dimmed" data-testid="role-editor-count">
+            {covered === 0
+              ? m.roles_row_allows_nothing()
+              : covered === 1
+                ? m.roles_row_allows_one({ total })
+                : m.roles_row_allows({ count: covered, total })}
           </Text>
+        </Stack>
+        <ScopeTreeSelector
+          scopes={declaredScopes}
+          selected={selected}
+          onChange={setSelected}
+        />
+        {error && (
+          <Alert color="red" variant="light">
+            <Text size="sm">{asI18n(error.message)}</Text>
+          </Alert>
         )}
       </Stack>
     </ConsolePanel>

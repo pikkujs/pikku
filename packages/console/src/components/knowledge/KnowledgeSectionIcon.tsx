@@ -3,6 +3,7 @@ import {
   BookOpen,
   Boxes,
   FileText,
+  Flag,
   HelpCircle,
   Layers,
   Lock,
@@ -23,6 +24,7 @@ import {
  */
 const SECTION_ICONS: Record<string, LucideIcon> = {
   slices: Layers,
+  milestones: Flag,
   entities: Boxes,
   decisions: Scale,
   security: Lock,
@@ -38,9 +40,10 @@ export const KnowledgeSectionIcon: React.FC<{
   /** The full section path — `decisions/security`, not `security`. */
   section: string
   size?: number
-}> = ({ section, size = 12 }) => {
+  color?: string
+}> = ({ section, size = 12, color = 'var(--app-text-dim)' }) => {
   // The root of the bundle is the entry point, which is a book, not a folder.
-  if (!section) return <BookOpen size={size} color="var(--app-text-dim)" />
+  if (!section) return <BookOpen size={size} color={color} />
   const segments = section.split('/')
   const Icon =
     segments
@@ -48,5 +51,5 @@ export const KnowledgeSectionIcon: React.FC<{
       .reverse()
       .map((segment) => SECTION_ICONS[segment])
       .find(Boolean) ?? FileText
-  return <Icon size={size} color="var(--app-text-dim)" />
+  return <Icon size={size} color={color} />
 }

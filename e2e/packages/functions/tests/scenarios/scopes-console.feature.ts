@@ -81,6 +81,12 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
       { testId: 'role-row' },
       { actor: actors.admin }
     )
+    await scenario.when(
+      "unfolds the admin addon's card",
+      'clicksTestId',
+      { testId: 'scope-source-toggle-addon:@pikku/addon-admin' },
+      { actor: actors.admin }
+    )
     await scenario.then(
       'sees the scopes-manage scope declared',
       'seesTestId',
@@ -91,6 +97,18 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
       'sees the reports-read scope declared',
       'seesTestId',
       scopeRow('reports:read'),
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      "sees the app's own permissions on their own card",
+      'seesTestId',
+      { testId: 'scope-source-app' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the admin addon credited for its permissions',
+      'seesTestId',
+      { testId: 'scope-source-addon:@pikku/addon-admin' },
       { actor: actors.admin }
     )
 
@@ -318,7 +336,7 @@ export const scopesHeaderSearchScenario = pikkuScenario<
   title:
     'Roles are filtered from the page-header search, which clears on navigation',
   description:
-    'Search and the create action live in the shared page header, and the query never survives leaving the page',
+    'Search lives in the shared page header and the create action on the roles card, and the query never survives leaving the page',
   tags: ['scenario', 'scopes-console', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -334,7 +352,7 @@ export const scopesHeaderSearchScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.then(
-      'finds the create action in the page header',
+      'finds the create action on the roles card',
       'seesTestId',
       { testId: 'scopes-create-role' },
       { actor: actors.admin }

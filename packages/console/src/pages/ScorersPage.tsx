@@ -105,7 +105,9 @@ export const ScorersPage: React.FC = () => {
               testId="scorers-summary"
               eyebrow={
                 idle ? (
-                  <StatusBadge tone="warn">{m.scorers_hero_badge()}</StatusBadge>
+                  <StatusBadge tone="warn">
+                    {m.scorers_hero_badge()}
+                  </StatusBadge>
                 ) : undefined
               }
               title={

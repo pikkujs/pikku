@@ -1,9 +1,15 @@
 import React from 'react'
-import { Anchor, Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
+import { Badge, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { CheckCircle2 } from 'lucide-react'
 import { SEVERITY_ORDER, type KnowledgeFinding } from '../../lib/knowledge'
+import { CardRow } from '../ui/CardRow'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { StatusTile } from '../ui/StatusTile'
+import type { StatusTone } from '../ui/StatusBadge'
+import { KnowledgeBackButton } from './KnowledgeBackButton'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 
 type KnowledgeFindingsProps = {
@@ -11,6 +17,13 @@ type KnowledgeFindingsProps = {
   /** Paths that are notes, so only those findings offer to open one. */
   notePaths: Set<string>
   onOpenNote: (path: string) => void
+  onBack: () => void
+}
+
+const SEVERITY_TONE: Record<KnowledgeFinding['severity'], StatusTone> = {
+  error: 'bad',
+  warn: 'warn',
+  info: 'info',
 }
 
 /**
@@ -22,15 +35,19 @@ export const KnowledgeFindings: React.FC<KnowledgeFindingsProps> = ({
   findings,
   notePaths,
   onOpenNote,
+  onBack,
 }) => {
   if (findings.length === 0) {
     return (
-      <Box style={{ maxWidth: 860, padding: '28px 32px 64px' }}>
-        <Group gap={8}>
-          <CheckCircle2 size={16} color="var(--mantine-color-teal-5)" />
-          <Text size="sm">{m.knowledge_findings_none()}</Text>
-        </Group>
-      </Box>
+      <CardsPage>
+        <KnowledgeBackButton onBack={onBack} />
+        <SectionCard
+          hero
+          title={m.knowledge_findings_title()}
+          blurb={m.knowledge_findings_none()}
+          right={<CheckCircle2 size={24} color="var(--mantine-color-teal-5)" />}
+        />
+      </CardsPage>
     )
   }
 
@@ -41,52 +58,59 @@ export const KnowledgeFindings: React.FC<KnowledgeFindingsProps> = ({
   )
 
   return (
-    <Box
-      data-testid="knowledge-findings"
-      style={{ maxWidth: 860, padding: '28px 32px 64px' }}
-    >
-      <Stack gap="lg">
-        <Stack gap={8}>
-          <Text fw={700} size="xl" style={{ lineHeight: 1.25 }}>
-            {m.knowledge_findings_title()}
-          </Text>
-          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-            {m.knowledge_findings_description()}
-          </Text>
+    <CardsPage>
+      <KnowledgeBackButton onBack={onBack} />
+      <SectionCard
+        testId="knowledge-findings"
+        hero
+        title={
+          findings.length === 1
+            ? m.knowledge_findings_hero_one()
+            : m.knowledge_findings_hero({ count: findings.length })
+        }
+        blurb={m.knowledge_findings_description()}
+      >
+        <Stack gap="sm" mt="lg">
+          {sorted.map((finding) => {
+            const isNote = notePaths.has(finding.path)
+            return (
+              <CardRow
+                key={`${finding.id}:${finding.path}`}
+                testId={`knowledge-finding-${finding.id}`}
+                onClick={isNote ? () => onOpenNote(finding.path) : undefined}
+                leading={
+                  <StatusTile tone={SEVERITY_TONE[finding.severity]}>
+                    <KnowledgeSeverityIcon
+                      severity={finding.severity}
+                      size={18}
+                    />
+                  </StatusTile>
+                }
+                title={asI18n(finding.message)}
+                badges={
+                  <Badge variant="light" radius="sm" tt="none" color="gray">
+                    {asI18n(finding.id)}
+                  </Badge>
+                }
+                meta={
+                  <Stack gap={2}>
+                    <Text size="sm" c="dimmed">
+                      {asI18n(finding.fixHint)}
+                    </Text>
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      c={isNote ? 'blue' : 'dimmed'}
+                    >
+                      {asI18n(finding.path)}
+                    </Text>
+                  </Stack>
+                }
+              />
+            )
+          })}
         </Stack>
-
-        <Stack gap="md">
-          {sorted.map((finding) => (
-            <Stack gap={4} key={finding.id}>
-              <Group gap={8} wrap="nowrap" align="center">
-                <KnowledgeSeverityIcon severity={finding.severity} />
-                {notePaths.has(finding.path) ? (
-                  <Anchor
-                    component="button"
-                    type="button"
-                    size="xs"
-                    ff="monospace"
-                    onClick={() => onOpenNote(finding.path)}
-                  >
-                    {asI18n(finding.path)}
-                  </Anchor>
-                ) : (
-                  <Text size="xs" c="dimmed" ff="monospace">
-                    {asI18n(finding.path)}
-                  </Text>
-                )}
-                <Badge size="xs" variant="light" radius="sm" tt="none">
-                  {asI18n(finding.id)}
-                </Badge>
-              </Group>
-              <Text size="sm">{asI18n(finding.message)}</Text>
-              <Text size="xs" c="dimmed">
-                {asI18n(finding.fixHint)}
-              </Text>
-            </Stack>
-          ))}
-        </Stack>
-      </Stack>
-    </Box>
+      </SectionCard>
+    </CardsPage>
   )
 }

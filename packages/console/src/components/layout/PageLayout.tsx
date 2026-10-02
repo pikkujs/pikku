@@ -100,6 +100,9 @@ interface PageContainerProps extends ComponentProps<typeof Container> {
   /** An extra band between the header and the body, inside the same card. */
   extraBand?: ReactNode
   headerInCard?: boolean
+  /** The body is a stack of its own cards, so the page draws no card of its
+   *  own around them — the same opt-out `ResizablePanelLayout` takes. */
+  surface?: 'cards'
 }
 
 /**
@@ -123,6 +126,7 @@ export function PageContainer({
   loading,
   extraBand,
   headerInCard = false,
+  surface,
   ...props
 }: PageContainerProps) {
   const gate = usePageGate()
@@ -142,6 +146,8 @@ export function PageContainer({
   // the body runs full-width so both share one gutter (the ShellHeader pattern).
   const hasHeader = header != null
   const cards = hasHeader && !hosted
+  const bareCards =
+    surface === 'cards' && hasHeader && !cards && !phone && !headerInCard
   const bodyContainer = (
     <Container
       className={noPadding ? classes.flushBody : undefined}
@@ -152,7 +158,7 @@ export function PageContainer({
       // below — so the inline gutter was 36px whatever the chrome said, and a
       // 450px side panel spent 72px of itself on empty margin. Say it on the
       // same prop the theme does, from the same token the block axis uses.
-      px={noPadding ? 0 : 'var(--console-body-gutter)'}
+      px={noPadding || bareCards ? 0 : 'var(--console-body-gutter)'}
       {...gutter}
       {...props}
       style={{
@@ -164,7 +170,7 @@ export function PageContainer({
         minHeight: 0,
         // Same gutter the other layouts read, so a page shell and a list screen
         // are inset alike in whichever chrome they land in.
-        padding: noPadding ? 0 : 'var(--console-body-gutter)',
+        padding: noPadding || bareCards ? 0 : 'var(--console-body-gutter)',
         ...style,
       }}
     >
@@ -185,12 +191,19 @@ export function PageContainer({
         <div className={styles.canvasHeader}>{header}</div>
         <div className={styles.hostedRow}>
           <PagePanelSlot side="start" />
-          <div className={`${styles.card} ${styles.hostedCard}`}>
-            {extraBand ? (
-              <div className={styles.extraBand}>{extraBand}</div>
-            ) : null}
-            <div className={styles.body}>{bodyContainer}</div>
-          </div>
+          {bareCards ? (
+            <div className={styles.body}>
+              {extraBand}
+              {bodyContainer}
+            </div>
+          ) : (
+            <div className={`${styles.card} ${styles.hostedCard}`}>
+              {extraBand ? (
+                <div className={styles.extraBand}>{extraBand}</div>
+              ) : null}
+              <div className={styles.body}>{bodyContainer}</div>
+            </div>
+          )}
           <PagePanelSlot />
         </div>
       </div>

@@ -9,7 +9,7 @@ import {
   Tooltip,
   SegmentedControl,
   TextInput,
-  useMantineColorScheme
+  useMantineColorScheme,
 } from '@pikku/mantine/core'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -649,9 +649,7 @@ function DatabaseCanvas({
   }, [schema, hideInternal, classificationFilter, search, setEdges, setNodes])
 
   if (loading || (layouting && nodes.length === 0)) {
-    return (
-      <ConsoleLoading h="60vh" />
-    )
+    return <ConsoleLoading h="60vh" />
   }
 
   if (!schema) {
@@ -782,82 +780,54 @@ function DatabasePageInner() {
     <ListPageHeader
       title={m.database_title()}
       description={m.database_description()}
-      view={
-        <Group gap="xs" wrap="nowrap">
-          <TextInput
-            data-testid="page-search"
-            size="xs"
-            placeholder={m.database_search_placeholder()}
-            leftSection={<Search size={12} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            style={{ width: 200 }}
-          />
-          <SegmentedControl
-            size="xs"
-            value={classificationFilter}
-            onChange={(v) => setClassificationFilter(v as ClassificationFilter)}
-            data={[
-              { label: 'All', value: 'all' },
-              {
-                label: (
-                  <Group gap={4} wrap="nowrap">
-                    <Globe size={14} color="var(--mantine-color-teal-5)" />
-                    Public
-                  </Group>
-                ),
-                value: 'public',
-              },
-              {
-                label: (
-                  <Group gap={4} wrap="nowrap">
-                    <Shield size={14} color="var(--mantine-color-orange-5)" />
-                    Private
-                  </Group>
-                ),
-                value: 'private',
-              },
-              {
-                label: (
-                  <Group gap={4} wrap="nowrap">
-                    <UserCheck
-                      size={14}
-                      color="var(--mantine-color-violet-5)"
-                    />
-                    PII
-                  </Group>
-                ),
-                value: 'pii',
-              },
-              {
-                label: (
-                  <Group gap={4} wrap="nowrap">
-                    <LockKeyhole size={14} color="var(--mantine-color-red-5)" />
-                    Secret
-                  </Group>
-                ),
-                value: 'secret',
-              },
-            ]}
-          />
-          <PikkuToggle
-            checked={!hideInternal}
-            onChange={(v) => setHideInternal(!v)}
-            tooltip={m.database_show_internal_tables()}
-          />
-          <Tooltip label={m.common_refresh()}>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              loading={isFetching}
-              onClick={() => void refetch()}
-            >
-              <RefreshCw size={14} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-      }
+      search={{
+        placeholder: m.database_search_placeholder(),
+        value: search,
+        onChange: setSearch,
+        width: 220,
+      }}
+      headerFilters={[
+        {
+          key: 'classification',
+          label: m.database_filter_classification(),
+          value: classificationFilter,
+          priority: 2,
+          onChange: (value) =>
+            setClassificationFilter(value as ClassificationFilter),
+          testId: 'database-filter-classification',
+          options: [
+            { value: 'all', label: m.database_classification_all() },
+            { value: 'public', label: m.database_classification_public() },
+            { value: 'private', label: m.database_classification_private() },
+            { value: 'pii', label: m.database_classification_pii() },
+            { value: 'secret', label: m.database_classification_secret() },
+          ],
+        },
+        {
+          key: 'internal',
+          label: m.database_filter_internal(),
+          value: hideInternal ? 'hidden' : 'shown',
+          priority: 1,
+          onChange: (value) => setHideInternal(value === 'hidden'),
+          testId: 'database-filter-internal',
+          options: [
+            { value: 'hidden', label: m.database_internal_hidden() },
+            { value: 'shown', label: m.database_internal_shown() },
+          ],
+        },
+      ]}
+      actions={[
+        {
+          key: 'refresh',
+          label: m.common_refresh(),
+          icon: <RefreshCw size={14} />,
+          onClick: () => void refetch(),
+          loading: isFetching,
+          variant: 'subtle',
+          iconOnly: true,
+          tooltip: m.common_refresh(),
+        },
+      ]}
     />
   )
 

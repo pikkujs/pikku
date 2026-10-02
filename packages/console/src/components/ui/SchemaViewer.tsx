@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Box, Text, Table, Badge } from '@pikku/mantine/core'
+import { Badge, Box, Group, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -32,9 +32,7 @@ const getColor = (prop: any): string => {
     return schemaTypeColor(main?.enum ? 'enum' : (main?.type ?? 'any'))
   }
   if (Array.isArray(prop.type)) {
-    return schemaTypeColor(
-      prop.type.find((t: string) => t !== 'null') ?? 'any'
-    )
+    return schemaTypeColor(prop.type.find((t: string) => t !== 'null') ?? 'any')
   }
   return schemaTypeColor(prop.type)
 }
@@ -68,44 +66,40 @@ const PropertyRow: React.FC<{
 
   return (
     <>
-      <Table.Tr
+      <Box
+        className={classes.schemaField}
+        data-expandable={isExpandable || undefined}
         onClick={() => isExpandable && setExpanded(!expanded)}
-        style={{ cursor: isExpandable ? 'pointer' : 'default' }}
+        style={{ paddingLeft: depth * 16 + 12 }}
       >
-        <Table.Td style={{ paddingLeft: depth * 20 + 8 }}>
-          <Box style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {isExpandable ? (
-              expanded ? (
-                <ChevronDown size={12} color="var(--app-text-dim)" />
-              ) : (
-                <ChevronRight size={12} color="var(--app-text-dim)" />
-              )
+        <Group gap={8} wrap="nowrap">
+          {isExpandable ? (
+            expanded ? (
+              <ChevronDown size={12} color="var(--app-text-dim)" />
             ) : (
-              <Box w={12} />
-            )}
-            <Text size="sm" ff="monospace" fw={500} c="var(--app-text)">
-              {asI18n(name)}
-              {required && (
-                <Text component="span" c="yellow" fw={700}>
-                  {asI18n('*')}
-                </Text>
-              )}
-            </Text>
-          </Box>
-        </Table.Td>
-        <Table.Td>
+              <ChevronRight size={12} color="var(--app-text-dim)" />
+            )
+          ) : (
+            <Box w={12} style={{ flexShrink: 0 }} />
+          )}
+          <Text size="sm" ff="monospace" fw={500} c="var(--app-text)" truncate>
+            {asI18n(name)}
+          </Text>
           <Badge size="sm" variant="light" color={getColor(prop)} tt="none">
             {asI18n(getTypeLabel(prop))}
           </Badge>
-        </Table.Td>
-        <Table.Td>
-          {notes && (
-            <Text size="sm" c="var(--app-text-dim)">
-              {asI18n(notes)}
+          {required && (
+            <Text size="xs" c="dimmed">
+              {m.schema_viewer_required()}
             </Text>
           )}
-        </Table.Td>
-      </Table.Tr>
+        </Group>
+        {notes && (
+          <Text size="sm" c="var(--app-text-dim)" mt={4} pl={20}>
+            {asI18n(notes)}
+          </Text>
+        )}
+      </Box>
       {isExpandable && expanded && childSchema?.properties && (
         <PropertyRows
           properties={childSchema.properties}
@@ -183,52 +177,12 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
   }
 
   return (
-    <Box
-      style={{
-        border: '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
-        borderRadius: 'var(--mantine-radius-md)',
-        overflow: 'hidden',
-      }}
-    >
-      <Table
-        verticalSpacing={6}
-        horizontalSpacing="sm"
-        layout="fixed"
-        styles={{
-          table: {
-            tableLayout: 'fixed',
-          },
-          th: {
-            color: 'var(--mantine-color-dimmed)',
-            fontSize: 'var(--mantine-font-size-xs)',
-            fontWeight: 600,
-            borderBottom: '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
-          },
-          td: {
-            borderBottom: '1px solid var(--app-border)',
-          },
-        }}
-      >
-        <colgroup>
-          <col />
-          <col style={{ width: 120 }} />
-          <col style={{ width: '28%' }} />
-        </colgroup>
-        <Table.Thead className={classes.tableHead}>
-          <Table.Tr>
-            <Table.Th>Field</Table.Th>
-            <Table.Th>Type</Table.Th>
-            <Table.Th>Notes</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          <PropertyRows
-            properties={properties}
-            required={resolvedSchema.required || []}
-            depth={0}
-          />
-        </Table.Tbody>
-      </Table>
+    <Box className={classes.schemaFields}>
+      <PropertyRows
+        properties={properties}
+        required={resolvedSchema.required || []}
+        depth={0}
+      />
     </Box>
   )
 }

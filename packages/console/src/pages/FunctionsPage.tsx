@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useSearchParams } from '../router'
-import { Box, Button, TextInput } from '@pikku/mantine/core'
-import { Eye, EyeOff, Search } from 'lucide-react'
+import { Box } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { FunctionsListPanel } from '../components/functions/FunctionsListPanel'
+import { useFunctionFilters } from '../components/functions/useFunctionFilters'
 import type {
   FunctionExtraColumn,
   FunctionTestData,
@@ -32,12 +32,11 @@ export const FunctionsPage: React.FC<{
   // initial value: from then on the box is yours, and rewriting the URL as you
   // type would put every keystroke in the back button.
   const [searchParams] = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState(
-    () => searchParams.get('search') ?? ''
-  )
-  const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
-
   const { data: rawFunctions, isLoading } = useFunctionsMeta()
+  const filters = useFunctionFilters(rawFunctions, {
+    initialSearch: searchParams.get('search') ?? '',
+    testsByFunction,
+  })
 
   return (
     <ConsoleSurface>
@@ -48,6 +47,8 @@ export const FunctionsPage: React.FC<{
             title={m.functions_title()}
             description={m.functions_tagline()}
             docsHref="https://pikku.dev/docs/core-features/functions"
+            search={filters.search}
+            headerFilters={filters.headerFilters}
             filters={headerRight}
           />
         }
@@ -63,35 +64,13 @@ export const FunctionsPage: React.FC<{
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
         >
           <FunctionsListPanel
-            searchQuery={searchQuery}
-            showPikkuFunctions={showPikkuFunctions}
+            searchQuery={filters.searchQuery}
+            showPikkuFunctions={filters.showPikkuFunctions}
+            kind={filters.kind}
+            attention={filters.attention}
             extraColumns={extraColumns}
             testsByFunction={testsByFunction}
             emptyHero={emptyHero}
-            search={
-              <TextInput
-                data-testid="page-search"
-                data-help="search"
-                placeholder={m.functions_search_by()}
-                leftSection={<Search size={16} />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            }
-            actions={
-              <Button
-                data-help="internals"
-                variant="default"
-                leftSection={
-                  showPikkuFunctions ? <EyeOff size={14} /> : <Eye size={14} />
-                }
-                onClick={() => setShowPikkuFunctions(!showPikkuFunctions)}
-              >
-                {showPikkuFunctions
-                  ? m.functions_hide_builtin()
-                  : m.functions_show_builtin()}
-              </Button>
-            }
           />
         </Box>
       </ResizablePanelLayout>

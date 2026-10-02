@@ -1,6 +1,4 @@
 import React, { useState } from 'react'
-import { Group, TextInput } from '@pikku/mantine/core'
-import { Search } from 'lucide-react'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -23,19 +21,12 @@ export const SecretsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
             title={m.secrets_title()}
             description={m.secrets_description()}
             docsHref="https://pikku.dev/docs/core-features/secrets"
-            filters={
-              <Group gap="sm" wrap="nowrap">
-                <TextInput
-                  data-testid="page-search"
-                  placeholder={m.secrets_search_placeholder()}
-                  leftSection={<Search size={14} />}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="xs"
-                  style={{ width: 240 }}
-                />
-              </Group>
-            }
+            search={{
+              placeholder: m.secrets_search_placeholder(),
+              value: searchQuery,
+              onChange: setSearchQuery,
+              width: 240,
+            }}
           />
         }
         emptyPanelMessage={m.secrets_select_item()}

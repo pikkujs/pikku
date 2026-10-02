@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
-import { toEnglishName } from '../lib/strings'
+import { filterFunctions } from '../lib/builtin-functions'
 
-export function isPikkuFunction(func: any): boolean {
-  return Array.isArray(func.tags) && func.tags.includes('pikku')
-}
+export {
+  isBuiltInFunction,
+  isPikkuFunction,
+  isScenarioFunction,
+} from '../lib/builtin-functions'
 
 /**
  * Every function in the project, unfiltered. Shared by the functions page and
@@ -22,26 +24,14 @@ export const useFunctionsMeta = () => {
 
 /**
  * Narrows the function list by free-text search, and by whether Pikku's own
- * internal functions are wanted.
+ * internal functions and the scenario suite are wanted.
  */
 export const useFilteredFunctions = (
   rawFunctions: unknown,
   searchQuery: string,
   showPikkuFunctions: boolean
 ): any[] =>
-  useMemo(() => {
-    const all = (rawFunctions ?? []) as any[]
-    const q = searchQuery.toLowerCase()
-    return all.filter((func: any) => {
-      if (!showPikkuFunctions && isPikkuFunction(func)) return false
-      if (!q) return true
-      const funcId = func.pikkuFuncName || func.pikkuFuncId
-      return (
-        funcId?.toLowerCase().includes(q) ||
-        func.displayName?.toLowerCase().includes(q) ||
-        toEnglishName(funcId).toLowerCase().includes(q) ||
-        func.summary?.toLowerCase().includes(q) ||
-        func.description?.toLowerCase().includes(q)
-      )
-    })
-  }, [rawFunctions, searchQuery, showPikkuFunctions])
+  useMemo(
+    () => filterFunctions(rawFunctions, searchQuery, showPikkuFunctions),
+    [rawFunctions, searchQuery, showPikkuFunctions]
+  )
