@@ -129,6 +129,9 @@ export enum ErrorCode {
 
   RPC_INVOCATION_TYPE_CAST = 'PKU940',
 
+  // Knowledge base errors
+  KNOWLEDGE_NOTE_MISSING = 'PKU960',
+
   // Secret boundary errors
   SECRET_SERVICE_ALIASED = 'PKU950',
   SECRET_NOT_DECLARED = 'PKU951',
