@@ -7,18 +7,18 @@
  * - `serverless`: the built-ins the provider supplies (`nodejs_compat`, Lambda).
  * - `server`: a full Node container. Anything goes.
  *
- * A package declares its tier in `package.json`:
- *
- *     "pikku": { "runtime": "edge", "exports": { "./dev": "server" } }
- *
- * `server` is the default. Nothing is edge or serverless until it says so.
+ * A package's tier comes from the cloudsupport data (see `cloudsupport.ts`),
+ * with per-subpath overrides. A package the data does not list is taken to be
+ * `serverless`: the verifier then fails the build if its bundle reaches
+ * something serverless cannot run, and the fix is to add the package to
+ * cloudsupport.
  */
 
 export const RUNTIME_TIERS = ['edge', 'serverless', 'server'] as const
 
 export type RuntimeTier = (typeof RUNTIME_TIERS)[number]
 
-export const DEFAULT_RUNTIME_TIER: RuntimeTier = 'server'
+export const DEFAULT_RUNTIME_TIER: RuntimeTier = 'serverless'
 
 export interface RuntimeDeclaration {
   /** The tier of the package as a whole. */
@@ -29,19 +29,6 @@ export interface RuntimeDeclaration {
    * Node-only subpaths `server` instead of dropping the whole package.
    */
   exports?: Record<string, RuntimeTier>
-}
-
-export class RuntimeDeclarationError extends Error {
-  constructor(
-    readonly source: string,
-    readonly problems: string[]
-  ) {
-    super(
-      `Invalid "pikku" runtime declaration in ${source}:\n` +
-        problems.map((p) => `  - ${p}`).join('\n')
-    )
-    this.name = 'RuntimeDeclarationError'
-  }
 }
 
 export const isRuntimeTier = (value: unknown): value is RuntimeTier =>
@@ -65,94 +52,6 @@ export const weakestTier = (tiers: Iterable<RuntimeTier>): RuntimeTier => {
   return weakest
 }
 
-export interface ParsedRuntimeDeclaration {
-  /** Undefined when the package.json has no `pikku.runtime`. */
-  declaration?: RuntimeDeclaration
-  problems: string[]
-}
-
-/**
- * Read `pikku.runtime` / `pikku.exports` out of a parsed package.json without
- * throwing. Other keys under `pikku` are not ours and are ignored.
- */
-export function parseRuntimeDeclaration(
-  packageJson: unknown
-): ParsedRuntimeDeclaration {
-  const pikku = (packageJson as { pikku?: unknown } | null | undefined)?.pikku
-  if (pikku === undefined) return { problems: [] }
-  if (pikku === null || typeof pikku !== 'object' || Array.isArray(pikku)) {
-    return { problems: ['"pikku" must be an object'] }
-  }
-
-  const { runtime, exports } = pikku as {
-    runtime?: unknown
-    exports?: unknown
-  }
-  const problems: string[] = []
-  const options = RUNTIME_TIERS.join(' | ')
-
-  if (runtime === undefined) {
-    if (exports !== undefined) {
-      problems.push(
-        `"pikku.exports" needs "pikku.runtime" beside it to say what the rest of the package is (${options})`
-      )
-    }
-    return { problems }
-  }
-  if (!isRuntimeTier(runtime)) {
-    problems.push(
-      `"pikku.runtime" is ${JSON.stringify(runtime)}; expected ${options}`
-    )
-  }
-
-  let overrides: Record<string, RuntimeTier> | undefined
-  if (exports !== undefined) {
-    if (
-      exports === null ||
-      typeof exports !== 'object' ||
-      Array.isArray(exports)
-    ) {
-      problems.push('"pikku.exports" must be an object of subpath to tier')
-    } else {
-      overrides = {}
-      for (const [subpath, tier] of Object.entries(exports)) {
-        if (subpath !== '.' && !subpath.startsWith('./')) {
-          problems.push(
-            `"pikku.exports" key ${JSON.stringify(subpath)} must be "." or start with "./"`
-          )
-        } else if (!isRuntimeTier(tier)) {
-          problems.push(
-            `"pikku.exports[${JSON.stringify(subpath)}]" is ${JSON.stringify(tier)}; expected ${options}`
-          )
-        } else {
-          overrides[subpath] = tier
-        }
-      }
-    }
-  }
-
-  if (problems.length > 0) return { problems }
-  return {
-    declaration: {
-      runtime: runtime as RuntimeTier,
-      ...(overrides && Object.keys(overrides).length > 0
-        ? { exports: overrides }
-        : {}),
-    },
-    problems,
-  }
-}
-
-/** As {@link parseRuntimeDeclaration}, but throws {@link RuntimeDeclarationError}. */
-export function readRuntimeDeclaration(
-  packageJson: unknown,
-  source: string
-): RuntimeDeclaration | undefined {
-  const { declaration, problems } = parseRuntimeDeclaration(packageJson)
-  if (problems.length > 0) throw new RuntimeDeclarationError(source, problems)
-  return declaration
-}
-
 /** Whether an `exports`-style pattern (`./a/*`) matches a subpath. */
 function matchSubpath(pattern: string, subpath: string): number {
   if (pattern === subpath) return Infinity
@@ -172,7 +71,7 @@ function matchSubpath(pattern: string, subpath: string): number {
 
 export interface PackageTier {
   tier: RuntimeTier
-  /** False when the package says nothing and the default applied. */
+  /** False when cloudsupport does not list the package and the default applied. */
   declared: boolean
   /** Which part of the declaration decided it. */
   via: 'subpath' | 'package' | 'default'

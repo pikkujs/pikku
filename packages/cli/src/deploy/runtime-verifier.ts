@@ -17,15 +17,14 @@
  */
 
 import { build, type Plugin } from 'esbuild'
-import { readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import {
   analyzeUnit,
   createPackageLookup,
   isNodeBuiltin,
-  readRuntimeDeclaration,
   tierRank,
   type BuiltinImport,
+  type CloudSupportData,
   type MetafileLike,
   type RuntimeProfile,
   type RuntimeTier,
@@ -50,6 +49,8 @@ export interface VerifyUnitOptions {
   providerStubs?: string[]
   /** `InMemory*` classes the app accepts on an edge unit. */
   allowInMemory?: string[]
+  /** Replaces the vendored cloudsupport data. For tests. */
+  support?: CloudSupportData
 }
 
 export type VerifyResult =
@@ -60,32 +61,17 @@ const toKey = (projectDir: string, file: string) =>
   relative(projectDir, file).split(sep).join('/')
 
 /**
- * The tier a unit must fit: its own `runtime`, else the project's declaration,
- * else the provider's default. Never above what the provider offers.
+ * The tier a unit must fit: its own `runtime`, else the provider's default.
+ * Never above what the provider offers.
  */
 export function resolveTargetTier(
   unit: Pick<DeploymentUnit, 'runtime'>,
-  projectDir: string,
   providerDefault: RuntimeTier
 ): RuntimeTier {
-  let declared: RuntimeTier | undefined = unit.runtime
-  if (!declared) {
-    try {
-      const pkg = JSON.parse(
-        readFileSync(join(projectDir, 'package.json'), 'utf-8')
-      )
-      declared = readRuntimeDeclaration(
-        pkg,
-        join(projectDir, 'package.json')
-      )?.runtime
-    } catch (error) {
-      if ((error as Error).name === 'RuntimeDeclarationError') throw error
-    }
-  }
-  if (!declared) return providerDefault
-  return tierRank(declared) > tierRank(providerDefault)
+  if (!unit.runtime) return providerDefault
+  return tierRank(unit.runtime) > tierRank(providerDefault)
     ? providerDefault
-    : declared
+    : unit.runtime
 }
 
 export async function verifyUnitRuntime(
@@ -177,7 +163,7 @@ export async function verifyUnitRuntime(
     profile,
     metafile: result.metafile as unknown as MetafileLike,
     builtinImports,
-    lookup: createPackageLookup(projectDir),
+    lookup: createPackageLookup(projectDir, undefined, options.support),
     entry: toKey(projectDir, options.entryPath),
     bundleText: result.outputFiles?.map((f) => f.text).join('\n'),
     allowInMemory: options.allowInMemory,
@@ -202,6 +188,8 @@ export async function verifyUnitsRuntime(options: {
   entryFiles: Map<string, string>
   projectDir: string
   deadPatternsFor?: (unit: DeploymentUnit) => Promise<RegExp[]>
+  /** Replaces the vendored cloudsupport data. For tests. */
+  support?: CloudSupportData
 }): Promise<VerifyUnitsResult> {
   const { provider } = options
   const out: VerifyUnitsResult = { failures: [], warnings: [] }
@@ -212,16 +200,13 @@ export async function verifyUnitsRuntime(options: {
     if (unit.target === 'server') continue
     const entryPath = options.entryFiles.get(unit.name)
     if (!entryPath) continue
-    const unitTier = resolveTargetTier(
-      unit,
-      options.projectDir,
-      providerDefault
-    )
+    const unitTier = resolveTargetTier(unit, providerDefault)
     if (unitTier === 'server') continue
     const result = await verifyUnitRuntime({
       unit,
       entryPath,
       projectDir: options.projectDir,
+      support: options.support,
       profile: provider.getRuntimeProfile(unitTier),
       unitTier,
       deadPatterns: await options.deadPatternsFor?.(unit),

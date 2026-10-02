@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 import { join } from 'node:path'
 import { build } from 'esbuild'
+import { CLOUDSUPPORT, cloudSupportFor } from '@pikku/deploy'
 
 const root = join(import.meta.dirname, '..')
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
   exports: Record<string, string | { import?: string; default?: string }>
-  pikku: { runtime: string; exports: Record<string, string> }
 }
 
 const builtins = new Set(builtinModules)
@@ -18,16 +18,27 @@ const isBuiltin = (specifier: string) =>
 const target = (value: string | { import?: string; default?: string }) =>
   typeof value === 'string' ? value : (value.import ?? value.default)
 
+const support = cloudSupportFor(
+  CLOUDSUPPORT,
+  '@pikku/core',
+  undefined
+)?.declaration
+const serverSubpaths = new Set(
+  Object.entries(support?.exports ?? {})
+    .filter(([, tier]) => tier === 'server')
+    .map(([subpath]) => subpath)
+)
+
 describe('@pikku/core edge-tier entry points', () => {
-  test('declares edge as the default tier', () => {
-    assert.equal(pkg.pikku.runtime, 'edge')
+  test('cloudsupport lists core as edge', () => {
+    assert.equal(support?.runtime, 'edge')
   })
 
   // Every subpath not declared `server` must bundle for a neutral platform
   // without reaching a single Node built-in. There is no allowance list: an
   // import that cannot run on an edge isolate belongs in a `server` subpath.
   for (const [subpath, value] of Object.entries(pkg.exports)) {
-    if (pkg.pikku.exports?.[subpath]) continue
+    if (serverSubpaths.has(subpath)) continue
     const dist = target(value)
     if (!dist?.startsWith('./dist/')) continue
     const source = join(

@@ -1,83 +1,12 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  RuntimeDeclarationError,
-  parseRuntimeDeclaration,
-  readRuntimeDeclaration,
   resolvePackageTier,
   resolveUnitTier,
   subpathForFile,
   tierFitsWithin,
   weakestTier,
 } from './runtime-tier.js'
-
-describe('parseRuntimeDeclaration', () => {
-  it('has no declaration when package.json has no pikku field', () => {
-    assert.deepEqual(parseRuntimeDeclaration({ name: 'x' }), { problems: [] })
-  })
-
-  it('reads a package-wide tier', () => {
-    const { declaration, problems } = parseRuntimeDeclaration({
-      pikku: { runtime: 'edge' },
-    })
-    assert.deepEqual(problems, [])
-    assert.deepEqual(declaration, { runtime: 'edge' })
-  })
-
-  it('reads per-subpath overrides', () => {
-    const { declaration } = parseRuntimeDeclaration({
-      pikku: { runtime: 'edge', exports: { './dev': 'server' } },
-    })
-    assert.deepEqual(declaration, {
-      runtime: 'edge',
-      exports: { './dev': 'server' },
-    })
-  })
-
-  it('ignores pikku keys that are not ours', () => {
-    const { declaration, problems } = parseRuntimeDeclaration({
-      pikku: { runtime: 'serverless', somethingElse: 1 },
-    })
-    assert.deepEqual(problems, [])
-    assert.equal(declaration?.runtime, 'serverless')
-  })
-
-  it('rejects an unknown tier, naming the options', () => {
-    const { declaration, problems } = parseRuntimeDeclaration({
-      pikku: { runtime: 'lambda' },
-    })
-    assert.equal(declaration, undefined)
-    assert.match(problems[0]!, /"lambda".*edge \| serverless \| server/)
-  })
-
-  it('rejects an override tier and a malformed subpath key', () => {
-    const { problems } = parseRuntimeDeclaration({
-      pikku: { runtime: 'edge', exports: { dev: 'server', './x': 'cloud' } },
-    })
-    assert.equal(problems.length, 2)
-  })
-
-  it('rejects exports without a runtime', () => {
-    const { problems } = parseRuntimeDeclaration({
-      pikku: { exports: { './dev': 'server' } },
-    })
-    assert.match(problems[0]!, /needs "pikku.runtime"/)
-  })
-
-  it('rejects a non-object pikku field', () => {
-    assert.equal(parseRuntimeDeclaration({ pikku: 'edge' }).problems.length, 1)
-  })
-
-  it('readRuntimeDeclaration throws with the source named', () => {
-    assert.throws(
-      () =>
-        readRuntimeDeclaration({ pikku: { runtime: 'x' } }, 'a/package.json'),
-      (e: unknown) =>
-        e instanceof RuntimeDeclarationError &&
-        /a\/package\.json/.test(e.message)
-    )
-  })
-})
 
 describe('resolvePackageTier', () => {
   const declaration = {
@@ -89,9 +18,9 @@ describe('resolvePackageTier', () => {
     },
   }
 
-  it('defaults to server, undeclared', () => {
+  it('defaults to serverless, undeclared', () => {
     assert.deepEqual(resolvePackageTier(undefined), {
-      tier: 'server',
+      tier: 'serverless',
       declared: false,
       via: 'default',
     })

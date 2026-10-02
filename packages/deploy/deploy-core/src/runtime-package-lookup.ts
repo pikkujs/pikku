@@ -4,7 +4,6 @@ import { dirname, join, relative, sep } from 'node:path'
 import { cloudSupportFor, type CloudSupportData } from './cloudsupport.js'
 import { CLOUDSUPPORT } from './cloudsupport.data.js'
 import {
-  parseRuntimeDeclaration,
   resolvePackageTier,
   subpathForFile,
   type RuntimeDeclaration,
@@ -18,7 +17,6 @@ interface PackageRecord {
   declaration?: RuntimeDeclaration
   /** Where the declaration came from, for messages. */
   declaredIn?: string
-  problems: string[]
 }
 
 /**
@@ -29,12 +27,8 @@ interface PackageRecord {
  * workspace package is symlinked, so esbuild reports its real path with no
  * `node_modules` in it.
  *
- * The tier comes from the cloudsupport data (by name and installed version)
- * first, then from a `pikku` block in the package's own `package.json`, then it
- * is undeclared.
- *
- * An invalid `package.json` declaration throws: a typo'd tier silently becoming
- * the `server` default is exactly the failure this exists to prevent.
+ * The tier comes from the cloudsupport data, by name and installed version. A
+ * package the data does not cover is undeclared and gets the default tier.
  */
 export function createPackageLookup(
   /** Absolute directory input keys are relative to (esbuild's absWorkingDir). */
@@ -67,18 +61,12 @@ export function createPackageLookup(
           pkg.name,
           typeof pkg.version === 'string' ? pkg.version : undefined
         )
-        const own = vetted ? undefined : parseRuntimeDeclaration(pkg)
         record = {
           dir,
           name: pkg.name,
           exports: pkg.exports,
-          declaration: vetted?.declaration ?? own?.declaration,
-          declaredIn: vetted
-            ? vetted.source
-            : own?.declaration
-              ? join(dir, 'package.json')
-              : undefined,
-          problems: own?.problems ?? [],
+          declaration: vetted?.declaration,
+          declaredIn: vetted?.source,
         }
         byDir.set(dir, record)
         trail.pop()
@@ -99,12 +87,6 @@ export function createPackageLookup(
         : join(baseDir, inputPath)
     const record = find(dirname(abs))
     if (!record) return undefined
-    if (record.problems.length > 0) {
-      throw new Error(
-        `Invalid "pikku" runtime declaration in ${join(record.dir, 'package.json')}:\n` +
-          record.problems.map((p) => `  - ${p}`).join('\n')
-      )
-    }
     const rel = relative(record.dir, abs).split(sep).join('/')
     const subpath = subpathForFile(record.exports, rel)
     return {

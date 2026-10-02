@@ -97,7 +97,7 @@ describe('analyzeUnit', () => {
       builtinImports: [],
       lookup: () => ({
         name: 'zod',
-        tier: { tier: 'server', declared: false, via: 'default' },
+        tier: { tier: 'serverless', declared: false, via: 'default' },
       }),
     })
     assert.deepEqual(a.violations, [])

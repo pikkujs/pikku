@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { RuntimeProfile } from '@pikku/deploy'
+import type { CloudSupportData, RuntimeProfile } from '@pikku/deploy'
 
 import {
   resolveTargetTier,
@@ -24,11 +24,30 @@ const profile = (over: Partial<RuntimeProfile> = {}): RuntimeProfile => ({
 describe('runtime tier verifier (real esbuild bundles)', () => {
   let dir: string
 
+  // Tiers come from cloudsupport, not package.json: a fixture's `pikku.runtime`
+  // is turned into an entry here.
+  const support: CloudSupportData = { schemaVersion: 1, packages: {} }
+  const TIERS = {
+    edge: { edge: ['cloudflare-workers'], serverless: true },
+    serverless: { edge: false, serverless: true },
+    server: { edge: false, serverless: false },
+  } as const
+
   const pkg = async (
     name: string,
-    json: Record<string, unknown>,
+    { pikku, ...json }: Record<string, unknown>,
     source: string
   ) => {
+    if (pikku) {
+      const runtime = (pikku as { runtime: keyof typeof TIERS }).runtime
+      support.packages[name] = [
+        {
+          versions: '*',
+          cloud: { ...TIERS[runtime] } as never,
+          reason: 'test fixture',
+        },
+      ]
+    }
     const root = join(dir, 'node_modules', name)
     await mkdir(root, { recursive: true })
     await writeFile(
@@ -97,6 +116,7 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       unit: { name },
       entryPath: await entry(`${name}.ts`, source),
       projectDir: dir,
+      support,
       profile:
         unitTier === 'edge'
           ? profile({ tier: 'edge', allowedBuiltins: [], compatFlags: [] })
@@ -235,6 +255,7 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
         'import { read } from "plain-lib"\nconsole.log(read())'
       ),
       projectDir: dir,
+      support,
       profile: profile(),
       unitTier: 'serverless',
       providerStubs: ['^plain-lib$'],
@@ -251,6 +272,7 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       unit: { name: 'broken' },
       entryPath: await entry('broken.ts', 'import "does-not-exist"'),
       projectDir: dir,
+      support,
       profile: profile(),
       unitTier: 'serverless',
     })
@@ -289,6 +311,7 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       ],
       entryFiles,
       projectDir: dir,
+      support,
     })
     assert.equal(out.failures.length, 1)
     assert.equal(out.failures[0]!.unitName, 'bad')
@@ -309,37 +332,17 @@ describe('runtime tier verifier (real esbuild bundles)', () => {
       units: [{ name: 'x', target: 'serverless' } as never],
       entryFiles: new Map(),
       projectDir: dir,
+      support,
     })
     assert.deepEqual(out, { failures: [], warnings: [] })
   })
 
-  it('resolves the target tier: unit, then project declaration, then provider default, never above it', async () => {
-    assert.equal(resolveTargetTier({}, dir, 'serverless'), 'serverless')
+  it('resolves the target tier: unit, then provider default, never above it', () => {
+    assert.equal(resolveTargetTier({}, 'serverless'), 'serverless')
+    assert.equal(resolveTargetTier({ runtime: 'edge' }, 'serverless'), 'edge')
     assert.equal(
-      resolveTargetTier({ runtime: 'edge' }, dir, 'serverless'),
-      'edge'
-    )
-    assert.equal(
-      resolveTargetTier({ runtime: 'server' }, dir, 'serverless'),
+      resolveTargetTier({ runtime: 'server' }, 'serverless'),
       'serverless'
     )
-    const edgeApp = await mkdtemp(join(tmpdir(), 'pikku-tier-app-'))
-    try {
-      await writeFile(
-        join(edgeApp, 'package.json'),
-        JSON.stringify({ name: 'a', pikku: { runtime: 'edge' } })
-      )
-      assert.equal(resolveTargetTier({}, edgeApp, 'serverless'), 'edge')
-      await writeFile(
-        join(edgeApp, 'package.json'),
-        JSON.stringify({ name: 'a', pikku: { runtime: 'nope' } })
-      )
-      assert.throws(
-        () => resolveTargetTier({}, edgeApp, 'serverless'),
-        /Invalid "pikku"/
-      )
-    } finally {
-      await rm(edgeApp, { recursive: true, force: true })
-    }
   })
 })

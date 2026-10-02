@@ -554,6 +554,7 @@
       },
       "devDependencies": {
         "@ag-ui/core": "0.0.57",
+        "@pikku/deploy": "^0.12.13",
         "@types/node": "^24.13.3",
         "esbuild": "~0.28.2",
         "tsx": "^4.23.12",

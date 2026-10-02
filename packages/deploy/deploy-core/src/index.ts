@@ -54,10 +54,7 @@ export { SERVER_READY_MARKER, serverReadyLine } from './server-ready.js'
 export {
   DEFAULT_RUNTIME_TIER,
   RUNTIME_TIERS,
-  RuntimeDeclarationError,
   isRuntimeTier,
-  parseRuntimeDeclaration,
-  readRuntimeDeclaration,
   resolvePackageTier,
   resolveUnitTier,
   subpathForFile,
@@ -67,7 +64,6 @@ export {
 } from './runtime-tier.js'
 export type {
   PackageTier,
-  ParsedRuntimeDeclaration,
   RuntimeDeclaration,
   RuntimeTier,
   UnitTier,
