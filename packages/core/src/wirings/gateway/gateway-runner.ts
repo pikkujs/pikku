@@ -297,7 +297,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
         senderId: '',
         platform: adapter.name,
         send: async (msg: GatewayOutboundMessage) => {
-          wire.channel?.send(msg)
+          await wire.channel?.send(msg)
         },
       } satisfies PikkuGateway
     },
@@ -315,7 +315,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
         senderId: parsed.senderId,
         platform: adapter.name,
         send: async (msg: GatewayOutboundMessage) => {
-          wire.channel?.send(msg)
+          await wire.channel?.send(msg)
         },
       }
       wire.gateway = gateway
@@ -338,7 +338,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
         : await invoke()
 
       if (result && (result.text || result.richContent || result.attachments)) {
-        wire.channel?.send(result)
+        await wire.channel?.send(result)
       }
     },
   })

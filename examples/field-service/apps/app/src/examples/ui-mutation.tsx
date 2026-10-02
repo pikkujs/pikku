@@ -31,8 +31,8 @@ export const RaiseJobForm = () => {
   const raise = usePikkuMutation('raiseJob', {
     //~ onSuccess is where the cache catches up. Doing it here rather than in the submit
     //~ handler means it also runs for a retry, and never runs for a failed write.
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['listJobs'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['listJobs'] })
       setTitle('')
     },
   })

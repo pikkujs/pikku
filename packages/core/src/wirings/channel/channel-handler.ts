@@ -94,7 +94,7 @@ export const processMessageHandlers = (
         `Channel ${channelConfig.name} with id ${channelHandler.getChannel().channelId} requires a session for ${routeMessage}. No session is attached to this websocket connection. Ensure auth middleware establishes a session during websocket upgrade, and configure sessionStore when the runtime needs persisted sessions.`
       )
       // knowledge: questions/unauthorized-channel-replies-escape-the-declared-out-type.md
-      channelHandler.getChannel().send(`Unauthorized for ${routeMessage}`)
+      await channelHandler.getChannel().send(`Unauthorized for ${routeMessage}`)
       return
     }
 

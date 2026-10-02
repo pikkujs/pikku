@@ -81,8 +81,8 @@ export function useDeleteAgentThread() {
     mutationFn: async (threadId: string) => {
       return await rpc.invoke('console:deleteAgentThread', { threadId })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-threads'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['agent-threads'] })
     },
   })
 }

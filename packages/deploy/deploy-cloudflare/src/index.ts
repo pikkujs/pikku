@@ -67,3 +67,11 @@ export type {
   WorkerSecretEntry,
   CronTrigger,
 } from './types.js'
+
+// Runtime profile
+export {
+  DEFAULT_CLOUDFLARE_TIER,
+  DEFAULT_COMPAT_DATE,
+  cloudflareBuiltinsFor,
+  getCloudflareRuntimeProfile,
+} from './runtime-profile.js'

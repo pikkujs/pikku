@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import { mock } from 'bun:test'
 import { execFileSync } from 'node:child_process'
@@ -15,14 +15,35 @@ type Ledger = {
 }[]
 
 // The deploy guard reads ~/.fabric/auth.json and the stage ledger, so HOME is
-// disposable and the ledger is whatever the test sets.
-process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
+// disposable and the ledger is whatever the test sets. Test files that share a
+// process (config.test.ts swaps process.env and deletes these variables) undo
+// a one-time setup, so every test re-arms it.
+const home = await mkdtemp(join(tmpdir(), 'pikku-migguard-home-'))
 const API_URL = 'https://fabric.test'
-process.env.FABRIC_API_URL = API_URL
-process.env.FABRIC_PROJECT_ID = '11111111-2222-3333-4444-555555555555'
+const PROJECT_ID = '11111111-2222-3333-4444-555555555555'
+const ENV_KEYS = ['HOME', 'FABRIC_API_URL', 'FABRIC_PROJECT_ID'] as const
+const arranged = {
+  HOME: home,
+  FABRIC_API_URL: API_URL,
+  FABRIC_PROJECT_ID: PROJECT_ID,
+}
+// Restored after every test (and after this file loads): left set, they make
+// the next test file in the same process look logged in and linked.
+const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
+const arrangeEnv = () => {
+  for (const key of ENV_KEYS) saved[key] = process.env[key]
+  Object.assign(process.env, arranged)
+}
+const restoreEnv = () => {
+  for (const key of ENV_KEYS) {
+    if (saved[key] === undefined) delete process.env[key]
+    else process.env[key] = saved[key]
+  }
+}
+arrangeEnv()
 let ledger: Ledger | Error = []
 const invoked: string[] = []
-mock.module('../lib/http.js', () => ({
+await mock.module('../lib/http.js', () => ({
   getFabricRPC: () => ({
     invoke: async (name: string) => {
       invoked.push(name)
@@ -36,6 +57,12 @@ mock.module('../lib/http.js', () => ({
 }))
 const { writeAuthFile } = await import('../lib/config.js')
 await writeAuthFile({ tokens: { [API_URL]: 'token' } })
+restoreEnv()
+beforeEach(async () => {
+  arrangeEnv()
+  await writeAuthFile({ tokens: { [API_URL]: 'token' } })
+})
+afterEach(restoreEnv)
 const { runValidate, hashMigration } = await import('./validate.function.js')
 const { guardMigrationHistory, applyDeploy } =
   await import('./deploy.function.js')

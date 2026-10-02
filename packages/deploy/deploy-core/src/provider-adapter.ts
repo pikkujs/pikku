@@ -9,6 +9,8 @@
  */
 
 import type { DeploymentManifest, DeploymentUnit } from './manifest.js'
+import type { RuntimeProfile } from './runtime-profile.js'
+import type { RuntimeTier } from './runtime-tier.js'
 
 export interface EntryGenerationContext {
   /** The unit being generated */
@@ -197,6 +199,18 @@ export interface ProviderAdapter {
    * Returns file content, or null if not applicable.
    */
   generateInfraManifest(manifest: DeploymentManifest): string | null
+
+  /**
+   * What the provider's runtime offers a unit at `tier`: compat date and flags,
+   * the Node built-ins it supplies (keyed by that date), the ones the build
+   * stubs, and the bundle externals. One source for everything that used to be
+   * spread over the uploader, the config generator and the bundler options.
+   *
+   * With no `tier`, the provider's default (what its units run at today). The
+   * deploy pipeline verifies each unit against this profile before any alias or
+   * stub is applied. Omit it and units are not verified.
+   */
+  getRuntimeProfile?(tier?: RuntimeTier): RuntimeProfile
 
   /**
    * External modules for esbuild bundling.

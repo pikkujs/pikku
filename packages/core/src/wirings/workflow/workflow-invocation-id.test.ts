@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 
 import { uuidv5, deriveInvocationId } from './workflow-invocation-id.js'
 
@@ -47,5 +48,47 @@ describe('deriveInvocationId', () => {
       deriveInvocationId('run-1', 'updateUser'),
       deriveInvocationId('run-2', 'updateUser')
     )
+  })
+})
+
+// The implementation this module shipped with, kept as the byte-for-byte
+// reference: derived IDs are dedupe keys, so they must never change.
+const oldUuidv5 = (name: string, namespace: string): string => {
+  const hash = createHash('sha1')
+    .update(Buffer.from(namespace.replace(/-/g, ''), 'hex'))
+    .update(name, 'utf8')
+    .digest()
+  const bytes = hash.subarray(0, 16)
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80
+  const hex = bytes.toString('hex')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
+}
+
+describe('uuidv5 parity with the node:crypto implementation', () => {
+  const NS = '70696b6b-7500-5770-9f6c-6f77000a0001'
+  const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+
+  test('matches for every length around the SHA-1 block boundaries', () => {
+    for (let len = 0; len <= 200; len++) {
+      const name = 'a'.repeat(len)
+      assert.equal(uuidv5(name), oldUuidv5(name, NS), `length ${len}`)
+      assert.equal(uuidv5(name, DNS), oldUuidv5(name, DNS), `dns ${len}`)
+    }
+  })
+
+  test('matches for random and non-ASCII names', () => {
+    let seed = 12345
+    const rand = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff)
+    for (let i = 0; i < 2000; i++) {
+      const len = rand() % 300
+      let name = ''
+      for (let j = 0; j < len; j++)
+        name += String.fromCodePoint(rand() % 0xd000)
+      assert.equal(uuidv5(name), oldUuidv5(name, NS))
+    }
+    for (const name of ['', 'héllo', '日本語', '🔑 emoji', 'run-1:step\n']) {
+      assert.equal(uuidv5(name), oldUuidv5(name, NS))
+    }
   })
 })

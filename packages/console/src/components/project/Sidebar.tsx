@@ -74,6 +74,7 @@ import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { useSidebarMode } from '../../context/SidebarModeProvider'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
+import { handleAsync } from '../../lib/async'
 
 export interface NavItem {
   /** A string rather than a node: the dock reads a nav label into a tooltip, a
@@ -752,7 +753,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             disabled={!collapsed}
           >
             <UnstyledButton
-              onClick={() => refresh()}
+              onClick={handleAsync(refresh)}
               disabled={metaLoading}
               px={collapsed ? 0 : 10}
               py={8}

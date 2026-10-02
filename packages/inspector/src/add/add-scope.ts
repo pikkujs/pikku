@@ -134,12 +134,73 @@ const unwrapAs = (node: ts.Expression): ts.Expression =>
     ? unwrapAs(node.expression)
     : node
 
+/**
+ * Records the ids of a `declareScopes([...])` call. They are merged into the
+ * definitions later (`applyDeclaredScopes`), after addon scope trees have
+ * loaded, so an addon's richer declaration is never shadowed by a bare id.
+ */
+const addDeclareScopes = (
+  logger: InspectorLogger,
+  node: ts.CallExpression,
+  state: Parameters<AddWiring>[3]
+): void => {
+  const arg = node.arguments[0] && unwrapAs(node.arguments[0])
+  if (!arg || !ts.isArrayLiteralExpression(arg)) {
+    return
+  }
+  const sourceFile = node.getSourceFile().fileName
+  for (const element of arg.elements) {
+    if (!ts.isStringLiteralLike(element)) {
+      logger.critical(
+        ErrorCode.NON_LITERAL_WIRE_NAME,
+        'declareScopes takes string literal scope ids.'
+      )
+      continue
+    }
+    const id = element.text
+    if (!id.split(SEPARATOR).every((s) => isValidSegment(s, id, logger))) {
+      continue
+    }
+    state.scopes.declared ??= new Map()
+    if (!state.scopes.declared.has(id)) {
+      state.scopes.declared.set(id, sourceFile)
+    }
+  }
+  state.scopes.files.add(sourceFile)
+}
+
+/**
+ * Folds `declareScopes` ids into `state.scopes.definitions`. An id the
+ * definitions already hold (an addon's tree, a `defineScope`) is left alone;
+ * a missing one is added as a bare node under its root, creating the root when
+ * nothing declared it.
+ */
+export const applyDeclaredScopes = (state: Parameters<AddWiring>[3]): void => {
+  for (const [id, sourceFile] of state.scopes.declared ?? []) {
+    const [rootName, ...rest] = id.split(SEPARATOR)
+    let root = state.scopes.definitions.find((d) => d.name === rootName)
+    if (!root) {
+      root = { name: rootName!, sourceFile }
+      state.scopes.definitions.push(root)
+    }
+    let level: { scopes?: Record<string, ScopeNodeMeta> } = root
+    for (const segment of rest) {
+      level.scopes ??= {}
+      level = level.scopes[segment] ??= {}
+    }
+  }
+}
+
 export const addScope: AddWiring = (logger, node, checker, state, _options) => {
   if (!ts.isCallExpression(node)) {
     return
   }
 
   const expression = node.expression
+  if (ts.isIdentifier(expression) && expression.text === 'declareScopes') {
+    addDeclareScopes(logger, node, state)
+    return
+  }
   if (!ts.isIdentifier(expression) || expression.text !== 'defineScope') {
     return
   }

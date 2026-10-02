@@ -23,6 +23,7 @@ import type {
 import { PAGE_SIZE, installedToPackageMeta } from './packageMeta'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 import { POPULAR_NAMES } from './addonJobs'
+import { handleAsync } from '../../lib/async'
 
 // The registry caps a page at 500 rows.
 const MAX_PAGE = 500
@@ -226,7 +227,7 @@ export const AddonsList: React.FC<{
       popular={popular}
       hasMore={!isInstalledView && !!hasNextPage}
       loadingMore={isFetchingNextPage}
-      onLoadMore={fetchNextPage}
+      onLoadMore={handleAsync(() => fetchNextPage())}
       installedNames={installedNames}
       editable={editable}
       onOpenInstalled={(addon) => onSelect(addon.name, 'installed')}

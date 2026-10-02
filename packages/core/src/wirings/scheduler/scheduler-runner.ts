@@ -83,7 +83,7 @@ export async function runScheduledTask({
 
   const userSession = new PikkuSessionService(singletonServices.sessionStore)
   if (session) {
-    userSession.set(session)
+    await userSession.set(session)
   }
 
   if (!task) {

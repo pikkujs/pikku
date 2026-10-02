@@ -53,11 +53,22 @@ export type KEKResolver = (
   keyVersion?: number
 ) => Promise<ResolvedKEK>
 
-const encodePart = (value: string): string =>
-  Buffer.from(value, 'utf8').toString('base64url')
+/** base64url of the UTF-8 bytes, unpadded: `Buffer`-free, so it runs on edge runtimes. */
+const encodePart = (value: string): string => {
+  let binary = ''
+  for (const byte of new TextEncoder().encode(value)) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
 
-const decodePart = (value: string): string =>
-  Buffer.from(value, 'base64url').toString('utf8')
+const decodePart = (value: string): string => {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+  const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new TextDecoder().decode(bytes)
+}
 
 const serializeEnvelope = (envelope: ColumnEnvelope): WrappedValue =>
   [

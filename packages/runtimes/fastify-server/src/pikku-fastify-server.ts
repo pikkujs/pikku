@@ -92,10 +92,16 @@ export class PikkuFastifyServer {
    * Enables the server to exit gracefully when a SIGINT signal is received.
    */
   public async enableExitOnSigInt() {
-    process.on('SIGINT', async () => {
+    const shutdown = async () => {
       await stopSingletonServices()
       await this.stop()
       process.exit(0)
+    }
+    process.on('SIGINT', () => {
+      shutdown().catch((error: unknown) => {
+        this.logger.error(`Error while stopping server: ${error}`)
+        process.exit(1)
+      })
     })
   }
 }

@@ -263,7 +263,12 @@ export class PikkuMCPFetchServer {
         else this.logger.info(data as any)
         return
       }
-      server.sendLoggingMessage({ level, data })
+      // Logging must never throw, so fall back to the plain logger on failure
+      Promise.resolve(server.sendLoggingMessage({ level, data })).catch(
+        (error: unknown) => {
+          this.logger.error(`Failed to send MCP logging message: ${error}`)
+        }
+      )
     }
 
     const withMeta = (
@@ -307,10 +312,15 @@ export class PikkuMCPFetchServer {
 
   private createMCPService(server: Server): PikkuMCP {
     const mcpEndpointRegistry = this.mcpEndpointRegistry
+    const logger = this.logger
 
     return {
-      sendResourceUpdated: async function (uri: string) {
-        await server.sendResourceUpdated({ uri })
+      // `PikkuMCP.sendResourceUpdated` is declared as returning void, so the
+      // notification is fire-and-forget and failures are logged.
+      sendResourceUpdated: (uri: string) => {
+        server.sendResourceUpdated({ uri }).catch((error: unknown) => {
+          logger.error(`Failed to send resource update for ${uri}: ${error}`)
+        })
       },
       enableTools: async function (tools: Record<any, boolean>) {
         const changed = mcpEndpointRegistry.enableTools(tools)
@@ -473,17 +483,22 @@ export class PikkuMCPFetchServer {
       } catch (error: unknown) {
         if (error instanceof MCPError) {
           const { code, message, data } = error.error
-          server.sendLoggingMessage({
-            level: 'error',
-            data: `Error reading resource ${uri}: code ${code}: ${message}`,
-          })
+          // The original error is what matters; a failed log must not mask it
+          await Promise.resolve(
+            server.sendLoggingMessage({
+              level: 'error',
+              data: `Error reading resource ${uri}: code ${code}: ${message}`,
+            })
+          ).catch(() => undefined)
           throw new ProtocolError(code, message, data)
         }
 
-        server.sendLoggingMessage({
-          level: 'error',
-          data: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
-        })
+        await Promise.resolve(
+          server.sendLoggingMessage({
+            level: 'error',
+            data: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
+          })
+        ).catch(() => undefined)
         throw error
       }
     })

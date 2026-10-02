@@ -20,6 +20,7 @@ import {
 import { useTagOptions } from '../../../hooks/useTags'
 import { useAddonFunctions } from '../../../hooks/useAddonFunctions'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { handleAsync } from '../../../lib/async'
 
 interface AgentEditorProps {
   wireId: string
@@ -291,7 +292,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           {asI18n('Cancel')}
         </Button>
         <Button
-          onClick={handleSave}
+          onClick={handleAsync(handleSave)}
           loading={updateAgent.isPending}
           leftSection={<Save size={14} />}
           size="xs"

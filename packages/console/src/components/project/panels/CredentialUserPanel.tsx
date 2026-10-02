@@ -42,8 +42,8 @@ export const CredentialUserPanel: React.FC<{
         userId,
       })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ['credential-list-users'],
       })
     },

@@ -19,7 +19,7 @@ import type { EmailService, Logger, WebhookService } from '@pikku/core/services'
 
 // ── Compile time: the sinks ──────────────────────────────────────────────────
 
-const sinkAssertions = (
+const sinkAssertions = async (
   secret: SecretValue<string>,
   logger: Logger,
   email: EmailService,
@@ -44,13 +44,13 @@ const sinkAssertions = (
   db.insert({ id: '1', token: secret })
 
   // Email
-  email.send({
+  await email.send({
     to: 'ada@example.com',
     subject: 'hello',
     // @ts-expect-error a secret cannot be the body
     text: secret,
   })
-  email.send({
+  await email.send({
     to: 'ada@example.com',
     template: {
       name: 'welcome',
@@ -61,14 +61,14 @@ const sinkAssertions = (
 
   // Queue payloads and outgoing webhooks
   // @ts-expect-error a secret cannot be enqueued
-  queue.add('jobs', { token: secret })
+  await queue.add('jobs', { token: secret })
   // @ts-expect-error nor sent to a third party
-  webhooks.send({ url: 'https://example.com', data: { token: secret } })
+  await webhooks.send({ url: 'https://example.com', data: { token: secret } })
 
   // Revealing is deliberate, and then everything is permitted.
   logger.info('token', { token: secret.reveal() })
   db.insert({ id: '1', token: secret.reveal() })
-  queue.add('jobs', { token: secret.reveal() })
+  await queue.add('jobs', { token: secret.reveal() })
 
   // Ordinary logging must keep working untouched.
   logger.info('a plain message')

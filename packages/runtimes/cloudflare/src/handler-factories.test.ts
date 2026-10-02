@@ -19,7 +19,7 @@ class WorkerEntrypointStub {
 // `mock.module`, node through a module hook.
 if (typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined') {
   const { mock } = await import('bun:test')
-  mock.module('cloudflare:workers', () => ({
+  await mock.module('cloudflare:workers', () => ({
     WorkerEntrypoint: WorkerEntrypointStub,
   }))
 } else {

@@ -29,7 +29,7 @@ export const authAPIKey = pikkuMiddlewareFactory<{
       if (apiKey && jwtService) {
         const userSession = await jwtService.decode(apiKey)
         if (userSession) {
-          setSession?.(userSession)
+          await setSession?.(userSession)
         }
       }
 

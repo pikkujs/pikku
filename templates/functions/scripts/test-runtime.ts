@@ -349,51 +349,55 @@ async function startCloudflareProxy(port: number) {
     }
   }
 
-  const server = createServer(async (request, response) => {
-    try {
-      const requestPath = request.url
-        ? new URL(request.url, `http://127.0.0.1:${port}`).pathname
-        : '/'
-      const requestMethod = (request.method || 'GET').toUpperCase()
-      const binding = routeBindings.find(
-        (routeBinding) =>
-          routeBinding.method === requestMethod &&
-          routeBinding.regex.test(requestPath)
-      )
+  const server = createServer((request, response) => {
+    ;(async () => {
+      try {
+        const requestPath = request.url
+          ? new URL(request.url, `http://127.0.0.1:${port}`).pathname
+          : '/'
+        const requestMethod = (request.method || 'GET').toUpperCase()
+        const binding = routeBindings.find(
+          (routeBinding) =>
+            routeBinding.method === requestMethod &&
+            routeBinding.regex.test(requestPath)
+        )
 
-      if (!binding) {
-        response.statusCode = 404
-        response.end(`No route for ${requestMethod} ${requestPath}`)
-        return
+        if (!binding) {
+          response.statusCode = 404
+          response.end(`No route for ${requestMethod} ${requestPath}`)
+          return
+        }
+
+        const body = await readRequestBody(request)
+        const upstreamUrl = new URL(
+          request.url || '/',
+          `http://127.0.0.1:${binding.port}`
+        )
+        const upstreamResponse = await fetch(upstreamUrl, {
+          method: requestMethod,
+          headers: filterHeaders(request.headers),
+          body:
+            requestMethod === 'GET' || requestMethod === 'HEAD'
+              ? undefined
+              : body,
+        })
+
+        response.statusCode = upstreamResponse.status
+        const responseHeaders = filterUpstreamResponseHeaders(
+          upstreamResponse.headers
+        )
+        responseHeaders.forEach((value, key) => {
+          response.setHeader(key, value)
+        })
+        const upstreamBody = Buffer.from(await upstreamResponse.arrayBuffer())
+        response.end(upstreamBody)
+      } catch (error) {
+        response.statusCode = 502
+        response.end(error instanceof Error ? error.message : String(error))
       }
-
-      const body = await readRequestBody(request)
-      const upstreamUrl = new URL(
-        request.url || '/',
-        `http://127.0.0.1:${binding.port}`
-      )
-      const upstreamResponse = await fetch(upstreamUrl, {
-        method: requestMethod,
-        headers: filterHeaders(request.headers),
-        body:
-          requestMethod === 'GET' || requestMethod === 'HEAD'
-            ? undefined
-            : body,
-      })
-
-      response.statusCode = upstreamResponse.status
-      const responseHeaders = filterUpstreamResponseHeaders(
-        upstreamResponse.headers
-      )
-      responseHeaders.forEach((value, key) => {
-        response.setHeader(key, value)
-      })
-      const upstreamBody = Buffer.from(await upstreamResponse.arrayBuffer())
-      response.end(upstreamBody)
-    } catch (error) {
-      response.statusCode = 502
-      response.end(error instanceof Error ? error.message : String(error))
-    }
+    })().catch((error) => {
+      console.error(error)
+    })
   })
 
   server.listen(port, '127.0.0.1')
@@ -526,7 +530,7 @@ async function waitForServer(baseUrl: string) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     try {
       const socket = await fetch(baseUrl, { method: 'HEAD' })
-      socket.body?.cancel()
+      await socket.body?.cancel()
       return
     } catch {}
 

@@ -28,7 +28,7 @@ let git: { repo: boolean; branch: string; sha: string } = {
   sha: 'abc1234def5678',
 }
 
-mock.module('../lib/changes.js', () => ({
+await mock.module('../lib/changes.js', () => ({
   ...changesLib,
   changesContext: async (_apiUrl?: string, projectIdOverride?: string) => ({
     rpc: {
@@ -59,7 +59,7 @@ const realGit = { ...gitLib }
 /** Whether the faked answers above are still in force. */
 let gitOverride = true
 
-mock.module('../../utils/git.js', () => ({
+await mock.module('../../utils/git.js', () => ({
   ...realGit,
   isGitRepo: async (cwd?: string) =>
     gitOverride ? git.repo : realGit.isGitRepo(cwd),

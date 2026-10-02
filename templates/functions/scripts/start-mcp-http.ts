@@ -28,14 +28,24 @@ async function main() {
   const port = parseInt(process.env.MCP_PORT || '4020', 10)
   const { close } = await server.connectHTTP({ port })
 
-  process.on('SIGINT', async () => {
-    await close()
-    process.exit(0)
+  process.on('SIGINT', () => {
+    ;(async () => {
+      await close()
+      process.exit(0)
+    })().catch((error) => {
+      console.error(error)
+      process.exit(1)
+    })
   })
 
-  process.on('SIGTERM', async () => {
-    await close()
-    process.exit(0)
+  process.on('SIGTERM', () => {
+    ;(async () => {
+      await close()
+      process.exit(0)
+    })().catch((error) => {
+      console.error(error)
+      process.exit(1)
+    })
   })
 }
 

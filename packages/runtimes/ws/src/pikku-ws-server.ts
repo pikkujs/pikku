@@ -1,4 +1,5 @@
-import type { Server } from 'http'
+import type { IncomingMessage, Server } from 'http'
+import type { Duplex } from 'stream'
 import type { WebSocket, WebSocketServer } from 'ws'
 import { getSingletonServices } from '@pikku/core/state'
 import { logChannels } from '@pikku/core/channel'
@@ -94,7 +95,11 @@ export const pikkuWebsocketHandler = ({
   wss.on(
     'connection',
     (ws: WebSocket, channelHandler: PikkuLocalChannelHandler) => {
-      eventHub.onChannelOpened(channelHandler)
+      Promise.resolve(eventHub.onChannelOpened(channelHandler)).catch(
+        (error: unknown) => {
+          logger.error(`Error registering websocket channel: ${error}`)
+        }
+      )
 
       channelHandler.registerOnSend((data) => {
         if (isSerializable(data)) {
@@ -108,7 +113,10 @@ export const pikkuWebsocketHandler = ({
         ws.send(data)
       })
 
-      ws.on('message', async (message, isBinary) => {
+      const handleMessage = async (
+        message: Buffer | ArrayBuffer | Buffer[],
+        isBinary: boolean
+      ) => {
         if (isBinary) {
           const result = await channelHandler.binaryMessage(
             new Uint8Array(
@@ -130,18 +138,35 @@ export const pikkuWebsocketHandler = ({
             channelHandler.send(result)
           }
         }
+      }
+
+      // ws does not handle rejections from listeners, so catch inside
+      ws.on('message', (message, isBinary) => {
+        handleMessage(message, isBinary).catch((error: unknown) => {
+          logger.error(`Error handling websocket message: ${error}`)
+        })
       })
 
       ws.on('close', () => {
-        eventHub.onChannelClosed(channelHandler.channelId)
-        channelHandler.close()
+        Promise.all([
+          eventHub.onChannelClosed(channelHandler.channelId),
+          channelHandler.close(),
+        ]).catch((error: unknown) => {
+          logger.error(`Error closing websocket channel: ${error}`)
+        })
       })
 
-      channelHandler.open()
+      Promise.resolve(channelHandler.open()).catch((error: unknown) => {
+        logger.error(`Error opening websocket channel: ${error}`)
+      })
     }
   )
 
-  server.on('upgrade', async (req, socket, head) => {
+  const handleUpgrade = async (
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer
+  ) => {
     // Opening the channel is async, so a client can reset before the handshake
     // completes. Until `ws` takes the socket over nothing listens for its
     // errors, and an unhandled 'error' on a raw socket kills the process.
@@ -169,6 +194,13 @@ export const pikkuWebsocketHandler = ({
 
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit('connection', ws, channelHandler)
+    })
+  }
+
+  server.on('upgrade', (req, socket, head) => {
+    handleUpgrade(req, socket, head).catch((error: unknown) => {
+      logger.error(`Websocket upgrade failed: ${error}`)
+      socket.destroy()
     })
   })
 }

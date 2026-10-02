@@ -268,7 +268,7 @@ describe('wireGateway', () => {
           gateway: (wire as any).gateway,
           hasSession: !!wire.session,
         })
-        wire.setSession?.({ userId: 'resolved-user' } as any)
+        await wire.setSession?.({ userId: 'resolved-user' } as any)
         await next()
       }
 

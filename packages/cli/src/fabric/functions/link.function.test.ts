@@ -34,13 +34,13 @@ const order: string[] = []
 const invoked: { name: string; data: any }[] = []
 const pushes: any[][] = []
 
-mock.module('../lib/config.js', () => ({
+await mock.module('../lib/config.js', () => ({
   ...realConfig,
   resolveApiContext: async (opts?: any) =>
     override ? { ...context } : realConfig.resolveApiContext(opts),
 }))
 
-mock.module('../lib/http.js', () => ({
+await mock.module('../lib/http.js', () => ({
   ...realHttp,
   getFabricRPC: (opts: any) =>
     override
@@ -66,13 +66,13 @@ mock.module('../lib/http.js', () => ({
       : realHttp.getFabricRPC(opts),
 }))
 
-mock.module('../lib/organization.js', () => ({
+await mock.module('../lib/organization.js', () => ({
   ...realOrg,
   resolveOrganizationId: async (...args: any[]) =>
     override ? undefined : (realOrg.resolveOrganizationId as any)(...args),
 }))
 
-mock.module('../lib/project-id.js', () => ({
+await mock.module('../lib/project-id.js', () => ({
   ...realProjectId,
   isTreeCleanBesidesProjectId: async (...args: any[]) =>
     override
@@ -85,7 +85,7 @@ mock.module('../lib/project-id.js', () => ({
   },
 }))
 
-mock.module('../lib/deploy-safety.js', () => ({
+await mock.module('../lib/deploy-safety.js', () => ({
   ...realSafety,
   assertDeploySafety: async () => {
     if (!override) return realSafety.assertDeploySafety()
@@ -94,7 +94,7 @@ mock.module('../lib/deploy-safety.js', () => ({
   },
 }))
 
-mock.module('../../utils/git.js', () => ({
+await mock.module('../../utils/git.js', () => ({
   ...realGit,
   hasCommits: async () => (override ? true : realGit.hasCommits()),
   isWorkingTreeClean: async () =>

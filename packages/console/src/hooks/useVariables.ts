@@ -30,8 +30,8 @@ export function useSetVariable() {
       variableId: string
       value: unknown
     }) => rpc.invoke('pikkuConsoleSetVariable', { variableId, value }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
         queryKey: ['variable-value', variables.variableId],
       })
     },

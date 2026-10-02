@@ -1,5 +1,4 @@
 import type { Kysely, Selectable } from 'kysely'
-import { randomUUID } from 'node:crypto'
 import type {
   StepRecord,
   VirtualUserDisposition,
@@ -66,7 +65,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
 
   async start(run: VirtualUserRunStart): Promise<string> {
     await this.init()
-    const runId = randomUUID()
+    const runId = globalThis.crypto.randomUUID()
     await this.db
       .insertInto('virtualUserRun')
       .values({

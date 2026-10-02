@@ -41,7 +41,7 @@ async function main(): Promise<void> {
       { ...config, port: PORT, hostname: 'localhost' },
       services.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
 
@@ -52,11 +52,16 @@ async function main(): Promise<void> {
 
     services.logger.info(`Deployment registered: ${DEPLOYMENT_ID} (postgres)`)
 
-    process.on('SIGTERM', async () => {
-      services.logger.info('Shutting down...')
-      await deploymentService.stop()
-      await pikkuKysely.close()
-      process.exit(0)
+    process.on('SIGTERM', () => {
+      ;(async () => {
+        services.logger.info('Shutting down...')
+        await deploymentService.stop()
+        await pikkuKysely.close()
+        process.exit(0)
+      })().catch((error) => {
+        console.error(error)
+        process.exit(1)
+      })
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.toString() : String(e)
@@ -65,4 +70,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

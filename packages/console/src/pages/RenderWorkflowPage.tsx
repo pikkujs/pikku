@@ -19,6 +19,7 @@ import {
   edgeTypes,
 } from '@pikku/workflow-graph'
 import { PanelProvider } from '../context/PanelContext'
+import { reportAsyncError } from '../lib/async'
 import '@xyflow/react/dist/style.css'
 
 declare global {
@@ -45,7 +46,7 @@ const RenderFlow: React.FC<{ workflow: any }> = ({ workflow }) => {
       setNodes(layoutResult.nodes)
       setEdges(layoutResult.edges)
       setTimeout(() => {
-        fitView({ padding: 0.2 })
+        fitView({ padding: 0.2 }).catch(reportAsyncError)
         setTimeout(() => {
           window.__PIKKU_RENDER_READY__ = true
         }, 100)

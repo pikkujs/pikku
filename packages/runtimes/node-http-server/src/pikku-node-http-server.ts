@@ -194,7 +194,17 @@ export class PikkuNodeHTTPServer {
     private readonly logger: Logger,
     private readonly options: PikkuNodeHTTPServerOptions = {}
   ) {
-    this.server = createServer(this.handleRequest)
+    this.server = createServer((req, res) => {
+      // handleRequest handles its own errors; this is a last-resort guard
+      this.handleRequest(req, res).catch((error: unknown) => {
+        this.logger.error(
+          'pikku-node-http-server: unhandled request error',
+          error
+        )
+        if (!res.headersSent) res.statusCode = 500
+        res.end()
+      })
+    })
     this.server.headersTimeout =
       config.headersTimeout ?? HARDENING_DEFAULTS.headersTimeout
     this.server.requestTimeout =
@@ -895,7 +905,12 @@ export class PikkuNodeHTTPServer {
         process.exit(0)
       }
     }
-    process.once('SIGINT', () => shutdown('SIGINT'))
-    process.once('SIGTERM', () => shutdown('SIGTERM'))
+    // `shutdown` handles every phase error itself and always exits
+    process.once('SIGINT', () => {
+      void shutdown('SIGINT')
+    })
+    process.once('SIGTERM', () => {
+      void shutdown('SIGTERM')
+    })
   }
 }

@@ -474,7 +474,7 @@ export class VercelAgentRunner implements AgentRunnerService {
                   : nextText
                 stepResult.text = nextText
                 if (delta) {
-                  channel.send({ type: 'text-delta', text: delta })
+                  await channel.send({ type: 'text-delta', text: delta })
                 }
                 lastStructuredText = nextText
               }
@@ -484,7 +484,7 @@ export class VercelAgentRunner implements AgentRunnerService {
                 const serialized = JSON.stringify(nextUI)
                 if (serialized !== lastStructuredUISerialized) {
                   lastStructuredUISerialized = serialized
-                  channel.send({ type: 'generative-ui', spec: nextUI })
+                  await channel.send({ type: 'generative-ui', spec: nextUI })
                 }
               }
             }
@@ -496,10 +496,10 @@ export class VercelAgentRunner implements AgentRunnerService {
           case 'text-delta':
             if (useStructuredOutput) break
             stepResult.text += part.text
-            channel.send({ type: 'text-delta', text: part.text })
+            await channel.send({ type: 'text-delta', text: part.text })
             break
           case 'reasoning-delta':
-            channel.send({
+            await channel.send({
               type: 'reasoning-delta',
               text: (part as any).delta ?? '',
             })
@@ -510,7 +510,7 @@ export class VercelAgentRunner implements AgentRunnerService {
               toolName: part.toolName,
               args: part.input,
             })
-            channel.send({
+            await channel.send({
               type: 'tool-call',
               toolCallId: part.toolCallId,
               toolName: part.toolName,
@@ -523,7 +523,7 @@ export class VercelAgentRunner implements AgentRunnerService {
               toolName: part.toolName,
               result: part.output,
             })
-            channel.send({
+            await channel.send({
               type: 'tool-result',
               toolCallId: part.toolCallId,
               toolName: part.toolName,
@@ -542,7 +542,7 @@ export class VercelAgentRunner implements AgentRunnerService {
               result: errorText,
               error: errorMessage,
             })
-            channel.send({
+            await channel.send({
               type: 'tool-result',
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
@@ -558,7 +558,7 @@ export class VercelAgentRunner implements AgentRunnerService {
             }
             stepResult.finishReason =
               part.finishReason as AgentStepResult['finishReason']
-            channel.send({
+            await channel.send({
               type: 'usage',
               tokens: {
                 input: part.usage.inputTokens ?? 0,
@@ -568,7 +568,7 @@ export class VercelAgentRunner implements AgentRunnerService {
             })
             break
           case 'error':
-            channel.send({
+            await channel.send({
               type: 'error',
               message:
                 part.error instanceof Error

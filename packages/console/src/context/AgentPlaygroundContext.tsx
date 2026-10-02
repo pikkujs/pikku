@@ -7,6 +7,7 @@ import React, {
 } from 'react'
 import { useSearchParams } from '../router'
 import { useAgentThreads, useAgentThreadMessages } from '../hooks/useAgentRuns'
+import { reportAsyncError } from '../lib/async'
 
 export interface AgentThread {
   id: string
@@ -129,7 +130,7 @@ export const AgentPlaygroundProvider: React.FC<
         threads,
         createNewThread,
         refetchThreads: () => {
-          refetchThreads()
+          refetchThreads().catch(reportAsyncError)
         },
         dbMessages: dbMessages as any[] | undefined,
         model,

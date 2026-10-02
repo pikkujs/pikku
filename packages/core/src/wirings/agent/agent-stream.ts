@@ -166,7 +166,7 @@ function createPersistingChannel(
     flush: flushStep,
     close: () => parent.close(),
     sendBinary: (data) => parent.sendBinary(data),
-    send: (event: AgentStreamEvent) => {
+    send: async (event: AgentStreamEvent) => {
       // Accumulated whether or not storage is configured: `fullText` is what
       // the client was streamed, and an interrupted run has to be able to
       // report the fragment it got through even with persistence turned off.
@@ -228,7 +228,7 @@ function createPersistingChannel(
             break
         }
       }
-      parent.send(event)
+      await parent.send(event)
     },
     setState: (s) => parent.setState(s),
     getState: () => parent.getState(),
@@ -407,7 +407,7 @@ async function runStreamStepLoop(
       if (stopped) break
     }
 
-    channel.send({ type: 'step-start', stepNumber: step })
+    await channel.send({ type: 'step-start', stepNumber: step })
 
     const stepResult = await agentRunner.stream(runnerParams, streamChannel)
 
@@ -657,10 +657,10 @@ function handleApprovals(
         reason: err.reason,
         runId,
       }
-      channel.send(approvalEvent)
+      await channel.send(approvalEvent)
     }
-    channel.send({ type: 'done' })
-    channel.close()
+    await channel.send({ type: 'done' })
+    await channel.close()
   })()
 }
 
@@ -691,7 +691,7 @@ function handleCredentialRequests(
     })
 
     for (const req of requests) {
-      channel.send({
+      await channel.send({
         type: 'credential-request',
         toolCallId: req.toolCallId,
         toolName: req.toolName,
@@ -702,8 +702,8 @@ function handleCredentialRequests(
         runId,
       })
     }
-    channel.send({ type: 'done' })
-    channel.close()
+    await channel.send({ type: 'done' })
+    await channel.close()
   })()
 }
 
@@ -775,8 +775,12 @@ export async function streamAgent(
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    channel.send({ type: 'suspended', reason: 'rpc-missing', missingRpcs })
-    channel.send({ type: 'done' })
+    await channel.send({
+      type: 'suspended',
+      reason: 'rpc-missing',
+      missingRpcs,
+    })
+    await channel.send({ type: 'done' })
     return ''
   }
 
@@ -814,7 +818,7 @@ export async function streamAgent(
   // knowledge: decisions/internals/the-transcript-event-is-sent-ahead-of-the-run.md
   const transcript = sharedNotes[SPOKEN_TRANSCRIPT]
   if (typeof transcript === 'string') {
-    channel.send({ type: 'transcript', text: transcript })
+    await channel.send({ type: 'transcript', text: transcript })
   }
 
   // knowledge: decisions/internals/thread-history-records-the-transcript-not-the-audio.md
@@ -980,7 +984,7 @@ export async function streamAgent(
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await outputChannel.send({ type: 'done' })
-    channel.close()
+    await channel.close()
     return persistingChannel.fullText
   } catch (err) {
     // An interrupt is not a failure: the truncated text is real output the user
@@ -998,14 +1002,14 @@ export async function streamAgent(
           persistOrphanedToolResults(interruptHandle, storage, threadId)
         )
       }
-      channel.send({
+      await channel.send({
         type: 'interrupted',
         runId,
         text: persistingChannel.fullText,
         reason: interruption?.reason ?? 'user',
       })
-      channel.send({ type: 'done' })
-      channel.close()
+      await channel.send({ type: 'done' })
+      await channel.close()
       return persistingChannel.fullText
     }
 
@@ -1024,12 +1028,12 @@ export async function streamAgent(
       status: 'failed',
       errorMessage: err instanceof Error ? err.message : String(err),
     })
-    channel.send({
+    await channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),
     })
-    channel.send({ type: 'done' })
-    channel.close()
+    await channel.send({ type: 'done' })
+    await channel.close()
     return persistingChannel.fullText
   } finally {
     interruptHandle.release()
@@ -1182,7 +1186,7 @@ export async function resumeAgent(
       ])
     }
 
-    channel.send({
+    await channel.send({
       type: 'tool-result',
       toolCallId: input.toolCallId,
       toolName:
@@ -1196,8 +1200,8 @@ export async function resumeAgent(
     const remaining = updatedRun?.pendingApprovals ?? []
 
     if (remaining.length > 0) {
-      channel.send({ type: 'done' })
-      channel.close()
+      await channel.send({ type: 'done' })
+      await channel.close()
       return
     }
 
@@ -1234,7 +1238,7 @@ export async function resumeAgent(
     }
 
     const subChannel = createScopedChannel(channel, subRun.agentName, 'resume')
-    channel.send({
+    await channel.send({
       type: 'agent-call',
       agentName: subRun.agentName,
       session: 'resume',
@@ -1252,7 +1256,7 @@ export async function resumeAgent(
       options
     )
 
-    channel.send({
+    await channel.send({
       type: 'agent-result',
       agentName: subRun.agentName,
       session: 'resume',
@@ -1335,7 +1339,7 @@ export async function resumeAgent(
       ])
     }
 
-    channel.send({
+    await channel.send({
       type: 'tool-result',
       toolCallId: input.toolCallId,
       toolName: pending.toolName,
@@ -1348,8 +1352,8 @@ export async function resumeAgent(
   const remaining = updatedRun?.pendingApprovals ?? []
 
   if (remaining.length > 0) {
-    channel.send({ type: 'done' })
-    channel.close()
+    await channel.send({ type: 'done' })
+    await channel.close()
     return
   }
 
@@ -1587,7 +1591,7 @@ async function continueAfterToolResult(
 
     // knowledge: decisions/internals/the-agent-done-event-goes-through-the-middleware-and-is-awaited.md
     await wrappedChannel.send({ type: 'done' })
-    channel.close()
+    await channel.close()
   } catch (err) {
     // Same reasoning as the first turn: an interrupt is not a failure, and the
     // part of the reply the user already heard is real output.
@@ -1601,14 +1605,14 @@ async function continueAfterToolResult(
           persistOrphanedToolResults(interruptHandle, storage, run.threadId)
         )
       }
-      channel.send({
+      await channel.send({
         type: 'interrupted',
         runId: run.runId,
         text: persistingChannel.fullText,
         reason: interruption?.reason ?? 'user',
       })
-      channel.send({ type: 'done' })
-      channel.close()
+      await channel.send({ type: 'done' })
+      await channel.close()
       return
     }
 
@@ -1627,12 +1631,12 @@ async function continueAfterToolResult(
       status: 'failed',
       errorMessage: err instanceof Error ? err.message : String(err),
     })
-    channel.send({
+    await channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),
     })
-    channel.send({ type: 'done' })
-    channel.close()
+    await channel.send({ type: 'done' })
+    await channel.close()
   } finally {
     interruptHandle.release()
   }

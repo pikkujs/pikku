@@ -178,7 +178,7 @@ void _typeAssertions
 // the real interfaces are actually wired to it — the two can drift apart, and a
 // sink that forgot the guard is exactly the leak this design exists to stop.
 
-const _sinkAssertions = (
+const _sinkAssertions = async (
   secret: SecretValue<string>,
   logger: Logger,
   auditLog: AuditLog
@@ -191,14 +191,22 @@ const _sinkAssertions = (
   logger.info('using', { token: secret })
 
   // @ts-expect-error nor written into an audit input
-  auditLog.write({ type: 'used', source: 'explicit', input: { token: secret } })
+  await auditLog.write({
+    type: 'used',
+    source: 'explicit',
+    input: { token: secret },
+  })
   const metadata = { token: secret }
   // @ts-expect-error nor into audit metadata
-  auditLog.write({ type: 'used', source: 'explicit', metadata })
+  await auditLog.write({ type: 'used', source: 'explicit', metadata })
 
   // Ordinary logging and auditing must still compile.
   logger.info({ msg: 'fine' })
   logger.info('fine', { count: 1 })
-  auditLog.write({ type: 'used', source: 'explicit', input: { userId: 'u1' } })
+  await auditLog.write({
+    type: 'used',
+    source: 'explicit',
+    input: { userId: 'u1' },
+  })
 }
 void _sinkAssertions

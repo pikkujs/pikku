@@ -8,6 +8,9 @@
   },
   "description": "Console addon for Pikku — functions powering the Pikku Console UI",
   "type": "module",
+  "pikku": {
+    "runtime": "server"
+  },
   "imports": {
     "#pikku/*.js": "./dist/.pikku/*.js",
     "#pikku/*": "./dist/.pikku/*/index.js"
@@ -34,7 +37,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/) && (mkdir -p dist/.pikku/addon/db && cp .pikku/addon/db/pikku-db-meta.gen.json dist/.pikku/addon/db/)",
+    "build": "rm -rf dist && pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/) && (mkdir -p dist/.pikku/addon/db && cp .pikku/addon/db/pikku-db-meta.gen.json dist/.pikku/addon/db/) && (mkdir -p dist/.pikku/addon/console && cp .pikku/addon/console/pikku-addon-meta.gen.json dist/.pikku/addon/console/)",
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",

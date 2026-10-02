@@ -51,6 +51,7 @@ import {
   IMPERSONATE_HEADER,
 } from '../../context/ImpersonationContext'
 import classes from '../ui/console.module.css'
+import { handleAsync } from '../../lib/async'
 
 const ToolCallDisplay: React.FC<{
   toolCallId: string
@@ -168,7 +169,7 @@ const ToolCallDisplay: React.FC<{
             size="xs"
             color="green"
             variant="light"
-            onClick={handleApprove}
+            onClick={handleAsync(handleApprove)}
             data-testid="approval-approve"
           >
             {m.agent_approval_approve()}
@@ -177,7 +178,7 @@ const ToolCallDisplay: React.FC<{
             size="xs"
             color="red"
             variant="light"
-            onClick={handleDeny}
+            onClick={handleAsync(handleDeny)}
             data-testid="approval-deny"
           >
             {m.agent_approval_deny()}
@@ -313,7 +314,7 @@ const ToolCallDisplay: React.FC<{
             size="xs"
             color="gray"
             variant="light"
-            onClick={handleIgnore}
+            onClick={handleAsync(handleIgnore)}
             data-testid="credential-ignore"
           >
             {m.agent_credential_ignore()}

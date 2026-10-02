@@ -420,7 +420,7 @@ export function createScopedChannel(
     },
     close: () => {},
     sendBinary: (data) => parent.sendBinary(data),
-    send: (event: AgentStreamEvent) => {
+    send: async (event: AgentStreamEvent) => {
       if (event.type === 'done') return
       if (event.type === 'approval-request') {
         capturedApprovals.push({
@@ -441,9 +441,13 @@ export function createScopedChannel(
         event.type === 'usage' ||
         event.type === 'error'
       ) {
-        parent.send({ ...event, agent: agentName, session } as AgentStreamEvent)
+        await parent.send({
+          ...event,
+          agent: agentName,
+          session,
+        } as AgentStreamEvent)
       } else {
-        parent.send(event)
+        await parent.send(event)
       }
     },
     setState: (s) => parent.setState(s),
@@ -620,10 +624,11 @@ export async function buildToolDefs(
         needsApproval: needsApproval || undefined,
         approvalDescriptionFn,
         readonly: fnMeta?.readonly || undefined,
-        execute: async (toolInput: unknown) => {
+        execute: async (toolInput: unknown, options) => {
           const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
+          if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
             wire,
@@ -691,7 +696,7 @@ export async function buildToolDefs(
               streamContext.delegateState.delegated = true
             }
             const { channel } = streamContext
-            channel.send({
+            await channel.send({
               type: 'agent-call',
               agentName: subAgentName,
               session,
@@ -706,13 +711,13 @@ export async function buildToolDefs(
               ? subChannel
               : {
                   ...subChannel,
-                  send: (event: AgentStreamEvent) => {
+                  send: async (event: AgentStreamEvent) => {
                     if (
                       event.type === 'text-delta' ||
                       event.type === 'reasoning-delta'
                     )
                       return
-                    subChannel.send(event)
+                    await subChannel.send(event)
                   },
                 }
             const resultText = await streamAgent(
@@ -738,7 +743,7 @@ export async function buildToolDefs(
                 subApprovals: subChannel.approvals,
               }
             }
-            channel.send({
+            await channel.send({
               type: 'agent-result',
               agentName: subAgentName,
               session,
@@ -810,7 +815,7 @@ export async function buildToolDefs(
         name: workflowName,
         description: wfMeta.description || workflowName,
         inputSchema,
-        execute: async (toolInput: unknown) => {
+        execute: async (toolInput: unknown, options) => {
           const workflowService = singletonServices.workflowService
           if (!workflowService) {
             throw new Error(
@@ -820,6 +825,7 @@ export async function buildToolDefs(
           const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
+          if (options?.abortScope) wire.abortScope = options.abortScope
           const rpcService = new ContextAwareRPCService(
             singletonServices,
             wire,
@@ -838,9 +844,9 @@ export async function buildToolDefs(
 
   for (const tool of tools) {
     const originalExecute = tool.execute
-    tool.execute = async (toolInput: unknown) => {
+    tool.execute = async (toolInput: unknown, options) => {
       try {
-        return await originalExecute(toolInput)
+        return await originalExecute(toolInput, options)
       } catch (err: any) {
         if (err?.payload?.error === 'missing_credential') {
           return {
@@ -864,7 +870,7 @@ export async function buildToolDefs(
   if (hasToolHooks) {
     for (const tool of tools) {
       const originalExecute = tool.execute
-      tool.execute = async (toolInput: unknown) => {
+      tool.execute = async (toolInput: unknown, options) => {
         const toolCallId = randomUUID()
         let args = (toolInput ?? {}) as Record<string, unknown>
 
@@ -885,7 +891,7 @@ export async function buildToolDefs(
         let result: unknown
         let execError: unknown
         try {
-          result = await originalExecute(args)
+          result = await originalExecute(args, options)
         } catch (err: any) {
           execError = err
           if (err?.payload?.error === 'missing_credential') throw err

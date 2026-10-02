@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { mock, test } from 'bun:test'
 import { win32 } from 'node:path'
 
-mock.module('path', () => ({ ...win32, default: win32 }))
+await mock.module('path', () => ({ ...win32, default: win32 }))
 const { getFileImportRelativePath } = await import('./file-import-path.js')
 
 test('a Windows path imports with forward slashes, so `\\u` is never an escape', () => {

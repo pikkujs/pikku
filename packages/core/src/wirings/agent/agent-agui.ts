@@ -80,53 +80,56 @@ export function wrapChannelWithAGUI(
   let usageModel: string | undefined
   const usageTotals = { input: 0, output: 0 }
 
-  function send(event: AGUIEvent): void {
+  async function send(event: AGUIEvent): Promise<void> {
     if (!runStartedSent) {
       runStartedSent = true
-      inner.send({
+      await inner.send({
         type: 'RUN_STARTED',
         threadId,
         runId: resolveRunId(),
       } as unknown as AgentStreamEvent)
     }
-    inner.send(event as unknown as AgentStreamEvent)
+    await inner.send(event as unknown as AgentStreamEvent)
   }
 
-  function endTextMessage(): void {
+  async function endTextMessage(): Promise<void> {
     if (textMessageId) {
-      send({ type: 'TEXT_MESSAGE_END', messageId: textMessageId })
+      await send({ type: 'TEXT_MESSAGE_END', messageId: textMessageId })
       textMessageId = null
     }
   }
 
-  function endThinkingMessage(): void {
+  async function endThinkingMessage(): Promise<void> {
     if (thinkingMessageId) {
-      send({ type: 'THINKING_TEXT_MESSAGE_END', messageId: thinkingMessageId })
-      send({ type: 'THINKING_END' })
+      await send({
+        type: 'THINKING_TEXT_MESSAGE_END',
+        messageId: thinkingMessageId,
+      })
+      await send({ type: 'THINKING_END' })
       thinkingMessageId = null
     }
   }
 
-  function endStep(): void {
+  async function endStep(): Promise<void> {
     if (openStepName) {
-      send({ type: 'STEP_FINISHED', stepName: openStepName })
+      await send({ type: 'STEP_FINISHED', stepName: openStepName })
       openStepName = null
     }
   }
 
-  function ensureTextMessage(): string {
+  async function ensureTextMessage(): Promise<string> {
     if (!textMessageId) {
       textMessageId = randomUUID()
-      send({ type: 'TEXT_MESSAGE_START', messageId: textMessageId })
+      await send({ type: 'TEXT_MESSAGE_START', messageId: textMessageId })
     }
     return textMessageId
   }
 
-  function ensureThinkingMessage(): string {
+  async function ensureThinkingMessage(): Promise<string> {
     if (!thinkingMessageId) {
       thinkingMessageId = randomUUID()
-      send({ type: 'THINKING_START' })
-      send({
+      await send({ type: 'THINKING_START' })
+      await send({
         type: 'THINKING_TEXT_MESSAGE_START',
         messageId: thinkingMessageId,
       })
@@ -134,11 +137,11 @@ export function wrapChannelWithAGUI(
     return thinkingMessageId
   }
 
-  function finishRun(): void {
-    endTextMessage()
-    endThinkingMessage()
-    endStep()
-    send({
+  async function finishRun(): Promise<void> {
+    await endTextMessage()
+    await endThinkingMessage()
+    await endStep()
+    await send({
       type: 'RUN_FINISHED',
       threadId,
       runId: resolveRunId(),
@@ -171,14 +174,14 @@ export function wrapChannelWithAGUI(
     sendBinary: (data) => inner.sendBinary(data),
     close: () => inner.close(),
 
-    send: (event: AgentStreamEvent) => {
+    send: async (event: AgentStreamEvent) => {
       if (terminal) return
 
       switch (event.type) {
         case 'text-delta': {
-          endThinkingMessage()
-          const id = ensureTextMessage()
-          send({
+          await endThinkingMessage()
+          const id = await ensureTextMessage()
+          await send({
             type: 'TEXT_MESSAGE_CONTENT',
             messageId: id,
             delta: event.text,
@@ -187,9 +190,9 @@ export function wrapChannelWithAGUI(
         }
 
         case 'reasoning-delta': {
-          endTextMessage()
-          const id = ensureThinkingMessage()
-          send({
+          await endTextMessage()
+          const id = await ensureThinkingMessage()
+          await send({
             type: 'THINKING_TEXT_MESSAGE_CONTENT',
             messageId: id,
             delta: event.text,
@@ -198,19 +201,19 @@ export function wrapChannelWithAGUI(
         }
 
         case 'tool-call': {
-          endTextMessage()
-          endThinkingMessage()
-          send({
+          await endTextMessage()
+          await endThinkingMessage()
+          await send({
             type: 'TOOL_CALL_START',
             toolCallId: event.toolCallId,
             toolCallName: event.toolName,
           })
-          send({
+          await send({
             type: 'TOOL_CALL_ARGS',
             toolCallId: event.toolCallId,
             delta: resultToString(event.args) || '{}',
           })
-          send({
+          await send({
             type: 'TOOL_CALL_END',
             toolCallId: event.toolCallId,
             toolCallName: event.toolName,
@@ -219,7 +222,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'tool-result': {
-          send({
+          await send({
             type: 'TOOL_CALL_RESULT',
             messageId: randomUUID(),
             toolCallId: event.toolCallId,
@@ -230,8 +233,8 @@ export function wrapChannelWithAGUI(
         }
 
         case 'usage': {
-          endTextMessage()
-          endThinkingMessage()
+          await endTextMessage()
+          await endThinkingMessage()
           sawUsage = true
           usageTotals.input += event.tokens.input
           usageTotals.output += event.tokens.output
@@ -240,33 +243,33 @@ export function wrapChannelWithAGUI(
         }
 
         case 'error': {
-          endTextMessage()
-          endThinkingMessage()
-          endStep()
-          send({ type: 'RUN_ERROR', message: event.message })
+          await endTextMessage()
+          await endThinkingMessage()
+          await endStep()
+          await send({ type: 'RUN_ERROR', message: event.message })
           terminal = true
           break
         }
 
         case 'done': {
-          finishRun()
+          await finishRun()
           break
         }
 
         case 'step-start': {
-          endTextMessage()
-          endThinkingMessage()
-          endStep()
+          await endTextMessage()
+          await endThinkingMessage()
+          await endStep()
           stepSeq += 1
           openStepName = `${event.agent ?? 'step'}#${stepSeq}`
-          send({ type: 'STEP_STARTED', stepName: openStepName })
+          await send({ type: 'STEP_STARTED', stepName: openStepName })
           break
         }
 
         case 'approval-request': {
-          endTextMessage()
-          endThinkingMessage()
-          send({
+          await endTextMessage()
+          await endThinkingMessage()
+          await send({
             type: 'CUSTOM',
             name: 'pikku:approval-request',
             value: {
@@ -283,9 +286,9 @@ export function wrapChannelWithAGUI(
         }
 
         case 'credential-request': {
-          endTextMessage()
-          endThinkingMessage()
-          send({
+          await endTextMessage()
+          await endThinkingMessage()
+          await send({
             type: 'CUSTOM',
             name: 'pikku:credential-request',
             value: {
@@ -304,7 +307,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'generative-ui': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:generative-ui',
             value: { spec: event.spec },
@@ -313,7 +316,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'data': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:data',
             value: { name: event.name, data: event.data },
@@ -322,7 +325,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'agent-call': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:agent-call',
             value: {
@@ -335,7 +338,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'agent-result': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:agent-result',
             value: {
@@ -348,7 +351,7 @@ export function wrapChannelWithAGUI(
         }
 
         case 'suspended': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:suspended',
             value: { reason: event.reason, missingRpcs: event.missingRpcs },
@@ -357,10 +360,10 @@ export function wrapChannelWithAGUI(
         }
 
         case 'interrupted': {
-          endTextMessage()
-          endThinkingMessage()
-          endStep()
-          send({
+          await endTextMessage()
+          await endThinkingMessage()
+          await endStep()
+          await send({
             type: 'CUSTOM',
             name: 'pikku:interrupted',
             value: {
@@ -374,7 +377,7 @@ export function wrapChannelWithAGUI(
 
         // knowledge: decisions/internals/agent-speech-travels-as-a-custom-agui-event.md
         case 'audio-delta': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:audio-delta',
             value: {
@@ -387,12 +390,12 @@ export function wrapChannelWithAGUI(
         }
 
         case 'audio-done': {
-          send({ type: 'CUSTOM', name: 'pikku:audio-done', value: {} })
+          await send({ type: 'CUSTOM', name: 'pikku:audio-done', value: {} })
           break
         }
 
         case 'transcript': {
-          send({
+          await send({
             type: 'CUSTOM',
             name: 'pikku:transcript',
             value: { text: event.text },

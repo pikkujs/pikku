@@ -19,9 +19,9 @@ describe('TypedVariablesService', () => {
     assert.strictEqual(service.get('DB_URL'), 'postgres://...')
   })
 
-  test('should delegate set to underlying service', () => {
+  test('should delegate set to underlying service', async () => {
     const service = createService()
-    service.set('DB_URL', 'new-value')
+    await service.set('DB_URL', 'new-value')
     assert.strictEqual(service.get('DB_URL'), 'new-value')
   })
 
@@ -31,9 +31,9 @@ describe('TypedVariablesService', () => {
     assert.strictEqual(service.has('MISSING'), false)
   })
 
-  test('should delegate delete to underlying service', () => {
+  test('should delegate delete to underlying service', async () => {
     const service = createService({ DB_URL: 'val' })
-    service.delete('DB_URL')
+    await service.delete('DB_URL')
     assert.strictEqual(service.has('DB_URL'), false)
   })
 
@@ -42,9 +42,9 @@ describe('TypedVariablesService', () => {
     assert.deepStrictEqual(service.get('DATA'), { key: 'val' })
   })
 
-  test('should delegate set to underlying service', () => {
+  test('should delegate set to underlying service', async () => {
     const service = createService()
-    service.set('DATA', { key: 'val' })
+    await service.set('DATA', { key: 'val' })
     assert.deepStrictEqual(service.get('DATA'), { key: 'val' })
   })
 

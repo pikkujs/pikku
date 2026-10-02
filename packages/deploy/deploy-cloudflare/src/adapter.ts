@@ -8,6 +8,10 @@
  */
 
 import { generateWranglerToml } from './wrangler-toml.js'
+import {
+  DEFAULT_COMPAT_DATE,
+  getCloudflareRuntimeProfile,
+} from './runtime-profile.js'
 import { generateInfraManifest } from './infra-manifest.js'
 import {
   generateServerProxyBundle,
@@ -21,6 +25,8 @@ import type {
   EntryGenerationContext,
   PlatformServiceContributor,
   ProviderAdapter,
+  RuntimeProfile,
+  RuntimeTier,
 } from '@pikku/deploy'
 import {
   assertContributorsSupported,
@@ -63,6 +69,12 @@ export interface CloudflareProviderAdapterOptions {
    * with a public route MUST leave this off.
    */
   httpQueueJobs?: boolean
+  /**
+   * The compatibility date units are uploaded with. It decides which Node
+   * built-ins exist (`node:os`, `node:fs` arrive on 2025-09-15), so the
+   * runtime profile, `wrangler.toml` and the verifier all follow it.
+   */
+  compatDate?: string
 }
 
 /**
@@ -120,14 +132,6 @@ const NODE_BUILTINS = [
   'zlib',
 ]
 
-// `node:fs` has no implementation on Workers under any compatibility flag, so a
-// bundle that imports it dies at module load with `No such module "node:fs"`
-// before a line of it runs. Leaving it in the externals meant esbuild resolved
-// it before the stub plugin ever saw it — `external` is matched ahead of an
-// `onResolve` hook — so listing the builtins individually is what lets the stub
-// below take it.
-const CF_UNSUPPORTED_BUILTINS = new Set(['fs', 'child_process'])
-
 export class CloudflareProviderAdapter implements ProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
@@ -142,12 +146,14 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    */
   readonly workflowQueues: boolean
   readonly httpQueueJobs: boolean
+  readonly compatDate: string
 
   private readonly contributors: PlatformServiceContributor[]
 
   constructor(options: CloudflareProviderAdapterOptions = {}) {
     this.workflowQueues = options.workflowQueues ?? false
     this.httpQueueJobs = options.httpQueueJobs ?? false
+    this.compatDate = options.compatDate ?? DEFAULT_COMPAT_DATE
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -741,7 +747,14 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     const configs = new Map<string, string>()
     configs.set(
       'wrangler.toml',
-      generateWranglerToml(unit, manifest, projectId)
+      generateWranglerToml(
+        unit,
+        manifest,
+        projectId,
+        this.getRuntimeProfile(
+          unit.runtime && unit.runtime !== 'server' ? unit.runtime : undefined
+        )
+      )
     )
     return configs
   }
@@ -755,15 +768,12 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     return JSON.stringify(infra, null, 2)
   }
 
+  getRuntimeProfile(tier?: RuntimeTier): RuntimeProfile {
+    return getCloudflareRuntimeProfile(tier, this.compatDate)
+  }
+
   getExternals(): string[] {
-    const supported = NODE_BUILTINS.filter(
-      (b) => !CF_UNSUPPORTED_BUILTINS.has(b)
-    )
-    return [
-      ...supported.flatMap((b) => [`node:${b}`, `node:${b}/*`]),
-      'cloudflare:*',
-      'uWebSockets.js',
-    ]
+    return this.getRuntimeProfile().externals
   }
 
   getStubModules(): string[] {
@@ -777,14 +787,17 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     // the two in application code, it is equally unreachable on CF, and it
     // additionally reaches for `net`/`tls` and `pg-native`, which a worker
     // build cannot resolve at all.
+    //
+    // The built-ins match with or without the `node:` prefix. Bundlers run
+    // their resolve hooks on the specifier as written, and `getAliases()` only
+    // rewrites a bare `fs` to `node:fs` afterwards, so a `^node:fs$` pattern
+    // never sees the bare import and the alias then leaves it unresolvable.
     return [
       '^postgres$',
       '^kysely-postgres-js$',
       '^pg$',
       '^pg-native$',
-      '^node:fs$',
-      '^node:fs/promises$',
-      '^node:child_process$',
+      ...this.getRuntimeProfile().stubbedBuiltins.map((b) => `^(node:)?${b}$`),
     ]
   }
 
@@ -807,6 +820,10 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     return {
       'process.versions.electron': 'undefined',
       'process.versions.node': '"22.0.0"',
+      // A deployed Worker is always production, whatever the host did or did
+      // not set. Without this `isProduction()` is false and every 500 carries
+      // the error message and stack trace.
+      'process.env.NODE_ENV': '"production"',
     }
   }
 

@@ -21,6 +21,7 @@ import {
   type NavItem,
   type NavSection,
 } from '../../nav/sections'
+import { handleAsync } from '../../lib/async'
 
 export interface NavListProps {
   sections?: NavSection[]
@@ -134,7 +135,7 @@ export const NavList: React.FC<NavListProps> = ({ sections: sectionsProp }) => {
           }
           label={m.sidebar_refresh()}
           disabled={metaLoading}
-          onSelect={() => refresh()}
+          onSelect={handleAsync(refresh)}
         />
         <NavAction
           icon={colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

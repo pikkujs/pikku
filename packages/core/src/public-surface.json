@@ -322,6 +322,7 @@
     "validateAndBuildCredentialDefinitionsMeta"
   ],
   "./scope": [
+    "declareScopes",
     "defineScope",
     "flattenScopeDefinitions",
     "hasScopes",
@@ -428,7 +429,6 @@
     "ACTOR_SECRET_NAME",
     "ConsoleLogger",
     "DEFAULT_WEBHOOK_RETRIES",
-    "FileScenarioRunStore",
     "InMemoryAgentRunStateService",
     "InMemoryLeaseService",
     "InMemoryQueueService",
@@ -478,8 +478,6 @@
     "pikkuRemoteScheduledJobFunc",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
-    "scenarioArtifactContentType",
-    "scenarioRunSummary",
     "spy",
     "stub",
     "verifyActorSecret",
@@ -505,6 +503,11 @@
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
+  ],
+  "./services/file-scenario-run-store": [
+    "FileScenarioRunStore",
+    "scenarioArtifactContentType",
+    "scenarioRunSummary"
   ],
   "./services/temporary-file-service": [
     "TemporaryFileInstance",

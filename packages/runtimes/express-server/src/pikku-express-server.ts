@@ -17,9 +17,7 @@ import type { JWTService, Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
-import {
-  verifySignedContentRequest,
-} from '@pikku/core/services/local-content-request-handler'
+import { verifySignedContentRequest } from '@pikku/core/services/local-content-request-handler'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.
@@ -218,12 +216,18 @@ export class PikkuExpressServer {
   }
 
   public async enableExitOnSigInt() {
-    process.on('SIGINT', async () => {
+    const shutdown = async () => {
       this.logger.info('Stopping server...')
       await stopSingletonServices()
       await this.stop()
       this.logger.info('Server stopped')
       process.exit(0)
+    }
+    process.on('SIGINT', () => {
+      shutdown().catch((error: unknown) => {
+        this.logger.error(`Error while stopping server: ${error}`)
+        process.exit(1)
+      })
     })
   }
 }

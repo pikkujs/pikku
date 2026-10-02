@@ -34,6 +34,17 @@ async function writeFrontends(root: string, frontends: unknown) {
   )
 }
 
+// A skeleton with no toolchain; oxlint has its own tests.
+const NO_OXLINT = {
+  rules: {
+    'oxlint-not-installed': 'off',
+    'oxlint-config-missing': 'off',
+    'oxlint-rule-missing': 'off',
+    'oxlint-type-aware-off': 'off',
+    'oxlint-run': 'off',
+  },
+}
+
 async function makeValidProject(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
     srcDirectories: ['packages/functions/src'],
@@ -51,6 +62,7 @@ async function makeValidProject(root: string) {
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
     environments: { local: { apiUrl: 'http://localhost:4002' } },
+    validate: NO_OXLINT,
   })
   await writeJson(join(root, 'package.json'), {
     packageManager: 'bun@1.3.14',
@@ -418,6 +430,7 @@ describe('pikku fabric validate', () => {
             workflow: true,
             events: true,
           },
+          validate: NO_OXLINT,
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true) // info only

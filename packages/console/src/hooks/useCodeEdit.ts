@@ -39,10 +39,12 @@ export function useUpdateFunctionConfig() {
         exportedName,
         changes,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['functions'] })
-      queryClient.invalidateQueries({ queryKey: ['function-source'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['functions'] }),
+        queryClient.invalidateQueries({ queryKey: ['function-source'] }),
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+      ])
     },
   })
 }
@@ -85,11 +87,13 @@ export function useUpdateFunctionBody() {
         exportedName,
         body,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['functions'] })
-      queryClient.invalidateQueries({ queryKey: ['function-body'] })
-      queryClient.invalidateQueries({ queryKey: ['function-source'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['functions'] }),
+        queryClient.invalidateQueries({ queryKey: ['function-body'] }),
+        queryClient.invalidateQueries({ queryKey: ['function-source'] }),
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+      ])
     },
   })
 }
@@ -110,8 +114,8 @@ export function useUpdateEmailTemplate() {
         templateName,
         source,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['emails'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['emails'] })
     },
   })
 }
@@ -154,9 +158,11 @@ export function useUpdateAgentConfig() {
         exportedName,
         changes,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-      queryClient.invalidateQueries({ queryKey: ['agent-source'] })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['allMeta'] }),
+        queryClient.invalidateQueries({ queryKey: ['agent-source'] }),
+      ])
     },
   })
 }

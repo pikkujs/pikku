@@ -10,6 +10,21 @@
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
+  "pikku": {
+    "runtime": "edge",
+    "exports": {
+      "./services/local-meta": "server",
+      "./services/v8-coverage": "server",
+      "./services/istanbul-coverage": "server",
+      "./services/local-content": "server",
+      "./services/local-content-request-handler": "server",
+      "./services/temporary-file-service": "server",
+      "./services/file-scenario-run-store": "server",
+      "./node-host-resolver": "server",
+      "./testing": "server",
+      "./dev": "server"
+    }
+  },
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.type-tests.json",
     "build": "tsc -b",
@@ -80,6 +95,7 @@
     "./services/local-content": "./dist/services/local-content.js",
     "./services/local-content-request-handler": "./dist/services/local-content-request-handler.js",
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
+    "./services/file-scenario-run-store": "./dist/services/file-scenario-run-store.js",
     "./crypto-utils": "./dist/crypto-utils.js",
     "./hmac": "./dist/utils/hmac.js",
     "./state": "./dist/pikku-state.js",

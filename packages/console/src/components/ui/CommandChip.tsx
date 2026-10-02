@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Check, Copy } from 'lucide-react'
+import { reportAsyncError } from '../../lib/async'
 
 type CommandChipProps = { cmd: string }
 
@@ -17,7 +18,7 @@ export const CommandChip: React.FC<CommandChipProps> = ({ cmd }) => {
   }, [])
 
   const handleClick = () => {
-    navigator.clipboard?.writeText(cmd)
+    navigator.clipboard?.writeText(cmd).catch(reportAsyncError)
     setCopied(true)
     timerRef.current = setTimeout(() => setCopied(false), 1200)
   }

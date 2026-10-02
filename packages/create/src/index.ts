@@ -26,6 +26,7 @@ import {
   replaceFunctionReferences,
   serverlessChanges,
   updatePackageJSONScripts,
+  ensureOxlintSetup,
   withNetworkRetry,
   wranglerChanges,
 } from './utils.js'
@@ -309,7 +310,7 @@ async function setupTemplate(cliOptions: CliOptions) {
     filterFilesByFeatures(functionsPath, supportedFeatures)
 
     // Merge and process files
-    lazymkdir(targetPath)
+    await lazymkdir(targetPath)
     mergeJsonFiles([functionsPath, templatePath], targetPath, 'package.json')
     mergeJsonFiles(
       [functionsPath, templatePath],
@@ -334,6 +335,7 @@ async function setupTemplate(cliOptions: CliOptions) {
       supportedFeatures,
       cliOptions.stackblitz
     )
+    ensureOxlintSetup(targetPath)
 
     if (cliOptions.stackblitz) {
       try {
@@ -400,7 +402,7 @@ async function cloneRepo(cliOptions: CliOptions, repoName: string) {
       repoDirPath,
       spinner
     )
-    lazymkdir(targetPath)
+    await lazymkdir(targetPath)
     mergeDirectories(repoDirPath, targetPath)
 
     try {
@@ -614,4 +616,7 @@ async function setupFabric(cliOptions: CliOptions) {
   }
 }
 
-run()
+run().catch((error) => {
+  console.error(chalk.red('Failed to create project:'), error)
+  process.exit(1)
+})
