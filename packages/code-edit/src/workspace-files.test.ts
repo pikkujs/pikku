@@ -50,6 +50,26 @@ describe('WorkspaceFilesService', () => {
     await assert.rejects(files.read('nope.ts'), WorkspaceFileNotFoundError)
   })
 
+  test('hides secrets and ignored paths from listing and reading', async () => {
+    const root = await workspace()
+    await writeFile(join(root, '.env'), 'KEY=x')
+    await writeFile(join(root, '.env.local'), 'KEY=x')
+    await writeFile(join(root, '.env.example'), 'KEY=')
+    await writeFile(join(root, 'node_modules/x/index.js'), '')
+    const files = new WorkspaceFilesService(root)
+    assert.deepStrictEqual(
+      (await files.list()).map((e) => e.name),
+      ['src', '.env.example', 'README.md']
+    )
+    await assert.rejects(files.read('.env'), WorkspaceFileNotFoundError)
+    await assert.rejects(files.read('.env.local'), WorkspaceFileNotFoundError)
+    await assert.rejects(
+      files.read('node_modules/x/index.js'),
+      WorkspaceFileNotFoundError
+    )
+    assert.strictEqual((await files.read('.env.example')).content, 'KEY=')
+  })
+
   test('rejects paths that leave the workspace', async () => {
     const root = await workspace()
     const outside = await mkdtemp(join(tmpdir(), 'pikku-outside-'))

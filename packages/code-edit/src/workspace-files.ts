@@ -28,6 +28,10 @@ export const DEFAULT_IGNORED = [
   '.DS_Store',
 ]
 
+const isSecret = (name: string) =>
+  (name === '.env' || name.startsWith('.env.') || name === '.dev.vars') &&
+  !name.endsWith('.example')
+
 /** Thrown when a requested file does not exist or is a directory. */
 export class WorkspaceFileNotFoundError extends Error {}
 
@@ -44,6 +48,10 @@ export class WorkspaceFilesService {
     this.maxFileBytes = options.maxFileBytes ?? 1_000_000
   }
 
+  private hidden(name: string) {
+    return this.ignored.has(name) || isSecret(name)
+  }
+
   /** One directory's entries, directories first; a directory that does not exist yet lists as empty. */
   async list(path = ''): Promise<WorkspaceEntry[]> {
     const { abs, rel } = resolveWorkspacePath(this.root, path)
@@ -54,7 +62,7 @@ export class WorkspaceFilesService {
       }
     )
     return entries
-      .filter((e) => !this.ignored.has(e.name))
+      .filter((e) => !this.hidden(e.name))
       .map((e) => ({
         name: e.name,
         path: rel ? `${rel}/${e.name}` : e.name,
@@ -72,7 +80,9 @@ export class WorkspaceFilesService {
   /** A file's text, cut at `maxFileBytes`; binary files come back with empty content. */
   async read(path: string): Promise<WorkspaceFile> {
     const { abs, rel } = resolveWorkspacePath(this.root, path)
-    const info = await stat(abs).catch(() => null)
+    const info = rel.split('/').some((part) => this.hidden(part))
+      ? null
+      : await stat(abs).catch(() => null)
     if (!info || !info.isFile())
       throw new WorkspaceFileNotFoundError(`no file at ${rel || '/'}`)
     const length = Math.min(info.size, this.maxFileBytes)
