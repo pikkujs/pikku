@@ -15,7 +15,10 @@ import { analyzeDeployment, unroutedHttpWirings } from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest, HttpRouteInfo } from '@pikku/deploy'
-import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
+import {
+  collectFilterNames,
+  generatePerUnitCodegen,
+} from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
@@ -564,11 +567,17 @@ export async function runBuildPipeline(options: {
 
       // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)
       const serverManifest = { ...manifest, units: [mergedServerUnit] }
+      const wiringFilterNames = serverUnits
+        .filter((u) => u.role !== 'function')
+        .flatMap((u) =>
+          collectFilterNames(u, manifest, inspectorState, workflowQueues)
+        )
       const { unitPikkuDirs: serverPikkuDirs, errors: serverCodegenErrors } =
         await generatePerUnitCodegen({
           projectDir,
           manifest: serverManifest,
           inspectorState,
+          extraFilterNames: wiringFilterNames,
           deployDir: containerDir,
           resolveUnitDir: () => containerDir,
           workflowQueues,
