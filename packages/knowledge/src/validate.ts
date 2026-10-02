@@ -9,10 +9,7 @@ import {
   readPikkuMeta,
 } from './plan-meta.js'
 import { checkPlanInternals, type PlanRead, readPlan } from './plan.js'
-import {
-  MILESTONE_STATUSES,
-  type MilestoneStatus,
-} from './milestone.js'
+import { MILESTONE_STATUSES, type MilestoneStatus } from './milestone.js'
 import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
@@ -449,7 +446,7 @@ export const runKnowledgeValidate = async (
 
   for (const orphan of resources.orphans) {
     add(
-      'info',
+      'warn',
       `knowledge-orphan-${orphan.uri}`,
       `${orphan.uri} exists in the code and no note describes it`,
       KNOWLEDGE_DIR,
