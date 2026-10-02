@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalStorage } from '@mantine/hooks'
 import { ActionIcon, Tooltip } from '@pikku/mantine/core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { GitCommitHorizontal, Hammer, History, MessageSquare, PanelLeftClose, Plus } from 'lucide-react'
+import { GitCommitHorizontal, Hammer, History, ScrollText, MessageSquare, PanelLeftClose, Plus } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocation } from '../router'
 import { CollapsiblePanel } from '../components/shell/CollapsiblePanel'
@@ -15,8 +15,9 @@ import { ChangesPanel } from '../components/builder/ChangesPanel'
 import { CommitHistory, type GitCommitEntry } from '../components/builder/CommitHistory'
 import { callSandboxControlRpc } from '../components/builder/sandboxControl'
 import { KeepChanges } from './KeepChanges'
+import { LogsTab } from './LogsTab'
 
-type DockTab = 'chat' | 'changes' | 'history'
+type DockTab = 'chat' | 'changes' | 'logs' | 'history'
 
 const HistoryTab: React.FC = () => {
   const log = useQuery({
@@ -122,6 +123,7 @@ export function StudioChatDock() {
                 items={[
                   { value: 'chat', label: m.studio_dock_tab_chat(), icon: <MessageSquare size={13} />, 'data-testid': 'dock-tab-chat' },
                   { value: 'changes', label: m.studio_dock_tab_changes(), icon: <GitCommitHorizontal size={13} />, 'data-testid': 'dock-tab-changes' },
+                  { value: 'logs', label: m.studio_dock_tab_logs(), icon: <ScrollText size={13} />, 'data-testid': 'dock-tab-logs' },
                   { value: 'history', label: m.studio_dock_tab_history(), icon: <History size={13} />, 'data-testid': 'dock-tab-history' },
                 ]}
               />
@@ -167,6 +169,8 @@ export function StudioChatDock() {
               </div>
               <KeepChanges projectKey={key} />
             </div>
+          ) : tab === 'logs' ? (
+            <LogsTab projectKey={key} />
           ) : (
             <HistoryTab />
           )}

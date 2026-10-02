@@ -1314,5 +1314,11 @@
   "studio_keep_nothing": "你的 {folder} 文件夹已包含这里的所有内容。",
   "studio_keep_done": "完成。你的 {folder} 文件夹现在已包含这些更改。",
   "studio_keep_conflict": "你在 {folder} 中修改了构建器在这里修改过的同一行，因此没有移动任何内容。请让构建器基于你的版本修改这些文件，然后再试一次：",
-  "studio_keep_edited": "这些文件在 {folder} 中有未保存的修改，因此没有移动任何内容。请在那里保存或撤销后再试一次："
+  "studio_keep_edited": "这些文件在 {folder} 中有未保存的修改，因此没有移动任何内容。请在那里保存或撤销后再试一次：",
+  "studio_dock_tab_logs": "日志",
+  "studio_logs_server": "服务器",
+  "studio_logs_empty": "这里还没有内容。应用运行后，它的消息会显示在这里。",
+  "studio_logs_ask": "让构建器修复",
+  "studio_logs_ref": "{source} 中的错误",
+  "studio_logs_app": "{slug} 网站"
 }

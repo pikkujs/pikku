@@ -113,6 +113,28 @@ describe('Studio server', () => {
     }
   })
 
+  test('shows the project\'s own logs without colour codes', async () => {
+    const { base, studio, call } = await setup()
+    try {
+      const path = join(base, 'notes')
+      await mkdir(path)
+      execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: path })
+      const { key } = (await call('addProject', { path })).body
+      await mkdir(join(base, 'studio/logs'), { recursive: true })
+      await writeFile(join(base, 'studio/logs', `${key}.log`), 'up\n\x1b[31mError: boom\x1b[0m\n')
+      await writeFile(join(base, 'studio/logs', `${key}-app.log`), 'vite ready\n')
+      await writeFile(join(base, 'studio/logs', 'other.log'), 'not mine\n')
+      assert.deepEqual((await call('projectLogs', { key })).body, {
+        sources: [
+          { id: 'server', lines: ['up', 'Error: boom'] },
+          { id: 'app', lines: ['vite ready'] },
+        ],
+      })
+    } finally {
+      await studio.close()
+    }
+  })
+
   test('proxies an open project with its token', async () => {
     const { base, studio, call } = await setup()
     try {

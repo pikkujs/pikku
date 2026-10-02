@@ -445,6 +445,19 @@ export class StudioProjectsService {
     return entry
   }
 
+  async logs(key: string): Promise<{ sources: { id: string; lines: string[] }[] }> {
+    await this.entry(key)
+    const dir = join(this.home, 'logs')
+    const files = existsSync(dir) ? readdirSync(dir).filter((f) => f === `${key}.log` || (f.startsWith(`${key}-`) && f.endsWith('.log'))) : []
+    const sources = await Promise.all(
+      files.sort().map(async (file) => ({
+        id: file === `${key}.log` ? 'server' : file.slice(key.length + 1, -4),
+        lines: (await tail(join(dir, file), 400)).replace(/\x1b\[[0-9;]*m/g, '').split('\n').filter(Boolean),
+      }))
+    )
+    return { sources: sources.sort((a, b) => Number(b.id === 'server') - Number(a.id === 'server')) }
+  }
+
   async keepStatus(key: string): Promise<KeepStatus> {
     const entry = await this.entry(key)
     return keepStatus(entry.path, await ensureWorktree(entry.path, this.home, entry.id))

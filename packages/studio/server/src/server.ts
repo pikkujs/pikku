@@ -162,6 +162,7 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
     publishStatus: async ({ key }: { key: string }) => publisher.status(key),
     projectApps: async ({ key }: { key: string }) => projects.projectApps(key),
     builderState: ({ key }: { key: string }) => builder.state(key),
+    projectLogs: ({ key }: { key: string }) => projects.logs(key),
     keepStatus: ({ key }: { key: string }) => projects.keepStatus(key),
     keepChanges: ({ key }: { key: string }) => projects.keepChanges(key),
     milestones: async ({ key }: { key: string }) => ({ milestones: await milestoneReport(await projects.projectDir(key)) }),

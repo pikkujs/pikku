@@ -3121,5 +3121,11 @@
   "studio_keep_nothing": "Your {folder} folder has everything made here.",
   "studio_keep_done": "Done. Your {folder} folder now has these changes.",
   "studio_keep_conflict": "You changed the same lines in {folder} that the builder changed here, so nothing was moved. Ask the builder to work from your version of these files, then try again:",
-  "studio_keep_edited": "These files have unsaved edits in {folder}, so nothing was moved. Save or undo them there, then try again:"
+  "studio_keep_edited": "These files have unsaved edits in {folder}, so nothing was moved. Save or undo them there, then try again:",
+  "studio_dock_tab_logs": "Logs",
+  "studio_logs_server": "Server",
+  "studio_logs_empty": "Nothing here yet. Your app's messages show up once it is running.",
+  "studio_logs_ask": "Ask the builder to fix",
+  "studio_logs_ref": "Error in {source}",
+  "studio_logs_app": "{slug} website"
 }

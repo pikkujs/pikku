@@ -1314,5 +1314,11 @@
   "studio_keep_nothing": "Dein Ordner {folder} hat alles, was hier entstanden ist.",
   "studio_keep_done": "Fertig. Dein Ordner {folder} hat jetzt diese Änderungen.",
   "studio_keep_conflict": "Du hast in {folder} dieselben Zeilen geändert wie der Builder hier, deshalb wurde nichts übernommen. Bitte den Builder, mit deiner Version dieser Dateien weiterzuarbeiten, und versuch es dann erneut:",
-  "studio_keep_edited": "Diese Dateien haben ungespeicherte Änderungen in {folder}, deshalb wurde nichts übernommen. Speichere oder verwirf sie dort und versuch es erneut:"
+  "studio_keep_edited": "Diese Dateien haben ungespeicherte Änderungen in {folder}, deshalb wurde nichts übernommen. Speichere oder verwirf sie dort und versuch es erneut:",
+  "studio_dock_tab_logs": "Logs",
+  "studio_logs_server": "Server",
+  "studio_logs_empty": "Noch nichts da. Die Meldungen deiner App erscheinen, sobald sie läuft.",
+  "studio_logs_ask": "Builder beheben lassen",
+  "studio_logs_ref": "Fehler in {source}",
+  "studio_logs_app": "{slug}-Website"
 }
