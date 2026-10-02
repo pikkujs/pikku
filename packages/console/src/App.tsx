@@ -18,6 +18,7 @@ import { QueuesPage } from './pages/QueuesPage'
 import { TriggersPage } from './pages/TriggersPage'
 import { RuntimePage } from './pages/RuntimePage'
 import { EmailsPage } from './pages/EmailsPage'
+import { PagesPage } from './pages/PagesPage'
 import { WebhooksPage } from './pages/WebhooksPage'
 import { SecretsPage } from './pages/SecretsPage'
 import { VariablesPage } from './pages/VariablesPage'
@@ -98,6 +99,7 @@ export const App: React.FC = () => {
           <Route path="/async/trigger" element={<TriggersPage />} />
           <Route path="/runtime" element={<RuntimePage />} />
           <Route path="/emails" element={<EmailsPage />} />
+          <Route path="/pages" element={<PagesPage />} />
           <Route path="/translations" element={<TranslationsPage />} />
           <Route path="/artifacts" element={<ArtifactsPage />} />
           <Route path="/webhooks" element={<WebhooksPage />} />

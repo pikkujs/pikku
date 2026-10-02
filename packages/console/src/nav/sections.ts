@@ -22,6 +22,7 @@ import {
   ListOrdered,
   Lock,
   Mail,
+  Monitor,
   Package,
   Radio,
   Route,
@@ -159,6 +160,11 @@ export function consoleNavSections(): NavSection[] {
       title: m.nav_content(),
       icon: Boxes,
       groups: [
+        {
+          id: 'screens',
+          title: m.nav_group_what_people_see(),
+          items: [item(m.nav_pages(), '/pages', Monitor)],
+        },
         {
           id: 'data',
           title: m.nav_group_data(),
