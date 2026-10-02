@@ -1023,5 +1023,6 @@
   "webhook_source_registration_switch": "Ereignisse empfangen",
   "webhook_source_orphan_badge": "Nicht mehr in deiner App",
   "webhook_source_orphan_body": "{source} schickt womöglich noch Ereignisse hierher. Entferne den Webhook in {source} und bestätige dann.",
-  "webhook_source_orphan_forget": "Ich habe ihn entfernt"
+  "webhook_source_orphan_forget": "Ich habe ihn entfernt",
+  "nav_checks": "Prüfungen"
 }

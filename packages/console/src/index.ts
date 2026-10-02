@@ -367,6 +367,7 @@ export type {
 export { SecretsPage } from './pages/SecretsPage'
 export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
+export { ChecksPage } from './pages/ChecksPage'
 export type { EmailsPageProps } from './pages/EmailsPage'
 export { EmailsComposePanel } from './components/emails/EmailsComposePanel'
 export type { EmailsComposePanelProps } from './components/emails/EmailsComposePanel'
