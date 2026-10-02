@@ -16,6 +16,7 @@ import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholde
 import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 import { FileTree } from '../components/code/FileTree'
 import { FilePicker, filePicker } from '../components/code/FilePicker'
+import { spotlight } from '../components/search/SpotlightSearch'
 
 function languageFromPath(path: string): string {
   const ext = path.split('.').pop() ?? ''
@@ -189,6 +190,7 @@ export const CodePage: React.FC = () => {
     setMounted([editor, monaco])
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current())
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => filePicker.open())
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => spotlight.open())
   }
 
   const editorBody = !selectedPath ? (

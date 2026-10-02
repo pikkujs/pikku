@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { createSpotlight, Spotlight, useSpotlight } from '@mantine/spotlight'
 import type { SpotlightActionData } from '@mantine/spotlight'
-import { useHotkeys } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
 import { m } from '@/i18n/messages'
@@ -91,11 +90,10 @@ export const FilePicker: React.FC<{ onSelect: (path: string) => void }> = ({
     })
   }, [data, query, onSelect])
 
-  useHotkeys([['mod+P', () => filePicker.open()]], [])
-
   return (
     <Spotlight
       store={filePickerStore}
+      shortcut="mod + P"
       actions={actions}
       filter={(_, a) => a}
       query={query}
