@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { I18nString } from '@pikku/react'
+import { asI18n, type I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import {
@@ -38,6 +38,7 @@ import {
   Network,
   UserRound,
   UserSearch,
+  Shapes,
   Users,
   UserCog,
   Variable,
@@ -174,7 +175,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'reference',
           title: m.nav_group_reference(),
-          items: [item(m.nav_knowledge(), '/knowledge', BookOpen)],
+          items: [
+            item(m.nav_knowledge(), '/knowledge', BookOpen),
+            item(asI18n('Artifacts'), '/artifacts', Shapes),
+          ],
         },
       ],
     },

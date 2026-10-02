@@ -36,6 +36,7 @@ import { PersonasPage } from './pages/PersonasPage'
 import { VirtualUsersPage } from './pages/VirtualUsersPage'
 import { KnowledgePage } from './pages/KnowledgePage'
 import { TranslationsPage } from './pages/TranslationsPage'
+import { ArtifactsPage, ArtifactPublicPage } from './pages/ArtifactsPage'
 import { ProjectSurfacePage } from './pages/ProjectSurfacePage'
 import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/render/workflow" element={<RenderWorkflowPage />} />
+      <Route path="/a/:id" element={<ArtifactPublicPage />} />
       <Route
         element={
           <AuthGate>
@@ -97,6 +99,7 @@ export const App: React.FC = () => {
           <Route path="/runtime" element={<RuntimePage />} />
           <Route path="/emails" element={<EmailsPage />} />
           <Route path="/translations" element={<TranslationsPage />} />
+          <Route path="/artifacts" element={<ArtifactsPage />} />
           <Route path="/webhooks" element={<WebhooksPage />} />
           <Route path="/secrets" element={<SecretsPage />} />
           <Route path="/variables" element={<VariablesPage />} />
