@@ -64,6 +64,14 @@ import { FabricSecretsDelete } from './functions/secrets-delete.function.js'
 import { FabricSecretsRotate } from './functions/secrets-rotate.function.js'
 import { FabricVariablesSet } from './functions/variables-set.function.js'
 import { FabricVariablesGet } from './functions/variables-get.function.js'
+import {
+  FabricStageLink,
+  renderStageLink,
+} from './functions/stage-link.function.js'
+import {
+  FabricStageVisibility,
+  renderStageVisibility,
+} from './functions/stage-visibility.function.js'
 import { FabricLogs } from './functions/logs.function.js'
 import { FabricMetrics } from './functions/metrics.function.js'
 import { FabricTrace } from './functions/trace.function.js'
@@ -476,6 +484,32 @@ export const fabricCommands = defineCLICommands({
         options: {
           branch: { description: 'Target branch', short: 'b' },
           json: { description: 'Machine-readable output', default: false },
+        },
+      }),
+    },
+  },
+  stage: {
+    description:
+      'Open a private stage: its access and changes links, and whether it is public',
+    subcommands: {
+      link: pikkuCLICommand({
+        parameters: '<kind>',
+        func: FabricStageLink,
+        render: renderStageLink,
+        description:
+          'Print the access or changes link for a stage (kind: access, changes)',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          route: { description: 'Path the link opens on, e.g. /login' },
+        },
+      }),
+      visibility: pikkuCLICommand({
+        parameters: '<visibility>',
+        func: FabricStageVisibility,
+        render: renderStageVisibility,
+        description: 'Make a stage public or private',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
         },
       }),
     },

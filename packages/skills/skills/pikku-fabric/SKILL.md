@@ -522,6 +522,22 @@ It mints a short-lived operator token for the stage and calls the stage's own
 a 404 is refused by name and nothing is created. A generated password is printed
 once; one you passed is never echoed. With no TTY, pass `--password` or pipe it.
 
+### Opening a private stage
+
+A non-production stage is private: without a link it answers "This preview is
+private". `pikku fabric stage link` prints the link that opens it:
+
+```bash
+pikku fabric stage link access -b develop --route /login   # use the stage
+pikku fabric stage link changes -b develop                 # use it with the changes panel
+pikku fabric stage visibility public -b develop            # or: private
+```
+
+A stage has one live link of each kind, so asking again returns the same one
+until it expires. A `changes` link turns the panel on first; if that needs a
+deploy, the command says so. `visibility public` opens the stage to anyone with
+its URL — hand out an `access` link instead when that is all you need.
+
 ## Versioning
 
 Functions with `expose: true` are versioned via `versions.pikku.json`. When you change a function's input or output schema, you must bump its version number — otherwise `pikku all` will report a breaking change and callers' generated clients become stale.
