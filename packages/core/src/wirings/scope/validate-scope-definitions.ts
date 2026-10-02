@@ -100,6 +100,7 @@ export function validateAndBuildScopeDefinitionsMeta(
       description: def.description,
       scopes: def.scopes,
       sourceFile: def.sourceFile,
+      origin: def.origin,
     }
   }
 

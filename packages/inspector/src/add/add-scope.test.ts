@@ -148,6 +148,38 @@ describe('addScope inspector', () => {
     assert.ok(state.scopes.files.has(file))
   })
 
+  test("marks the app's own declaration as the app's", async () => {
+    const { state } = await inspectSource(
+      [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ reports: {} })',
+      ].join('\n')
+    )
+
+    assert.deepEqual(state.scopes.definitions[0]!.origin, { kind: 'app' })
+  })
+
+  test('marks a declaration the CLI generated as generated', async () => {
+    const { state } = await inspectSources({
+      'user-admin.gen.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ admin: {} })',
+      ].join('\n'),
+      'scopes.ts': [
+        "import { defineScope } from '@pikku/core/scope'",
+        'defineScope({ billing: {} })',
+      ].join('\n'),
+    })
+
+    const origins = Object.fromEntries(
+      state.scopes.definitions.map((d) => [d.name, d.origin])
+    )
+    assert.deepEqual(origins, {
+      admin: { kind: 'generated' },
+      billing: { kind: 'app' },
+    })
+  })
+
   // The point of the keyed form: one call declares as many roots as you like,
   // and a root reads exactly like the nodes beneath it.
   test('extracts several roots from one declaration', async () => {
