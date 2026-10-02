@@ -171,6 +171,13 @@
   padding: 0;
 }
 
+.card .panelSlot .card {
+  background: var(--app-panel-bg-raised);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-card-radius);
+  box-shadow: var(--app-shadow-panel);
+}
+
 
 .hostedStack {
   display: flex;

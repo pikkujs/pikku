@@ -127,6 +127,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
               </Box>
             </PageOptionsPortal>
           )}
+          {slotted && <PagePanelSlot side="start" />}
           {leftDrawer &&
             !listInSheet &&
             (listAsPanel ? (

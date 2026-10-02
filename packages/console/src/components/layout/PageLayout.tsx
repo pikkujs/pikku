@@ -184,6 +184,7 @@ export function PageContainer({
       <div className={styles.hostedStack} data-page-surface="cards">
         <div className={styles.canvasHeader}>{header}</div>
         <div className={styles.hostedRow}>
+          <PagePanelSlot side="start" />
           <div className={`${styles.card} ${styles.hostedCard}`}>
             {extraBand ? (
               <div className={styles.extraBand}>{extraBand}</div>
@@ -229,6 +230,7 @@ export function PageContainer({
     <div className={styles.pageStack}>
       <div className={styles.canvasHeader}>{header}</div>
       <div className={styles.pageRow}>
+        <PagePanelSlot side="start" />
         <div className={styles.card}>
           {extraBand ? (
             <div className={styles.extraBand}>{extraBand}</div>
@@ -241,8 +243,9 @@ export function PageContainer({
   )
 }
 
-export function PagePanelSlot() {
-  return <div className={styles.panelSlot} {...{ [PAGE_PANEL_SLOT]: '' }} />
+/** Where an edge panel lands inside the page row, below the header band, so it lines up with the page card. */
+export function PagePanelSlot({ side = 'end' }: { side?: 'start' | 'end' }) {
+  return <div className={styles.panelSlot} {...{ [PAGE_PANEL_SLOT]: side }} />
 }
 
 /**
