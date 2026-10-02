@@ -2,6 +2,7 @@ import type React from 'react'
 import { asI18n, type I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { isStudio } from '../studio/studio'
 import {
   Activity,
   BarChart3,
@@ -17,6 +18,7 @@ import {
   FunctionSquare,
   GitBranch,
   GitCompare,
+  Inbox,
   Globe,
   KeyRound,
   Languages,
@@ -26,12 +28,16 @@ import {
   Monitor,
   Package,
   Radio,
+  Rocket,
   Route,
   ScrollText,
   Server,
   Shield,
   ShieldCheck,
   Sparkles,
+  Hammer,
+  AppWindow,
+  Waypoints,
   Stethoscope,
   Target,
   Terminal,
@@ -128,9 +134,13 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'main',
           items: [
+            ...(isStudio() ? [item(m.nav_builder(), '/builder', Hammer), item(m.nav_apps_preview(), '/app', AppWindow)] : []),
             item(m.nav_overview(), '/overview', Gauge),
+            item(m.nav_weave(), '/weave', Waypoints),
             item(m.nav_functions(), '/functions', FunctionSquare),
             item(m.nav_workflows(), '/workflow', GitBranch),
+            item(m.nav_requests(), '/requests', Inbox),
+            ...(isStudio() ? [item(m.nav_publish(), '/publish', Rocket)] : []),
           ],
         },
       ],

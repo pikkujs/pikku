@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-const serverDir = fileURLToPath(new URL('..', import.meta.url))
+const serverDir = fileURLToPath(new URL('.', import.meta.url))
 
 /** Starts the design server for `root`, resolving with the URL it serves on. */
 export async function startDesignServer({ root, port, base } = {}) {

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { VariablesListPanel } from '../components/variables/VariablesListPanel'
+import { ConfigValuesCards } from '../components/config-values/ConfigValuesCards'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
@@ -15,7 +15,7 @@ export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
+        surface="cards"
         header={
           <ListPageHeader
             title={m.variables_title()}
@@ -31,7 +31,11 @@ export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
         }
         emptyPanelMessage={m.variables_select_item()}
       >
-        <VariablesListPanel searchQuery={searchQuery} emptyHero={emptyHero} />
+        <ConfigValuesCards
+          kind="variable"
+          searchQuery={searchQuery}
+          emptyHero={emptyHero}
+        />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

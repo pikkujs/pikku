@@ -5,8 +5,11 @@ import { fileURLToPath } from 'node:url'
 
 import { consoleNavSections, navItems } from './sections.js'
 
+const outsideStudio = consoleNavSections().flatMap(navItems)
+Object.assign(globalThis, { window: { __PIKKU_STUDIO__: {}, location: { search: '' } } })
 const sections = consoleNavSections()
 const items = sections.flatMap(navItems)
+Reflect.deleteProperty(globalThis, 'window')
 
 const app = readFileSync(
   fileURLToPath(new URL('../App.tsx', import.meta.url)),
@@ -74,6 +77,11 @@ describe('the console nav model', () => {
     const hrefs = new Set(items.map((item) => item.href))
     const unreachable = routes.filter((route) => !hrefs.has(route))
     assert.deepEqual(unreachable, [])
+  })
+
+  test('only Studio offers Publish', () => {
+    assert.ok(items.some((item) => item.href === '/publish'))
+    assert.equal(outsideStudio.some((item) => item.href === '/publish'), false)
   })
 
   test('every nav destination is a route that exists', () => {

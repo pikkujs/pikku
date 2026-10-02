@@ -22,6 +22,7 @@ import type { PagesService } from '@pikku/code-edit/routes'
 import type { VerifyService } from '@pikku/code-edit/verify'
 import type { BrandWorkspace } from '@pikku/code-edit/brand'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
+import type { StudioHost } from '../src/services/studio-host.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
 
@@ -60,6 +61,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    * them should not have to know which one they are talking to.
    */
   scenarioRunStore: ScenarioRunStore | null
+  studioHost: StudioHost | null
   /**
    * The host's resolved better-auth instance, wired by `pikkuBetterAuth`. The
    * console never constructs it — it is declared here only so the functions

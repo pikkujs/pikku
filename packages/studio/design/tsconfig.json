@@ -34,7 +34,7 @@
         "workspace/apps/app/node_modules/@project/*"
       ],
       "@pikku/mantine/theme": [
-        "../frontend/mantine/src/theme/index.ts"
+        "../../frontend/mantine/src/theme/index.ts"
       ]
     }
   },

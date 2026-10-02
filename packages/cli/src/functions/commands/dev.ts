@@ -45,6 +45,7 @@ import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { startDesignServer } from './serve-design.js'
+import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import {
   clearDevAddress,
@@ -239,6 +240,7 @@ export const dev = pikkuSessionlessFunc<
     if (config.scaffold?.scenarios) {
       registerScenarioInstrumentation()
     }
+    registerStudioSession()
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)

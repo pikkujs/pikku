@@ -23,18 +23,20 @@ function freePort(): Promise<number> {
   })
 }
 
-/** Starts `@pikku/design-server` when the project has it installed, and exposes its URL to the console. */
+/** Starts the design server from `@pikku/studio` — the running Studio's, or the project's own install — and exposes its URL to the console. */
 export async function startDesignServer(
   rootDir: string,
   logger: Logger
 ): Promise<DesignServer | undefined> {
-  let entry: string
-  try {
-    entry = createRequire(join(rootDir, 'package.json')).resolve(
-      '@pikku/design-server'
-    )
-  } catch {
-    return undefined
+  let entry = process.env.PIKKU_STUDIO_DESIGN
+  if (!entry) {
+    try {
+      entry = createRequire(join(rootDir, 'package.json')).resolve(
+        '@pikku/studio/design'
+      )
+    } catch {
+      return undefined
+    }
   }
   try {
     const { startDesignServer: start } = await import(pathToFileURL(entry).href)

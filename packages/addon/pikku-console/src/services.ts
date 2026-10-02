@@ -20,6 +20,7 @@ import { findProjectRoot } from './lib/find-project-root.js'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 import { join } from 'node:path'
 import { FileScenarioRunStore } from '@pikku/core/services'
+import { resolveStudioHost, type StudioHost } from './services/studio-host.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -72,6 +73,7 @@ export const createSingletonServices = pikkuAddonServices(
     let verifyService: VerifyService | null = null
     let brandService: BrandWorkspace | null = null
     let scenarioRunStore: FileScenarioRunStore | null = null
+    let studioHost: StudioHost | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
       stateDiffService = new StateDiffService(projectRoot)
@@ -90,6 +92,7 @@ export const createSingletonServices = pikkuAddonServices(
         projectRoot
       )
       verifyService = new VerifyService(projectRoot)
+      studioHost = await resolveStudioHost(projectRoot)
       const brandSettings = async () => {
         const names = ['UNSPLASH_ACCESS_KEY', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'] as const
         const found: Partial<Record<(typeof names)[number], string>> = {
@@ -165,6 +168,7 @@ export const createSingletonServices = pikkuAddonServices(
       verifyService,
       brandService,
       scenarioRunStore,
+      studioHost,
       auth,
     }
   }

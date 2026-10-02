@@ -1,0 +1,67 @@
+{
+  "name": "@pikku/studio",
+  "version": "0.12.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/studio"
+  },
+  "description": "Pikku Studio \u2014 the local app for building pikku projects: its backend (projects, sign-in, worktrees, one dev server per project) and the design server behind the console's Design page",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "pikku-studio": "./dist/bin.js",
+    "pikku-design-server": "./design/start.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./design": "./design/start.mjs"
+  },
+  "files": [
+    "dist",
+    "design/start.mjs",
+    "design/src",
+    "design/messages",
+    "design/types",
+    "design/seed-scratchpads",
+    "design/project.inlang/settings.json",
+    "design/index.html",
+    "design/vite.config.ts",
+    "design/tsconfig.json"
+  ],
+  "scripts": {
+    "i18n:compile": "cd design && paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy globalVariable baseLocale --emit-ts-declarations --no-emit-readme --silent",
+    "build": "tsc -p server",
+    "tsc": "bun run i18n:compile && tsc -p server --noEmit && tsc -p design --noEmit",
+    "test": "node --import tsx --test 'server/**/*.test.ts'",
+    "dev": "bun run i18n:compile && node design/start.mjs",
+    "prepublishOnly": "bun run i18n:compile && bun run build",
+    "e2e": "node --import tsx e2e/studio.e2e.ts"
+  },
+  "dependencies": {
+    "@mantine/core": "^9.5.1",
+    "@mantine/hooks": "^9.5.1",
+    "@pikku/builder": "^0.12.0",
+    "@pikku/cli": "^0.12.179",
+    "@pikku/mantine": "^0.12.16",
+    "@tanstack/react-query": "^5.66.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "lucide-react": "^0.456.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "vite": "^7.0.0"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.24.1",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9",
+    "@playwright/test": "1.58.2"
+  }
+}

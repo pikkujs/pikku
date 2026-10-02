@@ -1,0 +1,11 @@
+{
+  "name": "@pikku/studio-desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bunx @tauri-apps/cli@2 dev",
+    "build": "bunx @tauri-apps/cli@2 build --bundles app",
+    "icon": "bunx @tauri-apps/cli@2 icon ../../console/public/android-chrome-512x512.png"
+  }
+}

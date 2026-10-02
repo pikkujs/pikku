@@ -1,0 +1,506 @@
+.root {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  /* Same dark canvas the console shell uses, so the chat and page cards float on
+     it — the sandbox shell now matches SidebarLayout's card-on-canvas layout. */
+  background: var(--app-page-bg);
+}
+
+.fullScreenState {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mantine-color-body);
+}
+
+.panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  overflow: hidden;
+  background: var(--app-panel-bg);
+  animation: builderDrawerSlideIn 180ms ease-out;
+}
+
+.panelTabsRoot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panelTabsList {
+  flex-shrink: 0;
+  /* Match the app header/rail head so the chat panel's top bar lines up with
+     the console header across the seam. Fixed height, vertically centered —
+     not content-driven padding, which drifted off the shared height. */
+  height: var(--screen-header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  /* Same flat fill as the navbar/rail (--app-panel-bg) so the chat header reads
+     as one surface with the nav beside it, not a separate raised band. */
+  background: var(--app-panel-bg);
+  /* Divide the header from the chat body with the same hairline the weave card's
+     header band uses, so both cards read with one header language. */
+  border-bottom: 1px solid var(--app-border);
+}
+
+.panelBody {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+}
+
+.panelBody > span {
+  margin: auto;
+}
+
+.thread {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes builderDrawerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.resizeHandle {
+  width: 8px;
+  /* Net-zero layout footprint (8 − 4 − 4): the 8px grab area straddles the
+     panel/app divider without consuming width, so no body-background seam
+     shows between the drawer and the app column. */
+  margin-left: -4px;
+  margin-right: -4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 150ms ease;
+  z-index: 2;
+  touch-action: none;
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+  background-color: var(--app-primary-button-bg);
+}
+
+.resizeOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* --mobile-sm: 36em = 576px (Mantine xs) */
+@media (max-width: 36em) {
+  .panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+    width: 100% !important;
+    max-width: 100vw;
+  }
+
+  .resizeHandle {
+    display: none;
+  }
+}
+
+.app {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-width: 0;
+  min-height: 0;
+  font-size: var(--mantine-font-size-sm);
+  /* Transparent so the page's own PageContainer card floats on the shell canvas
+     with its 8px gutter (matching the console content column), instead of sitting
+     on a flat body fill. */
+  background-color: transparent;
+  overflow: hidden;
+}
+
+.iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* The open screen plus the shell-level cards that caption it (dev server down). */
+.appColumn {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sits under whatever screen is open, as its own card. */
+.devDownCard {
+  margin: 0 8px 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 14px 20px;
+  background: var(--app-panel-bg);
+  border: 0.5px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+/* On a phone the screen above it is full-bleed, so this is a bar attached to the
+   bottom of that screen rather than a card floating under it. Same breakpoint as
+   the page card's (MOBILE_QUERY in lib/breakpoints.ts — CSS cannot import it, so
+   the two must be changed together). */
+@media (max-width: 62em) {
+  .devDownCard {
+    margin: 0;
+    padding: 12px 16px;
+    border: none;
+    border-top: 0.5px solid var(--app-border);
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+.devDownIcon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: var(--app-panel-bg-soft);
+  border: 0.5px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspectorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  background: var(--app-panel-bg-raised);
+  flex-shrink: 0;
+}
+
+/* Browser-style controls that live in the page header: device · address · open. */
+.chromePill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 200px;
+  max-width: 360px;
+  padding: 2px 6px 2px 4px;
+}
+
+.chromePageButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  max-width: 100%;
+  color: var(--app-text-dim);
+}
+
+.chromePageButton:hover {
+  background: var(--app-panel-bg);
+  color: var(--app-text);
+}
+
+.chromePageStatic {
+  padding: 0 6px;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tablet/mobile preview shrinks the iframe; desktop fills the screen. */
+.viewportStage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: auto;
+  padding: 16px;
+  background: var(--mantine-color-default);
+}
+
+.deviceFrame {
+  height: 100%;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid var(--app-border);
+  overflow: hidden;
+}
+
+.deviceTablet {
+  width: 820px;
+  border-radius: 12px;
+}
+
+.deviceMobile {
+  width: 390px;
+  border-radius: 24px;
+}
+
+.commitList {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 10px;
+  gap: 8px;
+}
+
+.commitItem {
+  border: 1px solid var(--app-border);
+  border-radius: var(--mantine-radius-md);
+  padding: 10px;
+  background: var(--mantine-color-default);
+}
+
+.commitSubject {
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.35;
+}
+
+.commitMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.commitState {
+  margin: auto;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.chatSessionDivider {
+  height: 0;
+  margin: 2px 2px 10px;
+}
+
+.chatSessionState {
+  padding: 10px 10px 12px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.chatSessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 42vh;
+  overflow: auto;
+}
+
+.chatSessionRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 4px 4px 4px 6px;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.chatSessionRow:hover,
+.chatSessionRowActive {
+  background: var(--app-panel-bg-strong);
+}
+
+.chatSessionMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatSessionSelect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 2px;
+  text-align: left;
+}
+
+.chatSessionSelectRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.chatSessionIcon {
+  flex-shrink: 0;
+  color: var(--app-text-faint);
+}
+
+.chatSessionTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--app-text-dim);
+}
+
+.chatSessionMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: var(--app-text-faint);
+  font-size: 10.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.chatSessionActiveIcon {
+  flex-shrink: 0;
+  color: var(--app-accent);
+}
+
+.chatSessionActions {
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.chatSessionRow:hover .chatSessionActions,
+.chatSessionRow:focus-within .chatSessionActions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.chatSessionInput {
+  height: 30px;
+  min-height: 30px;
+  font-size: 12.5px;
+}
+
+.chatSessionSpinner {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  display: inline-block;
+  animation: chatSessionSpin 800ms linear infinite;
+}
+
+@keyframes chatSessionSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Inspect toggles (i18n · select-for-chat) as ONE segmented group, matching the
+   chat panel's PikkuToggle chrome exactly — same fill, hairline, radius and 2px
+   inset. Not PikkuToggle itself: that control requires a selected value, while
+   these deselect back to "no panel". */
+.inspectGroup {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 9px;
+  background: var(--app-panel-bg-strong);
+  border: 0.5px solid var(--app-border);
+}
+
+.inspectGroup button {
+  border-radius: 7px;
+}
+
+/* The phone's Options sheet: the same browser controls the desktop header draws
+   as an icon strip, as labelled rows a thumb can hit. Metrics match the nav
+   rail's rows (DashboardSidebar.module.css .navRow) so the two sheets the
+   bottom bar raises read as one system. */
+.optionSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  width: 100%;
+}
+
+.optionPill {
+  padding: 2px 2px 6px;
+}
+
+.optionRow {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--app-text);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.optionRow:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.optionRow:not(:disabled):hover {
+  background: var(--app-surface-interactive);
+}
+
+.optionRowActive,
+.optionRowActive:not(:disabled):hover {
+  color: var(--app-accent);
+  background: var(--app-surface-info);
+}

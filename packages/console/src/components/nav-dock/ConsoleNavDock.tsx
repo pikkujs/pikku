@@ -10,6 +10,7 @@ import {
   Download,
   Languages,
   LogOut,
+  LayoutGrid,
   Monitor,
   Moon,
   Palette,
@@ -22,6 +23,7 @@ import {
   Sun,
   UserCog,
 } from 'lucide-react'
+import { isStudio, leaveProject } from '../../studio/studio'
 import { m } from '@/i18n/messages'
 import { supportedLocales, useLocale, type Locale } from '@/i18n/config'
 import {
@@ -350,15 +352,22 @@ export function ConsoleNavDock({
                 {
                   key: 'out',
                   rows: [
-                    {
-                      key: 'sign-out',
-                      Icon: LogOut,
-                      label: m.auth_sign_out(),
-                      danger: true,
-                      onSelect: () => {
-                        void auth?.signOut()
-                      },
-                    },
+                    isStudio()
+                      ? {
+                          key: 'all-projects',
+                          Icon: LayoutGrid,
+                          label: m.studio_all_projects(),
+                          onSelect: leaveProject,
+                        }
+                      : {
+                          key: 'sign-out',
+                          Icon: LogOut,
+                          label: m.auth_sign_out(),
+                          danger: true,
+                          onSelect: () => {
+                            void auth?.signOut()
+                          },
+                        },
                   ],
                 },
               ]

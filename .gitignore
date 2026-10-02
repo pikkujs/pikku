@@ -194,3 +194,5 @@ verifiers/addon-openapi/generated/
 # native init` from pikku.config.json, and dist-native is `build:native` output.
 e2e/packages/web/dist-native/
 e2e/packages/web/src-tauri/
+
+.studio/
