@@ -122,13 +122,18 @@ export const SEVERITY_ORDER: KnowledgeFinding['severity'][] = [
 /**
  * The findings the CLI gate would fail on.
  *
- * `pikku knowledge validate` reports orphans — code no note describes — at
- * `info`, keeps them outside `ok` and prints them as their own summary rather
- * than among the problems. A console row that counted them would offer a clean
- * base a list of work it does not have.
+ * `pikku knowledge validate` reports orphans — code no note describes — as
+ * warnings under their own summary rather than among the problems, and the
+ * console's findings row stays for what is wrong inside the notes. A row that
+ * counted them would offer a clean base a list of work it does not have.
  */
+const ORPHAN_PREFIX = 'knowledge-orphan-'
+
 export const issuesToFix = (findings: KnowledgeFinding[]): KnowledgeFinding[] =>
-  findings.filter((finding) => finding.severity !== 'info')
+  findings.filter(
+    (finding) =>
+      finding.severity !== 'info' && !finding.id.startsWith(ORPHAN_PREFIX)
+  )
 
 /**
  * The worst severity present, so one icon can stand for a whole list. `info` for

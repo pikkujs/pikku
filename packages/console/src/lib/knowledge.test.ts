@@ -86,10 +86,10 @@ describe('noteMatches', () => {
 })
 
 describe('issuesToFix', () => {
-  test('drops the orphans validate reports at info', () => {
+  test('drops the orphans validate reports', () => {
     assert.deepEqual(
       issuesToFix([
-        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'info' }),
+        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'warn' }),
         finding({ id: 'a', severity: 'warn' }),
         finding({ id: 'b', severity: 'error' }),
       ]).map((f) => f.id),
@@ -100,7 +100,7 @@ describe('issuesToFix', () => {
   test('a base with only orphans has nothing to fix', () => {
     assert.deepEqual(
       issuesToFix([
-        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'info' }),
+        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'warn' }),
       ]),
       []
     )
