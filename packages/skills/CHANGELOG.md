@@ -1,5 +1,11 @@
 # @pikku/skills
 
+## 0.12.49
+
+### Patch Changes
+
+- d6d2450: `pikku fabric stage link <access|changes>` prints the link that opens a private stage, turning the changes panel on when asked for a changes link, and `pikku fabric stage visibility <public|private>` makes a stage public or private.
+
 ## 0.12.48
 
 ### Patch Changes

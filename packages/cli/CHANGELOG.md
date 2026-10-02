@@ -1,3 +1,19 @@
+## 0.12.180
+
+### Patch Changes
+
+- e746ba9: Agent, MCP and channel deployment units now take `deploy.defaultTarget` instead of always being serverless, and a server-target one is folded into the merged server container with its agent, MCP and channel wirings. A project that defaults to `server` no longer gets worker bundles for them that cannot hold its node-only services.
+- 62680bf: `createScenarioRunner`, `flattenAnalyticsEvent` and the generated feature-flag values are no longer exported from the `#pikku` leaves; the flag values are imported from `pikku-flags-manifest.gen.js` and renamed `declaredFeatureFlags`, `featureFlagsMeta` and `featureFlagsFallback`.
+- d6d2450: `pikku fabric stage link <access|changes>` prints the link that opens a private stage, turning the changes panel on when asked for a changes link, and `pikku fabric stage visibility <public|private>` makes a stage public or private.
+- 9112494: `pikku knowledge validate` reports code that no note describes as a warning rather than info, and raises one `PKU960` diagnostic for it, so `--fail-on-warn` can gate on it and the "consistent" line no longer prints while notes are missing. A plain run still exits 0: only errors fail it.
+- Updated dependencies [d6d2450]
+- Updated dependencies [9112494]
+- Updated dependencies [1b7268b]
+  - @pikku/skills@0.12.49
+  - @pikku/knowledge@0.12.17
+  - @pikku/inspector@0.12.101
+  - @pikku/better-auth@0.12.53
+
 ## 0.12.179
 
 ### Patch Changes
