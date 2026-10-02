@@ -108,6 +108,7 @@ export const HELP_PENDING: readonly string[] = [
   '/async/trigger',
   '/runtime',
   '/emails',
+  '/checks',
   '/webhooks',
   '/secrets',
   '/variables',

@@ -30,6 +30,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  Stethoscope,
   Target,
   Terminal,
   ToggleLeft,
@@ -206,7 +207,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'what',
           title: m.nav_group_what_is_tested(),
-          items: [item(m.nav_scenarios(), '/scenarios', Route)],
+          items: [
+            item(m.nav_checks(), '/checks', Stethoscope),
+            item(m.nav_scenarios(), '/scenarios', Route),
+          ],
         },
         {
           id: 'who',
