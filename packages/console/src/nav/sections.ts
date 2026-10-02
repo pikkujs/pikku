@@ -37,6 +37,7 @@ import {
   Sparkles,
   Hammer,
   AppWindow,
+  Milestone,
   Waypoints,
   Stethoscope,
   Target,
@@ -134,7 +135,7 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'main',
           items: [
-            ...(isStudio() ? [item(m.nav_builder(), '/builder', Hammer), item(m.nav_apps_preview(), '/app', AppWindow)] : []),
+            ...(isStudio() ? [item(m.nav_builder(), '/builder', Hammer), item(m.nav_milestones(), '/milestones', Milestone), item(m.nav_apps_preview(), '/app', AppWindow)] : []),
             item(m.nav_overview(), '/overview', Gauge),
             item(m.nav_weave(), '/weave', Waypoints),
             item(m.nav_functions(), '/functions', FunctionSquare),

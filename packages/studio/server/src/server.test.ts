@@ -48,7 +48,7 @@ const setup = async () => {
     const res = await fetch(`${studio.url}/studio/${name}`, { method: 'POST', body: JSON.stringify(input) })
     return { status: res.status, body: await res.json() }
   }
-  return { base, studio, call }
+  return { base, studio, call, projects }
 }
 
 describe('Studio server', () => {
@@ -87,6 +87,27 @@ describe('Studio server', () => {
       assert.equal(await (await fetch(`${studio.url}/console/assets/app.js`)).text(), 'console.log(1)')
       const root = await fetch(`${studio.url}/`, { redirect: 'manual' })
       assert.equal(root.headers.get('location'), '/console/')
+    } finally {
+      await studio.close()
+    }
+  })
+
+  test('lists milestones and serves only their screenshots', async () => {
+    const { base, studio, call, projects } = await setup()
+    try {
+      const path = join(base, 'notes')
+      await mkdir(path)
+      execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: path })
+      const { key } = (await call('addProject', { path })).body
+      assert.deepEqual((await call('milestones', { key })).body, { milestones: [] })
+      const dir = await projects.projectDir(key)
+      await mkdir(join(dir, '.pikku/builder/looks/app/desktop'), { recursive: true })
+      await writeFile(join(dir, '.pikku/builder/looks/app/desktop/index.png'), 'png')
+      await writeFile(join(dir, 'secret.png'), 'no')
+      const shot = await fetch(`${studio.url}/studio/shot/${key}/.pikku/builder/looks/app/desktop/index.png`)
+      assert.equal(shot.status, 200)
+      assert.equal(await shot.text(), 'png')
+      assert.equal((await fetch(`${studio.url}/studio/shot/${key}/..%2F..%2F..%2Fsecret.png`)).status, 404)
     } finally {
       await studio.close()
     }

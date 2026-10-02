@@ -40,6 +40,7 @@ import { StudioPublishPage } from './studio/StudioPublishPage'
 import { StudioBuilderPage } from './studio/StudioBuilderPage'
 import { WeavePage } from './pages/WeavePage'
 import { StudioAppsPage } from './studio/StudioAppsPage'
+import { StudioMilestonesPage } from './studio/StudioMilestonesPage'
 import { isStudio } from './studio/studio'
 import { ScenariosPage } from './pages/ScenariosPage'
 import { PersonasPage } from './pages/PersonasPage'
@@ -99,6 +100,7 @@ export const App: React.FC = () => {
           {isStudio() && <Route path="/publish" element={<StudioPublishPage />} />}
           {isStudio() && <Route path="/builder" element={<StudioBuilderPage />} />}
           {isStudio() && <Route path="/app" element={<StudioAppsPage />} />}
+          {isStudio() && <Route path="/milestones" element={<StudioMilestonesPage />} />}
           <Route path="/code" element={<CodePage />} />
           <Route path="/scenarios" element={<ScenariosPage />} />
           <Route path="/personas" element={<PersonasPage />} />

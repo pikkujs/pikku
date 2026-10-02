@@ -18,7 +18,7 @@ import {
   writeConfigProjectId,
   type FabricProjectRow,
 } from '@pikku/cli/fabric'
-import { commitPaths, ensureWorktree, worktreeConfinement, type StudioWorktree } from './worktree.js'
+import { commitPaths, ensureWorktree, keepChanges, keepStatus, worktreeConfinement, type KeepResult, type KeepStatus, type StudioWorktree } from './worktree.js'
 import { canConfine, confinedSpawn, type Confinement } from './confine.js'
 import { previewViteConfig } from './vite-preview.js'
 
@@ -437,6 +437,28 @@ export class StudioProjectsService {
     }
     await commitPaths(path, ['pikku.config.json'], 'Link to Fabric')
     return this.add(path)
+  }
+
+  private async entry(key: string): Promise<RegistryEntry> {
+    const entry = (await this.registry()).find((e) => e.id === key)
+    if (!entry) throw new Error('Add the project to Studio before opening it')
+    return entry
+  }
+
+  async keepStatus(key: string): Promise<KeepStatus> {
+    const entry = await this.entry(key)
+    return keepStatus(entry.path, await ensureWorktree(entry.path, this.home, entry.id))
+  }
+
+  async keepChanges(key: string): Promise<KeepResult> {
+    const entry = await this.entry(key)
+    return keepChanges(entry.path, await ensureWorktree(entry.path, this.home, entry.id))
+  }
+
+  async projectDir(key: string): Promise<string> {
+    const entry = (await this.registry()).find((e) => e.id === key)
+    if (!entry) throw new Error('Add the project to Studio before opening it')
+    return (await ensureWorktree(entry.path, this.home, entry.id)).projectDir
   }
 
   async builderLaunch(key: string): Promise<{ cwd: string; apiUrl?: string; apps: { slug: string; url: string }[]; env: Record<string, string>; launch?: Launcher }> {

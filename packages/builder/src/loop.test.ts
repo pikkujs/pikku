@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { budgetLine, nextStep, type CommandRunner } from './loop.js'
+import { milestoneReport } from './milestones.js'
 import { execFileSync } from 'node:child_process'
 
 const project = (status = 'proposed') => {
@@ -87,5 +88,26 @@ describe('budgetLine', () => {
   test('warns near the end of the budget', () => {
     assert.equal(budgetLine(3, 25), 'Turn 3 of 25 for this milestone.')
     assert.match(budgetLine(22, 25), /Few turns left/)
+  })
+})
+
+describe('milestoneReport', () => {
+  test('shows the last check and the commit of each milestone', async () => {
+    const cwd = project('dispatched')
+    await nextStep(cwd, { run: runner({ verify: 1 }) })
+    let [report] = await milestoneReport(cwd)
+    assert.equal(report!.status, 'dispatched')
+    assert.equal(report!.check?.ok, false)
+    assert.equal(report!.check?.stage, 'verify')
+
+    await nextStep(cwd, { run: runner({ verify: 1 }) })
+    ;[report] = await milestoneReport(cwd)
+    assert.equal(report!.check?.attempts, 2)
+
+    await nextStep(cwd, { run: runner({}) })
+    ;[report] = await milestoneReport(cwd)
+    assert.equal(report!.status, 'built')
+    assert.equal(report!.check?.ok, true)
+    assert.match(report!.gherkin ?? '', /writes one/)
   })
 })

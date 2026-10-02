@@ -62,3 +62,53 @@ export const worktreeConfinement = (worktree: StudioWorktree): Confinement => ({
   root: worktree.path,
   writable: [worktree.gitDir],
 })
+
+export interface KeepStatus {
+  folder: string
+  target: string | null
+  commits: { sha: string; subject: string }[]
+  unsaved: number
+}
+
+export type KeepResult = { ok: true; kept: number } | { ok: false; reason: 'conflict' | 'edited'; files: string[] }
+
+const SCRATCH = ['--', '.', ':(exclude,glob)**/.pikku/**']
+
+const tryGit = (cwd: string, ...args: string[]) =>
+  exec('git', args, { cwd }).then(
+    (r) => ({ ok: true, output: r.stdout.trim() }),
+    (e: { stdout?: string; stderr?: string }) => ({ ok: false, output: `${e.stdout ?? ''}\n${e.stderr ?? ''}`.trim() })
+  )
+
+const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean)
+
+export async function keepStatus(repo: string, worktree: StudioWorktree): Promise<KeepStatus> {
+  const folder = await git(repo, 'rev-parse', '--show-toplevel')
+  const target = (await tryGit(folder, 'symbolic-ref', '--short', '-q', 'HEAD')).output || null
+  const log = await git(folder, 'log', '--format=%h%x09%s', `HEAD..${worktree.branch}`)
+  const unsaved = lines(await git(worktree.path, 'status', '--porcelain', ...SCRATCH)).length
+  return { folder, target, unsaved, commits: lines(log).map((l) => ({ sha: l.split('\t')[0]!, subject: l.split('\t').slice(1).join('\t') })) }
+}
+
+export async function keepChanges(repo: string, worktree: StudioWorktree): Promise<KeepResult> {
+  const folder = await git(repo, 'rev-parse', '--show-toplevel')
+  await git(worktree.path, 'add', '-A', ...SCRATCH)
+  if (!(await tryGit(worktree.path, 'diff', '--cached', '--quiet')).ok) {
+    await git(worktree.path, ...IDENTITY, 'commit', '-q', '--no-verify', '-m', 'Changes from the builder')
+  }
+  const head = await git(folder, 'rev-parse', 'HEAD')
+  const synced = await tryGit(worktree.path, ...IDENTITY, 'merge', '-q', '--no-edit', head)
+  if (!synced.ok) {
+    const files = lines(await git(worktree.path, 'diff', '--name-only', '--diff-filter=U'))
+    await tryGit(worktree.path, 'merge', '--abort')
+    return { ok: false, reason: 'conflict', files }
+  }
+  const kept = Number(await git(folder, 'rev-list', '--count', `HEAD..${worktree.branch}`))
+  if (kept === 0) return { ok: true, kept }
+  const merged = await tryGit(folder, 'merge', '-q', '--ff-only', worktree.branch)
+  if (!merged.ok) {
+    const files = lines(merged.output).filter((l) => !/^(error|hint|fatal|Please|Aborting|Updating)\b/.test(l) && !l.endsWith(':'))
+    return { ok: false, reason: 'edited', files }
+  }
+  return { ok: true, kept }
+}

@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { NO_DRIVER, lookAtPages, lookReport, type Critic } from './look.js'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, join, relative } from 'node:path'
+import { NO_DRIVER, lookAtPages, lookReport, type Critic, type PageLook } from './look.js'
 import {
   SEATS,
   dispatchedMilestone,
@@ -19,9 +20,13 @@ import {
   type KnowledgeNote,
 } from '@pikku/knowledge'
 
+export type GateStage = 'verify' | 'plan' | 'scenarios' | 'look'
+
 export interface GateResult {
   ok: boolean
   report: string
+  stage?: GateStage
+  looks?: PageLook[]
 }
 
 export type CommandRunner = (cwd: string, args: string[], env?: Record<string, string>) => Promise<{ code: number; output: string }>
@@ -99,7 +104,7 @@ const noteText = (cwd: string, note: KnowledgeNote) => {
 export async function checkMilestone(cwd: string, note: KnowledgeNote, options: LoopOptions = {}): Promise<GateResult> {
   const run = options.run ?? runPikku
   const verify = await run(cwd, ['verify'], options.env)
-  if (verify.code !== 0) return { ok: false, report: `\`pikku verify\` is red:\n\n${tail(verify.output)}` }
+  if (verify.code !== 0) return { ok: false, stage: 'verify', report: `\`pikku verify\` is red:\n\n${tail(verify.output)}` }
 
   const plan = readPlan(cwd, note.path)
   if (plan.ok) {
@@ -108,6 +113,7 @@ export async function checkMilestone(cwd: string, note: KnowledgeNote, options: 
     if (owed.length > 0) {
       return {
         ok: false,
+        stage: 'plan',
         report: `The plan still owes ${owed.length} item(s) that pikku's generated meta cannot see:\n${owed.map((item) => `  - ${item}`).join('\n')}`,
       }
     }
@@ -115,13 +121,14 @@ export async function checkMilestone(cwd: string, note: KnowledgeNote, options: 
 
   const target = options.apiUrl ? ['--api-url', options.apiUrl] : ['--spawn']
   const scenarios = await run(cwd, ['scenario', 'run', 'local', ...target], options.env)
-  if (scenarios.code !== 0) return { ok: false, report: `\`pikku scenario run\` failed:\n\n${tail(scenarios.output)}` }
+  if (scenarios.code !== 0) return { ok: false, stage: 'scenarios', report: `\`pikku scenario run\` failed:\n\n${tail(scenarios.output)}` }
 
+  let looks: PageLook[] | undefined
   if (options.critic && options.apps?.length) {
     options.onStatus?.('Photographing the pages and grading their look')
     const gherkin = gherkinOf(note)
     try {
-      const looks = await lookAtPages(cwd, {
+      looks = await lookAtPages(cwd, {
         apps: options.apps,
         persona: gherkin ? personasIn(gherkin)[0] : undefined,
         milestone: note.path,
@@ -133,14 +140,42 @@ export async function checkMilestone(cwd: string, note: KnowledgeNote, options: 
       const ungraded = looks.filter((look) => look.verdict === 'ungraded').map((look) => look.route)
       if (ungraded.length) options.onStatus?.(`Could not grade the look of ${ungraded.join(', ')}; they are checked again next time`)
       const report = lookReport(looks)
-      if (report) return { ok: false, report }
+      if (report) return { ok: false, stage: 'look', report, looks }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      if (!NO_DRIVER.test(message)) return { ok: false, report: message }
+      if (!NO_DRIVER.test(message)) return { ok: false, stage: 'look', report: message }
       options.onStatus?.('Skipped the page look: this project has no @pikku/playwright')
     }
   }
-  return { ok: true, report: tail(scenarios.output, 20) }
+  return { ok: true, report: tail(scenarios.output, 20), looks }
+}
+
+export interface MilestoneCheck {
+  at: number
+  ok: boolean
+  stage?: GateStage
+  report: string
+  looks?: PageLook[]
+  commit?: string
+  attempts?: number
+}
+
+const checksPath = (cwd: string) => join(cwd, '.pikku', 'builder', 'checks.json')
+
+export function readChecks(cwd: string): Record<string, MilestoneCheck> {
+  try {
+    return JSON.parse(readFileSync(checksPath(cwd), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+async function recordCheck(cwd: string, milestone: string, check: MilestoneCheck) {
+  const checks = readChecks(cwd)
+  const looks = check.looks?.map((look) => ({ ...look, shots: look.shots.map((shot) => relative(cwd, shot)) }))
+  checks[milestone] = { ...check, looks, attempts: (checks[milestone]?.ok === false ? (checks[milestone]!.attempts ?? 1) : 0) + 1 }
+  await mkdir(dirname(checksPath(cwd)), { recursive: true })
+  await writeFile(checksPath(cwd), JSON.stringify(checks, null, 2))
 }
 
 export const buildPrompt = (cwd: string, note: KnowledgeNote) => {
@@ -200,10 +235,17 @@ export async function nextStep(cwd: string, options: LoopOptions = {}): Promise<
   if (building) {
     const gate = await checkMilestone(cwd, building, options)
     if (!gate.ok) {
+      await recordCheck(cwd, building.path, { at: Date.now(), ok: false, stage: gate.stage, report: gate.report, looks: gate.looks })
       return { kind: 'prompt', status: `Checks for "${titleOf(building)}" are not green yet`, message: continuePrompt(titleOf(building), gate) }
     }
     await markDispatchedMilestoneBuilt(cwd)
+    await recordCheck(cwd, building.path, { at: Date.now(), ok: true, report: gate.report, looks: gate.looks })
     const commit = await commitMilestone(cwd, titleOf(building))
+    if (commit) {
+      const checks = readChecks(cwd)
+      checks[building.path] = { ...checks[building.path]!, commit }
+      await writeFile(checksPath(cwd), JSON.stringify(checks, null, 2))
+    }
     return { kind: 'built', status: `"${titleOf(building)}" is built and its checks pass${commit ? ` (saved as ${commit})` : ''}`, commit }
   }
 

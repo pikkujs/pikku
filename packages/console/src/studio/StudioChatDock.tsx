@@ -14,6 +14,7 @@ import { PikkuToggle } from '../components/builder/PikkuToggle'
 import { ChangesPanel } from '../components/builder/ChangesPanel'
 import { CommitHistory, type GitCommitEntry } from '../components/builder/CommitHistory'
 import { callSandboxControlRpc } from '../components/builder/sandboxControl'
+import { KeepChanges } from './KeepChanges'
 
 type DockTab = 'chat' | 'changes' | 'history'
 
@@ -156,7 +157,15 @@ export function StudioChatDock() {
             <BuilderChat projectKey={key} context={context} />
           ) : tab === 'changes' ? (
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <ChangesPanel onSaved={() => void queryClient.invalidateQueries({ queryKey: ['studio', 'git-log'] })} />
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <ChangesPanel
+                  onSaved={() => {
+                    void queryClient.invalidateQueries({ queryKey: ['studio', 'git-log'] })
+                    void queryClient.invalidateQueries({ queryKey: ['studio', 'keep', key] })
+                  }}
+                />
+              </div>
+              <KeepChanges projectKey={key} />
             </div>
           ) : (
             <HistoryTab />

@@ -8,11 +8,11 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { connect } from 'node:net'
-import { extname, join, normalize, resolve } from 'node:path'
+import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { StudioProjectsService, studioHome } from './projects.js'
 import { StudioPublisher } from './publish.js'
-import { BuilderSession } from '@pikku/builder'
+import { BuilderSession, milestoneReport } from '@pikku/builder'
 import { KEY_PROVIDERS, StudioAi, SUBSCRIPTION_PROVIDERS, type AiInput } from './ai.js'
 
 export type SignInChoice = 'local' | 'fabric'
@@ -162,6 +162,9 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
     publishStatus: async ({ key }: { key: string }) => publisher.status(key),
     projectApps: async ({ key }: { key: string }) => projects.projectApps(key),
     builderState: ({ key }: { key: string }) => builder.state(key),
+    keepStatus: ({ key }: { key: string }) => projects.keepStatus(key),
+    keepChanges: ({ key }: { key: string }) => projects.keepChanges(key),
+    milestones: async ({ key }: { key: string }) => ({ milestones: await milestoneReport(await projects.projectDir(key)) }),
     builderPrompt: ({ key, message, context }: { key: string; message: string; context?: string }) =>
       builder.prompt(key, message, context),
     async builderCancel({ key }: { key: string }) {
@@ -191,6 +194,15 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
     }
     res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' })
     res.end(req.method === 'HEAD' ? undefined : body)
+  }
+
+  const serveShot = async (res: ServerResponse, path: string) => {
+    const [key, ...rest] = decodeURIComponent(path.slice('/studio/shot/'.length)).split('/')
+    const root = join(await projects.projectDir(key!), '.pikku', 'builder', 'looks')
+    const file = normalize(join(root, ...rest.slice(rest[0] === '.pikku' ? 3 : 0)))
+    if (!file.startsWith(root + sep) || extname(file) !== '.png' || !existsSync(file)) return send(res, 404, { error: 'Not found' })
+    res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-cache' })
+    res.end(await readFile(file))
   }
 
   const target = (url: string) => {
@@ -232,6 +244,7 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
         if (!action) return send(res, 404, { error: 'Unknown action' })
         return send(res, 200, await action(await readBody(req)))
       }
+      if (path.startsWith('/studio/shot/') && req.method === 'GET') return await serveShot(res, path)
       if (path.startsWith('/p/')) return proxy(req, res)
       if (path === '/' || path === '') {
         res.writeHead(302, { location: '/console/' })
