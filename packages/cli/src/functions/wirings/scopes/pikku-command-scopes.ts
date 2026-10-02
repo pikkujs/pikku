@@ -30,6 +30,27 @@ export const withAppScopes = (
   return appScopes ? [...scopes, appScopes] : scopes
 }
 
+/**
+ * An addon's own trees, as the addon. Built on its own, an addon is an app and
+ * its `defineScope` reads as the app's; stamping its package and display name
+ * here is what lets a host that installs it say which addon put them there.
+ */
+export const withAddonOrigin = (
+  scopes: ScopeDefinitions,
+  addonName: string | undefined,
+  addon: boolean | { displayName?: string } | undefined
+): ScopeDefinitions => {
+  if (!addonName) {
+    return scopes
+  }
+  const displayName = typeof addon === 'object' ? addon.displayName : undefined
+  return scopes.map((scope) =>
+    scope.origin?.kind === 'app'
+      ? { ...scope, origin: { kind: 'addon', package: addonName, displayName } }
+      : scope
+  )
+}
+
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {
     const { scopesFile, scopesMetaJsonFile } = config
@@ -48,7 +69,11 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const bootstrap = data?.bootstrap ?? false
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
-    const definitions = withAppScopes(state.scopes.definitions, state.personas.definitions)
+    const definitions = withAddonOrigin(
+      withAppScopes(state.scopes.definitions, state.personas.definitions),
+      config.addonName,
+      config.addon
+    )
 
     const content = serializeScopesTypes({
       definitions,

@@ -18,6 +18,7 @@ const makeMetaService = (
   getWorkflowMeta: async () => ({}),
   getPersonasMeta: async () => ({}),
   getSystemRolesMeta: async () => ({}),
+  getScopesMeta: async () => ({}),
   getFeatureFlagsMeta: async () => ({}),
   getAnalyticsMeta: async () => ({}),
   getScenarioActorsMeta: async () => ({}),
@@ -69,6 +70,21 @@ describe('WiringService.readAllMeta', () => {
     assert.ok('welcome' in (result.emailsMeta.templates ?? {}))
   })
 
+  test('serves each scope tree with where it came from', async () => {
+    const scopes = {
+      reports: { name: 'reports', origin: { kind: 'app' } },
+      admin: {
+        name: 'admin',
+        origin: { kind: 'addon', package: '@pikku/addon-admin' },
+      },
+    }
+    const metaService = makeMetaService({ getScopesMeta: async () => scopes })
+    const service = new WiringService(metaService as never)
+    const result = await service.readAllMeta()
+
+    assert.deepEqual(result.scopes, scopes)
+  })
+
   test('counts emails from emailsMeta.templates', async () => {
     const metaService = makeMetaService()
     const service = new WiringService(metaService as never)
@@ -111,5 +127,27 @@ describe('WiringService.readAllMeta', () => {
 
     assert.equal(result.webhookSourceMeta.shop?.route, '/webhooks/shop')
     assert.deepEqual(result.webhookSourceMeta.shop?.events, ['order.paid'])
+  })
+
+  test("counts only the app's own functions, but returns every one", async () => {
+    const metaService = makeMetaService({
+      getFunctionsMeta: async () => ({
+        getConcept: { pikkuFuncId: 'getConcept' },
+        analyticsIngest: {
+          pikkuFuncId: 'analyticsIngest',
+          tags: ['pikku', 'analytics'],
+        },
+        conceptMapScenario: {
+          pikkuFuncId: 'conceptMapScenario',
+          scenario: true,
+        },
+        opensTheMap: { pikkuFuncId: 'opensTheMap', scenarioStep: true },
+      }),
+    })
+    const service = new WiringService(metaService as never)
+    const result = await service.readAllMeta()
+
+    assert.equal(result.counts.functions, 1)
+    assert.equal(result.functions.length, 4)
   })
 })

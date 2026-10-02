@@ -18,6 +18,7 @@ import type { FeaturesMeta } from '../wirings/workflow/scenario.types.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { SystemRoleDefinitionsMeta } from '../wirings/role/role.types.js'
 import type { FeatureFlagDefinitionsMeta } from '../wirings/flag/flag.types.js'
+import type { ScopeDefinitionsMeta } from '../wirings/scope/scope.types.js'
 import type { AnalyticsEventsMeta } from '../analytics/analytics.types.js'
 import type {
   TriggerMeta,
@@ -188,6 +189,14 @@ export interface MetaService {
    */
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
   /**
+   * The scope trees declared with `defineScope`, keyed by root, each carrying
+   * where it came from.
+   *
+   * The scope store holds the grantable ids; this holds what the store does
+   * not — a root's display name and which addon, if any, declared it.
+   */
+  getScopesMeta(): Promise<ScopeDefinitionsMeta>
+  /**
    * The flags declared with `defineFeatureFlags`, keyed by name.
    *
    * The declaration half only. What an operator set — the switch, the rollout,
@@ -237,6 +246,7 @@ export class LocalMetaService implements MetaService {
   private workflowMetaCache: WorkflowsMeta | null = null
   private personasMetaCache: Record<string, ResolvedPersona> | null = null
   private systemRolesMetaCache: SystemRoleDefinitionsMeta | null = null
+  private scopesMetaCache: ScopeDefinitionsMeta | null = null
   private featureFlagsMetaCache: FeatureFlagDefinitionsMeta | null = null
   private analyticsMetaCache: AnalyticsEventsMeta | null = null
   private featuresMetaCache: FeaturesMeta | null = null
@@ -341,6 +351,7 @@ export class LocalMetaService implements MetaService {
     this.workflowMetaCache = null
     this.personasMetaCache = null
     this.systemRolesMetaCache = null
+    this.scopesMetaCache = null
     this.featureFlagsMetaCache = null
     this.analyticsMetaCache = null
     this.featuresMetaCache = null
@@ -536,6 +547,14 @@ export class LocalMetaService implements MetaService {
     const content = await this.readFile('scopes/pikku-roles-meta.gen.json')
     this.systemRolesMetaCache = content ? JSON.parse(content) : {}
     return this.systemRolesMetaCache!
+  }
+
+  async getScopesMeta(): Promise<ScopeDefinitionsMeta> {
+    if (this.scopesMetaCache) return this.scopesMetaCache
+
+    const content = await this.readFile('scopes/pikku-scopes-meta.gen.json')
+    this.scopesMetaCache = content ? JSON.parse(content) : {}
+    return this.scopesMetaCache!
   }
 
   async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta> {

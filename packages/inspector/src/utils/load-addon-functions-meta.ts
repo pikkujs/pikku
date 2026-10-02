@@ -9,6 +9,7 @@ import {
 } from './addon-resolution.js'
 import { ErrorCode } from '../error-codes.js'
 import type { WebhookSourceMeta, WebhookSourcesMeta } from '@pikku/core/trigger'
+import type { ScopeOrigin } from '@pikku/core/scope'
 import type {
   ExportedChannelContractsMeta,
   ExportedHTTPRouteConfigMeta,
@@ -405,7 +406,17 @@ export async function loadAddonFunctionsMeta(
             (d: any) => d.name === key
           )
           if (!existing) {
-            state.scopes.definitions.push(def)
+            // The addon's build stamped its own name on the trees it declared;
+            // the package it was installed as is the one this host knows.
+            const origin: ScopeOrigin = {
+              kind: 'addon',
+              package: decl.package,
+              displayName:
+                def.origin?.kind === 'addon'
+                  ? def.origin.displayName
+                  : undefined,
+            }
+            state.scopes.definitions.push({ ...def, origin })
             logger.debug(`Loaded addon scope '${key}' from ${decl.package}`)
           }
         }

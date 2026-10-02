@@ -17,6 +17,7 @@ import {
 import { InMemoryScopeService } from './scope-service.js'
 import type { ScopeId } from '../.pikku/scopes/pikku-scopes.gen.js'
 import { SCOPES, SCOPES_META } from '../.pikku/scopes/pikku-scopes.gen.js'
+import scopeDefinitions from '../.pikku/scopes/pikku-scopes-meta.gen.json' with { type: 'json' }
 
 // ============================================================================
 // Compile-time assertions — an undeclared scope must not type-check
@@ -243,6 +244,16 @@ assert.throws(
   assert.deepEqual(await service.pruneSystemRoles(), ['buyer'])
   assert.deepEqual(await service.listUserRoles('u1'), [])
   assert.deepEqual(await service.findStaleSystemRoles(), [])
+}
+
+// The console groups permissions by who declared them, and reads that from the
+// generated meta. Trees this project declares itself are the app's own.
+for (const root of ['admin', 'billing'] as const) {
+  assert.deepEqual(
+    scopeDefinitions[root].origin,
+    { kind: 'app' },
+    `${root} should be recorded as declared by the app`
+  )
 }
 
 console.log('✓ scopes: codegen, compile-time narrowing, and runtime gate')

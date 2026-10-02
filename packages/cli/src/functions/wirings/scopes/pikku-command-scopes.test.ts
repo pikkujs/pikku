@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { withAppScopes } from './pikku-command-scopes.js'
+import { withAddonOrigin, withAppScopes } from './pikku-command-scopes.js'
 
 const persona = (id: string, app?: string) =>
   ({ id, name: id, roles: [], goals: [], tags: [], runnable: true, app }) as any
@@ -33,10 +33,7 @@ describe('withAppScopes', () => {
   test('refuses a hand-declared app root, naming where it came from', () => {
     assert.throws(
       () =>
-        withAppScopes(
-          [scope('app', 'src/scopes.ts')],
-          [persona('a', 'staff')]
-        ),
+        withAppScopes([scope('app', 'src/scopes.ts')], [persona('a', 'staff')]),
       /reserved.*src\/scopes\.ts/s
     )
   })
@@ -50,5 +47,34 @@ describe('withAppScopes', () => {
       () => withAppScopes([scope('app', 'src/scopes.ts')], [persona('a')]),
       /reserved.*src\/scopes\.ts/s
     )
+  })
+})
+
+describe('withAddonOrigin', () => {
+  const declared = [
+    { name: 'billing', origin: { kind: 'app' } },
+    { name: 'app', origin: { kind: 'generated' } },
+  ] as any
+
+  test("stamps an addon's own trees with its package and display name", () => {
+    const definitions = withAddonOrigin(declared, '@acme/addon-billing', {
+      displayName: 'Billing',
+    })
+
+    assert.deepEqual(definitions[0]!.origin, {
+      kind: 'addon',
+      package: '@acme/addon-billing',
+      displayName: 'Billing',
+    })
+  })
+
+  test('leaves what the CLI generated as generated', () => {
+    const definitions = withAddonOrigin(declared, '@acme/addon-billing', true)
+
+    assert.deepEqual(definitions[1]!.origin, { kind: 'generated' })
+  })
+
+  test('leaves an app that is not an addon alone', () => {
+    assert.equal(withAddonOrigin(declared, undefined, undefined), declared)
   })
 })
