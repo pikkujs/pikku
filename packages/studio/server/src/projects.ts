@@ -284,6 +284,11 @@ export interface StudioProjectsOptions {
   databaseCommands?: () => Array<{ command: string; args: string[] }>
 }
 
+const outermostNodeModules = (path: string) => {
+  const at = path.indexOf(`${sep}node_modules${sep}`)
+  return at === -1 ? path : path.slice(0, at + `${sep}node_modules`.length)
+}
+
 export class StudioProjectsService {
   private running = new Map<string, RunningProject & { child: ChildProcess }>()
   private apps = new Map<string, RunningApp[]>()
@@ -492,7 +497,7 @@ export class StudioProjectsService {
       writable: [...(confinement.writable ?? []), process.env.PI_CODING_AGENT_DIR ?? join(homedir(), '.pi', 'agent')],
       readable: [
         ...(confinement.readable ?? []),
-        piPackageRoot(),
+        outermostNodeModules(piPackageRoot()),
         packageRoot,
         builderHome(),
         join(this.home, 'logs'),
