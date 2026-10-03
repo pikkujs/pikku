@@ -139,6 +139,8 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'fabric.changes.shot',
   'fabric.changes.reply',
   'fabric.changes.done',
+  'fabric.changes.merge',
+  'next',
 ])
 
 export const createConfig: CreateConfig<

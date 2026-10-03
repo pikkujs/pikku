@@ -22,6 +22,14 @@ describe('local changes queue', () => {
     })
     assert.strictEqual(claimed.changes.length, 2)
 
+    const again = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      groupId: claimed.group.groupId,
+      changeIds: ['1', '2'],
+      claimedBy: 'me',
+    })
+    assert.strictEqual(again.group.title, claimed.group.title)
+
     await assert.rejects(
       rpc.invoke('claimChanges', {
         projectId: 'local',

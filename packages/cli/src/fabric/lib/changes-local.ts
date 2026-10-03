@@ -27,7 +27,15 @@ const LOCAL_STAGE_ID = 'local'
 const STORE_FILE = 'pikku-changes.json'
 
 type Change = ListChangesOutput['changes'][number]
-type Group = ListChangesOutput['groups'][number]
+
+export type Declaration = {
+  creates: string[]
+  alters: string[]
+  reads: string[]
+  needsPlan: boolean
+}
+
+type Group = ListChangesOutput['groups'][number] & Partial<Declaration>
 type Message = GetChangeOutput['thread'][number]
 
 type Store = {
@@ -88,10 +96,7 @@ async function read(path: string): Promise<Store> {
   }
 }
 
-async function withStore<T>(
-  path: string,
-  fn: (store: Store) => T
-): Promise<T> {
+async function withStore<T>(path: string, fn: (store: Store) => T): Promise<T> {
   const lock = `${path}.lock`
   for (let attempt = 0; ; attempt++) {
     try {
@@ -217,7 +222,7 @@ const handlers: {
     return { change }
   },
 
-  claimChanges: (store, input) => {
+  claimChanges: (store, input: ClaimChangesInput & Partial<Declaration>) => {
     const now = new Date()
     const wanted = input.changeIds?.length
       ? input.changeIds.map((ref) => find(store, ref))
@@ -234,15 +239,20 @@ const handlers: {
           : 'Nothing open to claim',
         409
       )
+    const existing = store.groups.find((g) => g.groupId === input.groupId)
     const group: Group = {
       groupId: input.groupId ?? randomUUID(),
       projectId: LOCAL_PROJECT_ID,
-      title: input.title ?? wanted[0]!.title,
+      title: input.title ?? existing?.title ?? wanted[0]!.title,
       claimedBy: input.claimedBy,
       claimExpiresAt: new Date(
         now.getTime() + (input.leaseMinutes ?? 30) * 60_000
       ),
-      createdAt: now,
+      createdAt: existing?.createdAt ?? now,
+      creates: input.creates ?? existing?.creates,
+      alters: input.alters ?? existing?.alters,
+      reads: input.reads ?? existing?.reads,
+      needsPlan: input.needsPlan ?? existing?.needsPlan,
     }
     store.groups = store.groups.filter((g) => g.groupId !== group.groupId)
     store.groups.push(group)

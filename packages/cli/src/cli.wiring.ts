@@ -48,6 +48,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { next, renderNext } from './functions/commands/next.js'
 import {
   examplesAdd,
   examplesList,
@@ -947,6 +948,12 @@ wireCLI({
         },
       },
     },
+    next: pikkuCLICommand({
+      func: next,
+      render: renderNext,
+      description:
+        'Decide what should run next — the agent, its skill and its work — from the state of the project',
+    }),
     validate: pikkuCLICommand({
       func: validate,
       render: renderValidate,
