@@ -5,7 +5,7 @@
 //~ lang: tsx
 
 //~ steps:
-//~ On Mantine, render `<DevActorSwitcher apiUrl={…} />` from `@pikku/mantine/dev`
+//~ On shadcn, copy `components/dev/DevActorSwitcher.tsx` from `examples/starter-template`
 //~ instead of this; otherwise drive `useDevActors` with your own markup, as here.
 //~
 //~ The server half is `personaSignIn` on `pikkuActor` — see `src/auth.ts`. It

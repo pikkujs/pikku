@@ -15,7 +15,8 @@
     "typeRoots": [
       "./node_modules/@types",
       "./packages/functions/node_modules/@types",
-      "./packages/functions/node_modules"
+      "./packages/functions/node_modules",
+      "./node_modules"
     ]
   },
   "include": ["packages/functions/src", "packages/functions/test"]

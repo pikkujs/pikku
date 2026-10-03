@@ -33,7 +33,7 @@ tokens file, a site to rebuild. With no reference, choose a preset from the doma
 
 4. **Build the layout craft the reference shows.** Colours, fonts, radius and shadow travel through
    the theme. What no token carries (an asymmetric grid, a bespoke type scale, a masked image edge,
-   a hover reveal) goes in colocated `.module.css` files on Mantine components, with theme variables
+   a hover reveal) goes in utility classes on shadcn components (or a small CSS file for what utilities cannot express), with theme variables
    for every colour.
 
 ## Rebuild an existing site

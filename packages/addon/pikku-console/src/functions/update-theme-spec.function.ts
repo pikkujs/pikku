@@ -5,7 +5,7 @@ import type { ThemeSpecPatch } from '../services/design.service.js'
 export const updateThemeSpec = pikkuFunc<ThemeSpecPatch, { ok: true }>({
   title: 'Update Theme Spec',
   description:
-    'Merges changes into the active theme. A component default prop set to null is removed.',
+    'Merges colours, fonts, radius, density, shadows, page and ink into the active theme and regenerates theme.css.',
   expose: true,
   scopes: ['pikku:console:design:write'],
   func: async ({ designService }, patch) => {

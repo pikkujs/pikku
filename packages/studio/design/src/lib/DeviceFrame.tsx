@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 //
 // The obvious version of this is a div with `width: 390px`, and it is wrong in a
 // way that is worse than not offering the feature: every responsive prop the
-// design skill asks for (`visibleFrom`, `hiddenFrom`, `cols={{ base: 1, md: 3 }}`)
+// design skill asks for (`sm:`, `md:`, `lg:` breakpoints)
 // compiles to a media query, and a media query reads the VIEWPORT, not the box
 // its element happens to sit in. Narrowing a div gives you the desktop layout
 // squeezed — the mobile branch never runs, so the canvas would report that a
@@ -17,12 +17,12 @@ import { createPortal } from 'react-dom'
 // markup. Two consequences fall out of the boundary:
 //
 //   - Stylesheets do not cross it. The parent's <style> / <link> nodes are cloned
-//     into the frame's head once, which covers Mantine's own CSS and the app's.
+//     into the frame's head once, which covers Tailwind's CSS and the app's.
 //   - Theme CSS VARIABLES do not cross it either, and unlike the stylesheets they
 //     change while you look (the tweak knobs, the light/dark switch). So the
-//     caller puts a PreviewProvider INSIDE the portal: Mantine emits its variable
-//     block as an element in the React tree, so rendering it here lands it in this
-//     document, live.
+//     caller puts a PreviewProvider INSIDE the portal: it emits the theme's
+//     variable block as a <style> in the React tree, so rendering it here lands it
+//     in this document, live.
 //
 // The size is fixed rather than measured. A device is a screen with a height, and
 // pinning it sidesteps the content-height round trip an auto-sizing frame needs —

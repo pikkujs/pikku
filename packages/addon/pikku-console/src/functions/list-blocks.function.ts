@@ -8,7 +8,7 @@ export const listBlocks = pikkuFunc<
 >({
   title: 'List Blocks',
   description:
-    'Lists the ready-made Mantine page sections an app can copy, with their tags, optionally only one tag.',
+    'Lists the ready-made shadcn page sections an app can copy, with their tags, optionally only one tag.',
   expose: true,
   scopes: ['pikku:console:design:read'],
   func: async ({ designService }, { tag }) => {

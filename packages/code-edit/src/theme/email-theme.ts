@@ -34,7 +34,7 @@ const LIGHT_NEUTRALS = {
   muted: '#71717a',
 }
 
-/** Black or white, whichever reads on the brand colour; emails have no Mantine autoContrast. */
+/** Black or white, whichever reads on the brand colour; emails have no generated foreground tokens. */
 function readableOn(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
   if (!m) return '#ffffff'
@@ -50,7 +50,7 @@ function readableOn(hex: string): string {
 /** Derive the email palette from the app's applied theme. */
 export function emailThemeFromTheme(theme: Theme): Omit<EmailTheme, 'appName'> {
   const dark = theme.structure.defaultColorScheme === 'dark'
-  const tuple = theme.structure.darkColors
+  const tuple = theme.structure.darkSurface
   const neutrals = dark
     ? {
         canvas: tuple?.[7] ?? DARK_NEUTRALS.canvas,

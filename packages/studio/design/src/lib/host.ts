@@ -1,35 +1,30 @@
 import { useEffect, useState } from 'react'
 import type { RefObject } from 'react'
-import type { MantineThemeOverride } from '@mantine/core'
-import { activeTheme, buildTheme } from '@project/mantine-themes'
+import { workspaceThemeCss } from '@/lib/themeCss'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Host bridge — the postMessage protocol between this design server (in an
 // iframe) and the console Design tab. Kept identical to the old storyboard so
 // the console side is unchanged:
-//   console → server:  { source:'pikku-console', type:'set-theme'|'set-section', ... }
+//   console → server:  { source:'pikku-console', type:'set-theme-css'|'set-section', ... }
 //   server  → console:  { source:'pikku-design', type:'ready'|'content-height'|'component-meta' }
 //   server  → console:  { source:'pikku-preview', type:'element-select', ... } (Alt+click)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Live-swappable Mantine theme: starts on the persisted active palette, rebuilds
- *  client-side when the console posts a full palette spec (no iframe reload). */
-export function useHostTheme(): MantineThemeOverride {
-  const [theme, setTheme] = useState<MantineThemeOverride>(activeTheme)
+/** Live-swappable theme CSS: starts on the workspace's generated `theme.css`, and
+ *  swaps when the console posts `set-theme-css` (no iframe reload). */
+export function useHostTheme(): string {
+  const [css, setCss] = useState<string>(workspaceThemeCss)
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       const data = event.data
-      if (data?.source !== 'pikku-console' || data.type !== 'set-theme') return
-      try {
-        setTheme(data.palette ? buildTheme(data.palette) : activeTheme)
-      } catch (err) {
-        console.warn('[design-server] ignoring bad theme payload', err)
-      }
+      if (data?.source !== 'pikku-console' || data.type !== 'set-theme-css') return
+      setCss(typeof data.css === 'string' ? data.css : workspaceThemeCss)
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [])
-  return theme
+  return css
 }
 
 /** Active section (library: component title · app: section id), seeded from the URL and updated by `set-section` posts. */
@@ -329,5 +324,3 @@ export function parseHostParams(): {
   }
 }
 
-/** Re-export so views can keep a stable handle to the persisted theme. */
-export { activeTheme }

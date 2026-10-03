@@ -96,7 +96,7 @@ sign-in opted in **and** its `devSwitcher` feature flag on; production never
 has the opt-in, so it lists nobody and refuses every persona sign-in.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
-`<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
+the starter's `src/components/DevActorSwitcher.tsx` is a ready rendering of it.
 `pikku fabric validate` **requires** any frontend with a login screen to ship
 one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them

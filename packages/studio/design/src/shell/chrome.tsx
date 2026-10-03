@@ -1,12 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Shell chrome atoms — the console-themed furniture of the unified Design shell
-// (sub-header, left menu, theme drawer). These render under the OUTER Mantine
-// provider (the console theme) so they match the console; only the component
+// (sub-header, left menu, theme drawer). These render under the console
+// tokens so they match the console; only the component
 // previews inside `PreviewProvider` carry the user's theme.
 //
 // Layout is inline-styled against the `--app-*` CSS variables emitted by
-// `@pikku/mantine/theme`'s cssVariablesResolver (same tokens as the
-// console), so the chrome tracks light/dark automatically.
+// `index.css` (same tokens as the console), so the chrome tracks light/dark automatically.
 // ─────────────────────────────────────────────────────────────────────────────
 import type { CSSProperties, ReactNode } from 'react'
 import { m } from '@/lib/i18n'
@@ -83,8 +82,8 @@ export function DottedStage({
   )
 }
 
-/** "Composed from Mantine primitives" footnote shown under a detail preview. */
-export function MantineNote({ parts, style }: { parts: string[]; style?: CSSProperties }) {
+/** "Composed from shadcn primitives" footnote shown under a detail preview. */
+export function ComposedNote({ parts, style }: { parts: string[]; style?: CSSProperties }) {
   return (
     <div
       style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', ...style }}

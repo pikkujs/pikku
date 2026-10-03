@@ -8,18 +8,16 @@
 // Across the boundary the worst case is a blank frame.
 //
 // Two things have to cross that boundary anyway:
-//   - The USER's theme. The page is written against `var(--mantine-color-*)`, so
-//     a MantineProvider is portalled into the artifact document with its variable
-//     block under `:root` — Mantine emits it as an element in the React tree, so
-//     rendering it there lands it in that document and it re-emits live when the
-//     theme or the scheme changes.
+//   - The USER's theme. The page is written against the shadcn tokens
+//     (`var(--primary)` and friends), so the theme CSS is portalled into the
+//     artifact document's head as a <style> and re-emits live when the theme
+//     changes; the `dark` class on its root follows the scheme.
 //   - The OPTIONS. They are the sections carrying `data-artifact-option`, read
 //     out of the loaded document rather than trusted from the index, so the rail
 //     always names what is actually on screen.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MantineProvider, type MantineThemeOverride } from '@mantine/core'
 import { ChevronDown, Monitor, Plus, Smartphone, Sparkles, Tablet } from 'lucide-react'
 import { artifactUrl, type DesignArtifact } from '@/lib/discovery'
 import { DEVICE_SIZES, type DeviceMode } from '@/lib/DeviceFrame'
@@ -39,13 +37,16 @@ export function ArtifactView({
   sketching: boolean
   onNew: () => void
   onOpenPicker: () => void
-  userTheme: MantineThemeOverride
+  userTheme: string
   colorScheme: 'light' | 'dark'
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const [doc, setDoc] = useState<Document | null>(null)
   const [options, setOptions] = useState<string[]>([])
   const [device, setDevice] = useState<DeviceMode>('desktop')
+  useEffect(() => {
+    doc?.documentElement.classList.toggle('dark', colorScheme === 'dark')
+  }, [doc, colorScheme])
   const [version, setVersion] = useState<string | null>(null)
 
   const file = version && artifact?.versions.includes(version) ? version : artifact?.file
@@ -159,14 +160,8 @@ export function ArtifactView({
           />
           {doc &&
             createPortal(
-              <MantineProvider
-                theme={userTheme}
-                forceColorScheme={colorScheme}
-                cssVariablesSelector=":root"
-                getRootElement={() => doc.documentElement}
-                withGlobalClasses={false}
-              />,
-              doc.body,
+              <style>{userTheme}</style>,
+              doc.head,
             )}
         </div>
 

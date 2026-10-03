@@ -120,8 +120,9 @@ import {
   pikkuBlocksList,
   pikkuBlocksShow,
   pikkuComponentsList,
+  pikkuComponentsAdd,
   pikkuComponentsShow,
-} from './functions/commands/mantine-catalog.js'
+} from './functions/commands/shadcn-catalog.js'
 import {
   pagesList,
   pagesScreenshot,
@@ -765,7 +766,7 @@ wireCLI({
       },
     },
     theme: {
-      description: "The app's Mantine themes, in packages/mantine-theme",
+      description: "The app's themes, in packages/theme",
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuThemeList,
@@ -782,7 +783,7 @@ wireCLI({
             },
             structure: {
               description:
-                'Structure id for depth: shadows, radius, component defaults',
+                'Structure id for depth: shadows, radius, density',
             },
             primary: { description: 'Primary colour, as hex' },
             secondary: { description: 'Secondary colour, as hex' },
@@ -796,21 +797,27 @@ wireCLI({
       },
     },
     components: {
-      description: "Mantine component props, variants and sizes for the app's installed Mantine",
+      description: "The app's shadcn components and their variants and sizes",
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuComponentsList,
-          description: 'List the Mantine components the bundled metadata covers',
+          description: "List the shadcn components in the app's src/components/ui",
+        }),
+        add: pikkuCLICommand({
+          func: pikkuComponentsAdd,
+          description:
+            "Copy shadcdn components (and the ones they compose) into the app's src/components/ui, lint-clean and ready to use. Names may be comma or space separated",
+          parameters: '<names...>',
         }),
         show: pikkuCLICommand({
           func: pikkuComponentsShow,
-          description: "One component's props, variants, sizes and Styles API parts, with the active theme's custom variants",
+          description: "One component's variants, sizes and defaults, read from its cva definition",
           parameters: '<name>',
         }),
       },
     },
     blocks: {
-      description: 'Ready-made, i18n-safe Mantine page sections to copy into an app',
+      description: 'Ready-made, i18n-safe shadcn page sections to copy into an app',
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuBlocksList,

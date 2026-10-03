@@ -11,15 +11,8 @@
       rel="stylesheet"
     />
     <style>
-      /* Transparent canvas so previews float on the host (console) background.
-         !important beats Mantine's unlayered body background injected by Vite. */
-      html,
-      body,
-      #root {
-        background: transparent !important;
-      }
       /* Force `normal` color-scheme so the iframe composites over the host;
-         Mantine's themed colors come from its data-attribute vars, not this. */
+         the themed colors come from the CSS variables, not this. */
       html {
         color-scheme: normal !important;
       }

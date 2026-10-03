@@ -18,7 +18,6 @@ import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.j
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { Kysely } from 'kysely'
 import { GeneratedTemplateEmailService } from './lib/email-service.js'
-import { declareFlagsTo } from './lib/declared-flag-source.js'
 import type { DB } from '#pikku/db/schema.gen.js'
 
 export const createSingletonServices = pikkuServices(async (config, existingServices) => {
@@ -55,7 +54,6 @@ export const createSingletonServices = pikkuServices(async (config, existingServ
   const credentialService = existingServices?.credentialService
 
   const featureFlags = existingServices?.featureFlags ?? new KyselyFeatureFlagStore(kysely as any)
-  declareFlagsTo(featureFlags)
 
   const virtualUserRunStore =
     existingServices?.virtualUserRunStore ?? new KyselyVirtualUserRunStore(kysely as any)

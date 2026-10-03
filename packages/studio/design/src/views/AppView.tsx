@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { Box, Group, Stack, Text, Title } from '@mantine/core'
-import type { MantineThemeOverride } from '@mantine/core'
 import { appItems, findAppItem, renderStory, sectionItems } from '@/lib/discovery'
 import type { AppItem, AppScenario } from '@/lib/discovery'
 import { reportComponentMeta, useReportContentHeight } from '@/lib/host'
@@ -9,7 +7,7 @@ import { PreviewSurface } from '@/lib/PreviewSurface'
 import { m } from '@/lib/i18n'
 
 type PreviewProps = {
-  previewTheme: MantineThemeOverride
+  previewCss: string
   colorScheme: 'light' | 'dark'
 }
 
@@ -24,56 +22,52 @@ type PreviewProps = {
 // One named scenario in its own labelled frame, matching the design's ScenarioFrame.
 function ScenarioFrame({
   scenario,
-  previewTheme,
+  previewCss,
   colorScheme,
 }: { scenario: AppScenario } & PreviewProps) {
   return (
-    <Stack gap={6}>
-      <Group gap={10} align="baseline">
-        <Text size="xs" fw={700} tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-[var(--app-text)]">
           {scenario.name.replace(/([A-Z])/g, ' $1').trim()}
-        </Text>
+        </span>
         {scenario.tag && (
-          <Text size="xs" c="dimmed" ff="monospace">
-            {scenario.tag}
-          </Text>
+          <span className="font-mono text-xs text-[var(--app-text-faint)]">{scenario.tag}</span>
         )}
-      </Group>
+      </div>
       {/* The box is the USER theme's page, not console chrome — a widget with a
           transparent surface rendered straight onto the console's page card was
           unreadable, which is what this replaces. It carries the user's own body
           colour and border, so it still isn't a card in a card. */}
-      <Box style={{ width: '100%', minWidth: 0 }}>
-        <PreviewProvider theme={previewTheme} colorScheme={colorScheme}>
+      <div className="w-full min-w-0">
+        <PreviewProvider css={previewCss} colorScheme={colorScheme}>
           <PreviewSurface>{renderStory(scenario.story, scenario.component)}</PreviewSurface>
         </PreviewProvider>
-      </Box>
-    </Stack>
+      </div>
+    </div>
   )
 }
 
-function WidgetScenarios({ item, previewTheme, colorScheme }: { item: AppItem } & PreviewProps) {
+function WidgetScenarios({ item, previewCss, colorScheme }: { item: AppItem } & PreviewProps) {
   return (
-    <Stack gap="md" maw={720}>
-      <Stack gap={2}>
-        <Title order={4}>{item.title}</Title>
+    <div className="flex max-w-180 flex-col gap-4">
+      <div className="flex flex-col gap-0.5">
+        <h4 className="text-base font-semibold text-[var(--app-text)]">{item.title}</h4>
         {item.description && (
-          <Text size="sm" c="dimmed">
-            {item.description}
-          </Text>
+          <p className="text-sm text-[var(--app-text-faint)]">{item.description}</p>
         )}
-      </Stack>
-      <Stack gap="md">
+      </div>
+      <div className="flex flex-col gap-4">
         {item.scenarios.map((scenario) => (
           <ScenarioFrame
             key={scenario.name}
             scenario={scenario}
-            previewTheme={previewTheme}
+            previewCss={previewCss}
             colorScheme={colorScheme}
           />
         ))}
-      </Stack>
-    </Stack>
+      </div>
+    </div>
   )
 }
 
@@ -92,7 +86,7 @@ function useReportComponentMeta(item: AppItem | null) {
 
 export function AppView({
   section,
-  previewTheme,
+  previewCss,
   colorScheme,
 }: { section: string | null } & PreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -103,25 +97,25 @@ export function AppView({
 
   if (appItems.length === 0) {
     return (
-      <Stack ref={containerRef} py="xl" align="center">
-        <Text c="dimmed" size="sm">
+      <div ref={containerRef} className="flex flex-col items-center py-8">
+        <p className="text-sm text-[var(--app-text-faint)]">
           {m.view_no_widgets()} <code>*.app.stories.tsx</code> {m.view_files_to()}{' '}
-          <code>packages/components/src/</code>.
-        </Text>
-      </Stack>
+          <code>apps/*/src/components/</code>.
+        </p>
+      </div>
     )
   }
 
   return (
-    <Stack ref={containerRef} gap="xl">
+    <div ref={containerRef} className="flex flex-col gap-8">
       {items.map((item) => (
         <WidgetScenarios
           key={item.title}
           item={item}
-          previewTheme={previewTheme}
+          previewCss={previewCss}
           colorScheme={colorScheme}
         />
       ))}
-    </Stack>
+    </div>
   )
 }

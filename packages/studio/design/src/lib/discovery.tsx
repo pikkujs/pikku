@@ -1,11 +1,14 @@
+import stockStories from 'virtual:stock-stories'
 import type { ComponentType } from 'react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Convention-based discovery of the user's components. Single source of truth for
 // the two globs so the views and the catalog never drift.
 //
-//   Library → `apps/*/src/components/**/*.stories.tsx`  (Mantine primitives in
+//   Library → `apps/*/src/components/**/*.stories.tsx`  (shadcn primitives in
 //             their variants). Each named export is a variant.
+//   Stock   → `packages/shadcdn/ui/*.stories.tsx` (the registry itself, so the
+//             Library is never empty before components are copied into an app).
 //   App     → `apps/*/src/components/**/*.app.stories.tsx` (app-level widgets
 //             composed from the library). Each named export is a NAMED SCENARIO
 //             (one per data state) carrying an optional `tag` (e.g.
@@ -53,6 +56,7 @@ const libGlob = import.meta.glob<StoryModule>(
   '../../workspace/apps/*/src/components/**/*.stories.tsx',
   { eager: true },
 )
+const stockGlob = stockStories as unknown as Record<string, StoryModule>
 const appGlob = import.meta.glob<StoryModule>(
   '../../workspace/apps/*/src/components/**/*.app.stories.tsx',
   { eager: true },
@@ -75,7 +79,7 @@ function groupOf(meta: StoryMeta): string {
 // `Header`, a `Card`, a `LoginForm`. Without the app in the identity the two
 // collapse into one row that opens whichever was globbed first.
 function appOf(path: string): string {
-  return path.split('/apps/')[1]?.split('/')[0] ?? ''
+  return path.split('/apps/')[1]?.split('/')[0] ?? 'shadcdn'
 }
 
 // The app only earns a place in the group label once there is more than one of
@@ -106,7 +110,7 @@ export type LibraryItem = {
 }
 
 export const libraryItems: LibraryItem[] = withAppGroups(
-  Object.entries(libGlob)
+  Object.entries({ ...stockGlob, ...libGlob })
     .filter(([path]) => !isAppPath(path))
     .filter((entry): entry is [string, StoryModule & { default: StoryMeta }] =>
       Boolean(entry[1].default?.title),

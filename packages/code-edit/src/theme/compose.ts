@@ -46,8 +46,8 @@ export function composeTheme(input: ThemeInput): { id: string; theme: Theme } {
       },
       structure: {
         ...structure,
-        ...(input.page ? { white: input.page } : {}),
-        ...(input.ink ? { black: input.ink } : {}),
+        ...(input.page ? { page: input.page } : {}),
+        ...(input.ink ? { ink: input.ink } : {}),
       },
     },
   }

@@ -71,10 +71,10 @@ grep -rhoE "(member_action|collection_action) :[a-z_]+" app/admin/*.rb | sort -u
 | Legacy | Also called | Becomes in Fabric |
 |---|---|---|
 | `ActiveAdmin.register X` / `class XAdmin` | resource, ModelAdmin, Nova Resource | one TanStack route + one screen |
-| `index do … column :x` | `list_display`, `columns()` | a Mantine `Table`/`DataTable`, columns from the query's return type |
+| `index do … column :x` | `list_display`, `columns()` | a shadcn `Table` with TanStack Table, columns from the query's return type |
 | `filter :x` | `list_filter`, `searchable` | typed input fields on the list query |
 | `scope :active` | `get_queryset` variants, `Nova::Filters` | a named variant of the list query — NOT a new function per scope |
-| `form do f.input …` | `fields()`, `fieldsets` | a Mantine form; inputs from the command's zod input schema |
+| `form do f.input …` | `fields()`, `fieldsets` | a shadcn form (react-hook-form); inputs from the command's zod input schema |
 | `permit_params` | `fields`, `$fillable` | you already have this: it is the command's input schema. Cross-check, don't re-derive. |
 | `member_action :foo` | custom action, `Nova::Actions` | **a `pikkuFunc`** — almost always already in `commands.json` |
 | `collection_action :foo` | bulk action | a `pikkuFunc` taking a set |
@@ -154,7 +154,7 @@ impersonation and editing an FAQ all guarded identically.
 - Columns come from the query's return type. If a column exists in the DSL but not
   in the type, the DSL was computing it in Ruby per row — that is an N+1 wearing a
   column, and it belongs in the query.
-- Reuse the app's Mantine theme. An admin styled differently from the product is
+- Reuse the app's theme. An admin styled differently from the product is
   how design systems fork.
 - **Server-computed charts** (chartkick/groupdate and friends) do not port. The
   aggregation becomes a real query; the plot becomes a chart component. This is the
@@ -209,4 +209,4 @@ pikku all && pikku fabric validate --json
 - **pikku-software-archaeology** — produces the `.knowledge/` blueprint this needs.
 - **pikku-blueprint-to-fabric** — the parent port; run this per-domain alongside it.
 - **pikku-auth** — roles, ban and impersonation, and the scopes that gate them.
-- **pikku-fabric** — screens, theme, Mantine conventions.
+- **pikku-fabric** — screens, theme, Tailwind conventions.

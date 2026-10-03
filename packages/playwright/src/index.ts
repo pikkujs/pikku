@@ -47,4 +47,4 @@ export {
   type ScreenshotPagesOptions,
 } from './page-screenshots.js'
 export { testIdSelector, type LocateTestIdOptions } from './testid.js'
-export * as mantine from './locators.js'
+export * as ui from './locators.js'

@@ -160,7 +160,7 @@ helper, stop — that helper IS the bug.
 
 A message IS a function: a typo'd or deleted key (`m.auth__login__titel()`) is a missing export — a **TypeScript error**, not a silent runtime fallback string. Params are typed too. The deploy pipeline compiles Paraglide then runs each frontend's `tsc` (`"tsc": "tsc --noEmit"` script — keep it in every frontend's `package.json`) **before** building; a type error aborts the deploy. `vite build` does not type-check on its own, so this gate is the only thing standing between a broken message and production.
 
-The gate catches _invalid_ messages but not _inlined_ strings. The `@pikku/mantine` `I18nNode` prop typing catches those: a raw string literal fails to compile on a gated prop, because `I18nString` is a branded type a bare `string` can't satisfy. Between the two, `tsc` is the whole safety net — there is no runtime fallback to inspect, by design.
+The gate catches _invalid_ messages but not _inlined_ strings. The lint config catches those: `react/jsx-no-literals` (with `noStrings` and `ignoreProps`) rejects a literal in JSX text. It deliberately skips string attributes, because `className="..."` is everywhere in shadcn and the rule cannot tell it from `aria-label`: user-facing attributes (`aria-label`, `alt`, `title`, `placeholder`) must still come from `m.*()` by convention. Between `tsc` and lint, nothing user-facing reaches the build as a bare string — there is no runtime fallback to inspect, by design.
 
 ## Compile step
 
@@ -181,7 +181,7 @@ The gate catches _invalid_ messages but not _inlined_ strings. The `@pikku/manti
 
 ## i18n debug mode (find inlined strings)
 
-`tsc` catches invalid messages, and the `@pikku/mantine` gate catches raw strings on gated props — but neither sees a hardcoded string in plain JSX, an `aria-label`, `alt`, `document.title`, or anything passed to a non-Mantine component. Debug mode covers that gap: render every message as block glyphs (`█`), and whatever is still readable never went through a message.
+`tsc` catches invalid messages, and the `react/jsx-no-literals` lint rule catches raw strings in JSX — but neither sees a hardcoded `document.title`, a string assembled in a variable, or text returned from a helper. Debug mode covers that gap: render every message as block glyphs (`█`), and whatever is still readable never went through a message.
 
 **Build it as a generated locale, never as a runtime wrapper.** Masked text is text, and rendering different text per locale is what Paraglide already does:
 
@@ -207,7 +207,7 @@ The wrapper alternative — a module that walks the namespace and pipes each mes
 - Don't let a non-English UI reach the identifiers. Functions, components, types, files, tables and columns are English in every project; the product's language lives in `messages/*.json` and nowhere else.
 - Don't translate message **keys**. `auth__login__title` stays English in `de.json`; only the value changes.
 - Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
-- **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies the `@pikku/mantine` `I18nNode` gate natively. A wrapper adds nothing and costs per-message tree-shaking.
+- **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies any prop typed `I18nString` natively. A wrapper adds nothing and costs per-message tree-shaking.
 
   `packages/console` is the one place in this repo that still wraps it, in `src/i18n/messages.ts`, to keep the debug mask (`█`) it carried over from i18next. That wrapper is a leftover, not a pattern — the generated-locale approach above is how a new app gets the same masking without touching every export. Don't copy it.
 

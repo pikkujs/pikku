@@ -334,7 +334,7 @@ p('')
 if (feComponents.length) {
   p('## Frontend')
   p('')
-  p(`- **${cheapComponents.length}** components are a cheap re-expression in Mantine (standard / composition / restyle).`)
+  p(`- **${cheapComponents.length}** components are a cheap re-expression in shadcn (standard / composition / restyle).`)
   p(`- **${customLogic.length}** carry \`custom-logic\` and must be **ported**. This is the real frontend project.`)
   p(`- **${feRoutes.length}** routes → TanStack routes; their \`dataFrom\` names are already the function names above.`)
   p('')

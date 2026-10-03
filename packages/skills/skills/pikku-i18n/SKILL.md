@@ -47,9 +47,9 @@ the app is in. Set `defaultLocale` instead.
 ## Direction is one setting, not per-component work
 
 Set `dir` once at the document root from the active locale and the browser (and
-Mantine) mirror everything — provided every custom style is flow-relative
-(`margin-inline-start`, `text-align: start`, Mantine `ms`/`me`) rather than
-physical (`margin-left`, `text-align: left`, `ml`/`me`'s physical twins). Write
+Tailwind's logical utilities) mirror everything — provided every custom style is
+flow-relative (`margin-inline-start`, `text-align: start`, Tailwind `ms-*`/`me-*`/`text-start`)
+rather than physical (`margin-left`, `text-align: left`, `ml-*`/`mr-*`). Write
 logical properties from the start even in an English-only app; that discipline
 is what makes an RTL language just another locale file.
 

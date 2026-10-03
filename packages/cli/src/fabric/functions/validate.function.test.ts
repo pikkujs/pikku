@@ -127,14 +127,14 @@ async function makeValidProject(root: string) {
     '-- seed data\n',
     'utf8'
   )
-  await mkdir(join(root, 'packages', 'mantine-theme', 'themes'), {
+  await mkdir(join(root, 'packages', 'theme', 'themes'), {
     recursive: true,
   })
   await writeJson(
-    join(root, 'packages', 'mantine-theme', 'themes', 'default.json'),
+    join(root, 'packages', 'theme', 'themes', 'default.json'),
     { name: 'Default', brand: { colors: { primary: '#4f46e5' } } }
   )
-  await writeJson(join(root, 'packages', 'mantine-theme', 'active.json'), {
+  await writeJson(join(root, 'packages', 'theme', 'active.json'), {
     id: 'default',
   })
   await mkdir(join(root, 'packages', 'components'), {
@@ -1283,12 +1283,12 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('packages/mantine-theme and packages/components presence', () => {
-    test('missing packages/mantine-theme → info', async () => {
+  describe('packages/theme and packages/components presence', () => {
+    test('missing packages/theme → info', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'mantine-theme'), {
+        await rm(join(tmp, 'packages', 'theme'), {
           recursive: true,
           force: true,
         })
@@ -1301,7 +1301,7 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    const addMantineApp = async (root: string) => {
+    const addTailwindApp = async (root: string) => {
       await mkdir(join(root, 'apps', 'web', 'src', 'components'), {
         recursive: true,
       })
@@ -1310,18 +1310,18 @@ describe('pikku fabric validate', () => {
         type: 'module',
         dependencies: {
           react: '^19.0.0',
-          '@mantine/core': '^9.0.0',
-          '@pikku/mantine': '^0.12.5',
+          tailwindcss: '^4.0.0',
+          '@shadcn/lint': '^1.0.0',
         },
       })
     }
 
-    test('missing packages/mantine-theme with a Mantine frontend → warn', async () => {
+    test('missing packages/theme with a Tailwind frontend → warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await addMantineApp(tmp)
-        await rm(join(tmp, 'packages', 'mantine-theme'), {
+        await addTailwindApp(tmp)
+        await rm(join(tmp, 'packages', 'theme'), {
           recursive: true,
           force: true,
         })
@@ -1335,16 +1335,16 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('theme package but no spec, with a Mantine frontend → theme-no-spec warn', async () => {
+    test('theme package but no spec, with a Tailwind frontend → theme-no-spec warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await addMantineApp(tmp)
-        await rm(join(tmp, 'packages', 'mantine-theme', 'themes'), {
+        await addTailwindApp(tmp)
+        await rm(join(tmp, 'packages', 'theme', 'themes'), {
           recursive: true,
           force: true,
         })
-        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
           force: true,
         })
         const result = await runValidate(tmp)
@@ -1360,7 +1360,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await addMantineApp(tmp)
+        await addTailwindApp(tmp)
         const result = await runValidate(tmp)
         const finding = result.findings.find(
           (f) => f.id === 'design-no-stories'
@@ -1376,7 +1376,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await addMantineApp(tmp)
+        await addTailwindApp(tmp)
         await writeFile(
           join(tmp, 'apps', 'web', 'src', 'components', 'Wordmark.stories.tsx'),
           "export default { title: 'Wordmark' }\nexport const Default = {}\n",
@@ -1412,11 +1412,11 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         // Drop the spec + active.json but keep the package (a hand-written
         // createTheme() with no console-readable spec).
-        await rm(join(tmp, 'packages', 'mantine-theme', 'themes'), {
+        await rm(join(tmp, 'packages', 'theme', 'themes'), {
           recursive: true,
           force: true,
         })
-        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
           force: true,
         })
         const result = await runValidate(tmp)
@@ -1436,7 +1436,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
           force: true,
         })
         const result = await runValidate(tmp)
@@ -1452,7 +1452,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+        await writeJson(join(tmp, 'packages', 'theme', 'active.json'), {
           id: 'nope',
         })
         const result = await runValidate(tmp)
@@ -1532,9 +1532,9 @@ describe('pikku fabric validate', () => {
           }
         )
         await writeJson(
-          join(tmp, 'packages', 'mantine-theme', 'package.json'),
+          join(tmp, 'packages', 'theme', 'package.json'),
           {
-            name: '@project/mantine-theme',
+            name: '@project/theme',
           }
         )
         await writeJson(join(tmp, 'packages', 'components', 'package.json'), {
@@ -1658,7 +1658,7 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await makeFrontend(tmp, {
-          // An app that wants its own control rather than @pikku/mantine/dev's
+          // An app that wants its own control rather than the starter's
           // still satisfies the rule, as long as it drives the shared hook.
           'src/pages/LoginPage.tsx':
             "import { useDevActors } from '@pikku/react'\n" +
@@ -2073,7 +2073,7 @@ addHTTPMiddleware('*', [betterAuthSession()])
   })
 })
 
-describe('i18n + @pikku/mantine convergence — Paraglide (live validate.function)', () => {
+describe('i18n + Tailwind/shadcn convergence — Paraglide (live validate.function)', () => {
   // Scaffold an apps/web react frontend with the given package deps + src file,
   // optionally wiring the full Paraglide stack (messages/ + project.inlang/).
   const makeApp = async (
@@ -2107,7 +2107,7 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
   }
   const PARAGLIDE_DEPS = {
     react: '^19.0.0',
-    '@pikku/mantine': '^0.12.5',
+    tailwindcss: '^4.0.0',
     '@inlang/paraglide-js': '^2.20.0',
   }
 
@@ -2168,7 +2168,7 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
     try {
       await makeValidProject(tmp)
       await makeApp(tmp, {
-        deps: { react: '^19.0.0', '@pikku/mantine': '^0.12.5' },
+        deps: { react: '^19.0.0', tailwindcss: '^4.0.0' },
       })
       const result = await runLiveValidate(tmp)
       const f = result.findings.find(
@@ -2203,7 +2203,7 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
     }
   })
 
-  test('full Paraglide stack + m usage → no i18n/mantine errors', async () => {
+  test('full Paraglide stack + m usage → no i18n/ui errors', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
@@ -2212,7 +2212,7 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
         paraglideWired: true,
         srcFile: {
           name: 'Page.tsx',
-          body: `import { m } from '@/i18n/messages'\nimport { Button } from '@pikku/mantine/core'\nexport const Page = () => <Button>{m.hello()}</Button>\n`,
+          body: `import { m } from '@/i18n/messages'\nimport { Button } from '@/components/ui/button'\nexport const Page = () => <Button>{m.hello()}</Button>\n`,
         },
       })
       const result = await runLiveValidate(tmp)
@@ -2222,14 +2222,48 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
           (f.id.startsWith('app-legacy-i18n') ||
             f.id.startsWith('app-missing-paraglide') ||
             f.id.startsWith('app-paraglide-not-wired') ||
-            f.id.startsWith('app-raw-mantine') ||
-            f.id.startsWith('app-missing-pikku-mantine'))
+            f.id.startsWith('app-mantine-leftover'))
       )
       assert.strictEqual(
         i18nErrors.length,
         0,
-        `unexpected i18n/mantine errors: ${JSON.stringify(i18nErrors.map((x) => x.id))}`
+        `unexpected i18n/ui errors: ${JSON.stringify(i18nErrors.map((x) => x.id))}`
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('Mantine import in a Tailwind app → error app-mantine-leftover-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'Page.tsx',
+          body: `import { Button } from '@mantine/core'\nexport const Page = () => <Button />\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-mantine-leftover-web')
+      assert.ok(f, JSON.stringify(result.findings.map((x) => x.id)))
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('Tailwind without @shadcn/lint → warn app-missing-shadcn-lint-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, { deps: PARAGLIDE_DEPS, paraglideWired: true })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-missing-shadcn-lint-web')
+      assert.ok(f, JSON.stringify(result.findings.map((x) => x.id)))
+      assert.strictEqual(f!.severity, 'warn')
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

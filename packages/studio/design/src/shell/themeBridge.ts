@@ -9,16 +9,14 @@
 //     op: 'select' → { id }      set the active theme
 //     op: 'delete' → { id }      remove a saved theme
 //
-// The live preview re-themes locally (the shell builds the Mantine theme from the
-// working palette) — it does NOT wait for a round-trip.
+// The live preview re-themes locally (the shell scopes the theme's CSS) — it does NOT wait for a round-trip.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useState } from 'react'
 
 export type ThemePalette = {
   id: string
   name: string
-  primaryColor?: string
-  bases?: Record<string, string>
+  css?: string
 }
 
 export type ThemesPayload = { themes: ThemePalette[]; activeId: string }

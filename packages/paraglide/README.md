@@ -123,9 +123,9 @@ paraglide-enums ./messages/en.json ./src/i18n/i18n-enum.gen.ts ./messages.js ./p
 
 ## The i18n-debug mask locale
 
-`tsc` catches an invalid message, and the `@pikku/mantine` `I18nNode` gate catches a raw
-string literal on a gated prop. Neither sees a hardcoded string in plain JSX, an
-`aria-label`, an `alt`, a `document.title`, or anything handed to a non-Mantine component.
+`tsc` catches an invalid message, and `react/jsx-no-literals` catches a raw string literal in
+JSX text. Neither sees a hardcoded string in an `aria-label`, an `alt`, a `document.title`,
+or anything built outside JSX.
 
 i18n-debug covers that gap: render every message as block glyphs, and whatever is still
 readable on screen never went through a message.

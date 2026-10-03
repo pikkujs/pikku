@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from 'node:fs'
  * The registry is meant to be GENERATED from the app's data-testids (the
  * scaffold emits them deterministically), so feature files use a closed
  * vocabulary of element names and a dry run can reject unknown ones. Names
- * not in the registry fall back to the Mantine-aware heuristics in
+ * not in the registry fall back to the shadcn-aware heuristics in
  * locators.ts, so adoption is incremental.
  */
 export type ElementKind =

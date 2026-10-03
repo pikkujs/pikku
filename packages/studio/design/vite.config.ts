@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
 import type { PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join, sep } from 'node:path'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ const ws = (sub: string) => fileURLToPath(new URL(`./workspace/${sub}`, import.m
 // workspace dependency into the DEPENDENT package's node_modules (e.g.
 // apps/app/node_modules/@project/…), not the workspace root, so
 // workspace/node_modules/@project never exists. Package names also differ from
-// their directory names (packages/mantine-theme → @project/mantine-themes), so
+// their directory names (packages/theme → @project/theme), so
 // only the package.json name is authoritative. Aliasing to the package DIRECTORY
 // keeps Vite's own resolver in charge, so package.json `exports` still applies.
 function discoverProjectPackages(): { name: string; dir: string }[] {
@@ -130,6 +132,33 @@ function projectPackagesPlugin(): PluginOption {
       // Hand the real path back to Vite's resolver so the package's own
       // package.json `exports`/`main` still decides the entry point.
       return this.resolve(target, importer, { ...options, skipSelf: true })
+    },
+  }
+}
+
+function shadcdnDir(): string | null {
+  try {
+    return dirname(createRequire(import.meta.url).resolve('@pikku/shadcdn/package.json'))
+  } catch {
+    const sibling = fileURLToPath(new URL('../../shadcdn', import.meta.url))
+    return existsSync(sibling) ? sibling : null
+  }
+}
+
+function stockStoriesPlugin(): PluginOption {
+  const id = 'virtual:stock-stories'
+  return {
+    name: 'pikku-design:stock-stories',
+    resolveId: (source) => (source === id ? '\0' + id : null),
+    load(loaded) {
+      if (loaded !== '\0' + id) return null
+      const dir = shadcdnDir()
+      const files = dir
+        ? readdirSync(join(dir, 'ui')).filter((f) => f.endsWith('.stories.tsx'))
+        : []
+      const lines = files.map((f, i) => `import * as s${i} from ${JSON.stringify(join(dir!, 'ui', f))}`)
+      const entries = files.map((f, i) => `  ${JSON.stringify('/shadcdn/' + f)}: s${i},`)
+      return `${lines.join('\n')}\nexport default {\n${entries.join('\n')}\n}\n`
     },
   }
 }
@@ -335,7 +364,7 @@ function omIdPlugin(api: any) {
       JSXOpeningElement(path: any, state: any) {
         if (!state.filename) return
         const { name } = path.node.name
-        if (typeof name !== 'string') return
+        if (typeof name !== 'string' || name === 'Fragment') return
         // Strip any query suffix (route splitting emits virtual modules like
         // `index.tsx?tsr-split=component`) so the om-id stays a clean source path
         // that resolveWorkspacePath can open. Mirrors the sandbox app's plugin.
@@ -429,7 +458,7 @@ function hmrClientPort(): number | undefined {
  * so the browser refused the `ws://` upgrade as mixed content, the reload never
  * arrived, and the freshly imported module ran against a second copy of React —
  * surfacing as "Invalid hook call" and then `Cannot read properties of null (reading
- * 'use')` out of `useMantineTheme`, with the whole lens replaced by the error
+ * 'use')` with the whole lens replaced by the error
  * boundary. The story file itself was perfectly good; nothing could render it.
  *
  * Leaving the protocol unset is the fix rather than hardcoding `wss`: Vite's client
@@ -449,7 +478,9 @@ export default defineConfig({
   base,
   plugins: [
     react({ babel: { plugins: [omIdPlugin] } }),
+    tailwindcss(),
     projectPackagesPlugin(),
+    stockStoriesPlugin(),
     artifactIndexPlugin(),
     {
       name: 'om-i18n-map-server',
@@ -484,12 +515,12 @@ export default defineConfig({
     ],
     // Ensure user source files compiled by this Vite process share the same
     // singleton instances installed in the design-server's own node_modules.
-    dedupe: ['react', 'react-dom', '@mantine/core', '@mantine/hooks'],
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
     // @project/* is loose user source (not a built package) — let Vite transpile
     // it rather than pre-bundling, and dedupe the singletons from the workspace.
-    exclude: ['@project/mantine-themes'],
+    exclude: ['@project/theme'],
   },
   server: {
     host: '127.0.0.1',
@@ -501,7 +532,7 @@ export default defineConfig({
       // All three forms are listed because any one of them can be what Vite ends
       // up checking, and `workspaceConfigured` is the only one that survives the
       // repo not existing yet (see its definition).
-      allow: [serverDir, workspaceLink, workspaceReal(), workspaceConfigured],
+      allow: [serverDir, ...(shadcdnDir() ? [shadcdnDir()!] : []), workspaceLink, workspaceReal(), workspaceConfigured],
     },
     hmr: hmrPath
       ? { protocol: hmrProtocol(), path: hmrPath, clientPort: hmrClientPort() }

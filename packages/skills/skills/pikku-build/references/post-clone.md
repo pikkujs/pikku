@@ -11,16 +11,10 @@ commit, separate from any feature work.
    _template_, not the user's project — leaving it in place is misleading.
    Either delete it (`git rm README.md`) or rewrite it with the new project's
    name and purpose. Never ship a clone with the generic template README.
-2. **Keep the lockfile committed.** Do NOT re-add `yarn.lock` to `.gitignore`.
-   A real project commits its lockfile for reproducible installs. The correct
-   pattern is `yarn.lock` followed by `!/yarn.lock`, which commits the root
-   lockfile while keeping generated per-unit lockfiles under `.deploy/` (and
-   `e2e/`) ignored.
-
-   `create-pikku` keeps only the chosen package manager's lockfile and deletes
-   the other, and for yarn it may have written an **empty** `yarn.lock` as a
-   marker. Commit the lockfile _after_ the first install has filled it in —
-   committing the empty placeholder pins nothing.
+2. **Keep the lockfile committed.** A real project commits its lockfile (`bun.lock` for the
+   bun-based starter) for reproducible installs; generated per-unit lockfiles under `.deploy/`
+   (and `e2e/`) stay ignored. Commit it _after_ the first install has filled it in, and only
+   when the user asked for a commit (a build in a shared checkout does not commit).
 
 3. **Rename template identifiers.** Update `name` in the root `package.json`
    (and any `@project/*` or other placeholder names) to the real project.

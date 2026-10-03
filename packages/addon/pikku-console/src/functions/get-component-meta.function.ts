@@ -8,7 +8,7 @@ export const getComponentMeta = pikkuFunc<
 >({
   title: 'Get Component Meta',
   description:
-    "A Mantine component's props, variants, sizes and Styles API parts for the project's installed Mantine, with the active theme's custom variants.",
+    "A shadcn component's variants, sizes and defaults, read from the cva definition in the app's src/components/ui.",
   expose: true,
   scopes: ['pikku:console:design:read'],
   func: async ({ designService }, { componentName }) => {

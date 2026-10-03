@@ -7,10 +7,10 @@ import { DesignService } from './design.service.js'
 
 const workspace = async (): Promise<string> => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-console-design-'))
-  await mkdir(join(root, 'packages/mantine-theme/themes'), { recursive: true })
+  await mkdir(join(root, 'packages/theme/themes'), { recursive: true })
   await mkdir(join(root, 'apps/app/src'), { recursive: true })
   await writeFile(
-    join(root, 'packages/mantine-theme/themes/default.json'),
+    join(root, 'packages/theme/themes/default.json'),
     JSON.stringify({ name: 'Default', brand: { colors: { primary: '#123456' } }, structure: {} })
   )
   await writeFile(
@@ -21,16 +21,15 @@ const workspace = async (): Promise<string> => {
 }
 
 describe('DesignService', () => {
-  test('creates, switches and deletes themes, keeping the barrel in step', async () => {
+  test('creates, switches and deletes themes, regenerating theme.css', async () => {
     const root = await workspace()
     const design = new DesignService(root)
     assert.strictEqual(await design.createTheme('night', 'Night'), 'night')
     const { themes, activeId } = await design.listThemes()
     assert.deepStrictEqual(themes.map((t) => t.id), ['default', 'night'])
     assert.strictEqual(activeId, 'night')
-    const barrel = await readFile(join(root, 'packages/mantine-theme/themes/index.ts'), 'utf-8')
-    assert.match(barrel, /Active theme: night/)
-    assert.match(barrel, /'night': t_night/)
+    const css = await readFile(join(root, 'packages/theme/theme.css'), 'utf-8')
+    assert.match(css, /--primary: oklch\(/)
     assert.strictEqual(await design.deleteTheme('night'), 'default')
     await assert.rejects(design.deleteTheme('default'))
     await assert.rejects(design.setActiveTheme('../evil'))
@@ -52,20 +51,25 @@ describe('DesignService', () => {
     await assert.rejects(design.applyTheme({ preset: 'nope' }))
   })
 
-  test('merges component default props and drops nulls', async () => {
-    const design = new DesignService(await workspace())
+  test('merges colours, radius and shadows into the theme and regenerates theme.css', async () => {
+    const root = await workspace()
+    const design = new DesignService(root)
     await design.updateThemeSpec({
       colors: { accent: '#abcdef' },
-      defaultRadius: 'md',
-      components: { Button: { defaultProps: { variant: 'filled', size: 'lg' } } },
+      radius: 'lg',
+      shadows: { sm: '0 1px 2px #0003' },
     })
-    await design.updateThemeSpec({ components: { Button: { defaultProps: { size: null } } } })
+    await design.updateThemeSpec({ shadows: { md: '0 2px 4px #0003' }, density: 'roomy' })
     const { spec } = await design.getThemeSpec()
     assert.deepStrictEqual(spec.brand?.colors, { primary: '#123456', accent: '#abcdef' })
     assert.deepStrictEqual(spec.structure, {
-      defaultRadius: 'md',
-      components: { Button: { defaultProps: { variant: 'filled' } } },
+      radius: 'lg',
+      density: 'roomy',
+      shadows: { sm: '0 1px 2px #0003', md: '0 2px 4px #0003' },
     })
+    const css = await readFile(join(root, 'packages/theme/theme.css'), 'utf-8')
+    assert.match(css, /--radius: 0\.75rem/)
+    assert.match(css, /--theme-spacing: 0\.29rem/)
     await assert.rejects(design.updateThemeSpec({ colors: { accent: 'red' } }))
   })
 
@@ -86,18 +90,18 @@ describe('DesignService', () => {
     await assert.rejects(design.readJsxProps('../outside.tsx', 1, 0))
   })
 
-  test('serves component meta for the installed Mantine and the block library', async () => {
+  test('serves component meta from the app ui folder and the block library', async () => {
     const root = await workspace()
-    await mkdir(join(root, 'apps/app/node_modules/@mantine/core'), { recursive: true })
+    await mkdir(join(root, 'apps/app/src/components/ui'), { recursive: true })
     await writeFile(
-      join(root, 'apps/app/node_modules/@mantine/core/package.json'),
-      JSON.stringify({ name: '@mantine/core', version: '9.4.1' })
+      join(root, 'apps/app/src/components/ui/button.tsx'),
+      "const v = cva('x', { variants: { variant: { default: 'a', brand: 'b' } }, defaultVariants: { variant: 'default' } })"
     )
     const design = new DesignService(root)
     const meta = await design.componentMeta('Button')
-    assert.strictEqual(meta.source, 'manifest')
-    assert.ok(meta.variantOptions.includes('filled'))
-    assert.ok((await design.mantineComponents()).components.includes('Stack'))
+    assert.strictEqual(meta.source, 'app')
+    assert.deepStrictEqual(meta.variantOptions.variant, ['default', 'brand'])
+    assert.deepStrictEqual((await design.uiComponents()).components, ['Button'])
     const { tags, blocks } = await design.listBlocks()
     assert.ok(tags.length > 0 && blocks.length > 0)
     const block = await design.getBlock(blocks[0]!.name)

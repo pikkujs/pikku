@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { Box, Divider, Stack, Text, Title } from '@mantine/core'
-import type { MantineThemeOverride } from '@mantine/core'
 import { libraryItems, findLibraryItem, renderStory, sectionItems } from '@/lib/discovery'
 import type { LibraryItem } from '@/lib/discovery'
 import { reportComponentMeta, useReportContentHeight } from '@/lib/host'
@@ -9,7 +7,7 @@ import { PreviewSurface } from '@/lib/PreviewSurface'
 import { m } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Library lens — the user's Mantine primitives, each rendered in all its variants
+// Library lens — the user's shadcn primitives, each rendered in all its variants
 // under the active theme. The console drives `section` (the component title) via
 // set-section; with no selection we show the whole library.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,11 +27,11 @@ function useReportComponentMeta(item: LibraryItem | null) {
 
 export function LibraryView({
   section,
-  previewTheme,
+  previewCss,
   colorScheme,
 }: {
   section: string | null
-  previewTheme: MantineThemeOverride
+  previewCss: string
   colorScheme: 'light' | 'dark'
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -44,43 +42,37 @@ export function LibraryView({
 
   if (libraryItems.length === 0) {
     return (
-      <Stack ref={containerRef} py="xl" align="center">
-        <Text c="dimmed" size="sm">
+      <div ref={containerRef} className="flex flex-col items-center py-8">
+        <p className="text-sm text-[var(--app-text-faint)]">
           {m.view_no_stories()} <code>*.stories.tsx</code> {m.view_files_to()}{' '}
-          <code>packages/components/src/</code>.
-        </Text>
-      </Stack>
+          <code>apps/*/src/components/</code>.
+        </p>
+      </div>
     )
   }
 
   return (
-    <Stack ref={containerRef} gap="xl">
+    <div ref={containerRef} className="flex flex-col gap-8">
       {items.map((item) => (
-        <Stack key={item.title} gap="md">
-          <Title order={4}>{item.title}</Title>
-          <Stack gap="lg">
+        <div key={item.title} className="flex flex-col gap-4">
+          <h4 className="text-base font-semibold text-[var(--app-text)]">{item.title}</h4>
+          <div className="flex flex-col gap-6">
             {item.variants.map(({ name, story }, i) => (
-              <Stack key={name} gap="sm">
-                {i > 0 && <Divider />}
-                <Text
-                  size="xs"
-                  c="dimmed"
-                  tt="uppercase"
-                  fw={500}
-                  style={{ letterSpacing: '0.05em' }}
-                >
+              <div key={name} className="flex flex-col gap-3">
+                {i > 0 && <hr className="border-[var(--app-border)]" />}
+                <span className="text-xs font-medium uppercase tracking-wider text-[var(--app-text-faint)]">
                   {name.replace(/([A-Z])/g, ' $1').trim()}
-                </Text>
-                <Box style={{ minHeight: 120 }}>
-                  <PreviewProvider theme={previewTheme} colorScheme={colorScheme}>
+                </span>
+                <div className="min-h-30">
+                  <PreviewProvider css={previewCss} colorScheme={colorScheme}>
                     <PreviewSurface>{renderStory(story, item.component)}</PreviewSurface>
                   </PreviewProvider>
-                </Box>
-              </Stack>
+                </div>
+              </div>
             ))}
-          </Stack>
-        </Stack>
+          </div>
+        </div>
       ))}
-    </Stack>
+    </div>
   )
 }

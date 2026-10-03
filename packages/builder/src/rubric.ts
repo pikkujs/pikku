@@ -10,7 +10,7 @@ export const UI_CRITIQUE_RUBRIC = [
   '  it HIGH. Fix: the route threw during render; the usual cause is a raw value dropped into JSX',
   '  (a bare `{date}` object) — format it (dayjs for dates) or guard the value.',
   '',
-  '- FLAT GRAY-SLOP THEME: default Mantine gray survived; no committed domain colour on',
+  '- FLAT GRAY-SLOP THEME: default shadcn neutral grey survived; no committed domain colour on',
   '  the primary actions, headers, or accents. A real product commits to a palette.',
   '- A ROW OF IDENTICAL CARDS holding content that is not uniform — same size, same corner,',
   '  same border, one per topic. Committing to a colour does not excuse it: three navy panels',

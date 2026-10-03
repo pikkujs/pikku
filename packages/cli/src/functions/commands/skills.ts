@@ -149,7 +149,7 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     console.log('')
     console.log('Run `pikku skills install` to copy them into .claude/skills/')
     console.log(
-      'Run `pikku skills install --core --fabric` to install the Fabric sandbox skill set.'
+      'Run `pikku skills install --core --client --fabric` to install the Fabric sandbox skill set.'
     )
     console.log(
       'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'

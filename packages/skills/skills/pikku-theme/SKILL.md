@@ -1,57 +1,56 @@
 ---
 name: pikku-theme
 description: >-
-  Use when giving a Pikku Mantine app its look: picking and applying a theme with `pikku theme
-  list|apply`, composing brand colours, fonts, page and ink over a preset's structure, matching an
-  existing site with `pikku design extract`, declaring custom component variants and reading them
-  back with `pikku components show`, pulling ready-made sections with `pikku blocks`, replacing
-  template names and icons with `pikku design placeholders|favicon`, and keeping emails/theme.json
-  on-brand. Also the light/dark and WCAG contrast rules a theme must clear. TRIGGER when: the user
-  asks to theme, restyle, rebrand or recolour an app; the project has packages/mantine-theme
-  (themes/*.json, active.json); a screen needs a colour, font, radius or shadow; or the app still
-  shows a template name or default icon. DO NOT TRIGGER when: rendering data or RTL layout (use
-  pikku-mantine), writing email templates (use pikku-emails), or accessibility beyond colour (use
-  pikku-a11y).
+  Use when giving a Pikku Tailwind + shadcn/ui app its look: picking and applying a theme with `pikku
+  theme list|apply`, composing brand colours, fonts, page and ink over a preset's structure, matching
+  an existing site with `pikku design extract`, declaring component variants and reading them back
+  with `pikku components show`, pulling ready-made sections with `pikku blocks`, replacing template
+  names and icons with `pikku design placeholders|favicon`, and keeping emails/theme.json on-brand.
+  Also the light/dark and WCAG contrast rules a theme must clear. TRIGGER when: the user asks to
+  theme, restyle, rebrand or recolour an app; the project has packages/theme (themes/*.json,
+  active.json); a screen needs a colour, font, radius or shadow; or the app still shows a template
+  name or default icon. DO NOT TRIGGER when: rendering data or RTL layout (use pikku-tailwind),
+  writing email templates (use pikku-emails), or accessibility beyond colour (use pikku-a11y).
 installGroups: [client]
 ---
 
-# Theming a Pikku Mantine app
+# Theming a Pikku Tailwind app
 
-The look of the app lives in one package, `packages/mantine-theme`, and the CLI owns it. Do not
-hand-edit the theme JSON to change the look; run `pikku theme apply`. Every colour in app code
-then comes from the theme, never a literal.
+The look of the app lives in one package, `packages/theme`, and the CLI owns it. Do not hand-edit
+the theme JSON or the generated `theme.css` to change the look; run `pikku theme apply`. Every
+colour in app code then comes from the theme, never a literal.
 
 ## The theme package
 
 ```
-packages/mantine-theme/
+packages/theme/
   themes/
     default.json      # one file per theme: { name, description, brand, structure }
     <id>.json         # written by `pikku theme apply`
-    index.ts          # GENERATED on every apply/switch — imports every themes/*.json; never edit
   active.json         # { "id": "<id>" } — which theme the app renders
   base.json           # optional: spacing / radius / fontSizes scales shared by every theme
-  index.ts            # builds the Mantine theme(s) from the specs
+  theme.css           # GENERATED on every apply/switch — never edit
 ```
 
-A theme is ONE Mantine theme in two halves:
+The app imports `theme.css` once, after Tailwind. It holds the shadcn tokens as CSS variables in
+OKLCH, a `:root` block for light and a `.dark` block for dark, and the font variables. Tailwind's
+`@theme inline` maps those variables to utilities, so `bg-primary`, `text-muted-foreground` and
+`rounded-lg` follow the active theme with no JavaScript.
+
+A theme is ONE set of tokens in two halves:
 
 - **brand** — `colors` (`primary`, `secondary`, `accent`, as hex) and `fonts` (`heading`, `body`,
   optional `mono`, each a Google Fonts family). This is what makes two apps look different.
-- **structure** — the depth: `defaultRadius`, `shadows` (`xs`..`xl`), `radius`, `spacing`,
-  `components` (per-component `defaultProps`/`styles`), `defaultGradient`, `autoContrast`,
-  `primaryShade`, `white` (light page colour), `black` (light ink), `defaultColorScheme`, and an
-  optional 10-step `darkColors` tuple. This is what makes styles read as genuinely different rather
+- **structure** — the depth: `radius` (the base for `rounded-*`), `shadows` (`xs`..`xl`), `density`
+  (the spacing scale), `page` (light page colour), `ink` (light text colour), `defaultColorScheme`,
+  and an optional `darkSurface` ramp. This is what makes styles read as genuinely different rather
   than recoloured.
 
-`@pikku/mantine/theme-spec` turns the stored specs into Mantine themes: `themeRegistry(themeSpecs,
-activeId)` returns the built themes, the active one, each theme's colour scheme and the font
-families to load (`googleFontsHref` builds the stylesheet link). `buildTheme` generates each brand
-colour's 10-step tuple, tints the `dark` ramp toward the primary's hue unless `darkColors` is given,
-strips `defaultColorScheme` and `darkColors` before `createTheme`, and routes the primary's filled
-label and light background through per-scheme variables. `cssVariablesResolver` darkens light-mode
-`dimmed` and `placeholder` text so they clear AA. The frontend writes plain `<Card>`, `<Paper>`,
-`<Button>` and inherits all of it.
+`pikku theme apply` generates the whole token set from those inputs: each brand colour becomes
+`--primary`, `--secondary`, `--accent` with a matching `-foreground` picked for contrast, the neutral
+ramp (`--background`, `--card`, `--muted`, `--border`, `--input`, `--ring`) is tinted toward the
+primary's hue unless `darkSurface` is given, and `--muted-foreground` is darkened in light mode so it
+clears AA. The frontend writes plain `<Card>` and `<Button>` and inherits all of it.
 
 ## Presets, structures and brands
 
@@ -94,36 +93,36 @@ pikku theme apply --preset quorum --structure monopro
 | `--structure <id>` | swap in another preset's structure (depth) under this brand |
 | `--primary`, `--secondary`, `--accent` | brand colours, hex |
 | `--font-heading`, `--font-body` | Google Fonts families |
-| `--page` | light-mode page colour (`structure.white`) — paper, linen, bone instead of white |
-| `--ink` | light-mode text colour (`structure.black`) |
+| `--page` | light-mode page colour (`structure.page`) — paper, linen, bone instead of white |
+| `--ink` | light-mode text colour (`structure.ink`) |
 
 Flags are flat scalars, one value each; there is no nested `--colors` object. One call writes the
 theme, makes it active, regenerates `themes/index.ts` (so the running app reloads) and re-brands
 `emails/theme.json`. There is no separate activate step. Re-running with the same preset overwrites
 that theme file.
 
-Fine-grained structure tweaks the flags do not cover (a component's `defaultProps`, a shadow
-scale) are edits to the active `themes/<id>.json` `structure`; keep them in the theme, not in
-components.
+Fine-grained structure tweaks the flags do not cover (a shadow scale, the radius base) are edits to
+the active `themes/<id>.json` `structure`, followed by `pikku theme apply` to regenerate
+`theme.css`; keep them in the theme, not in components.
 
 ## Colour rule
 
-Every colour in app code comes from the theme: semantic names (`primary`, `secondary`, `accent`,
-Mantine's named colours by role), `var(--mantine-color-*)` variables the theme defines, or a token
-your theme package exports. No hex, `rgb()`, `hsl()`, named CSS colour, ad-hoc alpha or one-scheme
-shade (`dark.6`, `gray.0`) in components or CSS modules. Gradients, tinted borders and shadows
-follow the same rule: define them in the theme (`defaultGradient`, `shadows`) and reference them.
-Before finishing UI work, scan the changed files for colour literals and replace them.
+Every colour in app code comes from the theme: a semantic utility (`bg-primary`, `text-foreground`,
+`bg-muted`, `border-border`, `text-destructive`) or a token your theme exports. No hex, `rgb()`,
+`hsl()`, named CSS colour, arbitrary value (`bg-[#2F5D62]`), raw palette class (`bg-blue-500`),
+ad-hoc alpha or one-scheme shade in components or CSS. Gradients, tinted borders and shadows follow
+the same rule: define them as tokens in the theme and reference them. `@shadcn/lint` enforces this
+and names the token to use instead. Before finishing UI work, run it and scan the changed files for
+colour literals.
 
 ## Light, dark and contrast
 
-- Always set `structure.defaultColorScheme`. It seeds `ColorSchemeScript` and `MantineProvider`; a
-  theme without it boots dark.
-- A dark-first structure ships an explicit `darkColors` tuple (index 0 lightest text, 7 body
-  background, 9 deepest). Without one, the dark ramp is tinted toward the primary's hue; a
-  near-grey primary stays neutral.
-- Branch on scheme with `light-dark()` or Mantine variables, only between theme values. Never
-  hardcode a shade for one scheme; see pikku-mantine.
+- Always set `structure.defaultColorScheme`. It decides which block the page boots in; a theme
+  without it boots dark.
+- A dark-first structure ships an explicit `darkSurface` ramp (lightest text to deepest background).
+  Without one, the dark ramp is tinted toward the primary's hue; a near-grey primary stays neutral.
+- Semantic tokens already switch per scheme, so most classes need no `dark:` prefix. Use `dark:` only
+  to choose between theme tokens. Never hardcode a shade for one scheme; see pikku-tailwind.
 - **Text clears 4.5:1 (WCAG AA) on every surface it can land on**, in both schemes. Verify, do not
   estimate. If you need a colour dimmer than the dimmest text token, change the layout.
 - **Control boundaries clear 3:1** (WCAG 1.4.11): input borders, toggles, focus rings. A
@@ -134,35 +133,40 @@ Before finishing UI work, scan the changed files for colour literals and replace
   carried by a tinted fill with normal text, and the amber is only the mark.
 - **Accent means state.** The accent marks selection, current item, active state, and means the
   same thing in both schemes. On an element regardless of its state, it is decoration.
-- Leave `autoContrast: true` so filled buttons pick a readable label. The page/ink you pass with
-  `--page`/`--ink` must clear 4.5:1 against each other, and the primary must still read on the page.
+- Every `-foreground` token is generated from its surface, so a filled button gets a readable
+  label. The page/ink you pass with `--page`/`--ink` must clear 4.5:1 against each other, and the
+  primary must still read on the page.
 - One status vocabulary: red, amber/yellow, green, plus a neutral. Do not add a second spelling of
   a colour that already exists.
 
 ## Custom variants and component metadata
 
-`pikku components list` prints the Mantine components the bundled metadata covers for the installed
-`@mantine/core` major. `pikku components show <Name>` prints one component's props (with kinds,
-options and defaults), variants, sizes, Styles API parts (`stylesNames`) and CSS variables. Check it
-before guessing a prop or a `classNames` key.
+`pikku components list` prints the shadcn components in the app's `src/components/ui/`.
+`pikku components show <Name>` prints one component's props, variants, sizes and default variants,
+read from its `cva` definition. Check it before guessing a `variant` or `size` value.
+`pikku components add <name...>` copies shadcdn components the app lacks (and the ones they compose)
+into `src/components/ui/`, skipping files that exist, and prints the npm packages to `bun add`.
 
-A custom variant is declared in the active theme under
-`structure.components.<Name>.variants.<variant>`:
+A custom variant is added where the component defines its variants, in the component file:
 
-```json
-{ "structure": { "components": { "Button": { "variants": { "brand": {} } } } } }
+```js
+const buttonVariants = cva('...', {
+  variants: {
+    variant: {
+      default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      brand: 'bg-accent text-accent-foreground hover:bg-accent/90',
+    },
+  },
+})
 ```
 
-`pikku components show Button` then lists `brand` beside `filled`, `light` and the rest, and any
-editor reading the same metadata offers it. Mantine itself ignores the `variants` key: the look
-comes from CSS keyed on the `data-variant` attribute Mantine sets on the root, for example
-`.mantine-Button-root[data-variant='brand']` in the theme package's stylesheet, using theme
-variables only. Declare it once in the theme and use `variant="brand"`; do not restyle one button
-inline.
+`pikku components show Button` then lists `brand` beside the rest, `@shadcn/lint` accepts
+`variant="brand"`, and its error messages suggest it. Use theme tokens only inside a variant. Add it
+once and use it; do not restyle one button inline.
 
 ## Blocks
 
-Ready-made, i18n-safe Mantine page sections: heroes, features, FAQ, contact, footers, headers,
+Ready-made, i18n-safe shadcn page sections: heroes, features, FAQ, contact, footers, headers,
 navbars, auth screens, cards, stats, tables, inputs and more.
 
 ```bash
@@ -173,8 +177,9 @@ pikku blocks show HeroBullets --out apps/app/src/components/hero
 ```
 
 `show` resolves everything the block composes into one flat folder of files. `--out` writes them,
-skipping any file that exists. Then add the printed i18n keys to the app's base locale (see
-pikku-i18n), install any listed npm packages, and replace placeholder copy and empty media with the
+skipping any file that exists, installs any `ui/` components the app is missing, and merges the
+block's i18n keys into `messages/en.json` (never overwriting a key). Run `bun add` for the npm
+packages it prints, run `pikku i18n sync` for the other locales, and replace placeholder copy and empty media with the
 app's real content. A block left with its default text is not done. Blocks inherit the theme; do not
 add colours to them.
 
@@ -202,7 +207,7 @@ Renders the favicon, apple-touch and PWA manifest icons into the app's `public/`
 The glyph colour is chosen for contrast with `--background`; pass the theme's primary.
 
 **Emails.** `pikku theme apply` (and `pikku design extract --apply`) rewrites `emails/theme.json`
-from the applied theme: neutrals from the scheme (or the `darkColors` tuple for a dark theme),
+from the applied theme: neutrals from the scheme (or the `darkSurface` ramp for a dark theme),
 `accent`, `button` from the primary, `buttonText` black or white by luminance, `fonts.body` from
 the brand. It merges, so `appName` and any project keys survive. It cannot know the app's name: set
 `appName` yourself right after the first apply, because confirm-address and reset-password emails

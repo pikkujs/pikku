@@ -7,7 +7,7 @@ export const getThemes = pikkuFunc<
   { themes: ThemeEntry[]; activeId: string; tokens: ThemeTokens }
 >({
   title: 'Get Themes',
-  description: "Lists the project's Mantine themes, which one is active, and the token scales they share.",
+  description: "Lists the project's themes and which one is active.",
   expose: true,
   scopes: ['pikku:console:design:read'],
   func: async ({ designService }) => {

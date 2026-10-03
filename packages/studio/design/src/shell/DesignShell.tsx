@@ -7,14 +7,11 @@
 // the theme (and any picked element) on the right. The shell only READS the saved
 // theme list the console broadcasts, so there is one theme editor, not two.
 //
-// This renders under the OUTER (console) Mantine provider; only the previews
-// inside the views' PreviewProvider carry the user's theme.
+// The chrome uses the --app-* tokens; only the previews inside the views'
+// PreviewProvider carry the user's theme.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from 'react'
-import { Box } from '@mantine/core'
-import type { MantineThemeOverride } from '@mantine/core'
 import { Palette } from 'lucide-react'
-import { buildTheme } from '@project/mantine-themes'
 import { libraryItems, appItems, catalog, type DesignArtifact } from '@/lib/discovery'
 import { Plus } from 'lucide-react'
 import { LibraryView } from '@/views/LibraryView'
@@ -22,6 +19,7 @@ import { AppView } from '@/views/AppView'
 import { ArtifactView } from '@/artifact/ArtifactView'
 import {
   reportCatalog,
+  useHostTheme,
   reportArtifacts,
   requestComponentStories,
   requestDeleteArtifact,
@@ -164,24 +162,13 @@ export function DesignShell({
     () => themes.find((t) => t.id === activeId) ?? themes[0] ?? null,
     [themes, activeId],
   )
-  const userTheme: MantineThemeOverride = useMemo(
-    () => (selectedPalette ? buildTheme(selectedPalette) : {}),
-    [selectedPalette],
-  )
+  const hostCss = useHostTheme()
+  const userTheme = selectedPalette?.css ?? hostCss
 
   const lensMeta = LENSES.find((l) => l.id === lens)!
 
   return (
-    <Box
-      style={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        minHeight: 0,
-        background: 'var(--mantine-color-body)',
-      }}
-    >
+    <div className="relative flex h-screen min-h-0 flex-col bg-[var(--app-panel-bg)]">
       {/* sub-header: lens switch. Geometry is copied from the console's own header
           row (--screen-header-height 45px, --app-panel-bg fill, NO hairline — the
           fill step against the canvas is the seam) so this row, the chat panel's
@@ -320,7 +307,7 @@ export function DesignShell({
           onClose={() => setPickerOpen(false)}
         />
       )}
-    </Box>
+    </div>
   )
 }
 
@@ -344,13 +331,13 @@ function DetailPanel({
   sketching: boolean
   onNewArtifact: () => void
   onOpenPicker: () => void
-  userTheme: MantineThemeOverride
+  userTheme: string
   colorScheme: 'light' | 'dark'
 }) {
   if (lens === 'library')
-    return <LibraryView section={libSel} previewTheme={userTheme} colorScheme={colorScheme} />
+    return <LibraryView section={libSel} previewCss={userTheme} colorScheme={colorScheme} />
   if (lens === 'app')
-    return <AppView section={appSel} previewTheme={userTheme} colorScheme={colorScheme} />
+    return <AppView section={appSel} previewCss={userTheme} colorScheme={colorScheme} />
   return (
     <ArtifactView
       artifact={artifact}

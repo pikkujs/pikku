@@ -37,7 +37,7 @@ import fs, { unlinkSync, writeFileSync } from 'fs'
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
-const DEFAULT_FABRIC_APP = 'react-vite-mantine'
+const DEFAULT_FABRIC_APP = 'react-vite-tailwind'
 
 const packageManagers = ['npm', 'yarn', 'pnpm', 'bun'] as const
 
@@ -535,7 +535,7 @@ async function run() {
 // Pretty labels for apps the starter ships. Anything missing from this map
 // falls back to the directory name in the picker.
 const fabricAppLabels: Record<string, string> = {
-  'react-vite-mantine': 'React + Vite + Mantine (static export)',
+  'react-vite-tailwind': 'React + Vite + Tailwind + shadcn/ui (static export)',
   'nextjs-tailwind': 'Next.js 15 + Tailwind (SSR)',
 }
 

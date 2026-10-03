@@ -203,7 +203,7 @@ if (window.self !== window.top) {
   }
   // Find the best [data-om-id] element for a design-mode click. Tries closest()
   // first (the common case), then walks up looking for a descendant with
-  // data-om-id — covers Mantine internals like the <label> rendered by TextInput
+  // data-om-id — covers library internals like the <label> rendered by an Input wrapper
   // where data-om-* attributes are forwarded to the leaf <input>, not the wrapper.
   function findDesignEl(target) {
     const direct = target.closest('[data-om-id]')
