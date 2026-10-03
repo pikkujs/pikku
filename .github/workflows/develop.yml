@@ -128,7 +128,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
+      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
 
   e2e:
     name: E2E Standard
