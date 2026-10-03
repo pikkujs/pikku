@@ -6,6 +6,7 @@ export const NextInput = z.object({
   harnessArg: z.array(z.string()).optional(),
   loop: z.boolean().optional(),
   parallel: z.boolean().optional(),
+  push: z.boolean().optional(),
 })
 
 export const NextOutput = z.object({
@@ -14,4 +15,5 @@ export const NextOutput = z.object({
   refs: z.array(z.string()),
   reason: z.string(),
   context: z.string().nullable(),
+  merged: z.array(z.string()),
 })
