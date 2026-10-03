@@ -15,8 +15,10 @@ A checkout with no Fabric project works a local queue instead (`.git/pikku-chang
 worktree) with the same commands; its items have no stage, screenshot or circled elements.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
-**Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below
-and work them as changesets.
+**Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below,
+group them into changesets, and take one: claim it, build it, merge it, stop. `pikku next --loop`
+starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
+changeset needs to know goes in a commit or a `reply`.
 
 ## Which stage
 

@@ -102,10 +102,10 @@ Read the knowledge base for what the app already is, then file the request as ch
 `,
 })
 
-const WORKING_THEM = `These are every open change. Work them as changesets, as the pikku-changes skill's Changesets section says.
+const WORKING_THEM = `These are every open change. Group them into changesets as the pikku-changes skill's Changesets section says, then claim one, build it, merge it and stop. The next changeset gets a fresh agent.
 `
 
-const WORKING_ALONGSIDE = `Other agents work changesets at the same time as you. Claim one changeset with --worktree and build it in the checkout that prints; declare the tables it creates, alters and reads, and if the claim is refused because of a running changeset, claim one that does not clash or stop. Merge it from this checkout when its changes are done.
+const WORKING_ALONGSIDE = `Other agents work changesets at the same time as you. Claim one changeset with --worktree and build it in the checkout that prints; declare the tables it creates, alters and reads, and if the claim is refused because of a running changeset, claim one that does not clash or stop. Merge it from this checkout when its changes are done, then stop. The next changeset gets a fresh agent.
 `
 
 const describe = (g: {
