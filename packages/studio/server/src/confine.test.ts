@@ -35,6 +35,13 @@ describe('confinedSpawn', { skip: !supported }, () => {
     assert.equal((await readFile(join(root, 'note'), 'utf8')).trim(), 'hi')
   })
 
+  test('bun can write its install cache', async () => {
+    const { home, root } = await setup()
+    await mkdir(join(home, '.bun', 'install', 'cache'), { recursive: true })
+    const { code } = await run(`echo x > ${home}/.bun/install/cache/tmp`, root, home)
+    assert.equal(code, 0)
+  })
+
   test('cannot write outside the worktree', async () => {
     const { home, root, outside, base } = await setup()
     const { code } = await run(`echo x > ${outside}/planted`, root, home)
