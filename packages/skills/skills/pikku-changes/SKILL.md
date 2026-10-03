@@ -16,7 +16,7 @@ worktree) with the same commands; its items have no stage, screenshot or circled
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
 **Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below,
-group them into changesets, and take one: claim it, build it, merge it, stop. `pikku next --loop`
+group them into changesets, and take one: claim it, build it, mark its items done, stop. `pikku next --loop`
 starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
 changeset needs to know goes in a commit or a `reply`.
 
@@ -82,8 +82,10 @@ A planned changeset is planned before any code — the functions, tables, screen
 touches — and the plan goes on its first item with `reply`.
 
 Build each changeset on its own branch, `changeset/<slug>`, cut from the branch you started on, one
-commit per item (see Committing). When every item in it is `done`, switch back and merge it as one
-`--no-ff` commit with a `Changeset:` trailer:
+commit per item (see Committing), and mark each item `done`. Launched by `pikku next`, stop there:
+it merges finished changesets itself, as one `--no-ff` commit with a `Changeset:` trailer, and if the
+merge conflicts it hands that back to an agent to resolve on the changeset's branch. Working by hand,
+merge it yourself from the branch it goes into:
 
 ```bash
 pikku fabric changes merge --group-id <id>
@@ -99,8 +101,7 @@ changeset declared no `--creates`/`--alters`.
 
 When other agents are working changesets at the same time (your work says so), claim with
 `--worktree`: it creates `changeset/<slug>` in its own checkout beside the repo and prints the path.
-Build and commit there, run `done` there, then merge from the checkout you started in — the merge
-removes the worktree. If the claim is refused because of a running changeset, claim one that does not
+Build and commit there and run `done` there; the merge removes the worktree. If the claim is refused because of a running changeset, claim one that does not
 clash, or stop.
 
 ## Reading an item

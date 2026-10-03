@@ -976,6 +976,10 @@ wireCLI({
             'Route an agent even while another changeset is running; each works its own in a worktree',
           type: 'boolean',
         },
+        push: {
+          description: 'Push after merging finished changesets',
+          type: 'boolean',
+        },
       },
     }),
     validate: pikkuCLICommand({

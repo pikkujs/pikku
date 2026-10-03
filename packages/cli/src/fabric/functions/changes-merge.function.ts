@@ -2,9 +2,8 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
-import { currentBranch, git, isAncestor } from '../../utils/git.js'
 import { dim, safe } from '../lib/output.js'
-import { releaseChangeset } from '../lib/changes-local.js'
+import { mergeChangeset } from '../lib/changeset-merge.js'
 
 export const FabricChangesMergeInput = z.object({
   apiUrl: z.string().optional(),
@@ -54,38 +53,17 @@ export const FabricChangesMerge = pikkuSessionlessFunc({
       throw new FabricPreconditionError(
         `The changes in this set landed on ${branches.map((b) => b ?? 'no branch').join(', ')}; a changeset is one branch.`
       )
-    const into = await currentBranch()
-    if (into === branch)
+    const outcome = await mergeChangeset({ group, branch }, storePath)
+    if (outcome.kind === 'conflict')
       throw new FabricPreconditionError(
-        `This checkout is on ${branch} itself. Run merge from the branch it goes into.`
+        `${branch} conflicts with ${outcome.into} in ${outcome.files.join(', ')}. Merge ${outcome.into} into ${branch}${outcome.worktree ? ` in ${outcome.worktree}` : ''}, resolve, commit, and run merge again.`
       )
-    if (await isAncestor(branch, 'HEAD')) {
-      if (storePath) await releaseChangeset(storePath, group.groupId)
-      throw new FabricPreconditionError(
-        `${branch} is already in ${into} — merged by plain git, so there is no Changeset commit for “${group.title}”. Leave it as it is; next time let \`changes merge\` do the merge.`
-      )
-    }
-    await git([
-      'merge',
-      '--no-ff',
-      branch,
-      '-m',
-      group.title,
-      '-m',
-      `Changeset: ${group.groupId}`,
-    ])
-    if (storePath) await releaseChangeset(storePath, group.groupId)
-    const worktree = (await git(['worktree', 'list', '--porcelain']))
-      .split('\n\n')
-      .find((entry) => entry.includes(`\nbranch refs/heads/${branch}`))
-      ?.match(/^worktree (.+)$/m)?.[1]
-    if (worktree) await git(['worktree', 'remove', worktree])
     return {
       groupId: group.groupId,
       branch,
-      into,
-      commit: (await git(['rev-parse', 'HEAD'])).trim(),
-      removedWorktree: worktree ?? null,
+      into: outcome.into,
+      commit: outcome.commit,
+      removedWorktree: outcome.removedWorktree,
     }
   },
 })
