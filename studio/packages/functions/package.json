@@ -20,7 +20,6 @@
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/builder": "workspace:*",
-    "@pikku/cloudflare": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",

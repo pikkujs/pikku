@@ -20,7 +20,6 @@
     "@pikku/assistant-ui": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/bun-server": "workspace:*",
-    "@pikku/cloudflare": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/fetch": "workspace:*",
     "@pikku/kysely": "workspace:*",
