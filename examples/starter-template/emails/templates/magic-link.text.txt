@@ -1,0 +1,7 @@
+{{t.magicLink.heading}}
+
+{{t.magicLink.intro}}
+
+{{signInUrl}}
+
+{{t.magicLink.expiry}}

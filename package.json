@@ -17,6 +17,7 @@
       "packages/deploy/*",
       "templates/*",
       "examples/*",
+      "!examples/starter-template",
       "verifiers/*",
       "e2e",
       "e2e/packages/*",
