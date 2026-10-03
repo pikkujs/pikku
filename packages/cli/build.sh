@@ -321,11 +321,6 @@ else
   echo "Warning: PikkuCLIConfig.schema.json not found, skipping schema copy"
 fi
 
-echo "Copying console app..."
-rm -rf console-app
-if [ -d "../console/dist" ]; then
-  cp -r ../console/dist console-app
-fi
 
 # Build native CLI binaries for all platforms using bun --compile
 if command -v bun >/dev/null 2>&1; then

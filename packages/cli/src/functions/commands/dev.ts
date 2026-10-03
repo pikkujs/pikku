@@ -43,7 +43,6 @@ import { registerScenarioInstrumentation } from '../wirings/scenarios/register-s
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
-import { resolveConsoleMount } from './serve-console.js'
 import { startDesignServer } from './serve-design.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -376,16 +375,7 @@ export const dev = pikkuSessionlessFunc<
       return m[serverLifecycleFactory.variable]
     }
 
-    const consoleMount = await resolveConsoleMount()
-
-    // Appended, not assigned: an app's own config may already declare mounts
-    // for its frontend, and dev is where that frontend is meant to be served.
-    // Replacing them meant the console being present silently unmounted the
-    // app, which is the one combination every project has.
-    const staticMounts = [
-      ...(userConfig.staticMounts ?? []),
-      ...(consoleMount ? [consoleMount] : []),
-    ]
+    const staticMounts = [...(userConfig.staticMounts ?? [])]
 
     /**
      * Hand the server the generated MCP manifests so it actually serves MCP.
@@ -425,12 +415,6 @@ export const dev = pikkuSessionlessFunc<
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
     const boundPort = pikkuServer.port
-
-    if (consoleMount) {
-      logger.info(
-        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
-      )
-    }
 
     const designServer = await startDesignServer(config.rootDir, logger)
     if (designServer) {

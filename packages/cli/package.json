@@ -100,7 +100,6 @@
   },
   "files": [
     "dist",
-    "console-app",
     "cli.schema.json",
     "surface.json",
     "snippets.json",
