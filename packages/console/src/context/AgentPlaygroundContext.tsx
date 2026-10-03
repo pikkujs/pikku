@@ -1,0 +1,144 @@
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react'
+import { useSearchParams } from '../router'
+import { useAgentThreads, useAgentThreadMessages } from '../hooks/useAgentRuns'
+
+export interface AgentThread {
+  id: string
+  status: string
+  createdAt: string
+  label?: string
+}
+
+interface AgentPlaygroundContextType {
+  agentId: string
+  threadId: string | null
+  /** The thread a conversation that has not been selected yet runs under. */
+  draftThreadId: string
+  setThreadId: (id: string | null) => void
+  threads: AgentThread[]
+  createNewThread: () => void
+  refetchThreads: () => void
+  dbMessages: any[] | undefined
+  model: string | undefined
+  setModel: (model: string | undefined) => void
+  temperature: number | undefined
+  setTemperature: (temperature: number | undefined) => void
+}
+
+export const AgentPlaygroundContext = createContext<
+  AgentPlaygroundContextType | undefined
+>(undefined)
+
+export const useAgentPlayground = () => {
+  const context = useContext(AgentPlaygroundContext)
+  if (!context) {
+    throw new Error(
+      'useAgentPlayground must be used within AgentPlaygroundProvider'
+    )
+  }
+  return context
+}
+
+interface AgentPlaygroundProviderProps {
+  children: React.ReactNode
+  agentId: string
+}
+
+const mapDbThreadToAgentThread = (dbThread: any): AgentThread => ({
+  id: dbThread.id,
+  status: 'completed',
+  createdAt: dbThread.createdAt,
+  label: dbThread.title || dbThread.id.slice(0, 8),
+})
+
+export const AgentPlaygroundProvider: React.FC<
+  AgentPlaygroundProviderProps
+> = ({ children, agentId }) => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialThreadId = searchParams.get('threadId')
+  const [threadId, setThreadIdState] = useState<string | null>(initialThreadId)
+  const [model, setModel] = useState<string | undefined>()
+  const [temperature, setTemperature] = useState<number | undefined>()
+
+  const { data: dbThreads, refetch: refetchThreads } = useAgentThreads(agentId)
+  const { data: dbMessages } = useAgentThreadMessages(threadId)
+
+  const threads: AgentThread[] = ((dbThreads as any[]) || []).map(
+    mapDbThreadToAgentThread
+  )
+
+  const setThreadId = useCallback(
+    (id: string | null) => {
+      setThreadIdState(id)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (id) {
+            next.set('threadId', id)
+          } else {
+            next.delete('threadId')
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  useEffect(() => {
+    const urlThreadId = searchParams.get('threadId')
+    if (urlThreadId !== threadId) {
+      setThreadIdState(urlThreadId)
+    }
+  }, [searchParams])
+
+  const createNewThread = useCallback(() => {
+    const newId = crypto.randomUUID()
+    setThreadId(newId)
+  }, [setThreadId])
+
+  /**
+   * The id an unsaved conversation talks under. `threadId` stays null until one
+   * is picked — that is what tells the list nothing is selected — so the chat
+   * needs an id of its own before the first message, and anything watching that
+   * conversation needs the same one. Minted here rather than inside the chat so
+   * both look at the same thread; re-minted whenever the selection returns to
+   * null, which is what starting a new conversation does.
+   */
+  const [draftThreadId, setDraftThreadId] = useState(() => crypto.randomUUID())
+  useEffect(() => {
+    if (threadId === null) {
+      setDraftThreadId(crypto.randomUUID())
+    }
+  }, [threadId])
+
+  return (
+    <AgentPlaygroundContext.Provider
+      value={{
+        agentId,
+        threadId,
+        draftThreadId,
+        setThreadId,
+        threads,
+        createNewThread,
+        refetchThreads: () => {
+          refetchThreads()
+        },
+        dbMessages: dbMessages as any[] | undefined,
+        model,
+        setModel,
+        temperature,
+        setTemperature,
+      }}
+    >
+      {children}
+    </AgentPlaygroundContext.Provider>
+  )
+}

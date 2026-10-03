@@ -1,0 +1,19 @@
+[data-help-active] {
+  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
+  outline-offset: 3px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 6px color-mix(
+      in srgb,
+      var(--app-accent, var(--mantine-primary-color-filled)) 16%,
+      transparent
+    );
+  transition:
+    outline-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-help-active] {
+    transition: none;
+  }
+}

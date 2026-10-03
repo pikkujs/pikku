@@ -1,0 +1,28 @@
+/* DataTable custom styles */
+
+/* Header row height */
+.mantine-datatable thead tr {
+  height: 50px !important;
+}
+
+.mantine-datatable thead th {
+  height: 50px !important;
+  vertical-align: middle;
+}
+
+/* Data row height */
+.mantine-datatable tbody tr {
+  height: 50px !important;
+}
+
+.mantine-datatable tbody td {
+  height: 50px !important;
+  vertical-align: middle;
+}
+
+/* Ensure content is properly aligned */
+.mantine-datatable th,
+.mantine-datatable td {
+  padding: 8px 12px;
+  line-height: 1.4;
+}

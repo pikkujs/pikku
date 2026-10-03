@@ -22,6 +22,8 @@
   "ignoreBinaries": [
     // A c8 subcommand (`npx c8 report`), not a binary on PATH.
     "report",
+    // A workspace script (`packages/console`), invoked from the repo root.
+    "generate",
     // A subcommand, not a binary: `pikku dev` in the dev-bun verifier, and
     // `yarn dev` in the app `create-pikku` has just scaffolded.
     "dev",

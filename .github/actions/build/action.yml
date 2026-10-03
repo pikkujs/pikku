@@ -80,6 +80,18 @@ runs:
         start=$SECONDS
         bun run build:templates
         echo "::notice::⏱ Build templates: $((SECONDS - start))s"
+    - name: Generate and type-check console
+      shell: bash
+      run: |
+        start=$SECONDS
+        cd packages/console && bun run generate && bun run tsc --noEmit
+        echo "::notice::⏱ Console type-check: $((SECONDS - start))s"
+    - name: Build console
+      shell: bash
+      run: |
+        start=$SECONDS
+        bun run build:console
+        echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
     # One tar rather than the tree: upload-artifact sends each file on its own,
     # and ~16 MB of small build files took two minutes that way.

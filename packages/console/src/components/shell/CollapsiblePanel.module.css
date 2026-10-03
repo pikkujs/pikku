@@ -1,0 +1,146 @@
+/* Shared collapsible side panel — see CollapsiblePanel.tsx. */
+
+/* Expanded: the panel chrome (a fixed-width flex column). The panel's own
+   content (header + body) fills it. Same flat fill as the nav so panels read as
+   one surface with it beside them. */
+.body {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--app-panel-bg);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  animation: collapsiblePanelSlideIn 180ms ease-out;
+}
+
+/* Collapsed: a thin icon bar. Its top button sits at the header height so the
+   expand control lines up with the page header / other panel headers. */
+.rail {
+  flex-shrink: 0;
+  width: var(--panel-rail-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: calc((var(--screen-header-height) - 30px) / 2);
+  background: var(--app-panel-bg);
+  border-inline-end: 1px solid var(--app-border);
+  animation: collapsiblePanelSlideIn 180ms ease-out;
+}
+
+.railEnd {
+  border-inline-end: none;
+  border-inline-start: 1px solid var(--app-border);
+}
+
+/* Floating-card variant: the panel floats on the app canvas as a card matching
+   the page's header/body cards (raised surface + radius + shadow), inset by one
+   card gutter. The inner gutter is left to the adjacent page stack's own padding
+   so the gap between panel and page stays a single gutter. */
+.floating {
+  composes: cardChrome from './card.module.css';
+}
+
+/* Collapsed floating variant: a slim, full-height raised strip that reads as the
+   panel tucked off the canvas edge (same card chrome + gutter as the floating
+   body, so expand/collapse just changes its width). The whole strip is the expand
+   button — a small glyph centred in it points back toward the content. */
+.slimRail {
+  composes: cardChrome from './card.module.css';
+  flex-shrink: 0;
+  width: var(--panel-slim-rail-width);
+  display: flex;
+  flex-direction: column;
+  animation: collapsiblePanelSlideIn 180ms ease-out;
+}
+
+/* With a topAction the strip has to hold a real button, not just a glyph. */
+.slimRailWide {
+  width: var(--panel-slim-rail-width-wide);
+}
+
+/* Pinned control — sits at the top of the strip, at the same height it occupies
+   in the expanded header, separated from the grab target. */
+.slimRailTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+/* The grab target: everything below the topAction, so clicking the strip's edge
+   still pulls the panel back. */
+.slimRailExpand {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  color: var(--app-text-faint);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.slimRailExpand:hover {
+  color: var(--app-text);
+  background: var(--app-panel-bg-strong);
+}
+
+.expand {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--app-text);
+  transition: background-color 150ms ease;
+}
+
+.expand:hover {
+  background: var(--app-panel-bg-strong);
+}
+
+.glyph {
+  color: var(--app-text-faint);
+  display: flex;
+}
+
+/* A card sitting on the canvas beside another card. The gutter lives on the
+   card's own outer edge and its head/foot; the inner edge is left to the
+   neighbouring page stack's padding so the seam between them stays a single
+   gutter rather than doubling.
+
+   Flow-relative, so a panel on the start edge sits on the RIGHT in Arabic
+   without a second rule. Which class applies is decided by the component from
+   its `side` prop — never by which of these two is declared later here. */
+.gutterStart {
+  margin-block: var(--app-card-gutter);
+  margin-inline-start: var(--app-card-gutter);
+  margin-inline-end: 0;
+}
+
+.gutterEnd {
+  margin-block: var(--app-card-gutter);
+  margin-inline-start: 0;
+  margin-inline-end: var(--app-card-gutter);
+}
+
+/* Slide in from the panel's OWN edge. `transform` has no logical form, so the
+   distance is signed by the component from `side` + `dir` and handed down as
+   `--panel-slide-from`; a single hardcoded `translateX(-18px)` made an end-edge
+   panel fly in from the far side of the screen, and both edges wrong in RTL. */
+@keyframes collapsiblePanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(var(--panel-slide-from, -18px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

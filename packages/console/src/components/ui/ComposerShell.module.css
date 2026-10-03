@@ -1,0 +1,178 @@
+/*
+ * Shared composer (prompt-box) styling. Used by the OpenCode assistant chat
+ * footer and the build-mode new-project prompt. The visual shell lives here;
+ * each caller supplies its own input + send (assistant-ui primitives vs a
+ * plain controlled textarea).
+ */
+.composerRoot {
+  --composer-surface-bg: var(--app-panel-bg-raised);
+  --composer-surface-border: var(--app-border);
+  --composer-surface-shadow: var(--app-shadow-panel);
+  --composer-input-color: var(--app-text);
+  --composer-placeholder-color: var(--app-text-faint);
+  --composer-icon-border: var(--app-border);
+  --composer-icon-bg: var(--app-panel-bg-soft);
+  --composer-icon-color: var(--app-text-dim);
+  --composer-icon-hover-bg: var(--app-panel-bg-strong);
+  --composer-icon-hover-color: var(--app-text);
+  --composer-send-border: var(--app-blue-border);
+  --composer-send-bg: var(--app-blue);
+  --composer-send-color: var(--app-panel-bg);
+  --composer-send-hover-bg: var(--app-blue-hover);
+  --composer-send-hover-color: var(--app-panel-bg);
+  --composer-control-color: var(--app-text-dim);
+  --composer-control-hover-color: var(--app-text);
+  --composer-control-muted: var(--app-text-faint);
+  position: relative;
+  z-index: 2;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: var(--composer-surface-bg);
+  border: 1px solid var(--composer-surface-border);
+  border-radius: 24px;
+  padding: 14px 12px 10px;
+  box-shadow: 0 14px 30px var(--composer-surface-shadow);
+}
+
+.composerInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--composer-input-color);
+  font-size: var(--mantine-font-size-sm);
+  font-family: inherit;
+  resize: none;
+  line-height: 1.5;
+  min-height: 46px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.composerInput::placeholder {
+  color: var(--composer-placeholder-color);
+}
+
+.composerFooter {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.composerSpacer {
+  flex: 1;
+}
+
+.iconChip,
+.sendButton {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--composer-icon-border);
+  background: var(--composer-icon-bg);
+  color: var(--composer-icon-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+  flex-shrink: 0;
+}
+
+.iconChip:hover:not(:disabled) {
+  background: var(--composer-icon-hover-bg);
+  color: var(--composer-icon-hover-color);
+}
+
+.sendButton {
+  border-color: var(--composer-send-border);
+  background: var(--composer-send-bg);
+  color: var(--composer-send-color);
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--composer-send-hover-bg);
+  color: var(--composer-send-hover-color);
+}
+
+.sendButton:disabled,
+.iconChip:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.controlChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  padding: 5px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--composer-control-color);
+  font-size: 13px;
+  line-height: 1;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.controlChipLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controlChip:hover:not(:disabled) {
+  background-color: transparent;
+  color: var(--composer-control-hover-color);
+}
+
+.controlChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controlChipIcon {
+  color: var(--composer-control-muted);
+  flex-shrink: 0;
+}
+
+.controlChipChevron {
+  color: var(--composer-control-muted);
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+@container (max-width: 360px) {
+  .controlChip {
+    max-width: none;
+    padding-inline: 3px;
+    gap: 3px;
+  }
+
+  .controlChipLabel {
+    display: none;
+  }
+}
+
+/* Spinner shown in the send button while a submit is in flight. */
+.spin {
+  animation: composerSpin 0.7s linear infinite;
+}
+
+@keyframes composerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

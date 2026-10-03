@@ -1,0 +1,28 @@
+.fields {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
+  column-gap: var(--mantine-spacing-lg);
+  row-gap: 10px;
+  align-items: baseline;
+}
+
+.field {
+  display: contents;
+}
+
+.value {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+@media (max-width: 48em) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+
+  .value {
+    margin-bottom: 10px;
+  }
+}

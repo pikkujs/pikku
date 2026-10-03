@@ -1,0 +1,290 @@
+import React, { useContext, useState } from 'react'
+import {
+  Stack,
+  Text,
+  Box,
+  Group,
+  TextInput,
+  NumberInput,
+  ActionIcon,
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { Bot, Pencil } from 'lucide-react'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { CommonDetails } from './shared/CommonDetails'
+import { SectionLabel } from '../../ui/SectionLabel'
+import { LinkedBadge } from './LinkedBadge'
+import { SchemaSection } from './shared/SchemaSection'
+import { usePanelContext } from '../../../context/PanelContext'
+import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
+import { AgentEditor } from './AgentEditor'
+import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
+import classes from '../../ui/console.module.css'
+
+interface AgentPanelProps {
+  wireId: string
+  metadata?: any
+}
+
+export const AgentConfiguration: React.FC<AgentPanelProps> = ({
+  wireId,
+  metadata = {},
+}) => {
+  const { navigateInPanel } = usePanelContext()
+  const playgroundCtx = useContext(AgentPlaygroundContext)
+  const editable = useConsoleEditable()
+  const [editing, setEditing] = useState(false)
+
+  const canEdit = editable && !!metadata?.sourceFile && !!metadata?.exportedName
+
+  if (editing && canEdit) {
+    return (
+      <AgentEditor
+        wireId={wireId}
+        sourceFile={metadata.sourceFile}
+        exportedName={metadata.exportedName}
+        metadata={metadata}
+        onClose={() => setEditing(false)}
+      />
+    )
+  }
+
+  const middleware = metadata?.middleware || []
+  const channelMiddleware = metadata?.channelMiddleware || []
+  const agentMiddleware = metadata?.agentMiddleware || []
+  const permissions = metadata?.permissions || []
+  const tools = metadata?.tools || []
+  const subAgents = metadata?.agents || []
+  const memory = metadata?.memory
+
+  return (
+    <Stack gap="lg">
+      <Box>
+        <Group gap="xs" justify="space-between">
+          <Group gap="xs">
+            <Bot size={20} />
+            <Text size="lg" ff="monospace" fw={600}>
+              {metadata?.name || wireId}
+            </Text>
+            {metadata?.model && (
+              <PikkuBadge type="dynamic" badge="model" value={metadata.model} />
+            )}
+          </Group>
+          {canEdit && (
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => setEditing(true)}
+              title="Edit agent"
+            >
+              <Pencil size={14} />
+            </ActionIcon>
+          )}
+        </Group>
+        {metadata?.summary && (
+          <Text size="sm" c="dimmed" mt={4}>
+            {metadata.summary}
+          </Text>
+        )}
+      </Box>
+
+      <Group gap="xs">
+        <PikkuBadge type="wiringType" value="agent" />
+        {metadata?.maxSteps && (
+          <PikkuBadge
+            type="dynamic"
+            badge="maxSteps"
+            value={metadata.maxSteps}
+            variant="outline"
+            color="gray"
+          />
+        )}
+        {metadata?.toolChoice && (
+          <PikkuBadge
+            type="dynamic"
+            badge="toolChoice"
+            value={metadata.toolChoice}
+            variant="outline"
+            color="gray"
+          />
+        )}
+        {permissions.length > 0 && (
+          <PikkuBadge type="flag" flag="permissioned" />
+        )}
+      </Group>
+
+      {playgroundCtx && (
+        <Box>
+          <SectionLabel>{asI18n('Playground Overrides')}</SectionLabel>
+          <Stack gap="xs">
+            <TextInput
+              size="xs"
+              label={asI18n(
+                `Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`
+              )}
+              placeholder={asI18n(metadata?.model ?? 'provider/model')}
+              value={playgroundCtx.model ?? ''}
+              onChange={(e) =>
+                playgroundCtx.setModel(e.currentTarget.value || undefined)
+              }
+            />
+            <NumberInput
+              size="xs"
+              label={asI18n(
+                `Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`
+              )}
+              placeholder={asI18n(
+                metadata?.temperature != null
+                  ? String(metadata.temperature)
+                  : 'default'
+              )}
+              value={playgroundCtx.temperature ?? ''}
+              onChange={(v) =>
+                playgroundCtx.setTemperature(
+                  typeof v === 'number' ? v : undefined
+                )
+              }
+              min={0}
+              max={2}
+              step={0.1}
+              decimalScale={1}
+            />
+          </Stack>
+        </Box>
+      )}
+
+      <CommonDetails
+        description={metadata?.description}
+        middleware={middleware}
+        permissions={permissions}
+        tags={metadata?.tags}
+      >
+        {metadata?.role && (
+          <Box>
+            <SectionLabel>{asI18n('Role')}</SectionLabel>
+            <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
+              {asI18n(metadata.role)}
+            </Text>
+          </Box>
+        )}
+
+        {metadata?.personality && (
+          <Box>
+            <SectionLabel>{asI18n('Personality')}</SectionLabel>
+            <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
+              {asI18n(metadata.personality)}
+            </Text>
+          </Box>
+        )}
+
+        {metadata?.goal && (
+          <Box>
+            <SectionLabel>{asI18n('Goal')}</SectionLabel>
+            <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
+              {asI18n(metadata.goal)}
+            </Text>
+          </Box>
+        )}
+
+        {tools.length > 0 && (
+          <Box>
+            <SectionLabel>{asI18n(`Tools (${tools.length})`)}</SectionLabel>
+            <Group gap={6}>
+              {tools.map((tool: string) => (
+                <PikkuBadge
+                  key={tool}
+                  type="dynamic"
+                  badge="tool"
+                  value={tool}
+                  className={classes.clickableText}
+                  onClick={() => navigateInPanel('function', tool, tool)}
+                />
+              ))}
+            </Group>
+          </Box>
+        )}
+
+        {subAgents.length > 0 && (
+          <Box>
+            <SectionLabel>
+              {asI18n(`Sub-Agents (${subAgents.length})`)}
+            </SectionLabel>
+            <Group gap={6}>
+              {subAgents.map((agent: string) => (
+                <PikkuBadge
+                  key={agent}
+                  type="dynamic"
+                  badge="agent"
+                  value={agent}
+                  className={classes.clickableText}
+                  onClick={() => navigateInPanel('agent', agent, agent)}
+                />
+              ))}
+            </Group>
+          </Box>
+        )}
+
+        {channelMiddleware.length > 0 && (
+          <Box>
+            <SectionLabel>{asI18n('Channel Middleware')}</SectionLabel>
+            <Group gap={6}>
+              {channelMiddleware.map((mw: any, i: number) => (
+                <LinkedBadge key={i} item={mw} kind="middleware" />
+              ))}
+            </Group>
+          </Box>
+        )}
+
+        {agentMiddleware.length > 0 && (
+          <Box>
+            <SectionLabel>{asI18n('AI Middleware')}</SectionLabel>
+            <Group gap={6}>
+              {agentMiddleware.map((mw: any, i: number) => (
+                <LinkedBadge key={i} item={mw} kind="middleware" />
+              ))}
+            </Group>
+          </Box>
+        )}
+
+        {memory && (
+          <Box>
+            <SectionLabel>{asI18n('Memory')}</SectionLabel>
+            <Group gap={6}>
+              {memory.storage && (
+                <PikkuBadge
+                  type="dynamic"
+                  badge="storage"
+                  value={memory.storage}
+                  variant="outline"
+                  color="gray"
+                />
+              )}
+              {memory.lastMessages !== undefined && (
+                <PikkuBadge
+                  type="dynamic"
+                  badge="lastMessages"
+                  value={memory.lastMessages}
+                  variant="outline"
+                  color="gray"
+                />
+              )}
+            </Group>
+          </Box>
+        )}
+
+        <SchemaSection
+          label={asI18n('Input Schema')}
+          schemaName={metadata?.inputSchema}
+        />
+        <SchemaSection
+          label={asI18n('Output Schema')}
+          schemaName={metadata?.outputSchema}
+        />
+        <SchemaSection
+          label={asI18n('Working Memory Schema')}
+          schemaName={metadata?.workingMemorySchema}
+        />
+      </CommonDetails>
+    </Stack>
+  )
+}

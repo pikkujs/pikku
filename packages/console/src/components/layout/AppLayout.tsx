@@ -1,0 +1,180 @@
+import { useEffect, useState } from 'react'
+import { Box, Button } from '@pikku/mantine/core'
+import { useLocation } from '../../router'
+import { NavList, type NavListProps } from '../nav/NavList'
+import { PikkuMetaProvider, usePikkuMeta } from '../../context/PikkuMetaContext'
+import {
+  PageOptionsProvider,
+  usePageOptions,
+} from '../../context/PageOptionsProvider'
+import { SpotlightSearch } from '../search/SpotlightSearch'
+import { ConnectionScreen } from './ConnectionScreen'
+import { ContentArea } from '../shell/ContentArea'
+import { ConsoleScreen } from '../shell/ConsoleScreen'
+import { MobileSheet } from '../shell/MobileSheet'
+import { MobileTabBar } from '../shell/MobileTabBar'
+import { ConsoleNavDock } from '../nav-dock/ConsoleNavDock'
+import { usePhone } from '../../lib/breakpoints'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { StudioChatDock } from '../../studio/StudioChatDock'
+import { isStudio } from '../../studio/studio'
+
+export interface AppLayoutProps {
+  children: React.ReactNode
+  /** The nav model, shared by the dock, the phone's nav sheet and the command
+   *  palette, so no two of them can disagree about what the console contains. */
+  nav?: NavListProps
+}
+
+const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, nav }) => {
+  const { initialLoading, error } = usePikkuMeta()
+  const { pathname } = useLocation()
+  const phone = usePhone()
+  const [navOpen, setNavOpen] = useState(false)
+  // The page's OWN rail of choices, if it registered one (PageOptionsPortal).
+  // The layout renders the sheet; the page only says what goes in it.
+  const {
+    hasOptions,
+    label: optionsLabel,
+    setHost: setOptionsHost,
+    open: optionsOpen,
+    setOpen: setOptionsOpen,
+    action,
+  } = usePageOptions()
+
+  // A nav tap navigates, so nothing raised over the page may survive the move.
+  useEffect(() => {
+    setNavOpen(false)
+    setOptionsOpen(false)
+  }, [pathname, setOptionsOpen])
+
+  // Only the first load blanks the screen. A metadata refresh from the dock
+  // keeps the page it was on: the tile carries the busy badge, and the meta
+  // swaps under the screen when it arrives.
+  if (initialLoading) {
+    return (
+      <ConsoleLoading h="100vh" />
+    )
+  }
+
+  if (error) {
+    return <ConnectionScreen error={error} />
+  }
+
+  // A phone gets the tab bar instead of the dock: the dock is a pointer surface
+  // — hover raises it, a long press opens its menus — and it occupies the one
+  // edge a thumb can reach, which the bar needs. Navigation arrives as the rail
+  // in a sheet, which is a list you can scroll and tap.
+  if (phone) {
+    return (
+      <>
+        <SpotlightSearch sections={nav?.sections} />
+        <MobileSheet opened={navOpen} onClose={() => setNavOpen(false)}>
+          <NavList {...nav} />
+        </MobileSheet>
+        {/* Always mounted so the portal host exists before the sheet is ever
+            opened — a page that registers its rail must be able to render into
+            it immediately. */}
+        <MobileSheet
+          opened={optionsOpen}
+          onClose={() => setOptionsOpen(false)}
+          keepMounted
+          data-testid="page-options-sheet"
+        >
+          {/* Pinned above the body rather than left inside it: the surface it
+              belongs to scrolls, and an action that scrolls out of a sheet is one
+              the user has to go looking for. */}
+          {action && (
+            <Box
+              p={10}
+              style={{
+                flexShrink: 0,
+                borderBottom: '1px solid var(--app-border)',
+              }}
+            >
+              <Button
+                fullWidth
+                leftSection={action.icon}
+                onClick={() => {
+                  action.onSelect()
+                  setOptionsOpen(false)
+                }}
+                data-testid="page-options-action"
+              >
+                {action.label}
+              </Button>
+            </Box>
+          )}
+          <Box
+            ref={setOptionsHost}
+            style={{ flex: 1, minWidth: 0, display: 'flex' }}
+          />
+        </MobileSheet>
+        {/* `dvh`, not `vh`: in a mobile browser `100vh` is the tallest the
+            viewport ever gets, so the foot of the screen sat under Safari's
+            address bar until it collapsed. Installed standalone the two agree. */}
+        <Box
+          style={{
+            height: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            paddingTop: 'calc(var(--safe-top) + var(--app-banner-inset-top))',
+            paddingInline: 'var(--safe-left) var(--safe-right)',
+            paddingBottom: 'var(--mobile-tabbar-foot)',
+          }}
+        >
+          <ContentArea>
+            <ConsoleScreen>{children}</ConsoleScreen>
+          </ContentArea>
+        </Box>
+        <MobileTabBar
+          navOpen={navOpen}
+          onToggleNav={() => setNavOpen(!navOpen)}
+          optionsOpen={optionsOpen}
+          optionsLabel={optionsLabel}
+          onToggleOptions={
+            hasOptions ? () => setOptionsOpen(!optionsOpen) : undefined
+          }
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <SpotlightSearch sections={nav?.sections} />
+      <ConsoleNavDock sections={nav?.sections} />
+      {/* Floating, the dock reserves nothing and the content starts at the
+          window edge — it is over the card gutter that is already there. Held
+          open it is furniture, so it publishes the edge it took and the screen
+          stops there instead of running underneath it. */}
+      <Box
+        h="100vh"
+        style={{
+          display: 'flex',
+          minWidth: 0,
+          paddingTop:
+            'calc(var(--nav-dock-inset-top) + var(--app-banner-inset-top))',
+          paddingBottom: 'var(--nav-dock-inset-bottom)',
+          paddingInline:
+            'var(--nav-dock-inset-left) var(--nav-dock-inset-right)',
+        }}
+      >
+        {isStudio() && <StudioChatDock />}
+        <ContentArea>
+          <ConsoleScreen>{children}</ConsoleScreen>
+        </ContentArea>
+      </Box>
+    </>
+  )
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, nav }) => {
+  return (
+    <PikkuMetaProvider>
+      <PageOptionsProvider>
+        <AppLayoutInner nav={nav}>{children}</AppLayoutInner>
+      </PageOptionsProvider>
+    </PikkuMetaProvider>
+  )
+}

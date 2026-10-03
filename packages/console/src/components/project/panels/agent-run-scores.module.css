@@ -1,0 +1,23 @@
+/*
+ * A grade reads as a measurement, not a verdict: pikku defines no passing
+ * threshold, so the bar states magnitude and never changes hue to imply one.
+ * The scenario that asserted the bound is where pass and fail are decided.
+ */
+.scoreTrack {
+  background: var(--mantine-color-default-border);
+  border-radius: 2px;
+  height: 4px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.scoreFill {
+  background: var(--app-accent, var(--mantine-primary-color-filled));
+  border-radius: 2px;
+  height: 100%;
+}
+
+/* A judge's reason is prose about the answer, so it wraps like prose. */
+.scoreReason {
+  max-width: 62ch;
+}

@@ -1,0 +1,67 @@
+/* ChatDock — the org Fabric Assistant as an in-flow collapsible left card.
+   The card chrome (fixed-width flex column, --app-panel-bg fill) comes from
+   CollapsiblePanel; this file styles the panel's body and the right-edge
+   resize handle. The panel carries no header band — the transcript is the
+   whole surface, and the NavDock's Assistant tile owns open/close. */
+
+/* The conversation fills the card and scrolls internally. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Which assistant you are talking to, in the two places this app owns: a 2px cap
+   on the card and the collapsed rail glyph. The transcript itself is inline-styled
+   by @pikku/assistant-ui and cannot follow, so the tint stops at the frame. */
+.body[data-agent='org'] {
+  --chat-dock-accent: var(--app-agent-org);
+}
+
+.body[data-agent='project'] {
+  --chat-dock-accent: var(--app-agent-project);
+}
+
+.body[data-agent='deployment'] {
+  --chat-dock-accent: var(--app-agent-deployment);
+}
+
+.body::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 2px;
+  background: var(--chat-dock-accent);
+  border-start-start-radius: var(--app-card-radius);
+  border-start-end-radius: var(--app-card-radius);
+  z-index: 1;
+}
+
+/* Right-edge drag handle. Net-zero footprint (8 − 4 − 4) so the 8px grab area
+   straddles the chat/page divider without consuming layout width. */
+.resizeHandle {
+  width: 8px;
+  margin-inline-start: -4px;
+  margin-inline-end: -4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 150ms ease;
+  z-index: 3;
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+  background-color: var(--app-primary-button-bg);
+}
+
+.resizeOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  cursor: col-resize;
+  touch-action: none;
+}
