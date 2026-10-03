@@ -11,6 +11,7 @@ import {
   type SignInChoice,
   type StudioSettings,
 } from '@pikku/studio'
+import { installEmbeddedRuntime } from './runtime.js'
 
 export class StudioSettingsFile {
   constructor(private path: string) {}
@@ -39,17 +40,25 @@ export interface Studio {
 
 export type { SignInChoice }
 
-export function createStudio(home = studioHome()): Studio {
+export async function createStudio(home = studioHome()): Promise<Studio> {
+  await installEmbeddedRuntime(home)
   const ai = new StudioAi(home)
   const projects = new StudioProjectsService({
     home,
-    designEntry: resolveDesignEntry(),
+    designEntry: existsSync(resolveDesignEntry()) ? resolveDesignEntry() : undefined,
     env: () => ai.env(),
   })
   const builder = new BuilderSession(async (key) => {
     const env = await ai.env()
-    if (!env.PIKKU_STUDIO_AI) throw new Error('Choose your AI before building')
-    const fabric = env.PIKKU_STUDIO_AI === 'fabric' ? await projects.modelAccess() : null
+    const proxyUrl = process.env.PIKKU_BUILDER_PROXY_URL
+    const proxyKey = process.env.PIKKU_BUILDER_PROXY_KEY
+    const fabric =
+      proxyUrl && proxyKey
+        ? { proxyUrl, apiKey: proxyKey }
+        : env.PIKKU_STUDIO_AI === 'fabric'
+          ? await projects.modelAccess()
+          : null
+    if (!fabric && !env.PIKKU_STUDIO_AI) throw new Error('Choose your AI before building')
     const launch = await projects.builderLaunch(key)
     return {
       ...launch,

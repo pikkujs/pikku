@@ -20,7 +20,11 @@ import type { Kysely } from 'kysely'
 import { GeneratedTemplateEmailService } from './lib/email-service.js'
 import { declareFlagsTo } from './lib/declared-flag-source.js'
 import type { DB } from '#pikku/db/schema.gen.js'
+import { join } from 'node:path'
+import { studioHome } from '@pikku/studio'
 import { createStudio } from './lib/studio.js'
+
+process.env.PIKKU_DATA_DIR ??= join(studioHome(), 'data')
 
 export const createSingletonServices = pikkuServices(async (config, existingServices) => {
   const variables =
@@ -76,7 +80,7 @@ export const createSingletonServices = pikkuServices(async (config, existingServ
     kysely,
     virtualUserRunStore,
     virtualUserScheduleStore,
-    studio: existingServices?.studio ?? createStudio(),
+    studio: existingServices?.studio ?? (await createStudio()),
     ...(credentialService ? { credentialService } : {}),
   }
 })

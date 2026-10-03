@@ -27,7 +27,10 @@
     "db": true
   },
   "deploy": {
-    "bundler": "esbuild"
+    "bundler": "esbuild",
+    "embed": {
+      "studio-runtime": ".deploy/studio-runtime.tar.gz"
+    }
   },
   "content": {
     "uploadUrlPrefix": "/upload",

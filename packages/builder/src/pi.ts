@@ -12,7 +12,9 @@ export const EXTENSIONS = ['proxy-provider.mjs', 'codegen-diagnostics.mjs', 'edi
 
 export const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-export const extensionPaths = () => EXTENSIONS.map((name) => join(packageRoot, 'extensions', name))
+export const extensionsDir = () => process.env.PIKKU_BUILDER_EXTENSIONS ?? join(packageRoot, 'extensions')
+
+export const extensionPaths = () => EXTENSIONS.map((name) => join(extensionsDir(), name))
 
 export const SYSTEM_PROMPT = [
   'You are building a pikku app in the current directory.',
@@ -49,18 +51,18 @@ export function packageDir(name: string): string {
 }
 
 export function resolvePi(): string {
-  const dir = packageDir('@earendil-works/pi-coding-agent')
+  const dir = piPackageRoot()
   const bin = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).bin
   const relative = typeof bin === 'string' ? bin : bin?.pi
   if (!relative) throw new Error('The installed pi has no command to run')
   return join(dir, relative)
 }
 
-export const piPackageRoot = () => packageDir('@earendil-works/pi-coding-agent')
+export const piPackageRoot = () => process.env.PIKKU_PI_ROOT ?? packageDir('@earendil-works/pi-coding-agent')
 
 export function criticArgs(ai: BuilderAi | undefined, system: string): string[] {
   const args = ['-p', '--no-session', '--no-tools', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-context-files', '--no-approve', '--system-prompt', system]
-  if (ai?.proxy) args.push('-e', join(packageRoot, 'extensions', 'proxy-provider.mjs'), '--provider', 'pikku-proxy')
+  if (ai?.proxy) args.push('-e', join(extensionsDir(), 'proxy-provider.mjs'), '--provider', 'pikku-proxy')
   else if (ai?.provider) args.push('--provider', PROVIDERS[ai.provider] ?? ai.provider)
   if (ai?.model) args.push('--model', ai.model)
   return args
