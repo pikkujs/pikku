@@ -1247,6 +1247,25 @@ wireCLI({
       render: renderNext,
       description:
         'Decide what should run next — the agent, its skill and its work — from the state of the project',
+      options: {
+        prompt: {
+          description:
+            'A request for this project; it is turned into changes first',
+        },
+        exec: {
+          description:
+            'Launch the chosen agent in this harness (pi or claude) instead of printing it',
+        },
+        harnessArg: {
+          description: 'Passed through to the harness, e.g. -p — repeatable',
+          type: 'string[]',
+        },
+        loop: {
+          description:
+            'With --exec, route again after each agent until there is nothing to do',
+          type: 'boolean',
+        },
+      },
     }),
     validate: pikkuCLICommand({
       func: validate,
