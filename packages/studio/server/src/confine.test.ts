@@ -42,6 +42,13 @@ describe('confinedSpawn', { skip: !supported }, () => {
     assert.equal(code, 0)
   })
 
+  test('npm can write its cache', async () => {
+    const { home, root } = await setup()
+    await mkdir(join(home, '.npm'), { recursive: true })
+    const { code } = await run(`echo x > ${home}/.npm/tmp`, root, home)
+    assert.equal(code, 0)
+  })
+
   test('cannot write outside the worktree', async () => {
     const { home, root, outside, base } = await setup()
     const { code } = await run(`echo x > ${outside}/planted`, root, home)

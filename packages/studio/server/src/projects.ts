@@ -243,8 +243,8 @@ export const linkedRepos = (root: string): string[] => {
 }
 
 const defaultInstall = (dir: string) => {
-  if (existsSync(join(dir, 'node_modules'))) return null
-  if (existsSync(join(dir, 'bun.lock')) || existsSync(join(dir, 'bun.lockb'))) {
+  if (existsSync(join(dir, 'node_modules', '.bin'))) return null
+  if (['bun.lock', 'bun.lockb', 'bunfig.toml'].some((file) => existsSync(join(dir, file)))) {
     return { command: 'bun', args: ['install'] }
   }
   if (existsSync(join(dir, 'pnpm-lock.yaml'))) return { command: 'pnpm', args: ['install'] }

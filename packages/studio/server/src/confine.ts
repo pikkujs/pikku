@@ -33,14 +33,14 @@ const TOOLCHAIN = [
 export function seatbeltProfile({ root, writable = [], readable = [], home = homedir() }: Confinement) {
   const writes = [root, tmpdir(), '/private/tmp', '/private/var/folders', '/dev', ...writable]
   const reads = [root, ...writable, ...readable, ...TOOLCHAIN.map((p) => join(home, p))]
-  const cache = join(home, '.bun', 'install', 'cache')
+  const caches = [join(home, '.bun', 'install', 'cache'), join(home, '.npm')]
   return [
     '(version 1)',
     '(allow default)',
     '(deny file-write* (subpath "/"))',
     `(allow file-write* ${writes.map((p) => `(subpath ${quote(p)})`).join(' ')})`,
     `(deny file-write* (subpath ${quote(home)}))`,
-    `(allow file-write* ${[root, ...writable, cache].map((p) => `(subpath ${quote(p)})`).join(' ')})`,
+    `(allow file-write* ${[root, ...writable, ...caches].map((p) => `(subpath ${quote(p)})`).join(' ')})`,
     `(deny file-read* (subpath ${quote(home)}))`,
     `(allow file-read* (literal ${quote(home)}) ${reads.map((p) => `(subpath ${quote(p)})`).join(' ')})`,
     '(allow file-read-metadata)',
