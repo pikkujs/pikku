@@ -63,6 +63,11 @@ export interface EntryGenerationContext {
    */
   version?: string
   /**
+   * Whether the build staged `deploy.embed` files, which the entry exports to
+   * the app as `PIKKU_EMBEDDED_<NAME>` paths.
+   */
+  embedded?: boolean
+  /**
    * The database the generated entry has to open for itself, or undefined when
    * the project has none.
    *
