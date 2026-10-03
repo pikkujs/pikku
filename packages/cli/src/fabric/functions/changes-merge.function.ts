@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
-import { currentBranch, git } from '../../utils/git.js'
+import { currentBranch, git, isAncestor } from '../../utils/git.js'
 import { dim, safe } from '../lib/output.js'
 import { releaseChangeset } from '../lib/changes-local.js'
 
@@ -59,6 +59,12 @@ export const FabricChangesMerge = pikkuSessionlessFunc({
       throw new FabricPreconditionError(
         `This checkout is on ${branch} itself. Run merge from the branch it goes into.`
       )
+    if (await isAncestor(branch, 'HEAD')) {
+      if (storePath) await releaseChangeset(storePath, group.groupId)
+      throw new FabricPreconditionError(
+        `${branch} is already in ${into} — merged by plain git, so there is no Changeset commit for “${group.title}”. Leave it as it is; next time let \`changes merge\` do the merge.`
+      )
+    }
     await git([
       'merge',
       '--no-ff',
