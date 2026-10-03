@@ -847,6 +847,7 @@ export const fabricCommands = defineCLICommands({
         },
       }),
       ask: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesAsk,
         render: renderChangesAsk,
         description:
@@ -870,10 +871,11 @@ export const fabricCommands = defineCLICommands({
       reply: pikkuCLICommand({
         func: FabricChangesReply,
         render: renderChangesReply,
-        parameters: '<changeId>',
+        parameters: '[changeId]',
         description:
           'Say something on an item’s thread without asking (which parks it) or closing it (done --note) — e.g. why you are not doing it, or what it is blocked on',
         options: {
+          changeId: { description: 'The item to reply on — 2, #2 or its uuid' },
           message: {
             description: 'What to say, in the filer’s vocabulary',
             short: 'm',
@@ -894,6 +896,7 @@ export const fabricCommands = defineCLICommands({
         },
       }),
       shot: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesShot,
         render: renderChangesShot,
         description:
@@ -936,6 +939,7 @@ export const fabricCommands = defineCLICommands({
         },
       }),
       done: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesDone,
         render: renderChangesDone,
         description:

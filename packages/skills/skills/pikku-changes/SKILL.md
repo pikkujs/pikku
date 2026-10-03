@@ -11,7 +11,12 @@ screenshot of what they saw, and the elements the circle enclosed. You have the 
 Empty the queue without making them regret filing.
 
 Run every command from the checkout: the project comes from its git remote (`pikku fabric config` shows which).
+A checkout with no Fabric project works a local queue instead (`.git/pikku-changes.json`, shared by every
+worktree) with the same commands; its items have no stage, screenshot or circled elements.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
+
+**Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below
+and work them as changesets.
 
 ## Which stage
 
@@ -60,6 +65,31 @@ group's lease, done — and when a held or leased item is **claimable at** (a lo
 `HH:MM`; `list` and `show` print the same). An item inside someone else's live lease
 cannot be taken. For held items, run `next --claim` rather than retrying. The lease is 30 minutes
 (`--lease-minutes`); an abandoned claim returns to the queue by itself.
+
+## Changesets
+
+Group related items into changesets and claim each one as a group, saying which tables it touches —
+the entity notes' `resource:` lines name them:
+
+```bash
+pikku fabric changes claim --change-ids 1,3 --title "Waitlist" --claimed-by pi --creates waitlist --reads booking
+```
+
+`--creates`/`--alters` mean it needs a plan (the claim output says so; `--needs-plan false` overrides).
+A planned changeset is planned before any code — the functions, tables, screens and scenario each item
+touches — and the plan goes on its first item with `reply`.
+
+Build each changeset on its own branch, `changeset/<slug>`, cut from the branch you started on, one
+commit per item (see Committing). When every item in it is `done`, switch back and merge it as one
+`--no-ff` commit with a `Changeset:` trailer:
+
+```bash
+pikku fabric changes merge --group-id <id>
+```
+
+Changesets that create or alter tables go one at a time; one that reads a table waits for the
+changeset creating it; the rest can run side by side. On the local queue, `done` refuses a commit that
+adds a migration under `db/` when its changeset declared no `--creates`/`--alters`.
 
 ## Reading an item
 
@@ -138,7 +168,8 @@ Scope names the screen they were looking at, not the file you edited.
 pikku fabric changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-Branch and commit default to the checkout you are in — run it there, never type a sha.
+Branch and commit default to the checkout you are in — run it there, never type a sha. On the
+local queue `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 

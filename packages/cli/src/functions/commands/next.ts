@@ -97,18 +97,7 @@ Read the knowledge base for what the app already is, then file the request as ch
 `,
 })
 
-const WORKING_THEM = `# Working them
-
-These are every open change; do not run \`changes next\` or \`list\` to find them.
-
-1. Group related changes into changesets.
-2. Claim each changeset: \`pikku fabric changes claim --change-ids 1,3 --title "<what it delivers>" --claimed-by <you>\`, adding \`--creates\`, \`--alters\` and \`--reads\` with the tables it touches (the entity notes' \`resource:\` lines name them). The output says whether it needs a plan.
-3. A changeset that needs a plan is planned before any code: the functions, tables, screens and scenario each change touches, posted with \`pikku fabric changes reply --change-id <first> --message "<plan>"\`.
-4. Build it on its own branch, \`changeset/<slug>\`, cut from the branch you started on.
-5. One commit per change: the change's title as the message and a \`Change: #<n>\` trailer. Then \`pikku fabric changes done --change-id <n>\`.
-6. When every change in it is done, switch back and \`pikku fabric changes merge --group-id <id>\`.
-
-Changesets that create or alter tables go one at a time, and one that reads a table waits for the changeset creating it. When something is not yours to decide, \`pikku fabric changes ask\` and move to the next changeset.
+const WORKING_THEM = `These are every open change. Work them as changesets, as the pikku-changes skill's Changesets section says.
 `
 
 const SKILL_DIRS: Record<Harness, string> = {
