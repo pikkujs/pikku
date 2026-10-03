@@ -92,9 +92,10 @@ export const FabricChangesNext = pikkuSessionlessFunc({
       )
 
     const log = (line: string) => console.error(dim(line))
-    const events = input.once
-      ? null
-      : subscribeToChanges({ apiUrl, token, projectId, log })
+    const events =
+      input.once || !token
+        ? null
+        : subscribeToChanges({ apiUrl, token, projectId, log })
     try {
       const result = await waitForNext(
         rpc,
