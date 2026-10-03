@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changeRef, changesContext } from '../lib/changes.js'
-import { currentBranch, headSha, isGitRepo } from '../../utils/git.js'
+import { currentBranch, git, headSha, isGitRepo } from '../../utils/git.js'
+import { FabricPreconditionError } from '../lib/errors.js'
+import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '../lib/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -48,7 +50,9 @@ export const FabricChangesDone = pikkuSessionlessFunc({
       headCommit ??= await headSha().catch(() => undefined)
     }
 
-    const { rpc, projectId } = await changesContext(input.apiUrl)
+    const { rpc, projectId, local } = await changesContext(input.apiUrl)
+    if (local && headCommit)
+      await checkCommit(rpc, projectId!, input.changeId, headCommit)
     return await rpc.invoke('completeChange', {
       ...changeRef(projectId, input.changeId),
       branch,
@@ -58,6 +62,45 @@ export const FabricChangesDone = pikkuSessionlessFunc({
     })
   },
 })
+
+/**
+ * On the local queue the commit is the only durable record of a change, and a
+ * migration the changeset never declared would slip past the one-at-a-time
+ * ordering of schema changesets.
+ */
+async function checkCommit(
+  rpc: ChangesRPC,
+  projectId: string,
+  ref: string,
+  sha: string
+): Promise<void> {
+  const { change } = await rpc.invoke('getChange', changeRef(projectId, ref))
+  const message = await git(['log', '-1', '--format=%B', sha])
+  const trailer = message.match(/^Change: #?(\S+)\s*$/m)?.[1]
+  if (trailer !== change.shortId && trailer !== change.changeId)
+    throw new FabricPreconditionError(
+      `${sha.slice(0, 7)} is not the commit for #${change.shortId}. Commit the change with its text as the message and a \`Change: #${change.shortId}\` trailer, then run done again.`
+    )
+  const files = await git([
+    'diff-tree',
+    '--no-commit-id',
+    '--name-only',
+    '-r',
+    sha,
+  ])
+  const migrations = files.split('\n').filter((f) => /^db\/[^/]+\//.test(f))
+  if (!migrations.length) return
+  const { groups } = await rpc.invoke('listChanges', {
+    projectId,
+    groupId: change.groupId ?? undefined,
+    includeDone: true,
+  })
+  const declared = groups[0] as Partial<Declaration> | undefined
+  if (declared?.creates?.length || declared?.alters?.length) return
+  throw new FabricPreconditionError(
+    `#${change.shortId} adds ${migrations.join(', ')} but its changeset declared no table it creates or alters. Claim it again with --creates/--alters so it is ordered with the other schema changes, then run done again.`
+  )
+}
 
 export const renderChangesDone = (
   _s: unknown,

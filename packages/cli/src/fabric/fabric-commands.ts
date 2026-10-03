@@ -108,6 +108,10 @@ import {
   renderChangesDone,
 } from './functions/changes-done.function.js'
 import {
+  FabricChangesMerge,
+  renderChangesMerge,
+} from './functions/changes-merge.function.js'
+import {
   FabricValidate,
   renderValidate,
 } from './functions/validate.function.js'
@@ -820,6 +824,25 @@ export const fabricCommands = defineCLICommands({
               'How long to hold it before it returns to the queue (default 30)',
             type: 'number',
           },
+          creates: {
+            description:
+              'Tables this changeset creates — comma-separated; implies --needs-plan',
+            type: 'string[]',
+          },
+          alters: {
+            description:
+              'Tables this changeset alters — comma-separated; implies --needs-plan',
+            type: 'string[]',
+          },
+          reads: {
+            description:
+              'Tables this changeset reads — it waits for whichever changeset creates them',
+            type: 'string[]',
+          },
+          needsPlan: {
+            description: 'Whether the changeset is planned before it is built',
+            type: 'boolean',
+          },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
@@ -895,6 +918,20 @@ export const fabricCommands = defineCLICommands({
             default: 'option',
           },
           authorName: { description: 'Who rendered it, e.g. claude-code' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      merge: pikkuCLICommand({
+        func: FabricChangesMerge,
+        render: renderChangesMerge,
+        description:
+          'Merge a finished changeset into this branch as one --no-ff commit with a Changeset trailer',
+        options: {
+          projectId: {
+            description: 'Project the changeset belongs to',
+            short: 'p',
+          },
+          groupId: { description: 'The changeset to merge' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
