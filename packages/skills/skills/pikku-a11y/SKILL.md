@@ -9,24 +9,24 @@ installGroups: [client]
 
 # Accessibility Rules
 
-Mantine components are accessible ONLY when used properly — the rules below are the
+shadcn/ui components are accessible ONLY when used properly — the rules below are the
 "properly". They apply to every page; heading order, landmarks, and image alt text are
 covered in the `pikku-seo` skill and apply app-wide, not just on public pages.
 
 ## Every input has a label
 
-- Use the `label` prop on every Mantine input — a placeholder is NOT a label (it
+- Give every input a visible `<Label htmlFor>` — a placeholder is NOT a label (it
   disappears on input and is never announced as one). Placeholder = example value only.
-- Use the `error` and `description` props for validation/help text — Mantine associates
-  them with the input for screen readers; a loose `<Text c="red">` next to the field
-  does not.
-- Icon-only controls (`ActionIcon`, icon `Button`) MUST have `aria-label={m.key()}`
+- Put validation and help text in the `Field` parts (`FieldError`, `FieldDescription`) —
+  they are linked to the input with `aria-describedby`; a loose `<p className="text-destructive">`
+  next to the field is not.
+- Icon-only controls (`Button size="icon"`) MUST have `aria-label={m.key()}`
   naming the action ("Delete item", not "Trash icon").
 
 ## Interactive = a real button or link
 
-- Never `onClick` on a `div`/`Box`/`Card` — it is invisible to keyboard and screen
-  readers. Use `Button`, `ActionIcon`, `UnstyledButton`, or `<Link>`; navigation is a
+- Never `onClick` on a `div`/`Card` — it is invisible to keyboard and screen
+  readers. Use `Button`, `Toggle`, or `<Link>`; navigation is a
   link (href), actions are buttons.
 - Everything reachable by Tab, activatable by Enter/Space. Never remove focus outlines
   (the theme owns the focus ring), never set `tabIndex` greater than 0, never trap focus
@@ -36,17 +36,17 @@ covered in the `pikku-seo` skill and apply app-wide, not just on public pages.
 
 ## Don't say it with color alone
 
-- Status must carry text or an icon, not only a color: a Badge says "Overdue", a form
+- Status must carry text or an icon, not only a color: a `Badge` says "Overdue", a form
   error has a message — a red tint by itself is invisible to colorblind users.
-- Contrast comes from the theme; don't undermine it by stacking `c="dimmed"` on small
+- Contrast comes from the theme; don't undermine it by stacking `text-muted-foreground` on small
   text over tinted backgrounds. Body copy stays at least AA-readable.
-- Touch targets: WCAG 2.2 minimum 24px — don't shrink `ActionIcon`/`Checkbox` below
-  size `sm`, and keep adjacent row actions spaced.
+- Touch targets: WCAG 2.2 minimum 24px — don't shrink icon `Button`/`Checkbox` below
+  `size-6`, and keep adjacent row actions spaced.
 
 ## Overlays and motion
 
-- Modals/drawers: use Mantine `Modal`/`Drawer` and ALWAYS pass `title` — that is what
-  gets announced; focus trap and Escape come built in. (This project uses drawers, not
+- Drawers: use shadcn `Sheet` and ALWAYS render a `SheetTitle` — that is what gets
+  announced; focus trap and Escape come built in. (This project uses drawers, not
   dialogs.)
 - Landing-page animation (the only custom-CSS surface) respects
   `prefers-reduced-motion: reduce` — gate transforms/parallax behind the media query.

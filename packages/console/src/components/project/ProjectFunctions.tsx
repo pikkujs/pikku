@@ -8,6 +8,7 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { funcWrapperDefs } from '../ui/badge-defs'
+import { isBuiltInFunction } from '../../lib/builtin-functions'
 
 interface ProjectFunctionsProps {
   functions: any[]
@@ -24,13 +25,11 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
 
   const filtered = useMemo(() => {
     if (!functions) return []
-    return functions.filter((func) => {
-      const id = func.pikkuFuncId
-      return (
+    return functions.filter(
+      (func) =>
         (!func.functionType || func.functionType === 'user') &&
-        !id?.startsWith('pikku')
-      )
-    })
+        !isBuiltInFunction(func)
+    )
   }, [functions])
 
   usePanelUrl({

@@ -21,6 +21,7 @@ import {
 } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
 import { stageSqliteExtensions } from './sqlite-extension-assets.js'
+import { stageEmbeddedFiles } from './embedded-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
@@ -358,6 +359,8 @@ export async function runBuildPipeline(options: {
    * absent.
    */
   sqliteExtensions?: string[]
+  /** `deploy.embed` from pikku.config.json: files a standalone binary carries. */
+  embed?: Record<string, string>
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   /** Overrides the provider's own choice when set. See PikkuCLIConfig. */
@@ -438,6 +441,9 @@ export async function runBuildPipeline(options: {
       logger.info(`Frontend: ${keys.length} files from ${options.frontend.dir}`)
     }
 
+    const embedded = await stageEmbeddedFiles(projectDir, unitDir, options.embed)
+    if (embedded.length > 0) logger.info(`Embedded: ${embedded.join(', ')}`)
+
     const ctx = {
       ...(getEntryContext(
         unitDir,
@@ -446,6 +452,7 @@ export async function runBuildPipeline(options: {
         inspectorState
       ) as object),
       frontend: frontendMount,
+      embedded: embedded.length > 0,
       version: resolveProjectVersion(projectDir),
       db: await resolveStandaloneDb(
         projectDir,

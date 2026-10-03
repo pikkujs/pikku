@@ -493,8 +493,9 @@ progress` has to exit zero before anything is `built` — and only then set
 Rules that are not optional:
 
 - A function's input and output types come from its `input:`/`output:` zod
-  schemas. Never pass generic type params, never annotate the return type inline.
-  The schema is the type. (Generics XOR schemas — never both.)
+  schemas, declared as exported consts (`export const OrderInput = z.object(...)`; inline
+  schemas raise PKU489). Never pass generic type params, never annotate the return type
+  inline. The schema is the type. (Generics XOR schemas — never both.)
 - Auth and permission checks go in the `permissions` field, never in the function
   body. This is what makes §4's app split safe.
 - No `process.env` inside a function. Read config through the injected
@@ -768,10 +769,8 @@ spacing.
 
 ### 8a. Author the theme — the step nothing does for you
 
-The look lives in `packages/mantine-theme`, and it is data, not code:
-
-The look lives in `packages/mantine-theme`, and it is data, not code — one JSON
-per theme, `active.json` naming the live one. **Read `references/theming.md`** for
+The look lives in `packages/theme`, and it is data, not code — one JSON
+per theme, `active.json` naming the live one, and a generated `theme.css` the app imports. **Read `references/theming.md`** for
 the file layout, what each field changes, and how to turn a direction in words
 into a theme.
 
@@ -779,7 +778,7 @@ Two things that belong here rather than in the reference, because they govern
 every screen you then build:
 
 **Set the theme once, don't hardcode colours per component.** A screen full of
-inline `color="blue"` and one-off hex values is why apps look templated. Change
+`bg-blue-500` and one-off hex values is why apps look templated. Change
 the theme, not the components — and keep it theme-aware for light and dark.
 
 With two apps, **share the theme package and vary the register, not the
@@ -800,19 +799,21 @@ database before judging anything. It prescribes no layouts on purpose: two apps
 built from this skill should not look like each other. What follows here is only
 the component inventory.
 
-**Compose with Mantine's rich components — not tables and text everywhere:**
+**Compose with shadcn's rich components — not tables and text everywhere:**
 
-- **`@mantine/charts`** (Recharts underneath) for overviews — `AreaChart`,
-  `BarChart`, `LineChart`, `DonutChart`, `Sparkline`. A metric worth showing is
-  worth a chart, not a number in a `Text`.
-- **`@mantine/dates`** for anything time-based — `DatePicker`, `Calendar`,
-  `DateTimePicker`, range inputs. Never hand-roll a date field.
-- Composed layouts over flat lists — `Timeline` for history, `Stepper` for
-  multi-step progress, `Card` + `SimpleGrid` for a gallery, `RingProgress` for
-  completion, `Badge`/`ThemeIcon` for status.
+- **shadcn `Chart`** (Recharts underneath) for overviews — area, bar, line and pie
+  charts through `ChartContainer`. A metric worth showing is worth a chart, not a
+  number in a `<span>`.
+- **`Calendar` in a `Popover`** for anything time-based — the date-picker, date-range
+  and date-time recipes. Never hand-roll a date field.
+- Composed layouts over flat lists — a timeline built from `Separator` and `Badge`
+  for history, `Tabs` or a stepper recipe for multi-step progress, `Card` in a
+  `grid` for a gallery, `Progress` for completion, `Badge` for status.
 
-Both ship in the template's app dependencies. Look each one up in the Mantine
-llms.txt and use the real component.
+The starter ships a few. Add any other with `pikku components add <name...>`
+(Select, Table, Tabs, Dialog, Avatar, Checkbox, Switch, Sheet, Tooltip and more, copied lint-clean from
+`@pikku/shadcdn`), then `bun add` the npm packages it prints. Do not use `bunx shadcn add`: stock
+shadcn files break `@shadcn/lint`. Use the real component.
 
 Then critique it. Free, and works across coding agents:
 
@@ -831,9 +832,9 @@ Judging your own UI from source code is guessing.
 **Screenshot at a phone width too (≈390px), not just desktop, and critique
 those.** A layout that is fine at 1440px routinely breaks at 390 — a table that
 overflows, a row of buttons that wraps into a pile, text jammed against the edge,
-a modal taller than the viewport. Mantine gives you the tools (responsive `Grid`,
-`visibleFrom` / `hiddenFrom`, `Stack` instead of `Group` at small sizes); use
-them. The template already mounts a phone navigation per `AGENTS.md` — pick
+a drawer taller than the viewport. Tailwind gives you the tools (responsive
+prefixes like `md:grid-cols-3`, `hidden md:block` / `md:hidden`, `flex-col` instead
+of `flex-row` at small sizes); use them. The template already mounts a phone navigation per `AGENTS.md` — pick
 `MobileTabBar` or `MobileNavDrawer` deliberately per app, never both.
 
 The gate: **no P0 findings left on any screen, in any app, at either width**,

@@ -17,6 +17,23 @@ export interface HelpScreen {
 }
 
 export const HELP_SCREENS: Record<string, HelpScreen> = {
+  '/publish': {
+    title: m.help_publish_title,
+    what: m.help_publish_what,
+    behaviour: m.help_publish_behaviour,
+    surprise: m.help_publish_surprise,
+    examples: m.help_publish_examples,
+    whatYouCanDo: [m.help_publish_do_fabric, m.help_publish_do_copy],
+  },
+  '/requests': {
+    title: m.help_requests_title,
+    what: m.help_requests_what,
+    behaviour: m.help_requests_behaviour,
+    surprise: m.help_requests_surprise,
+    examples: m.help_requests_examples,
+    whatYouCanDo: [m.help_requests_do_new, m.help_requests_do_finish],
+    docsHref: 'https://pikku.dev/docs/console/requests',
+  },
   '/functions': {
     title: m.help_functions_title,
     what: m.help_functions_what,
@@ -108,6 +125,7 @@ export const HELP_PENDING: readonly string[] = [
   '/async/trigger',
   '/runtime',
   '/emails',
+  '/checks',
   '/webhooks',
   '/secrets',
   '/variables',

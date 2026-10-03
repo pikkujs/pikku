@@ -222,11 +222,12 @@ describe('bundled skills corpus', () => {
     )
   })
 
-  test("no skill teaches a router Link through Mantine's component prop", async () => {
-    // `component={Link}` compiles and navigates, and widens the router generic
-    // to AnyRouter on the way — `to` and `params` stop being checked against
-    // the real routes, so renaming one breaks the running app instead of the
-    // build. `renderRoot` with a wrapped, typed Link keeps the checking.
+  test("no skill teaches a router Link through a polymorphic component prop", async () => {
+    // `component={Link}` and `as={Link}` compile and navigate, and widen the
+    // router generic to AnyRouter on the way — `to` and `params` stop being
+    // checked against the real routes, so renaming one breaks the running app
+    // instead of the build. `asChild` over a wrapped, typed Link keeps the
+    // checking.
     const offenders: string[] = []
     for (const skill of await readSkills()) {
       // Code only: the prose that warns about it has to be able to spell it.
@@ -236,7 +237,7 @@ describe('bundled skills corpus', () => {
           inFence = !inFence
           continue
         }
-        if (inFence && /component=\{Link\}/.test(line)) {
+        if (inFence && /(component|as)=\{Link\}/.test(line)) {
           offenders.push(`${skill.name}:${i + 1}`)
         }
       }
@@ -244,7 +245,7 @@ describe('bundled skills corpus', () => {
     assert.deepEqual(
       offenders,
       [],
-      `use renderRoot with a wrapped Link instead: ${offenders.join(', ')}`
+      `use asChild over a wrapped Link instead: ${offenders.join(', ')}`
     )
   })
 

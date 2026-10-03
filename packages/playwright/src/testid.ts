@@ -29,9 +29,9 @@ export const testIdSelector = ({
 
 export interface LocateTestIdOptions {
   /**
-   * Match only rendered elements. On by default because Mantine layouts
-   * routinely mount a hidden copy of a control — `ShellHeader` measures its
-   * actions that way — so a bare test id resolves to two elements. Turn it off
+   * Match only rendered elements. On by default because responsive layouts
+   * routinely mount a hidden copy of a control (a desktop and a mobile nav, say),
+   * so a bare test id resolves to two elements. Turn it off
    * for an absence check, which has to see the element it is waiting to lose.
    */
   visible?: boolean

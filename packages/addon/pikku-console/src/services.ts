@@ -6,10 +6,21 @@ import type { CodeEditService } from '@pikku/code-edit'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
+import { DesignService } from './services/design.service.js'
+import { PageScreenshotService } from './services/page-screenshot.service.js'
+import { I18nService } from '@pikku/code-edit/i18n'
+import { WorkspaceFilesService } from '@pikku/code-edit/files'
+import { GitService } from '@pikku/code-edit/git'
+import { TypeScriptService } from '@pikku/code-edit/typescript'
+import { PagesService } from '@pikku/code-edit/routes'
+import { VerifyService } from '@pikku/code-edit/verify'
+import { BrandWorkspace } from '@pikku/code-edit/brand'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
+import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 import { join } from 'node:path'
 import { FileScenarioRunStore } from '@pikku/core/services'
+import { resolveStudioHost, type StudioHost } from './services/studio-host.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -52,12 +63,61 @@ export const createSingletonServices = pikkuAddonServices(
     let stateDiffService: StateDiffService | null = null
     let dbSchemaService: DbSchemaService | null = null
     let knowledgeService: KnowledgeService | null = null
+    let designService: DesignService | null = null
+    let i18nService: I18nService | null = null
+    let workspaceFilesService: WorkspaceFilesService | null = null
+    let gitService: GitService | null = null
+    let typeScriptService: TypeScriptService | null = null
+    let pagesService: PagesService | null = null
+    let pageScreenshotService: PageScreenshotService | null = null
+    let verifyService: VerifyService | null = null
+    let brandService: BrandWorkspace | null = null
     let scenarioRunStore: FileScenarioRunStore | null = null
+    let studioHost: StudioHost | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
       stateDiffService = new StateDiffService(projectRoot)
       dbSchemaService = new DbSchemaService(metaService)
       knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
+      designService = new DesignService(findWorkspaceRoot(projectRoot))
+      i18nService = new I18nService(findWorkspaceRoot(projectRoot))
+      workspaceFilesService = new WorkspaceFilesService(
+        findWorkspaceRoot(projectRoot)
+      )
+      gitService = new GitService(findWorkspaceRoot(projectRoot))
+      typeScriptService = new TypeScriptService(findWorkspaceRoot(projectRoot))
+      pagesService = new PagesService(findWorkspaceRoot(projectRoot))
+      pageScreenshotService = new PageScreenshotService(
+        pagesService,
+        projectRoot
+      )
+      verifyService = new VerifyService(projectRoot)
+      studioHost = await resolveStudioHost(projectRoot)
+      const brandSettings = async () => {
+        const names = ['UNSPLASH_ACCESS_KEY', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'] as const
+        const found: Partial<Record<(typeof names)[number], string>> = {
+          ...(await variables.getVariables<Record<(typeof names)[number], string>>([...names])),
+        }
+        try {
+          const stored = await secrets.getSecrets<Record<(typeof names)[number], string>>([
+            'UNSPLASH_ACCESS_KEY',
+            'CLOUDFLARE_ACCOUNT_ID',
+            'CLOUDFLARE_API_TOKEN',
+          ])
+          for (const name of names) {
+            const secret = stored[name]
+            if (secret) found[name] = secret.reveal()
+          }
+        } catch {}
+        return found
+      }
+      brandService = new BrandWorkspace(findWorkspaceRoot(projectRoot), {
+        unsplashAccessKey: async () => (await brandSettings()).UNSPLASH_ACCESS_KEY,
+        cloudflare: async () => {
+          const { CLOUDFLARE_ACCOUNT_ID: accountId, CLOUDFLARE_API_TOKEN: apiToken } = await brandSettings()
+          return accountId && apiToken ? { accountId, apiToken } : undefined
+        },
+      })
       // The same directory `pikku scenario run` writes to: the console reads
       // runs the CLI recorded, so the path is the contract between them.
       scenarioRunStore = new FileScenarioRunStore({
@@ -98,7 +158,17 @@ export const createSingletonServices = pikkuAddonServices(
       stateDiffService,
       dbSchemaService,
       knowledgeService,
+      designService,
+      i18nService,
+      workspaceFilesService,
+      gitService,
+      typeScriptService,
+      pagesService,
+      pageScreenshotService,
+      verifyService,
+      brandService,
       scenarioRunStore,
+      studioHost,
       auth,
     }
   }

@@ -1,0 +1,22 @@
+{
+  "name": "ActionsGrid",
+  "title": "Actions grid card",
+  "description": "A bordered card with a titled header and a 3-column grid of icon action buttons. Use for a compact launcher of quick actions or services inside a dashboard.",
+  "tags": ["layout"],
+  "files": ["ActionsGrid.tsx", "ActionsGrid.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "actionsgrid__title": "Services",
+    "actionsgrid__more_services": "+ 21 other services",
+    "actionsgrid__credit_cards": "Credit cards",
+    "actionsgrid__banks_nearby": "Banks nearby",
+    "actionsgrid__transfers": "Transfers",
+    "actionsgrid__refunds": "Refunds",
+    "actionsgrid__receipts": "Receipts",
+    "actionsgrid__taxes": "Taxes",
+    "actionsgrid__reports": "Reports",
+    "actionsgrid__payments": "Payments",
+    "actionsgrid__cashback": "Cashback"
+  }
+}

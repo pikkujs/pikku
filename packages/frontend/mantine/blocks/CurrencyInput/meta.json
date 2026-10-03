@@ -1,0 +1,13 @@
+{
+  "name": "CurrencyInput",
+  "title": "Amount input with currency selector",
+  "description": "A numeric transfer-amount field with an attached currency dropdown in its right section. Use for money transfers, pricing, or any amount that needs a currency picker.",
+  "tags": ["inputs"],
+  "files": ["CurrencyInput.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "currencyinput__label": "Transfer amount",
+    "currencyinput__currency_aria": "Currency"
+  }
+}

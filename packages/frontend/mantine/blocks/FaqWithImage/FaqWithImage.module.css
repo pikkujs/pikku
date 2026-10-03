@@ -1,0 +1,16 @@
+.wrapper {
+  padding-top: calc(var(--mantine-spacing-xl) * 2);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 2);
+}
+
+.title {
+  margin-bottom: var(--mantine-spacing-md);
+  padding-left: var(--mantine-spacing-md);
+  color: var(--mantine-color-text);
+  font-weight: 500;
+}
+
+.item {
+  font-size: var(--mantine-font-size-sm);
+  color: light-dark(var(--mantine-color-text), var(--mantine-color-text));
+}

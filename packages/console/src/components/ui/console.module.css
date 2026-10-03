@@ -1101,3 +1101,25 @@
 .bodyCard {
   composes: cardChrome from '../shell/card.module.css';
 }
+
+.schemaFields {
+  border: 1px solid var(--app-border);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+
+.schemaField {
+  padding: 10px 12px;
+}
+
+.schemaField + .schemaField {
+  border-top: 1px solid var(--app-border);
+}
+
+.schemaField[data-expandable] {
+  cursor: pointer;
+}
+
+.schemaField[data-expandable]:hover {
+  background: var(--app-surface-interactive);
+}

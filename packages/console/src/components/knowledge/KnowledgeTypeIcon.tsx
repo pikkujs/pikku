@@ -3,6 +3,7 @@ import {
   BookOpen,
   Boxes,
   FileText,
+  Flag,
   HelpCircle,
   Layers,
   Scale,
@@ -18,6 +19,7 @@ import {
 const TYPE_ICONS: Record<string, LucideIcon> = {
   overview: BookOpen,
   slice: Layers,
+  milestone: Flag,
   entity: Boxes,
   decision: Scale,
   question: HelpCircle,
@@ -27,7 +29,8 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 export const KnowledgeTypeIcon: React.FC<{
   type?: string
   size?: number
-}> = ({ type, size = 13 }) => {
+  color?: string
+}> = ({ type, size = 13, color = 'var(--mantine-color-dimmed)' }) => {
   const Icon = (type && TYPE_ICONS[type]) || FileText
-  return <Icon size={size} color="var(--mantine-color-dimmed)" />
+  return <Icon size={size} color={color} />
 }

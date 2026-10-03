@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3209 observable things**: 1068 exported names, plus
-2141 members on the classes and interfaces among them, reachable
-through 56 entry points.
+**3236 observable things**: 1076 exported names, plus
+2160 members on the classes and interfaces among them, reachable
+through 57 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -35,6 +35,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
+| `./scenario/coverage` | 8 | 8 | 19 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
 | `./utils` | 22 | 21 | 2 |
@@ -1845,6 +1846,43 @@ export interface TestIdSelector {
   where?: Record<string, string>
   containing?: string
   within?: TestIdSelector
+}
+```
+
+## ./scenario/coverage
+
+```ts
+aggregateScenarioCoverageGaps: (file: ScenarioCoverageFile) => ScenarioCoverageGap[]
+readScenarioCoverage: (metaService: MetaService, { routes }?: { routes?: string[] | undefined; }) => Promise<ScenarioCoverage>
+routeMatchesPath: (route: string, path: string) => boolean
+export interface ScenarioCoverage {
+  api: { generatedAt: string; environment: string; pct: number; covered: number; total: number; gaps: ScenarioCoverageGap[] } | null
+  mutations: { required: number; covered: number; uncovered: UncoveredMutation[] }
+  routes: { visited: string[]; total: number | null; unvisited: string[] | null }
+}
+export interface ScenarioCoverageFile {
+  generatedAt: string
+  environment: string
+  scenarios: Record< string, { functions?: ScenarioFunctionCoverage[]; summary?: { total?: number } } >
+}
+export interface ScenarioCoverageGap {
+  function: string
+  sourceFile: string
+  status: 'uncovered' | 'partial'
+  missing: string[]
+  missedLines: number
+  totalLines: number
+}
+export interface ScenarioFunctionCoverage {
+  name: string
+  sourceFile: string
+  status: 'covered' | 'partial' | 'uncovered' | 'unknown'
+  totalLines: number
+  missedLines: number[]
+}
+export interface UncoveredMutation {
+  id: string
+  sourceFile?: string
 }
 ```
 

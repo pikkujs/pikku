@@ -1,0 +1,16 @@
+{
+  "name": "CookiesBanner",
+  "title": "Cookie consent banner",
+  "description": "Bordered card that explains cookie usage with preferences and accept-all actions plus a close button. Use for cookie-consent / GDPR notices.",
+  "tags": ["banners"],
+  "files": ["CookiesBanner.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "cookiesbanner__title": "Allow cookies",
+    "cookiesbanner__close_aria": "Close cookie banner",
+    "cookiesbanner__body": "We use cookies to personalise content, remember your preferences and understand how you use our product. To view this page you will need to accept all cookies.",
+    "cookiesbanner__preferences": "Cookies preferences",
+    "cookiesbanner__accept_all": "Accept all"
+  }
+}

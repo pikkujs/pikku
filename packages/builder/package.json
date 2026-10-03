@@ -1,0 +1,43 @@
+{
+  "name": "@pikku/builder",
+  "version": "0.12.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/builder"
+  },
+  "description": "The pikku builder \u2014 pi set up to build pikku apps, with the pikku skills and edit tools. Run it in a terminal, or drive it over rpc from Studio",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "pikku-builder": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "extensions"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "tsc": "tsc --noEmit",
+    "test": "node --import tsx --test 'src/**/*.test.ts' 'extensions/**/*.test.mjs'",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "@pikku/knowledge": "^0.12.16",
+    "@pikku/skills": "^0.12.48"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9",
+    "oxfmt": "^0.53.0"
+  }
+}

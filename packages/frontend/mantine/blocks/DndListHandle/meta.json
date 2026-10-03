@@ -1,0 +1,12 @@
+{
+  "name": "DndListHandle",
+  "title": "Drag-and-drop list with grip handle",
+  "description": "A vertical list whose rows are reordered by dragging a dedicated per-row grip handle (pointer and keyboard). Pass live rows via the `data` prop. Use when rows have interactive content and only the handle should start a drag.",
+  "tags": ["lists"],
+  "files": ["DndListHandle.tsx", "DndListHandle.module.css"],
+  "dependsOn": [],
+  "npmDeps": ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+  "i18nKeys": {
+    "dndlisthandle__meta": "Position: {position} • Mass: {mass}"
+  }
+}

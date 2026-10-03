@@ -1,0 +1,12 @@
+{
+  "name": "ActionToggle",
+  "title": "Light/dark theme toggle",
+  "description": "An icon button that switches the color scheme between light and dark, swapping a sun/moon glyph to match. Use in a header or navbar to let users flip the theme.",
+  "tags": ["buttons"],
+  "files": ["ActionToggle.tsx", "ActionToggle.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "actiontoggle__toggle_color_scheme": "Toggle color scheme"
+  }
+}

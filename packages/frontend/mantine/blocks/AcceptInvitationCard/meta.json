@@ -1,0 +1,16 @@
+{
+  "name": "AcceptInvitationCard",
+  "title": "Accept / decline an organization invitation",
+  "description": "The landing card for an invitation link: shows the inviting organization and Accept/Decline buttons that call the Better Auth organization client (acceptInvitation / rejectInvitation), with inline errors and an onAccepted callback to redirect after joining. Use on an /accept-invite route.",
+  "tags": ["organization"],
+  "files": ["AcceptInvitationCard.tsx"],
+  "dependsOn": ["OrgAuthClient"],
+  "npmDeps": [],
+  "i18nKeys": {
+    "acceptinvitationcard__title": "You've been invited",
+    "acceptinvitationcard__generic": "You've been invited to join an organization.",
+    "acceptinvitationcard__accept": "Accept invitation",
+    "acceptinvitationcard__decline": "Decline",
+    "acceptinvitationcard__declined": "Invitation declined."
+  }
+}

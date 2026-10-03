@@ -77,7 +77,7 @@ async function findProjectRoot(startDir: string): Promise<string> {
 }
 
 // List .ts/.tsx source files under a directory (skips node_modules). Used to
-// scan an app for raw @mantine/core imports and i18n usage.
+// scan an app for leftover Mantine imports and i18n usage.
 async function listSourceFiles(dir: string): Promise<string[]> {
   if (!existsSync(dir)) return []
   try {
@@ -167,7 +167,7 @@ const LOGIN_FILE_PATTERN =
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
 //
-// Canonical implementation is `<DevActorSwitcher>` from `@pikku/mantine/dev`
+// Canonical implementation is the starter's `<DevActorSwitcher>`
 // (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
 // it lists and signs in personas by id through `pikkuActor({ personaSignIn })`. A local component calling `signInAsPersona()`, and
 // the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
@@ -980,7 +980,7 @@ export async function runValidate(
   )?.name
   const themePkgName = (
     await readJsonSafe<PkgWithName>(
-      join(root, 'packages', 'mantine-theme', 'package.json')
+      join(root, 'packages', 'theme', 'package.json')
     )
   )?.name
   const componentsPkgName = (
@@ -1497,7 +1497,7 @@ export async function runValidate(
     dir: string
     deploy: boolean
   }> = []
-  let hasMantineFrontend = false
+  let hasUiFrontend = false
   /** every syntactically valid cwd, including ones whose directory is missing */
   const declaredCwdList: string[] = []
   // `frontends` lives in pikku.config.json: an app is a pikku concept, not a
@@ -1728,11 +1728,11 @@ export async function runValidate(
         )
       }
 
-      // ── i18n + @pikku/mantine convergence (React frontend apps) ──────────
+      // ── i18n + Tailwind/shadcn convergence (React frontend apps) ──────────
       // Every frontend converges onto the canonical starter-template stack:
-      // Paraglide JS (inlang) for translation + components imported from
-      // @pikku/mantine/core (whose I18nNode-typed props make untranslated
-      // strings a compile error). A raw @mantine/core import bypasses that gate.
+      // Paraglide JS (inlang) for translation + Tailwind v4 over shadcn/ui
+      // components, with @shadcn/lint and react/jsx-no-literals as the gate
+      // that keeps untranslated strings and hardcoded styles out.
       // The i18next → Paraglide cutover is hard (no back-compat), so a residual
       // i18next dep or useTranslation()/useI18n() call is an error.
       const appAllDeps = {
@@ -1741,16 +1741,16 @@ export async function runValidate(
       }
       const isReactFrontend = !!(
         appAllDeps['@mantine/core'] ||
-        appAllDeps['@pikku/mantine'] ||
+        appAllDeps['tailwindcss'] ||
         appAllDeps['react']
       )
-      if (appAllDeps['@mantine/core'] || appAllDeps['@pikku/mantine']) {
-        hasMantineFrontend = true
+      if (appAllDeps['tailwindcss'] || appAllDeps['@shadcn/lint']) {
+        hasUiFrontend = true
       }
       if (isReactFrontend) {
         const srcFiles = await listSourceFiles(join(appPath, 'src'))
         let usesMessages = false
-        const rawMantineFiles: string[] = []
+        const mantineFiles: string[] = []
         const legacyI18nFiles: string[] = []
         for (const file of srcFiles) {
           const text = await readTextSafe(file)
@@ -1779,10 +1779,8 @@ export async function runValidate(
           ) {
             legacyI18nFiles.push(rel)
           }
-          // component import from @mantine/core — the trailing quote excludes
-          // the `@mantine/core/styles.css` side-effect import and @mantine/hooks
-          if (/from\s+['"]@mantine\/core['"]/.test(text)) {
-            rawMantineFiles.push(rel)
+          if (/from\s+['"](?:@mantine\/|@pikku\/mantine)/.test(text)) {
+            mantineFiles.push(rel)
           }
         }
 
@@ -1859,27 +1857,28 @@ export async function runValidate(
           )
         }
 
-        if (!appAllDeps['@pikku/mantine'] && appAllDeps['@mantine/core']) {
+        if (mantineFiles.length > 0 || appAllDeps['@mantine/core']) {
           e(
-            `app-missing-pikku-mantine-${name}`,
-            `apps/${name} uses @mantine/core but not @pikku/mantine — components bypass the i18n-typed compile gate`,
-            join(appPath, 'package.json'),
-            'Add "@pikku/mantine": "^0.12.5" and import components from "@pikku/mantine/core" (a drop-in for @mantine/core with I18nNode-typed string props).'
+            `app-mantine-leftover-${name}`,
+            `apps/${name} still uses Mantine${mantineFiles.length > 0 ? ` in ${mantineFiles.length} file(s)` : ''} — Fabric frontends are Tailwind v4 over shadcn/ui`,
+            mantineFiles.length > 0 ? join(appPath, 'src') : join(appPath, 'package.json'),
+            lines(
+              'Replace Mantine components with the shadcn component for the job',
+              '(`pikku components list`) and style with Tailwind utilities.',
+              ...mantineFiles.slice(0, 10).map((f) => `  - ${f}`),
+              ...(mantineFiles.length > 10
+                ? [`  …and ${mantineFiles.length - 10} more`]
+                : []),
+              'Remove @mantine/* and @pikku/mantine from package.json.'
+            )
           )
         }
-        if (rawMantineFiles.length > 0) {
-          e(
-            `app-raw-mantine-imports-${name}`,
-            `apps/${name} imports components from "@mantine/core" directly in ${rawMantineFiles.length} file(s) — this bypasses the @pikku/mantine i18n gate, so untranslated strings compile silently`,
-            join(appPath, 'src'),
-            lines(
-              `Swap 'from "@mantine/core"' → 'from "@pikku/mantine/core"' in:`,
-              ...rawMantineFiles.slice(0, 10).map((f) => `  - ${f}`),
-              ...(rawMantineFiles.length > 10
-                ? [`  …and ${rawMantineFiles.length - 10} more`]
-                : []),
-              'Keep "@mantine/core/styles.css", @mantine/hooks and @mantine/notifications imports as-is.'
-            )
+        if (appAllDeps['tailwindcss'] && !appAllDeps['@shadcn/lint']) {
+          w(
+            `app-missing-shadcn-lint-${name}`,
+            `apps/${name} uses Tailwind but not @shadcn/lint — hardcoded colours, arbitrary values and raw palette classes go unchecked`,
+            join(appPath, 'package.json'),
+            'Add "@shadcn/lint" to devDependencies and enable it in the lint config (ESLint or Oxlint).'
           )
         }
 
@@ -1919,7 +1918,7 @@ export async function runValidate(
             lines(
               'Render the "Sign in as …" switcher from the login screen.',
               `In ${loginFiles[0]}:`,
-              "  import { DevActorSwitcher } from '@pikku/mantine/dev'",
+              "  import { DevActorSwitcher } from '@/components/dev/DevActorSwitcher'",
               '  <DevActorSwitcher',
               '    apiUrl={apiUrl()}',
               '    app={appSlug}',
@@ -2224,22 +2223,22 @@ export async function runValidate(
 
   // ── packages/theme + packages/components ──────────────────────────────
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
-  const designSeverity = hasMantineFrontend ? w : info
-  const themePkgDir = join(root, 'packages', 'mantine-theme')
+  const designSeverity = hasUiFrontend ? w : info
+  const themePkgDir = join(root, 'packages', 'theme')
   if (!existsSync(themePkgDir)) {
     designSeverity(
       'theme-missing',
-      hasMantineFrontend
-        ? 'packages/mantine-theme/ not found — the Fabric console Design tab has no themes to list and reports "No themes yet"'
-        : 'packages/mantine-theme/ not found — Fabric design features require a theme package',
+      hasUiFrontend
+        ? 'packages/theme/ not found — the Fabric console Design tab has no themes to list and reports "No themes yet"'
+        : 'packages/theme/ not found — Fabric design features require a theme package',
       themePkgDir,
-      `Create packages/mantine-theme/ with your Mantine theme tokens. See ${designDocUrl}`
+      `Create packages/theme/ (run \`pikku theme apply\`) to generate the theme tokens. See ${designDocUrl}`
     )
   } else {
     // The Fabric console's Design tab lists a theme only when it can read a
     // themes/<id>.json spec (+ active.json pointing at one) — that spec is the
     // single source of truth the app runtime and the console both consume. A
-    // package that only hand-writes createTheme() renders fine but the console
+    // package that only hand-writes its CSS renders fine but the console
     // reports "no theme set" and cannot edit it. Mirror getSandboxThemes' file
     // logic (themes/<id>.json where id matches THEME_ID_RE, + active.json.id).
     const themeIdRe = /^[a-z][a-z0-9-]{0,38}$/
@@ -2258,18 +2257,18 @@ export async function runValidate(
     if (specIds.length === 0) {
       designSeverity(
         'theme-no-spec',
-        'packages/mantine-theme/ has no themes/<id>.json spec — the Fabric console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded via a hand-written createTheme()',
+        'packages/theme/ has no themes/<id>.json spec — the Fabric console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded by hand-written CSS',
         themesDir,
         lines(
           'Add a theme spec the console can read:',
-          '1. Create packages/mantine-theme/themes/<id>.json (id is kebab-case), e.g.:',
+          '1. Create packages/theme/themes/<id>.json (id is kebab-case), e.g.:',
           '{',
           '  "name": "My Brand",',
           '  "brand": { "colors": { "primary": "#4f46e5" }, "fonts": { "body": "Inter" } },',
-          '  "structure": { "defaultRadius": "md", "defaultColorScheme": "light" }',
+          '  "structure": { "radius": "md", "defaultColorScheme": "light" }',
           '}',
-          '2. Create packages/mantine-theme/active.json: { "id": "<id>" }',
-          '3. Build the Mantine theme from the active spec in index.ts.',
+          '2. Create packages/theme/active.json: { "id": "<id>" }',
+          '3. Run `pikku theme apply` to generate theme.css from the active spec.',
           `See ${designDocUrl}`
         )
       )
@@ -2283,17 +2282,17 @@ export async function runValidate(
       if (!activeId) {
         info(
           'theme-no-active',
-          'packages/mantine-theme/active.json is missing or has no string "id" — the Fabric console falls back to the "default" theme id, which may not match any themes/<id>.json',
+          'packages/theme/active.json is missing or has no string "id" — the Fabric console falls back to the "default" theme id, which may not match any themes/<id>.json',
           activePath,
           lines(
-            'Create packages/mantine-theme/active.json pointing at an existing spec:',
+            'Create packages/theme/active.json pointing at an existing spec:',
             `{ "id": "${specIds[0]}" }`
           )
         )
       } else if (!specIds.includes(activeId)) {
         info(
           'theme-active-mismatch',
-          `packages/mantine-theme/active.json points at "${activeId}" but no themes/${activeId}.json exists — the Fabric console has no active theme`,
+          `packages/theme/active.json points at "${activeId}" but no themes/${activeId}.json exists — the Fabric console has no active theme`,
           activePath,
           lines(
             `Point active.json at an existing spec (${specIds.join(', ')}):`,

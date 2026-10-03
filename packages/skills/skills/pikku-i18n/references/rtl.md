@@ -9,7 +9,7 @@ being told it is `rtl`.
 ## The one idea
 
 Set `dir` **once at the document root** from the active locale, then let the
-browser and Mantine mirror everything — _provided_ every custom style is written
+browser and Tailwind mirror everything — _provided_ every custom style is written
 **flow-relative** (start/end), never **physical** (left/right). Get those two
 things right and Arabic, Hebrew, Farsi and Urdu all work with zero per-component
 _layout_ code — directional icons still need one manual step, covered below.
@@ -51,16 +51,18 @@ Use the **inline-axis logical** property; never the physical one:
 | `border-top-left-radius`     | `border-start-start-radius`                  |
 | `float: left/right`          | `float: inline-start / inline-end`           |
 
-In **Mantine**, use the logical style props — they emit the logical CSS above:
+In **Tailwind**, use the logical utilities — they emit the logical CSS above:
 
-| Don't       | Do          |
-| ----------- | ----------- |
-| `ml` / `mr` | `ms` / `me` |
-| `pl` / `pr` | `ps` / `pe` |
+| Don't                     | Do                        |
+| ------------------------- | ------------------------- |
+| `ml-*` / `mr-*`           | `ms-*` / `me-*`           |
+| `pl-*` / `pr-*`           | `ps-*` / `pe-*`           |
+| `left-*` / `right-*`      | `start-*` / `end-*`       |
+| `text-left` / `text-right`| `text-start` / `text-end` |
 
-Mantine's own components already use logical properties internally, so once the
-direction is set they mirror automatically — you only have to be disciplined in
-**your** styles.
+The shadcn components in the app use logical utilities, so once the direction is
+set they mirror automatically — you only have to be disciplined in **your**
+classes. Directional icons flip with `rtl:rotate-180`.
 
 **Leave flexbox and grid alone.** `display:flex` already follows `dir`:
 `justify-content: flex-start` resolves to the right edge under RTL on its own.
@@ -70,13 +72,14 @@ logical order; let `dir` handle the visual order.
 
 ## Applying direction at the root
 
-### Mantine app (e.g. environment-template)
+### Tailwind app
 
-Mantine ships first-class RTL: wrap the tree in `DirectionProvider` and set the
-matching `dir` on `<html>`.
+Tailwind's logical utilities and the browser both read `dir` on `<html>`. Set it
+at bootstrap from the detected locale; the shadcn `DirectionProvider` (Radix) takes
+the same value so portalled overlays mirror too.
 
 ```tsx
-import { DirectionProvider, MantineProvider } from '@mantine/core'
+import { DirectionProvider } from '@radix-ui/react-direction'
 import { detectLocale, localeDir } from './i18n/config'
 
 const locale =
@@ -85,25 +88,23 @@ const dir = localeDir(locale)
 
 if (typeof document !== 'undefined') {
   document.documentElement.lang = locale
-  document.documentElement.dir = dir // Mantine + browser read this
+  document.documentElement.dir = dir
 }
 
 root.render(
-  <DirectionProvider initialDirection={dir}>
-    <MantineProvider theme={theme} defaultColorScheme="dark">
-      {/* …app… */}
-    </MantineProvider>
+  <DirectionProvider dir={dir}>
+    {/* …app… */}
   </DirectionProvider>
 )
 ```
 
 To flip direction live (a language switcher) call
-`document.documentElement.setAttribute('dir', localeDir(next))` and Mantine's
-`useDirection().setDirection(dir)`; both read the same value.
+`document.documentElement.setAttribute('dir', localeDir(next))` and re-render the
+`DirectionProvider` with the new value.
 
 ### Plain Vite SPA (kanban, test-harness vite-spa)
 
-No Mantine — just put `dir`/`lang` on `<html>` at bootstrap, after the locale is
+No Radix — just put `dir`/`lang` on `<html>` at bootstrap, after the locale is
 detected (the same `detectLocale` the i18n config uses):
 
 ```ts
@@ -205,13 +206,13 @@ left` with the flow-relative equivalent; revert any manual `row-reverse`.
 
 ## What NOT to do
 
-- Don't use physical `left`/`right` (or `ml`/`mr`) in any new layout style — even
+- Don't use physical `left`/`right` (or `ml-*`/`mr-*`) in any new layout style — even
   in an English-only app. Writing logical from the start is the seam Arabic
   slots into, exactly like tokens are for copy.
 - Don't fake RTL with `flex-direction: row-reverse`, reversed DOM order, or
   per-locale `if (rtl)` layout branches. Set `dir` once; let layout follow.
 - Don't set `dir` on individual components — it belongs on `<html>` so the whole
-  document (and Mantine) agrees.
+  document (and Radix) agrees.
 - Don't translate Arabic copy outside the message system; an RTL language is a
   normal locale, governed by `references/messages.md`. There is no `t()` and no i18next in a
   Pikku frontend — the string comes from `m.some__key()`.

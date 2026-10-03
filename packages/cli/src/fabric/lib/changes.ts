@@ -2,8 +2,15 @@ import { extname } from 'node:path'
 import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
+import {
+  LOCAL_PROJECT_ID,
+  localChangesRPC,
+  localStorePath,
+  type ChangesRPC,
+} from './changes-local.js'
+
+export type { ChangesRPC }
 
 /**
  * Resolve the three things every `changes` command needs: the api url, a
@@ -12,29 +19,43 @@ import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
  * `requireProject` is false for the per-item commands, which address a change
  * by id and so work from any directory — a harness reading a queue is often
  * not sitting in the checkout it is about to edit.
+ *
+ * A checkout with no linked fabric project works the local queue instead, so
+ * the same commands run on open-source Pikku with no account.
  */
 export async function changesContext(
   apiUrlOverride: string | undefined,
   projectIdOverride?: string
 ): Promise<{
-  rpc: PikkuRPC
+  rpc: ChangesRPC
   projectId: string | null
   apiUrl: string
-  token: string
+  token: string | null
+  local: boolean
+  storePath?: string
 }> {
   const ctx = await resolveApiContext({
     apiUrlOverride,
     resolveProject: !projectIdOverride,
   })
-  if (!ctx.token)
-    throw new FabricPreconditionError(
-      'Not logged in. Run `pikku fabric login` first.'
-    )
+  const projectId = projectIdOverride ?? ctx.projectId
+  if (!ctx.token || !projectId) {
+    const storePath = await localStorePath()
+    return {
+      rpc: localChangesRPC(storePath),
+      projectId: LOCAL_PROJECT_ID,
+      apiUrl: ctx.apiUrl,
+      token: null,
+      local: true,
+      storePath,
+    }
+  }
   return {
     rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
-    projectId: projectIdOverride ?? ctx.projectId,
+    projectId,
     apiUrl: ctx.apiUrl,
     token: ctx.token,
+    local: false,
   }
 }
 

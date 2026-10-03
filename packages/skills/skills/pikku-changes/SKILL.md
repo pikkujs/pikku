@@ -11,7 +11,14 @@ screenshot of what they saw, and the elements the circle enclosed. You have the 
 Empty the queue without making them regret filing.
 
 Run every command from the checkout: the project comes from its git remote (`pikku fabric config` shows which).
+A checkout with no Fabric project works a local queue instead (`.git/pikku-changes.json`, shared by every
+worktree) with the same commands; its items have no stage, screenshot or circled elements.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
+
+**Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below,
+group them into changesets, and take one: claim it, build it, mark its items done, stop. `pikku next --loop`
+starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
+changeset needs to know goes in a commit or a `reply`.
 
 ## Which stage
 
@@ -60,6 +67,42 @@ group's lease, done — and when a held or leased item is **claimable at** (a lo
 `HH:MM`; `list` and `show` print the same). An item inside someone else's live lease
 cannot be taken. For held items, run `next --claim` rather than retrying. The lease is 30 minutes
 (`--lease-minutes`); an abandoned claim returns to the queue by itself.
+
+## Changesets
+
+Group related items into changesets and claim each one as a group, saying which tables it touches —
+the entity notes' `resource:` lines name them:
+
+```bash
+pikku fabric changes claim --change-ids 1,3 --title "Waitlist" --claimed-by pi --creates waitlist --reads booking
+```
+
+`--creates`/`--alters` mean it needs a plan (the claim output says so; `--needs-plan false` overrides).
+A planned changeset is planned before any code — the functions, tables, screens and scenario each item
+touches — and the plan goes on its first item with `reply`.
+
+Build each changeset on its own branch, `changeset/<slug>`, cut from the branch you started on, one
+commit per item (see Committing), and mark each item `done`. Launched by `pikku next`, stop there:
+it merges finished changesets itself, as one `--no-ff` commit with a `Changeset:` trailer, and if the
+merge conflicts it hands that back to an agent to resolve on the changeset's branch. Working by hand,
+merge it yourself from the branch it goes into:
+
+```bash
+pikku fabric changes merge --group-id <id>
+```
+
+Never `git merge` a changeset branch yourself — a fast-forward leaves no changeset commit, and
+`changes merge` refuses a branch that is already in.
+
+Changesets that create or alter tables go one at a time; one that reads a table waits for the
+changeset creating it; the rest can run side by side. On the local queue, `claim` refuses a changeset
+that would break that order, and `done` refuses a commit that adds a migration under `db/` when its
+changeset declared no `--creates`/`--alters`.
+
+When other agents are working changesets at the same time (your work says so), claim with
+`--worktree`: it creates `changeset/<slug>` in its own checkout beside the repo and prints the path.
+Build and commit there and run `done` there; the merge removes the worktree. If the claim is refused because of a running changeset, claim one that does not
+clash, or stop.
 
 ## Reading an item
 
@@ -138,7 +181,8 @@ Scope names the screen they were looking at, not the file you edited.
 pikku fabric changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-Branch and commit default to the checkout you are in — run it there, never type a sha.
+Branch and commit default to the checkout you are in — run it there, never type a sha. On the
+local queue `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 

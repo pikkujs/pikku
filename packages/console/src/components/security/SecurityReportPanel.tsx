@@ -1,9 +1,15 @@
 import React from 'react'
-import { Box, ScrollArea, Text } from '@pikku/mantine/core'
-import { ShieldCheck } from 'lucide-react'
+import { Box, ScrollArea, Stack, Text } from '@pikku/mantine/core'
+import { PackageCheck, ShieldAlert } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { CardRow } from '../ui/CardRow'
+import { StatusTile } from '../ui/StatusTile'
+import { StatusBadge } from '../ui/StatusBadge'
+import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevCode } from '../ui/DevDetail'
 import { SecurityAuditView, type SecurityLens } from './SecurityAuditView'
 import type { RenderUpgradeAction } from './security-view-utils'
 import { useSecurityAudit } from '../../hooks/useSecurityAudit'
@@ -42,18 +48,63 @@ export const SecurityReportPanel: React.FC<SecurityReportPanelProps> = ({
   }
 
   if (!report) {
+    if (emptyHero) return <>{emptyHero}</>
     return (
-      <EmptyStatePlaceholder
-        icon={ShieldCheck}
-        hero={emptyHero}
-        title={m.security_empty_title()}
-        description={
-          runError
-            ? m.security_empty_error_description()
-            : m.security_empty_description()
-        }
-        docsHref="https://pikku.dev/docs"
-      />
+      <ScrollArea style={{ flex: 1 }}>
+        <CardsPage maw={880}>
+          <SectionCard
+            hero
+            testId="security-hero"
+            eyebrow={
+              <Box mb={4}>
+                <StatusBadge tone={runError ? 'bad' : 'neutral'}>
+                  {runError
+                    ? m.security_hero_failed_badge()
+                    : m.security_hero_never_badge()}
+                </StatusBadge>
+              </Box>
+            }
+            title={m.security_hero_never_title()}
+            blurb={
+              runError
+                ? m.security_empty_error_description()
+                : m.security_hero_never_blurb()
+            }
+          />
+          <SectionCard
+            testId="security-what"
+            title={m.security_what_title()}
+            blurb={m.security_what_blurb()}
+          >
+            <Stack gap="xs" mt="md">
+              <CardRow
+                leading={
+                  <StatusTile tone="neutral">
+                    <ShieldAlert size={18} />
+                  </StatusTile>
+                }
+                title={m.security_what_weak_title()}
+                meta={m.security_what_weak_about()}
+              />
+              <CardRow
+                leading={
+                  <StatusTile tone="neutral">
+                    <PackageCheck size={18} />
+                  </StatusTile>
+                }
+                title={m.security_what_outdated_title()}
+                meta={m.security_what_outdated_about()}
+              />
+            </Stack>
+          </SectionCard>
+          <ForDevelopers testId="security-developers">
+            <DevCode
+              label={m.security_dev_run()}
+              code="pikku audit --outdated"
+            />
+          </ForDevelopers>
+        </CardsPage>
+      </ScrollArea>
     )
   }
 

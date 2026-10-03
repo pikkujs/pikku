@@ -1,0 +1,13 @@
+{
+  "name": "InputValidation",
+  "title": "Text input with custom error styling",
+  "description": "A text input in an error state with a red-tinted background and a warning icon in the right section alongside the error message. Use to make invalid fields visually prominent in forms.",
+  "tags": ["inputs"],
+  "files": ["InputValidation.tsx", "InputValidation.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "inputvalidation__label": "Custom validation styles",
+    "inputvalidation__error": "Invalid email"
+  }
+}

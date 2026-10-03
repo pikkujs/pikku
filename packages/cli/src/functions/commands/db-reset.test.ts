@@ -153,4 +153,26 @@ describe('pikku db reset', () => {
       `--no-seed called a migrated database empty:\n${logs.join('\n')}`
     )
   })
+
+  test('a connection held across the reset, as pikku dev holds one, can still write', async () => {
+    await dbReset.func({ logger, config: config() } as any, {} as any)
+    const resolved = resolveDb(
+      { sqliteDb: '.pikku-runtime/dev.db' },
+      root,
+      root
+    )!
+    if (resolved.dialect !== 'sqlite') throw new Error('expected sqlite')
+    const runtime = await loadSqliteRuntime()
+    const held = runtime.open(resolved.dbFile)
+    try {
+      await dbReset.func(
+        { logger, config: config() } as any,
+        { noSeed: true } as any
+      )
+      held.prepare(`INSERT INTO todos (title) VALUES ('after reset')`).run()
+      assert.equal(await todoCount(), 1)
+    } finally {
+      held.close()
+    }
+  })
 })

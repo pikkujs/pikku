@@ -1,0 +1,17 @@
+{
+  "name": "TaskCard",
+  "title": "Task / release progress card",
+  "description": "A card showing a brand mark, a due-date badge, title, description, a task-completion progress bar, an avatar group of assignees and an upload action. Use for project or release tracking.",
+  "tags": ["cards"],
+  "files": ["TaskCard.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "taskcard__tasks_completed": "Tasks completed:",
+    "taskcard__task_completion": "Task completion",
+    "taskcard__avatar_alt": "Avatar {n}",
+    "taskcard__more_users": "More users",
+    "taskcard__upload": "Upload"
+  }
+}

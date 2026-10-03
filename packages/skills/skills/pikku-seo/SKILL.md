@@ -38,8 +38,8 @@ export const Route = createFileRoute('/pricing')({
 })
 ```
 
-`head()` strings are plain strings (they do not go through the Mantine i18n
-gate) — write real copy for THIS app, in the app's voice.
+`head()` strings are plain strings (they are not covered by the JSX
+lint rule) — write real copy for THIS app, in the app's voice.
 
 - **Title**: unique per page, 50–60 characters, the page's primary topic first,
   brand at the end (`Topic — AppName`). The template's `__APP_TITLE__` default
@@ -66,16 +66,15 @@ screens — they are invisible to crawlers by design.
 
 ## Headings — exactly one h1 per page
 
-- Every page has EXACTLY ONE h1 (`<Title order={1}>` in Mantine, `<h1>` in
-  Tailwind) and it names the page's primary topic — aligned with the title tag,
+- Every page has EXACTLY ONE h1 (`<h1>`) and it names the page's primary topic — aligned with the title tag,
   not identical boilerplate.
 - Logical hierarchy below it: h1 → h2 → h3, no skipped levels, headings
   describe the content under them. Never pick a heading level for its font
-  size — set the size on the correct level (`<Title order={2} fz="xs">`).
+  size — set the size on the correct level (`<h2 className="text-sm">`).
 
 ## Crawlable, semantic markup
 
-- Landmarks on public pages: `<nav>`, `<main>`, `<footer>` (Mantine: `component="nav"` etc.).
+- Landmarks on public pages: `<nav>`, `<main>`, `<footer>`.
 - Navigation between public pages uses real links (`<Link>`/`<a href>`) with
   descriptive anchor text — crawlers follow hrefs; a `div onClick` navigation
   is invisible to them. No public page may be orphaned: every public page is

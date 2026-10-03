@@ -1,0 +1,11 @@
+{
+  "name": "OrgAuthClient",
+  "title": "Organization auth-client helpers",
+  "description": "Thin async wrappers around the Better Auth organization client (invite/list/remove members, accept/decline invitations, create org, switch org). Shared by the organization UI blocks.",
+  "tags": ["organization"],
+  "files": ["org-auth.ts"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "internal": true,
+  "i18nKeys": {}
+}

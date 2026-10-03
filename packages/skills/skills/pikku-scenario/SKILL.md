@@ -347,6 +347,12 @@ That writes `<outDir>/coverage/scenario-coverage.json`. **`references/coverage.m
 `scaffold.scenarios` shape, why coverage silently reads zero, the four-step loop for filling a gap,
 and where a plain unit test is still the right tool.
 
+## Local sign-in and roles
+
+An actor's local sign-in does not grant its persona roles, so a scoped RPC answers 403 until the role exists. Grant it in a scenario `before` step, or insert the `pikku_user_role` rows for the persona after the first sign-in.
+
+Inline zod schemas on the functions a scenario calls must be exported consts (PKU489).
+
 ## Red flags
 
 | Smell                                               | Why it's wrong                                                                                                                                   |

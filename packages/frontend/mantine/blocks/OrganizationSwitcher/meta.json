@@ -1,0 +1,14 @@
+{
+  "name": "OrganizationSwitcher",
+  "title": "Active-organization switcher",
+  "description": "A header dropdown button listing the user's organizations with a check on the active one; selecting switches the session's active org via the Better Auth organization client. Takes the current activeId as a prop. Use in an app-shell header for multi-tenant apps.",
+  "tags": ["organization"],
+  "files": ["OrganizationSwitcher.tsx"],
+  "dependsOn": ["OrgAuthClient"],
+  "npmDeps": [],
+  "i18nKeys": {
+    "organizationswitcher__label": "Switch organization",
+    "organizationswitcher__select": "Select organization",
+    "organizationswitcher__empty": "No organizations yet."
+  }
+}

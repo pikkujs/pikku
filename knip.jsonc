@@ -42,5 +42,11 @@
 
   // Build output and generated sources are not hand-authored, and their
   // imports are already accounted for by the source they are generated from.
-  "ignore": ["**/dist/**", "**/.pikku/**", "**/*.gen.ts", "**/*.gen.d.ts"],
+  "ignore": [
+    "**/dist/**",
+    "**/.pikku/**",
+    "**/*.gen.ts",
+    "**/*.gen.d.ts",
+    "packages/frontend/mantine/blocks/**",
+  ],
 }

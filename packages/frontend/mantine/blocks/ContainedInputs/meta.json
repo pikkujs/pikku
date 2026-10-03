@@ -1,0 +1,14 @@
+{
+  "name": "ContainedInputs",
+  "title": "Filled inputs with contained labels",
+  "description": "A text input and select styled so the label sits inside the field above the value, giving a compact, contained look. Use for dense forms where labels should live within the input frame.",
+  "tags": ["inputs"],
+  "files": ["ContainedInputs.tsx", "ContainedInput.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "containedinputs__shipping_label": "Shipping address",
+    "containedinputs__framework_label": "Your favorite library/framework",
+    "containedinputs__framework_placeholder": "Pick one"
+  }
+}

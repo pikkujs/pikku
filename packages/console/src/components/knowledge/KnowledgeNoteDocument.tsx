@@ -1,16 +1,17 @@
-import React, { useId, useMemo, useState } from 'react'
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   Badge,
   Box,
+  Button,
+  Card,
   Collapse,
-  Divider,
   Group,
+  Paper,
   Stack,
   Text,
-  UnstyledButton,
 } from '@pikku/mantine/core'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { asI18n } from '@pikku/react'
+import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type { Components } from 'react-markdown'
 import type { KnowledgeFinding, KnowledgeNote } from '../../lib/knowledge'
@@ -23,13 +24,15 @@ import {
 } from '../../lib/knowledge'
 import { Markdown, asMarkdownContent } from '../ui/Markdown'
 import { MetaRow } from '../ui/MetaRow'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { KnowledgeBackButton } from './KnowledgeBackButton'
 import { KnowledgeNoteLinks } from './KnowledgeNoteLinks'
 import { KnowledgeResourceLink } from './KnowledgeResourceLink'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
 import { KnowledgeTypeIcon } from './KnowledgeTypeIcon'
 import { PlanDocument } from './PlanDocument'
-import classes from '../ui/console.module.css'
 
 type KnowledgeNoteDocumentProps = {
   note: KnowledgeNote
@@ -38,6 +41,11 @@ type KnowledgeNoteDocumentProps = {
   onOpenNote: (path: string) => void
   /** The plan beside a milestone note, when the note is one and a plan was read. */
   plan?: MilestonePlan
+  /** What the note's section is called, shown above its title. */
+  sectionTitle: I18nNode
+  onBack: () => void
+  /** Rendered after the note: the notes filed beside it. */
+  related?: React.ReactNode
 }
 
 /**
@@ -61,9 +69,17 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
   titleFor,
   onOpenNote,
   plan,
+  sectionTitle,
+  onBack,
+  related,
 }) => {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const detailsId = useId()
+  const topRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    topRef.current?.scrollIntoView({ block: 'start' })
+  }, [note.path])
 
   // Memoized on what it actually closes over. A renderer rebuilt per render is a
   // new component type per render, and react-markdown would remount the entire
@@ -132,39 +148,41 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
     note.dangling.length > 0
 
   return (
-    <Box
-      data-testid={`knowledge-document-${note.path}`}
-      style={{ maxWidth: 860, padding: '28px 32px 64px' }}
-    >
-      <Stack gap="md">
-        <Stack gap={6}>
-          <Group gap={8} wrap="nowrap" align="center">
-            <KnowledgeTypeIcon type={note.type} size={16} />
-            <Text fw={700} size="xl" style={{ lineHeight: 1.25 }}>
-              {asI18n(note.title)}
-            </Text>
-          </Group>
-          {note.description && (
-            <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-              {asI18n(note.description)}
-            </Text>
-          )}
+    <Box data-testid={`knowledge-document-${note.path}`} ref={topRef}>
+      <CardsPage maw={960}>
+        <KnowledgeBackButton onBack={onBack} />
+
+        <SectionCard
+          testId="knowledge-note-summary"
+          hero
+          eyebrow={
+            <Group gap={6} wrap="nowrap">
+              <KnowledgeTypeIcon type={note.type} size={14} />
+              <Text size="sm" c="dimmed">
+                {sectionTitle}
+              </Text>
+            </Group>
+          }
+          title={asI18n(note.title)}
+          blurb={note.description ? asI18n(note.description) : undefined}
+        >
           {/*
             The path is identity in OKF, so it stays on the page — but beside the
             badges rather than on a line of its own, where it read as the subtitle
             of a note that already has one.
           */}
-          <Group gap={6} align="center">
+          <Group gap={6} align="center" mt="md">
+            {note.status && (
+              <KnowledgeStatusBadge status={note.status} size="lg" />
+            )}
             {note.type && (
-              <Badge size="xs" variant="light" radius="sm" tt="none">
+              <Badge variant="light" radius="sm" tt="none">
                 {asI18n(note.type)}
               </Badge>
             )}
-            {note.status && <KnowledgeStatusBadge status={note.status} />}
             {note.tags.map((tag) => (
               <Badge
                 key={tag}
-                size="xs"
                 variant="outline"
                 radius="sm"
                 tt="none"
@@ -177,53 +195,68 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
               {asI18n(note.path)}
             </Text>
           </Group>
-        </Stack>
 
-        {findings.length > 0 && (
-          <Stack gap={6} data-testid="knowledge-note-findings">
-            {findings.map((finding) => (
-              <Group key={finding.id} gap={8} wrap="nowrap" align="flex-start">
-                <Box pt={2}>
-                  <KnowledgeSeverityIcon severity={finding.severity} />
-                </Box>
-                <Stack gap={2}>
-                  <Text size="sm">{asI18n(finding.message)}</Text>
-                  <Text size="xs" c="dimmed">
-                    {asI18n(finding.fixHint)}
-                  </Text>
-                </Stack>
-              </Group>
-            ))}
-          </Stack>
-        )}
+          {findings.length > 0 && (
+            <Stack gap="xs" mt="md" data-testid="knowledge-note-findings">
+              {findings.map((finding) => (
+                <Paper key={finding.id} variant="inset" px="md" py="sm">
+                  <Group gap={10} wrap="nowrap" align="flex-start">
+                    <Box pt={2}>
+                      <KnowledgeSeverityIcon severity={finding.severity} />
+                    </Box>
+                    <Stack gap={2}>
+                      <Text size="sm">{asI18n(finding.message)}</Text>
+                      <Text size="xs" c="dimmed">
+                        {asI18n(finding.fixHint)}
+                      </Text>
+                    </Stack>
+                  </Group>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </SectionCard>
+
+        <Card component="article" data-testid="knowledge-note-body">
+          <Markdown components={linkRenderer}>
+            {bodyWithoutTitle(readableBody(note.body), note.title)}
+          </Markdown>
+        </Card>
 
         {hasDetails && (
-          <Box>
-            <UnstyledButton
-              data-testid="knowledge-note-details-toggle"
-              onClick={() => setDetailsOpen((open) => !open)}
-              aria-expanded={detailsOpen}
-              aria-controls={detailsId}
-              className={classes.knowledgeRow}
-              style={{ marginLeft: -10 }}
-            >
-              {detailsOpen ? (
-                <ChevronDown size={12} color="var(--app-text-dim)" />
-              ) : (
-                <ChevronRight size={12} color="var(--app-text-dim)" />
-              )}
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                {m.knowledge_details()}
-              </Text>
-            </UnstyledButton>
-
+          <SectionCard
+            testId="knowledge-note-details-card"
+            title={m.knowledge_details()}
+            blurb={m.knowledge_details_blurb()}
+            right={
+              <Button
+                variant="default"
+                size="compact-sm"
+                data-testid="knowledge-note-details-toggle"
+                onClick={() => setDetailsOpen((open) => !open)}
+                aria-expanded={detailsOpen}
+                aria-controls={detailsId}
+                leftSection={
+                  detailsOpen ? (
+                    <ChevronDown size={14} />
+                  ) : (
+                    <ChevronRight size={14} />
+                  )
+                }
+              >
+                {detailsOpen
+                  ? m.knowledge_details_hide()
+                  : m.knowledge_details_show()}
+              </Button>
+            }
+          >
             {/*
               Unmounted while closed, not hidden: the links here carry the same
               titles as the links in the prose, and two anchors with one name is
               an ambiguity for a screen reader and for anything driving the page.
             */}
             <Collapse expanded={detailsOpen} keepMounted={false}>
-              <Box id={detailsId} data-testid="knowledge-note-details">
+              <Box id={detailsId} data-testid="knowledge-note-details" mt="md">
                 {note.entities.length > 0 && (
                   <MetaRow label={m.knowledge_entities()} labelWidth={110}>
                     <Group gap={10} wrap="wrap">
@@ -264,14 +297,8 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
                 />
               </Box>
             </Collapse>
-          </Box>
+          </SectionCard>
         )}
-
-        <Divider />
-
-        <Markdown components={linkRenderer}>
-          {bodyWithoutTitle(readableBody(note.body), note.title)}
-        </Markdown>
 
         {/*
           Below the body, because the note is the ask and the plan is the answer
@@ -279,15 +306,19 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
           shown what was promised, and how much of it the meta can find.
         */}
         {plan && (
-          <>
-            <Divider />
-            <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-              {m.knowledge_plan_title()}
-            </Text>
-            <PlanDocument milestone={plan} />
-          </>
+          <SectionCard
+            testId="knowledge-note-plan"
+            title={m.knowledge_plan_title()}
+            blurb={m.knowledge_plan_blurb()}
+          >
+            <Box mt="md">
+              <PlanDocument milestone={plan} />
+            </Box>
+          </SectionCard>
         )}
-      </Stack>
+
+        {related}
+      </CardsPage>
     </Box>
   )
 }

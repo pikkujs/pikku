@@ -31,7 +31,7 @@ const runCli = (...args: string[]) =>
   )
 
 describe('pikku console command removal (#870)', () => {
-  test('`pikku console` no longer exists — dev serves the console instead', async (t) => {
+  test('`pikku console` no longer exists — the console is gone', async (t) => {
     if (!existsSync(cliBin)) return t.skip('dist not built')
     const help = await runCli('--help')
     const helpOutput = `${help.stdout}\n${help.stderr}`
@@ -49,7 +49,7 @@ describe('pikku console command removal (#870)', () => {
     )
   })
 
-  test('`pikku serve --help` exposes the explicit --console flag', async (t) => {
+  test('`pikku serve --help` no longer offers --console', async (t) => {
     if (!existsSync(cliBin)) return t.skip('dist not built')
     const result = await runCli('serve', '--help')
     assert.equal(
@@ -57,10 +57,10 @@ describe('pikku console command removal (#870)', () => {
       0,
       `expected 'pikku serve --help' to succeed:\n${result.stdout}\n${result.stderr}`
     )
-    assert.match(
+    assert.doesNotMatch(
       result.stdout,
       /--console/,
-      `--console missing from serve help:\n${result.stdout}`
+      `--console still in serve help:\n${result.stdout}`
     )
   })
 })

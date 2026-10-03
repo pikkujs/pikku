@@ -258,10 +258,9 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
 })
 ```
 
-- **It is UI-free**, so render it however you like. For the default rendering use
-  `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
-  `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
-  and so must not export components Mantine has no counterpart for.
+- **It is UI-free**, so render it however you like. The starter ships a default
+  rendering, `src/components/DevActorSwitcher.tsx`, built from shadcn components on
+  `useDevActors()` — edit it in place.
 - **No credential reaches the bundle.** It lists from `/auth/sign-in/personas`
   and `signInAs(id)` posts only the persona id to `/auth/sign-in/persona`. The
   server decides who is offered and who may sign in, and offers nobody in
@@ -276,32 +275,33 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
 Do not hand-write the list-and-sign-in pair per app; that copy-paste is exactly
 what this replaced.
 
-### Linking from a Mantine element: `renderRoot`, not `component`
+### Linking from a component: wrap the typed `Link`, not `asChild` on a loose one
 
-Handing TanStack's `Link` to a Mantine element as `component={Link}` compiles,
-renders, and navigates — and silently unties the type. Mantine's polymorphic
-`component` prop widens the router generic to `AnyRouter`, so `to` and
-`params` stop being checked against your actual routes. Renaming a route then
-breaks the running app instead of the build, which is the one thing the typed
-router exists to prevent.
+Handing TanStack's `Link` to a component through a polymorphic prop (`as={Link}`,
+`component={Link}`) compiles, renders, and navigates — and silently unties the type.
+A polymorphic prop widens the router generic to `AnyRouter`, so `to` and `params`
+stop being checked against your actual routes. Renaming a route then breaks the
+running app instead of the build, which is the one thing the typed router exists to
+prevent.
 
-Wrap the typed `Link` once and reach it through `renderRoot`, which passes the
-props through without re-typing the element:
+Wrap the typed `Link` once, let it accept the styling props, and put it under a shadcn
+component with `asChild`:
 
 ```tsx
 // components/links.tsx — one wrapper the whole app links through
 import { Link } from '@tanstack/react-router'
 
-export const AssessmentLink = (props: { assessmentId: string; children: React.ReactNode }) => (
-  <Link to="/assessments/$assessmentId" params={{ assessmentId: props.assessmentId }}>
-    {props.children}
-  </Link>
+export const AssessmentLink = ({
+  assessmentId,
+  ...props
+}: { assessmentId: string } & React.ComponentProps<'a'>) => (
+  <Link to="/assessments/$assessmentId" params={{ assessmentId }} {...props} />
 )
 ```
 
 ```tsx
-<Button renderRoot={(p) => <AssessmentLink assessmentId={id} {...p} />}>
-  Open
+<Button asChild>
+  <AssessmentLink assessmentId={id}>{m.assessment__open()}</AssessmentLink>
 </Button>
 ```
 

@@ -43,9 +43,14 @@ import { registerScenarioInstrumentation } from '../wirings/scenarios/register-s
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
-import { resolveConsoleMount } from './serve-console.js'
+import { startDesignServer } from './serve-design.js'
+import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
-import { clearDevAddress, writeDevAddress } from './dev-address.js'
+import {
+  clearDevAddress,
+  recordDevCodegen,
+  writeDevAddress,
+} from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
@@ -234,6 +239,7 @@ export const dev = pikkuSessionlessFunc<
     if (config.scaffold?.scenarios) {
       registerScenarioInstrumentation()
     }
+    registerStudioSession()
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
@@ -369,16 +375,7 @@ export const dev = pikkuSessionlessFunc<
       return m[serverLifecycleFactory.variable]
     }
 
-    const consoleMount = await resolveConsoleMount()
-
-    // Appended, not assigned: an app's own config may already declare mounts
-    // for its frontend, and dev is where that frontend is meant to be served.
-    // Replacing them meant the console being present silently unmounted the
-    // app, which is the one combination every project has.
-    const staticMounts = [
-      ...(userConfig.staticMounts ?? []),
-      ...(consoleMount ? [consoleMount] : []),
-    ]
+    const staticMounts = [...(userConfig.staticMounts ?? [])]
 
     /**
      * Hand the server the generated MCP manifests so it actually serves MCP.
@@ -419,10 +416,9 @@ export const dev = pikkuSessionlessFunc<
     // announced from here has to name the one it actually handed out.
     const boundPort = pikkuServer.port
 
-    if (consoleMount) {
-      logger.info(
-        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
-      )
+    const designServer = await startDesignServer(config.rootDir, logger)
+    if (designServer) {
+      logger.info(`Pikku Design available at ${designServer.url}`)
     }
 
     // Serving the built frontend here would hand you whatever the last build
@@ -460,6 +456,7 @@ export const dev = pikkuSessionlessFunc<
         await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
+        await designServer?.close()
         await pikkuServer.stop()
         await lifecycle?.afterStop?.(resolvedServices)
       } finally {
@@ -521,8 +518,13 @@ export const dev = pikkuSessionlessFunc<
               message: `✓ Generated in ${Date.now() - start}ms`,
               type: 'timing',
             })
+            recordDevCodegen(resolvedRuntimeDir, { ok: true })
           } catch (err) {
             logger.error(`Error running watch: ${err}`)
+            recordDevCodegen(resolvedRuntimeDir, {
+              ok: false,
+              error: err instanceof Error ? err.message : String(err),
+            })
           }
         }
 

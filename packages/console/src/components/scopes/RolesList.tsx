@@ -1,13 +1,17 @@
-import { Alert, Badge, Text } from '@pikku/mantine/core'
+import { useMemo } from 'react'
+import { Button, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { UsersRound } from 'lucide-react'
-import { TableListPage } from '../layout/TableListPage'
+import { Plus, RotateCw } from 'lucide-react'
 import { RoleEditorPanel, type EditableRole } from './RoleEditorPanel'
+import { RoleRow } from './RoleRow'
+import { RolesSummary } from './RolesSummary'
 import { isForbiddenScopeError } from './scope-error'
 import { useRoles, useDeclaredScopes } from '../../hooks/useScopes'
+import { SectionCard } from '../ui/SectionCard'
+import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevMono, DevNote, DevTable } from '../ui/DevDetail'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 import { m } from '@/i18n/messages'
-
-const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 
 type RolesListProps = {
   search: string
@@ -19,8 +23,9 @@ type RolesListProps = {
 
 /**
  * The Roles surface: a list of admin-composed roles, each editable in a drawer
- * that composes it from the declared scope vocabulary. Search and the create
- * action live in the page header, so both are passed in from RolesPage.
+ * that composes it from the declared scope vocabulary. Search lives in the page
+ * header, so it is passed in from RolesPage; the create action sits on the list
+ * card it adds to.
  */
 export const RolesList: React.FC<RolesListProps> = ({
   search,
@@ -32,86 +37,143 @@ export const RolesList: React.FC<RolesListProps> = ({
   const rolesQuery = useRoles()
   const declaredQuery = useDeclaredScopes()
 
-  const roles = rolesQuery.data?.roles ?? []
-  const declaredScopes = declaredQuery.data?.scopes ?? []
+  const roles = useMemo(() => rolesQuery.data?.roles ?? [], [rolesQuery.data])
+  const declaredScopes = useMemo(
+    () => declaredQuery.data?.scopes ?? [],
+    [declaredQuery.data]
+  )
+  const needle = search.trim().toLowerCase()
+  const visible = useMemo(
+    () =>
+      needle
+        ? roles.filter(
+            (role) =>
+              role.name.toLowerCase().includes(needle) ||
+              (role.description ?? '').toLowerCase().includes(needle)
+          )
+        : roles,
+    [roles, needle]
+  )
 
   const loadError = rolesQuery.error || declaredQuery.error
   if (loadError) {
-    if (isForbiddenScopeError(loadError)) {
-      return (
-        <Alert
-          color="yellow"
-          title={m.scopes_roles_forbidden_title()}
-          data-testid="roles-forbidden"
-        >
-          {m.scopes_roles_forbidden_body()}
-        </Alert>
-      )
-    }
+    const forbidden = isForbiddenScopeError(loadError)
     return (
-      <Alert
-        color="red"
-        title={m.scopes_roles_load_error()}
-        data-testid="roles-load-error"
-      >
-        {loadError instanceof Error ? asI18n(loadError.message) : null}
-      </Alert>
+      <>
+        <SectionCard
+          testId={forbidden ? 'roles-forbidden' : 'roles-load-error'}
+          title={
+            forbidden ? m.roles_forbidden_title() : m.roles_load_failed_title()
+          }
+          blurb={
+            forbidden ? m.roles_forbidden_blurb() : m.roles_load_failed_blurb()
+          }
+          right={
+            forbidden ? undefined : (
+              <Button
+                variant="default"
+                leftSection={<RotateCw size={14} />}
+                loading={rolesQuery.isFetching || declaredQuery.isFetching}
+                onClick={() => {
+                  void rolesQuery.refetch()
+                  void declaredQuery.refetch()
+                }}
+              >
+                {m.scopes_retry()}
+              </Button>
+            )
+          }
+        />
+        <ForDevelopers label={m.scopes_dev_label()} testId="roles-error-dev">
+          <DevNote>
+            {forbidden
+              ? m.scopes_roles_forbidden_body()
+              : loadError instanceof Error
+                ? asI18n(loadError.message)
+                : m.roles_load_failed_blurb()}
+          </DevNote>
+        </ForDevelopers>
+      </>
     )
   }
 
+  const loading = rolesQuery.isLoading || declaredQuery.isLoading
+  const empty = !loading && roles.length === 0
+
   return (
     <>
-      <TableListPage
-        icon={UsersRound}
+      {!loading && !needle && roles.length > 0 && (
+        <RolesSummary roles={roles} declaredScopes={declaredScopes} />
+      )}
+      <SectionCard
+        testId="roles-list"
         title={m.scopes_roles_title()}
-        docsHref={DOCS_HREF}
-        data={roles}
-        getKey={(role) => role.name}
-        getRowProps={(role) => ({
-          'data-testid': 'role-row',
-          'data-role-name': role.name,
-        })}
-        onRowClick={(role) => onOpenRole(role)}
-        loading={rolesQuery.isLoading}
-        externalSearch={search}
-        searchFilter={(role, q) =>
-          role.name.toLowerCase().includes(q) ||
-          (role.description ?? '').toLowerCase().includes(q)
+        subtitle={
+          loading || empty
+            ? undefined
+            : visible.length === 1
+              ? m.roles_list_count_one()
+              : m.roles_list_count({ count: visible.length })
         }
-        emptyTitle={m.scopes_no_roles_title()}
-        emptyDescription={m.scopes_no_roles_description()}
-        columns={[
-          {
-            key: 'name',
-            header: m.scopes_col_role(),
-            render: (role) => (
-              <Text size="sm" fw={500}>
-                {asI18n(role.name)}
-              </Text>
-            ),
-          },
-          {
-            key: 'description',
-            header: m.scopes_col_description(),
-            render: (role) => (
-              <Text size="sm" c="dimmed">
-                {asI18n(role.description || '—')}
-              </Text>
-            ),
-          },
-          {
-            key: 'scopes',
-            header: m.scopes_col_scopes(),
-            align: 'right',
-            width: 100,
-            render: (role) => (
-              <Badge variant="light" color="gray" size="sm">
-                {role.scopes.length}
-              </Badge>
-            ),
-          },
-        ]}
-      />
+        blurb={empty ? m.roles_list_empty_blurb() : m.roles_list_blurb()}
+        right={
+          <Button
+            size="lg"
+            leftSection={<Plus size={16} />}
+            onClick={() => onOpenRole(null)}
+            data-testid="scopes-create-role"
+          >
+            {m.scopes_create_role()}
+          </Button>
+        }
+        footer={
+          visible.length > 0 ? (
+            <ForDevelopers
+              attached
+              label={m.scopes_dev_label()}
+              hint={m.roles_dev_hint()}
+              testId="roles-developers"
+            >
+              <DevTable
+                columns={[m.roles_dev_col_role(), m.roles_dev_col_scopes()]}
+                rows={visible.map((role) => ({
+                  key: role.name,
+                  cells: [
+                    <DevMono key="name" value={role.name} copy />,
+                    role.scopes.length > 0 ? (
+                      <DevMono key="scopes" value={role.scopes.join(', ')} />
+                    ) : (
+                      <Text key="scopes" size="sm" c="dimmed">
+                        {m.roles_dev_none()}
+                      </Text>
+                    ),
+                  ],
+                }))}
+              />
+            </ForDevelopers>
+          ) : undefined
+        }
+      >
+        {loading ? (
+          <ConsoleLoading py="xl" />
+        ) : empty ? null : visible.length === 0 ? (
+          <Text size="sm" c="dimmed" mt="md">
+            {m.roles_no_match({ search: search.trim() })}
+          </Text>
+        ) : (
+          <Stack gap={8} mt="md">
+            {visible.map((role) => (
+              <RoleRow
+                key={role.name}
+                role={role}
+                declaredScopes={declaredScopes}
+                onOpen={onOpenRole}
+                selected={panelOpen && editing?.name === role.name}
+              />
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
       <RoleEditorPanel
         opened={panelOpen}
         onClose={onClosePanel}

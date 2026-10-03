@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { isBuiltInFunction } from '../../lib/builtin-functions'
 import { useOptionalAuth } from '../../context/AuthContext'
 import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import {
@@ -83,15 +84,17 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
       })
     }
 
-    meta.functions?.forEach((func: any) => {
-      items.push({
-        id: `fn-${func.pikkuFuncId}`,
-        label: func.pikkuFuncId,
-        description: 'Function',
-        leftSection: <FunctionSquare size={16} />,
-        onClick: () => navigate('/functions'),
+    meta.functions
+      ?.filter((func: any) => !isBuiltInFunction(func))
+      .forEach((func: any) => {
+        items.push({
+          id: `fn-${func.pikkuFuncId}`,
+          label: func.pikkuFuncId,
+          description: 'Function',
+          leftSection: <FunctionSquare size={16} />,
+          onClick: () => navigate('/functions'),
+        })
       })
-    })
 
     if (meta.workflows) {
       for (const [name] of Object.entries(meta.workflows)) {

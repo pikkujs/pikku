@@ -28,6 +28,7 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <PageContainer
       data-testid="admin-users"
+      surface="cards"
       header={
         <ListPageHeader
           title={m.users_title()}

@@ -129,6 +129,74 @@ defineScope({
               read: { description: 'Read the knowledge notes' },
             },
           },
+          changes: {
+            description:
+              'Changes to make to the app — local, or filed by Fabric against the deployed app',
+            scopes: {
+              read: { description: 'Read the changes queue' },
+              write: { description: 'File, move, answer and complete changes' },
+            },
+          },
+          wishes: {
+            description: 'The wish list shown while a project is set up',
+            scopes: {
+              read: { description: 'Read the wish list' },
+              write: { description: 'Like or dislike a wish' },
+            },
+          },
+          design: {
+            description: 'The design system: themes and component props',
+            scopes: {
+              read: { description: 'Read themes and component props' },
+              write: { description: 'Edit themes and component props' },
+            },
+          },
+          pages: {
+            description: "The frontends' pages, read from their route files",
+            scopes: {
+              read: {
+                description: 'List each page, its route file and params',
+              },
+              screenshot: {
+                description:
+                  'Open each page of a running frontend in a browser and photograph it',
+              },
+            },
+          },
+          i18n: {
+            description:
+              'The message catalogs the frontends are translated with',
+            scopes: {
+              read: { description: 'Read message catalogs and locales' },
+              write: { description: 'Edit, add and remove locales' },
+            },
+          },
+          files: {
+            description: 'The project files on disk',
+            scopes: {
+              read: { description: 'Browse and read project files' },
+              write: { description: 'Edit project files' },
+            },
+          },
+          git: {
+            description: 'The project git repository',
+            scopes: {
+              read: { description: 'Read status, history and diffs' },
+              write: { description: 'Commit chosen files' },
+              sync: {
+                description:
+                  'Pull from and push to the remote with your own git credentials',
+              },
+            },
+          },
+          verify: {
+            description:
+              'Codegen, type-checks and correctness checks over the project',
+            scopes: {
+              read: { description: 'Read the latest verify result' },
+              run: { description: 'Run verify against the project' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {

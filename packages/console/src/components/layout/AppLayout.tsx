@@ -16,6 +16,8 @@ import { MobileTabBar } from '../shell/MobileTabBar'
 import { ConsoleNavDock } from '../nav-dock/ConsoleNavDock'
 import { usePhone } from '../../lib/breakpoints'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { StudioChatDock } from '../../studio/StudioChatDock'
+import { isStudio } from '../../studio/studio'
 
 export interface AppLayoutProps {
   children: React.ReactNode
@@ -158,6 +160,7 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, nav }) => {
             'var(--nav-dock-inset-left) var(--nav-dock-inset-right)',
         }}
       >
+        {isStudio() && <StudioChatDock />}
         <ContentArea>
           <ConsoleScreen>{children}</ConsoleScreen>
         </ContentArea>

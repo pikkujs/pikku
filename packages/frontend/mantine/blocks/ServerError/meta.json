@@ -1,0 +1,14 @@
+{
+  "name": "ServerError",
+  "title": "500 server-error page",
+  "description": "A full-bleed 500 page with a giant code label, title, message and a 'refresh' button on a filled background. Use as the server-error fallback.",
+  "tags": ["errors"],
+  "files": ["ServerError.tsx", "ServerError.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "servererror__title": "Something bad just happened...",
+    "servererror__description": "Our servers could not handle your request. Don't worry, our development team was already notified. Try refreshing the page.",
+    "servererror__refresh": "Refresh the page"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "ForgotPassword",
+  "title": "Forgot-password reset card",
+  "description": "A centered card that asks for an email to send a reset link, with a back-to-login link and a reset button. Use as the password-recovery entry page.",
+  "tags": ["auth"],
+  "files": ["ForgotPassword.tsx", "ForgotPassword.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "forgotpassword__title": "Forgot your password?",
+    "forgotpassword__subtitle": "Enter your email to get a reset link",
+    "forgotpassword__email": "Your email",
+    "forgotpassword__email_placeholder": "me@example.com",
+    "forgotpassword__back": "Back to the login page",
+    "forgotpassword__reset": "Reset password"
+  }
+}

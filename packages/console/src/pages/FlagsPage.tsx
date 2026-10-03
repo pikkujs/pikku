@@ -33,6 +33,7 @@ export const FlagsPage: React.FC = () => {
 
   return (
     <PageContainer
+      surface="cards"
       header={
         <ListPageHeader
           title={m.flags_page_title()}

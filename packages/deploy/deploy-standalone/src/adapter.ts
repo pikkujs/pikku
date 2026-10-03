@@ -48,6 +48,9 @@ export const STANDALONE_FRONTEND_MANIFEST = './frontend-assets.gen.js'
  * The node entry loads the libraries from the directory beside itself; the bun
  * one imports the manifest, which, like the frontend's, stays out of esbuild.
  */
+export const STANDALONE_EMBEDDED_DIR = 'embedded'
+export const STANDALONE_EMBEDDED_MANIFEST = './embedded-files.gen.js'
+
 export const STANDALONE_SQLITE_EXTENSIONS_DIR = 'sqlite-extensions'
 export const STANDALONE_SQLITE_EXTENSIONS_MANIFEST =
   './sqlite-extensions.gen.js'
@@ -417,7 +420,11 @@ export interface StandaloneProviderAdapterOptions {
    */
   nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
   contributors?: PlatformServiceContributor[]
+  compileTarget?: string
 }
+
+const targetPlatform = (target: string | undefined): string =>
+  target?.match(/^bun-(linux|darwin|windows)/)?.[1] ?? process.platform
 
 const contributorPlatform = (
   ctx: EntryGenerationContext
@@ -437,12 +444,15 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
-  readonly bundlesSqliteLibrary = true
+  readonly bundlesSqliteLibrary: boolean
+  private readonly compileTarget?: string
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.nativeSidecars = options.nativeSidecars ?? []
+    this.compileTarget = options.compileTarget
+    this.bundlesSqliteLibrary = targetPlatform(options.compileTarget) === 'darwin'
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -502,6 +512,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
+      ...(ctx.embedded
+        ? [`import { embeddedFiles as __pikkuEmbeddedFiles } from '${STANDALONE_EMBEDDED_MANIFEST}'`]
+        : []),
       ...(ctx.db
         ? [
             `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
@@ -520,6 +533,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `const logger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '3000', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
+      ...(ctx.embedded
+        ? [`for (const { env, path } of __pikkuEmbeddedFiles) process.env[env] ??= path`]
+        : []),
       ``,
       ...commandParseLines(ctx),
       ``,
@@ -607,6 +623,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       'bun:ffi',
       STANDALONE_FRONTEND_MANIFEST,
       STANDALONE_SQLITE_EXTENSIONS_MANIFEST,
+      STANDALONE_EMBEDDED_MANIFEST,
     ]
   }
 
@@ -680,9 +697,33 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       logger.info(`Frontend: ${join(outDir, STANDALONE_FRONTEND_DIR)}`)
     }
 
+    const embeddedDir = join(unitDir, STANDALONE_EMBEDDED_DIR)
+    if (existsSync(embeddedDir)) {
+      await cp(embeddedDir, join(outDir, STANDALONE_EMBEDDED_DIR), {
+        recursive: true,
+      })
+      const manifestName = STANDALONE_EMBEDDED_MANIFEST.replace('./', '')
+      await copyFile(join(unitDir, manifestName), join(outDir, manifestName))
+      logger.info(`Embedded: ${join(outDir, STANDALONE_EMBEDDED_DIR)}`)
+    }
+
     // --- 2a'. SQLite extensions, when the build staged any ---
     // `bun build --compile` follows the manifest to the libraries and embeds them.
     const extensionsDir = join(unitDir, STANDALONE_SQLITE_EXTENSIONS_DIR)
+    if (
+      existsSync(extensionsDir) &&
+      targetPlatform(this.compileTarget) !== process.platform
+    ) {
+      return {
+        success: false,
+        errors: [
+          {
+            step: 'compile',
+            error: `SQLite extensions are staged for ${process.platform}, but this build targets ${this.compileTarget}. Set db.sqliteExtensions to [] or build on the target platform.`,
+          },
+        ],
+      }
+    }
     if (existsSync(extensionsDir)) {
       await cp(extensionsDir, join(outDir, STANDALONE_SQLITE_EXTENSIONS_DIR), {
         recursive: true,
@@ -718,6 +759,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           'build',
           '--compile',
           '--minify',
+          ...(this.compileTarget ? [`--target=${this.compileTarget}`] : []),
           `--outfile=${binaryPath}`,
           join(outDir, 'bundle.js'),
         ],

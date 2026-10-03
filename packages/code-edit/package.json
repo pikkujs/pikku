@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/code-edit"
   },
-  "description": "Surgical edits to developer-owned Pikku source — locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
+  "description": "Surgical edits to developer-owned Pikku source \u2014 locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -17,6 +17,61 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "import": "./dist/theme/index.js",
+      "default": "./dist/theme/index.js"
+    },
+    "./brand": {
+      "types": "./dist/brand/index.d.ts",
+      "import": "./dist/brand/index.js",
+      "default": "./dist/brand/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n.service.d.ts",
+      "import": "./dist/i18n.service.js",
+      "default": "./dist/i18n.service.js"
+    },
+    "./workspace": {
+      "types": "./dist/workspace-root.d.ts",
+      "import": "./dist/workspace-root.js",
+      "default": "./dist/workspace-root.js"
+    },
+    "./files": {
+      "types": "./dist/workspace-files.d.ts",
+      "import": "./dist/workspace-files.js",
+      "default": "./dist/workspace-files.js"
+    },
+    "./git": {
+      "types": "./dist/git.service.d.ts",
+      "import": "./dist/git.service.js",
+      "default": "./dist/git.service.js"
+    },
+    "./typescript": {
+      "types": "./dist/typescript.service.d.ts",
+      "import": "./dist/typescript.service.js",
+      "default": "./dist/typescript.service.js"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.ts",
+      "import": "./dist/routes.js",
+      "default": "./dist/routes.js"
+    },
+    "./verify": {
+      "types": "./dist/verify/index.d.ts",
+      "import": "./dist/verify/index.js",
+      "default": "./dist/verify/index.js"
+    },
+    "./emails": {
+      "types": "./dist/emails/index.d.ts",
+      "import": "./dist/emails/index.js",
+      "default": "./dist/emails/index.js"
+    },
+    "./shadcn": {
+      "types": "./dist/shadcn-catalog.d.ts",
+      "import": "./dist/shadcn-catalog.js",
+      "default": "./dist/shadcn-catalog.js"
     }
   },
   "scripts": {
@@ -30,8 +85,17 @@
   "dependencies": {
     "typescript": "^6.0.3"
   },
+  "peerDependencies": {
+    "@pikku/shadcdn": "^0.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@pikku/shadcdn": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "@types/node": "^24.13.3"
+    "@types/node": "^24.13.3",
+    "@pikku/shadcdn": "workspace:^"
   },
   "engines": {
     "node": ">=24"

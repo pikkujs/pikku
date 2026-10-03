@@ -26,6 +26,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
       data-testid={measurement ? undefined : filter.testId}
+      data-help={measurement ? undefined : filter.helpAnchor}
       onClick={
         filter.options
           ? undefined

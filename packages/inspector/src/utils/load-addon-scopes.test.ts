@@ -126,6 +126,41 @@ describe('loadAddonFunctionsMeta — addon scopes', () => {
     assert.equal(state.scopes.definitions[0].description, 'from the host')
   })
 
+  // The addon's own build stamps its name on its trees. The host keeps that
+  // name but records the package it actually installed.
+  test('marks a merged tree as coming from the addon that declared it', async () => {
+    installAddon({
+      billing: {
+        name: 'billing',
+        origin: {
+          kind: 'addon',
+          package: '@test/addon-as-built',
+          displayName: 'Test Billing',
+        },
+      },
+    })
+    const state = makeState()
+
+    await loadAddonFunctionsMeta(logger, state)
+
+    assert.deepEqual(state.scopes.definitions[0].origin, {
+      kind: 'addon',
+      package: PACKAGE,
+      displayName: 'Test Billing',
+    })
+  })
+
+  test('names the addon by its package when its build gave no display name', async () => {
+    installAddon({ billing: { name: 'billing' } })
+    const state = makeState()
+
+    await loadAddonFunctionsMeta(logger, state)
+
+    assert.equal(state.scopes.definitions[0].origin.kind, 'addon')
+    assert.equal(state.scopes.definitions[0].origin.package, PACKAGE)
+    assert.equal(state.scopes.definitions[0].origin.displayName, undefined)
+  })
+
   test('is a no-op for an addon that declares no scopes', async () => {
     installAddon()
     const state = makeState()

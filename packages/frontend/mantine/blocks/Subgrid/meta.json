@@ -1,0 +1,10 @@
+{
+  "name": "Subgrid",
+  "title": "Nested subgrid layout",
+  "description": "A four-column responsive grid where inner columns hold vertically stacked sub-panels whose heights sum to match the full-height outer cells. Use for aligned dashboards mixing one large panel with several smaller ones.",
+  "tags": ["layout"],
+  "files": ["Subgrid.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {}
+}

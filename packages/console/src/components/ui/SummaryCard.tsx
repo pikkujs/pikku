@@ -15,10 +15,18 @@ export const SummaryCard: React.FC<{
   title: I18nNode
   blurb?: I18nNode
   eyebrow?: React.ReactNode
+  right?: React.ReactNode
   facts: SummaryFact[]
   testId?: string
-}> = ({ title, blurb, eyebrow, facts, testId }) => (
-  <SectionCard testId={testId} hero eyebrow={eyebrow} title={title} blurb={blurb}>
+}> = ({ title, blurb, eyebrow, right, facts, testId }) => (
+  <SectionCard
+    testId={testId}
+    hero
+    eyebrow={eyebrow}
+    title={title}
+    blurb={blurb}
+    right={right}
+  >
     <Divider my="md" />
     <SimpleGrid cols={{ base: 2, sm: facts.length }} spacing="lg">
       {facts.map((fact, index) => (

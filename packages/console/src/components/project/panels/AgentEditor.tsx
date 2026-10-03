@@ -20,6 +20,7 @@ import {
 import { useTagOptions } from '../../../hooks/useTags'
 import { useAddonFunctions } from '../../../hooks/useAddonFunctions'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { isScenarioFunction } from '../../../lib/builtin-functions'
 
 interface AgentEditorProps {
   wireId: string
@@ -130,7 +131,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
   const allFunctions = meta.functions ?? []
   const groups: Record<string, string[]> = {}
   for (const f of allFunctions) {
-    if ((f as any).functionType !== 'user') continue
+    if ((f as any).functionType !== 'user' || isScenarioFunction(f)) continue
     const id = (f as any).pikkuFuncId as string
     if (!groups['Local']) groups['Local'] = []
     groups['Local'].push(id)

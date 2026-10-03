@@ -51,11 +51,49 @@ const dark: MantineColorsTuple = [
   '#7a7d85',
   '#373A40',
   '#2C2E33',
-  '#1a1c24',
-  '#13151c',
-  '#0e1016',
-  '#0b0d12',
+  '#171c25',
+  '#121721',
+  '#0d121a',
+  '#0a0f17',
 ]
+
+/* The third bypass channel, and the one the flags board found: Mantine's
+ * light variants. `<Alert color="orange">` renders #d9480f on #ffe8cc =
+ * 3.62:1 and `<Badge variant="light" color="teal">` 4.33:1 — both measured
+ * in the browser, both under AA, and neither reachable from an --app-* token
+ * because the component never asks for one. Every light variant is therefore
+ * mixed from its own filled colour and labelled with a shade chosen per scheme,
+ * rather than leaving Mantine to pick both. */
+const softVariantVars = (textShade: number, mix: number) =>
+  Object.fromEntries(
+    [
+      'blue',
+      'cyan',
+      'grape',
+      'gray',
+      'green',
+      'indigo',
+      'orange',
+      'pink',
+      'red',
+      'teal',
+      'violet',
+      'yellow',
+    ].flatMap((color) => [
+      [
+        `--mantine-color-${color}-light`,
+        `color-mix(in srgb, var(--mantine-color-${color}-filled) ${mix}%, transparent)`,
+      ],
+      [
+        `--mantine-color-${color}-light-hover`,
+        `color-mix(in srgb, var(--mantine-color-${color}-filled) ${mix + 8}%, transparent)`,
+      ],
+      [
+        `--mantine-color-${color}-light-color`,
+        `var(--mantine-color-${color}-${textShade})`,
+      ],
+    ])
+  )
 
 /**
  * The console colour contract. Read this before adding a token.
@@ -67,7 +105,7 @@ const dark: MantineColorsTuple = [
  * The roles, in the order you should reach for them:
  *
  *   Surfaces   --app-page-bg < --app-panel-bg < -raised < -soft < -strong
- *              One cool axis (OKLCH hue 262). Steps are >=2.4 L* so each level is
+ *              One cool axis (OKLCH hue 265). Steps are >=1.9 L* so each level is
  *              actually visible. Capped at L*17 — see the dark block comment.
  *
  *   Text       --app-text > --app-text-dim > --app-text-faint
@@ -119,7 +157,10 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
    * was overridden by BOTH scheme blocks and so could never render. */
   variables: {},
   dark: {
+    ...softVariantVars(4, 18),
     '--mantine-color-body': 'var(--app-page-bg)',
+    '--mantine-color-text': 'var(--app-text)',
+    '--mantine-color-bright': 'var(--app-text)',
     /* Mantine's own dimmed grey is the single most-used text colour in the app
      * (346 `c="dimmed"` call sites) and it is NOT ours — #868e96 measures 3.32:1
      * on light panels, so Rule 1 was satisfied by this file and broken by the app.
@@ -134,44 +175,36 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-filled-hover': 'var(--app-primary-button-hover)',
     '--mantine-color-primary-filled': 'var(--app-accent-strong)',
     '--mantine-color-primary-filled-hover': 'var(--app-primary-button-hover)',
-    /* The third bypass channel, and the one the flags board found: Mantine's
-     * light variants. `<Alert color="orange">` renders #d9480f on #ffe8cc =
-     * 3.62:1 and `<Badge variant="light" color="teal">` 4.33:1 — both measured
-     * in the browser, both under AA, and neither reachable from an --app-* token
-     * because the component never asks for one. The warning pair is the reason
-     * the tier note below exists: warning in light mode is carried by the FILL,
-     * so point the fill at --app-surface-warning and the label at the amber TEXT
-     * tier rather than leaving Mantine to pick both. */
-    '--mantine-color-orange-light': 'var(--app-surface-warning)',
-    '--mantine-color-orange-light-color': 'var(--app-amber)',
-    '--mantine-color-teal-light': 'var(--app-surface-success)',
-    '--mantine-color-teal-light-color': 'var(--app-green)',
+    '--mantine-color-default': 'transparent',
+    '--mantine-color-default-hover': 'var(--app-panel-bg-soft)',
+    '--mantine-color-default-border': 'var(--app-border-control)',
 
-    /* Core neutrals — one cool axis (OKLCH hue 262, chroma 0.010). Page and panel
-     * share the hue so layered surfaces read as one system; steps are >=2.4 L* so
+    /* Core neutrals — one cool axis (OKLCH hue 265, chroma 0.022). Page and panel
+     * share the hue so layered surfaces read as one system; steps are >=1.9 L* so
      * each level is actually visible. The ramp tops out at L*17 deliberately: any
-     * lighter and the dimmed text ramp below stops clearing AA on it. */
-    '--app-page-bg': '#07080d',
-    '--app-page-bg-alt': '#101217',
-    '--app-panel-bg': '#16181d',
-    '--app-panel-bg-raised': '#1d2024',
-    '--app-panel-bg-soft': '#23252a',
-    '--app-panel-bg-strong': '#282a30',
+     * lighter and --app-border-control stops clearing 3:1 on the top step. */
+    '--app-page-bg': '#111318',
+    '--app-page-bg-alt': '#16181e',
+    '--app-panel-bg': '#14161b',
+    '--app-panel-bg-raised': '#1b1e25',
+    '--app-panel-bg-soft': '#1f2330',
+    '--app-panel-bg-strong': '#252a36',
     /* Borders split by JOB, not by weight. `border`/`border-hover` are decorative
      * dividers and are exempt from WCAG 1.4.11. `border-control`/`border-strong`
      * draw CONTROL boundaries (inputs, buttons, checkboxes) and must clear 3:1 on
      * every panel level — verified: control 3.72/3.01, strong 4.86/3.92. Do not
      * use `border` on an interactive control. */
-    '--app-border': '#3a3d44',
-    '--app-border-hover': '#4d5157',
+    '--app-border': '#272b34',
+    '--app-border-hover': '#353a46',
     '--app-border-control': '#6e737b',
     '--app-border-strong': '#818690',
-    '--app-text': '#e8e8e8',
+    '--app-text': '#e7e9ee',
     /* Dimmed text ramp — verified >=4.5:1 on every background it lands on, worst
      * case on --app-panel-bg-strong: dim 5.89, faint 5.10. Monotonic by name:
      * text > dim > faint. Reserve sub-4.5:1 grays for dividers, not text. */
-    '--app-text-dim': '#a6a6a6',
-    '--app-text-faint': '#9a9a9a',
+    '--app-text-secondary': '#c3c8d1',
+    '--app-text-dim': '#a3aab6',
+    '--app-text-faint': '#949baa',
     /* Text on an INVERTED surface — a label sitting on an accent/red/primary fill,
      * not a step of the dimmed ramp above. It briefly carried a third "dimmed" gray
      * (#8e8e8e) and a deprecation notice; the notice outlived the value. Migrating a
@@ -180,14 +213,14 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     /* Status surfaces at L*~20 / chroma ~0.05 so the tint is actually legible as a
      * tint. Each is verified against its paired foreground: danger 4.77, warning
      * 7.89, info 5.17, success 6.78, violet 4.82. */
-    '--app-surface-danger': '#482725',
+    '--app-surface-danger': '#3a1e22',
     '--app-surface-danger-soft': '#3e1f1c',
-    '--app-surface-warning': '#3f2d11',
+    '--app-surface-warning': '#3a2a1a',
     '--app-surface-warning-alt': '#372508',
-    '--app-surface-info': '#1b3248',
-    '--app-surface-success': '#183724',
-    '--app-surface-violet': '#342c48',
-    '--app-surface-accent': '#1b3248',
+    '--app-surface-info': '#1d2c4a',
+    '--app-surface-success': '#16322a',
+    '--app-surface-violet': '#2c2342',
+    '--app-surface-accent': '#1d2c4a',
     '--app-surface-interactive': '#1f2838',
     '--app-surface-interactive-strong': '#243149',
 
@@ -213,10 +246,10 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     /* Step indicators */
 
     /* Semantic colors */
-    '--app-accent': '#60a5fa',
-    '--app-accent-strong': '#2563eb',
+    '--app-accent': '#7fb0ff',
+    '--app-accent-strong': '#2f6fed',
     '--app-accent-alt': '#3b82f6',
-    '--app-accent-hover': '#93c5fd',
+    '--app-accent-hover': '#a9c9ff',
     /* Paired label for a fill of --app-accent-hover. Hover brightens in dark and
      * darkens in light, so a hardcoded white label is legible in exactly one of
      * the two schemes — it measured 1.80:1 on dark hover. The pair is a token. */
@@ -230,7 +263,7 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-primary-button-bg': 'var(--app-accent-strong)',
     /* Not --app-accent-alt: that brightens far enough that the white label drops
      * to 3.68:1. This is the lightest blue the button's own label survives. */
-    '--app-primary-button-hover': '#336fe4',
+    '--app-primary-button-hover': '#2862dc',
     '--app-primary-button-fg': '#ffffff',
     /* Disabled must READ disabled: the old fg (#e8e8e8) measured 12.67:1, higher
      * than most enabled body text, so disabled providers looked active. */
@@ -239,17 +272,17 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-blue': 'var(--app-accent)',
     '--app-blue-strong': 'var(--app-accent-strong)',
     '--app-blue-hover': 'var(--app-accent-hover)',
-    '--app-blue-border': '#1a2a4a',
-    '--app-green': '#34d399',
+    '--app-blue-border': '#2c4677',
+    '--app-green': '#5fcf9c',
     '--app-green-bright': '#4ade80',
     '--app-green-border': '#1a4a30',
-    '--app-amber': '#fbbf24',
+    '--app-amber': '#f0a35e',
     '--app-amber-strong': '#f59e0b',
     '--app-amber-deep': '#f97316',
     '--app-amber-border': '#3a2e00',
-    '--app-violet': '#a78bfa',
+    '--app-violet': '#b99bf5',
     '--app-violet-border': '#2a1a4a',
-    '--app-red': '#f87171',
+    '--app-red': '#ef8a8a',
     '--app-red-border': '#4a1a1a',
     '--app-red-border-soft': 'rgba(220, 38, 38, 0.2)',
     '--app-gray-dot': '#4d5157',
@@ -277,7 +310,10 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
      * down the neutral ramp instead of competing with info's accent blue. */
   },
   light: {
+    ...softVariantVars(8, 12),
     '--mantine-color-body': 'var(--app-page-bg)',
+    '--mantine-color-text': 'var(--app-text)',
+    '--mantine-color-bright': 'var(--app-text)',
     /* Mantine's own dimmed grey is the single most-used text colour in the app
      * (346 `c="dimmed"` call sites) and it is NOT ours — #868e96 measures 3.32:1
      * on light panels, so Rule 1 was satisfied by this file and broken by the app.
@@ -292,18 +328,9 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-filled-hover': 'var(--app-primary-button-hover)',
     '--mantine-color-primary-filled': 'var(--app-accent-strong)',
     '--mantine-color-primary-filled-hover': 'var(--app-primary-button-hover)',
-    /* The third bypass channel, and the one the flags board found: Mantine's
-     * light variants. `<Alert color="orange">` renders #d9480f on #ffe8cc =
-     * 3.62:1 and `<Badge variant="light" color="teal">` 4.33:1 — both measured
-     * in the browser, both under AA, and neither reachable from an --app-* token
-     * because the component never asks for one. The warning pair is the reason
-     * the tier note below exists: warning in light mode is carried by the FILL,
-     * so point the fill at --app-surface-warning and the label at the amber TEXT
-     * tier rather than leaving Mantine to pick both. */
-    '--mantine-color-orange-light': 'var(--app-surface-warning)',
-    '--mantine-color-orange-light-color': 'var(--app-amber)',
-    '--mantine-color-teal-light': 'var(--app-surface-success)',
-    '--mantine-color-teal-light-color': 'var(--app-green)',
+    '--mantine-color-default': 'transparent',
+    '--mantine-color-default-hover': 'var(--app-panel-bg-soft)',
+    '--mantine-color-default-border': 'var(--app-border-control)',
 
     /* Core neutrals — same cool axis as dark (OKLCH hue 262), with chroma rising
      * as the surface darkens, the way tinted paper behaves.
@@ -344,6 +371,7 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     /* Dimmed ramp — AA on every surface INCLUDING the sidebar ones, and now
      * actually distinguishable: dim/faint were 3.3 L* apart (7.11 vs 6.19 on
      * white), which is two names for one grey. They are 6.9 apart now. */
+    '--app-text-secondary': '#3a3d42',
     '--app-text-dim': '#51545a',
     '--app-text-faint': '#64686f',
     /* Text on an inverted surface — see the dark block. Same value in both schemes:
@@ -508,6 +536,8 @@ export const appColorVars = {
   pageBgAlt: 'var(--app-page-bg-alt)',
   panelBg: 'var(--app-panel-bg)',
   panelBgRaised: 'var(--app-panel-bg-raised)',
+  panelBgSoft: 'var(--app-panel-bg-soft)',
+  panelBgStrong: 'var(--app-panel-bg-strong)',
   border: 'var(--app-border)',
   borderHover: 'var(--app-border-hover)',
   borderStrong: 'var(--app-border-strong)',
@@ -528,25 +558,144 @@ export const appColorVars = {
   grayDot: 'var(--app-gray-dot)',
 } as const
 
+const paperVariantStyles: Record<string, Record<string, string>> = {
+  default: {
+    background: 'var(--app-panel-bg-raised)',
+    borderColor: 'var(--app-border)',
+    boxShadow: 'none',
+  },
+  inset: {
+    background: 'var(--app-panel-bg)',
+    border: '1px solid var(--app-border)',
+    borderRadius: 'var(--mantine-radius-md)',
+    boxShadow: 'none',
+  },
+  accent: {
+    background: 'var(--app-surface-accent)',
+    border: '1px solid var(--app-blue-border)',
+    borderRadius: 'var(--mantine-radius-lg)',
+    boxShadow: 'none',
+  },
+  'accent-inset': {
+    background: 'var(--app-panel-bg)',
+    border: '1px solid var(--app-blue-border)',
+    borderRadius: 'var(--mantine-radius-md)',
+    boxShadow: 'none',
+  },
+}
+
 export const theme = createTheme({
   primaryColor: 'blue',
   colors: { emerald, primary, secondary, dark },
-  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-  fontFamilyMonospace: 'JetBrains Mono, monospace',
+  fontFamily: 'Geist, Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+  fontFamilyMonospace:
+    '"Geist Mono", "JetBrains Mono", ui-monospace, monospace',
+  fontSizes: {
+    xs: '0.8125rem',
+    sm: '0.875rem',
+    md: '0.9375rem',
+    lg: '1.0625rem',
+    xl: '1.25rem',
+  },
+  lineHeights: {
+    xs: '1.45',
+    sm: '1.5',
+    md: '1.55',
+    lg: '1.5',
+    xl: '1.4',
+  },
+  radius: {
+    xs: '4px',
+    sm: '6px',
+    md: '10px',
+    lg: '14px',
+    xl: '20px',
+  },
   headings: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Geist, Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+    fontWeight: '700',
+    sizes: {
+      h1: { fontSize: '1.625rem', lineHeight: '1.25' },
+      h2: { fontSize: '1.125rem', lineHeight: '1.35', fontWeight: '600' },
+      h3: { fontSize: '1rem', lineHeight: '1.35', fontWeight: '600' },
+      h4: { fontSize: '0.9375rem', lineHeight: '1.4', fontWeight: '600' },
+    },
   },
   defaultRadius: 'md',
   components: {
+    Badge: {
+      defaultProps: {
+        radius: 'xl',
+        variant: 'light',
+      },
+      vars: (_theme: unknown, props: { size?: string }) =>
+        props.size === 'lg'
+          ? {
+              root: {
+                '--badge-height': '24px',
+                '--badge-fz': '12.5px',
+                '--badge-padding-x': '10px',
+              },
+            }
+          : { root: {} },
+      styles: {
+        root: {
+          textTransform: 'none' as const,
+          fontFamily: 'var(--mantine-font-family)',
+          fontWeight: 600,
+          letterSpacing: 0,
+        },
+      },
+    },
+    Alert: {
+      styles: (_theme: unknown, props: { variant?: string }) =>
+        props.variant && props.variant !== 'light'
+          ? {}
+          : {
+              root: {
+                padding: 'var(--mantine-spacing-sm) var(--mantine-spacing-md)',
+                background: 'var(--app-panel-bg-soft)',
+                border: '1px solid var(--app-border)',
+                borderLeft: '3px solid var(--alert-color)',
+              },
+              wrapper: {
+                gap: 'var(--mantine-spacing-sm)',
+              },
+              title: {
+                fontSize: 'var(--mantine-font-size-sm)',
+                marginBottom: 0,
+                color: 'var(--app-text)',
+              },
+              message: {
+                fontSize: 'var(--mantine-font-size-xs)',
+                color: 'var(--app-text-dim)',
+              },
+            },
+    },
     Paper: {
       defaultProps: {
         radius: 'lg',
       },
+      styles: (_theme: unknown, props: { variant?: string }) => ({
+        root:
+          paperVariantStyles[props.variant ?? ''] ?? paperVariantStyles.default,
+      }),
+    },
+    Card: {
+      defaultProps: {
+        radius: 'lg',
+        withBorder: true,
+        padding: 'xl',
+      },
       styles: {
         root: {
-          background: 'var(--app-panel-bg)',
+          background: 'var(--app-panel-bg-raised)',
           borderColor: 'var(--app-border)',
-          boxShadow: 'var(--app-shadow-panel)',
+          boxShadow: 'none',
+          display: 'flex',
+          flexDirection: 'column' as const,
+          gap: 'var(--mantine-spacing-md)',
+          overflow: 'visible',
         },
       },
     },
@@ -554,26 +703,47 @@ export const theme = createTheme({
       defaultProps: {
         size: 'sm',
       },
-      styles: {
+      vars: (_theme: unknown, props: { size?: string }) =>
+        props.size === 'lg'
+          ? {
+              root: {
+                '--button-height': '48px',
+                '--button-padding-x': '24px',
+                '--button-fz': '15px',
+              },
+            }
+          : props.size === 'md'
+            ? {
+                root: {
+                  '--button-height': '44px',
+                  '--button-padding-x': '20px',
+                  '--button-fz': '15px',
+                },
+              }
+            : { root: {} },
+      styles: (
+        _theme: unknown,
+        props: { variant?: string; size?: string }
+      ) => ({
         root: {
-          fontWeight: 600,
+          fontWeight: props.variant === 'default' ? 500 : 600,
+          ...(props.variant === 'default'
+            ? { borderColor: 'var(--app-border-hover)' }
+            : undefined),
         },
-      },
+      }),
     },
     TextInput: {
       styles: {
         input: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border-control)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 13,
+          fontSize: 14,
         },
         label: {
-          color: 'var(--app-text-dim)',
-          fontSize: 12,
+          color: 'var(--app-text)',
+          fontSize: 14,
           fontWeight: 600,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.5px',
           marginBottom: 6,
         },
       },
@@ -583,19 +753,15 @@ export const theme = createTheme({
         input: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border-control)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 13,
+          fontSize: 14,
         },
         innerInput: {
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 13,
+          fontSize: 14,
         },
         label: {
-          color: 'var(--app-text-dim)',
-          fontSize: 12,
+          color: 'var(--app-text)',
+          fontSize: 14,
           fontWeight: 600,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.5px',
           marginBottom: 6,
         },
       },
@@ -605,8 +771,7 @@ export const theme = createTheme({
         input: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border-control)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 12,
+          fontSize: 14,
         },
       },
     },
@@ -615,22 +780,19 @@ export const theme = createTheme({
         input: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border-control)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 13,
+          fontSize: 14,
         },
         dropdown: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border)',
         },
         option: {
-          fontSize: 13,
+          fontSize: 14,
         },
         label: {
-          color: 'var(--app-text-dim)',
-          fontSize: 12,
+          color: 'var(--app-text)',
+          fontSize: 14,
           fontWeight: 600,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.5px',
           marginBottom: 6,
         },
       },
@@ -640,15 +802,12 @@ export const theme = createTheme({
         input: {
           backgroundColor: 'var(--app-panel-bg)',
           borderColor: 'var(--app-border-control)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 13,
+          fontSize: 14,
         },
         label: {
-          color: 'var(--app-text-dim)',
-          fontSize: 12,
+          color: 'var(--app-text)',
+          fontSize: 14,
           fontWeight: 600,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.5px',
           marginBottom: 6,
         },
       },
@@ -656,8 +815,7 @@ export const theme = createTheme({
     Tabs: {
       styles: {
         tab: {
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 600,
         },
       },
@@ -665,9 +823,16 @@ export const theme = createTheme({
     Chip: {
       styles: {
         label: {
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 12,
+          fontSize: 13,
           backgroundColor: 'var(--app-panel-bg)',
+          borderColor: 'var(--app-border-control)',
+        },
+      },
+    },
+    Switch: {
+      defaultProps: { size: 'md' },
+      styles: {
+        track: {
           borderColor: 'var(--app-border-control)',
         },
       },
@@ -679,8 +844,7 @@ export const theme = createTheme({
           border: '0.5px solid var(--app-border-control)',
         },
         label: {
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 500,
         },
       },
@@ -711,11 +875,8 @@ export const theme = createTheme({
           borderColor: 'var(--app-border-control)',
         },
         stepLabel: {
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 11,
+          fontSize: 14,
           fontWeight: 600,
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.5px',
         },
         separator: {
           backgroundColor: 'var(--app-border)',

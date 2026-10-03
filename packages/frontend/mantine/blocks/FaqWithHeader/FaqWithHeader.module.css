@@ -1,0 +1,101 @@
+.wrapper {
+  padding-top: var(--mantine-spacing-md);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 2);
+}
+
+.header {
+  height: 25rem;
+  padding-top: var(--mantine-spacing-md);
+  background-image: linear-gradient(
+    135deg,
+    var(--mantine-primary-color-filled) 0%,
+    var(--mantine-primary-color-filled) 100%
+  );
+  background-size: cover;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  position: relative;
+  padding: calc(var(--mantine-spacing-xl) * 1.5) calc(var(--mantine-spacing-xl) * 2);
+  border-radius: var(--mantine-radius-lg);
+  margin-bottom: var(--mantine-spacing-lg);
+
+  @media (max-width: 75em) {
+    height: auto;
+    flex-direction: column-reverse;
+    align-items: initial;
+    padding: var(--mantine-spacing-xl);
+  }
+}
+
+.title {
+  color: var(--mantine-color-white);
+  position: relative;
+  z-index: 1;
+  font-size: 2.875rem;
+  font-weight: 800;
+  letter-spacing: -0.03125rem;
+
+  @media (max-width: 75em) {
+    font-size: 1.375rem;
+    text-align: center;
+    margin-top: var(--mantine-spacing-xl);
+  }
+}
+
+.titleOverlay {
+  z-index: 0;
+  position: absolute;
+  color: var(--mantine-color-white);
+  font-weight: 500;
+  opacity: 0.1;
+  font-size: 20rem;
+  line-height: 1;
+  top: 0.625rem;
+  left: 2.8125rem;
+  pointer-events: none;
+
+  @media (max-width: 75em) {
+    display: none;
+  }
+}
+
+.contact {
+  padding: calc(var(--mantine-spacing-xl) * 1.5);
+  background-color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: var(--mantine-shadow-md);
+  align-self: center;
+
+  @media (max-width: 75em) {
+    padding: var(--mantine-spacing-xl);
+  }
+}
+
+.contactTitle {
+  color: var(--mantine-color-black);
+  margin-bottom: var(--mantine-spacing-xl);
+  line-height: 1;
+}
+
+.categoryCard {
+  height: 10rem;
+  position: relative;
+  background-size: 100%;
+  background-position: center;
+  color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-lg);
+  padding: var(--mantine-spacing-xl);
+  overflow: hidden;
+  transition: background-size 300ms ease;
+}
+
+.categoryCard:hover {
+  background-size: 105%;
+}
+
+.categoryLabel {
+  color: var(--mantine-color-white);
+  z-index: 2;
+  position: relative;
+}

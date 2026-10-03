@@ -1,0 +1,14 @@
+{
+  "name": "NotFoundTitle",
+  "title": "404 not-found page (title)",
+  "description": "A centered 404 page with a big code label, title, message and a 'back to home' button. Use as the not-found route fallback.",
+  "tags": ["errors"],
+  "files": ["NotFoundTitle.tsx", "NotFoundTitle.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "notfoundtitle__title": "You have found a secret place.",
+    "notfoundtitle__description": "Unfortunately, this is only a 404 page. You may have mistyped the address, or the page has been moved to another URL.",
+    "notfoundtitle__back": "Take me back to home page"
+  }
+}

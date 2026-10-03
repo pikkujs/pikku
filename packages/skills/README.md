@@ -15,7 +15,7 @@ You do not normally depend on this package directly — the CLI installs from it
 
 ```bash
 npx pikku skills install                  # → .claude/skills/
-npx pikku skills install --core --fabric  # the Fabric sandbox skill set
+npx pikku skills install --core --client --fabric  # the Fabric sandbox skill set
 npx pikku skills install --agent pi       # → .pi/skills/
 ```
 

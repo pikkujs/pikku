@@ -1,0 +1,10 @@
+{
+  "name": "CommentHtml",
+  "title": "Rich-text comment",
+  "description": "Bordered comment card with avatar, author, timestamp and a rich-text (HTML) body rendered via Typography. Use for comment threads whose content includes formatting and links.",
+  "tags": ["comments"],
+  "files": ["CommentHtml.tsx", "CommentHtml.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {}
+}

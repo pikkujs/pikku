@@ -16,6 +16,7 @@ import { pikkuDist } from './functions/commands/dist.js'
 import { watch } from './functions/commands/watch.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
+import { devStatus } from './functions/commands/dev-status.js'
 import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
@@ -26,6 +27,7 @@ import {
   webhooksTeardown,
 } from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
+import { dbAnnotate } from './functions/commands/db-annotate.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
 import { dbReset } from './functions/commands/db-reset.js'
@@ -48,6 +50,8 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { next, renderNext } from './functions/commands/next.js'
+import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -56,6 +60,16 @@ import {
   renderExamplesList,
   renderExamplesShow,
 } from './functions/commands/examples.js'
+import {
+  i18nAdd,
+  i18nDefault,
+  i18nList,
+  i18nSync,
+  renderI18nAdd,
+  renderI18nDefault,
+  renderI18nList,
+  renderI18nSync,
+} from './functions/commands/i18n.js'
 import {
   knowledgeValidate,
   renderKnowledgeValidate,
@@ -91,8 +105,37 @@ import {
   personaSecret,
 } from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
+import {
+  renderScenarioCoverage,
+  scenarioCoverage,
+} from './functions/commands/scenario-coverage.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
+import {
+  pikkuEmailsAdd,
+  pikkuEmailsCatalog,
+} from './functions/commands/emails-catalog.js'
+import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
+import {
+  pikkuBlocksList,
+  pikkuBlocksShow,
+  pikkuComponentsList,
+  pikkuComponentsAdd,
+  pikkuComponentsShow,
+} from './functions/commands/shadcn-catalog.js'
+import {
+  pagesList,
+  pagesScreenshot,
+  renderPagesList,
+  renderPagesScreenshot,
+} from './functions/commands/pages.js'
+import {
+  pikkuDesignCrawl,
+  pikkuDesignExtract,
+  pikkuDesignFavicon,
+  pikkuDesignImages,
+  pikkuDesignPlaceholders,
+} from './functions/commands/design.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -522,6 +565,13 @@ wireCLI({
     dev: pikkuCLICommand({
       func: dev,
       description: 'Start a local development server with all services wired',
+      subcommands: {
+        status: pikkuCLICommand({
+          func: devStatus,
+          description:
+            'Report whether pikku dev is running, its address, and whether its last codegen pass failed',
+        }),
+      },
       options: {
         port: {
           description: 'Port for the dev server',
@@ -561,10 +611,6 @@ wireCLI({
           description: 'Port for the server',
           default: '3000',
           short: 'p',
-        },
-        console: {
-          description: 'Also serve the Pikku Console same-origin at /console',
-          default: false,
         },
         model: {
           description:
@@ -638,6 +684,206 @@ wireCLI({
           func: pikkuEmails,
           description:
             'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+        catalog: pikkuCLICommand({
+          func: pikkuEmailsCatalog,
+          description:
+            'List the ready-made emails (invitation, magic link, password reset, receipt, welcome), or show one with its locale block and wiring',
+          parameters: '[name]',
+        }),
+        add: pikkuCLICommand({
+          func: pikkuEmailsAdd,
+          description:
+            'Copy a ready-made email into emailTemplatesDir and merge its copy into locales/en.json',
+          parameters: '<name>',
+          options: {
+            force: {
+              description:
+                'Overwrite template files and locale keys that already exist',
+            },
+          },
+        }),
+      },
+    },
+    pages: {
+      description:
+        "The frontends' pages, read from their TanStack Router route files",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pagesList,
+          render: renderPagesList,
+          description: 'List every page: app, route path, route file and params',
+          options: {
+            app: {
+              description: 'Only this frontend, by its directory (e.g. apps/app)',
+              type: 'string',
+            },
+          },
+        }),
+        screenshot: pikkuCLICommand({
+          func: pagesScreenshot,
+          render: renderPagesScreenshot,
+          description:
+            "Photograph one frontend's pages on a running server, signed out or as a persona",
+          options: {
+            baseUrl: {
+              description: 'Where the frontend is served, e.g. http://localhost:7104',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+            out: {
+              description:
+                'Directory for the PNGs. Defaults to <outDir>/pages/screenshots/<app>',
+              type: 'string',
+            },
+            params: {
+              description:
+                'Values for route params, as name=value,name=value. $lang and $locale default to en',
+              type: 'string',
+            },
+            as: {
+              description: 'Sign in as this persona first, the way scenario actors do',
+              type: 'string',
+            },
+            environment: {
+              description:
+                'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+              type: 'string',
+            },
+            viewport: {
+              description: 'Capture the viewport only, not the whole page',
+              type: 'boolean',
+            },
+          },
+        }),
+      },
+    },
+    theme: {
+      description: "The app's themes, in packages/theme",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuThemeList,
+          description:
+            'List the themes, the active one, and the presets and structures a theme can start from',
+        }),
+        apply: pikkuCLICommand({
+          func: pikkuThemeApply,
+          description:
+            'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
+          options: {
+            preset: {
+              description: 'Preset id to start from (see `pikku theme list`)',
+            },
+            structure: {
+              description:
+                'Structure id for depth: shadows, radius, density',
+            },
+            primary: { description: 'Primary colour, as hex' },
+            secondary: { description: 'Secondary colour, as hex' },
+            accent: { description: 'Accent colour, as hex' },
+            fontHeading: { description: 'Heading font, a Google Fonts family' },
+            fontBody: { description: 'Body font, a Google Fonts family' },
+            page: { description: 'Light-mode page colour, as hex' },
+            ink: { description: 'Light-mode text colour, as hex' },
+          },
+        }),
+      },
+    },
+    components: {
+      description: "The app's shadcn components and their variants and sizes",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuComponentsList,
+          description: "List the shadcn components in the app's src/components/ui",
+        }),
+        add: pikkuCLICommand({
+          func: pikkuComponentsAdd,
+          description:
+            "Copy shadcdn components (and the ones they compose) into the app's src/components/ui, lint-clean and ready to use. Names may be comma or space separated",
+          parameters: '<names...>',
+        }),
+        show: pikkuCLICommand({
+          func: pikkuComponentsShow,
+          description: "One component's variants, sizes and defaults, read from its cva definition",
+          parameters: '<name>',
+        }),
+      },
+    },
+    blocks: {
+      description: 'Ready-made, i18n-safe shadcn page sections to copy into an app',
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuBlocksList,
+          description: 'List the blocks and their tags',
+          options: {
+            tag: { description: 'Only blocks with this tag (e.g. headers, heroes, auth)', type: 'string' },
+          },
+        }),
+        show: pikkuCLICommand({
+          func: pikkuBlocksShow,
+          description:
+            'Print a block with every block it composes: its files, the i18n keys to add and any npm packages it needs',
+          parameters: '<name>',
+          options: {
+            out: { description: 'Write the files into this folder instead, skipping any that exist', type: 'string' },
+          },
+        }),
+      },
+    },
+    design: {
+      description: "The app's brand assets: placeholder names, icons, design tokens and imagery",
+      subcommands: {
+        placeholders: pikkuCLICommand({
+          func: pikkuDesignPlaceholders,
+          description:
+            "Report every place an app still uses a template's name: the wordmark, the tab title and the emails' sender",
+        }),
+        favicon: pikkuCLICommand({
+          func: pikkuDesignFavicon,
+          description:
+            "Render the favicon, apple-touch and PWA icons into the app's public/ from a logo or a glyph, and link them from the document head. Needs playwright's chromium",
+          options: {
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
+            source: { description: 'Logo image (SVG/PNG/JPG/WebP), relative to the app, its public/ or the workspace', type: 'string' },
+            emoji: { description: 'Emoji to draw instead of a logo', type: 'string' },
+            letter: { description: 'One or two letters to draw instead of a logo', type: 'string' },
+            background: { description: 'Background colour, as hex', type: 'string' },
+          },
+        }),
+        extract: pikkuCLICommand({
+          func: pikkuDesignExtract,
+          description:
+            'Reduce a live site (needs playwright) or a W3C design-tokens file to colours, fonts and structure, and the theme input they imply',
+          options: {
+            url: { description: 'Site to read the design off', type: 'string' },
+            file: { description: 'DTCG tokens.json to read instead', type: 'string' },
+            preset: { description: 'Preset the extracted colours and fonts layer over', type: 'string' },
+            apply: { description: 'Write the theme and make it active, as `pikku theme apply` does', default: false },
+          },
+        }),
+        images: pikkuCLICommand({
+          func: pikkuDesignImages,
+          description:
+            "Search Unsplash with your UNSPLASH_ACCESS_KEY and download photos into the app's public/stock/, with the credit Unsplash requires",
+          parameters: '<query>',
+          options: {
+            count: { description: 'How many photos, up to 30 (default 8)', type: 'string' },
+            orientation: { description: 'landscape, portrait or squarish', type: 'string' },
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
+          },
+        }),
+        crawl: pikkuCLICommand({
+          func: pikkuDesignCrawl,
+          description:
+            "Crawl a site on your own Cloudflare account (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN) and return each page as markdown, its images saved into the app's public/crawled/",
+          parameters: '<url>',
+          options: {
+            maxPages: { description: 'Most pages to crawl (default 20)', type: 'string' },
+            app: { description: 'The frontend, when there is more than one', type: 'string' },
+          },
         }),
       },
     },
@@ -719,6 +965,11 @@ wireCLI({
           func: dbCheck,
           description:
             'Report how the configured database differs from the schema its migrations define',
+        }),
+        annotate: pikkuCLICommand({
+          func: dbAnnotate,
+          description:
+            'Add a kind to db/annotations.ts for each SQLite column declared BOOLEAN, DATE/TIMESTAMP or JSON, so it types as boolean, Date or parsed JSON',
         }),
         baseline: pikkuCLICommand({
           func: dbBaseline,
@@ -857,6 +1108,53 @@ wireCLI({
         }),
       },
     },
+    i18n: {
+      description:
+        "Manage the frontends' Paraglide message catalogs: locales, missing keys and the locale each app opens in",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: i18nList,
+          render: renderI18nList,
+          description:
+            "Report each frontend's catalog, locales and untranslated count",
+        }),
+        add: pikkuCLICommand({
+          func: i18nAdd,
+          render: renderI18nAdd,
+          description:
+            'Add a locale seeded from the base locale, every value marked to translate',
+          parameters: '<locale>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+          },
+        }),
+        sync: pikkuCLICommand({
+          func: i18nSync,
+          render: renderI18nSync,
+          description:
+            'Add base keys a locale is missing and report keys only it has',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+          },
+        }),
+        default: pikkuCLICommand({
+          func: i18nDefault,
+          render: renderI18nDefault,
+          description:
+            'Set the locale a frontend opens in for a first-time visitor',
+          parameters: '<locale>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+          },
+        }),
+      },
+    },
     knowledge: {
       description:
         'Inspect and maintain the knowledge base — what this app is, in the language its users use',
@@ -947,11 +1245,66 @@ wireCLI({
         },
       },
     },
+    next: pikkuCLICommand({
+      func: next,
+      render: renderNext,
+      description:
+        'Decide what should run next — the agent, its skill and its work — from the state of the project',
+      options: {
+        prompt: {
+          description:
+            'A request for this project; it is turned into changes first',
+        },
+        exec: {
+          description:
+            'Launch the chosen agent in this harness (pi or claude) instead of printing it',
+        },
+        harnessArg: {
+          description: 'Passed through to the harness, e.g. -p — repeatable',
+          type: 'string[]',
+        },
+        loop: {
+          description:
+            'With --exec, route again after each agent until there is nothing to do',
+          type: 'boolean',
+        },
+        parallel: {
+          description:
+            'Route an agent even while another changeset is running; each works its own in a worktree',
+          type: 'boolean',
+        },
+        push: {
+          description: 'Push after merging finished changesets',
+          type: 'boolean',
+        },
+      },
+    }),
     validate: pikkuCLICommand({
       func: validate,
       render: renderValidate,
       description:
         'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+    }),
+    verify: pikkuCLICommand({
+      func: pikkuVerify,
+      render: renderPikkuVerify,
+      description:
+        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
+      options: {
+        skipCodegen: {
+          description:
+            'Check the tree as it stands, without running codegen first',
+          default: false,
+        },
+        skipTypecheck: {
+          description: 'Skip the backend type-check',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
+          default: false,
+        },
+      },
     }),
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',
@@ -1032,6 +1385,18 @@ wireCLI({
         list: pikkuCLICommand({
           func: scenarioList,
           description: 'List scenarios with names and descriptions',
+        }),
+        coverage: pikkuCLICommand({
+          func: scenarioCoverage,
+          description:
+            'What the suite exercises: lines no scenario reaches (from the last `scenario run --coverage`), mutations no scenario drives, and pages no scenario opens',
+          render: renderScenarioCoverage,
+          options: {
+            routes: {
+              description:
+                "Comma-separated app routes, to list the ones no scenario opens. Defaults to every frontend's TanStack file routes",
+            },
+          },
         }),
         guide: pikkuCLICommand({
           func: scenarioGuide,

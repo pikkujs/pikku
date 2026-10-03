@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { ScopesOverview } from '../components/scopes/ScopesOverview'
+import { useScopeFilters } from '../components/scopes/useScopeFilters'
 import { CardsPage } from '../components/ui/CardsPage'
 import { useSearchParams } from '../router'
 import { useLocale } from '@/i18n/config'
@@ -13,10 +14,12 @@ export const ScopesPage: React.FC = () => {
   // from then on the box belongs to the reader.
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
+  const { headerFilters, role, source } = useScopeFilters()
 
   return (
     <PageContainer
       data-testid="scopes-page"
+      surface="cards"
       header={
         <ListPageHeader
           title={m.scopes_page_title()}
@@ -28,11 +31,12 @@ export const ScopesPage: React.FC = () => {
             onChange: setSearch,
             width: 240,
           }}
+          headerFilters={headerFilters}
         />
       }
     >
       <CardsPage>
-        <ScopesOverview search={search} />
+        <ScopesOverview search={search} role={role} source={source} />
       </CardsPage>
     </PageContainer>
   )

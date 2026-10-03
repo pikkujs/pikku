@@ -1,0 +1,26 @@
+{
+  "name": "NavbarSearch",
+  "title": "Sidebar with search and collections",
+  "description": "Full-height sidebar with a user button, a search input with a keyboard-shortcut hint, a main links list with notification badges, and an emoji-tagged collections section with an add button. Use for content/workspace app shells.",
+  "tags": ["navbars"],
+  "files": ["NavbarSearch.tsx", "NavbarSearch.module.css"],
+  "dependsOn": ["UserButton"],
+  "npmDeps": [],
+  "i18nKeys": {
+    "navbarsearch__activity": "Activity",
+    "navbarsearch__tasks": "Tasks",
+    "navbarsearch__contacts": "Contacts",
+    "navbarsearch__sales": "Sales",
+    "navbarsearch__deliveries": "Deliveries",
+    "navbarsearch__discounts": "Discounts",
+    "navbarsearch__profits": "Profits",
+    "navbarsearch__reports": "Reports",
+    "navbarsearch__orders": "Orders",
+    "navbarsearch__events": "Events",
+    "navbarsearch__debts": "Debts",
+    "navbarsearch__customers": "Customers",
+    "navbarsearch__search": "Search",
+    "navbarsearch__collections": "Collections",
+    "navbarsearch__create_collection": "Create collection"
+  }
+}

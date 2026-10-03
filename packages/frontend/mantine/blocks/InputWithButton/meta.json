@@ -1,0 +1,13 @@
+{
+  "name": "InputWithButton",
+  "title": "Search input with action button",
+  "description": "A pill-shaped text input with a search icon on the left and a filled circular action button on the right. Spreads TextInput props so it can be wired to real search. Use for search bars and query fields.",
+  "tags": ["inputs"],
+  "files": ["InputWithButton.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "inputwithbutton__placeholder": "Search questions",
+    "inputwithbutton__search_aria": "Search"
+  }
+}

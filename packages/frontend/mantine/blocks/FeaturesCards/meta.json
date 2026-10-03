@@ -1,0 +1,20 @@
+{
+  "name": "FeaturesCards",
+  "title": "Feature cards with badge + heading",
+  "description": "Centered section: a filled badge, a heading, an underlined intro, then a responsive grid of bordered feature cards each with an icon, title and blurb. Use to showcase 3 product highlights.",
+  "tags": ["features"],
+  "files": ["FeaturesCards.tsx", "FeaturesCards.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "featurescards__badge": "Best company ever",
+    "featurescards__title": "Integrate effortlessly with any technology stack",
+    "featurescards__description": "Every once in a while, you'll see a Golbat that's missing some fangs. This happens when hunger drives it to try biting a Steel-type Pokémon.",
+    "featurescards__f1_title": "Extreme performance",
+    "featurescards__f1_description": "This dust is actually a powerful poison that will even make a pro wrestler sick, Regice cloaks itself with frigid air of -328 degrees Fahrenheit",
+    "featurescards__f2_title": "Privacy focused",
+    "featurescards__f2_description": "People say it can run at the same speed as lightning striking, Its icy body is so cold, it will not melt even if it is immersed in magma",
+    "featurescards__f3_title": "No third parties",
+    "featurescards__f3_description": "They're popular, but they're rare. Trainers who show them off recklessly may be targeted by thieves"
+  }
+}

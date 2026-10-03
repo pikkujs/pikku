@@ -1,0 +1,17 @@
+{
+  "name": "ArticleCard",
+  "title": "Article card with cover image",
+  "description": "A media card with a cover image, gradient rating badge, title, clamped description, author row and like/bookmark/share actions. Use in blog or news grids.",
+  "tags": ["cards"],
+  "files": ["ArticleCard.tsx", "ArticleCard.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "articlecard__title": "Resident Evil Village review",
+    "articlecard__description": "Resident Evil Village is a direct sequel to 2017's Resident Evil 7, but takes a very different direction to its predecessor, namely the fact that this time round instead of fighting against various mutated zombies, you're now dealing with more occult enemies like werewolves and vampires.",
+    "articlecard__rating": "outstanding",
+    "articlecard__like": "Like",
+    "articlecard__bookmark": "Bookmark",
+    "articlecard__share": "Share"
+  }
+}

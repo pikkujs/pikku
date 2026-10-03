@@ -1,0 +1,32 @@
+{
+  "name": "HeaderTabs",
+  "title": "Header with tabs and user menu",
+  "description": "A two-row app header: brand wordmark plus an avatar user menu on top, and a row of section tabs below, collapsing to a mobile drawer. Use for app shells with a signed-in user and top-level tab navigation.",
+  "tags": ["headers"],
+  "files": ["HeaderTabs.tsx", "HeaderTabs.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "headertabs__home": "Home",
+    "headertabs__orders": "Orders",
+    "headertabs__education": "Education",
+    "headertabs__community": "Community",
+    "headertabs__forums": "Forums",
+    "headertabs__support": "Support",
+    "headertabs__account": "Account",
+    "headertabs__helpdesk": "Helpdesk",
+    "headertabs__liked_posts": "Liked posts",
+    "headertabs__saved_posts": "Saved posts",
+    "headertabs__your_comments": "Your comments",
+    "headertabs__settings": "Settings",
+    "headertabs__account_settings": "Account settings",
+    "headertabs__change_account": "Change account",
+    "headertabs__logout": "Logout",
+    "headertabs__danger_zone": "Danger zone",
+    "headertabs__pause_subscription": "Pause subscription",
+    "headertabs__delete_account": "Delete account",
+    "headertabs__toggle_navigation": "Toggle navigation",
+    "headertabs__navigation": "Navigation"
+  }
+}

@@ -270,6 +270,7 @@ done
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
+cp src/fabric/sdk/rpc-map.gen.d.ts dist/src/fabric/sdk/
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.
@@ -320,11 +321,6 @@ else
   echo "Warning: PikkuCLIConfig.schema.json not found, skipping schema copy"
 fi
 
-echo "Copying console app..."
-rm -rf console-app
-if [ -d "../console/dist" ]; then
-  cp -r ../console/dist console-app
-fi
 
 # Build native CLI binaries for all platforms using bun --compile
 if command -v bun >/dev/null 2>&1; then

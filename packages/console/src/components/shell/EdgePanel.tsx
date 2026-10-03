@@ -57,10 +57,9 @@ export function EdgePanel({
   // The portal root is mounted by the layout, so it only exists after the first
   // paint — resolve it in an effect rather than during render.
   useEffect(() => {
-    const slot =
-      side === 'end' && !isMobile
-        ? document.querySelector<HTMLElement>(`[${PAGE_PANEL_SLOT}]`)
-        : null
+    const slot = !isMobile
+      ? document.querySelector<HTMLElement>(`[${PAGE_PANEL_SLOT}="${side}"]`)
+      : null
     setTarget(
       slot ??
         document.querySelector<HTMLElement>('#console-content-portal-root')

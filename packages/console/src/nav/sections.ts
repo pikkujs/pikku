@@ -1,7 +1,8 @@
 import type React from 'react'
-import type { I18nString } from '@pikku/react'
+import { asI18n, type I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { isStudio } from '../studio/studio'
 import {
   Activity,
   BarChart3,
@@ -13,22 +14,32 @@ import {
   DoorOpen,
   Database,
   FlaskConical,
+  FolderGit2,
   FunctionSquare,
   GitBranch,
   GitCompare,
+  Inbox,
   Globe,
   KeyRound,
+  Languages,
   ListOrdered,
   Lock,
   Mail,
+  Monitor,
   Package,
   Radio,
+  Rocket,
   Route,
   ScrollText,
   Server,
   Shield,
   ShieldCheck,
   Sparkles,
+  Hammer,
+  AppWindow,
+  Milestone,
+  Waypoints,
+  Stethoscope,
   Target,
   Terminal,
   ToggleLeft,
@@ -37,6 +48,7 @@ import {
   Network,
   UserRound,
   UserSearch,
+  Shapes,
   Users,
   UserCog,
   Variable,
@@ -123,9 +135,13 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'main',
           items: [
+            ...(isStudio() ? [item(m.nav_builder(), '/builder', Hammer), item(m.nav_milestones(), '/milestones', Milestone), item(m.nav_apps_preview(), '/app', AppWindow)] : []),
             item(m.nav_overview(), '/overview', Gauge),
+            item(m.nav_weave(), '/weave', Waypoints),
             item(m.nav_functions(), '/functions', FunctionSquare),
             item(m.nav_workflows(), '/workflow', GitBranch),
+            item(m.nav_requests(), '/requests', Inbox),
+            ...(isStudio() ? [item(m.nav_publish(), '/publish', Rocket)] : []),
           ],
         },
       ],
@@ -158,6 +174,11 @@ export function consoleNavSections(): NavSection[] {
       icon: Boxes,
       groups: [
         {
+          id: 'screens',
+          title: m.nav_group_what_people_see(),
+          items: [item(m.nav_pages(), '/pages', Monitor)],
+        },
+        {
           id: 'data',
           title: m.nav_group_data(),
           items: [item(m.nav_database(), '/database', Database)],
@@ -165,12 +186,18 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'copy',
           title: m.nav_group_copy(),
-          items: [item(m.nav_emails(), '/emails', Mail)],
+          items: [
+            item(m.nav_emails(), '/emails', Mail),
+            item(m.nav_translations(), '/translations', Languages),
+          ],
         },
         {
           id: 'reference',
           title: m.nav_group_reference(),
-          items: [item(m.nav_knowledge(), '/knowledge', BookOpen)],
+          items: [
+            item(m.nav_knowledge(), '/knowledge', BookOpen),
+            item(asI18n('Artifacts'), '/artifacts', Shapes),
+          ],
         },
       ],
     },
@@ -202,7 +229,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'what',
           title: m.nav_group_what_is_tested(),
-          items: [item(m.nav_scenarios(), '/scenarios', Route)],
+          items: [
+            item(m.nav_checks(), '/checks', Stethoscope),
+            item(m.nav_scenarios(), '/scenarios', Route),
+          ],
         },
         {
           id: 'who',
@@ -248,7 +278,10 @@ export function consoleNavSections(): NavSection[] {
         {
           id: 'changed',
           title: m.nav_group_what_changed(),
-          items: [item(m.nav_changes(), '/changes', GitCompare)],
+          items: [
+            item(m.nav_changes(), '/changes', GitCompare),
+            item(m.nav_code(), '/code', FolderGit2),
+          ],
         },
       ],
     },

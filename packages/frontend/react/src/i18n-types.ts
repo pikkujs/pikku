@@ -3,8 +3,7 @@ import type { ReactElement, ReactPortal } from 'react'
 /**
  * A string that has been through i18n. Structurally identical to Paraglide JS's
  * `LocalizedString` (`string & { readonly __brand: 'LocalizedString' }`), so a
- * Paraglide `m()` message satisfies this brand — and the `@pikku/mantine` gate —
- * natively, with no wrapper. Also produced by `t()` / `asI18n()`. Compile-time
+ * Paraglide `m()` message satisfies this brand natively, with no wrapper. Also produced by `t()` / `asI18n()`. Compile-time
  * brand only: at runtime this is just a string.
  *
  * The brand is the string literal `'LocalizedString'`, not a `unique symbol`, on

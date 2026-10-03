@@ -58,7 +58,7 @@ export function ConsolePanel({
         noPadding
         fullWidth
         headerInCard
-        style={{ display: 'flex', flexDirection: 'column' }}
+        style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         header={
           <PageHeader
             panel

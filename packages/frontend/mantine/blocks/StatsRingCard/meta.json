@@ -1,0 +1,15 @@
+{
+  "name": "StatsRingCard",
+  "title": "Completion ring card",
+  "description": "A card pairing a large percent-complete ring with a headline count and a small breakdown of remaining/in-progress items. Use to summarise progress toward a total.",
+  "tags": ["stats"],
+  "files": ["StatsRingCard.tsx", "StatsRingCard.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "statsringcard__title": "Project tasks",
+    "statsringcard__completed": "Completed",
+    "statsringcard__remaining": "Remaining",
+    "statsringcard__in_progress": "In progress"
+  }
+}

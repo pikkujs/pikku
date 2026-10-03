@@ -116,6 +116,10 @@ import {
   renderChangesDone,
 } from './functions/changes-done.function.js'
 import {
+  FabricChangesMerge,
+  renderChangesMerge,
+} from './functions/changes-merge.function.js'
+import {
   FabricValidate,
   renderValidate,
 } from './functions/validate.function.js'
@@ -854,10 +858,35 @@ export const fabricCommands = defineCLICommands({
               'How long to hold it before it returns to the queue (default 30)',
             type: 'number',
           },
+          creates: {
+            description:
+              'Tables this changeset creates — comma-separated; implies --needs-plan',
+            type: 'string[]',
+          },
+          alters: {
+            description:
+              'Tables this changeset alters — comma-separated; implies --needs-plan',
+            type: 'string[]',
+          },
+          reads: {
+            description:
+              'Tables this changeset reads — it waits for whichever changeset creates them',
+            type: 'string[]',
+          },
+          needsPlan: {
+            description: 'Whether the changeset is planned before it is built',
+            type: 'boolean',
+          },
+          worktree: {
+            description:
+              'Build it in its own checkout beside the repo, on changeset/<title>, so other changesets can run at the same time',
+            type: 'boolean',
+          },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
       ask: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesAsk,
         render: renderChangesAsk,
         description:
@@ -881,10 +910,11 @@ export const fabricCommands = defineCLICommands({
       reply: pikkuCLICommand({
         func: FabricChangesReply,
         render: renderChangesReply,
-        parameters: '<changeId>',
+        parameters: '[changeId]',
         description:
           'Say something on an item’s thread without asking (which parks it) or closing it (done --note) — e.g. why you are not doing it, or what it is blocked on',
         options: {
+          changeId: { description: 'The item to reply on — 2, #2 or its uuid' },
           message: {
             description: 'What to say, in the filer’s vocabulary',
             short: 'm',
@@ -905,6 +935,7 @@ export const fabricCommands = defineCLICommands({
         },
       }),
       shot: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesShot,
         render: renderChangesShot,
         description:
@@ -932,7 +963,22 @@ export const fabricCommands = defineCLICommands({
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
+      merge: pikkuCLICommand({
+        func: FabricChangesMerge,
+        render: renderChangesMerge,
+        description:
+          'Merge a finished changeset into this branch as one --no-ff commit with a Changeset trailer',
+        options: {
+          projectId: {
+            description: 'Project the changeset belongs to',
+            short: 'p',
+          },
+          groupId: { description: 'The changeset to merge' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       done: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesDone,
         render: renderChangesDone,
         description:

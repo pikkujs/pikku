@@ -560,7 +560,7 @@ a **login screen** but no dev actor switcher, and it is not a style nit: a sandb
 reviewer has no seed password, so without the control they are locked out of the
 app they were asked to look at.
 
-Satisfy it with `<DevActorSwitcher />` from `@pikku/mantine/dev`, or with your
+Satisfy it with the starter's `<DevActorSwitcher />` (`src/components/DevActorSwitcher.tsx`), or with your
 own UI built on `useDevActors()` or `signInAsPersona()` from `@pikku/react` —
 validate accepts any of those call sites as evidence, so custom rendering
 passes. Either way the server needs `personaSignIn` on `pikkuActor`; see

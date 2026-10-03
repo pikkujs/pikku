@@ -276,7 +276,7 @@ describe('resolveScenarioBrowserProvider', () => {
           throw new Error('Cannot find module')
         },
       } as any),
-      /codeEditorScenario.*'@pikku\/playwright' could not be loaded[\s\S]*yarn add -D/
+      /codeEditorScenario.*'@pikku\/playwright' could not be loaded[\s\S]*bun add -D/
     )
   })
 

@@ -7,8 +7,11 @@ import {
 } from '../lib/auth-client'
 import { usePikkuRPC } from './PikkuRpcProvider'
 import { getServerUrl, setServerUrl as persistServerUrl } from './serverUrl'
+import { isStudio } from '../studio/studio'
 
 const CONSOLE_SCOPE_ROOT = 'pikku:console'
+
+const STUDIO_USER = { id: 'studio', email: '', name: 'You' }
 
 export interface AuthUser {
   id: string
@@ -128,6 +131,7 @@ export const AuthProvider: React.FC<{
   const sessionQuery = useQuery({
     queryKey: [...SESSION_QUERY_KEY, activeUrl],
     queryFn: async () => {
+      if (isStudio()) return { user: STUDIO_USER }
       const { data, error } = await client.getSession()
       if (error) {
         throw new Error(error.message ?? 'Failed to load session')

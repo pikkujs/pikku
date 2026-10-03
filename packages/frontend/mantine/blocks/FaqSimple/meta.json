@@ -1,0 +1,22 @@
+{
+  "name": "FaqSimple",
+  "title": "Simple FAQ accordion",
+  "description": "A centered FAQ section with a title and a separated accordion of question/answer items. Use on marketing or support pages to answer common questions.",
+  "tags": ["faq"],
+  "files": ["FaqSimple.tsx", "FaqSimple.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "faqsimple__title": "Frequently Asked Questions",
+    "faqsimple__q1": "How can I reset my password?",
+    "faqsimple__a1": "Head to your account settings and click 'Reset password'. We'll email you a secure link to choose a new one.",
+    "faqsimple__q2": "Can I create more than one account?",
+    "faqsimple__a2": "Yes — you can create as many accounts as you like, each with its own email address and settings.",
+    "faqsimple__q3": "How can I subscribe to the monthly newsletter?",
+    "faqsimple__a3": "Open your notification preferences and toggle on the monthly newsletter. You can unsubscribe at any time.",
+    "faqsimple__q4": "Do you store credit card information securely?",
+    "faqsimple__a4": "We never store raw card numbers. Payments are handled by a PCI-compliant processor and only a token is kept on our side.",
+    "faqsimple__q5": "What payment systems do you work with?",
+    "faqsimple__a5": "We accept all major credit cards, and support Apple Pay, Google Pay, and bank transfers in most regions."
+  }
+}
