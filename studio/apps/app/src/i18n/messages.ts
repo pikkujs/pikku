@@ -1,5 +1,5 @@
 // Typed message functions for the app. `m.landing_title()` returns a branded
-// I18nString, so it satisfies the @pikku/mantine i18n gate with no call-site
+// I18nString, so it satisfies the @pikku/react i18n gate with no call-site
 // boilerplate.
 //
 // Each message is wrapped once so i18n-debug masking (█) still works. Wrapping
@@ -28,5 +28,5 @@ export const m = _wrapped as unknown as Branded<typeof _m>
 // Re-export asI18n so every call site imports BOTH i18n helpers from this one
 // module — `import { asI18n, m } from '@/i18n/messages'`. asI18n brands an opaque
 // runtime string (a server name/slug/id or a formatted date/number) so it passes
-// the @pikku/mantine i18n gate; m.key() is for static copy. Keep them co-located.
+// the @pikku/react i18n gate; m.key() is for static copy. Keep them co-located.
 export { asI18n } from '@pikku/react'

@@ -26,7 +26,6 @@
     "@pikku/kysely-bun-sqlite": "workspace:*",
     "@pikku/kysely-node-sqlite": "workspace:*",
     "@pikku/kysely-sqlite": "workspace:*",
-    "@pikku/mantine": "workspace:*",
     "@pikku/react": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",

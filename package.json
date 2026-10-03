@@ -25,10 +25,7 @@
       "verifiers/addon-registry/consumer",
       "verifiers/db-schema/addon",
       "verifiers/db-schema/remote-addon",
-      "verifiers/addon-workspace/functions",
-      "studio",
-      "studio/apps/*",
-      "studio/packages/*"
+      "verifiers/addon-workspace/functions"
     ]
   },
   "scripts": {

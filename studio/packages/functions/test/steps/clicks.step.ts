@@ -21,9 +21,9 @@ export const ClicksOutput = z.object({
 /**
  * Click a control.
  *
- * `locate` filters to what is VISIBLE, which matters more than it sounds: Mantine's
- * responsive props (`hiddenFrom`/`visibleFrom`) are `display: none` rather than conditional
- * rendering, so a control that appears once on screen can match twice in the DOM. An
+ * `locate` filters to what is VISIBLE, which matters more than it sounds: responsive
+ * classes (`hidden md:flex`) are `display: none` rather than conditional rendering, so a
+ * control that appears once on screen can match twice in the DOM. An
  * unfiltered match would be a strict-mode violation, and taking the first would wait out a
  * timeout on the copy that is switched off.
  *

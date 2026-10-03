@@ -26,7 +26,7 @@ import type { PluginObj, NodePath, types as BabelTypes } from '@babel/core'
  * added to a component, and the ids are identical on every build.
  */
 
-/** Mantine's controls plus the native elements, by tag. */
+/** The shadcn controls plus the native elements, by tag. */
 const INTERACTIVE = new Set([
   'Button',
   'ActionIcon',

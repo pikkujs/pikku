@@ -57,8 +57,8 @@
   "environments": {
     "local": {
       "apiUrl": "http://localhost:3000",
-      "appUrl": "http://localhost:7104",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/actor",
+      "appUrl": "http://localhost:7104"
     },
     "sandbox": {
       "apiUrl": "http://localhost:4000",
@@ -79,9 +79,19 @@
       "primary": true,
       "deploy": true,
       "kind": "ssr",
-      "dev": { "command": ["yarn", "dev"], "port": 7104, "healthPath": "/" },
+      "dev": {
+        "command": [
+          "bun",
+          "run",
+          "dev"
+        ],
+        "port": 7104,
+        "healthPath": "/"
+      },
       "serves": "visitor",
-      "personas": ["visitor"]
+      "personas": [
+        "visitor"
+      ]
     }
   }
 }

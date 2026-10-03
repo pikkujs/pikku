@@ -11,7 +11,7 @@ import { recordRawEvent } from './analytics'
  * be added later as their own listeners rather than overloading this one.
  *
  * One delegated listener rather than wrapped component callbacks, because
- * **portalled content** — Mantine modals, menus, select dropdowns — renders
+ * **portalled content** — dialogs, menus, select dropdowns — renders
  * outside its logical DOM position but still under `document`, so it is covered
  * for free. The trade-off is that ancestor meta merging does not reach it: a
  * portalled element's DOM ancestry is the portal container, not the card it
@@ -56,7 +56,7 @@ export function registerAnalyticsClickListener(): () => void {
 
   // Capture phase is required, not stylistic: a bubble-phase listener on
   // `document` never fires if anything in between calls `stopPropagation()`,
-  // which Mantine and React components do in places. Capture runs on the way
+  // which React components do in places. Capture runs on the way
   // down and cannot be suppressed.
   document.addEventListener('click', onClick, { capture: true })
   return () => document.removeEventListener('click', onClick, { capture: true })

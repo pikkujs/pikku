@@ -53,6 +53,10 @@ const git = join(root, '.deploy', 'git', target)
 if (existsSync(git)) add('git', git, walk(git))
 else if (!target.startsWith('darwin')) throw new Error(`No git built for ${target}: run scripts/build-git.sh ${target.replace('-', '/')}`)
 
+const uv = join(root, '.deploy', 'uv', target)
+if (!existsSync(uv)) throw new Error(`No uv fetched for ${target}: run scripts/fetch-uv.sh ${target.replace('-', '/')}`)
+add('uv', uv, walk(uv))
+
 await mkdir(dirname(out), { recursive: true })
 await Bun.Archive.write(out, files, { compress: 'gzip' })
 console.log(`${relative(root, out)} (${target}): ${Object.keys(files).length} files, ${(statSync(out).size / 1e6).toFixed(1)} MB`)

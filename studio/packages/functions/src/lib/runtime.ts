@@ -41,6 +41,10 @@ export async function installEmbeddedRuntime(home: string): Promise<string | nul
     await mkdir(staging, { recursive: true })
     await new Bun.Archive(bytes).extract(staging)
     if (existsSync(join(staging, 'git'))) await prepareGit(join(staging, 'git'))
+    for (const name of ['uv', 'uvx']) {
+      const path = join(staging, 'uv', 'bin', name)
+      if (existsSync(path)) await chmod(path, 0o755)
+    }
     await rename(staging, dir).catch(async (error) => {
       if (!existsSync(dir)) throw error
       await rm(staging, { recursive: true, force: true })
@@ -54,7 +58,14 @@ export async function installEmbeddedRuntime(home: string): Promise<string | nul
   }
   const git = join(dir, 'git')
   const gitBin = existsSync(git) ? join(git, 'bin') : null
-  process.env.PATH = [bin, gitBin, process.env.PATH].filter(Boolean).join(delimiter)
+  const uvBin = existsSync(join(dir, 'uv', 'bin')) ? join(dir, 'uv', 'bin') : null
+  process.env.PATH = [bin, gitBin, uvBin, process.env.PATH].filter(Boolean).join(delimiter)
+  if (uvBin) {
+    process.env.UV_CACHE_DIR ??= join(home, 'uv', 'cache')
+    process.env.UV_PYTHON_INSTALL_DIR ??= join(home, 'uv', 'python')
+    process.env.UV_TOOL_DIR ??= join(home, 'uv', 'tools')
+    process.env.UV_TOOL_BIN_DIR ??= join(home, 'uv', 'bin')
+  }
   if (gitBin && !process.env.GIT_SSL_CAINFO && !existsSync('/etc/ssl/certs/ca-certificates.crt')) {
     process.env.GIT_SSL_CAINFO = join(git, 'etc', 'ca-certificates.crt')
   }

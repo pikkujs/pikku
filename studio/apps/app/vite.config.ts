@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { fileURLToPath, URL } from 'node:url'
@@ -19,6 +20,7 @@ export default defineConfig({
     // Compile messages/*.json → src/paraglide so `m` resolves, with HMR
     // on message edits. Must run first.
     paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    tailwindcss(),
     tanstackStart(),
     // Stamps the `data-testid`s browser scenarios address controls by, derived from each
     // control's i18n message key. A standalone pre-transform rather than a `babel` option
@@ -32,8 +34,10 @@ export default defineConfig({
     crossSiteSession(),
   ],
   resolve: {
+    dedupe: ['react', 'react-dom', '@pikku/react', '@pikku/fetch', '@tanstack/react-query'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@fabric/sdk': fileURLToPath(new URL('../../../../../fabric/fabric/packages/fabric-sdk/src/pikku', import.meta.url)),
     },
   },
   server: {
@@ -65,6 +69,10 @@ export default defineConfig({
       // so proxy them through WITHOUT a rewrite. `/content` (not `/assets`) avoids
       // colliding with Vite/TanStack's own built asset paths. In the sandbox Caddy
       // handles these before Vite, so this proxy only fires in local dev.
+      '/p': {
+        target: process.env.VITE_API_PROXY ?? 'http://localhost:3000',
+        changeOrigin: false,
+      },
       '/upload': {
         target: process.env.VITE_API_PROXY ?? 'http://localhost:3000',
         changeOrigin: false,

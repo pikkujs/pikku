@@ -16,7 +16,8 @@
     "checkJs": false,
     "types": ["vite/client", "node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@fabric/sdk/*": ["../../../../../fabric/fabric/packages/fabric-sdk/src/pikku/*"]
     }
   },
   "include": ["src", "dev", "build", "vite.config.ts", "wrangler.jsonc"]
