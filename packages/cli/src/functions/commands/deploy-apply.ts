@@ -301,6 +301,7 @@ export async function resolveProvider(
   options?: {
     projectDir?: string
     nativeSidecars?: Array<{ name: string; dir: string }>
+    compileTarget?: string
   }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
@@ -438,6 +439,8 @@ export const deployApply = pikkuSessionlessFunc<
     const provider = await resolveProvider(config, data?.provider, {
       projectDir,
       nativeSidecars: nativeSidecars(config.frontends),
+      compileTarget:
+        process.env.PIKKU_COMPILE_TARGET ?? config.deploy?.compileTarget,
     })
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile

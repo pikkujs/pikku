@@ -26,6 +26,9 @@
   "dev": {
     "db": true
   },
+  "db": {
+    "sqliteExtensions": []
+  },
   "deploy": {
     "bundler": "esbuild",
     "embed": {

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const builder = join(root, '..', 'packages', 'builder')
 const pi = join(builder, 'node_modules', '@earendil-works', 'pi-coding-agent')
+const target = process.env.PIKKU_COMPILE_TARGET?.replace(/^bun-/, '') ?? `${process.platform}-${process.arch}`
 const out = join(root, '.deploy', 'studio-runtime.tar.gz')
 
 const files: Record<string, Uint8Array | string> = {}
@@ -48,6 +49,10 @@ files[`pi/dist/bundle/${entry}`] = await bundled.outputs[0]!.text()
 const extensions = join(builder, 'extensions')
 add('extensions', extensions, walk(extensions).filter((path) => !path.endsWith('.test.mjs')))
 
+const git = join(root, '.deploy', 'git', target)
+if (existsSync(git)) add('git', git, walk(git))
+else if (!target.startsWith('darwin')) throw new Error(`No git built for ${target}: run scripts/build-git.sh ${target.replace('-', '/')}`)
+
 await mkdir(dirname(out), { recursive: true })
 await Bun.Archive.write(out, files, { compress: 'gzip' })
-console.log(`${relative(root, out)}: ${Object.keys(files).length} files, ${(statSync(out).size / 1e6).toFixed(1)} MB`)
+console.log(`${relative(root, out)} (${target}): ${Object.keys(files).length} files, ${(statSync(out).size / 1e6).toFixed(1)} MB`)

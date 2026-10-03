@@ -420,7 +420,11 @@ export interface StandaloneProviderAdapterOptions {
    */
   nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
   contributors?: PlatformServiceContributor[]
+  compileTarget?: string
 }
+
+const targetPlatform = (target: string | undefined): string =>
+  target?.match(/^bun-(linux|darwin|windows)/)?.[1] ?? process.platform
 
 const contributorPlatform = (
   ctx: EntryGenerationContext
@@ -440,12 +444,15 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
-  readonly bundlesSqliteLibrary = true
+  readonly bundlesSqliteLibrary: boolean
+  private readonly compileTarget?: string
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.nativeSidecars = options.nativeSidecars ?? []
+    this.compileTarget = options.compileTarget
+    this.bundlesSqliteLibrary = targetPlatform(options.compileTarget) === 'darwin'
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -703,6 +710,20 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     // --- 2a'. SQLite extensions, when the build staged any ---
     // `bun build --compile` follows the manifest to the libraries and embeds them.
     const extensionsDir = join(unitDir, STANDALONE_SQLITE_EXTENSIONS_DIR)
+    if (
+      existsSync(extensionsDir) &&
+      targetPlatform(this.compileTarget) !== process.platform
+    ) {
+      return {
+        success: false,
+        errors: [
+          {
+            step: 'compile',
+            error: `SQLite extensions are staged for ${process.platform}, but this build targets ${this.compileTarget}. Set db.sqliteExtensions to [] or build on the target platform.`,
+          },
+        ],
+      }
+    }
     if (existsSync(extensionsDir)) {
       await cp(extensionsDir, join(outDir, STANDALONE_SQLITE_EXTENSIONS_DIR), {
         recursive: true,
@@ -738,6 +759,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           'build',
           '--compile',
           '--minify',
+          ...(this.compileTarget ? [`--target=${this.compileTarget}`] : []),
           `--outfile=${binaryPath}`,
           join(outDir, 'bundle.js'),
         ],
