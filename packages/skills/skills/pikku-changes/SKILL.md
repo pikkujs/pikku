@@ -89,6 +89,9 @@ commit per item (see Committing). When every item in it is `done`, switch back a
 pikku fabric changes merge --group-id <id>
 ```
 
+Never `git merge` a changeset branch yourself — a fast-forward leaves no changeset commit, and
+`changes merge` refuses a branch that is already in.
+
 Changesets that create or alter tables go one at a time; one that reads a table waits for the
 changeset creating it; the rest can run side by side. On the local queue, `claim` refuses a changeset
 that would break that order, and `done` refuses a commit that adds a migration under `db/` when its
