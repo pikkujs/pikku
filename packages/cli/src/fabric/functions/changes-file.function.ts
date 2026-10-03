@@ -41,14 +41,16 @@ export const FabricChangesFile = pikkuSessionlessFunc({
     if (input.body && input.bodyFile)
       throw new FabricPreconditionError('Pass --body or --body-file, not both.')
 
-    const { rpc, projectId } = await changesContext(
+    const { rpc, projectId, local } = await changesContext(
       input.apiUrl,
       input.projectId
     )
 
     const stageId =
       input.stageId ??
-      (await resolveStageId(rpc, requireProjectId(projectId), input.branch))
+      (local
+        ? 'local'
+        : await resolveStageId(rpc, requireProjectId(projectId), input.branch))
 
     const body = input.bodyFile
       ? await readFile(input.bodyFile, 'utf8')

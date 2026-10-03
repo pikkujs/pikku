@@ -1,4 +1,4 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { ChangesRPC } from './changes-local.js'
 import { FabricPreconditionError } from './errors.js'
 
 export interface ResolvedStage {
@@ -23,7 +23,7 @@ export interface ResolvedStage {
  * case this function exists to handle.
  */
 export async function resolveStage(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<ResolvedStage> {
@@ -52,7 +52,7 @@ export async function resolveStage(
 }
 
 export async function resolveStageId(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<string> {
@@ -74,7 +74,7 @@ const hostOf = (value: string): string => {
  * path), or its id.
  */
 export async function matchStage(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   projectId: string,
   ref: string
 ): Promise<ResolvedStage> {
@@ -101,7 +101,7 @@ export async function matchStage(
 }
 
 export async function autoDeployOffHints(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   projectId: string,
   branch?: string
 ): Promise<string[]> {

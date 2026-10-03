@@ -10,7 +10,7 @@ import {
 } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { dim, safe } from '../lib/output.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { ChangesRPC } from '../lib/changes-local.js'
 import type { ClaimChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesClaimInput = z.object({
@@ -63,7 +63,7 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
  * fabric's own message comes first because it alone says who holds a lease.
  */
 async function whyUnclaimable(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   projectId: string,
   refs: string[],
   refusal: unknown
