@@ -135,6 +135,26 @@ function leaseLive(store: Store, change: Change, now: Date): boolean {
   return !!group?.claimExpiresAt && group.claimExpiresAt > now
 }
 
+/**
+ * Schema changesets go one at a time, and a changeset cannot read a table that
+ * a changeset still in flight is creating.
+ */
+function conflicts(store: Store, group: Group, now: Date): string | null {
+  const schema = (g: Group) => !!(g.creates?.length || g.alters?.length)
+  for (const other of store.groups) {
+    if (other.groupId === group.groupId) continue
+    if (!other.claimExpiresAt || other.claimExpiresAt <= now) continue
+    if (schema(group) && schema(other))
+      return `“${other.title}” is changing the schema; one schema changeset runs at a time. Claim a changeset that touches no tables, or wait.`
+    const waiting = (group.reads ?? []).filter((t) =>
+      other.creates?.includes(t)
+    )
+    if (waiting.length)
+      return `“${other.title}” is creating ${waiting.join(', ')}; a changeset that reads it waits until that one is merged.`
+  }
+  return null
+}
+
 function message(
   store: Store,
   change: Change,
@@ -254,6 +274,8 @@ const handlers: {
       reads: input.reads ?? existing?.reads,
       needsPlan: input.needsPlan ?? existing?.needsPlan,
     }
+    const clash = conflicts(store, group, now)
+    if (clash) throw new LocalChangesError(clash, 409)
     store.groups = store.groups.filter((g) => g.groupId !== group.groupId)
     store.groups.push(group)
     for (const change of wanted) {
@@ -303,6 +325,16 @@ const handlers: {
       key: '',
     }
   },
+}
+
+export async function releaseChangeset(
+  path: string,
+  groupId: string
+): Promise<void> {
+  await withStore(path, (store) => {
+    const group = store.groups.find((g) => g.groupId === groupId)
+    if (group) group.claimExpiresAt = new Date()
+  })
 }
 
 export function localChangesRPC(path: string): ChangesRPC {

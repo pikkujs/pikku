@@ -27,7 +27,9 @@ export const next = pikkuSessionlessFunc({
   input: NextInput,
   output: NextOutput,
   func: async (_services, input) => {
-    let current = input.prompt ? intake(input.prompt) : await route()
+    let current = input.prompt
+      ? intake(input.prompt)
+      : await route(input.parallel)
     if (!input.exec) return current
     for (;;) {
       if (!current.agent) return current
@@ -37,7 +39,7 @@ export const next = pikkuSessionlessFunc({
           `The ${current.agent} agent exited with ${code}.`
         )
       if (!input.loop) return current
-      const after = await route()
+      const after = await route(input.parallel)
       if (after.agent && after.context === current.context)
         return idle(`The ${current.agent} agent left the same work untouched.`)
       current = after
@@ -45,7 +47,7 @@ export const next = pikkuSessionlessFunc({
   },
 })
 
-async function route(): Promise<Route> {
+async function route(parallel = false): Promise<Route> {
   const { rpc, projectId } = await changesContext(undefined)
   const list = await rpc.invoke('listChanges', {
     projectId: projectId!,
@@ -58,7 +60,7 @@ async function route(): Promise<Route> {
   const running = list.groups.filter(
     (g) => g.claimExpiresAt && new Date(g.claimExpiresAt).getTime() > now
   )
-  if (running.length)
+  if (running.length && !parallel)
     return idle(
       `A changeset is running: ${running.map((g) => g.title).join(', ')}`
     )
@@ -77,7 +79,10 @@ async function route(): Promise<Route> {
         ...(c.body ? ['', c.body] : []),
         '',
       ]),
-      WORKING_THEM,
+      ...(running.length
+        ? ['# Already running', '', ...running.map(describe), '']
+        : []),
+      running.length || parallel ? WORKING_ALONGSIDE : WORKING_THEM,
     ].join('\n'),
   }
 }
@@ -99,6 +104,21 @@ Read the knowledge base for what the app already is, then file the request as ch
 
 const WORKING_THEM = `These are every open change. Work them as changesets, as the pikku-changes skill's Changesets section says.
 `
+
+const WORKING_ALONGSIDE = `Other agents work changesets at the same time as you. Claim one changeset with --worktree and build it in the checkout that prints; declare the tables it creates, alters and reads, and if the claim is refused because of a running changeset, claim one that does not clash or stop. Merge it from this checkout when its changes are done.
+`
+
+const describe = (g: {
+  title: string
+  creates?: string[]
+  alters?: string[]
+  reads?: string[]
+}): string => {
+  const touches = (['creates', 'alters', 'reads'] as const)
+    .filter((k) => g[k]?.length)
+    .map((k) => `${k} ${g[k]!.join(', ')}`)
+  return `- ${g.title}${touches.length ? ` — ${touches.join('; ')}` : ''}`
+}
 
 const SKILL_DIRS: Record<Harness, string> = {
   pi: '.pi/skills',

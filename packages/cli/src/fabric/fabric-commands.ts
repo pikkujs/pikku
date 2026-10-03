@@ -843,6 +843,11 @@ export const fabricCommands = defineCLICommands({
             description: 'Whether the changeset is planned before it is built',
             type: 'boolean',
           },
+          worktree: {
+            description:
+              'Build it in its own checkout beside the repo, on changeset/<title>, so other changesets can run at the same time',
+            type: 'boolean',
+          },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),

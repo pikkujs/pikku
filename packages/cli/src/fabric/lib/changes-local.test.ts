@@ -3,10 +3,11 @@ import assert from 'node:assert'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { localChangesRPC } from './changes-local.js'
+import { localChangesRPC, releaseChangeset } from './changes-local.js'
 
-const store = async () =>
-  localChangesRPC(join(await mkdtemp(join(tmpdir(), 'changes-')), 'q.json'))
+const tempStore = async () =>
+  join(await mkdtemp(join(tmpdir(), 'changes-')), 'q.json')
+const store = async () => localChangesRPC(await tempStore())
 
 describe('local changes queue', () => {
   test('files, claims, refuses a second claim, and completes', async () => {
@@ -47,6 +48,28 @@ describe('local changes queue', () => {
     )
     const { thread } = await rpc.invoke('getChange', { changeId: '2' })
     assert.strictEqual(thread[0]?.body, 'done')
+  })
+
+  test('runs one schema changeset at a time and holds readers of a new table', async () => {
+    const path = await tempStore()
+    const rpc = localChangesRPC(path)
+    for (const title of ['Waitlist', 'Cancel', 'Copy', 'Join list'])
+      await rpc.invoke('createChange', { stageId: 'local', title })
+    const claim = (changeId: string, d: Record<string, string[]>) =>
+      rpc.invoke('claimChanges', {
+        projectId: 'local',
+        changeIds: [changeId],
+        claimedBy: 'me',
+        ...d,
+      })
+
+    const waitlist = await claim('1', { creates: ['waitlist'] })
+    await assert.rejects(claim('2', { alters: ['class'] }), { status: 409 })
+    await assert.rejects(claim('4', { reads: ['waitlist'] }), { status: 409 })
+    await claim('3', { reads: ['class'] })
+
+    await releaseChangeset(path, waitlist.group.groupId)
+    await claim('2', { alters: ['class'] })
   })
 
   test('says an rpc it cannot serve needs a fabric project', async () => {
