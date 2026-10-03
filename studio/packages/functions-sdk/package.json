@@ -1,0 +1,25 @@
+{
+  "name": "@project/functions-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./pikku/api.gen": "./src/pikku/api.gen.ts",
+    "./pikku/pikku-fetch.gen": "./src/pikku/pikku-fetch.gen.ts",
+    "./pikku/pikku-rpc.gen": "./src/pikku/pikku-rpc.gen.ts",
+    "./pikku/rpc-map.gen": "./src/pikku/rpc-map.gen.d.ts",
+    "./pikku/http-map.gen": "./src/pikku/http-map.gen.d.ts",
+    "./pikku/*.js": "./src/pikku/*.ts",
+    "./pikku/*": [
+      "./src/pikku/*.ts",
+      "./src/pikku/*",
+      "./src/pikku/*.d.ts"
+    ]
+  },
+  "dependencies": {
+    "@pikku/fetch": "workspace:*",
+    "@pikku/react": "workspace:*",
+    "@tanstack/react-query": "^5.66.0"
+  }
+}
