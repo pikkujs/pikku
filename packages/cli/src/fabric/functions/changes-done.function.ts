@@ -52,7 +52,12 @@ export const FabricChangesDone = pikkuSessionlessFunc({
 
     const { rpc, projectId, local } = await changesContext(input.apiUrl)
     if (local && headCommit)
-      await checkCommit(rpc, projectId!, input.changeId, headCommit)
+      headCommit = await checkCommit(
+        rpc,
+        projectId!,
+        input.changeId,
+        input.headCommit ?? null
+      )
     return await rpc.invoke('completeChange', {
       ...changeRef(projectId, input.changeId),
       branch,
@@ -64,22 +69,36 @@ export const FabricChangesDone = pikkuSessionlessFunc({
 })
 
 /**
- * On the local queue the commit is the only durable record of a change, and a
- * migration the changeset never declared would slip past the one-at-a-time
- * ordering of schema changesets.
+ * On the local queue the commit is the only durable record of a change, so it
+ * is found by its trailer rather than assumed to be HEAD, and a migration the
+ * changeset never declared would slip past the one-at-a-time ordering of schema
+ * changesets.
  */
 async function checkCommit(
   rpc: ChangesRPC,
   projectId: string,
   ref: string,
-  sha: string
-): Promise<void> {
+  given: string | null
+): Promise<string> {
   const { change } = await rpc.invoke('getChange', changeRef(projectId, ref))
-  const message = await git(['log', '-1', '--format=%B', sha])
-  const trailer = message.match(/^Change: #?(\S+)\s*$/m)?.[1]
-  if (trailer !== change.shortId && trailer !== change.changeId)
+  const carries = (message: string) => {
+    const trailer = message.match(/^Change(?:-Id)?: #?(\S+)\s*$/m)?.[1]
+    return trailer === change.shortId || trailer === change.changeId
+  }
+  const sha = given
+    ? (await git(['rev-parse', given])).trim()
+    : (
+        await git([
+          'log',
+          '-1',
+          '--format=%H',
+          '-E',
+          `--grep=^Change(-Id)?: (${change.changeId}|#?${change.shortId})$`,
+        ])
+      ).trim()
+  if (!sha || !carries(await git(['log', '-1', '--format=%B', sha])))
     throw new FabricPreconditionError(
-      `${sha.slice(0, 7)} is not the commit for #${change.shortId}. Commit the change with its text as the message and a \`Change: #${change.shortId}\` trailer, then run done again.`
+      `${given ? `${given} is not the commit for #${change.shortId}` : `No commit on this branch is #${change.shortId}`}. Commit it with #${change.shortId} in the subject and a \`Change-Id: ${change.changeId}\` trailer, then run done again.`
     )
   const files = await git([
     'diff-tree',
@@ -89,14 +108,14 @@ async function checkCommit(
     sha,
   ])
   const migrations = files.split('\n').filter((f) => /^db\/[^/]+\//.test(f))
-  if (!migrations.length) return
+  if (!migrations.length) return sha
   const { groups } = await rpc.invoke('listChanges', {
     projectId,
     groupId: change.groupId ?? undefined,
     includeDone: true,
   })
   const declared = groups[0] as Partial<Declaration> | undefined
-  if (declared?.creates?.length || declared?.alters?.length) return
+  if (declared?.creates?.length || declared?.alters?.length) return sha
   throw new FabricPreconditionError(
     `#${change.shortId} adds ${migrations.join(', ')} but its changeset declared no table it creates or alters. Claim it again with --creates/--alters so it is ordered with the other schema changes, then run done again.`
   )
