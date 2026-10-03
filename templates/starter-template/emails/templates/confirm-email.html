@@ -1,0 +1,31 @@
+<p
+  style="margin:0 0 12px;color:{{theme.colors.accent}};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;"
+>
+  {{appName}}
+</p>
+<h1 style="margin:0 0 16px;color:{{theme.colors.text}};font-size:28px;line-height:1.1;">
+  {{t.confirmEmail.heading}}
+</h1>
+<p style="margin:0 0 24px;color:{{theme.colors.muted}};font-size:16px;line-height:1.6;">
+  {{t.confirmEmail.intro}}
+</p>
+<p style="margin: 0 0 24px">
+  <a
+    href="{{confirmUrl}}"
+    style="display:inline-block;background:{{theme.colors.button}};color:{{theme.colors.buttonText}};text-decoration:none;padding:14px 22px;border-radius:999px;font-weight:700;"
+  >
+    {{t.confirmEmail.cta}}
+  </a>
+</p>
+<p style="margin:0 0 8px;color:{{theme.colors.text}};font-size:14px;line-height:1.6;">
+  {{t.confirmEmail.fallback}}
+</p>
+<p
+  style="margin:0;color:{{theme.colors.muted}};font-size:14px;line-height:1.6;word-break:break-all;"
+>
+  {{confirmUrl}}
+</p>
+<p style="margin:24px 0 0;color:{{theme.colors.muted}};font-size:13px;line-height:1.6;">
+  {{t.confirmEmail.expiry}}
+</p>
+{{> footer}}
