@@ -10,6 +10,8 @@ import {
 } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { dim, safe } from '../lib/output.js'
+import { git } from '../../utils/git.js'
+import { basename, dirname, join } from 'node:path'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import type { ClaimChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -25,11 +27,13 @@ export const FabricChangesClaimInput = z.object({
   alters: z.array(z.string()).optional(),
   reads: z.array(z.string()).optional(),
   needsPlan: z.boolean().optional(),
+  worktree: z.boolean().optional(),
 })
 
 export const FabricChangesClaimOutput = z.object({
   group: z.any(),
   changes: z.any(),
+  worktree: z.string().optional(),
 })
 
 export const FabricChangesClaim = pikkuSessionlessFunc({
@@ -48,8 +52,9 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
       throw new FabricPreconditionError(
         'fabric does not record --creates/--alters/--reads/--needs-plan yet; they work on the local queue.'
       )
+    let claimed: ClaimChangesOutput
     try {
-      return await rpc.invoke('claimChanges', {
+      claimed = await rpc.invoke('claimChanges', {
         projectId: project,
         groupId: input.groupId,
         changeIds,
@@ -64,8 +69,27 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
         await whyUnclaimable(rpc, project, changeIds, error)
       )
     }
+    if (!input.worktree) return claimed
+    return { ...claimed, worktree: await addWorktree(claimed.group.title) }
   },
 })
+
+/**
+ * Changesets that run side by side each get their own checkout, next to the
+ * repo rather than inside it, on a branch named after the changeset and cut
+ * from the branch it will be merged back into.
+ */
+async function addWorktree(title: string): Promise<string> {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 48)
+  const top = (await git(['rev-parse', '--show-toplevel'])).trim()
+  const path = join(dirname(top), `${basename(top)}-changesets`, slug)
+  await git(['worktree', 'add', path, '-b', `changeset/${slug}`])
+  return path
+}
 
 /**
  * The hard rule of the judge: a changeset that creates or alters a table is
@@ -127,6 +151,7 @@ async function whyUnclaimable(
     })
   )
   const said = refusal instanceof Error ? refusal.message : ''
+  if (said && lines.every((line) => line.endsWith(': open'))) return said
   return [
     'Nothing in that set can be claimed right now:',
     ...lines,
@@ -141,7 +166,7 @@ async function whyUnclaimable(
 
 export const renderChangesClaim = (
   _s: unknown,
-  { group, changes }: ClaimChangesOutput
+  { group, changes, worktree }: ClaimChangesOutput & { worktree?: string }
 ): void => {
   console.log(`Claimed ${changes.length} item(s) as “${safe(group.title)}”`)
   console.log(dim(`group ${safe(group.groupId)}`))
@@ -157,6 +182,7 @@ export const renderChangesClaim = (
       `  #${safe(change.shortId)}  ${safe(change.title)}  ${dim(safe(change.changeId))}`
     )
   }
+  if (worktree) console.log(`Work in ${safe(worktree)}`)
 }
 
 const touchesLine = (d: Partial<Declaration>): string | null => {

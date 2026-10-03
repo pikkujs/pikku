@@ -3,7 +3,8 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 import { currentBranch, git } from '../../utils/git.js'
-import { safe } from '../lib/output.js'
+import { dim, safe } from '../lib/output.js'
+import { releaseChangeset } from '../lib/changes-local.js'
 
 export const FabricChangesMergeInput = z.object({
   apiUrl: z.string().optional(),
@@ -16,6 +17,7 @@ export const FabricChangesMergeOutput = z.object({
   branch: z.string(),
   into: z.string(),
   commit: z.string(),
+  removedWorktree: z.string().nullable(),
 })
 
 /**
@@ -29,7 +31,7 @@ export const FabricChangesMerge = pikkuSessionlessFunc({
   input: FabricChangesMergeInput,
   output: FabricChangesMergeOutput,
   func: async (_services, input) => {
-    const { rpc, projectId } = await changesContext(
+    const { rpc, projectId, storePath } = await changesContext(
       input.apiUrl,
       input.projectId
     )
@@ -66,11 +68,18 @@ export const FabricChangesMerge = pikkuSessionlessFunc({
       '-m',
       `Changeset: ${group.groupId}`,
     ])
+    if (storePath) await releaseChangeset(storePath, group.groupId)
+    const worktree = (await git(['worktree', 'list', '--porcelain']))
+      .split('\n\n')
+      .find((entry) => entry.includes(`\nbranch refs/heads/${branch}`))
+      ?.match(/^worktree (.+)$/m)?.[1]
+    if (worktree) await git(['worktree', 'remove', worktree])
     return {
       groupId: group.groupId,
       branch,
       into,
-      commit: await git(['rev-parse', 'HEAD']),
+      commit: (await git(['rev-parse', 'HEAD'])).trim(),
+      removedWorktree: worktree ?? null,
     }
   },
 })
@@ -82,4 +91,6 @@ export const renderChangesMerge = (
   console.log(
     `Merged ${safe(result.branch)} into ${safe(result.into)} @ ${result.commit.slice(0, 7)}`
   )
+  if (result.removedWorktree)
+    console.log(dim(`removed worktree ${safe(result.removedWorktree)}`))
 }

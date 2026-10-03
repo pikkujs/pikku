@@ -5,6 +5,7 @@ export const NextInput = z.object({
   exec: z.enum(['pi', 'claude']).optional(),
   harnessArg: z.array(z.string()).optional(),
   loop: z.boolean().optional(),
+  parallel: z.boolean().optional(),
 })
 
 export const NextOutput = z.object({

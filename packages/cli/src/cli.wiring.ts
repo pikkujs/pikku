@@ -971,6 +971,11 @@ wireCLI({
             'With --exec, route again after each agent until there is nothing to do',
           type: 'boolean',
         },
+        parallel: {
+          description:
+            'Route an agent even while another changeset is running; each works its own in a worktree',
+          type: 'boolean',
+        },
       },
     }),
     validate: pikkuCLICommand({

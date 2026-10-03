@@ -88,8 +88,15 @@ pikku fabric changes merge --group-id <id>
 ```
 
 Changesets that create or alter tables go one at a time; one that reads a table waits for the
-changeset creating it; the rest can run side by side. On the local queue, `done` refuses a commit that
-adds a migration under `db/` when its changeset declared no `--creates`/`--alters`.
+changeset creating it; the rest can run side by side. On the local queue, `claim` refuses a changeset
+that would break that order, and `done` refuses a commit that adds a migration under `db/` when its
+changeset declared no `--creates`/`--alters`.
+
+When other agents are working changesets at the same time (your work says so), claim with
+`--worktree`: it creates `changeset/<slug>` in its own checkout beside the repo and prints the path.
+Build and commit there, run `done` there, then merge from the checkout you started in — the merge
+removes the worktree. If the claim is refused because of a running changeset, claim one that does not
+clash, or stop.
 
 ## Reading an item
 

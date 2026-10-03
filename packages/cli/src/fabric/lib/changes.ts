@@ -32,20 +32,24 @@ export async function changesContext(
   apiUrl: string
   token: string | null
   local: boolean
+  storePath?: string
 }> {
   const ctx = await resolveApiContext({
     apiUrlOverride,
     resolveProject: !projectIdOverride,
   })
   const projectId = projectIdOverride ?? ctx.projectId
-  if (!ctx.token || !projectId)
+  if (!ctx.token || !projectId) {
+    const storePath = await localStorePath()
     return {
-      rpc: localChangesRPC(await localStorePath()),
+      rpc: localChangesRPC(storePath),
       projectId: LOCAL_PROJECT_ID,
       apiUrl: ctx.apiUrl,
       token: null,
       local: true,
+      storePath,
     }
+  }
   return {
     rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
     projectId,
