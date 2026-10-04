@@ -270,6 +270,8 @@ done
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
+# `export type *` in src/fabric/client.ts points at a hand-kept .d.ts, which tsc does not emit
+cp src/fabric/sdk/rpc-map.gen.d.ts dist/src/fabric/sdk/
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.

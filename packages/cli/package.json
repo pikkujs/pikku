@@ -114,7 +114,12 @@
     "./validate": "./dist/src/functions/validate/validate-registry.js",
     "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
     "./server/server-ready": "./dist/src/server/server-ready.js",
-    "./surface.json": "./surface.json"
+    "./surface.json": "./surface.json",
+    "./fabric": {
+      "types": "./dist/src/fabric/client.d.ts",
+      "import": "./dist/src/fabric/client.js",
+      "default": "./dist/src/fabric/client.js"
+    }
   },
   "peerDependenciesMeta": {
     "@pikku/playwright": {

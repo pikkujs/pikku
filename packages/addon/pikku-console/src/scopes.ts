@@ -175,6 +175,21 @@ defineScope({
               run: { description: 'Run verify against the project' },
             },
           },
+          changes: {
+            description:
+              'Changes to make to the app — local, or filed by Fabric against the deployed app',
+            scopes: {
+              read: { description: 'Read the changes queue' },
+              write: { description: 'File, move, answer and complete changes' },
+            },
+          },
+          wishes: {
+            description: 'The wish list shown while a project is set up',
+            scopes: {
+              read: { description: 'Read the wish list' },
+              write: { description: 'Like or dislike a wish' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {
