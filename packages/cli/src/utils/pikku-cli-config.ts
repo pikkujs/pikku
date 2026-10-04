@@ -1226,19 +1226,19 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
-    // Extension screens, when the package declares any. Their own directory:
+    // Addon screens, when the package declares any. Their own directory:
     // the host imports the screens file and the meta is published beside it.
-    const extensionDir = join(result.outDir, 'extension')
-    if (!result.extensionMetaJsonFile) {
-      result.extensionMetaJsonFile = join(
-        extensionDir,
-        'pikku-extension-meta.gen.json'
+    const screensDir = join(result.outDir, 'screens')
+    if (!result.screensMetaJsonFile) {
+      result.screensMetaJsonFile = join(
+        screensDir,
+        'pikku-screens-meta.gen.json'
       )
     }
-    if (!result.extensionScreensFile) {
-      result.extensionScreensFile = join(
-        extensionDir,
-        'pikku-extension-screens.gen.ts'
+    if (!result.screensFile) {
+      result.screensFile = join(
+        screensDir,
+        'pikku-screens.gen.ts'
       )
     }
 

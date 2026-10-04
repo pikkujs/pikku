@@ -15,9 +15,9 @@ const writePackage = (rootDir: string, name: string, manifest?: object) => {
     '{}'
   )
   if (manifest) {
-    mkdirSync(join(dir, '.pikku', 'extension'), { recursive: true })
+    mkdirSync(join(dir, '.pikku', 'screens'), { recursive: true })
     writeFileSync(
-      join(dir, '.pikku', 'extension', 'pikku-extension-meta.gen.json'),
+      join(dir, '.pikku', 'screens', 'pikku-screens-meta.gen.json'),
       JSON.stringify(manifest)
     )
   }
@@ -49,7 +49,7 @@ const makeState = (rootDir: string, decls: Map<string, any>) =>
     exportedContracts: { addonHttp: {}, addonCli: {}, addonChannel: {} },
   }) as unknown as InspectorState
 
-describe('loadAddonFunctionsMeta — wireExtension', () => {
+describe('loadAddonFunctionsMeta — ui: true', () => {
   let rootDir: string
   const manifest = {
     title: 'Invoices',
@@ -59,24 +59,24 @@ describe('loadAddonFunctionsMeta — wireExtension', () => {
   }
 
   before(() => {
-    rootDir = mkdtempSync(join(tmpdir(), 'pikku-extension-meta-'))
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-screens-meta-'))
     writeFileSync(join(rootDir, 'package.json'), '{"name":"consumer"}')
-    writePackage(rootDir, '@acme/extension-invoices', manifest)
+    writePackage(rootDir, '@acme/addon-invoices', manifest)
     writePackage(rootDir, '@acme/addon-plain')
   })
   after(() => rmSync(rootDir, { recursive: true, force: true }))
 
-  test('loads the manifest of a wired extension under its namespace', async () => {
+  test('loads the screens of a ui addon under its namespace', async () => {
     criticals = []
     const state = makeState(
       rootDir,
       new Map([
-        ['invoices', { package: '@acme/extension-invoices', extension: true }],
+        ['invoices', { package: '@acme/addon-invoices', ui: true }],
       ])
     )
     await loadAddonFunctionsMeta(logger, state)
     assert.deepEqual(criticals, [])
-    assert.deepEqual(state.extensions?.invoices, manifest)
+    assert.deepEqual(state.addonScreens?.invoices, manifest)
   })
 
   test('the wired role is the derived scopes plus the host scopes on that instance', async () => {
@@ -87,31 +87,42 @@ describe('loadAddonFunctionsMeta — wireExtension', () => {
         [
           'invoices',
           {
-            package: '@acme/extension-invoices',
-            extension: true,
+            package: '@acme/addon-invoices',
+            ui: true,
             scopes: ['admin', 'invoices:read'],
           },
         ],
       ])
     )
     await loadAddonFunctionsMeta(logger, state)
-    assert.deepEqual(state.extensions?.invoices?.scopes, [
+    assert.deepEqual(state.addonScreens?.invoices?.scopes, [
       'admin',
       'invoices:read',
       'invoices:write',
     ])
   })
 
-  test('a package with no screens is an addon, and wireExtension says so', async () => {
+  test('ui: true on a package with no screens is refused', async () => {
     criticals = []
     const state = makeState(
       rootDir,
-      new Map([['plain', { package: '@acme/addon-plain', extension: true }]])
+      new Map([['plain', { package: '@acme/addon-plain', ui: true }]])
     )
     await loadAddonFunctionsMeta(logger, state)
     assert.equal(criticals.length, 1)
-    assert.match(criticals[0]!, /PKU346.*addon-plain.*Use wireAddon/)
-    assert.equal(state.extensions?.plain, undefined)
+    assert.match(criticals[0]!, /PKU346.*addon-plain.*declares no screens/)
+    assert.equal(state.addonScreens?.plain, undefined)
+  })
+
+  test('a package that ships screens is ignored unless the wiring sets ui', async () => {
+    criticals = []
+    const state = makeState(
+      rootDir,
+      new Map([['invoices', { package: '@acme/addon-invoices' }]])
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    assert.deepEqual(criticals, [])
+    assert.equal(state.addonScreens?.invoices, undefined)
   })
 
   test('wireAddon on the same package stays valid', async () => {

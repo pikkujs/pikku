@@ -1,30 +1,30 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { extensionFiles } from './new-extension.js'
+import { addonUiFiles } from './new-addon-ui.js'
 
-test('the scaffold declares screens, so it is an extension and not an addon', () => {
-  const files = extensionFiles('invoice-tracker')
-  assert.match(files['src/extension.ts'], /defineExtension/)
-  assert.match(files['src/extension.ts'], /title: 'Invoice Tracker'/)
-  assert.match(files['src/extension.ts'], /scopes: \['invoice-tracker:read'\]/)
+test('the scaffold declares screens, so the host can mount them', () => {
+  const files = addonUiFiles('invoice-tracker')
+  assert.match(files['src/screens.ts'], /defineScreens/)
+  assert.match(files['src/screens.ts'], /title: 'Invoice Tracker'/)
+  assert.match(files['src/screens.ts'], /scopes: \['invoice-tracker:read'\]/)
 })
 
 test('the screen scope is one the shipped function enforces', () => {
-  const files = extensionFiles('invoice-tracker')
+  const files = addonUiFiles('invoice-tracker')
   assert.match(
     files['src/functions/hello.function.ts'],
     /scopes: \['invoice-tracker:read'\]/
   )
 })
 
-test('the package publishes the extension meta', () => {
-  const pkg = JSON.parse(extensionFiles('x')['package.json'])
-  assert.ok(pkg.exports['./.pikku/extension/*'])
-  assert.equal(pkg.name, '@pikku/extension-x')
+test('the package publishes its screens through the addon exports', () => {
+  const pkg = JSON.parse(addonUiFiles('x')['package.json'])
+  assert.ok(pkg.exports['./.pikku/*'])
+  assert.equal(pkg.name, '@pikku/addon-x')
 })
 
 test('the scope its screen and function require is declared, which the inspector insists on', () => {
-  const files = extensionFiles('invoice-tracker')
+  const files = addonUiFiles('invoice-tracker')
   assert.match(files['src/scopes.ts'], /defineScope/)
   assert.match(files['src/scopes.ts'], /'invoice-tracker': \{/)
   assert.match(files['src/scopes.ts'], /read: \{/)
@@ -32,7 +32,7 @@ test('the scope its screen and function require is declared, which the inspector
 })
 
 test('the scaffold declares the services types and factory pikku all requires', () => {
-  const files = extensionFiles('invoice-tracker')
+  const files = addonUiFiles('invoice-tracker')
   assert.match(files['types/application-types.d.ts'], /interface SingletonServices/)
   assert.match(files['src/services.ts'], /pikkuAddonServices/)
   assert.match(files['src/functions/hello.function.ts'], /#pikku\/addon\/function/)

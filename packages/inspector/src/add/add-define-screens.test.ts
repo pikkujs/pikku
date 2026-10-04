@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test, beforeEach } from 'node:test'
 import * as ts from 'typescript'
-import { addDefineExtension } from './add-define-extension.js'
+import { addDefineScreens } from './add-define-screens.js'
 import { addWireAddon } from './add-wire-addon.js'
 
 let state: any
@@ -20,7 +20,7 @@ const logger = {
 const inspect = (source: string) => {
   const file = ts.createSourceFile('x.ts', source, ts.ScriptTarget.Latest, true)
   const visit = (node: ts.Node) => {
-    addDefineExtension(node, state, logger)
+    addDefineScreens(node, state, logger)
     addWireAddon(node, state, logger)
     ts.forEachChild(node, visit)
   }
@@ -38,10 +38,10 @@ beforeEach(() => {
   }
 })
 
-describe('addDefineExtension', () => {
+describe('addDefineScreens', () => {
   test('records the screens of a manifest', () => {
     inspect(`
-      defineExtension({
+      defineScreens({
         title: 'Invoices',
         icon: 'receipt',
         screens: [
@@ -51,9 +51,9 @@ describe('addDefineExtension', () => {
       })
     `)
     assert.deepEqual(criticals, [])
-    assert.equal(state.extensionManifest.title, 'Invoices')
-    assert.equal(state.extensionManifest.icon, 'receipt')
-    assert.deepEqual(state.extensionManifest.screens, [
+    assert.equal(state.screensManifest.title, 'Invoices')
+    assert.equal(state.screensManifest.icon, 'receipt')
+    assert.deepEqual(state.screensManifest.screens, [
       {
         path: '/',
         title: 'Overview',
@@ -67,41 +67,41 @@ describe('addDefineExtension', () => {
 
   test('rejects a component that is not a lazy import literal', () => {
     inspect(`
-      defineExtension({
+      defineScreens({
         title: 'X',
         screens: [{ path: '/', title: 'A', component: loadIt }],
       })
     `)
     assert.equal(criticals.length, 2)
     assert.match(criticals[0]!, /PKU345.*import/)
-    assert.deepEqual(state.extensionManifest.screens, [])
+    assert.deepEqual(state.screensManifest.screens, [])
   })
 
   test('rejects a screen that is both a component and an app', () => {
     inspect(`
-      defineExtension({
+      defineScreens({
         title: 'X',
         screens: [{ path: '/', title: 'A', app: './a', component: () => import('./a') }],
       })
     `)
     assert.match(criticals[0]!, /one or the other/)
-    assert.deepEqual(state.extensionManifest.screens, [])
+    assert.deepEqual(state.screensManifest.screens, [])
   })
 })
 
-describe('wireExtension', () => {
-  test('is recorded as an addon instance flagged as an extension', () => {
+describe('wireAddon ui', () => {
+  test('ui: true is recorded on the addon instance', () => {
     inspect(
-      `wireExtension({ name: 'invoices', package: '@acme/extension-invoices', scopes: ['admin'] })`
+      `wireAddon({ name: 'invoices', package: '@acme/addon-invoices', ui: true, scopes: ['admin'] })`
     )
     const declaration = state.rpc.wireAddonDeclarations.get('invoices')
-    assert.equal(declaration.package, '@acme/extension-invoices')
-    assert.equal(declaration.extension, true)
+    assert.equal(declaration.package, '@acme/addon-invoices')
+    assert.equal(declaration.ui, true)
     assert.deepEqual(declaration.scopes, ['admin'])
   })
 
   test('wireAddon is not flagged', () => {
     inspect(`wireAddon({ name: 'x', package: '@acme/x' })`)
-    assert.equal(state.rpc.wireAddonDeclarations.get('x').extension, undefined)
+    assert.equal(state.rpc.wireAddonDeclarations.get('x').ui, undefined)
   })
 })

@@ -20,6 +20,7 @@ import {
   type AuthConfig,
   type ParsedSpec,
 } from '@pikku/openapi-parser'
+import { scaffoldAddonUi } from './new-addon-ui.js'
 import { installAddonIntoApp, type AddonAuthMode } from './install-addon.js'
 
 /**
@@ -1219,6 +1220,7 @@ function findAppProject(
 
 export type NewAddonInput = {
     name: string
+    ui?: boolean
     displayName?: string
     description?: string
     category?: string
@@ -1245,6 +1247,7 @@ export async function newAddon(
   { logger, config }: Pick<SingletonServices, 'logger' | 'config'>,
     {
       name,
+      ui = false,
       displayName,
       description,
       category = 'General',
@@ -1267,6 +1270,10 @@ export async function newAddon(
       build = true,
     }: NewAddonInput
 ): Promise<string> {
+  if (ui) {
+    await scaffoldAddonUi(logger, { name, dir })
+    return resolve(dir ?? join('packages', `addon-${name}`))
+  }
   name = sanitizeAddonName(name)
 
   if (!/^[a-z][a-z0-9_-]*$/.test(name)) {

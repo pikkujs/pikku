@@ -1,5 +1,5 @@
 import { dirname, relative, resolve, posix } from 'path'
-import type { ExtensionManifestMeta } from '@pikku/inspector'
+import type { ScreensManifestMeta } from '@pikku/inspector'
 
 const toPosix = (nativePath: string): string => nativePath.replace(/\\/g, '/')
 
@@ -15,12 +15,12 @@ const componentImport = (
 }
 
 /**
- * The extension's screens as the host imports them. Each component is a lazy
+ * The addon's screens as the host imports them. Each component is a lazy
  * import, so the host's bundler splits it and nothing loads until its route is
  * visited.
  */
-export const serializeExtensionScreens = (
-  manifest: ExtensionManifestMeta,
+export const serializeScreens = (
+  manifest: ScreensManifestMeta,
   screensFile: string
 ): string => {
   const entries = manifest.screens.map((screen) => {
@@ -35,14 +35,14 @@ export const serializeExtensionScreens = (
     ]
     return `  { ${fields.join(', ')} },`
   })
-  return `export const extensionScreens = [\n${entries.join('\n')}\n] as const\n`
+  return `export const addonScreens = [\n${entries.join('\n')}\n] as const\n`
 }
 
 /**
- * The extension's role: the scopes its own functions require, and nothing it
+ * The addon's role: the scopes its own functions require, and nothing it
  * declares by hand, so it cannot drift from what the functions enforce.
  */
-export const deriveExtensionScopes = (
+export const deriveScreensScopes = (
   functionsMeta: Record<string, { scopes?: string[] }>
 ): string[] =>
   [
@@ -52,12 +52,12 @@ export const deriveExtensionScopes = (
   ].sort()
 
 /**
- * The manifest a consuming project reads to tell an extension from an addon.
+ * The manifest a consuming project reads to find an addon's screens and role.
  * `file` is made relative to the package so the published meta does not carry
  * the author's machine path.
  */
-export const serializeExtensionMeta = (
-  manifest: ExtensionManifestMeta,
+export const serializeScreensMeta = (
+  manifest: ScreensManifestMeta,
   rootDir: string,
   scopes: string[]
 ): string =>
