@@ -1,0 +1,19 @@
+{
+  "name": "UserInfoIcons",
+  "title": "User info with icons",
+  "description": "Name, role and contact lines with icons.",
+  "tags": [
+    "user"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "userinfoicons__name": "Ada Lovelace",
+    "userinfoicons__role": "Engineer",
+    "userinfoicons__email": "ada@example.com",
+    "userinfoicons__phone": "+44 20 7946 0000",
+    "userinfoicons__initials": "AL"
+  }
+}

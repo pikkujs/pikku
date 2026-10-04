@@ -1,0 +1,17 @@
+{
+  "name": "StatsSegments",
+  "title": "Segmented stat",
+  "description": "A total with a multi-colour bar and a legend.",
+  "tags": [
+    "stats"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "statssegments__title": "Traffic by source",
+    "statssegments__total": "4,860",
+    "statssegments__a": "Search",
+    "statssegments__b": "Direct",
+    "statssegments__c": "Social"
+  }
+}

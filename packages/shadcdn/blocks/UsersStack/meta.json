@@ -1,0 +1,16 @@
+{
+  "name": "UsersStack",
+  "title": "Avatar stack",
+  "description": "A row of overlapping avatars with a count.",
+  "tags": [
+    "user"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "usersstack__i1": "AL",
+    "usersstack__i2": "AT",
+    "usersstack__i3": "GH",
+    "usersstack__more": "+5"
+  }
+}

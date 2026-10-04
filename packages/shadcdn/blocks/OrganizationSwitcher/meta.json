@@ -1,0 +1,15 @@
+{
+  "name": "OrganizationSwitcher",
+  "title": "Organization switcher",
+  "description": "A select to change the active organization.",
+  "tags": [
+    "organization"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "organizationswitcher__label": "Organization",
+    "organizationswitcher__o1": "Acme",
+    "organizationswitcher__o2": "Globex"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "FaqWithHeader",
+  "title": "FAQ accordion-style",
+  "description": "A header with a two-column list of questions and answers.",
+  "tags": [
+    "faq"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "faqwithheader__title": "Questions, answered",
+    "faqwithheader__q1": "Is there a free plan?",
+    "faqwithheader__a1": "Yes, with one project.",
+    "faqwithheader__q2": "Can I invite my team?",
+    "faqwithheader__a2": "Yes, from the members page.",
+    "faqwithheader__q3": "Do you offer refunds?",
+    "faqwithheader__a3": "Within 30 days of purchase.",
+    "faqwithheader__q4": "How do I export my data?",
+    "faqwithheader__a4": "From settings, as a zip."
+  }
+}

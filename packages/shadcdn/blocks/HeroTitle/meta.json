@@ -1,0 +1,16 @@
+{
+  "name": "HeroTitle",
+  "title": "Centered hero",
+  "description": "Centered headline with a gradient-free accent word, supporting copy and two buttons.",
+  "tags": [
+    "heroes"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "herotitle__title": "Build something people love",
+    "herotitle__description": "A short line that says what this does and who it is for.",
+    "herotitle__primary": "Get started",
+    "herotitle__secondary": "Learn more"
+  }
+}

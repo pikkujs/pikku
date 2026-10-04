@@ -1,0 +1,17 @@
+{
+  "name": "NavbarSearch",
+  "title": "Navigation with search",
+  "description": "A search field above a grouped link list.",
+  "tags": [
+    "navbars"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "navbarsearch__search": "Search",
+    "navbarsearch__section": "Workspace",
+    "navbarsearch__l1": "Overview",
+    "navbarsearch__l2": "Reports",
+    "navbarsearch__l3": "Team"
+  }
+}

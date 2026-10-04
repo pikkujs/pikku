@@ -1,0 +1,17 @@
+{
+  "name": "ForgotPassword",
+  "title": "Forgot password",
+  "description": "Asks for an email and sends a reset link.",
+  "tags": [
+    "auth"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "forgotpassword__title": "Forgot your password?",
+    "forgotpassword__description": "Enter your email and we will send a reset link.",
+    "forgotpassword__email": "Email",
+    "forgotpassword__submit": "Send reset link",
+    "forgotpassword__back": "Back to sign in"
+  }
+}

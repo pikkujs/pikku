@@ -1,0 +1,15 @@
+{
+  "name": "ServerError",
+  "title": "Server error page",
+  "description": "A 500 page that says it is on us and offers a retry.",
+  "tags": [
+    "errors"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "servererror__title": "Something went wrong on our side",
+    "servererror__description": "We have been told. Try again in a moment.",
+    "servererror__retry": "Try again"
+  }
+}
