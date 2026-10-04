@@ -6,8 +6,26 @@ import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { GitService, WorkspacePathError, runGit } from './git.service.js'
 
+Object.assign(process.env, {
+  GIT_TERMINAL_PROMPT: '0',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_COUNT: '3',
+  GIT_CONFIG_KEY_0: 'gc.auto',
+  GIT_CONFIG_VALUE_0: '0',
+  GIT_CONFIG_KEY_1: 'maintenance.auto',
+  GIT_CONFIG_VALUE_1: 'false',
+  GIT_CONFIG_KEY_2: 'commit.gpgsign',
+  GIT_CONFIG_VALUE_2: 'false',
+})
+
 const git = (cwd: string, ...args: string[]) =>
-  execFileSync('git', args, { cwd, encoding: 'utf8' }).trim()
+  execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 20_000,
+  }).trim()
 
 const identity = (cwd: string) => {
   git(cwd, 'config', 'user.name', 'Test')
