@@ -17,6 +17,7 @@
       "packages/deploy/*",
       "templates/*",
       "!templates/starter-template",
+      "!examples/field-service",
       "examples/*",
       "verifiers/*",
       "e2e",
@@ -30,6 +31,7 @@
   },
   "scripts": {
     "postinstall": "husky && node scripts/setup-merge-drivers.mjs",
+    "setup": "node scripts/setup-submodules.mjs",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",

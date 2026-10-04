@@ -145,7 +145,14 @@ function assertEntityAppears(entity, content, relPath) {
 const examples = []
 const names = new Map()
 for (const dir of SOURCE_DIRS) {
-  if (!existsSync(dir)) continue
+  if (!existsSync(dir)) {
+    if (dir.includes('field-service')) {
+      throw new Error(
+        `[embed-examples] ${relative(repoRoot, dir)} is missing: examples/field-service is a git submodule. Run \`bun run setup\`.`
+      )
+    }
+    continue
+  }
   for (const file of collect(dir)) {
     const relPath = relative(repoRoot, file).split(sep).join('/')
     const raw = readFileSync(file, 'utf-8')

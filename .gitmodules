@@ -2,3 +2,7 @@
 	path = templates/starter-template
 	url = https://github.com/pikkujs/starter-template.git
 	branch = main
+[submodule "examples/field-service"]
+	path = examples/field-service
+	url = https://github.com/pikkujs/template-field-service.git
+	branch = main
