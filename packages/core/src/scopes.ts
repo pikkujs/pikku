@@ -86,3 +86,30 @@ export const verifyScopes = (
     throw new MissingScopeError(missing)
   }
 }
+
+/**
+ * The scopes both `held` and `cap` grant, by the same parent and wildcard rules
+ * as {@link hasScopes}. Where one side is broader, the narrower grant is kept:
+ * a holder of `invoices:*` capped to `invoices:read` ends with `invoices:read`,
+ * and a holder of `invoices:read` capped to `invoices:*` keeps `invoices:read`.
+ * Fails closed: nothing held, or an empty cap, yields nothing.
+ */
+export const intersectScopes = (
+  held: Iterable<string> | undefined,
+  cap: Iterable<string> | undefined
+): string[] => {
+  const heldSet = new Set(held ?? [])
+  const capSet = new Set(cap ?? [])
+  const result = new Set<string>()
+  for (const scope of heldSet) {
+    if (holds(capSet, scope)) {
+      result.add(scope)
+    }
+  }
+  for (const scope of capSet) {
+    if (holds(heldSet, scope)) {
+      result.add(scope)
+    }
+  }
+  return [...result]
+}

@@ -1,6 +1,10 @@
 export { authAPIKey } from './auth-apikey.js'
 export { authCookie } from './auth-cookie.js'
 export { authBearer } from './auth-bearer.js'
+export {
+  extensionScopeCap,
+  EXTENSION_HEADER,
+} from './extension-scope-cap.js'
 export { remoteJobsSecret } from './remote-jobs-secret.js'
 export { pikkuRemoteAuthMiddleware } from './remote-auth.js'
 export { cors } from './cors.js'
