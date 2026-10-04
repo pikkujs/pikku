@@ -8,6 +8,7 @@ export type {
   StudioAccount,
   SignInStatus,
   FabricAccount,
+  FabricLink,
   RunningProject,
 } from './projects.js'
 export { confinedSpawn, seatbeltProfile, bwrapArgs } from './confine.js'

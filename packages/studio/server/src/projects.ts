@@ -93,6 +93,14 @@ export interface FabricAccount {
   pollSignIn(code: string): Promise<SignInStatus>
   signOut(): Promise<void>
   modelAccess(): Promise<{ proxyUrl: string; apiKey: string }>
+  link(projectId: string): Promise<FabricLink | null>
+}
+
+export interface FabricLink {
+  apiUrl: string
+  token: string
+  baseBranch: string
+  deployed: boolean
 }
 
 interface RegistryEntry {
@@ -119,6 +127,23 @@ export const fabricAccount: FabricAccount = {
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const { projects } = await rpc.invoke('fabricCliProjects', {})
     return projects
+  },
+  async link(projectId) {
+    const ctx = await resolveApiContext({ resolveProject: false })
+    if (!ctx.token) return null
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const [{ projects }, { stages }] = await Promise.all([
+      rpc.invoke('fabricCliProjects', {}),
+      rpc.invoke('listStages', { projectId }),
+    ])
+    const project = projects.find((p) => p.projectId === projectId)
+    if (!project) return null
+    return {
+      apiUrl: ctx.apiUrl,
+      token: ctx.token,
+      baseBranch: project.productionBranch,
+      deployed: stages.some((s) => s.hasActiveDeployment),
+    }
   },
   async startSignIn() {
     const ctx = await resolveApiContext({ resolveProject: false })
@@ -342,6 +367,10 @@ export class StudioProjectsService {
 
   modelAccess() {
     return this.account.modelAccess()
+  }
+
+  fabricLink(projectId: string) {
+    return this.account.link(projectId)
   }
 
   startSignIn() {
