@@ -1241,6 +1241,15 @@ const _getPikkuCLIConfig = async (
         'pikku-screens.gen.ts'
       )
     }
+    if (!result.installedAddonsFile) {
+      result.installedAddonsFile = join(
+        screensDir,
+        'pikku-installed-addons.gen.ts'
+      )
+    }
+    if (!result.addonRolesFile) {
+      result.addonRolesFile = join(screensDir, 'pikku-addon-roles.gen.ts')
+    }
 
     // Personas. Beside the roles they are checked against, for the same reason
     // roles sit beside their scopes.
