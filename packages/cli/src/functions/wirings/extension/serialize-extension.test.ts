@@ -1,6 +1,7 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
+  deriveExtensionScopes,
   serializeExtensionMeta,
   serializeExtensionScreens,
 } from './serialize-extension.js'
@@ -39,8 +40,36 @@ describe('serializeExtensionScreens', () => {
 
 describe('serializeExtensionMeta', () => {
   test('does not publish the absolute path of the author', () => {
-    const meta = JSON.parse(serializeExtensionMeta(manifest as any, '/pkg'))
+    const meta = JSON.parse(
+      serializeExtensionMeta(manifest as any, '/pkg', ['a'])
+    )
     assert.equal(meta.file, 'src/extension.ts')
     assert.equal(meta.screens.length, 2)
+  })
+})
+
+describe('deriveExtensionScopes', () => {
+  test('is the union of what the functions require, without declaring anything', () => {
+    assert.deepEqual(
+      deriveExtensionScopes({
+        list: { scopes: ['invoices:read'] },
+        save: { scopes: ['invoices:write', 'invoices:read'] },
+        open: {},
+      }),
+      ['invoices:read', 'invoices:write']
+    )
+  })
+
+  test('a package whose functions need no scope has an empty role', () => {
+    assert.deepEqual(deriveExtensionScopes({ open: {} }), [])
+  })
+})
+
+describe('the published meta', () => {
+  test('carries the derived role', () => {
+    const meta = JSON.parse(
+      serializeExtensionMeta(manifest as any, '/pkg', ['invoices:read'])
+    )
+    assert.deepEqual(meta.scopes, ['invoices:read'])
   })
 })

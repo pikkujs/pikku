@@ -595,6 +595,13 @@ export type ExtensionManifestMeta = {
   /** The source file whose `defineExtension` call declared this manifest. */
   file: string
   screens: ExtensionScreenMeta[]
+  /**
+   * The extension's role: every scope its own functions require, derived by
+   * `pikku all` and never declared. Absent from the raw `defineExtension` read.
+   * On a wired instance it also carries the host's `wireExtension` scopes, which
+   * the runner demands of every function in the package.
+   */
+  scopes?: string[]
 }
 
 export interface InspectorState {
