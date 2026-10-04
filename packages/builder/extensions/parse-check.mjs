@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 
 const PARSEABLE = /\.(ts|tsx|js|jsx|mjs|cjs)$/
 const SKIP = /\.gen\.[jt]sx?$|[/\\]\.pikku[/\\]/
@@ -29,7 +30,7 @@ export function parseErrors(cwd, paths) {
     return null
   }
   if (run.error || run.status !== SYNTAX_EXIT) return null
-  const lines = `${run.stdout ?? ''}\n${run.stderr ?? ''}`.replace(/\u001b\[[0-9;]*m/g, '').split('\n')
+  const lines = stripVTControlCharacters(`${run.stdout ?? ''}\n${run.stderr ?? ''}`).split('\n')
   const first = lines.findIndex((line) => /^\s*[x×] /.test(line))
   if (first === -1) return null
   const output = lines
