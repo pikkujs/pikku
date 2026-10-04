@@ -27,8 +27,9 @@ export const addonScopeCap = pikkuMiddlewareFactory<{
     name: string
   ) => readonly string[] | undefined | Promise<readonly string[] | undefined>
 }>(({ resolve }) =>
-  pikkuMiddleware(async (_services, { http, setSession, session }, next) => {
+  pikkuMiddleware(async (_services, { http, setSession, getSession }, next) => {
     const name = http?.request?.header(ADDON_HEADER)
+    const session = await getSession?.()
     if (!name || !setSession || !session) {
       return next()
     }
