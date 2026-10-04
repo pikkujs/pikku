@@ -91,7 +91,9 @@ describe('addDefineExtension', () => {
 
 describe('wireExtension', () => {
   test('is recorded as an addon instance flagged as an extension', () => {
-    inspect(`wireExtension({ name: 'invoices', package: '@acme/extension-invoices', scopes: ['admin'] })`)
+    inspect(
+      `wireExtension({ name: 'invoices', package: '@acme/extension-invoices', scopes: ['admin'] })`
+    )
     const declaration = state.rpc.wireAddonDeclarations.get('invoices')
     assert.equal(declaration.package, '@acme/extension-invoices')
     assert.equal(declaration.extension, true)

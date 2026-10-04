@@ -1,7 +1,11 @@
 import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
 import { join, dirname, parse, relative } from 'path'
-import type { InspectorState, InspectorLogger } from '../types.js'
+import type {
+  InspectorState,
+  InspectorLogger,
+  ExtensionManifestMeta,
+} from '../types.js'
 import {
   addonResolutionDirs,
   createAddonResolver,
@@ -264,6 +268,19 @@ export const namespaceAddonWebhookSources = (
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
  */
+const loadExtensionManifest = async (
+  require: AddonResolver,
+  packageName: string
+): Promise<ExtensionManifestMeta | null> => {
+  const path = resolveAddonMeta(
+    require,
+    packageName,
+    'extension/pikku-extension-meta'
+  )
+  if (!path) return null
+  return JSON.parse(await readFile(path, 'utf-8')) as ExtensionManifestMeta
+}
+
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
   state: InspectorState
@@ -279,6 +296,18 @@ export async function loadAddonFunctionsMeta(
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {
+      if (decl.extension) {
+        const manifest = await loadExtensionManifest(require, decl.package)
+        if (!manifest || manifest.screens.length === 0) {
+          logger.critical(
+            ErrorCode.EXTENSION_HAS_NO_SCREENS,
+            `wireExtension('${namespace}') wires ${decl.package}, which declares no screens, so it is an addon. Use wireAddon.`
+          )
+        } else {
+          ;(state.extensions ??= {})[namespace] = manifest
+        }
+      }
+
       // Verbose first. `description` is one of the fields stripped from the
       // minimal copy, and it is what an addon's function is offered to a model
       // under — both as an MCP tool below and as an agent tool. Read the minimal
