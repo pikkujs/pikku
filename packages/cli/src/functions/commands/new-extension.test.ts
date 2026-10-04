@@ -30,3 +30,10 @@ test('the scope its screen and function require is declared, which the inspector
   assert.match(files['src/scopes.ts'], /read: \{/)
   assert.match(files['src/index.ts'], /import '\.\/scopes\.js'/)
 })
+
+test('the scaffold declares the services types and factory pikku all requires', () => {
+  const files = extensionFiles('invoice-tracker')
+  assert.match(files['types/application-types.d.ts'], /interface SingletonServices/)
+  assert.match(files['src/services.ts'], /pikkuAddonServices/)
+  assert.match(files['src/functions/hello.function.ts'], /#pikku\/addon\/function/)
+})
