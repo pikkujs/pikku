@@ -64,6 +64,8 @@ fresh_repo() {
   echo base >f.txt
   git add f.txt
   git commit -qm base
+  echo '{"tsconfig":"./tsconfig.json","srcDirectories":["src"],"outDir":".pikku"}' >pikku.config.json
+  echo pikku.config.json >>.git/info/exclude
 }
 
 with_remote() {
