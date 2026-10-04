@@ -1898,6 +1898,22 @@ export interface AddonDeclaration {
   remote?: boolean
   /** Absolute path of the file that wires it; resolution starts from its package. */
   file?: string
+  /** Set when it was wired with `wireExtension`: the name its tables must be prefixed with. */
+  extension?: string
+}
+
+/** Every table an extension creates starts with `ext_` and its name, so two extensions, or an extension and the app, cannot collide. */
+export const extensionTablePrefix = (name: string): string =>
+  `ext_${name.replace(/[^a-zA-Z0-9]+/g, '_')}_`
+
+export const unprefixedExtensionTables = (
+  tables: Record<string, unknown>,
+  name: string
+): string[] => {
+  const prefix = extensionTablePrefix(name)
+  return Object.keys(tables).filter(
+    (table) => !table.replace(/^.*\./, '').startsWith(prefix)
+  )
 }
 
 const serializeSchemaMap = (tables: SchemaMap): Record<string, ColumnInfo[]> =>
@@ -2120,6 +2136,20 @@ export async function addonSchemaSources(
           'Its tables cannot be created here, so its services will fail at runtime.'
       )
       continue
+    }
+
+    if (addon.extension) {
+      const offenders = unprefixedExtensionTables(
+        exported.tables,
+        addon.extension
+      )
+      if (offenders.length > 0) {
+        throw new Error(
+          `The '${addon.extension}' extension creates tables without its prefix ` +
+            `'${extensionTablePrefix(addon.extension)}': ${offenders.join(', ')}. ` +
+            'Rename them in its migrations, so they cannot collide with the app or another extension.'
+        )
+      }
     }
 
     sources.push({
