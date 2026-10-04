@@ -164,13 +164,16 @@ export class BuilderSession {
     this.states.get(key)?.items.push({ kind: 'loop', text, at: Date.now() })
   }
 
-  async startChanges(key: string): Promise<{ started: boolean; reason: string }> {
+  async startChanges(key: string, onlyNew = false): Promise<{ started: boolean; reason: string }> {
     const state = await this.state(key)
     if (state.busy || this.turns.has(key)) return { started: false, reason: 'The builder is already working' }
     const launch = await this.resolve(key)
     const route = await pikkuNext(launch.cwd, undefined, launch.run, launch.env)
     if (!route.agent) return { started: false, reason: route.reason }
-    this.drives.set(key, { gen: this.drive(key).gen + 1, turns: 1, quiet: 0, report: route.context ?? '', repeats: 0 })
+    const drive = this.drive(key)
+    const same = route.context === drive.report
+    if (onlyNew && same && (drive.repeats >= 1 || drive.quiet >= 2)) return { started: false, reason: 'No new work since the last turn' }
+    this.drives.set(key, { gen: drive.gen + 1, turns: 1, quiet: same ? drive.quiet : 0, report: route.context ?? '', repeats: same ? drive.repeats + 1 : 0 })
     this.note(key, route.reason)
     await this.send(key, routeMessage(route))
     return { started: true, reason: route.reason }
