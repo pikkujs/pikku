@@ -1,15 +1,15 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
-  deriveExtensionScopes,
-  serializeExtensionMeta,
-  serializeExtensionScreens,
-} from './serialize-extension.js'
+  deriveScreensScopes,
+  serializeScreensMeta,
+  serializeScreens,
+} from './serialize-screens.js'
 
 const manifest = {
   title: 'Invoices',
   icon: 'receipt',
-  file: '/pkg/src/extension.ts',
+  file: '/pkg/src/screens.ts',
   screens: [
     {
       path: '/',
@@ -22,11 +22,11 @@ const manifest = {
   ],
 }
 
-describe('serializeExtensionScreens', () => {
+describe('serializeScreens', () => {
   test('imports each component lazily, relative to the generated file', () => {
-    const out = serializeExtensionScreens(
+    const out = serializeScreens(
       manifest as any,
-      '/pkg/.pikku/extension/pikku-extension-screens.gen.ts'
+      '/pkg/.pikku/screens/pikku-screens.gen.ts'
     )
     assert.match(
       out,
@@ -38,20 +38,20 @@ describe('serializeExtensionScreens', () => {
   })
 })
 
-describe('serializeExtensionMeta', () => {
+describe('serializeScreensMeta', () => {
   test('does not publish the absolute path of the author', () => {
     const meta = JSON.parse(
-      serializeExtensionMeta(manifest as any, '/pkg', ['a'])
+      serializeScreensMeta(manifest as any, '/pkg', ['a'])
     )
-    assert.equal(meta.file, 'src/extension.ts')
+    assert.equal(meta.file, 'src/screens.ts')
     assert.equal(meta.screens.length, 2)
   })
 })
 
-describe('deriveExtensionScopes', () => {
+describe('deriveScreensScopes', () => {
   test('is the union of what the functions require, without declaring anything', () => {
     assert.deepEqual(
-      deriveExtensionScopes({
+      deriveScreensScopes({
         list: { scopes: ['invoices:read'] },
         save: { scopes: ['invoices:write', 'invoices:read'] },
         open: {},
@@ -61,14 +61,14 @@ describe('deriveExtensionScopes', () => {
   })
 
   test('a package whose functions need no scope has an empty role', () => {
-    assert.deepEqual(deriveExtensionScopes({ open: {} }), [])
+    assert.deepEqual(deriveScreensScopes({ open: {} }), [])
   })
 })
 
 describe('the published meta', () => {
   test('carries the derived role', () => {
     const meta = JSON.parse(
-      serializeExtensionMeta(manifest as any, '/pkg', ['invoices:read'])
+      serializeScreensMeta(manifest as any, '/pkg', ['invoices:read'])
     )
     assert.deepEqual(meta.scopes, ['invoices:read'])
   })

@@ -24,7 +24,7 @@ export const serializeAddonInstallTypes = (
  * Installing an addon into this application
  */
 
-export { wireAddon, wireExtension, wireRemoteAddon } from '@pikku/core/addon'
+export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
 `
   }
 
@@ -44,7 +44,7 @@ export { wireAddon, wireExtension, wireRemoteAddon } from '@pikku/core/addon'
 import { wireAddon as wireAddonCore } from '@pikku/core/addon'
 import type { WireAddonConfig } from '@pikku/core/addon'
 
-export { wireExtension, wireRemoteAddon } from '@pikku/core/addon'
+export { wireRemoteAddon } from '@pikku/core/addon'
 
 /**
  * The functions each installed addon publishes. \`mcp\` and \`expose\` name them.

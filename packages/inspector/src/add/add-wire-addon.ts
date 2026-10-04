@@ -88,7 +88,7 @@ function parseCredentialOverrideRecord(
 }
 
 /**
- * Detect wireAddon / wireExtension({ name: '...', package: '...' }) call expressions and
+ * Detect wireAddon({ name: '...', package: '...' }) call expressions and
  * populate state.rpc.wireAddonDeclarations and state.rpc.usedAddons.
  */
 export function addWireAddon(
@@ -101,10 +101,9 @@ export function addWireAddon(
   const { expression, arguments: args } = node
   if (
     !ts.isIdentifier(expression) ||
-    (expression.text !== 'wireAddon' && expression.text !== 'wireExtension')
+    expression.text !== 'wireAddon'
   )
     return
-  const extension = expression.text === 'wireExtension'
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
@@ -116,6 +115,7 @@ export function addWireAddon(
   let expose: boolean | string[] | undefined
   let mcpEndpoint: boolean | string | undefined
   let auth: boolean | undefined
+  let ui: boolean | undefined
   let tags: string[] | undefined
   let scopes: string[] | undefined
   let secretOverrides: Record<string, string> | undefined
@@ -171,6 +171,12 @@ export function addWireAddon(
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword)
     ) {
       auth = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+    } else if (
+      key === 'ui' &&
+      (prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword)
+    ) {
+      ui = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
     } else if (key === 'tags') {
       tags = parseStringArray(prop.initializer)
     } else if (key === 'scopes') {
@@ -212,7 +218,7 @@ export function addWireAddon(
   logger.debug(`• Found ${expression.text}: ${name} → ${pkg}`)
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
-    ...(extension ? { extension } : {}),
+    ...(ui ? { ui } : {}),
     file: node.getSourceFile().fileName,
     rpcEndpoint,
     mcp,

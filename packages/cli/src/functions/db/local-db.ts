@@ -1897,19 +1897,21 @@ export interface AddonDeclaration {
   remote?: boolean
   /** Absolute path of the file that wires it; resolution starts from its package. */
   file?: string
-  /** Set when it was wired with `wireExtension`: the name its tables must be prefixed with. */
-  extension?: string
+  /** The name it is wired under, which its tables are prefixed with. */
+  name?: string
+  /** Wired with `ui: true`: a table without the prefix is an error rather than a warning. */
+  ui?: boolean
 }
 
-/** Every table an extension creates starts with `ext_` and its name, so two extensions, or an extension and the app, cannot collide. */
-export const extensionTablePrefix = (name: string): string =>
-  `ext_${name.replace(/[^a-zA-Z0-9]+/g, '_')}_`
+/** Every table an addon creates starts with its name, so two addons, or an addon and the app, cannot collide. */
+export const addonTablePrefix = (name: string): string =>
+  `${name.replace(/[^a-zA-Z0-9]+/g, '_')}_`
 
-export const unprefixedExtensionTables = (
+export const unprefixedAddonTables = (
   tables: Record<string, unknown>,
   name: string
 ): string[] => {
-  const prefix = extensionTablePrefix(name)
+  const prefix = addonTablePrefix(name)
   return Object.keys(tables).filter(
     (table) => !table.replace(/^.*\./, '').startsWith(prefix)
   )
@@ -2090,7 +2092,7 @@ export async function addonSchemaSources(
   rootDir: string,
   dialect: ResolvedDb['dialect'],
   addons: AddonDeclaration[],
-  logger: { error: (msg: string) => void }
+  logger: { error: (msg: string) => void; warn?: (msg: string) => void }
 ): Promise<SchemaSource[]> {
   if (addons.length === 0) return []
 
@@ -2137,17 +2139,15 @@ export async function addonSchemaSources(
       continue
     }
 
-    if (addon.extension) {
-      const offenders = unprefixedExtensionTables(
-        exported.tables,
-        addon.extension
-      )
+    if (addon.name) {
+      const offenders = unprefixedAddonTables(exported.tables, addon.name)
       if (offenders.length > 0) {
-        throw new Error(
-          `The '${addon.extension}' extension creates tables without its prefix ` +
-            `'${extensionTablePrefix(addon.extension)}': ${offenders.join(', ')}. ` +
-            'Rename them in its migrations, so they cannot collide with the app or another extension.'
-        )
+        const message =
+          `The '${addon.name}' addon creates tables without its prefix ` +
+          `'${addonTablePrefix(addon.name)}': ${offenders.join(', ')}. ` +
+          'Rename them in its migrations, so they cannot collide with the app or another addon.'
+        if (addon.ui) throw new Error(message)
+        logger.warn?.(`${message} This will become an error.`)
       }
     }
 

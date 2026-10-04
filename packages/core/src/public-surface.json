@@ -9,8 +9,8 @@
     "authBearer",
     "authCookie",
     "cors",
-    "EXTENSION_HEADER",
-    "extensionScopeCap",
+    "ADDON_HEADER",
+    "addonScopeCap",
     "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
@@ -217,10 +217,9 @@
   ],
   "./addon": [
     "RemoteAddonAuthError",
-    "defineExtension",
+    "defineScreens",
     "resolveRemoteAddonToken",
     "wireAddon",
-    "wireExtension",
     "wireRemoteAddon"
   ],
   "./safe-fetch": [

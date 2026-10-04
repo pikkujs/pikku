@@ -20,7 +20,7 @@ import { addChannel } from './add/add-channel.js'
 import { addGateway } from './add/add-gateway.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addWireAddon } from './add/add-wire-addon.js'
-import { addDefineExtension } from './add/add-define-extension.js'
+import { addDefineScreens } from './add/add-define-screens.js'
 import { addWireRemoteAddon } from './add/add-wire-remote-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
@@ -108,7 +108,7 @@ export const visitSetup = (
   addOutgoingWebhook(logger, node, checker, state)
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
-  addDefineExtension(node, state, logger)
+  addDefineScreens(node, state, logger)
   addWireRemoteAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
