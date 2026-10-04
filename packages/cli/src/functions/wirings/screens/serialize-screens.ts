@@ -70,3 +70,64 @@ export const serializeScreensMeta = (
     null,
     2
   )
+
+export type InstalledAddonScreens = {
+  name: string
+  package: string
+  manifest: ScreensManifestMeta
+}
+
+/** A component path as the package exports it: relative to `src/`, without the extension. */
+const packageSubpath = (file: string, specifier: string): string =>
+  posix
+    .join(posix.dirname(toPosix(file)), toPosix(specifier))
+    .replace(/^src\//, '')
+    .replace(/\.[cm]?[jt]sx?$/, '')
+
+/**
+ * The host's registry of installed addons that bring screens. Components are
+ * lazy imports through the package's own `./screens/*` export, so the host
+ * bundler splits them and the screen code never reaches the server bundle.
+ */
+export const serializeInstalledAddons = (
+  addons: InstalledAddonScreens[]
+): string => {
+  const entries = addons.map(({ name, package: pkg, manifest }) => {
+    const screens = manifest.screens.map((screen) => {
+      const fields = [
+        `path: ${JSON.stringify(screen.path)}`,
+        `title: ${JSON.stringify(screen.title)}`,
+        ...(screen.nav !== undefined ? [`nav: ${screen.nav}`] : []),
+        ...(screen.scopes ? [`scopes: ${JSON.stringify(screen.scopes)}`] : []),
+        screen.component !== undefined
+          ? `component: () => import(${JSON.stringify(`${pkg}/${packageSubpath(manifest.file, screen.component)}`)}) as never`
+          : `app: ${JSON.stringify(screen.app)}`,
+      ]
+      return `      { ${fields.join(', ')} },`
+    })
+    return [
+      '  {',
+      `    name: ${JSON.stringify(name)},`,
+      `    title: ${JSON.stringify(manifest.title)},`,
+      ...(manifest.icon ? [`    icon: ${JSON.stringify(manifest.icon)},`] : []),
+      '    screens: [',
+      ...screens,
+      '    ],',
+      '  },',
+    ].join('\n')
+  })
+  return `export const installedAddons = [\n${entries.join('\n')}\n]\n`
+}
+
+/**
+ * What the server caps a call to when it names an addon: plain data, no screen
+ * imports, so the middleware can load it without pulling in any UI.
+ */
+export const serializeAddonRoles = (
+  addons: InstalledAddonScreens[]
+): string => {
+  const roles = Object.fromEntries(
+    addons.map(({ name, manifest }) => [name, manifest.scopes ?? []])
+  )
+  return `export const addonRoles: Record<string, readonly string[]> = ${JSON.stringify(roles, null, 2)}\n`
+}
