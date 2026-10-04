@@ -4,6 +4,8 @@ export type {
   AddonConfig,
   AuthDefinition,
   CredentialOverrideMeta,
+  ExtensionManifestMeta,
+  ExtensionScreenMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,

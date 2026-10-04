@@ -293,6 +293,12 @@ export interface PikkuCLICoreOutputFiles {
   // Feature flags metadata JSON
   flagsMetaJsonFile: string
 
+  // Extension manifest metadata JSON — present when the package calls defineExtension
+  extensionMetaJsonFile: string
+
+  // Extension screens (lazy imports of each screen) — what the host imports
+  extensionScreensFile: string
+
   // Personas (PersonaId union + typed definePersonas)
   personasFile: string
 
