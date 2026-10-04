@@ -446,8 +446,15 @@
         "typescript": "^6.0.3",
       },
       "devDependencies": {
+        "@pikku/shadcdn": "workspace:^",
         "@types/node": "^24.13.3",
       },
+      "peerDependencies": {
+        "@pikku/shadcdn": "^0.0.1",
+      },
+      "optionalPeers": [
+        "@pikku/shadcdn",
+      ],
     },
     "packages/console": {
       "name": "@pikku/console",
