@@ -25,7 +25,7 @@ rl.on('close', () => process.exit(0))
 
 const idle = JSON.stringify({ agent: null, skill: null, refs: [], reason: 'Nothing to do', context: null, merged: [] })
 const intake = (prompt: string) => JSON.stringify({ agent: 'intake', skill: 'pikku-changes', refs: [], reason: 'A request', context: prompt, merged: [] })
-const run = async (_cwd: string, args: string[]) => ({ code: 0, output: args[1] === '--prompt' ? intake(args[2]!) : idle })
+const run = async (_cwd: string, args: string[]) => ({ code: 0, output: args[2] === '--prompt' ? intake(args[3]!) : idle })
 
 const until = async (check: () => Promise<boolean>) => {
   for (let i = 0; i < 300; i++) {
@@ -102,7 +102,7 @@ describe('BuilderSession', () => {
     const sessions: string[] = []
     let open = 1
     const queue = async (_cwd: string, args: string[]) => {
-      if (args[1] === '--prompt') return { code: 0, output: intake(args[2]!) }
+      if (args[2] === '--prompt') return { code: 0, output: intake(args[3]!) }
       if (!open) return { code: 0, output: JSON.stringify({ agent: null, skill: null, refs: [], reason: 'Nothing to do', context: null, merged: ['Contact page → main @ abc1234'] }) }
       open -= 1
       return { code: 0, output: JSON.stringify({ agent: 'changes', skill: 'pikku-changes', refs: [], reason: '1 open change(s)', context: '# Open changes', merged: [] }) }

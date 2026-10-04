@@ -53,7 +53,7 @@ under `db/<engine>/` without declaring a table change fails and is re-queued.
 - `git log --grep "Changeset: <id>"` is the history once the changes file is
   trimmed.
 
-## The router: `pikku next`
+## The router: `pikku changes next`
 
 A deterministic command decides what runs, so no agent starts by working out the
 project's state. It checks these in order:
@@ -68,7 +68,7 @@ project's state. It checks these in order:
 | prompt in an existing project | → files changes | the prompt |
 | nothing to do | none, exit | |
 
-`pikku next --json` prints `{ agent, skill, refs, context }`. `pikku next --exec
+`pikku changes next --json` prints `{ agent, skill, refs, context }`. `pikku changes next --exec
 <harness>` launches it:
 
 - the role skill goes into the system prompt (`--append-system-prompt`)
@@ -102,6 +102,6 @@ end on a real app:
 
 1. a local changes store behind the existing `changes` commands
 2. `claim` records `creates` / `alters` / `reads` and `needsPlan`
-3. `pikku next` with two routes: open changes → changes agent; nothing → exit
+3. `pikku changes next` with two routes: open changes → changes agent; nothing → exit
 4. `Change:` commits, the `Changeset:` merge, and the `db/` diff check at `done`
 5. 3–4 real changes, one needing a new table, worked through pi

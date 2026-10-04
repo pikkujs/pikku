@@ -21,7 +21,7 @@ export const SYSTEM_PROMPT = [
   'Before writing code for a part of the app, read the pikku skill for it (pikku-build first).',
   'Write code the way the skills show, keep generated files (.pikku/, *.gen.*) untouched,',
   'and check your work with `pikku all` once a batch of changes is done.',
-  'Work arrives as changes, grouped into changesets: `pikku next` picks the work and the builder hands it to you.',
+  'Work arrives as changes, grouped into changesets: `pikku changes next` picks the work and the builder hands it to you.',
   'Build one changeset, commit each change on its own, mark it done and stop; the builder merges it and starts the next.',
 ].join(' ')
 

@@ -167,7 +167,7 @@ const resolve = (
 
 ${outcome.files.map((f) => `- ${f}`).join('\n')}
 
-${outcome.worktree ? `Work in ${outcome.worktree}.` : `Switch to ${outcome.branch}.`} Merge ${outcome.into} into ${outcome.branch}, resolve each conflict so both sides still do what they were for, run the tests, commit the merge and stop. Do not merge ${outcome.branch} into ${outcome.into}; pikku next does that.
+${outcome.worktree ? `Work in ${outcome.worktree}.` : `Switch to ${outcome.branch}.`} Merge ${outcome.into} into ${outcome.branch}, resolve each conflict so both sides still do what they were for, run the tests, commit the merge and stop. Do not merge ${outcome.branch} into ${outcome.into}; pikku changes next does that.
 `,
 })
 
@@ -179,7 +179,7 @@ const upgrade = ({ from, to }: PikkuBump): Route => ({
   merged: [],
   context: `# pikku ${from} → ${to}
 
-Read the CHANGELOG.md of each @pikku package in node_modules for the entries after ${from}, run \`pikku all\` and the typecheck, and file what this project has to change to keep up as changes: \`pikku fabric changes file --title "<one line>" --body "<what has to change and why, citing the changelog entry>"\`, one commit's worth each. A breaking change that makes the project fail to build or typecheck comes first. File them and stop; another agent builds them. If nothing needs changing, file nothing.
+Read the CHANGELOG.md of each @pikku package in node_modules for the entries after ${from}, run \`pikku all\` and the typecheck, and file what this project has to change to keep up as changes: \`pikku changes file --title "<one line>" --body "<what has to change and why, citing the changelog entry>"\`, one commit's worth each. A breaking change that makes the project fail to build or typecheck comes first. File them and stop; another agent builds them. If nothing needs changing, file nothing.
 `,
 })
 
@@ -205,9 +205,9 @@ ${gaps
 
 # Filing them
 
-Read each note and file what it asks for as changes: \`pikku fabric changes file --title "<one line>" --body "<what the person sees when it is done>"\`, one commit's worth each, in the app's own words. End the body of every change that builds a note with that note's \`Knowledge:\` line above, exactly, so it is not filed again. A note that is only partly built gets changes for what it left behind.
+Read each note and file what it asks for as changes: \`pikku changes file --title "<one line>" --body "<what the person sees when it is done>"\`, one commit's worth each, in the app's own words. End the body of every change that builds a note with that note's \`Knowledge:\` line above, exactly, so it is not filed again. A note that is only partly built gets changes for what it left behind.
 
-\`removed\` and \`deleted\` run the other way: the code and the knowledge disagree about something that was built. \`removed\` means code a merged changeset built for the note is gone; \`deleted\` means the note is gone and its code is not. Read \`git log\` for who removed it and why. If it was removed on purpose, bring the knowledge into line — edit or delete the note, or for \`deleted\` file a change that removes the code — and commit that. If it looks accidental, file a change that restores it. If you cannot tell, file the change and \`pikku fabric changes ask\` on it which way. Every change filed for a gap still ends with its \`Knowledge:\` line. File them and stop; another agent builds them.
+\`removed\` and \`deleted\` run the other way: the code and the knowledge disagree about something that was built. \`removed\` means code a merged changeset built for the note is gone; \`deleted\` means the note is gone and its code is not. Read \`git log\` for who removed it and why. If it was removed on purpose, bring the knowledge into line — edit or delete the note, or for \`deleted\` file a change that removes the code — and commit that. If it looks accidental, file a change that restores it. If you cannot tell, file the change and \`pikku changes ask\` on it which way. Every change filed for a gap still ends with its \`Knowledge:\` line. File them and stop; another agent builds them.
 `,
 })
 
@@ -225,7 +225,7 @@ const replan = (
 
 “${group.title}” (${branch}) is done but cannot merge: ${why}
 
-Switch to ${branch}, write its plan with the pikku-architect skill and \`pikku knowledge plan set ${group.groupId} <file>\`, build whatever \`pikku knowledge plan progress ${group.groupId}\` says is missing, commit and stop. pikku next merges it.
+Switch to ${branch}, write its plan with the pikku-architect skill and \`pikku knowledge plan set ${group.groupId} <file>\`, build whatever \`pikku knowledge plan progress ${group.groupId}\` says is missing, commit and stop. pikku changes next merges it.
 `,
 })
 
@@ -241,14 +241,14 @@ ${prompt}
 
 # Turning it into changes
 
-Read the knowledge base for what the app already is, then file the request as changes: \`pikku fabric changes file --title "<one line>" --body "<what the person sees when it is done>"\`. Each change is one commit's worth, written in the app's own words. Where the request leaves something open that changes the schema or a screen, \`pikku fabric changes ask\` on the change it affects. File them and stop; another agent builds them.
+Read the knowledge base for what the app already is, then file the request as changes: \`pikku changes file --title "<one line>" --body "<what the person sees when it is done>"\`. Each change is one commit's worth, written in the app's own words. Where the request leaves something open that changes the schema or a screen, \`pikku changes ask\` on the change it affects. File them and stop; another agent builds them.
 `,
 })
 
-const WORKING_THEM = `These are every open change. Group them into changesets as the pikku-changes skill's Changesets section says, then claim one, build it, mark its changes done and stop. pikku next merges it, and the next changeset gets a fresh agent.
+const WORKING_THEM = `These are every open change. Group them into changesets as the pikku-changes skill's Changesets section says, then claim one, build it, mark its changes done and stop. pikku changes next merges it, and the next changeset gets a fresh agent.
 `
 
-const WORKING_ALONGSIDE = `Other agents work changesets at the same time as you. Claim one changeset with --worktree and build it in the checkout that prints; declare the tables it creates, alters and reads, and if the claim is refused because of a running changeset, claim one that does not clash or stop. When its changes are done, stop; pikku next merges it, and the next changeset gets a fresh agent.
+const WORKING_ALONGSIDE = `Other agents work changesets at the same time as you. Claim one changeset with --worktree and build it in the checkout that prints; declare the tables it creates, alters and reads, and if the claim is refused because of a running changeset, claim one that does not clash or stop. When its changes are done, stop; pikku changes next merges it, and the next changeset gets a fresh agent.
 `
 
 const describe = (g: {

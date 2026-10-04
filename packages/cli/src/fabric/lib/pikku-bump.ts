@@ -21,7 +21,7 @@ export function installedPikku(root: string): string | null {
 }
 
 /**
- * The version `pikku next` last saw, kept beside the local changes queue. The
+ * The version `pikku changes next` last saw, kept beside the local changes queue. The
  * first sighting is recorded rather than reported: with nothing to compare to,
  * there is no bump.
  */

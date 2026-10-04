@@ -45,10 +45,10 @@ async function json<T>(cwd: string, args: string[], run: CommandRunner, env?: Re
 }
 
 export const pikkuNext = (cwd: string, prompt?: string, run: CommandRunner = runPikku, env?: Record<string, string>) =>
-  json<NextRoute>(cwd, prompt ? ['next', '--prompt', prompt] : ['next'], run, env)
+  json<NextRoute>(cwd, prompt ? ['changes', 'next', '--prompt', prompt] : ['changes', 'next'], run, env)
 
 export const changesReport = (cwd: string, run: CommandRunner = runPikku) =>
-  json<ChangesReport>(cwd, ['fabric', 'changes', 'list', '--include-done'], run)
+  json<ChangesReport>(cwd, ['changes', 'list', '--include-done'], run)
 
 export const routeMessage = (route: NextRoute) =>
   [

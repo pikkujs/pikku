@@ -73,7 +73,7 @@ with_remote() {
 }
 
 file_changes() {
-  for title in "$@"; do pk fabric changes file --title "$title" >/dev/null; done
+  for title in "$@"; do pk changes file --title "$title" >/dev/null; done
 }
 
 store() { echo "$(cd "$(git rev-parse --git-common-dir)" && pwd)/pikku-changes.json"; }
