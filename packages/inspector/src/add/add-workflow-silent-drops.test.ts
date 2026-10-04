@@ -229,6 +229,7 @@ describe('DSL extraction — constructs that must not be silently dropped', () =
         '      merged.phone = dup.phone',
         '    }',
         '  }',
+        "  await workflow.do('put', 'rpcB', merged)",
         '  return { ok: true }',
       ].join('\n')
     )
