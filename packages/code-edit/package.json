@@ -67,6 +67,11 @@
       "types": "./dist/shadcn-catalog.d.ts",
       "import": "./dist/shadcn-catalog.js",
       "default": "./dist/shadcn-catalog.js"
+    },
+    "./brand": {
+      "types": "./dist/brand/index.d.ts",
+      "import": "./dist/brand/index.js",
+      "default": "./dist/brand/index.js"
     }
   },
   "scripts": {

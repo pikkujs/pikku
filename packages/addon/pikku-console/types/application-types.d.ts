@@ -18,6 +18,7 @@ import type { PagesService } from '@pikku/code-edit/routes'
 import type { TypeScriptService } from '@pikku/code-edit/typescript'
 import type { VerifyService } from '@pikku/code-edit/verify'
 import type { StudioHost } from '../src/services/studio-host.service.js'
+import type { BrandWorkspace } from '@pikku/code-edit/brand'
 import type { DesignService } from '../src/services/design.service.js'
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
@@ -45,6 +46,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   knowledgeService: KnowledgeService | null
   i18nService: I18nService | null
   designService: DesignService | null
+  brandService: BrandWorkspace | null
   studioHost: StudioHost | null
   verifyService: VerifyService | null
   typeScriptService: TypeScriptService | null
