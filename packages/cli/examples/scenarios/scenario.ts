@@ -63,8 +63,8 @@
 //~ ═══ THE FEATURE — group the scenarios for ONE AREA of the app and SAY WHAT IT PROMISES ═══
 //~ One pikkuFeature per AREA, alone in its own `test/features/<domain>.feature.ts`,
 //~ importing each scenario from its own `test/scenarios/*.scenario.ts` file.
-//~ A feature is NOT a milestone: it is named for something a person can DO here and it
-//~ outlives the milestone that started it, so a later milestone extending this area adds
+//~ A feature is NOT a changeset: it is named for something a person can DO here and it
+//~ outlives the changeset that started it, so a later changeset extending this area adds
 //~ its scenarios to THIS file rather than opening a second one beside it. Its `name` is
 //~ that area in the app's own words, and `scenarios` grows as you write each one.
 //~ A loose pile of scenario exports runs, but says nothing about what the app claims

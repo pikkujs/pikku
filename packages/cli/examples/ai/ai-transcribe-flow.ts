@@ -7,8 +7,8 @@
 //~ The SPLIT is load-bearing (same rules as {name: workflow}): the workflow lives in
 //~ src/workflows/*.workflow.ts, each step func in its own file, and the migration ships
 //~ the table the flow writes to. The client NEVER supplies transcript text — the server
-//~ computes it. A milestone that promises transcription is only met by this shape (the
-//~ build-complete gate checks for the agentRunner call).
+//~ computes it. A changeset that promises transcription is only met by this shape (its
+//~ plan checks for the agentRunner call).
 
 //~ steps:
 //~ ═══ CLIENT SIDE — upload, create, poll ═══

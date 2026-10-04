@@ -1,8 +1,9 @@
 import assert from 'node:assert'
 import { execFileSync } from 'node:child_process'
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, test } from 'node:test'
 import { StudioProjectsService, type FabricAccount } from './projects.js'
 import { startStudioServer } from './server.js'
@@ -92,14 +93,16 @@ describe('Studio server', () => {
     }
   })
 
-  test('lists milestones and serves only their screenshots', async () => {
+  test('lists changes and serves only screenshots', async () => {
     const { base, studio, call, projects } = await setup()
     try {
       const path = join(base, 'notes')
       await mkdir(path)
       execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: path })
+      await mkdir(join(path, 'node_modules/.bin'), { recursive: true })
+      await symlink(fileURLToPath(new URL('../../../cli/dist/bin/pikku.js', import.meta.url)), join(path, 'node_modules/.bin/pikku'))
       const { key } = (await call('addProject', { path })).body
-      assert.deepEqual((await call('milestones', { key })).body, { milestones: [] })
+      assert.deepEqual((await call('changes', { key })).body, { changes: [], groups: [] })
       const dir = await projects.projectDir(key)
       await mkdir(join(dir, '.pikku/builder/looks/app/desktop'), { recursive: true })
       await writeFile(join(dir, '.pikku/builder/looks/app/desktop/index.png'), 'png')

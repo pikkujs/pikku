@@ -3,8 +3,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
-import { piCritic } from './look.js'
-import { budgetLine, nextStep } from './loop.js'
+import { pikkuNext, routeMessage, type CommandRunner } from './changes.js'
 import { piArgs, piEnv, resolvePi, type BuilderAi } from './pi.js'
 import { builderHome, writeSkills } from './skills.js'
 
@@ -31,6 +30,7 @@ export interface BuilderLaunch {
   apps?: { slug: string; url: string }[]
   loop?: boolean
   launch?: Launcher
+  run?: CommandRunner
 }
 
 const spawnPi: Launcher = (command, args, options) => spawn(command, args, { ...options, stdio: ['pipe', 'pipe', 'pipe'] })
@@ -53,14 +53,12 @@ interface Turn {
 interface Drive {
   gen: number
   turns: number
-  built: number
   quiet: number
   report: string
   repeats: number
 }
 
 export const MAX_DRIVEN_TURNS = 25
-export const MAX_MILESTONES_PER_DRIVE = 3
 
 export class BuilderSession {
   private states = new Map<string, BuilderState>()
@@ -94,7 +92,7 @@ export class BuilderSession {
 
   private drive(key: string): Drive {
     let drive = this.drives.get(key)
-    if (!drive) this.drives.set(key, (drive = { gen: 0, turns: 0, built: 0, quiet: 0, report: '', repeats: 0 }))
+    if (!drive) this.drives.set(key, (drive = { gen: 0, turns: 0, quiet: 0, report: '', repeats: 0 }))
     return drive
   }
 
@@ -103,13 +101,26 @@ export class BuilderSession {
     if (!text) throw new Error('Say what you want built first')
     const state = await this.state(key)
     state.items.push({ kind: 'user', text, at: Date.now() })
-    const gen = this.drive(key).gen + (this.turns.has(key) ? 0 : 1)
-    this.drives.set(key, { gen, turns: 0, built: 0, quiet: 0, report: '', repeats: 0 })
-    await this.send(key, context ? `${text}\n\n<context>${context}</context>` : text)
+    const request = context ? `${text}\n\n<context>${context}</context>` : text
+    if (this.turns.has(key)) {
+      await this.send(key, request)
+      return state
+    }
+    this.drives.set(key, { gen: this.drive(key).gen + 1, turns: 0, quiet: 0, report: '', repeats: 0 })
+    state.busy = true
+    try {
+      const { cwd, env, run } = await this.resolve(key)
+      const route = await pikkuNext(cwd, request, run, env)
+      await this.send(key, routeMessage(route))
+    } catch (error) {
+      state.busy = false
+      this.push(key, `Pikku could not take the request: ${error instanceof Error ? error.message : String(error)}`)
+      await this.save(key)
+    }
     return state
   }
 
-  private async send(key: string, sent: string) {
+  private async send(key: string, sent: string, session?: string) {
     const state = await this.state(key)
     const running = this.turns.get(key)
     if (running) {
@@ -121,7 +132,7 @@ export class BuilderSession {
     const gen = this.drive(key).gen
     const { cwd, ai, env = {}, launch = spawnPi } = await this.resolve(key)
     const skills = await writeSkills(this.home)
-    const child = launch(process.execPath, [resolvePi(), ...piArgs({ ai, skills, mode: 'rpc', session: state.session })], {
+    const child = launch(process.execPath, [resolvePi(), ...piArgs({ ai, skills, mode: 'rpc', session: session ?? state.session })], {
       cwd,
       env: { ...process.env, ...env, ...piEnv(ai) },
     })
@@ -163,44 +174,23 @@ export class BuilderSession {
     }
     state.busy = true
     try {
-      const status = (text: string) => {
-        this.note(key, text)
-        void this.save(key)
-      }
-      const step = await nextStep(launch.cwd, {
-        apiUrl: launch.apiUrl,
-        env: launch.env,
-        apps: launch.apps,
-        critic: piCritic({ ai: launch.ai, env: { ...launch.env, ...piEnv(launch.ai) }, launch: launch.launch ?? spawnPi }),
-        onStatus: status,
-      })
+      const route = await pikkuNext(launch.cwd, undefined, launch.run, launch.env)
       if (this.drive(key).gen !== gen) return
-      if (step.kind === 'built') {
-        this.note(key, step.status)
-        drive.built += 1
-        drive.turns = 0
-        drive.repeats = 0
-        if (drive.built >= MAX_MILESTONES_PER_DRIVE) {
-          this.note(key, `Paused after ${drive.built} milestones — say "continue" to build the next`)
-          return
-        }
-        state.busy = false
-        return this.advance(key, gen)
-      }
-      if (step.kind === 'stop') {
-        if (step.status) this.note(key, step.status)
+      for (const line of route.merged) this.note(key, `Merged ${line}`)
+      if (!route.agent) {
+        if (route.reason !== 'Nothing to do') this.note(key, route.reason)
         return
       }
-      drive.repeats = step.message === drive.report ? drive.repeats + 1 : 0
-      drive.report = step.message
+      drive.repeats = route.context === drive.report ? drive.repeats + 1 : 0
+      drive.report = route.context ?? ''
       drive.turns += 1
-      if (drive.turns > MAX_DRIVEN_TURNS || drive.repeats >= 3) {
-        this.note(key, `${step.status} — stopped after ${drive.turns - 1} turns without passing`)
+      if (drive.turns > MAX_DRIVEN_TURNS || drive.repeats >= 2) {
+        this.note(key, `${route.reason} — stopped after ${drive.turns - 1} turns`)
         return
       }
-      this.note(key, `${step.status} (turn ${drive.turns} of ${MAX_DRIVEN_TURNS})`)
+      this.note(key, route.reason)
       state.busy = false
-      await this.send(key, `${budgetLine(drive.turns, MAX_DRIVEN_TURNS)}\n\n${step.message}`)
+      await this.send(key, routeMessage(route), `${state.session}-${drive.turns}`)
     } catch (error) {
       this.push(key, `The build loop failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {

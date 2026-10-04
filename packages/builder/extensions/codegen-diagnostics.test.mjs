@@ -150,7 +150,7 @@ test('only source files are considered', () => {
     writeFileSync(log, '[PKU574] no permission\n')
     const handler = load(log)
     assert.equal(handler(edit('/p/db/sqlite/0004-deal.sql')), undefined)
-    assert.equal(handler(edit('/p/knowledge/milestones/pipeline.md')), undefined)
+    assert.equal(handler(edit('/p/knowledge/entities/pipeline.md')), undefined)
   })
 })
 

@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.85.1",
-    "@pikku/knowledge": "^0.12.16",
     "@pikku/skills": "^0.12.48"
   },
   "devDependencies": {

@@ -23,6 +23,10 @@ rl.on('line', (line) => {
 rl.on('close', () => process.exit(0))
 `
 
+const idle = JSON.stringify({ agent: null, skill: null, refs: [], reason: 'Nothing to do', context: null, merged: [] })
+const intake = (prompt: string) => JSON.stringify({ agent: 'intake', skill: 'pikku-changes', refs: [], reason: 'A request', context: prompt, merged: [] })
+const run = async (_cwd: string, args: string[]) => ({ code: 0, output: args[1] === '--prompt' ? intake(args[2]!) : idle })
+
 const until = async (check: () => Promise<boolean>) => {
   for (let i = 0; i < 300; i++) {
     if (await check()) return
@@ -38,6 +42,7 @@ describe('BuilderSession', () => {
     const builder = new BuilderSession(
       async () => ({
         cwd: home,
+        run,
         launch: (_command, args) => {
           seen = args
           return spawn(process.execPath, ['-e', fakePi], { stdio: ['pipe', 'pipe', 'pipe'] })
@@ -64,6 +69,7 @@ describe('BuilderSession', () => {
     const builder = new BuilderSession(
       async () => ({
         cwd: home,
+        run,
         launch: () =>
           spawn(process.execPath, ['-e', 'console.error("No API key for openai"); process.exit(1)'], {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -89,5 +95,37 @@ describe('BuilderSession', () => {
     const proxied = { model: 'gemini-flash-lite-latest', proxy: { url: 'https://llm.example/v1', key: 'k' } }
     assert.deepEqual(piArgs({ skills, ai: proxied }).slice(-4), ['--provider', 'pikku-proxy', '--model', 'gemini-flash-lite-latest'])
     assert.equal(piEnv(proxied).PIKKU_BUILDER_PROXY_MODEL, 'gemini-flash-lite-latest')
+  })
+
+  test('after the request is filed, each changeset runs in a fresh session until nothing is left', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'pikku-builder-'))
+    const sessions: string[] = []
+    let open = 1
+    const queue = async (_cwd: string, args: string[]) => {
+      if (args[1] === '--prompt') return { code: 0, output: intake(args[2]!) }
+      if (!open) return { code: 0, output: JSON.stringify({ agent: null, skill: null, refs: [], reason: 'Nothing to do', context: null, merged: ['Contact page → main @ abc1234'] }) }
+      open -= 1
+      return { code: 0, output: JSON.stringify({ agent: 'changes', skill: 'pikku-changes', refs: [], reason: '1 open change(s)', context: '# Open changes', merged: [] }) }
+    }
+    const builder = new BuilderSession(
+      async () => ({
+        cwd: home,
+        run: queue,
+        launch: (_command, args) => {
+          sessions.push(args[args.indexOf('--session-id') + 1]!)
+          return spawn(process.execPath, ['-e', fakePi], { stdio: ['pipe', 'pipe', 'pipe'] })
+        },
+      }),
+      home
+    )
+    await builder.prompt('shop', 'Add a contact page')
+    await until(async () => sessions.length === 2 && !(await builder.state('shop')).busy)
+    await until(async () => (await builder.state('shop')).items.some((i) => i.kind === 'loop' && i.text.startsWith('Merged')))
+    const { session, items } = await builder.state('shop')
+    assert.deepEqual(sessions, [session, `${session}-1`])
+    assert.deepEqual(
+      items.filter((i) => i.kind === 'loop').map((i) => (i as { text: string }).text),
+      ['1 open change(s)', 'Merged Contact page → main @ abc1234']
+    )
   })
 })

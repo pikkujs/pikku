@@ -12,7 +12,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { StudioProjectsService, studioHome } from './projects.js'
 import { StudioPublisher } from './publish.js'
-import { BuilderSession, milestoneReport } from '@pikku/builder'
+import { BuilderSession, changesReport } from '@pikku/builder'
 import { KEY_PROVIDERS, StudioAi, SUBSCRIPTION_PROVIDERS, type AiInput } from './ai.js'
 
 export type SignInChoice = 'local' | 'fabric'
@@ -165,7 +165,7 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
     projectLogs: ({ key }: { key: string }) => projects.logs(key),
     keepStatus: ({ key }: { key: string }) => projects.keepStatus(key),
     keepChanges: ({ key }: { key: string }) => projects.keepChanges(key),
-    milestones: async ({ key }: { key: string }) => ({ milestones: await milestoneReport(await projects.projectDir(key)) }),
+    changes: async ({ key }: { key: string }) => changesReport(await projects.projectDir(key)),
     builderPrompt: ({ key, message, context }: { key: string; message: string; context?: string }) =>
       builder.prompt(key, message, context),
     async builderCancel({ key }: { key: string }) {
