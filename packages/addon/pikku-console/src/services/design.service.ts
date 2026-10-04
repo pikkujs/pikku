@@ -10,6 +10,7 @@ import {
   type ThemeInput,
   type ThemeSpecPatch,
 } from '@pikku/code-edit/theme'
+import type * as CodeEdit from '@pikku/code-edit'
 import { ShadcnCatalog, ComponentsNotInstalledError } from '@pikku/code-edit/shadcn'
 import type { ComponentMeta, Block, ResolvedBlock } from '@pikku/code-edit/shadcn'
 
@@ -154,7 +155,7 @@ export class DesignService {
     if (updated !== source) await writeFile(this.sourcePath(path), updated, 'utf-8')
   }
 
-  private async jsx(): Promise<typeof import('@pikku/code-edit')> {
+  private async jsx(): Promise<typeof CodeEdit> {
     return import('@pikku/code-edit')
   }
 
