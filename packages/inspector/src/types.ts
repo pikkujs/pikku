@@ -600,6 +600,8 @@ export type ExtensionManifestMeta = {
 export interface InspectorState {
   /** Set when this package calls `defineExtension`: the screens it ships. */
   extensionManifest?: ExtensionManifestMeta
+  /** The manifests of the extensions this project wires, by namespace. */
+  extensions?: Record<string, ExtensionManifestMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
