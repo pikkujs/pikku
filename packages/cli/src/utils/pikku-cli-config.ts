@@ -1226,6 +1226,22 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
+    // Extension screens, when the package declares any. Their own directory:
+    // the host imports the screens file and the meta is published beside it.
+    const extensionDir = join(result.outDir, 'extension')
+    if (!result.extensionMetaJsonFile) {
+      result.extensionMetaJsonFile = join(
+        extensionDir,
+        'pikku-extension-meta.gen.json'
+      )
+    }
+    if (!result.extensionScreensFile) {
+      result.extensionScreensFile = join(
+        extensionDir,
+        'pikku-extension-screens.gen.ts'
+      )
+    }
+
     // Personas. Beside the roles they are checked against, for the same reason
     // roles sit beside their scopes.
     if (!result.personasFile) {
