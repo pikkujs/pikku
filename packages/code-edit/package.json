@@ -47,6 +47,16 @@
       "types": "./dist/routes.d.ts",
       "import": "./dist/routes.js",
       "default": "./dist/routes.js"
+    },
+    "./verify": {
+      "types": "./dist/verify/index.d.ts",
+      "import": "./dist/verify/index.js",
+      "default": "./dist/verify/index.js"
+    },
+    "./typescript": {
+      "types": "./dist/typescript.service.d.ts",
+      "import": "./dist/typescript.service.js",
+      "default": "./dist/typescript.service.js"
     }
   },
   "scripts": {

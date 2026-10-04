@@ -15,6 +15,8 @@ import type { WorkspaceFilesService } from '@pikku/code-edit/files'
 import type { GitService } from '@pikku/code-edit/git'
 import type { PageScreenshotService } from '../src/services/page-screenshot.service.js'
 import type { PagesService } from '@pikku/code-edit/routes'
+import type { TypeScriptService } from '@pikku/code-edit/typescript'
+import type { VerifyService } from '@pikku/code-edit/verify'
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
@@ -40,6 +42,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   dbSchemaService: DbSchemaService | null
   knowledgeService: KnowledgeService | null
   i18nService: I18nService | null
+  verifyService: VerifyService | null
+  typeScriptService: TypeScriptService | null
   pagesService: PagesService | null
   pageScreenshotService: PageScreenshotService | null
   gitService: GitService | null

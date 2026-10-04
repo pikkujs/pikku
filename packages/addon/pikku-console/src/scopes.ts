@@ -167,6 +167,14 @@ defineScope({
               },
             },
           },
+          verify: {
+            description:
+              'Codegen, type-checks and correctness checks over the project',
+            scopes: {
+              read: { description: 'Read the latest verify result' },
+              run: { description: 'Run verify against the project' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {
