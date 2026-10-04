@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { pikkuNext, routeMessage, type CommandRunner } from './changes.js'
@@ -21,6 +22,13 @@ export interface BuilderState {
   session: string
 }
 
+export interface BuilderConversation {
+  session: string
+  title: string
+  at: number
+  current: boolean
+}
+
 export type Launcher = (command: string, args: string[], options: { cwd: string; env: NodeJS.ProcessEnv }) => ChildProcess
 
 export interface BuilderLaunch {
@@ -30,6 +38,7 @@ export interface BuilderLaunch {
   apiUrl?: string
   apps?: { slug: string; url: string }[]
   loop?: boolean
+  healDir?: string
   launch?: Launcher
   run?: CommandRunner
 }
@@ -60,6 +69,8 @@ interface Drive {
 }
 
 export const MAX_DRIVEN_TURNS = 25
+
+const HEAL_PROMPT = 'This project will not start. Get it running again as fast as you can, with the smallest change that works. Do not add features or tidy anything. Check it with `pikku all`, commit the fix, then call report_fix and stop. Here is what went wrong:'
 
 export class BuilderSession {
   private states = new Map<string, BuilderState>()
@@ -158,6 +169,31 @@ export class BuilderSession {
     })
     child.stdin?.write(`${JSON.stringify({ type: 'prompt', id: 'r1', message: sent })}\n`)
     await this.save(key)
+  }
+
+  async heal(key: string, problem: string, timeoutMs = 5 * 60_000): Promise<{ ok: boolean; summary: string }> {
+    const { cwd, ai, env = {}, launch = spawnPi, healDir } = await this.resolve(key)
+    const skills = await writeSkills(this.home)
+    await mkdir(healDir ?? tmpdir(), { recursive: true })
+    const report = join(await mkdtemp(join(healDir ?? tmpdir(), 'heal-')), 'report.json')
+    const prompt = `${HEAL_PROMPT}\n\n${problem}`
+    const child = launch(process.execPath, [resolvePi(), '-p', ...piArgs({ ai, skills, session: `pikku-heal-${key}-${Date.now()}` }), prompt], {
+      cwd,
+      env: { ...process.env, ...env, ...piEnv(ai), PIKKU_HEAL_REPORT: report },
+    })
+    let output = ''
+    child.stdout?.on('data', (chunk) => (output = (output + chunk).slice(-4000)))
+    child.stderr?.on('data', (chunk) => (output = (output + chunk).slice(-4000)))
+    child.stdin?.end()
+    const timer = setTimeout(() => child.kill(), timeoutMs)
+    const code = await new Promise<number | null>((resolve) => {
+      child.once('error', () => resolve(1))
+      child.once('exit', resolve)
+    })
+    clearTimeout(timer)
+    const saved = existsSync(report) ? JSON.parse(await readFile(report, 'utf8')) : null
+    if (saved) return { ok: saved.fixed === true, summary: saved.summary }
+    return { ok: false, summary: code === 0 ? 'The helper stopped without saying whether it fixed it.' : output.trim().split('\n').slice(-4).join('\n') || 'The helper could not run.' }
   }
 
   private note(key: string, text: string) {
@@ -268,8 +304,64 @@ export class BuilderSession {
     setTimeout(() => turn.child.kill(), 3000).unref()
   }
 
-  async clear(key: string) {
+  private archive(key: string, session?: string) {
+    if (session && !/^[\w-]+$/.test(session)) throw new Error('Unknown conversation')
+    return session ? join(this.home, 'transcripts', key, `${session}.json`) : join(this.home, 'transcripts', key)
+  }
+
+  private async stash(key: string) {
+    const state = await this.state(key)
+    if (!state.items.length) return
+    await mkdir(this.archive(key), { recursive: true })
+    await writeFile(this.archive(key, state.session), JSON.stringify({ session: state.session, items: state.items }))
+  }
+
+  async conversations(key: string): Promise<BuilderConversation[]> {
+    const state = await this.state(key)
+    const describe = (session: string, items: BuilderItem[], current: boolean): BuilderConversation => ({
+      session,
+      current,
+      title: (items.find((i) => i.kind === 'user') as { text: string } | undefined)?.text.split('\n')[0]!.slice(0, 80) ?? '',
+      at: items.at(-1)?.at ?? 0,
+    })
+    const dir = this.archive(key)
+    const files = existsSync(dir) ? (await readdir(dir)).filter((f) => f.endsWith('.json')) : []
+    const past = await Promise.all(
+      files.map(async (file) => {
+        const saved = JSON.parse(await readFile(join(dir, file), 'utf8'))
+        return describe(saved.session, saved.items ?? [], false)
+      })
+    )
+    return [
+      ...(state.items.length ? [describe(state.session, state.items, true)] : []),
+      ...past.filter((c) => c.session !== state.session).sort((a, b) => b.at - a.at),
+    ]
+  }
+
+  async resume(key: string, session: string): Promise<BuilderState> {
+    const state = await this.state(key)
+    if (state.busy) throw new Error('Wait for the builder to finish, or stop it, before switching conversations')
+    if (session === state.session) return state
+    const path = this.archive(key, session)
+    if (!existsSync(path)) throw new Error('Unknown conversation')
+    const saved = JSON.parse(await readFile(path, 'utf8'))
+    await this.stash(key)
     this.cancel(key)
+    await rm(path)
+    this.states.set(key, { busy: false, items: saved.items ?? [], session: saved.session })
+    await this.save(key)
+    return this.state(key)
+  }
+
+  async forget(key: string, session: string) {
+    const state = await this.state(key)
+    if (session === state.session) return this.clear(key, false)
+    await rm(this.archive(key, session), { force: true })
+  }
+
+  async clear(key: string, keep = true) {
+    this.cancel(key)
+    if (keep) await this.stash(key)
     this.states.set(key, { busy: false, items: [], session: `pikku-${key}-${Date.now()}` })
     await this.save(key)
   }

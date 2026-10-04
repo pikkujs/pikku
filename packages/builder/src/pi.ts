@@ -8,7 +8,7 @@ export interface BuilderAi {
   proxy?: { url: string; key: string }
 }
 
-export const EXTENSIONS = ['proxy-provider.mjs', 'codegen-diagnostics.mjs', 'edit-files-extension.mjs', 'write-files-extension.mjs', 'navigate-extension.mjs']
+export const EXTENSIONS = ['proxy-provider.mjs', 'codegen-diagnostics.mjs', 'edit-files-extension.mjs', 'write-files-extension.mjs', 'navigate-extension.mjs', 'heal-report-extension.mjs']
 
 export const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -23,6 +23,9 @@ export const SYSTEM_PROMPT = [
   'and check your work with `pikku all` once a batch of changes is done.',
   'Work arrives as changes, grouped into changesets: `pikku changes next` picks the work and the builder hands it to you.',
   'Build one changeset, commit each change on its own, mark it done and stop; the builder merges it and starts the next.',
+  'For one-off scripts use bun. When a Python library is the better tool (images, data, a Blender scene),',
+  'run it with `uv run --no-project --with <package> script.py`: uv brings its own Python, so none needs installing.',
+  'Keep such scripts out of the app source.',
 ].join(' ')
 
 const PROVIDERS: Record<string, string> = { gemini: 'google' }

@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { packageDir } from './pi.js'
 import { createHash } from 'node:crypto'
 import { listSkillFiles, listSkillNames, readSkillFile, SKILL_FILES } from '@pikku/skills'
 
@@ -10,13 +9,7 @@ const CLOUD_ONLY = /fabric/
 
 export const builderHome = () => process.env.PIKKU_BUILDER_HOME ?? join(homedir(), '.pikku', 'builder')
 
-const skillsVersion = (): string => {
-  try {
-    return JSON.parse(readFileSync(join(packageDir('@pikku/skills'), 'package.json'), 'utf8')).version
-  } catch {
-    return createHash('sha256').update(JSON.stringify(SKILL_FILES)).digest('hex').slice(0, 16)
-  }
-}
+const skillsVersion = (): string => createHash('sha256').update(JSON.stringify(SKILL_FILES)).digest('hex').slice(0, 16)
 
 export async function writeSkills(home = builderHome()): Promise<string> {
   const dir = join(home, 'skills', skillsVersion())
