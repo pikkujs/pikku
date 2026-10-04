@@ -105,6 +105,7 @@ import {
   personaSecret,
 } from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
+import { personaRpc } from './functions/commands/persona-rpc.js'
 import {
   renderScenarioCoverage,
   scenarioCoverage,
@@ -1512,6 +1513,31 @@ wireCLI({
             out: {
               description:
                 'Write the whole run — every step, response and finding — as JSON to this path',
+            },
+          },
+        }),
+        rpc: pikkuCLICommand({
+          func: personaRpc,
+          description:
+            'Call one RPC on a running server signed in as a persona, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a persona that is not permitted',
+          parameters: '<rpc>',
+          options: {
+            as: {
+              description: 'The persona to sign in as',
+              type: 'string',
+            },
+            data: {
+              description: "The RPC's input as JSON, e.g. '{\"id\":\"1\"}'",
+              type: 'string',
+            },
+            environment: {
+              description:
+                'Environment in pikku.config.json to call. Defaults to local',
+              type: 'string',
+            },
+            apiUrl: {
+              description: "Override the environment's apiUrl",
+              type: 'string',
             },
           },
         }),
