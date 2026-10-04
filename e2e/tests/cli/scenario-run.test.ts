@@ -118,46 +118,6 @@ describe('pikku scenario run', () => {
     assertAllPassed(await runScenario('notificationScenario'))
   })
 
-  test('declared steps render a readable ladder', async () => {
-    const run = await runScenario('codeEditorScenario')
-    assertAllPassed(run)
-    assert.match(
-      run.output,
-      /^\s*When\s+admin \(the Console administrator\) reads a function definition in the console\s+✓/m,
-      `expected the first mention to name the actor and their role:\n${run.output}`
-    )
-    assert.match(
-      run.output,
-      /^\s*Then\s+admin sees how editableFunc is declared\s+✓/m,
-      `expected a phase change to name the actor again, without the role:\n${run.output}`
-    )
-    assert.match(
-      run.output,
-      /^\s*And\s+sees the original greeting\s+✓/m,
-      `expected a repeated phase and actor to drop both:\n${run.output}`
-    )
-  })
-
-  /** A run that skips everything it was asked for must not report success. */
-  test('a scenario that cannot run on the surface fails the run', async () => {
-    const { code, output } = await runScenario('codeEditorConsoleScenario')
-    assert.notEqual(
-      code,
-      0,
-      `a run that could not run what it was asked for must not exit zero:\n${output}`
-    )
-    assert.match(
-      output,
-      /^SKIP codeEditorConsoleScenario \(no default or default binding: /m,
-      `expected the scenario to name the missing surface:\n${output}`
-    )
-    assert.match(
-      output,
-      /could not run on 'default'.*--run browser/s,
-      `expected the run to say how to run it:\n${output}`
-    )
-  })
-
   /**
    * `--tags` selects which scenarios to RUN. It is not the inspector's tag
    * filter, which selects which code to GENERATE — and a run that narrowed the

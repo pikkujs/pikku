@@ -30,7 +30,7 @@ export function parseErrors(cwd, paths) {
   }
   if (run.error || run.status !== SYNTAX_EXIT) return null
   const lines = `${run.stdout ?? ''}\n${run.stderr ?? ''}`.split('\n')
-  const first = lines.findIndex((line) => /^\s*x /.test(line))
+  const first = lines.findIndex((line) => /^\s*[x×] /.test(line))
   if (first === -1) return null
   const output = lines
     .slice(first)
