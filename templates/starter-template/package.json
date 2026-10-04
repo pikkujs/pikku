@@ -9,7 +9,6 @@
     "!apps/_app_template_"
   ],
   "scripts": {
-    "pikku": "pikku",
     "prebuild": "cd packages/functions && bunx --bun pikku all",
     "build": "bun run --filter '*' --if-present build",
     "dev": "bun scripts/dev.mjs",
