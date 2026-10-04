@@ -25,6 +25,9 @@ export function runGit(
       env: {
         ...process.env,
         GIT_TERMINAL_PROMPT: '0',
+        GIT_ASKPASS: '',
+        SSH_ASKPASS_REQUIRE: 'never',
+        GCM_INTERACTIVE: 'never',
         GIT_OPTIONAL_LOCKS: '0',
         LC_ALL: 'C',
       },
