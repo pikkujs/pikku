@@ -1,0 +1,4 @@
+[submodule "templates/starter-template"]
+	path = templates/starter-template
+	url = https://github.com/pikkujs/starter-template.git
+	branch = main
