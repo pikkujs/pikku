@@ -19,6 +19,8 @@ import {
   type ResolvedSqliteDb,
   type SchemaArtifact,
   addonSchemaSources,
+  extensionTablePrefix,
+  unprefixedExtensionTables,
   computeSchemaDrift,
   baseline,
   exportSchema,
@@ -1067,6 +1069,68 @@ describe('the addon schema channel', () => {
     assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
   })
 
+  test('an extension may only create tables under its own name', async () => {
+    publishAddon('extension-labels', labels)
+
+    await assert.rejects(
+      addonSchemaSources(
+        root,
+        'sqlite',
+        [{ package: 'extension-labels', extension: 'labels' }],
+        silent
+      ),
+      /creates tables without its prefix 'ext_labels_': labels/
+    )
+  })
+
+  test('an addon with the same unprefixed table is still accepted', async () => {
+    publishAddon('addon-plain-labels', labels)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'addon-plain-labels' }],
+      silent
+    )
+    assert.equal(sources.length, 1)
+  })
+
+  test('an extension whose tables are all prefixed is accepted', async () => {
+    const prefixed: SchemaArtifact = {
+      sqlite: {
+        sql: labels.sqlite!.sql,
+        tables: { ext_invoice_tracker_labels: labels.sqlite!.tables.labels! },
+      },
+    }
+    publishAddon('extension-invoice-tracker', prefixed)
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'extension-invoice-tracker', extension: 'invoice-tracker' }],
+      silent
+    )
+    assert.equal(sources.length, 1)
+  })
+
+  test('the prefix is the extension name with separators folded to underscores', () => {
+    assert.equal(
+      extensionTablePrefix('invoice-tracker'),
+      'ext_invoice_tracker_'
+    )
+    assert.deepEqual(
+      unprefixedExtensionTables(
+        {
+          ext_invoice_tracker_a: [],
+          invoice_tracker_x: [],
+          'public.ext_invoice_tracker_b': [],
+        },
+        'invoice-tracker'
+      ),
+      ['invoice_tracker_x']
+    )
+  })
+
   test('an addon installed only in the workspace package that wires it is found', async () => {
     const member = join(root, 'packages', 'functions')
     mkdirSync(join(member, 'src'), { recursive: true })
@@ -1344,7 +1408,12 @@ CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
     join(dir, 'package.json'),
     JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
   )
-  const column = (name: string, type: string, notNull: boolean, pk = false) => ({
+  const column = (
+    name: string,
+    type: string,
+    notNull: boolean,
+    pk = false
+  ) => ({
     name,
     type,
     notNull,
@@ -1408,7 +1477,10 @@ CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
   assert.ok(migration, 'the orphaned column got a migration')
   assert.deepEqual(migration.orphaned, ['todos.issuer'])
   const body = readFileSync(migration.file, 'utf8')
-  assert.match(body, /DROP INDEX todos_issuer_title_uidx;\nALTER TABLE todos DROP COLUMN issuer;/)
+  assert.match(
+    body,
+    /DROP INDEX todos_issuer_title_uidx;\nALTER TABLE todos DROP COLUMN issuer;/
+  )
 
   // And it applies: the column is gone and an insert that never names it works.
   await migrateAndCodegen(resolved)
