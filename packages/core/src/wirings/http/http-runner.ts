@@ -278,6 +278,10 @@ const executeRoute = async (
         originalClose()
       }
     }
+    response.onClose?.(() => {
+      channel!.state = 'closed'
+      singletonServices.eventHub?.onChannelClosed(channelId)
+    })
   }
 
   const wire: PikkuRawWire = {
