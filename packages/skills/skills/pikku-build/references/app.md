@@ -675,16 +675,6 @@ scenarios are the ones you wrote to pass; the regression lives in someone
 else's. Tightening what "archived" means is a one-function change that reads as
 local and quietly breaks the first changeset's scenario nobody re-ran.
 
-**Restart the server after adding a function.** Hot reload does not register a
-new RPC and does not re-run `afterStart`, so a fresh function answers 404 and
-anything provisioned at boot is missing — failures that read like a wiring bug
-and are nothing but a stale process.
-
-**Run the whole suite, not the changeset's own scenarios.** The changeset's
-scenarios are the ones you wrote to pass; the regression lives in someone
-else's. Tightening what "archived" means is a one-function change that reads as
-local and quietly breaks the first changeset's scenario nobody re-ran.
-
 **Restart the server after adding a function, and never edit one while a run is
 in flight.** Hot reload does not register a new RPC and does not re-run
 `afterStart`, so a fresh function answers 404 and anything provisioned at boot

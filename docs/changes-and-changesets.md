@@ -97,7 +97,7 @@ Projected subagents (`pikku skills install --agent pi`) inline their skill
 
 ## Plans and gaps
 
-A changeset that creates or alters a table, or has many changes, needs a plan; for
+A changeset that creates or alters a table, or has 6 or more changes, needs a plan; for
 anything else `claim` asks the judge at `PIKKU_PLAN_JUDGE_URL` when one is configured,
 and a judge that fails says plan. The plan is `knowledge/plans/<changeset>.plan.json`,
 written with `pikku knowledge plan set` and committed on the changeset's branch. `done`

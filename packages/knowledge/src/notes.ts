@@ -198,7 +198,7 @@ const collectMarkdown = async <Key extends string>(
     if (!/\.(md|markdown|txt)$/i.test(entry.name)) continue
     out.push(
       parseNote(
-        relative(root, full),
+        relative(root, full).split(sep).join('/'),
         await readFile(full, 'utf8'),
         extraScalars
       )

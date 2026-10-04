@@ -133,7 +133,9 @@ async function worktreeOf(branch: string): Promise<string | null> {
   return (
     (await git(['worktree', 'list', '--porcelain']))
       .split('\n\n')
-      .find((entry) => entry.includes(`\nbranch refs/heads/${branch}`))
+      .find((entry) =>
+        entry.split('\n').includes(`branch refs/heads/${branch}`)
+      )
       ?.match(/^worktree (.+)$/m)?.[1] ?? null
   )
 }

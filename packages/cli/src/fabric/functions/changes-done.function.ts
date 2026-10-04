@@ -109,12 +109,16 @@ async function checkCommit(
     sha,
   ])
   const migrations = files.split('\n').filter((f) => /^db\/[^/]+\//.test(f))
-  const { groups, changes } = await rpc.invoke('listChanges', {
-    projectId,
-    groupId: change.groupId ?? undefined,
-    includeDone: true,
-  })
-  const declared = groups[0] as Partial<Declaration> | undefined
+  const { groups, changes } = change.groupId
+    ? await rpc.invoke('listChanges', {
+        projectId,
+        groupId: change.groupId,
+        includeDone: true,
+      })
+    : { groups: [], changes: [] }
+  const declared = groups.find((g) => g.groupId === change.groupId) as
+    | Partial<Declaration>
+    | undefined
   if (declared?.needsPlan && change.groupId) {
     const last = changes.every(
       (c) => c.changeId === change.changeId || c.status === 'done'
