@@ -13,4 +13,4 @@ export type {
   ScopeNodeMeta,
   ScopeOrigin,
 } from './scope.types.js'
-export { hasScopes, verifyScopes } from '../../scopes.js'
+export { hasScopes, intersectScopes, verifyScopes } from '../../scopes.js'

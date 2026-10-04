@@ -9,6 +9,8 @@
     "authBearer",
     "authCookie",
     "cors",
+    "EXTENSION_HEADER",
+    "extensionScopeCap",
     "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
@@ -332,6 +334,7 @@
     "defineScope",
     "flattenScopeDefinitions",
     "hasScopes",
+    "intersectScopes",
     "validateAndBuildScopeDefinitionsMeta",
     "verifyScopes"
   ],
