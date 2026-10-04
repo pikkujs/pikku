@@ -113,8 +113,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
   },
   void
 >({
-  func: async (services, input) => {
-    const { logger, config } = services
+  func: async ({ logger, config }, input) => {
     const root: string = config.rootDir
     const srcDir = config.srcDirectories?.[0] ? join(root, config.srcDirectories[0]) : undefined
     if (!srcDir || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
@@ -138,7 +137,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       const name =
         input.name ??
         (await parseOpenAPISpec(source.spec, { headers: parseHeaderOptions(input.openapiHeader) })).info.title
-      const addonDir = await newAddon(services, {
+      const addonDir = await newAddon({ logger, config }, {
         name,
         openapi: source.spec,
         openapiHeader: input.openapiHeader,

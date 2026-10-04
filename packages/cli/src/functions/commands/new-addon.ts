@@ -1478,7 +1478,7 @@ export async function newAddon(
 }
 
 export const pikkuNewAddon = pikkuSessionlessFunc<NewAddonInput, void>({
-  func: async (services, input) => {
-    console.log(await newAddon(services, input))
+  func: async ({ logger, config }, input) => {
+    console.log(await newAddon({ logger, config }, input))
   },
 })
