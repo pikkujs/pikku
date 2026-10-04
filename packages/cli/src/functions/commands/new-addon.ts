@@ -8,6 +8,7 @@ import {
   saveManifest,
 } from '../../utils/contract-versions.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import type { SingletonServices } from '../../../types/application-types.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -1216,8 +1217,7 @@ function findAppProject(
   return { root, srcDir: join(root, src) }
 }
 
-export const pikkuNewAddon = pikkuSessionlessFunc<
-  {
+export type NewAddonInput = {
     name: string
     displayName?: string
     description?: string
@@ -1239,11 +1239,10 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     mcp?: boolean
     camelCase?: boolean
     build?: boolean
-  },
-  void
->({
-  func: async (
-    { logger, config },
+  }
+
+export async function newAddon(
+  { logger, config }: Pick<SingletonServices, 'logger' | 'config'>,
     {
       name,
       displayName,
@@ -1266,215 +1265,220 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       mcp = false,
       camelCase = false,
       build = true,
-    }
-  ) => {
-    name = sanitizeAddonName(name)
+    }: NewAddonInput
+): Promise<string> {
+  name = sanitizeAddonName(name)
 
-    if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
+  if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
+    logger.error(
+      `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`
+    )
+    process.exit(1)
+  }
+
+  const pascalName = toPascalCase(name)
+  const resolvedDisplayName = displayName || pascalName
+  const resolvedDescription =
+    description || `${resolvedDisplayName} integration for Pikku`
+
+  const app = findAppProject(config)
+  const installing = Boolean(openapi) && (install ?? Boolean(app))
+  if (installing && !app) {
+    logger.error(
+      '--install needs to run inside a pikku app (a pikku.config.json that is not an addon)'
+    )
+    process.exit(1)
+  }
+
+  // Resolve target directory
+  const workspacePackages = app ? join(app.root, 'packages') : undefined
+  const baseDir =
+    dir ||
+    config.scaffold?.addonDir ||
+    (installing && workspacePackages && existsSync(workspacePackages)
+      ? workspacePackages
+      : process.cwd())
+  // Folder mirrors the package name (@pikku/addon-<name>) so a packages/
+  // listing reads as packages/addon-<name>, distinct from app workspaces.
+  const addonDir = join(baseDir, `addon-${name}`)
+
+  if (existsSync(addonDir)) {
+    logger.error(`Directory already exists: ${addonDir}`)
+    process.exit(1)
+  }
+
+  const vars: AddonVars = {
+    name,
+    camelName: toCamelCase(name),
+    pascalName,
+    screamingName: toScreamingSnake(name),
+    displayName: resolvedDisplayName,
+    description: resolvedDescription,
+    category,
+    addonDepProtocol: resolveAddonDepProtocol(baseDir),
+  }
+
+  let loadedAuthConfig: AuthConfig | undefined
+  if (authConfig) {
+    loadedAuthConfig = await loadAuthConfig(authConfig)
+    if (loadedAuthConfig.delegated && credential && credential !== 'bearer') {
       logger.error(
-        `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`
+        `--auth-config with delegated login stores the upstream token per user, so it cannot be combined with --credential ${credential}`
       )
       process.exit(1)
     }
+  }
 
-    const pascalName = toPascalCase(name)
-    const resolvedDisplayName = displayName || pascalName
-    const resolvedDescription =
-      description || `${resolvedDisplayName} integration for Pikku`
-
-    const app = findAppProject(config)
-    const installing = Boolean(openapi) && (install ?? Boolean(app))
-    if (installing && !app) {
-      logger.error(
-        '--install needs to run inside a pikku app (a pikku.config.json that is not an addon)'
-      )
-      process.exit(1)
-    }
-
-    // Resolve target directory
-    const workspacePackages = app ? join(app.root, 'packages') : undefined
-    const baseDir =
-      dir ||
-      config.scaffold?.addonDir ||
-      (installing && workspacePackages && existsSync(workspacePackages)
-        ? workspacePackages
-        : process.cwd())
-    // Folder mirrors the package name (@pikku/addon-<name>) so a packages/
-    // listing reads as packages/addon-<name>, distinct from app workspaces.
-    const addonDir = join(baseDir, `addon-${name}`)
-
-    if (existsSync(addonDir)) {
-      logger.error(`Directory already exists: ${addonDir}`)
-      process.exit(1)
-    }
-
-    const vars: AddonVars = {
-      name,
-      camelName: toCamelCase(name),
-      pascalName,
-      screamingName: toScreamingSnake(name),
-      displayName: resolvedDisplayName,
-      description: resolvedDescription,
-      category,
-      addonDepProtocol: resolveAddonDepProtocol(baseDir),
-    }
-
-    let loadedAuthConfig: AuthConfig | undefined
-    if (authConfig) {
-      loadedAuthConfig = await loadAuthConfig(authConfig)
-      if (loadedAuthConfig.delegated && credential && credential !== 'bearer') {
-        logger.error(
-          `--auth-config with delegated login stores the upstream token per user, so it cannot be combined with --credential ${credential}`
+  let spec: ParsedSpec | undefined
+  let resolved: ResolvedAuth
+  try {
+    if (openapi) {
+      spec = await parseOpenAPISpec(openapi, {
+        headers: parseHeaderOptions(openapiHeader),
+      })
+      const total = spec.operations.length
+      spec = filterOperations(spec, { tags, include, exclude })
+      if (spec.operations.length === 0) {
+        throw new Error(
+          `No operations left out of ${total} after --tags/--include/--exclude`
         )
-        process.exit(1)
       }
-    }
-
-    let spec: ParsedSpec | undefined
-    let resolved: ResolvedAuth
-    try {
-      if (openapi) {
-        spec = await parseOpenAPISpec(openapi, {
-          headers: parseHeaderOptions(openapiHeader),
-        })
-        const total = spec.operations.length
-        spec = filterOperations(spec, { tags, include, exclude })
-        if (spec.operations.length === 0) {
-          throw new Error(
-            `No operations left out of ${total} after --tags/--include/--exclude`
-          )
-        }
-        const warning = specCoverageWarning(spec)
-        if (warning) {
-          logger.warn(`\n⚠️  ${warning}\n`)
-        }
-        resolved = resolveAddonAuth(spec, {
-          auth,
-          credential,
-          oauth,
-          secret,
-          authConfig: loadedAuthConfig,
-        })
-        const login = detectLoginOperation(spec)
-        if (login && resolved.mode !== 'delegated') {
-          logger.info(
-            `${spec.info.title} has a login route (${login.method.toUpperCase()} ${login.path}). To let users sign in to the app with their ${resolvedDisplayName} account, pass --auth-config with a "delegated" block (see pikku-build references/openapi.md).`
-          )
-        }
-        logger.info(
-          `${spec.operations.length} operations, auth: ${resolved.mode}${resolved.credential ? ` (${resolved.credential})` : ''}`
-        )
-      } else {
-        const credentialType = credential as CredentialType | undefined
-        if (
-          credentialType &&
-          !['apikey', 'bearer', 'basic', 'oauth2'].includes(credentialType)
-        ) {
-          throw new Error(
-            `Invalid credential type "${credential}": must be one of apikey, bearer, basic, oauth2`
-          )
-        }
-        const effectiveOAuth = oauth || credentialType === 'oauth2'
-        resolved = {
-          mode: effectiveOAuth
-            ? 'oauth2'
-            : credentialType
-              ? 'connect'
-              : secret
-                ? 'shared'
-                : 'none',
-          credential: loadedAuthConfig?.delegated ? 'bearer' : credentialType,
-          secret: (secret || effectiveOAuth) && !credentialType,
-          oauth: effectiveOAuth,
-        }
-        if (loadedAuthConfig?.delegated) resolved.mode = 'delegated'
+      const warning = specCoverageWarning(spec)
+      if (warning) {
+        logger.warn(`\n⚠️  ${warning}\n`)
       }
-    } catch (error) {
-      logger.error(error instanceof Error ? error.message : String(error))
-      process.exit(1)
-    }
-
-    const addonFiles = getAddonFiles(vars, {
-      secret: resolved.secret,
-      variable,
-      oauth: resolved.oauth,
-      credential: resolved.credential,
-      delegated: resolved.mode === 'delegated',
-    })
-
-    if (spec) {
-      const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
-        oauth: resolved.oauth,
-        secret: resolved.secret,
-        credential: resolved.credential,
-        mcp,
-        camelCase,
+      resolved = resolveAddonAuth(spec, {
+        auth,
+        credential,
+        oauth,
+        secret,
         authConfig: loadedAuthConfig,
       })
-      Object.assign(addonFiles, openapiFiles)
-
-      const config = JSON.parse(addonFiles['pikku.config.json'])
-      config.addon.openapi = {
-        version: spec.info.version,
-        hash: computeContractHash(spec),
-        ...(camelCase ? { camelCase: true } : {}),
-        ...(loadedAuthConfig ? { authConfig: true } : {}),
+      const login = detectLoginOperation(spec)
+      if (login && resolved.mode !== 'delegated') {
+        logger.info(
+          `${spec.info.title} has a login route (${login.method.toUpperCase()} ${login.path}). To let users sign in to the app with their ${resolvedDisplayName} account, pass --auth-config with a "delegated" block (see pikku-build references/openapi.md).`
+        )
       }
-      addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
-    }
-
-    const written = await writeFiles(addonDir, addonFiles)
-
-    // Test harness
-    if (test) {
-      const testFiles = getTestFiles(vars)
-      const testWritten = await writeFiles(join(addonDir, 'test'), testFiles)
-      written.push(...testWritten)
-    }
-
-    // Initialize version manifest
-    const manifestPath = join(addonDir, 'versions.pikku.json')
-    await saveManifest(manifestPath, createEmptyManifest())
-
-    logger.info(`Created addon at ${addonDir}`)
-    for (const f of written) {
-      logger.debug({ message: `  ${f}`, type: 'success' })
-    }
-
-    if (installing && app && spec) {
-      const functions = Object.fromEntries(
-        Object.entries(addonFiles)
-          .filter(([path]) =>
-            /^src\/functions\/[^/]+\.function\.ts$/.test(path)
-          )
-          .map(([path, source]) => [
-            path.slice('src/functions/'.length, -'.function.ts'.length),
-            source,
-          ])
+      logger.info(
+        `${spec.operations.length} operations, auth: ${resolved.mode}${resolved.credential ? ` (${resolved.credential})` : ''}`
       )
-      const baseUrl = spec.serverUrls.find((url) => /^https?:\/\//.test(url))
-      const { written: installed, notes } = installAddonIntoApp({
-        projectRoot: app.root,
-        srcDir: app.srcDir,
-        name,
-        camelName: vars.camelName,
-        pascalName,
-        screamingName: vars.screamingName,
-        packageName: `@pikku/addon-${name}`,
-        addonDir,
-        inWorkspace: workspaceCovers(app.root, addonDir),
-        mode: resolved.mode,
-        functions,
-        baseUrl: baseUrl?.replace(/\/+$/, ''),
-      })
-      for (const f of installed) logger.info(`  updated ${f}`)
-      for (const note of notes) logger.warn(note)
+    } else {
+      const credentialType = credential as CredentialType | undefined
+      if (
+        credentialType &&
+        !['apikey', 'bearer', 'basic', 'oauth2'].includes(credentialType)
+      ) {
+        throw new Error(
+          `Invalid credential type "${credential}": must be one of apikey, bearer, basic, oauth2`
+        )
+      }
+      const effectiveOAuth = oauth || credentialType === 'oauth2'
+      resolved = {
+        mode: effectiveOAuth
+          ? 'oauth2'
+          : credentialType
+            ? 'connect'
+            : secret
+              ? 'shared'
+              : 'none',
+        credential: loadedAuthConfig?.delegated ? 'bearer' : credentialType,
+        secret: (secret || effectiveOAuth) && !credentialType,
+        oauth: effectiveOAuth,
+      }
+      if (loadedAuthConfig?.delegated) resolved.mode = 'delegated'
     }
+  } catch (error) {
+    logger.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
+  }
 
-    if (build && !buildGeneratedAddon(addonDir, logger)) {
-      process.exit(1)
+  const addonFiles = getAddonFiles(vars, {
+    secret: resolved.secret,
+    variable,
+    oauth: resolved.oauth,
+    credential: resolved.credential,
+    delegated: resolved.mode === 'delegated',
+  })
+
+  if (spec) {
+    const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
+      oauth: resolved.oauth,
+      secret: resolved.secret,
+      credential: resolved.credential,
+      mcp,
+      camelCase,
+      authConfig: loadedAuthConfig,
+    })
+    Object.assign(addonFiles, openapiFiles)
+
+    const config = JSON.parse(addonFiles['pikku.config.json'])
+    config.addon.openapi = {
+      version: spec.info.version,
+      hash: computeContractHash(spec),
+      ...(camelCase ? { camelCase: true } : {}),
+      ...(loadedAuthConfig ? { authConfig: true } : {}),
     }
+    addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
+  }
 
-    console.log(addonDir)
+  const written = await writeFiles(addonDir, addonFiles)
+
+  // Test harness
+  if (test) {
+    const testFiles = getTestFiles(vars)
+    const testWritten = await writeFiles(join(addonDir, 'test'), testFiles)
+    written.push(...testWritten)
+  }
+
+  // Initialize version manifest
+  const manifestPath = join(addonDir, 'versions.pikku.json')
+  await saveManifest(manifestPath, createEmptyManifest())
+
+  logger.info(`Created addon at ${addonDir}`)
+  for (const f of written) {
+    logger.debug({ message: `  ${f}`, type: 'success' })
+  }
+
+  if (installing && app && spec) {
+    const functions = Object.fromEntries(
+      Object.entries(addonFiles)
+        .filter(([path]) =>
+          /^src\/functions\/[^/]+\.function\.ts$/.test(path)
+        )
+        .map(([path, source]) => [
+          path.slice('src/functions/'.length, -'.function.ts'.length),
+          source,
+        ])
+    )
+    const baseUrl = spec.serverUrls.find((url) => /^https?:\/\//.test(url))
+    const { written: installed, notes } = installAddonIntoApp({
+      projectRoot: app.root,
+      srcDir: app.srcDir,
+      name,
+      camelName: vars.camelName,
+      pascalName,
+      screamingName: vars.screamingName,
+      packageName: `@pikku/addon-${name}`,
+      addonDir,
+      inWorkspace: workspaceCovers(app.root, addonDir),
+      mode: resolved.mode,
+      functions,
+      baseUrl: baseUrl?.replace(/\/+$/, ''),
+    })
+    for (const f of installed) logger.info(`  updated ${f}`)
+    for (const note of notes) logger.warn(note)
+  }
+
+  if (build && !buildGeneratedAddon(addonDir, logger)) {
+    process.exit(1)
+  }
+
+  return addonDir
+}
+
+export const pikkuNewAddon = pikkuSessionlessFunc<NewAddonInput, void>({
+  func: async (services, input) => {
+    console.log(await newAddon(services, input))
   },
 })
