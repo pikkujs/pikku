@@ -119,6 +119,7 @@ import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
+import { pikkuNewExtension } from './functions/commands/new-extension.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
   appList,
@@ -1505,6 +1506,19 @@ wireCLI({
                 'Wiring type: http (default), channel, scheduler, queue, mcp, cli, or trigger',
               short: 't',
               default: 'http',
+            },
+          },
+        }),
+        extension: pikkuCLICommand({
+          func: pikkuNewExtension,
+          description:
+            'Create a new Pikku Studio extension: an addon that also ships screens',
+          parameters: '<name>',
+          options: {
+            dir: {
+              description:
+                'Where to create it (default packages/extension-<name>)',
+              short: 'd',
             },
           },
         }),
