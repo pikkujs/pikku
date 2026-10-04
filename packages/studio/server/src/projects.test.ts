@@ -188,6 +188,18 @@ describe('StudioProjectsService', () => {
     service.close(added.key)
     assert.equal((await service.list())[0].open, false)
   })
+
+  test('stops an open project gracefully and says which were open', async () => {
+    const { base, service } = await setup()
+    const added = await service.add(await repo(base, 'notes'))
+    await service.open(added.key)
+    assert.deepEqual(await service.keys(), [added.key])
+    assert.deepEqual(service.openKeys(), [added.key])
+    await service.settle()
+    await service.stop(added.key, 2000)
+    assert.deepEqual(service.openKeys(), [])
+    assert.equal(service.runningProject(added.key), null)
+  })
 })
 
 describe('projectEnv', () => {

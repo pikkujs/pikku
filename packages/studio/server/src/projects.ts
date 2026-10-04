@@ -185,6 +185,23 @@ const run = (command: string, args: string[], cwd: string) =>
     )
   })
 
+const exited = (child: ChildProcess, timeoutMs: number) =>
+  child.exitCode !== null || child.signalCode !== null
+    ? Promise.resolve(true)
+    : new Promise<boolean>((done) => {
+        const timer = setTimeout(() => done(false), timeoutMs)
+        child.once('exit', () => {
+          clearTimeout(timer)
+          done(true)
+        })
+      })
+
+const stopGracefully = async (child: ChildProcess | null, timeoutMs: number) => {
+  if (!child) return
+  child.kill('SIGINT')
+  if (!(await exited(child, timeoutMs))) child.kill('SIGKILL')
+}
+
 const tail = async (path: string, lines = 20) => {
   const text = existsSync(path) ? await readFile(path, 'utf8') : ''
   return text.trimEnd().split('\n').slice(-lines).join('\n')
@@ -292,6 +309,7 @@ const outermostNodeModules = (path: string) => {
 export class StudioProjectsService {
   private running = new Map<string, RunningProject & { child: ChildProcess }>()
   private apps = new Map<string, RunningApp[]>()
+  private keeping = new Set<Promise<unknown>>()
   private account: FabricAccount
   private home: string
 
@@ -470,7 +488,29 @@ export class StudioProjectsService {
 
   async keepChanges(key: string): Promise<KeepResult> {
     const entry = await this.entry(key)
-    return keepChanges(entry.path, await ensureWorktree(entry.path, this.home, entry.id))
+    const keep = keepChanges(entry.path, await ensureWorktree(entry.path, this.home, entry.id))
+    this.keeping.add(keep)
+    return keep.finally(() => this.keeping.delete(keep))
+  }
+
+  async keys(): Promise<string[]> {
+    return (await this.registry()).map((e) => e.id)
+  }
+
+  openKeys(): string[] {
+    return [...this.running.keys()]
+  }
+
+  async settle(): Promise<void> {
+    await Promise.allSettled([...this.keeping])
+  }
+
+  async stop(key: string, timeoutMs = 10_000): Promise<void> {
+    const running = this.running.get(key)
+    const apps = this.apps.get(key) ?? []
+    this.running.delete(key)
+    this.apps.delete(key)
+    await Promise.all([running?.child ?? null, ...apps.map((app) => app.child)].map((child) => stopGracefully(child, timeoutMs)))
   }
 
   async projectDir(key: string): Promise<string> {
