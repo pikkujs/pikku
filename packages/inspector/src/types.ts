@@ -578,7 +578,28 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
+/** A screen of an extension as `defineExtension` declares it, read statically. */
+export type ExtensionScreenMeta = {
+  path: string
+  title: string
+  nav?: boolean
+  scopes?: string[]
+} & (
+  | { component: string; app?: undefined }
+  | { app: string; component?: undefined }
+)
+
+export type ExtensionManifestMeta = {
+  title: string
+  icon?: string
+  /** The source file whose `defineExtension` call declared this manifest. */
+  file: string
+  screens: ExtensionScreenMeta[]
+}
+
 export interface InspectorState {
+  /** Set when this package calls `defineExtension`: the screens it ships. */
+  extensionManifest?: ExtensionManifestMeta
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -679,6 +700,8 @@ export interface InspectorState {
         package: string
         /** The app source file whose `wireAddon` call declared this instance. */
         file?: string
+        /** Declared with `wireExtension`: the package must ship screens, or it is an addon. */
+        extension?: boolean
         rpcEndpoint?: string
         /**
          * `true` offers every function the addon declared `mcp: true`; a list

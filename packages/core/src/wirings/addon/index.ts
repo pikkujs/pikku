@@ -1,5 +1,13 @@
 export { wireAddon } from './wire-addon.js'
 export type { WireAddonConfig } from './wire-addon.js'
+export { wireExtension, defineExtension } from './wire-extension.js'
+export type {
+  WireExtensionConfig,
+  ExtensionManifest,
+  ExtensionScreen,
+  ExtensionComponentScreen,
+  ExtensionAppScreen,
+} from './wire-extension.js'
 export { wireRemoteAddon } from './wire-remote-addon.js'
 export type {
   WireRemoteAddonConfig,
