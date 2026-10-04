@@ -164,6 +164,18 @@ export class BuilderSession {
     this.states.get(key)?.items.push({ kind: 'loop', text, at: Date.now() })
   }
 
+  async startChanges(key: string): Promise<{ started: boolean; reason: string }> {
+    const state = await this.state(key)
+    if (state.busy || this.turns.has(key)) return { started: false, reason: 'The builder is already working' }
+    const launch = await this.resolve(key)
+    const route = await pikkuNext(launch.cwd, undefined, launch.run, launch.env)
+    if (!route.agent) return { started: false, reason: route.reason }
+    this.drives.set(key, { gen: this.drive(key).gen + 1, turns: 1, quiet: 0, report: route.context ?? '', repeats: 0 })
+    this.note(key, route.reason)
+    await this.send(key, routeMessage(route))
+    return { started: true, reason: route.reason }
+  }
+
   private async advance(key: string, gen: number): Promise<void> {
     const state = await this.state(key)
     const drive = this.drive(key)
