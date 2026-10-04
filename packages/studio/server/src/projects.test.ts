@@ -216,4 +216,14 @@ describe('projectEnv', () => {
     assert.equal(second.SCENARIO_ACTOR_SECRET, first.SCENARIO_ACTOR_SECRET)
     assert.equal(await readFile(join(project, '.env'), 'utf8'), 'BETTER_AUTH_SECRET="mine"\nAPI_KEY=abc\n')
   })
+
+  test('registers a project under the key it is given, and keeps it', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'pikku-studio-key-'))
+    const service = new StudioProjectsService({ account: fakeAccount([]), home: join(base, 'studio'), confine: false })
+    const path = await repo(base, 'shop')
+    assert.equal((await service.add(path, 'app')).key, 'app')
+    assert.equal((await service.add(path, 'app')).key, 'app')
+    assert.equal((await service.list()).filter((p) => p.path === path).length, 1)
+    await assert.rejects(service.add(await repo(base, 'other'), 'app'), /already taken/)
+  })
 })

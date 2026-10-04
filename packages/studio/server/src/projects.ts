@@ -435,14 +435,18 @@ export class StudioProjectsService {
     return [...local, ...remote]
   }
 
-  async add(path: string): Promise<StudioProject> {
+  async add(path: string, key?: string): Promise<StudioProject> {
     const absolute = resolve(path)
     if (!existsSync(absolute)) throw new Error(`No folder at ${absolute}`)
     const entries = await this.registry()
     let entry = entries.find((e) => resolve(e.path) === absolute)
+    if (key && entries.some((e) => e.id === key && e !== entry)) throw new Error(`The key ${key} is already taken`)
     if (!entry) {
-      entry = { id: randomUUID().slice(0, 8), path: absolute, addedAt: new Date().toISOString() }
+      entry = { id: key ?? randomUUID().slice(0, 8), path: absolute, addedAt: new Date().toISOString() }
       entries.push(entry)
+      await this.saveRegistry(entries)
+    } else if (key && entry.id !== key) {
+      entry.id = key
       await this.saveRegistry(entries)
     }
     return (await this.list()).find((p) => p.key === entry!.id)!
