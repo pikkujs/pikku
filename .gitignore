@@ -9,6 +9,7 @@ benchmarks/result-*.json
 *.js
 meta.json
 !packages/frontend/mantine/blocks/*/meta.json
+!packages/shadcdn/blocks/*/meta.json
 .yarn
 .dist
 dist

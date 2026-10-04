@@ -83,6 +83,6 @@ test('a profile feeds composeTheme, dropping colours that are not hex', () => {
   const { theme } = composeTheme(input)
   assert.equal(theme.brand.colors.primary, '#ff5500')
   assert.equal(theme.brand.fonts?.heading, 'Fraunces')
-  assert.equal(theme.structure.white, '#fafafa')
-  assert.equal(theme.structure.black, '#111')
+  assert.equal(theme.structure.page, '#fafafa')
+  assert.equal(theme.structure.ink, '#111')
 })

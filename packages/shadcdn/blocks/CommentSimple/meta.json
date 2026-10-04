@@ -1,0 +1,16 @@
+{
+  "name": "CommentSimple",
+  "title": "Comment",
+  "description": "An avatar, author, time and body text.",
+  "tags": [
+    "comments"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "commentsimple__initials": "AL",
+    "commentsimple__author": "Ada Lovelace",
+    "commentsimple__time": "2 hours ago",
+    "commentsimple__body": "Looks right to me. Shipping it."
+  }
+}

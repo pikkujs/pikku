@@ -1,0 +1,18 @@
+{
+  "name": "NavbarSimple",
+  "title": "Side navigation",
+  "description": "A vertical list of links with an icon each and a footer action.",
+  "tags": [
+    "navbars"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "navbarsimple__home": "Home",
+    "navbarsimple__projects": "Projects",
+    "navbarsimple__settings": "Settings",
+    "navbarsimple__sign_out": "Sign out"
+  }
+}

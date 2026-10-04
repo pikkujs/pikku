@@ -1,0 +1,14 @@
+{
+  "name": "SocialButtons",
+  "title": "Social sign-in buttons",
+  "description": "Full-width provider buttons for single sign-on.",
+  "tags": [
+    "auth"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "socialbuttons__google": "Continue with Google",
+    "socialbuttons__github": "Continue with GitHub"
+  }
+}

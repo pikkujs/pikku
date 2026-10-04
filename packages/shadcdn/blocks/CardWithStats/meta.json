@@ -1,0 +1,18 @@
+{
+  "name": "CardWithStats",
+  "title": "Card with stats",
+  "description": "An article card with a stat footer.",
+  "tags": [
+    "cards"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "cardwithstats__title": "Quarterly report",
+    "cardwithstats__description": "How the team did against plan.",
+    "cardwithstats__l1": "Views",
+    "cardwithstats__v1": "1.2k",
+    "cardwithstats__l2": "Shares",
+    "cardwithstats__v2": "84"
+  }
+}
