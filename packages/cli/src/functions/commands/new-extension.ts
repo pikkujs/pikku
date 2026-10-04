@@ -115,7 +115,20 @@ export const ${fn}Hello = pikkuSessionlessFunc<void, { message: string }>({
   return <h1>${title}</h1>
 }
 `,
+    'src/scopes.ts': `import { defineScope } from '@pikku/core/scope'
+
+defineScope({
+  '${name}': {
+    displayName: '${title}',
+    description: '${title} for Pikku Studio',
+    scopes: {
+      read: { description: 'See ${title}' },
+    },
+  },
+})
+`,
     'src/index.ts': `export * from './functions/hello.function.js'
+import './scopes.js'
 `,
   }
 }
