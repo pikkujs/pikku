@@ -104,7 +104,7 @@ export default defineExtension({
   ],
 })
 `,
-    'src/functions/hello.function.ts': `import { pikkuSessionlessFunc } from '#pikku/function'
+    'src/functions/hello.function.ts': `import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const ${fn}Hello = pikkuSessionlessFunc<void, { message: string }>({
   scopes: ['${name}:read'],
@@ -114,6 +114,20 @@ export const ${fn}Hello = pikkuSessionlessFunc<void, { message: string }>({
     'src/screens/Home.tsx': `export default function Home() {
   return <h1>${title}</h1>
 }
+`,
+    'types/application-types.d.ts': `import type { CoreConfig, CoreServices, CoreSingletonServices, CoreUserSession } from '@pikku/core/types'
+
+export interface Config extends CoreConfig {}
+
+export interface UserSession extends CoreUserSession {}
+
+export interface SingletonServices extends CoreSingletonServices<Config> {}
+
+export interface Services extends CoreServices<SingletonServices> {}
+`,
+    'src/services.ts': `import { pikkuAddonServices } from '#pikku/addon/setup'
+
+export const createSingletonServices = pikkuAddonServices(async () => ({}))
 `,
     'src/scopes.ts': `import { defineScope } from '@pikku/core/scope'
 
