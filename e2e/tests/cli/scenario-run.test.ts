@@ -20,8 +20,6 @@ import { startBackend } from '../../bin/backend-harness.js'
 
 const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
-/** Where `pikku scenario run` files a run's artifacts, one folder per run. */
-
 interface ScenarioRunResult {
   code: number | null
   output: string
