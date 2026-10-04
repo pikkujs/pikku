@@ -155,6 +155,18 @@ defineScope({
               },
             },
           },
+          pages: {
+            description: "The frontends' pages, read from their route files",
+            scopes: {
+              read: {
+                description: 'List each page, its route file and params',
+              },
+              screenshot: {
+                description:
+                  'Open each page of a running frontend in a browser and photograph it',
+              },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {
