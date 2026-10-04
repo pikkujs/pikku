@@ -4,7 +4,7 @@ description: >-
   Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
   or a showcase that exercises every surface), adding a feature to an app that already exists, and
   the one-off cleanup right after a template is cloned. Covers the knowledge base, personas and
-  roles, milestone planning, the scenario that proves each one, theming, multi-app layouts and
+  roles, filing the work as changes and planning each changeset, the scenario that proves each one, theming, multi-app layouts and
   deploying. TRIGGER when: the user asks for an app to be built on Pikku, a freshly scaffolded
   project needs turning into a product, the user asks to add a feature or wire up a new endpoint
   in a working app, or a template was just cloned or scaffolded. DO NOT TRIGGER when: the user
@@ -36,7 +36,7 @@ agent:
 | A real product, meant to be picked up by someone else                        | `references/app.md` — the default                                        |
 | A spike, a throwaway demo, an idea nobody has committed to                   | `references/quick.md`                                                    |
 | A showcase meant to exercise every Pikku surface                             | `references/platform.md`, which is a delta on top of `references/app.md` |
-| A feature added to an app that already has its knowledge base and milestones | `references/feature.md`                                                  |
+| A feature added to an app that already has its knowledge base               | `references/feature.md`                                                  |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
@@ -79,14 +79,14 @@ Say it at once, in one line, and start: this is the obvious first move, not a
 question for the user. Generate the whole spec, however large.
 
 Neither is the app. When the conversion compiles, come back here and carry on
-in the mode the request calls for — App by default — planning milestones around
+in the mode the request calls for — App by default — planning changesets around
 what the user wants to do with the API or the workflow, and reaching the
 generated functions through `ref()`.
 
 ## What holds in every mode
 
 - **The branch and the diff are the contract.** A reviewer sees real, compiled,
-  working code: apply is a merge, reject is a `git branch -D`. The milestone's
+  working code: apply is a merge, reject is a `git branch -D`. The changeset's
   plan is your own denominator, measured by `pikku knowledge plan progress` —
   never something a reviewer is handed instead of the code.
 - **Discover before editing, and there are two questions, not one.** What THIS
@@ -102,7 +102,7 @@ generated functions through `ref()`.
 - **`capabilities.<type>` reports what this app USES, not what pikku offers.**
   A `false` there is "no wire of this type is declared yet", so the rule below
   about not introducing one is about not widening an app's surface on a whim —
-  it is not a statement that the surface is unavailable. When a milestone's plan
+  it is not a statement that the surface is unavailable. When a changeset's plan
   calls for a scheduled task and `capabilities.scheduler` is `false`, check
   `pikku doc` for the door before concluding you cannot build it.
 - **`metaLocale` in `pikku.config.json` is the language of authored meta** —
@@ -116,7 +116,7 @@ generated functions through `ref()`.
   because codegen refuses before it gets there. Delete those contracts' entries
   from `versions.pikku.json` and re-run; they are re-recorded. Fix the real
   diagnostic first, or you will chase the echo instead. Deleting is right only
-  for a contract first recorded INSIDE the milestone you are building — nothing
+  for a contract first recorded INSIDE the changeset you are building — nothing
   has consumed it, so there is no version to keep. A contract that shipped and
   then genuinely changed shape gets `version: N+1` on its `pikkuFunc({...})`
   followed by `pikku versions update`; delete its entry and you erase a version
@@ -130,10 +130,11 @@ generated functions through `ref()`.
   `addressLine1`, so a value saved through the query builder comes back missing
   with no error anywhere. Follow the columns already in `db/sqlite/`
   (`address_line1`), and check a new one round-trips before building on it.
-- **A milestone is planned before it is built, and the plan then stays fixed.**
-  The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
-  passes — is written through `pikku knowledge plan set` (how: `pikku-architect`)
-  in its own turn before any of that milestone's code exists, and
+- **A changeset that needs a plan is planned before it is built, and the plan
+  then stays fixed.** `changes claim` says whether it needs one. The plan —
+  tables, functions, wires, roles, scopes, screens, scenarios, in passes — is
+  written through `pikku knowledge plan set <changeset>` (how: `pikku-architect`)
+  in its own turn before any of that changeset's code exists, and
   `pikku knowledge plan progress` measures the build against it from the
   generated meta. You plan it and you build it; what you never do is edit the
   plan afterwards to match what you built — that is grading yourself.
@@ -205,17 +206,17 @@ listed here.
 
 ## What NOT to do
 
-- **Do not skip ahead in App mode.** Knowledge, then people, then milestones,
-  then one milestone at a time — planned, built, proven by a scenario, and
-  closed against its plan before the next starts. The order is the method.
-- **Do not close a milestone your plan says is unfinished.** Build the missing
+- **Do not skip ahead in App mode.** Knowledge, then people, then changes,
+  then one changeset at a time — planned, built, proven by a scenario, and
+  closed against its plan before it merges. The order is the method.
+- **Do not close a changeset your plan says is unfinished.** Build the missing
   item, or defer it with a reason through `pikku knowledge plan defer`. Never
   edit the plan to match what you built, and never drop an item silently.
 - **Do not let a Quick build be mistaken for a real one.** It skips
-  `knowledge/`, milestone planning, design direction and refusal scenarios — say
+  `knowledge/`, changesets and plans, design direction and refusal scenarios — say
   so out loud to the user when you finish, and point at the way out.
 - **Do not introduce a wire of a type whose `capabilities.<type>` is `false`**
-  unless the user asked for it — and an approved milestone plan counts as them
+  unless the user asked for it — and an approved changeset plan counts as them
   asking. A plan the user signed off on authorizes the wires it names, so build
   them and flip the capability, rather than refusing planned work because the
   flag still reads `false` from before the plan.

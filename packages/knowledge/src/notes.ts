@@ -27,14 +27,8 @@ export const sectionOf = (path: string): string => {
  * bundle: a markdown file whose **path is its identity**, carrying YAML
  * frontmatter plus a body. Only `type` is required.
  *
- * `status`, `entities` and `statusAt` apply to `type: milestone`, which is a piece
- * of work rather than a fact — so unlike every other note it has a state, a size,
- * and a time its state last changed.
- *
- * `attempts` is the loop's ledger — see `ledger.ts`. It is read here rather than
- * left to a profile because a note carrying one is not a profile's private
- * business: any reader that renders or diffs a note has to know the key is
- * bookkeeping, not content.
+ * `status`, `entities` and `statusAt` are optional frontmatter a note may carry
+ * to say how settled it is and what it is about.
  */
 export const KnowledgeNoteSchema = z.object({
   path: z.string(),
@@ -47,7 +41,6 @@ export const KnowledgeNoteSchema = z.object({
   status: z.string().optional(),
   entities: z.string().optional(),
   statusAt: z.string().optional(),
-  attempts: z.string().optional(),
   reserved: z.enum(['index', 'log']).optional(),
   body: z.string(),
 })
@@ -65,9 +58,6 @@ export type KnowledgeNote = z.infer<typeof KnowledgeNoteSchema>
  */
 export type ProfileNote<Key extends string = never> = KnowledgeNote &
   Partial<Record<Key, string>>
-
-/** The `type:` a milestone note carries. */
-export const MILESTONE_TYPE = 'milestone'
 
 /** Read a frontmatter scalar that carries a list, written either bare or bracketed. */
 export const listOf = (value: string | undefined): string[] =>
@@ -99,7 +89,6 @@ const SCALARS = [
   'status',
   'entities',
   'statusAt',
-  'attempts',
 ] as const
 
 /** `type` and `status` are closed vocabularies compared literally by every gate. */

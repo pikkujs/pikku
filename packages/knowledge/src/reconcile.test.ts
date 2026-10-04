@@ -1,347 +1,108 @@
 import assert from 'node:assert'
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, test } from 'node:test'
-import { recordNoteAttempt, setNoteScalars } from './ledger.js'
-import { readMilestones } from './milestone.js'
+import { describe, test } from 'node:test'
+import { noteHash } from './notes.js'
 import { basePlan } from './plan-fixture.js'
-import { writePlan } from './plan.js'
-import {
-  MAX_ATTEMPTS,
-  SEATS,
-  nextAction,
-  runKnowledgeReconcile,
-} from './reconcile.js'
+import { knowledgeLine, runKnowledgeGaps } from './reconcile.js'
 
-let cwd: string
-
-beforeEach(() => {
-  cwd = mkdtempSync(join(tmpdir(), 'reconcile-'))
-  mkdirSync(join(cwd, 'knowledge', 'milestones'), { recursive: true })
-})
-
-afterEach(() => {
-  rmSync(cwd, { recursive: true, force: true })
-})
-
-const GHERKIN = [
-  '```gherkin',
-  "Given 'owner' has no entry for today",
-  "When 'owner' writes one",
-  '```',
-].join('\n')
-
-const milestone = (
-  name = '01-the-daily-entry.md',
-  frontmatter: Record<string, string> = {}
-) => {
-  const keys = {
-    type: 'milestone',
-    title: 'The daily entry',
-    status: 'proposed',
-    entities: 'entry',
-    ...frontmatter,
+const project = async (files: Record<string, string>): Promise<string> => {
+  const root = await mkdtemp(join(tmpdir(), 'pikku-gaps-'))
+  for (const [rel, contents] of Object.entries(files)) {
+    const full = join(root, rel)
+    await mkdir(join(full, '..'), { recursive: true })
+    await writeFile(full, contents, 'utf8')
   }
-  const fence = Object.entries(keys)
-    .filter(([, value]) => value !== '')
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n')
-  writeFileSync(
-    join(cwd, 'knowledge/milestones', name),
-    `---\n${fence}\n---\n\n${GHERKIN}\n`
-  )
-  return `knowledge/milestones/${name}`
+  return root
 }
 
-/**
- * Spend a seat's whole budget against the note as it now stands.
- *
- * `profileScalars` has to match what the reader will pass: an attempt is recorded
- * against a fingerprint taken over the keys the CALLER names, so burning under one
- * profile and reading under another compares two different notes and asserts nothing.
- */
-const burn = async (
-  path: string,
-  seat: string,
-  profileScalars: readonly string[] = []
-) => {
-  for (let i = 0; i < MAX_ATTEMPTS; i++) {
-    const note = (await readMilestones(cwd, profileScalars)).find(
-      (n) => n.path === path
-    )!
-    recordNoteAttempt(cwd, note, seat, { profileScalars })
-  }
+const ENTRY = '---\ntype: entity\n---\nentry body'
+const BASE = {
+  'knowledge/index.md': '---\ntype: overview\n---\nThe app.',
+  'knowledge/entities/entry.md': ENTRY,
+  'knowledge/questions/who.md': '---\ntype: question\n---\nWho signs in?',
 }
 
-/** Replace a note's body, leaving its frontmatter — the ledger included — alone. */
-const rewriteBody = (path: string, body: string) => {
-  const raw = readFileSync(join(cwd, path), 'utf8')
-  const fence = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(raw)![0]
-  writeFileSync(join(cwd, path), `${fence}\n${body}\n`)
-}
-
-describe('nextAction', () => {
-  test('idles on an empty knowledge base', async () => {
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'idle')
-    assert.match(
-      action.kind === 'idle' ? action.why : '',
-      /nothing is written down yet/
+describe('runKnowledgeGaps', () => {
+  test('a note nobody planned is a gap; questions and indexes are not', async () => {
+    const { gaps } = await runKnowledgeGaps(await project(BASE))
+    assert.deepEqual(
+      gaps.map((gap) => [gap.note, gap.state]),
+      [['knowledge/entities/entry.md', 'uncovered']]
     )
   })
 
-  test('a dispatched milestone is the whole answer', async () => {
-    milestone('01-the-daily-entry.md', { status: 'dispatched' })
-    milestone('02-the-week.md')
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'idle')
-    assert.match(
-      action.kind === 'idle' ? action.why : '',
-      /01-the-daily-entry\.md is building/
-    )
-  })
-
-  test('a malformed note is repaired first, then asked about, then rests', async () => {
-    const path = milestone('01-the-daily-entry.md', { entities: '' })
-
-    const repair = await nextAction(cwd)
-    assert.equal(repair.kind, 'repair-note')
-    assert.match(
-      repair.kind === 'repair-note' ? repair.reason : '',
-      /no `entities:`/
-    )
-
-    await burn(path, SEATS.author)
-    const ask = await nextAction(cwd)
-    assert.equal(ask.kind, 'ask-user')
-
-    await burn(path, SEATS.user)
-    const rest = await nextAction(cwd)
-    assert.equal(rest.kind, 'idle')
-    assert.match(
-      rest.kind === 'idle' ? rest.why : '',
-      /cannot be repaired and the user has been asked/
-    )
-  })
-
-  test("the author's budget is spent across every body the note has had", async () => {
-    const path = milestone('01-the-daily-entry.md', { entities: '' })
-    await burn(path, SEATS.author)
-    assert.equal((await nextAction(cwd)).kind, 'ask-user')
-
-    // A rewrite that leaves the missing `entities:` exactly as it was must not hand the
-    // author its budget back — that is the loop this counts across bodies to stop.
-    rewriteBody(path, `Rewritten prose.\n\n${GHERKIN}`)
-    assert.equal((await nextAction(cwd)).kind, 'ask-user')
-  })
-
-  test('a ready milestone with no plan goes to the planner, then to the user', async () => {
-    const path = milestone()
-
-    const plan = await nextAction(cwd)
-    assert.equal(plan.kind, 'write-plan')
-    assert.match(plan.kind === 'write-plan' ? plan.reason : '', /No plan at/)
-
-    await burn(path, SEATS.planner)
-    assert.equal((await nextAction(cwd)).kind, 'ask-user')
-
-    await burn(path, SEATS.user)
-    const rest = await nextAction(cwd)
-    assert.equal(rest.kind, 'idle')
-    assert.match(
-      rest.kind === 'idle' ? rest.why : '',
-      /no plan the planner could write/
-    )
-  })
-
-  test('a ready milestone with a plan dispatches', async () => {
-    const path = milestone()
-    writePlan(cwd, path, basePlan(path))
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'dispatch')
-    assert.equal(action.kind === 'dispatch' ? action.note.path : '', path)
-  })
-
-  test("a profile's hold is returned rather than swallowed as idle", async () => {
-    const path = milestone()
-    const action = await nextAction(cwd, {
-      gate: async (_cwd, note) => ({
-        ok: false,
-        reason: 'Not dispatched: nobody has agreed the screen yet.',
-        awaiting: { hold: 'screens', notes: [note] },
-      }),
+  test('a gap already filed as a change is not filed again', async () => {
+    const root = await project(BASE)
+    const [gap] = (await runKnowledgeGaps(root)).gaps
+    const { gaps } = await runKnowledgeGaps(root, {
+      filed: [`Build the entry.\n\n${knowledgeLine(gap!)}`],
     })
-    assert.equal(action.kind, 'hold')
-    assert.equal(action.kind === 'hold' ? action.hold : '', 'screens')
-    assert.deepEqual(
-      action.kind === 'hold' ? action.notes.map((n) => n.path) : [],
-      [path]
-    )
+    assert.deepEqual(gaps, [])
   })
 
-  test('a repair to a profile key refunds a per-body budget when the profile names it', async () => {
-    const path = milestone()
-    const scalars = ['design'] as const
-    const next = () => nextAction(cwd, { profileScalars: scalars })
-
-    await burn(path, SEATS.planner, scalars)
-    assert.equal((await next()).kind, 'ask-user')
-
-    // Reading again with nothing changed must NOT hand the budget back, or the refund
-    // below is only the fingerprint being unstable.
-    assert.equal((await next()).kind, 'ask-user')
-
-    // The planner is counted against the body it is answering, and `design:` belongs to
-    // a profile — so the note only reads as having moved for a caller that names it.
-    setNoteScalars(cwd, path, { design: 'the picked one' })
-    assert.equal(
-      (await next()).kind,
-      'write-plan',
-      'the key the profile named moved, so the planner gets another go'
-    )
+  test('an edit to a filed note brings it back', async () => {
+    const root = await project(BASE)
+    const filed = [knowledgeLine({ note: 'knowledge/entities/entry.md', hash: noteHash('old body') })]
+    const { gaps } = await runKnowledgeGaps(root, { filed })
+    assert.equal(gaps.length, 1)
   })
-})
 
-describe('runKnowledgeReconcile', () => {
-  test('flattens the action to paths a driver on the other side of a command can read', async () => {
-    const path = milestone()
-    writePlan(cwd, path, basePlan(path))
-    assert.deepEqual(await runKnowledgeReconcile(cwd), {
-      kind: 'dispatch',
-      reason: `${path} has a plan and is ready to build`,
-      note: path,
+  test('a merged plan covering the note closes it; an unmerged one claims it', async () => {
+    const plan = basePlan()
+    const root = await project({
+      ...BASE,
+      'knowledge/plans/the-daily-entry.plan.json': JSON.stringify(plan),
     })
-
-    rmSync(join(cwd, path.replace(/\.md$/, '.plan.json')))
-    const plan = await runKnowledgeReconcile(cwd)
-    assert.equal(plan.kind, 'write-plan')
-    assert.equal(plan.note, path)
-
-    const held = await runKnowledgeReconcile(
-      cwd,
-      {},
-      {
-        gate: async (_cwd, note) => ({
-          ok: false,
-          reason: 'Not dispatched: nobody has agreed the screen yet.',
-          awaiting: { hold: 'screens', notes: [note] },
-        }),
-      }
-    )
-    assert.equal(held.kind, 'hold')
-    assert.equal(held.hold, 'screens')
-    assert.deepEqual(held.notes, [path])
-    assert.equal(held.note, undefined)
-  })
-
-  test('an idle action carries its why as the reason', async () => {
-    const result = await runKnowledgeReconcile(cwd)
-    assert.equal(result.kind, 'idle')
-    assert.match(result.reason, /nothing is written down yet/)
-    assert.equal(result.note, undefined)
-  })
-})
-
-describe('the refusal as a question', () => {
-  test('a closed vocabulary becomes real options, in the language of the app', async () => {
-    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
-    await burn(path, SEATS.author)
-
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'ask-user')
-    const question = action.kind === 'ask-user' ? action.question : null
-    assert.equal(question?.header, 'Where it stands')
-    assert.match(
-      question?.question ?? '',
-      /Where has "The daily entry" got to\?/
-    )
+    assert.deepEqual((await runKnowledgeGaps(root)).gaps, [])
     assert.deepEqual(
-      question?.options.map((o) => o.label),
-      ['proposed', 'dispatched', 'built']
-    )
-    assert.equal(
-      question?.options.find((o) => o.label === 'dispatched')?.description,
-      'being built right now'
-    )
-
-    // The machine wording stays on `reason`, and must never be what a person is shown.
-    assert.match(
-      action.kind === 'ask-user' ? action.reason : '',
-      /`status: ready`/
-    )
-    assert.doesNotMatch(question?.question ?? '', /status|note|frontmatter/i)
-  })
-
-  test('an unreadable surface offers the five surfaces', async () => {
-    const path = milestone('01-the-daily-entry.md', { surface: 'telepathy' })
-    await burn(path, SEATS.author)
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'ask-user')
-    assert.deepEqual(
-      action.kind === 'ask-user'
-        ? action.question.options.map((o) => o.label)
-        : [],
-      ['app', 'cli', 'mcp', 'agent', 'backend']
-    )
-  })
-
-  test('a refusal about missing content offers free text rather than inventing options', async () => {
-    const path = milestone('01-the-daily-entry.md', { entities: '' })
-    await burn(path, SEATS.author)
-    const action = await nextAction(cwd)
-    assert.equal(action.kind, 'ask-user')
-    assert.deepEqual(
-      action.kind === 'ask-user' ? action.question.options : null,
+      (await runKnowledgeGaps(root, { merged: () => false })).gaps,
       []
     )
-    assert.match(
-      action.kind === 'ask-user' ? action.question.question : '',
-      /What is the main thing "The daily entry" is about/
+  })
+  test('a note deleted after its changeset merged is a gap the other way', async () => {
+    const { 'knowledge/entities/entry.md': _, ...rest } = BASE
+    const root = await project({
+      ...rest,
+      'knowledge/plans/the-daily-entry.plan.json': JSON.stringify(basePlan()),
+    })
+    const { gaps } = await runKnowledgeGaps(root)
+    assert.deepEqual(
+      gaps.map((gap) => [gap.note, gap.state, gap.by]),
+      [['knowledge/entities/entry.md', 'deleted', ['the-daily-entry']]]
     )
   })
 
-  test('the question survives the flattening to a command result', async () => {
-    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
-    await burn(path, SEATS.author)
-    const result = await runKnowledgeReconcile(cwd)
-    assert.equal(result.kind, 'ask-user')
-    assert.equal(result.note, path)
-    assert.equal(result.question?.options.length, 3)
-  })
-  test('without --require the result carries no verdict, so a bare next stays a prompt', async () => {
-    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
-    await burn(path, SEATS.author)
-    const result = await runKnowledgeReconcile(cwd)
-    assert.equal(result.required, undefined)
-    assert.equal(result.satisfied, undefined)
-  })
-
-  test('--require names the kinds that count as done, and says so either way', async () => {
-    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
-    await burn(path, SEATS.author)
-
-    const met = await runKnowledgeReconcile(cwd, { require: 'ask-user,idle' })
-    assert.deepEqual(met.required, ['ask-user', 'idle'])
-    assert.equal(met.satisfied, true)
-
-    const unmet = await runKnowledgeReconcile(cwd, { require: 'idle' })
-    assert.deepEqual(unmet.required, ['idle'])
-    assert.equal(unmet.satisfied, false)
-    assert.equal(unmet.kind, 'ask-user')
+  test('code a merged changeset built that is gone now flags its note', async () => {
+    const root = await project({
+      ...BASE,
+      'knowledge/plans/the-daily-entry.plan.json': JSON.stringify(basePlan()),
+      '.pikku/function/pikku-functions-meta.gen.json': JSON.stringify({
+        somethingElse: {},
+      }),
+    })
+    const [gap, ...rest] = (await runKnowledgeGaps(root)).gaps
+    assert.equal(rest.length, 0)
+    assert.equal(gap!.state, 'removed')
+    assert.ok(gap!.missing.some((item) => item.includes('createEntry')))
+    const built = knowledgeLine({
+      note: 'knowledge/entities/entry.md',
+      hash: noteHash('entry body'),
+    })
+    const again = await runKnowledgeGaps(root, { filed: [built] })
+    assert.equal(again.gaps.length, 1, 'the change that built it does not hide it')
+    const filed = await runKnowledgeGaps(root, {
+      filed: [built, knowledgeLine(gap!)],
+    })
+    assert.equal(filed.gaps.length, 0)
   })
 
-  test('an empty --require is not a gate, so a stray flag cannot silently pass everything', async () => {
-    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
-    await burn(path, SEATS.author)
-    const result = await runKnowledgeReconcile(cwd, { require: ' , ' })
-    assert.equal(result.required, undefined)
-    assert.equal(result.satisfied, undefined)
+  test('no generated meta yet is not read as everything removed', async () => {
+    const root = await project({
+      ...BASE,
+      'knowledge/plans/the-daily-entry.plan.json': JSON.stringify(basePlan()),
+    })
+    assert.deepEqual((await runKnowledgeGaps(root)).gaps, [])
   })
 })

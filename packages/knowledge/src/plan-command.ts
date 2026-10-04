@@ -2,13 +2,6 @@ import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { readKnowledgeNotes } from './notes.js'
 import {
-  gherkinOf,
-  personasIn,
-  readMilestones,
-  surfaceOf,
-  type MilestoneNote,
-} from './milestone.js'
-import {
   cascadeProblems,
   functionsDirFor,
   planShortfall,
@@ -17,13 +10,10 @@ import {
 } from './plan-meta.js'
 import {
   PlanSchema,
-  checkAgainstMilestone,
   checkCovers,
   checkFirstPass,
   checkPlanInternals,
   deferPlanItem,
-  planIdFor,
-  planPathFor,
   planSchemaJson,
   readPlan,
   renderPlanForBuild,
@@ -31,55 +21,28 @@ import {
 } from './plan.js'
 
 /**
- * The plan commands, as one module so the CLI binds four thin wrappers rather than
+ * The plan commands, as one module so the CLI binds thin wrappers rather than
  * reimplementing the order the checks run in.
  *
  * `set` is the only writer, and that is the property worth protecting: schema, then the
- * first-pass shape, then the plan against its own milestone — and nothing reaches disk
- * unless all three pass. A plan validated at gate time instead has already cost the
- * build it was measured against.
+ * first-pass shape, then the plan against itself and the notes it covers — and nothing
+ * reaches disk unless all of them pass.
  *
  * What is deliberately absent is any judgement of whether a plan is a GOOD plan. That
  * needs a model, a budget and a seat, and it belongs to whatever is driving the build,
  * not to a command that must run offline.
  */
-const NO_MILESTONE = (milestone: string) =>
-  `No milestone note matching "${milestone}". Pass the note's id (its filename stem) or its path under knowledge/milestones/.`
-
 const PLAN_FIXED = (path: string) =>
-  `${path} already holds this milestone's plan. A plan is fixed once written: it is the order the build is measured against, so it cannot be replaced. Take an item out with \`pikku knowledge plan defer <milestone> <item> --reason <why>\`.`
-
-const resolve = async (
-  root: string,
-  milestone: string
-): Promise<MilestoneNote | null> => {
-  const notes = await readMilestones(root)
-  return (
-    notes.find((note) => note.path === milestone) ??
-    notes.find((note) => planIdFor(note.path) === milestone) ??
-    null
-  )
-}
+  `${path} already holds this changeset's plan. A plan is fixed once written: it is the order the build is measured against, so it cannot be replaced. Take an item out with \`pikku knowledge plan defer <changeset> <item> --reason <why>\`.`
 
 const problemsFor = async (
   root: string,
-  plan: z.infer<typeof PlanSchema>,
-  note: MilestoneNote
-): Promise<string[]> => {
-  const surface = surfaceOf(note)
-  const gherkin = gherkinOf(note)
-  return [
-    ...checkFirstPass(plan, surface),
-    ...checkPlanInternals(plan),
-    ...checkCovers(plan, await readKnowledgeNotes(root)),
-    ...checkAgainstMilestone(
-      plan,
-      note,
-      gherkin ? personasIn(gherkin) : [],
-      surface
-    ),
-  ]
-}
+  plan: z.infer<typeof PlanSchema>
+): Promise<string[]> => [
+  ...checkFirstPass(plan),
+  ...checkPlanInternals(plan),
+  ...checkCovers(plan, await readKnowledgeNotes(root)),
+]
 
 export const KnowledgePlanSchemaInput = z.object({})
 
@@ -96,7 +59,7 @@ export const runKnowledgePlanSchema = (): KnowledgePlanSchemaResult => ({
 })
 
 export const KnowledgePlanShowInput = z.object({
-  milestone: z.string().min(1),
+  changeset: z.string().min(1),
   forBuild: z.boolean().optional(),
 })
 
@@ -110,11 +73,9 @@ export type KnowledgePlanShowResult = z.infer<typeof KnowledgePlanShowOutput>
 
 export const runKnowledgePlanShow = async (
   root: string,
-  { milestone, forBuild }: z.infer<typeof KnowledgePlanShowInput>
+  { changeset, forBuild }: z.infer<typeof KnowledgePlanShowInput>
 ): Promise<KnowledgePlanShowResult> => {
-  const note = await resolve(root, milestone)
-  if (!note) return { ok: false, path: '', body: NO_MILESTONE(milestone) }
-  const read = readPlan(root, note.path)
+  const read = readPlan(root, changeset)
   if (!read.ok) return { ok: false, path: read.path, body: read.reason }
   return {
     ok: true,
@@ -126,7 +87,7 @@ export const runKnowledgePlanShow = async (
 }
 
 export const KnowledgePlanProgressInput = z.object({
-  milestone: z.string().min(1),
+  changeset: z.string().min(1),
 })
 
 export const KnowledgePlanProgressOutput = z.object({
@@ -145,7 +106,7 @@ export type KnowledgePlanProgressResult = z.infer<
 >
 
 /**
- * What the milestone still owes its plan, read from codegen rather than from anyone's word.
+ * What the changeset still owes its plan, read from codegen rather than from anyone's word.
  *
  * This is the half of the gate the build cannot edit. `missing` is set membership against
  * pikku's generated meta — the function exists or it does not — so a build that reports
@@ -159,8 +120,8 @@ export type KnowledgePlanProgressResult = z.infer<
  * catches a browser scenario that only proves its route loads, and `cascadeProblems` reads the
  * migrations, which no generated meta describes.
  *
- * Only the FIRST pass blocks what is MISSING. A later pass is real work the next milestone
- * picks up, and refusing on it is what made plan size fatal rather than merely slow — so it
+ * Only the FIRST pass blocks what is MISSING. A later pass is real work that comes back
+ * as changes of its own, and refusing on it is what made plan size fatal rather than merely slow — so it
  * comes back under `deferred`, reported and never blocking.
  *
  * `problems` block whatever pass they came from, because a problem is not unbuilt work: the
@@ -170,14 +131,10 @@ export type KnowledgePlanProgressResult = z.infer<
  */
 export const runKnowledgePlanProgress = async (
   root: string,
-  { milestone }: z.infer<typeof KnowledgePlanProgressInput>
+  { changeset }: z.infer<typeof KnowledgePlanProgressInput>
 ): Promise<KnowledgePlanProgressResult> => {
   const empty = { done: [], missing: [], deferred: [], problems: [] }
-  const note = await resolve(root, milestone)
-  if (!note) {
-    return { ok: false, path: '', message: NO_MILESTONE(milestone), ...empty }
-  }
-  const read = readPlan(root, note.path)
+  const read = readPlan(root, changeset)
   if (!read.ok) {
     return { ok: false, path: read.path, message: read.reason, ...empty }
   }
@@ -200,7 +157,7 @@ export const runKnowledgePlanProgress = async (
 }
 
 export const KnowledgePlanSetInput = z.object({
-  milestone: z.string().min(1),
+  changeset: z.string().min(1),
   file: z.string().min(1),
 })
 
@@ -215,12 +172,11 @@ export type KnowledgePlanSetResult = z.infer<typeof KnowledgePlanSetOutput>
 
 export const runKnowledgePlanSet = async (
   root: string,
-  { milestone, file }: z.infer<typeof KnowledgePlanSetInput>
+  { changeset, file }: z.infer<typeof KnowledgePlanSetInput>
 ): Promise<KnowledgePlanSetResult> => {
-  const note = await resolve(root, milestone)
-  if (!note) return { ok: false, path: '', problems: [NO_MILESTONE(milestone)] }
-  const path = planPathFor(note.path)
-  if (readPlan(root, note.path).ok) {
+  const existing = readPlan(root, changeset)
+  const path = existing.path
+  if (existing.ok) {
     return { ok: false, path, problems: [PLAN_FIXED(path)] }
   }
   let raw: unknown
@@ -229,7 +185,10 @@ export const runKnowledgePlanSet = async (
   } catch (err) {
     return { ok: false, path, problems: [`${file}: ${String(err)}`] }
   }
-  const parsed = PlanSchema.safeParse(raw)
+  const parsed = PlanSchema.safeParse({
+    ...(raw as object),
+    changeset,
+  })
   if (!parsed.success) {
     // The schema rides along with a shape refusal. Naming the bad field is not enough on
     // its own: a writer told `transport` is invalid, with no way to ask what the options
@@ -245,17 +204,17 @@ export const runKnowledgePlanSet = async (
       schema: planSchemaJson(),
     }
   }
-  const problems = await problemsFor(root, parsed.data, note)
+  const problems = await problemsFor(root, parsed.data)
   if (problems.length > 0) return { ok: false, path, problems }
   return {
     ok: true,
-    path: writePlan(root, note.path, parsed.data),
+    path: writePlan(root, parsed.data),
     problems: [],
   }
 }
 
 export const KnowledgePlanDeferInput = z.object({
-  milestone: z.string().min(1),
+  changeset: z.string().min(1),
   item: z.string().min(1),
   reason: z.string().min(1),
 })
@@ -270,11 +229,9 @@ export type KnowledgePlanDeferResult = z.infer<typeof KnowledgePlanDeferOutput>
 
 export const runKnowledgePlanDefer = async (
   root: string,
-  { milestone, item, reason }: z.infer<typeof KnowledgePlanDeferInput>
+  { changeset, item, reason }: z.infer<typeof KnowledgePlanDeferInput>
 ): Promise<KnowledgePlanDeferResult> => {
-  const note = await resolve(root, milestone)
-  if (!note) return { ok: false, path: '', message: NO_MILESTONE(milestone) }
-  const read = readPlan(root, note.path)
+  const read = readPlan(root, changeset)
   if (!read.ok) return { ok: false, path: read.path, message: read.reason }
   const deferred = deferPlanItem(read.plan, item, reason)
   if (!deferred.ok) {
@@ -282,7 +239,7 @@ export const runKnowledgePlanDefer = async (
   }
   return {
     ok: true,
-    path: writePlan(root, note.path, deferred.plan),
+    path: writePlan(root, deferred.plan),
     message: `${deferred.label} moved to the next pass.`,
   }
 }

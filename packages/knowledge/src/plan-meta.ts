@@ -21,7 +21,7 @@ import { scenarioDepths, type ScenarioDepth } from './hollow-scenarios.js'
  * This is the gap the existence check cannot see: the scenario was written, so it counts as
  * delivered, and it passes its run, so the scenario gate is green — measured on the journal
  * fixture, `renWritesHowTheDayFeltScenario` shipped as `opens /app` → `is on /app`, passed
- * 5/5, and the milestone was certified with the entry-writing journey never once driven.
+ * 5/5, and the changeset was certified with the entry-writing journey never once driven.
  */
 function shallowScenarioProblem(
   level: string,
@@ -104,7 +104,7 @@ export type PikkuMeta = {
    * A plan states a wire only when the function is reached some way other than its RPC,
    * and until now only `http` was ever checked back. So a plan could promise a scheduled
    * task or a workflow entry point, the build could ship the bare function, and the gate
-   * would certify the milestone complete — which is why `transports: ["http",
+   * would certify the changeset complete — which is why `transports: ["http",
    * "scheduler"]` has been planned and never once built.
    */
   wired: Record<PlannedTransport, Set<string>>
@@ -212,7 +212,7 @@ export function readPikkuMeta(functionsDir: string): PikkuMeta {
  * Codegen keys a function that carries a `version` as `name@vN`, so a plan naming
  * `adminSaveProduct` found nothing the moment the build did what the plan asked and
  * bumped the version — the gate reported five built, wired, scenario-covered functions
- * as MISSING and the milestone could not be closed except by writing the version into
+ * as MISSING and the changeset could not be closed except by writing the version into
  * the plan, which is editing the plan to match the build.
  *
  * A version is an implementation fact: a plan states which function exists, never which
@@ -643,7 +643,7 @@ export type PlanShortfallResult = Omit<PlanProgress, 'pass'> & {
 
 /**
  * Everything the plan promised that the meta cannot find — `missing` is what BLOCKS,
- * `deferred` is what a later milestone picks up.
+ * `deferred` is what a later changeset picks up.
  *
  * `planProgress` answers "what is left in THIS pass", which is what a build turn needs
  * while it works. Completion used to be the union of every pass, so that a plan could not
@@ -652,7 +652,7 @@ export type PlanShortfallResult = Omit<PlanProgress, 'pass'> & {
  * the architect/builder split closed the vector, and `checkFirstPass` independently
  * requires pass 1 to be a walking skeleton that reaches a screen with a function behind it.
  *
- * What the union cost instead: a milestone ships only when every pass is done, so plan SIZE
+ * What the union cost instead: a changeset ships only when every pass is done, so plan SIZE
  * became fatal. Run hmt3fz3c0 planned 14 items whose 10 permission scenarios were the role x
  * resource cross product, failed the closing gate thirteen times, and surrendered
  * with a deployed, rendering, signed-in app carrying 15 passing scenarios. Blocking on pass 1

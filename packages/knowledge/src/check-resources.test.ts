@@ -34,8 +34,8 @@ describe('checkKnowledgeResources', () => {
   test('passes when every resource resolves', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: func:createEntry, func:listEntries\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: func:createEntry, func:listEntries\n---\nx',
     })
     const result = await check(root)
     assert.deepEqual(result.problems, [])
@@ -47,8 +47,8 @@ describe('checkKnowledgeResources', () => {
   test('reports a dangling id — the note survived a rename the code did not keep', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: func:createEntrey\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: func:createEntrey\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.ok, false)
@@ -74,8 +74,8 @@ describe('checkKnowledgeResources', () => {
     // to ignore the check.
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: queue:nightly-digest\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: queue:nightly-digest\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.ok, true)
@@ -86,8 +86,8 @@ describe('checkKnowledgeResources', () => {
   test('checks a resolvable prefix even when another in the same note is skipped', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: queue:nightly, func:gone\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: queue:nightly, func:gone\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.skipped, 1)
@@ -100,10 +100,29 @@ describe('checkKnowledgeResources', () => {
     const root = await project({
       ...FUNC_META,
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: func:createEntry\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: func:createEntry\n---\nx',
     })
     assert.equal((await check(root)).notes, 1)
+  })
+
+  test('a table no migration has created yet is pending, not a problem', async () => {
+    const root = await project({
+      ...FUNC_META,
+      '.pikku/db/pikku-db-schema.gen.json': { tables: [{ name: 'entry' }] },
+      'knowledge/entities/day.md':
+        '---\ntype: entity\nresource: table:entry, table:day\n---\nx',
+    })
+    const result = await check(root)
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.problems, [])
+    assert.deepEqual(result.pending, [
+      {
+        path: 'knowledge/entities/day.md',
+        uri: 'table:day',
+        detail: 'no table "day" exists yet',
+      },
+    ])
   })
 
   test('a project with no knowledge base is ok, and all orphan', async () => {
@@ -118,6 +137,7 @@ describe('checkKnowledgeResources', () => {
         { uri: 'func:createEntry', prefix: 'func', id: 'createEntry' },
         { uri: 'func:listEntries', prefix: 'func', id: 'listEntries' },
       ],
+      pending: [],
     })
   })
 
@@ -139,8 +159,8 @@ describe('resource URIs in the prose', () => {
   test('an inline link is checked like a resource field', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\n---\nWritten by [createEntry](func:createEntry).',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\n---\nWritten by [createEntry](func:createEntry).',
     })
     const result = await check(root)
     assert.deepEqual(result.problems, [])
@@ -150,8 +170,8 @@ describe('resource URIs in the prose', () => {
   test('an inline link to a function nobody exports is drift', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\n---\nWritten by [saveEntry](func:saveEntry).',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\n---\nWritten by [saveEntry](func:saveEntry).',
     })
     const result = await check(root)
     assert.equal(result.problems.length, 1)
@@ -162,8 +182,8 @@ describe('resource URIs in the prose', () => {
   test('a mistyped kind is reported rather than passed over', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\n---\nWritten by [createEntry](fun:createEntry).',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\n---\nWritten by [createEntry](fun:createEntry).',
     })
     const result = await check(root)
     assert.equal(result.problems[0]?.reason, 'unknown-prefix')
@@ -172,9 +192,9 @@ describe('resource URIs in the prose', () => {
   test('ordinary links are left alone', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md': [
+      'knowledge/features/01-a.md': [
         '---',
-        'type: milestone',
+        'type: feature',
         '---',
         'See [the docs](https://pikku.dev/docs), the [decision](../decisions/why.md),',
         'the [section](#how-it-works) and [us](mailto:hi@example.com).',
@@ -187,9 +207,9 @@ describe('resource URIs in the prose', () => {
   test('an example inside code is an example, not a claim', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md': [
+      'knowledge/features/01-a.md': [
         '---',
-        'type: milestone',
+        'type: feature',
         '---',
         'Write it as `[label](func:someFunction)`, like this:',
         '',
@@ -207,8 +227,8 @@ describe('orphans', () => {
   test('reports code no note claims', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: func:createEntry\n---\nx',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: func:createEntry\n---\nx',
     })
     const result = await check(root)
     assert.equal(result.ok, true)
@@ -221,8 +241,8 @@ describe('orphans', () => {
   test('counts an inline prose reference as a claim', async () => {
     const root = await project({
       ...FUNC_META,
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\nresource: func:createEntry\n---\nIt lists via [listEntries](func:listEntries).',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\nresource: func:createEntry\n---\nIt lists via [listEntries](func:listEntries).',
     })
     assert.deepEqual((await check(root)).orphans, [])
   })

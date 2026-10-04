@@ -15,7 +15,11 @@ A checkout with no Fabric project works a local queue instead (`.git/pikku-chang
 worktree) with the same commands; its items have no stage, screenshot or circled elements.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
-**Launched by `pikku next`?** Your work file already lists every open change. Skip the loop below,
+**Launched by `pikku next`?** `pikku next` picks one agent: a merge conflict or a changeset with no plan
+goes back to a changes agent; open changes go to a changes agent; a pikku version bump goes to an
+upgrade agent, and knowledge no change builds yet (`pikku knowledge gaps`) to a knowledge agent — both
+of those only file changes. A change filed for a gap ends its body with the gap's `Knowledge:` line.
+As a changes agent, your work file already lists every open change. Skip the loop below,
 group them into changesets, and take one: claim it, build it, mark its items done, stop. `pikku next --loop`
 starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
 changeset needs to know goes in a commit or a `reply`.
@@ -77,9 +81,17 @@ the entity notes' `resource:` lines name them:
 pikku fabric changes claim --change-ids 1,3 --title "Waitlist" --claimed-by pi --creates waitlist --reads booking
 ```
 
-`--creates`/`--alters` mean it needs a plan (the claim output says so; `--needs-plan false` overrides).
-A planned changeset is planned before any code — the functions, tables, screens and scenario each item
-touches — and the plan goes on its first item with `reply`.
+The claim says whether the changeset needs a plan, and why: one that creates or alters a table, or
+has many changes, always does; anything else goes to the judge configured with
+`PIKKU_PLAN_JUDGE_URL` (any endpoint answering `{verdict, reason}` to `{question, context}`), and a
+judge that fails says plan. With no judge configured only the fixed rules apply. `--needs-plan
+true|false` overrides all of it.
+
+A planned changeset is planned before any code, with the pikku-architect skill:
+`pikku knowledge plan set <groupId> <file>` writes `knowledge/plans/<groupId>.plan.json`; commit it on
+the changeset's branch. `done` refuses the first change until the plan reads and the last until
+`pikku knowledge plan progress <groupId>` is clean, and `pikku next` will not merge a planned
+changeset whose branch has no plan.
 
 Build each changeset on its own branch, `changeset/<slug>`, cut from the branch you started on, one
 commit per item (see Committing), and mark each item `done`. Launched by `pikku next`, stop there:

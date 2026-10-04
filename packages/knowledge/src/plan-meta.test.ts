@@ -16,7 +16,8 @@ import { cascadeProblems, planShortfall, readPikkuMeta } from './plan-meta.js'
 const plan = (): Plan => ({
   version: PLAN_VERSION,
   deferrals: [],
-  milestone: 'knowledge/milestones/01-the-daily-entry.md',
+  changeset: 'the-daily-entry',
+  surface: 'app',
   description: 'One person writes one entry a day and reads their own back.',
   covers: [
     {
@@ -164,7 +165,7 @@ test('a plan whose every function and wire exists has nothing outstanding', () =
 })
 
 // A version is an implementation fact, not something a plan states: codegen keys a
-// versioned function as `name@vN`, and a milestone that amended two existing functions
+// versioned function as `name@vN`, and a changeset that amended two existing functions
 // had both reported MISSING while they were built, wired and covered.
 test('a versioned function discharges the plan item that names it plainly', () => {
   const dir = project({
@@ -227,8 +228,8 @@ test('an unversioned function is never shadowed by a versioned one', () => {
   }
 })
 
-// Completion asks whether the milestone's WALKING SKELETON is done. A later pass is real
-// work the next milestone picks up, and blocking on it is what made plan size fatal.
+// Completion asks whether the changeset's WALKING SKELETON is done. A later pass is real
+// work the next changeset picks up, and blocking on it is what made plan size fatal.
 test('a function planned for a later pass is deferred, not blocking', () => {
   const dir = project({
     ...bothBuilt,
@@ -377,7 +378,7 @@ test('the rendered plan carries the reason an empty slot is empty', () => {
   assert.match(text, /body: text \[personal\]/)
 })
 
-// The gate's whole point after the journal runs: a milestone whose scenarios were never
+// The gate's whole point after the journal runs: a changeset whose scenarios were never
 // written must not certify. deepseek-v4-pro delivered 0 of 6 planned scenarios and kimi-k2.6
 // delivered 1, and both were marked complete, because nothing compared the plan's scenario
 // list against what codegen found.
@@ -704,7 +705,7 @@ test('readPikkuMeta flattens nested scope ids, not just the roots', () => {
   }
 })
 
-// The failure this split exists for: run hmt3fz3c0's first milestone planned ten permission
+// The failure this split exists for: run hmt3fz3c0's first changeset planned ten permission
 // scenarios against four other items, and the union meant a deployed, rendering, signed-in
 // app with 15 passing scenarios could never be marked complete.
 test('a cross product of permission scenarios does not block the walking skeleton', () => {
@@ -754,7 +755,7 @@ test('a permission scenario explicitly placed in pass 1 still blocks', () => {
 
 // A plan states a wire only when the function is reached some way other than its RPC, and
 // only `http` was ever checked back. So a plan could promise a scheduled task, the build
-// could ship the bare function, and the gate certified the milestone complete — which is
+// could ship the bare function, and the gate certified the changeset complete — which is
 // why `transports: ["http", "scheduler"]` was planned in run hmt7o76ws and never built.
 test('a function planned on a non-http transport is missing until that transport reaches it', () => {
   const scheduled = plan()

@@ -54,6 +54,12 @@ export const ResourceCheckSchema = z.object({
    * normal state rather than a fault.
    */
   orphans: z.array(ResourceOrphanSchema),
+  /**
+   * Tables a note describes that no migration has created yet. The knowledge is
+   * written before the change that builds it, so this is work still to come rather
+   * than drift, and it stays outside `ok`.
+   */
+  pending: z.array(ResourceProblemSchema.omit({ reason: true })),
 })
 
 export type ResourceCheck = z.infer<typeof ResourceCheckSchema>
@@ -160,6 +166,7 @@ export const checkKnowledgeResources = async (
 
   const claimed = new Set<string>()
   const problems: ResourceProblem[] = []
+  const pending: ResourceCheck['pending'] = []
   let withResource = 0
   let checked = 0
   let skipped = 0
@@ -186,7 +193,13 @@ export const checkKnowledgeResources = async (
       }
       checked++
       claimed.add(`${parsed.prefix}:${parsed.id}`)
-      if (!resolvable.has(parsed.id)) {
+      if (!resolvable.has(parsed.id) && parsed.prefix === 'table') {
+        pending.push({
+          path: note.path,
+          uri,
+          detail: `no table "${parsed.id}" exists yet`,
+        })
+      } else if (!resolvable.has(parsed.id)) {
         problems.push({
           path: note.path,
           uri,
@@ -214,5 +227,6 @@ export const checkKnowledgeResources = async (
     skipped,
     problems,
     orphans,
+    pending,
   }
 }

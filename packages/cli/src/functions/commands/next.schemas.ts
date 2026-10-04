@@ -10,7 +10,7 @@ export const NextInput = z.object({
 })
 
 export const NextOutput = z.object({
-  agent: z.enum(['changes', 'intake']).nullable(),
+  agent: z.enum(['changes', 'intake', 'knowledge', 'upgrade']).nullable(),
   skill: z.string().nullable(),
   refs: z.array(z.string()),
   reason: z.string(),
