@@ -22,3 +22,11 @@ test('the package publishes the extension meta', () => {
   assert.ok(pkg.exports['./.pikku/extension/*'])
   assert.equal(pkg.name, '@pikku/extension-x')
 })
+
+test('the scope its screen and function require is declared, which the inspector insists on', () => {
+  const files = extensionFiles('invoice-tracker')
+  assert.match(files['src/scopes.ts'], /defineScope/)
+  assert.match(files['src/scopes.ts'], /'invoice-tracker': \{/)
+  assert.match(files['src/scopes.ts'], /read: \{/)
+  assert.match(files['src/index.ts'], /import '\.\/scopes\.js'/)
+})
