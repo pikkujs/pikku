@@ -1,19 +1,13 @@
 import assert from 'node:assert'
 import { afterEach, beforeEach, describe, test } from 'node:test'
-import type {
-  KnowledgePlanProgressResult,
-  KnowledgeReconcileResult,
-} from '@pikku/knowledge'
-import {
-  renderKnowledgePlanProgress,
-  renderKnowledgeReconcile,
-} from './render.js'
+import type { KnowledgePlanProgressResult } from '@pikku/knowledge'
+import { renderKnowledgeGaps, renderKnowledgePlanProgress } from './render.js'
 
 const result = (
   over: Partial<KnowledgePlanProgressResult> = {}
 ): KnowledgePlanProgressResult => ({
   ok: false,
-  path: 'knowledge/milestones/01-the-daily-entry.plan.json',
+  path: 'knowledge/plans/the-daily-entry.plan.json',
   message: '',
   done: [],
   missing: [],
@@ -102,114 +96,51 @@ describe('renderKnowledgePlanProgress', () => {
     assert.ok(!out.includes('plan defer'))
   })
 
-  test('a milestone the command could not read exits non-zero with its reason', () => {
+  test('a changeset the command could not read exits non-zero with its reason', () => {
     const out = capture(() =>
       renderKnowledgePlanProgress(
         null,
-        result({ message: 'No milestone `02-nothing`.' })
+        result({ message: 'No plan for `02-nothing`.' })
       )
     )
     assert.equal(process.exitCode, 1)
-    assert.ok(out.includes('No milestone'))
+    assert.ok(out.includes('No plan for'))
   })
 })
 
-describe('renderKnowledgeReconcile', () => {
+describe('renderKnowledgeGaps', () => {
+  let lines: string[]
+  const original = console.log
+
   beforeEach(() => {
-    process.exitCode = undefined
+    lines = []
+    console.log = (...args: unknown[]) => void lines.push(args.join(' '))
   })
 
-  // Restored to `undefined`, the value a process starts on, rather than to `0`:
-  // both mean success to the build gate, but leaving `0` behind hands the next
-  // file a code this file invented.
   afterEach(() => {
-    process.exitCode = undefined
+    console.log = original
   })
 
-  const action = (
-    over: Partial<KnowledgeReconcileResult> = {}
-  ): KnowledgeReconcileResult => ({
-    kind: 'idle',
-    reason: 'nothing is written down yet',
-    ...over,
+  test('names each gap and what it left behind', () => {
+    renderKnowledgeGaps(null, {
+      gaps: [
+        {
+          note: 'knowledge/entities/entry.md',
+          hash: 'abc123',
+          state: 'partial',
+          leftBehind: [{ item: 'scenario:x', why: 'later', at: 'now' }],
+          missing: [],
+          by: [],
+        },
+      ],
+    })
+    const out = lines.join('\n')
+    assert.ok(out.includes('knowledge/entities/entry.md'))
+    assert.ok(out.includes('scenario:x'))
   })
 
-  test('idle says why and nothing else', () => {
-    const out = capture(() =>
-      renderKnowledgeReconcile(null, action({ kind: 'idle' }))
-    )
-    assert.match(out, /nothing is written down yet/)
-    assert.doesNotMatch(out, /IDLE/)
-  })
-
-  test('a question is numbered with its options, and the machine reason is demoted', () => {
-    const out = capture(() =>
-      renderKnowledgeReconcile(
-        null,
-        action({
-          kind: 'ask-user',
-          note: 'knowledge/milestones/01-the-daily-entry.md',
-          reason: 'Not dispatched: `status: ready` is not a status.',
-          question: {
-            header: 'Where it stands',
-            question: 'Where has "The daily entry" got to?',
-            options: [
-              {
-                label: 'proposed',
-                description: 'settled, and ready to be built',
-              },
-              { label: 'built', description: 'already built' },
-            ],
-          },
-        })
-      )
-    )
-    assert.match(out, /ASK/)
-    assert.match(out, /Where has "The daily entry" got to\?/)
-    assert.match(out, /1\. proposed/)
-    assert.match(out, /2\. built/)
-    // The refusal is still readable, but under `why:` rather than as the question.
-    assert.match(out, /why:/)
-    const question = out.indexOf('Where has')
-    assert.ok(
-      question < out.indexOf('why:'),
-      'the question comes before the reason'
-    )
-  })
-
-  test('a free-text question says so rather than printing an empty list', () => {
-    const out = capture(() =>
-      renderKnowledgeReconcile(
-        null,
-        action({
-          kind: 'ask-user',
-          note: 'knowledge/milestones/01-the-daily-entry.md',
-          reason: 'Not dispatched: no `entities:`.',
-          question: {
-            header: 'What it is about',
-            question: 'What is the main thing this is about?',
-            options: [],
-          },
-        })
-      )
-    )
-    assert.match(out, /\(free text\)/)
-  })
-
-  test('a hold names what it is held on and which notes', () => {
-    const out = capture(() =>
-      renderKnowledgeReconcile(
-        null,
-        action({
-          kind: 'hold',
-          reason: 'Not dispatched: nobody has agreed the screen yet.',
-          hold: 'screens',
-          notes: ['knowledge/screens/today.md'],
-        })
-      )
-    )
-    assert.match(out, /HELD/)
-    assert.match(out, /held on:\s+screens/)
-    assert.match(out, /knowledge\/screens\/today\.md/)
+  test('says so when nothing is left', () => {
+    renderKnowledgeGaps(null, { gaps: [] })
+    assert.ok(lines.join('\n').includes('every note is built or filed'))
   })
 })

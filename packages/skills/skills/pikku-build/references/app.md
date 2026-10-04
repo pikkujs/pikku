@@ -8,13 +8,13 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
 
 1. Write the knowledge graph — what the app IS, before any code
 2. Declare the people and the apps — personas, roles, frontends
-3. Plan the milestones — the buildable pieces, in dependency order
-4. Implement them one at a time — each proven by a scenario before the next starts
+3. File the work as changes — grouped into changesets, in dependency order
+4. Build them one changeset at a time — each proven by a scenario before it merges
 
 The sections below follow those phases in order, and are meant to be worked
 through rather than searched: §0 bootstrap, §1-§1a the last questions and the
 three languages, §2 the knowledge graph, §3-§4 personas and apps, §5-§5a the
-milestones and each one's technical plan, §6-§6a building and closing one,
+changes and each changeset's technical plan, §6-§6a building and closing one,
 §7-§7a proving it, §8 design, §9 ship. Four of them hand off to their own file —
 [scenarios.md](scenarios.md), [design.md](design.md),
 [multi-app.md](multi-app.md) and [ship.md](ship.md) — at the point you need it.
@@ -63,7 +63,7 @@ in one message. Then stop; do not interview the user.
   roles they name.
 - **What are the two or three core objects?**
 - **What is the main thing someone does on their first visit?** This answer
-  becomes the second milestone, not the tenth.
+  becomes the second changeset, not the tenth.
 - **One app or several?** Separate apps on separate hosts, or one app with paths.
   Cheap to answer now, expensive after the routes exist.
 - **What should it look like?** The template ships one theme — "Neutral", a
@@ -81,7 +81,7 @@ in one message. Then stop; do not interview the user.
   approved page becomes source of truth for the screens, and the theme is written
   before it so what they approve is what ships. Only an explicit no skips it.
 - **May I write test records into the system it talks to?** Ask only when the
-  app reads a live system through an addon (an ERP, a CRM) and a milestone needs
+  app reads a live system through an addon (an ERP, a CRM) and a changeset needs
   data that isn't there yet: an unpaid invoice, a closed ticket. Say what you
   would create and that it will be marked "Test". A no means building those
   screens against their empty states.
@@ -156,17 +156,14 @@ discoverable from code, and the next agent will otherwise re-derive them wrong.
 `knowledge/` is not documentation you write at the end. It is the record of what
 the app IS, in the words its users use, and it is the one part of the project
 another agent picks up and continues from. **Nothing gets built until there is a
-milestone note to build.**
+note saying what it is.**
 
 Read `knowledge/index.md` and the `pikku-knowledge` skill, then write the notes
 for what the user just told you. A project whose `knowledge/` is still only the
 shipped index is a project nobody can resume.
 
-Five sections, each answering exactly one question:
+Four sections, each answering exactly one question:
 
-- `milestones/` — what is one buildable piece, and what proves it works
-  (some scaffolds call these `slices/`; follow the name `knowledge/index.md`
-  uses — `knowledge validate` accepts either)
 - `entities/` — what a thing IS, in the words users use for it
 - `decisions/` — what was chosen and what that rules out.
   `decisions/security/` for who may reach what, `decisions/design/` for how it
@@ -182,12 +179,9 @@ Rules that make it a graph rather than a pile of files:
   written in the same turn. Never scaffold empty directories, and never leave
   notes flat at the root: a `product.md` and a `glossary.md` at `knowledge/` is
   not a knowledge base, and it leaves the project unbuildable.
-- **A milestone note carries `status`** (`proposed` → `dispatched` → `built`,
-  nothing else), **at most three `entities`** (past three it is not one piece —
-  split it), and **its scenario as a fenced ` ```gherkin ` block in the third
-  person** — `Given 'owner' has no entry`, never `Given I …`. A quoted word
-  MEANS a persona, so quote only personas you declare in §3 and write domain
-  values bare. That block becomes a real scenario in §7.
+- **A note says what the app is, never what is left to do.** No status, no
+  todo list: the work is filed as changes in §5, and `pikku knowledge gaps`
+  says which notes no change builds yet.
 - **Record only what pikku cannot tell you.** Tables, columns, function
   signatures, routes, wirings, permissions and roles are all discoverable with
   `pikku info` / `pikku meta`. Copying them into a note gives you a second copy
@@ -332,7 +326,7 @@ Either way, write the choice and its reason into `knowledge/decisions/`.
 
 Recording the decision is Phase 2 work. **Creating the directory is not.**
 Cloning `apps/app` materialises a folder of copied screens, so it belongs to the
-milestone that first needs the second app, not to planning.
+changeset that first needs the second app, not to planning.
 
 When you get there, read `references/multi-app.md`. It carries the clone, the
 `package.json` edits, the `frontends` map in `pikku.config.json`, the dev-runner
@@ -346,95 +340,76 @@ serves, written into `knowledge/decisions/`.
 
 ## PHASE 3 — The plan
 
-## 5. Plan the milestones
+## 5. File the work as changes
 
-Turn the app into an ordered list of buildable pieces, each a note in
-`knowledge/milestones/`, each `status: proposed` with a gherkin block.
+Turn the app into changes on the project's queue — the pikku-changes skill.
+`pikku knowledge gaps` lists every note no change builds yet; file each as one
+or more changes with `pikku fabric changes file`, one commit's worth each, and
+end every body with the gap's `Knowledge:` line so it is not filed twice.
 
-What a milestone is:
+What a change is:
 
-- **One buildable piece, at most three entities.** Past three it is not one piece.
-- **Vertical, not layered.** "The owner sees this month's arrears" is a
-  milestone — migration, function, screen, scenario. "Add the database schema" is
-  not; it is a step inside one.
+- **One commit's worth.** "The owner sees this month's arrears" is a change,
+  or a few. "Add the database schema" is not; it is a step inside one.
 - **It ends in something a person can do**, in a browser, signed in as a named
-  persona. If you cannot write the gherkin, you cannot build it yet — that is a
-  `questions/` note, not a milestone.
+  persona. If you cannot say what they see when it is done, that is a
+  `questions/` note, not a change.
 
-If §1's screen mock was made — approved, or drawn because nobody answered — the
-milestones are read off it: every screen on that page belongs to some milestone,
-and a screen no milestone builds
-is a hole in this plan. Say which milestone covers which screen.
+If §1's screen mock was made — approved, or drawn because nobody answered —
+every screen on that page belongs to some change, and a screen no change builds
+is a hole in this plan.
 
-How to order them:
+How they group into changesets, in order:
 
 1. **The spine first.** The one object everything else hangs off, and the screen
    that proves the app exists at all.
 2. **Then the loop the user named as "the main thing someone does on their first
-   visit."** That answer from §1 is the second milestone, not the tenth.
+   visit."** That answer from §1 is the second changeset, not the tenth.
 3. **Then each audience's own surface**, one at a time. With two apps, finish one
    app's spine before starting the other's — a half-built app in each is worse
    than one working app.
-4. **Refusals ride along with the milestone that creates the thing being
-   refused**, never as a "permissions" milestone at the end. A milestone that
-   creates a row and does not say who may not see it is not finished.
-
-Number the files (`01-…`, `02-…`) so the order is visible in the tree. Then
-`knowledge index && knowledge validate` before you write a line of code.
+4. **Refusals ride along with the changeset that creates the thing being
+   refused**, never as a "permissions" changeset at the end.
 
 **One approval, then build to the end.** Show the picture of the screens and
-the milestone list together, in one message, as the plan: which milestone builds
-which screen, in what order. That is the only approval you ask for. It is the
-last cheap moment to reorder: after §6 the migrations are numbered and the order
-is concrete.
+the changes together, in one message, as the plan. That is the only approval you
+ask for. Once they approve it, or don't answer, run `pikku next --exec <harness>
+--loop`: it hands each changeset to a fresh agent, merges it, and moves on. Post
+one line as each changeset merges, and carry on. Stop only for what is theirs to
+decide: a credential you don't have, spending money, posting in public, deleting
+or overwriting their data, or a finding that changes the plan.
 
-Once they approve it, or don't answer, build every milestone in order without
-stopping to ask between them. Post one line as each milestone closes, with its
-console links, and carry on. Stop only for what is theirs to decide: a
-credential you don't have, spending money, posting in public, deleting or
-overwriting their data, or a finding that changes the plan.
+## 5a. The technical plan — per changeset, before you build it
 
-## 5a. The technical plan — one milestone at a time, before you build it
+`pikku fabric changes claim` decides whether a changeset needs a **plan**: one
+that creates or alters a table always does, and the judge decides the rest. The
+plan says what has to exist: the tables, functions, wires, roles, scopes,
+screens and scenarios, split into passes. It is JSON at
+`knowledge/plans/<changeset>.plan.json`, committed on the changeset's branch,
+and `pikku knowledge plan progress` measures the finished build against it.
 
-The milestone note says what the app must DO. The **plan** says what has to
-exist for it: the tables, functions, wires, roles, scopes, screens and
-scenarios, split into passes. It is JSON, it lives beside the note, and
-`pikku knowledge plan progress` measures the finished build against it.
-
-**Read `pikku-architect` and follow it.** The plan is the denominator the
-completion check divides by, so a builder who plans after seeing their own work
-can build a fraction, plan only that fraction, and certify itself complete. The
-defence is the ORDER, and it only holds if you keep it: the plan is written
-against the note in its own turn,
+**Read `pikku-architect` and follow it.** The plan is written in its own turn,
 before any of the code it measures exists, and is never edited afterwards to
 match what you ended up building. An item that will not land is deferred with
-its reason — `plan defer` — not quietly rewritten. Write it before you open a
-migration:
+its reason — `plan defer` — not quietly rewritten:
 
 ```sh
 pikku knowledge plan schema                        # the only spec there is
-pikku knowledge plan set <milestone> /tmp/plan.json
-pikku knowledge plan show <milestone> --for-build  # what you then build
+pikku knowledge plan set <changeset> /tmp/plan.json
+pikku knowledge plan show <changeset> --for-build  # what you then build
 ```
-
-**Plan one milestone at a time, at the moment you are about to build it** — not
-all of them here. A plan written against a note that later moves is worse than
-no plan, and everything after the current milestone is still allowed to move.
 
 ---
 
 ## PHASE 4 — Build
 
-## 6. Implement milestones, one at a time
+## 6. Build each changeset
 
-All of them, one after another, on the one approval from §5.
-
-**Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
-six steps, close it out (§6a), set it to `built`. Do not start the next one
-until §6a passes, §7 is green for this one _and §7a shows its functions
-covered_. A stack of half-milestones cannot be reviewed and cannot be handed
-over, and an uncovered function is a half-milestone whether or not the note says
-`built`.
+**Per changeset** — claim it, plan it if the claim says so (§5a), do the six
+steps one commit per change, close it out (§6a), mark its changes done. Do not
+mark the last one done until §6a passes, §7 is green for it _and §7a shows its
+functions covered_; `changes done` refuses a planned changeset's last change
+while the plan is short.
 
 1. **Migration.** SQL in `db/sqlite/` at the project root (`db/postgres/` or
    `db/mysql/` when `createConfig` sets `postgresUrl` or `mysqlUrl`), numbered on from the
@@ -477,17 +452,17 @@ over, and an uncovered function is a half-milestone whether or not the note says
    **Read `references/design.md` before you write the first screen.** You commit
    to a design direction there and are then accountable to it — it hands you no
    layouts, because the design is yours to make. What you build here is then
-   judged at step 7, at the end of this milestone rather than once at §8, where
+   judged at step 7, at the end of this changeset rather than once at §8, where
    the only affordable fix is a repaint of eight screens.
 6. **Scenario** (§7).
-7. **Look at it.** Screenshot every screen this milestone touched, at both
+7. **Look at it.** Screenshot every screen this changeset touched, at both
    widths, with the seed in place, and look at the images. This is a gate, the
-   same as the scenario: a milestone whose screens nobody has seen is not built,
+   same as the scenario: a changeset whose screens nobody has seen is not built,
    it is unproven at the one layer scenarios cannot reach. `references/design.md`
    carries how to take the shot when no browser tool is wired up, and what to
    look for. Then close it against its plan (§6a) — `pikku knowledge plan
-progress` has to exit zero before anything is `built` — and only then set
-   `status: built`, saying in the note what you looked at and what it made you
+progress` has to exit zero before the last change is done — and only then
+   mark it done, saying in the `--note` what you looked at and what it made you
    change.
 
 Rules that are not optional:
@@ -601,17 +576,17 @@ it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
 
-## 6a. Close the milestone against its plan, not against your memory
+## 6a. Close the changeset against its plan, not against your memory
 
 ```sh
-pikku knowledge plan progress <milestone>
+pikku knowledge plan progress <changeset>
 ```
 
 It reads §5a's plan and reconciles it against the generated meta under
 `.pikku/` — the function exists or it does not, the route is wired or it is not,
 the `pikkuScenario` export is there or it is not. Nothing it reports comes from
-what anyone claimed, which is the whole reason it replaced a todo list. It exits
-non-zero while anything in the first pass is missing.
+what anyone claimed. It exits non-zero while anything in the first pass is
+missing, and `changes done` runs the same check on the last change.
 
 Three things it says, and what each one asks of you:
 
@@ -620,14 +595,14 @@ Three things it says, and what each one asks of you:
   the record:
 
   ```sh
-  pikku knowledge plan defer <milestone> function:sendReminder \
-    -r "The email service it needs is the next milestone."
+  pikku knowledge plan defer <changeset> function:sendReminder \
+    -r "The email service it needs is the next changeset."
   ```
 
   **A deferral is capped at two per plan.** Past that, the plan was wrong and the
-  milestone is two milestones — say so to the user rather than deferring again.
-  What you may never do is drop the item silently: the plan is what the next
-  person reads to know what this milestone was for.
+  changeset is two changesets — say so rather than deferring again. What you may
+  never do is drop the item silently. A merged changeset with deferrals leaves its
+  notes `partial`, and `pikku knowledge gaps` files what it left behind.
 
 - **PROBLEMS** — something exists but does not do what was planned. A function
   planned as restricted whose meta says `auth: false`; a `cascade` no migration
@@ -636,14 +611,13 @@ Three things it says, and what each one asks of you:
 - **DEFERRED to a later pass** — already accounted for. Reported so it is
   visible, never blocking.
 
-**Do not set the note to `built` while this exits non-zero**, and do not edit the
-plan to match what you built — the plan was written before the code on purpose,
-and rewriting your own denominator afterwards is exactly what that order exists
-to stop.
+Do not edit the plan to match what you built — the plan was written before the
+code on purpose, and rewriting your own denominator afterwards is exactly what
+that order exists to stop.
 
-### 6b. Feed the milestone back into the seats
+### 6b. Feed the changeset back into the seats
 
-Before starting the next milestone, answer two questions out loud:
+Before starting the next changeset, answer two questions out loud:
 
 - **What did the plan fail to say?** A field nothing wrote, a promise no function
   could keep, a pass 1 that turned out to be two. That is a `pikku-architect`
@@ -652,11 +626,11 @@ Before starting the next milestone, answer two questions out loud:
   a stale process, a scenario that only passes once, a diagnostic that turned
   out to be an echo of an earlier one. That is a `pikku-build` lesson.
 
-Then edit the skill — **at most one change to each per milestone**, and only for
+Then edit the skill — **at most one change to each per changeset**, and only for
 something that actually went wrong here. A rule with no incident behind it is a
 guess, and these files are read in full every time: they earn their length by
 naming failures a reader would otherwise repeat. Prefer sharpening an existing
-line to appending a new one, and delete a rule the last few milestones have
+line to appending a new one, and delete a rule the last few changesets have
 shown to be noise.
 
 The gates are the compounding part. A lesson written into a scenario the suite
@@ -670,9 +644,9 @@ A scenario is a user journey run as one of your personas, over the real
 transport, with that persona's session. It is the only kind of test worth writing
 here, because a passing one proves the app works the way a signed-in person
 experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
-green — and every milestone's gherkin block from §5 becomes one more.
+green — and every scenario a changeset's plan names becomes one more.
 
-**Read [scenarios.md](scenarios.md) before writing the milestone's scenarios,
+**Read [scenarios.md](scenarios.md) before writing the changeset's scenarios,
 and again whenever one of these describes what you are doing.** It is the file
 where the expensive lessons live, and most of them produce a GREEN suite that
 proves nothing:
@@ -683,7 +657,7 @@ proves nothing:
 - what to assert — refusals must read the REASON, totals must be deltas, and the
   assertion nobody writes is the row count
 - living without a state reset: the suite must be green on its SECOND run
-- how a shared step rots as later milestones add writers of the rows it selects
+- how a shared step rots as later changesets add writers of the rows it selects
 - browser specifics — the click/navigate race, testids, and `Outlet` nesting
 
 Run them:
@@ -735,17 +709,17 @@ bunx --bun pikku scenario run local --coverage         # against that server
 **A function no scenario touches has no scenario coverage** — the file knows
 what the suite exercises and nothing else, so a unit test, a scheduled job, a
 webhook or a hand call leaves no trace in it. Read
-`coverage/scenario-coverage.json` **as each milestone closes** — per milestone it is a short list you can act on, whereas read for the
-first time after ten milestones it is a wall of red nobody triages. Every gap is
+`coverage/scenario-coverage.json` **as each changeset closes** — per changeset it is a short list you can act on, whereas read for the
+first time after ten changesets it is a wall of red nobody triages. Every gap is
 a missing scenario, a function that should not exist, or a deferral worth
 writing down; [scenarios.md](scenarios.md) says how to tell them apart. Report
-the number when you hand the milestone over.
+the number when you hand the changeset over.
 
 ## 8. Make it look like someone designed it
 
 **This section numbers 8, but half of it has already happened.** Read
 `references/design.md` before the first screen is built — a design pass run on
-eight milestones of scaffolded screens is a repaint, and it shows. What is left
+eight changesets of scaffolded screens is a repaint, and it shows. What is left
 here at §8 is the theme you may have deferred and the critique you cannot run
 until there are screens to critique.
 
@@ -851,7 +825,7 @@ problem it does not have.
 
 ## 9. Ship it, and stay Fabric-ready
 
-When every milestone is `built` and the scenarios are green, read
+When the queue is empty, `pikku knowledge gaps` lists nothing and the scenarios are green, read
 `references/ship.md`. It carries the open-source deploy paths (`--provider
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
 API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
@@ -876,7 +850,7 @@ cheaper to honour than to retrofit:
 
 Read these when the section that names them comes up, not up front:
 
-- [multi-app.md](multi-app.md) — adding a second frontend (§4), at the milestone
+- [multi-app.md](multi-app.md) — adding a second frontend (§4), at the changeset
   that needs it
 - [scenarios.md](scenarios.md) — writing journeys that stay proven (§7, §7a)
 - `references/design.md` — committing to a design direction, and how to tell

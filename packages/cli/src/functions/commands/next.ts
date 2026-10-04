@@ -8,6 +8,12 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { changesContext } from '../../fabric/lib/changes.js'
 import { claimable } from '../../fabric/lib/changes-next.js'
 import { FabricPreconditionError } from '../../fabric/lib/errors.js'
+import { openKnowledgeGaps } from '../../fabric/lib/knowledge-gaps.js'
+import { planOnBranch } from '../../fabric/lib/plan-gate.js'
+import { takeBump, type PikkuBump } from '../../fabric/lib/pikku-bump.js'
+import { localStorePath } from '../../fabric/lib/changes-local.js'
+import { predictSkills } from '../../fabric/lib/predict-skills.js'
+import { knowledgeLine } from '@pikku/knowledge'
 import {
   finishedChangesets,
   mergeChangeset,
@@ -34,9 +40,11 @@ export const next = pikkuSessionlessFunc({
     'Decide what should run next in this project, and print the agent, the skill it starts with and the work it is given. --exec launches it.',
   input: NextInput,
   output: NextOutput,
-  func: async (_services, input) => {
+  func: async ({ config }, input) => {
     const home = await currentBranch()
-    let current = input.prompt ? intake(input.prompt) : await route(input)
+    const root =
+      config.rootDir ?? (await git(['rev-parse', '--show-toplevel'])).trim()
+    let current = input.prompt ? intake(input.prompt) : await route(root, input)
     if (!input.exec) return current
     const merged = [...current.merged]
     for (;;) {
@@ -47,7 +55,7 @@ export const next = pikkuSessionlessFunc({
           `The ${current.agent} agent exited with ${code}.`
         )
       if ((await currentBranch()) !== home) await git(['switch', home])
-      const after = await route(input)
+      const after = await route(root, input)
       merged.push(...after.merged)
       if (!input.loop) return { ...current, merged }
       if (after.agent && after.context === current.context)
@@ -60,10 +68,10 @@ export const next = pikkuSessionlessFunc({
   },
 })
 
-async function route({
-  parallel = false,
-  push = false,
-}: z.infer<typeof NextInput>): Promise<Route> {
+async function route(
+  root: string,
+  { parallel = false, push = false }: z.infer<typeof NextInput>
+): Promise<Route> {
   const { rpc, projectId, storePath } = await changesContext(undefined)
   const merged: string[] = []
   const finished = await finishedChangesets(
@@ -76,6 +84,10 @@ async function route({
   )
   if (finished.length) await syncWithUpstream()
   for (const changeset of finished) {
+    const unplanned =
+      (changeset.group as { needsPlan?: boolean }).needsPlan &&
+      (await planOnBranch(changeset.branch, changeset.group.groupId))
+    if (unplanned) return replan(changeset, unplanned, merged)
     const outcome = await mergeChangeset(changeset, storePath)
     if (outcome.kind === 'conflict') return resolve(outcome, merged)
     merged.push(
@@ -83,10 +95,11 @@ async function route({
     )
   }
   if (merged.length && push) await git(['push'])
-  return { ...(await pick(rpc, projectId!, parallel)), merged }
+  return { ...(await pick(root, rpc, projectId!, parallel)), merged }
 }
 
 async function pick(
+  root: string,
   rpc: Awaited<ReturnType<typeof changesContext>>['rpc'],
   projectId: string,
   parallel: boolean
@@ -107,11 +120,20 @@ async function pick(
       `A changeset is running: ${running.map((g) => g.title).join(', ')}`
     )
   const ready = claimable(list, now)
-  if (!ready.length) return idle('Nothing to do')
+  if (!ready.length) {
+    if (running.length) return idle('Nothing to do')
+    const bump = await takeBump(root, await localStorePath())
+    if (bump) return upgrade(bump)
+    const { gaps } = await openKnowledgeGaps(root, rpc, projectId)
+    return gaps.length ? fileGaps(gaps) : idle('Nothing to do')
+  }
   return {
     agent: 'changes',
     skill: 'pikku-changes',
-    refs: [],
+    refs: predictSkills(
+      ready.flatMap((c) => [c.title, c.body]),
+      list.groups as Array<{ creates?: string[]; alters?: string[]; needsPlan?: boolean }>
+    ),
     reason: `${ready.length} open change(s)`,
     merged: [],
     context: [
@@ -146,6 +168,64 @@ const resolve = (
 ${outcome.files.map((f) => `- ${f}`).join('\n')}
 
 ${outcome.worktree ? `Work in ${outcome.worktree}.` : `Switch to ${outcome.branch}.`} Merge ${outcome.into} into ${outcome.branch}, resolve each conflict so both sides still do what they were for, run the tests, commit the merge and stop. Do not merge ${outcome.branch} into ${outcome.into}; pikku next does that.
+`,
+})
+
+const upgrade = ({ from, to }: PikkuBump): Route => ({
+  agent: 'upgrade',
+  skill: 'pikku-changes',
+  refs: ['pikku-concepts'],
+  reason: `pikku went from ${from} to ${to}`,
+  merged: [],
+  context: `# pikku ${from} → ${to}
+
+Read the CHANGELOG.md of each @pikku package in node_modules for the entries after ${from}, run \`pikku all\` and the typecheck, and file what this project has to change to keep up as changes: \`pikku fabric changes file --title "<one line>" --body "<what has to change and why, citing the changelog entry>"\`, one commit's worth each. A breaking change that makes the project fail to build or typecheck comes first. File them and stop; another agent builds them. If nothing needs changing, file nothing.
+`,
+})
+
+const fileGaps = (
+  gaps: Awaited<ReturnType<typeof openKnowledgeGaps>>['gaps']
+): Route => ({
+  agent: 'knowledge',
+  skill: 'pikku-knowledge',
+  refs: ['pikku-changes'],
+  reason: `${gaps.length} note(s) no change builds yet`,
+  merged: [],
+  context: `# Knowledge no change builds yet
+
+${gaps
+  .map((g) =>
+    [
+      `- ${g.note} (${g.state}) — \`${knowledgeLine(g)}\``,
+      ...g.leftBehind.map((d) => `  - left behind: ${d.item} — ${d.why}`),
+      ...g.missing.map((item) => `  - built by ${g.by.join(', ')}, gone now: ${item}`),
+    ].join('\n')
+  )
+  .join('\n')}
+
+# Filing them
+
+Read each note and file what it asks for as changes: \`pikku fabric changes file --title "<one line>" --body "<what the person sees when it is done>"\`, one commit's worth each, in the app's own words. End the body of every change that builds a note with that note's \`Knowledge:\` line above, exactly, so it is not filed again. A note that is only partly built gets changes for what it left behind.
+
+\`removed\` and \`deleted\` run the other way: the code and the knowledge disagree about something that was built. \`removed\` means code a merged changeset built for the note is gone; \`deleted\` means the note is gone and its code is not. Read \`git log\` for who removed it and why. If it was removed on purpose, bring the knowledge into line — edit or delete the note, or for \`deleted\` file a change that removes the code — and commit that. If it looks accidental, file a change that restores it. If you cannot tell, file the change and \`pikku fabric changes ask\` on it which way. Every change filed for a gap still ends with its \`Knowledge:\` line. File them and stop; another agent builds them.
+`,
+})
+
+const replan = (
+  { group, branch }: { group: { title: string; groupId: string }; branch: string },
+  why: string,
+  merged: string[]
+): Route => ({
+  agent: 'changes',
+  skill: 'pikku-changes',
+  refs: ['pikku-architect'],
+  reason: `“${group.title}” has no usable plan`,
+  merged,
+  context: `# Plan before merge
+
+“${group.title}” (${branch}) is done but cannot merge: ${why}
+
+Switch to ${branch}, write its plan with the pikku-architect skill and \`pikku knowledge plan set ${group.groupId} <file>\`, build whatever \`pikku knowledge plan progress ${group.groupId}\` says is missing, commit and stop. pikku next merges it.
 `,
 })
 

@@ -13,26 +13,11 @@ import {
   runKnowledgePlanShow,
 } from './plan-command.js'
 
-const MILESTONE = 'knowledge/milestones/01-the-daily-entry.md'
-
-const NOTE = `---
-type: milestone
-entities: entry
----
-The daily entry.
-
-\`\`\`gherkin
-Given 'owner' has today free
-When 'owner' writes an entry
-Then 'owner' reads it back
-\`\`\`
-`
+const CHANGESET = 'cs-1'
 
 const project = async (): Promise<string> => {
   const cwd = await mkdtemp(join(tmpdir(), 'plan-cmd-'))
-  await mkdir(join(cwd, 'knowledge/milestones'), { recursive: true })
   await mkdir(join(cwd, 'knowledge/entities'), { recursive: true })
-  await writeFile(join(cwd, MILESTONE), NOTE)
   // No trailing newline: the body has to hash to exactly what `basePlan` claims in its
   // `covers`, and `plan set` now refuses a hash that is not the note's current one.
   await writeFile(
@@ -58,42 +43,39 @@ describe('plan schema', () => {
 })
 
 describe('plan set', () => {
-  test('a plan that holds against its milestone is written', async () => {
+  test('a plan that holds is written under its changeset', async () => {
     const cwd = await project()
     try {
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       assert.deepEqual(result.problems, [])
       assert.equal(result.ok, true)
-      assert.equal(
-        result.path,
-        'knowledge/milestones/01-the-daily-entry.plan.json'
-      )
+      assert.equal(result.path, 'knowledge/plans/cs-1.plan.json')
       const written = JSON.parse(await readFile(join(cwd, result.path), 'utf8'))
-      assert.equal(written.milestone, MILESTONE)
+      assert.equal(written.changeset, CHANGESET)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
   })
 
-  test('a second plan for the same milestone is refused', async () => {
+  test('a second plan for the same changeset is refused', async () => {
     const cwd = await project()
     try {
       const first = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       assert.equal(first.ok, true)
       const before = await readFile(join(cwd, first.path), 'utf8')
       const second = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       assert.equal(second.ok, false)
       assert.equal(second.path, first.path)
-      assert.match(second.problems[0]!, /already holds this milestone's plan/)
+      assert.match(second.problems[0]!, /already holds this changeset's plan/)
       assert.match(second.problems[0]!, /plan defer/)
       assert.equal(await readFile(join(cwd, first.path), 'utf8'), before)
     } finally {
@@ -104,25 +86,10 @@ describe('plan set', () => {
   test('an unreadable plan file can be replaced', async () => {
     const cwd = await project()
     try {
-      await writeFile(
-        join(cwd, 'knowledge/milestones/01-the-daily-entry.plan.json'),
-        '{ not json'
-      )
+      await mkdir(join(cwd, 'knowledge/plans'), { recursive: true })
+      await writeFile(join(cwd, 'knowledge/plans/cs-1.plan.json'), '{ not json')
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
-        file: await planFile(cwd, basePlan()),
-      })
-      assert.equal(result.ok, true)
-    } finally {
-      await rm(cwd, { recursive: true, force: true })
-    }
-  })
-
-  test('the milestone can be named by path as well as by id', async () => {
-    const cwd = await project()
-    try {
-      const result = await runKnowledgePlanSet(cwd, {
-        milestone: MILESTONE,
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       assert.equal(result.ok, true)
@@ -139,7 +106,7 @@ describe('plan set', () => {
       const plan = basePlan()
       plan.ui = { kind: 'n/a', description: 'Later.' }
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(result.ok, false)
@@ -156,7 +123,7 @@ describe('plan set', () => {
       const plan = basePlan() as unknown as Record<string, unknown>
       delete plan.covers
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(result.ok, false)
@@ -170,7 +137,7 @@ describe('plan set', () => {
   // `hash` is the only thing making coverage a claim about CONTENT. Nothing else checks
   // it — `knowledgeCoverage` compares it much later, where a hash that was never right is
   // indistinguishable from a note somebody edited since, so the note quietly reads as
-  // backlog from the moment the milestone ships.
+  // backlog from the moment the changeset merges.
   test("a covers hash that is not the note's current one is refused, and the right one is named", async () => {
     const cwd = await project()
     try {
@@ -181,7 +148,7 @@ describe('plan set', () => {
       const current = plan.covers[0]!.hash
       plan.covers[0]!.hash = 'deadbeefcafe'
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(result.ok, false)
@@ -198,7 +165,7 @@ describe('plan set', () => {
       const plan = basePlan()
       plan.covers[0]!.note = 'entities/nothing.md'
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(result.ok, false)
@@ -216,7 +183,7 @@ describe('plan set', () => {
       const plan = basePlan()
       plan.covers[0]!.note = 'knowledge/entities/entry.md'
       const result = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(result.ok, true, result.problems.join('\n'))
@@ -225,19 +192,6 @@ describe('plan set', () => {
     }
   })
 
-  test('a milestone nobody wrote is said so, not guessed at', async () => {
-    const cwd = await project()
-    try {
-      const result = await runKnowledgePlanSet(cwd, {
-        milestone: '99-nothing',
-        file: await planFile(cwd, basePlan()),
-      })
-      assert.equal(result.ok, false)
-      assert.match(result.problems[0]!, /No milestone note matching/)
-    } finally {
-      await rm(cwd, { recursive: true, force: true })
-    }
-  })
 })
 
 describe('plan show', () => {
@@ -245,14 +199,14 @@ describe('plan show', () => {
     const cwd = await project()
     try {
       await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       const shown = await runKnowledgePlanShow(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.equal(shown.ok, true)
-      assert.equal(JSON.parse(shown.body).milestone, MILESTONE)
+      assert.equal(JSON.parse(shown.body).changeset, CHANGESET)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -262,11 +216,11 @@ describe('plan show', () => {
     const cwd = await project()
     try {
       await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       const shown = await runKnowledgePlanShow(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         forBuild: true,
       })
       assert.equal(shown.ok, true)
@@ -277,11 +231,11 @@ describe('plan show', () => {
     }
   })
 
-  test('a milestone with no plan says so rather than showing nothing', async () => {
+  test('a changeset with no plan says so rather than showing nothing', async () => {
     const cwd = await project()
     try {
       const shown = await runKnowledgePlanShow(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.equal(shown.ok, false)
       assert.match(shown.body, /No plan at/)
@@ -296,11 +250,11 @@ describe('plan defer', () => {
     const cwd = await project()
     try {
       await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       const result = await runKnowledgePlanDefer(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         item: 'function:createEntry',
         reason: 'The table it writes is not migrated yet.',
       })
@@ -317,11 +271,11 @@ describe('plan defer', () => {
     const cwd = await project()
     try {
       await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, basePlan()),
       })
       const result = await runKnowledgePlanDefer(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         item: 'function:noSuchThing',
         reason: 'Because.',
       })
@@ -374,21 +328,21 @@ const generate = async (
 
 const planned = async (cwd: string): Promise<void> => {
   const result = await runKnowledgePlanSet(cwd, {
-    milestone: '01-the-daily-entry',
+    changeset: CHANGESET,
     file: await planFile(cwd, basePlan()),
   })
   assert.equal(result.ok, true, result.problems.join('\n'))
 }
 
-// The whole point of the command: a milestone closes on what codegen can SEE, so an agent
+// The whole point of the command: a changeset closes on what codegen can SEE, so an agent
 // that says it is finished having written nothing is refused by a check it cannot edit.
 describe('plan progress', () => {
-  test('a milestone whose plan is unbuilt is refused, and says what is owed', async () => {
+  test('a changeset whose plan is unbuilt is refused, and says what is owed', async () => {
     const cwd = await project()
     try {
       await planned(cwd)
       const result = await runKnowledgePlanProgress(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.equal(result.ok, false)
       assert.ok(result.missing.includes('function createEntry'))
@@ -397,13 +351,13 @@ describe('plan progress', () => {
     }
   })
 
-  test('a milestone whose first pass exists in the meta is complete', async () => {
+  test('a changeset whose first pass exists in the meta is complete', async () => {
     const cwd = await project()
     try {
       await planned(cwd)
       await generate(cwd, GENERATED)
       const result = await runKnowledgePlanProgress(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.equal(result.ok, true, result.missing.join('\n'))
       assert.deepEqual(result.missing, [])
@@ -424,12 +378,12 @@ describe('plan progress', () => {
           GENERATED['scenarios/pikku-scenario-functions-meta.gen.json'],
       })
       await runKnowledgePlanDefer(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         item: 'function:createEntry',
         reason: 'The table it writes is not migrated yet.',
       })
       const result = await runKnowledgePlanProgress(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.deepEqual(result.missing, [])
       assert.ok(result.deferred.includes('function createEntry'))
@@ -462,7 +416,7 @@ describe('plan progress', () => {
         name: 'anotherMemberCannotArchiveScenario',
       })
       const set = await runKnowledgePlanSet(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
         file: await planFile(cwd, plan),
       })
       assert.equal(set.ok, true, set.problems.join('\n'))
@@ -478,7 +432,7 @@ describe('plan progress', () => {
         },
       })
       const result = await runKnowledgePlanProgress(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.deepEqual(result.missing, [])
       assert.ok(result.problems.some((p) => p.includes('archiveEntry')))
@@ -488,11 +442,11 @@ describe('plan progress', () => {
     }
   })
 
-  test('a milestone with no plan is refused rather than reported as complete', async () => {
+  test('a changeset with no plan is refused rather than reported as complete', async () => {
     const cwd = await project()
     try {
       const result = await runKnowledgePlanProgress(cwd, {
-        milestone: '01-the-daily-entry',
+        changeset: CHANGESET,
       })
       assert.equal(result.ok, false)
       assert.notEqual(result.message, '')

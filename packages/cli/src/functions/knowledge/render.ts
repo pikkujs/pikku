@@ -1,11 +1,11 @@
 import type {
+  KnowledgeGapsResult,
   KnowledgeIndexResult,
   KnowledgePlanDeferResult,
   KnowledgePlanProgressResult,
   KnowledgePlanSchemaResult,
   KnowledgePlanSetResult,
   KnowledgePlanShowResult,
-  KnowledgeReconcileResult,
   KnowledgeValidateResult,
 } from '@pikku/knowledge'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
@@ -186,8 +186,8 @@ export const renderKnowledgePlanProgress = (
   }
   if (missing.length > 0) {
     console.log(
-      `${removed('✗')}  the milestone is not built yet — build each missing item, or move it out with ` +
-        dim('pikku knowledge plan defer <milestone> <item> -r "<why>"')
+      `${removed('✗')}  the changeset is not built yet — build each missing item, or move it out with ` +
+        dim('pikku knowledge plan defer <changeset> <item> -r "<why>"')
     )
   }
   // A problem is something that EXISTS and does not do what was planned, so there is
@@ -195,13 +195,13 @@ export const renderKnowledgePlanProgress = (
   // refuse them.
   if (problems.length > 0) {
     console.log(
-      `${removed('✗')}  the milestone is not built yet — fix what the problems above name. ` +
+      `${removed('✗')}  the changeset is not built yet — fix what the problems above name. ` +
         dim(
           'A problem is never deferred; the thing exists, it just does something else.'
         )
     )
   }
-  // A build closes a milestone on this exit code, so it has to be readable by a shell
+  // The merge gate reads this exit code, so it has to be readable by a shell
   // and not only by whoever is reading the output.
   process.exitCode = 1
 }
@@ -242,74 +242,19 @@ export const renderKnowledgePlanDefer = (
   if (!ok) process.exitCode = 1
 }
 
-/**
- * What to do next, and — when only a person can settle it — the question to put to
- * them.
- *
- * The action's `reason` is machine wording that names the note and the frontmatter
- * key; on `ask-user` it is deliberately NOT what gets printed as the question, because
- * the reader there has never seen a note. The options are numbered rather than
- * rendered as a picker: this is the fallback every harness has, and one that can do
- * better reads the same answer as JSON.
- */
-export const renderKnowledgeReconcile = (
+export const renderKnowledgeGaps = (
   _services: unknown,
-  {
-    kind,
-    reason,
-    note,
-    hold,
-    notes,
-    question,
-    required,
-    satisfied,
-  }: KnowledgeReconcileResult
+  { gaps }: KnowledgeGapsResult
 ): void => {
-  if (required && !satisfied) {
-    process.exitCode = 1
-    console.log(
-      `${removed('✗')}  next is ${kind}, and this check requires ${required.join(' or ')}`
-    )
-    console.log()
-  }
-
-  if (kind === 'idle') {
-    console.log(`${dim('=')}  ${dim(reason)}`)
+  if (gaps.length === 0) {
+    console.log(`${added('✓')}  every note is built or filed`)
     return
   }
-
-  const label: Record<string, string> = {
-    'repair-note': 'REPAIR',
-    'write-plan': 'PLAN',
-    'ask-user': 'ASK',
-    dispatch: 'BUILD',
-    hold: 'HELD',
-  }
-  const paint = kind === 'dispatch' ? added : kind === 'hold' ? dim : changed
-  console.log(
-    `${paint(label[kind] ?? kind.toUpperCase())}  ${note ?? ''}`.trim()
-  )
-  console.log()
-
-  if (question) {
-    console.log(`${dim(question.header)}`)
-    console.log(question.question)
-    question.options.forEach((option, index) => {
-      const description = option.description
-        ? `  ${dim(option.description)}`
-        : ''
-      console.log(`  ${index + 1}. ${option.label}${description}`)
-    })
-    if (question.options.length === 0) console.log(dim('  (free text)'))
-    console.log()
-    console.log(`${dim('why:')}  ${dim(reason)}`)
-    return
-  }
-
-  console.log(reason)
-  if (hold) {
-    console.log()
-    console.log(`${dim('held on:')}  ${hold}`)
-    for (const path of notes ?? []) console.log(`  ${dim(path)}`)
+  for (const gap of gaps) {
+    console.log(`${changed(gap.state.toUpperCase())}  ${gap.note}`)
+    for (const left of gap.leftBehind)
+      console.log(`   ${dim(`${left.item} — ${left.why}`)}`)
+    for (const item of gap.missing)
+      console.log(`   ${dim(`gone since ${gap.by.join(', ')}: ${item}`)}`)
   }
 }

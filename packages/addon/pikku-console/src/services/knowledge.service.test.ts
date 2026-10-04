@@ -75,26 +75,15 @@ describe('KnowledgeService', () => {
   })
 })
 
-describe('KnowledgeService milestone plans', () => {
-  const MILESTONE = 'knowledge/milestones/01-the-daily-entry.md'
-
-  const NOTE = `---
-type: milestone
-entities: entry
----
-The daily entry.
-
-\`\`\`gherkin
-Given 'owner' has today free
-When 'owner' writes an entry
-Then 'owner' reads it back
-\`\`\`
-`
+describe('KnowledgeService plans', () => {
+  const CHANGESET = 'the-daily-entry'
+  const PLAN_FILE = 'knowledge/plans/the-daily-entry.plan.json'
 
   const plan = {
     version: 1,
     deferrals: [],
-    milestone: MILESTONE,
+    changeset: CHANGESET,
+    surface: 'app',
     description: 'One person writes one entry a day.',
     covers: [
       { note: 'entities/entry.md', hash: 'a1b2c3d4e5f6', complete: true },
@@ -124,10 +113,9 @@ Then 'owner' reads it back
     },
   }
 
-  test('a milestone with a plan carries it, reconciled against the meta', async () => {
+  test('a changeset with a plan carries it, reconciled against the meta', async () => {
     const root = await project({
-      [MILESTONE]: NOTE,
-      'knowledge/milestones/01-the-daily-entry.plan.json': JSON.stringify(plan),
+      [PLAN_FILE]: JSON.stringify(plan),
       '.pikku/function/pikku-functions-meta.gen.json': JSON.stringify({
         createEntry: { auth: true },
       }),
@@ -137,16 +125,16 @@ Then 'owner' reads it back
     })
     const bundle = await service(root).getBundle()
 
-    const milestone = bundle.plans[MILESTONE]
-    assert.ok(milestone)
-    assert.equal(milestone.unavailable, null)
+    const planned = bundle.plans[CHANGESET]
+    assert.ok(planned)
+    assert.equal(planned.unavailable, null)
     assert.equal(
-      milestone.plan?.description,
+      planned.plan?.description,
       'One person writes one entry a day.'
     )
-    assert.equal(milestone.complete, true)
+    assert.equal(planned.complete, true)
     assert.deepEqual(
-      milestone.checklist.map((item) => [item.id, item.done]),
+      planned.checklist.map((item) => [item.id, item.done]),
       [
         ['function:createEntry', true],
         ['wire:POST /entry', true],
@@ -156,33 +144,27 @@ Then 'owner' reads it back
 
   test('a plan the meta cannot account for reads as incomplete rather than as absent', async () => {
     const root = await project({
-      [MILESTONE]: NOTE,
-      'knowledge/milestones/01-the-daily-entry.plan.json': JSON.stringify(plan),
+      [PLAN_FILE]: JSON.stringify(plan),
     })
     const bundle = await service(root).getBundle()
 
-    const milestone = bundle.plans[MILESTONE]
-    assert.equal(milestone?.complete, false)
+    const planned = bundle.plans[CHANGESET]
+    assert.equal(planned?.complete, false)
     assert.deepEqual(
-      milestone?.checklist.map((item) => item.done),
+      planned?.checklist.map((item) => item.done),
       [false, false]
     )
   })
 
-  test('a milestone nobody planned says so, rather than going missing from the bundle', async () => {
-    // A note with no plan beside it is the state the console most needs to show —
-    // dropping the key would render exactly like a milestone that was never written.
-    const root = await project({ [MILESTONE]: NOTE })
-    const bundle = await service(root).getBundle()
-
-    const milestone = bundle.plans[MILESTONE]
-    assert.ok(milestone)
-    assert.equal(milestone.plan, null)
-    assert.match(milestone.unavailable ?? '', /No plan at/)
-    assert.deepEqual(milestone.checklist, [])
+  test('a plan file that will not parse says so, keyed by its path', async () => {
+    const root = await project({ [PLAN_FILE]: '{ not json' })
+    const unreadable = (await service(root).getBundle()).plans[PLAN_FILE]
+    assert.ok(unreadable)
+    assert.equal(unreadable.plan, null)
+    assert.ok(unreadable.unavailable)
   })
 
-  test('a base with no milestones carries no plans', async () => {
+  test('a base with no plans carries none', async () => {
     const root = await project({
       'knowledge/decisions/why.md': '---\ntype: decision\n---\nBecause.',
     })

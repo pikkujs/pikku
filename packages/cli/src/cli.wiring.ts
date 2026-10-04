@@ -79,9 +79,9 @@ import {
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
 import {
-  knowledgeReconcile,
-  renderKnowledgeReconcile,
-} from './functions/commands/knowledge-reconcile.js'
+  knowledgeGaps,
+  renderKnowledgeGaps,
+} from './functions/commands/knowledge-gaps.js'
 import {
   knowledgePlanDefer,
   knowledgePlanProgress,
@@ -1178,22 +1178,15 @@ wireCLI({
             },
           },
         }),
-        next: pikkuCLICommand({
-          func: knowledgeReconcile,
-          render: renderKnowledgeReconcile,
+        gaps: pikkuCLICommand({
+          func: knowledgeGaps,
+          render: renderKnowledgeGaps,
           description:
-            'Say the one thing to do next — repair a note, write a plan, ask the user, build, or nothing',
-          options: {
-            require: {
-              description:
-                'Exit non-zero unless the next action is one of these (comma-separated: idle, repair-note, write-plan, ask-user, dispatch, hold) — what turns this command into a gate a stage can be held to',
-              type: 'string',
-            },
-          },
+            'List the notes no change builds yet, leaving out any already filed as a change',
         }),
         plan: {
           description:
-            "Read and write a milestone's technical plan — the shape of the work, checked before it is built rather than after",
+            "Read and write a changeset's technical plan — the shape of the work, checked before it is built rather than after",
           subcommands: {
             schema: pikkuCLICommand({
               func: knowledgePlanSchema,
@@ -1204,8 +1197,8 @@ wireCLI({
             show: pikkuCLICommand({
               func: knowledgePlanShow,
               render: renderKnowledgePlanShow,
-              description: "Print a milestone's plan",
-              parameters: '<milestone>',
+              description: "Print a changeset's plan",
+              parameters: '<changeset>',
               options: {
                 forBuild: {
                   description:
@@ -1218,22 +1211,22 @@ wireCLI({
               func: knowledgePlanProgress,
               render: renderKnowledgePlanProgress,
               description:
-                'Say what the milestone still owes its plan, read from the generated meta rather than from what was claimed',
-              parameters: '<milestone>',
+                'Say what the changeset still owes its plan, read from the generated meta rather than from what was claimed',
+              parameters: '<changeset>',
             }),
             set: pikkuCLICommand({
               func: knowledgePlanSet,
               render: renderKnowledgePlanSet,
               description:
-                'Validate a plan against its milestone note and write it, or write nothing and say what is wrong',
-              parameters: '<milestone> <file>',
+                'Validate a plan and write it, or write nothing and say what is wrong',
+              parameters: '<changeset> <file>',
             }),
             defer: pikkuCLICommand({
               func: knowledgePlanDefer,
               render: renderKnowledgePlanDefer,
               description:
                 'Move one first-pass item to the next pass, with the reason on the record',
-              parameters: '<milestone> <item>',
+              parameters: '<changeset> <item>',
               options: {
                 reason: {
                   description: 'Why this item cannot land in the first pass',

@@ -101,7 +101,7 @@ export const KnowledgeGraphSchema = z.object({
 /**
  * Fenced and inline code, removed before links are read.
  *
- * A milestone body is mostly a gherkin block and decisions quote paths; both contain
+ * A note body may quote a gherkin block and decisions quote paths; both contain
  * bracket-and-paren text that reads as a markdown link. Counting those would put
  * edges in the graph that no reader can click.
  */
@@ -134,9 +134,9 @@ export const outboundLinks = (note: KnowledgeNote): string[] => {
 
 /**
  * Where a section sorts: the order the profile declares them in, which is the
- * order they are read in — a milestone, the entities it is about, the decisions
+ * order they are read in — the entities, the decisions
  * that govern it, then what is still open. Alphabetical would lead with
- * `decisions` and bury `milestones` in the middle, and would separate `decisions`
+ * `decisions` ahead of `entities`, and would separate `decisions`
  * from `decisions/security` by everything in between.
  *
  * A section the profile does not name sorts after all of them, alphabetically,

@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changeRef, changesContext } from '../lib/changes.js'
 import { currentBranch, git, headSha, isGitRepo } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
+import { planRefusal } from '../lib/plan-gate.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '../lib/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
@@ -72,7 +73,7 @@ export const FabricChangesDone = pikkuSessionlessFunc({
  * On the local queue the commit is the only durable record of a change, so it
  * is found by its trailer rather than assumed to be HEAD, and a migration the
  * changeset never declared would slip past the one-at-a-time ordering of schema
- * changesets.
+ * changesets. A changeset that needs a plan is held to it here.
  */
 async function checkCommit(
   rpc: ChangesRPC,
@@ -108,13 +109,21 @@ async function checkCommit(
     sha,
   ])
   const migrations = files.split('\n').filter((f) => /^db\/[^/]+\//.test(f))
-  if (!migrations.length) return sha
-  const { groups } = await rpc.invoke('listChanges', {
+  const { groups, changes } = await rpc.invoke('listChanges', {
     projectId,
     groupId: change.groupId ?? undefined,
     includeDone: true,
   })
   const declared = groups[0] as Partial<Declaration> | undefined
+  if (declared?.needsPlan && change.groupId) {
+    const last = changes.every(
+      (c) => c.changeId === change.changeId || c.status === 'done'
+    )
+    const top = (await git(['rev-parse', '--show-toplevel'])).trim()
+    const refusal = planRefusal(top, change.groupId, last)
+    if (refusal) throw new FabricPreconditionError(refusal)
+  }
+  if (!migrations.length) return sha
   if (declared?.creates?.length || declared?.alters?.length) return sha
   throw new FabricPreconditionError(
     `#${change.shortId} adds ${migrations.join(', ')} but its changeset declared no table it creates or alters. Claim it again with --creates/--alters so it is ordered with the other schema changes, then run done again.`

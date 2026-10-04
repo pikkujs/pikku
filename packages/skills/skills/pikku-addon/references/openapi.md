@@ -126,5 +126,5 @@ on their tracker is a public post.
 ## Then
 
 Go back to the mode you were building in (`pikku-build`). The addon is a
-dependency of the app, not the app: plan milestones around what the user wants
+dependency of the app, not the app: plan changes around what the user wants
 to do with the API, and reach the operations through `ref()`.

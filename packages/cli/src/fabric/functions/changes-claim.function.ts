@@ -14,6 +14,7 @@ import { git } from '../../utils/git.js'
 import { basename, dirname, join } from 'node:path'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import type { ClaimChangesOutput } from '../sdk/rpc-map.gen.d.js'
+import { configuredPlanJudge, needsPlan } from '../lib/plan-judge.js'
 
 export const FabricChangesClaimInput = z.object({
   apiUrl: z.string().optional(),
@@ -34,6 +35,7 @@ export const FabricChangesClaimOutput = z.object({
   group: z.any(),
   changes: z.any(),
   worktree: z.string().optional(),
+  planWhy: z.string().optional(),
 })
 
 export const FabricChangesClaim = pikkuSessionlessFunc({
@@ -47,11 +49,13 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
     )
     const project = requireProjectId(projectId)
     const changeIds = idList(input.changeIds)
-    const declaration = declare(input)
-    if (declaration && !local)
+    if (!local && declared(input))
       throw new FabricPreconditionError(
         'fabric does not record --creates/--alters/--reads/--needs-plan yet; they work on the local queue.'
       )
+    const declaration = local
+      ? await declare(rpc, project, changeIds, input)
+      : undefined
     let claimed: ClaimChangesOutput
     try {
       claimed = await rpc.invoke('claimChanges', {
@@ -69,8 +73,13 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
         await whyUnclaimable(rpc, project, changeIds, error)
       )
     }
-    if (!input.worktree) return claimed
-    return { ...claimed, worktree: await addWorktree(claimed.group.title) }
+    const planWhy = declaration?.why
+    if (!input.worktree) return { ...claimed, planWhy }
+    return {
+      ...claimed,
+      planWhy,
+      worktree: await addWorktree(claimed.group.title),
+    }
   },
 })
 
@@ -91,29 +100,62 @@ async function addWorktree(title: string): Promise<string> {
   return path
 }
 
+const declared = (input: z.infer<typeof FabricChangesClaimInput>) =>
+  Boolean(
+    idList(input.creates)?.length ||
+      idList(input.alters)?.length ||
+      idList(input.reads)?.length ||
+      input.needsPlan !== undefined
+  )
+
 /**
- * The hard rule of the judge: a changeset that creates or alters a table is
- * planned unless the caller says otherwise.
+ * Whether the changeset is planned: said outright with --needs-plan, or
+ * decided by the fixed rules and then the configured judge. Renewing a claim
+ * on a group without declaring anything keeps what was decided before.
  */
-function declare(
+async function declare(
+  rpc: ChangesRPC,
+  projectId: string,
+  changeIds: string[] | undefined,
   input: z.infer<typeof FabricChangesClaimInput>
-): Declaration | undefined {
+): Promise<(Declaration & { why: string }) | undefined> {
   const creates = idList(input.creates) ?? []
   const alters = idList(input.alters) ?? []
   const reads = idList(input.reads) ?? []
-  if (
-    !creates.length &&
-    !alters.length &&
-    !reads.length &&
-    input.needsPlan === undefined
+  if (input.needsPlan !== undefined)
+    return {
+      creates,
+      alters,
+      reads,
+      needsPlan: input.needsPlan,
+      why: '--needs-plan said so',
+    }
+  if (input.groupId && !declared(input)) return undefined
+  const changes = changeIds?.length
+    ? await Promise.all(
+        changeIds.map(
+          async (ref) =>
+            (await rpc.invoke('getChange', changeRef(projectId, ref))).change
+        )
+      )
+    : (
+        await rpc.invoke('listChanges', {
+          projectId,
+          status: ['open'],
+          includeDone: false,
+        })
+      ).changes
+  const verdict = await needsPlan(
+    {
+      title: input.title ?? changes[0]?.title ?? '',
+      changes: changes.map((c) => ({ title: c.title, body: c.body ?? null })),
+      creates,
+      alters,
+      reads,
+    },
+    configuredPlanJudge()
   )
-    return undefined
-  return {
-    creates,
-    alters,
-    reads,
-    needsPlan: input.needsPlan ?? creates.length + alters.length > 0,
-  }
+  return { creates, alters, reads, ...verdict }
 }
 
 /**
@@ -166,12 +208,21 @@ async function whyUnclaimable(
 
 export const renderChangesClaim = (
   _s: unknown,
-  { group, changes, worktree }: ClaimChangesOutput & { worktree?: string }
+  {
+    group,
+    changes,
+    worktree,
+    planWhy,
+  }: ClaimChangesOutput & { worktree?: string; planWhy?: string }
 ): void => {
   console.log(`Claimed ${changes.length} item(s) as “${safe(group.title)}”`)
   console.log(dim(`group ${safe(group.groupId)}`))
   const touches = touchesLine(group as Partial<Declaration>)
-  if (touches) console.log(touches)
+  if (touches) console.log(planWhy ? `${touches} ${dim(`— ${safe(planWhy)}`)}` : touches)
+  if ((group as Partial<Declaration>).needsPlan)
+    console.log(
+      `Plan it before any code: the pikku-architect skill, then \`pikku knowledge plan set ${safe(group.groupId)} <file>\`, committed on the changeset's branch.`
+    )
   if (group.claimExpiresAt) {
     console.log(
       dim(`lease until ${new Date(group.claimExpiresAt).toISOString()}`)

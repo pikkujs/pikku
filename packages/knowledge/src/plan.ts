@@ -1,23 +1,28 @@
 import { z } from 'zod'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
-import { KNOWLEDGE_DIR, listOf, noteHash } from './notes.js'
-import { MILESTONES_DIR, type MilestoneSurface } from './milestone.js'
+import { KNOWLEDGE_DIR, noteHash } from './notes.js'
 
 /**
- * The technical plan for one milestone: what has to exist for the milestone to be
- * built, written BEFORE the build and read by the gate afterwards.
+ * The technical plan for one changeset: what has to exist for it to be built,
+ * written BEFORE the build and read by the gate afterwards.
  *
  * It exists because the build plan used to be the build agent's own `todo` list,
  * which makes the agent both author and examiner — it can build
- * a fraction, plan only that fraction, and certify itself complete. A plan written by
- * a different seat, against the milestone, is a denominator the builder does not own.
+ * a fraction, plan only that fraction, and certify itself complete. A plan written
+ * before any code, and checked against codegen, is a denominator the builder does not own.
  *
  * JSON rather than a knowledge note on purpose. Every other artefact under
  * `knowledge/` is prose a human reads; this one is consumed field-by-field by the
  * gate, and a markdown parser is one more place a misspelt heading silently passes.
- * It also cannot live INSIDE the milestone note: that note is frozen once its status
- * leaves `proposed`, so rewriting it would change what the builder was told.
+ * It is committed on the changeset's branch, so it reaches main with the code it
+ * describes and git keeps it after the changes queue forgets the changeset.
  *
  * The plan holds INTENT. Reality lives in pikku's generated meta (`.pikku/**`), which
  * already inventories functions, wires, scopes, roles, workflows, agents and features.
@@ -29,6 +34,17 @@ export const PLAN_VERSION = 1
 export const FIRST_PASS = 1
 
 export const MAX_DEFERRALS = 2
+
+/**
+ * What a changeset reaches its person through. What the surface changes is WHICH
+ * proof a first pass owes, never whether it owes one: a CLI does not get a route,
+ * and an MCP tool is used by a machine.
+ */
+export const PLAN_SURFACES = ['app', 'cli', 'mcp', 'agent', 'backend'] as const
+
+export type PlanSurface = (typeof PLAN_SURFACES)[number]
+
+export const PLANS_DIR = `${KNOWLEDGE_DIR}/plans`
 
 const Deferral = z.object({
   item: z.string().min(1),
@@ -153,7 +169,7 @@ const FunctionItem = z.object({
     .nullable()
     .optional()
     .describe(
-      "OMIT THIS for a normal function, which is nearly all of them: pikku already serves every function as an RPC at /rpc/<name> and the client calls it by name, so there is no wire to decide. State one when the function is reached some OTHER way — its own HTTP path via wireHTTP (a webhook, a payment callback, a public URL someone else posts to), a queue job, or a channel. State one ALSO when the work itself is not a request: `workflow` for a process that pauses on a person and then carries on (an approval, a sign-off, an escalation), `scheduler` for something that happens on the app's own clock with nobody present (an overdue sweep, a nightly digest, a reminder). Those two are not alternate URLs, they are what the milestone IS — its note says so on `requires:`, and a plan that omits them ships a `status` column nothing advances or a job nobody runs."
+      "OMIT THIS for a normal function, which is nearly all of them: pikku already serves every function as an RPC at /rpc/<name> and the client calls it by name, so there is no wire to decide. State one when the function is reached some OTHER way — its own HTTP path via wireHTTP (a webhook, a payment callback, a public URL someone else posts to), a queue job, or a channel. State one ALSO when the work itself is not a request: `workflow` for a process that pauses on a person and then carries on (an approval, a sign-off, an escalation), `scheduler` for something that happens on the app's own clock with nobody present (an overdue sweep, a nightly digest, a reminder). Those two are not alternate URLs, they are what the change IS, and a plan that omits them ships a `status` column nothing advances or a job nobody runs."
     ),
   scopes: z.array(z.string()).default([]),
   permission: z.string().nullable(),
@@ -191,7 +207,7 @@ const RoleItem = z.object({
     .string()
     .min(1)
     .describe(
-      'REQUIRED on every role: the slug of the app this person USES — lowercase, one word, named for what they do there (`workshop`, `storefront`, `portal`). The distinct values across all roles ARE the apps this project needs, and the build creates a frontend for each one after the first, so this field alone decides how many frontends exist. When everyone is on the same side, give every role the SAME slug — one app is a real answer and often the right one. The test is the counter, not the org chart: the mechanic, the person on the counter and the bookkeeper are colleagues and share ONE app, differing only by nav and permitted actions; a customer WITH AN ACCOUNT is across the counter and gets their own, as do the tenant, the patient and the practitioner. Never invent a person the milestone notes do not name in order to reach two. A ROLE WHO NEVER SIGNS IN NEVER GETS A SLUG OF THEIR OWN: an app is built around the people who log into it, so a shopper who checks out as a guest, a diner reading a menu or anyone opening a link takes the SAME slug as the signed-in role they transact with, and their screens live on that app\u2019s public routes outside `/app`. A shop where a guest buys and one seller packs is ONE app and ONE slug: `/`, `/shop` and `/checkout` public, `/app/orders` behind the login. Give that shopper their own slug and the storefront is built on a second hostname while the product\u2019s own domain answers the people it is for with a login screen \u2014 the exact failure this field exists to prevent.'
+      'REQUIRED on every role: the slug of the app this person USES — lowercase, one word, named for what they do there (`workshop`, `storefront`, `portal`). The distinct values across all roles ARE the apps this project needs, and the build creates a frontend for each one after the first, so this field alone decides how many frontends exist. When everyone is on the same side, give every role the SAME slug — one app is a real answer and often the right one. The test is the counter, not the org chart: the mechanic, the person on the counter and the bookkeeper are colleagues and share ONE app, differing only by nav and permitted actions; a customer WITH AN ACCOUNT is across the counter and gets their own, as do the tenant, the patient and the practitioner. Never invent a person the knowledge notes do not name in order to reach two. A ROLE WHO NEVER SIGNS IN NEVER GETS A SLUG OF THEIR OWN: an app is built around the people who log into it, so a shopper who checks out as a guest, a diner reading a menu or anyone opening a link takes the SAME slug as the signed-in role they transact with, and their screens live on that app\u2019s public routes outside `/app`. A shop where a guest buys and one seller packs is ONE app and ONE slug: `/`, `/shop` and `/checkout` public, `/app/orders` behind the login. Give that shopper their own slug and the storefront is built on a second hostname while the product\u2019s own domain answers the people it is for with a login screen \u2014 the exact failure this field exists to prevent.'
     ),
 })
 
@@ -210,7 +226,7 @@ const ScenarioItem = z.object({
   /**
    * Which pass writes it, defaulting by level — see `scenarioPass`. Permission scenarios
    * default to pass 2 because they harden a journey that has to exist before they can
-   * cover it, and a milestone whose skeleton works ships without waiting on the whole
+   * cover it, and a changeset whose skeleton works ships without waiting on the whole
    * role x resource cross product.
    */
   pass: z
@@ -219,14 +235,14 @@ const ScenarioItem = z.object({
     .min(1)
     .optional()
     .describe(
-      'Which pass writes this scenario. Backend and browser scenarios default to pass 1 — they prove the journey works. Permission scenarios default to pass 2: they harden a journey that has to exist first, and only pass 1 has to be built for the milestone to ship, so a role x resource cross product here costs the milestone nothing.'
+      'Which pass writes this scenario. Backend and browser scenarios default to pass 1 — they prove the journey works. Permission scenarios default to pass 2: they harden a journey that has to exist first, and only pass 1 has to be built for the changeset to merge, so a role x resource cross product here costs it nothing.'
     ),
 })
 
 /**
  * Scenarios are keyed by level rather than tagged with one, so a plan carrying four
  * backend scenarios and no browser scenario fails on its shape. A flat list lets that
- * through, and it is exactly the milestone that builds an API and ships no screen.
+ * through, and it is exactly the changeset that builds an API and ships no screen.
  */
 const Scenarios = z.object({
   backend: slot(ScenarioItem),
@@ -235,13 +251,13 @@ const Scenarios = z.object({
 })
 
 /**
- * `complete: false` is the honest default for a note whose claims span milestones.
- * Without it the ledger lies in the flattering direction — one milestone touching a
+ * `complete: false` is the honest default for a note whose claims span changesets.
+ * Without it the ledger lies in the flattering direction — one changeset touching a
  * decision note would mark the whole note discharged and the rest of it would never
  * be built.
  *
  * `hash` is what makes the claim about CONTENT rather than about a filename. A note is
- * edited after the milestone that discharged it ships — the interview keeps going, and
+ * edited after the changeset that discharged it ships — the interview keeps going, and
  * a new sentence in an old note is the commonest way a requirement arrives. Keyed on
  * path alone that note stays `covered` forever and the new sentence is never built by
  * anybody. Recording what was actually claimed means an edit downgrades the note to
@@ -255,7 +271,11 @@ const Covers = z.object({
 
 export const PlanSchema = z.object({
   version: z.literal(PLAN_VERSION),
-  milestone: z.string().min(1),
+  changeset: z
+    .string()
+    .min(1)
+    .describe('The groupId of the changeset this plan builds.'),
+  surface: z.enum(PLAN_SURFACES).default('app'),
   description: z.string().min(1),
   covers: z.array(Covers).min(1),
   model: slot(ModelItem),
@@ -278,7 +298,7 @@ export const PlanSchema = z.object({
  * Backend and browser scenarios prove the journey works, so they are the walking
  * skeleton and default to pass 1. Permission scenarios prove nobody else can reach it —
  * necessary, but hardening of a journey that must already exist, and combinatorial in
- * roles x resources: run hmt3fz3c0's first milestone planned ten of them against four
+ * roles x resources: run hmt3fz3c0's first changeset planned ten of them against four
  * other items, and the build never shipped a working deployed app because completion
  * demanded the cross product before the skeleton could be signed off.
  */
@@ -310,42 +330,9 @@ export function plannedApps(plan: Plan): string[] {
   return seen
 }
 
-/** Where a milestone's plan lives: beside the note, same stem. */
-export function planPathFor(milestonePath: string): string {
-  return milestonePath.replace(/\.(md|markdown|txt)$/i, '.plan.json')
-}
-
-/** A plan's id, which is the note's stem and the console's URL segment. */
-export function planIdFor(milestonePath: string): string {
-  return milestonePath
-    .replace(/\.(md|markdown|txt)$/i, '')
-    .split('/')
-    .pop()!
-}
-
-/**
- * The milestone note a plan id names, resolved by scanning the milestones directory
- * rather than by joining the id onto a path.
- *
- * The id arrives from a URL, so building a path out of it hands the caller the file
- * system — `../../.env` is a plan id as far as string concatenation is concerned.
- * Matching against ids we generated ourselves means an unknown id finds nothing.
- */
-export function milestonePathForPlanId(
-  cwd: string,
-  planId: string
-): string | null {
-  let entries: string[]
-  try {
-    entries = readdirSync(join(cwd, MILESTONES_DIR))
-  } catch {
-    return null
-  }
-  const note = entries.find(
-    (entry) =>
-      /\.(md|markdown|txt)$/i.test(entry) && planIdFor(entry) === planId
-  )
-  return note ? `${MILESTONES_DIR}/${note}` : null
+/** Where a changeset's plan lives, named by the changeset's groupId. */
+export function planPathFor(changeset: string): string {
+  return `${PLANS_DIR}/${changeset}.plan.json`
 }
 
 export type PlanRead =
@@ -358,33 +345,23 @@ export type PlanRead =
        * There is no file, as opposed to a file that will not read.
        *
        * Callers that only ask `.ok` treat the two alike, which is how an architect came to
-       * be told a milestone "has no plan — write it" with an unparseable one sitting at
-       * that exact path.
+       * be told it "has no plan — write it" with an unparseable one sitting at that exact
+       * path.
        */
       missing?: true
     }
 
 /**
- * Read and validate a milestone's plan.
+ * Validate a plan's raw text.
  *
  * Validation errors are reported with their field path because the reader is an
  * agent: "invalid plan" costs a turn of guessing, while `functions.items[2].permission
  * — expected string, received undefined` is one edit.
  */
-export function readPlan(cwd: string, milestonePath: string): PlanRead {
-  const path = planPathFor(milestonePath)
-  const full = join(cwd, path)
-  if (!existsSync(full)) {
-    return {
-      ok: false,
-      path,
-      missing: true,
-      reason: `No plan at ${path}. Write it before dispatching the build.`,
-    }
-  }
+export function parsePlan(text: string, path: string): PlanRead {
   let raw: unknown
   try {
-    raw = JSON.parse(readFileSync(full, 'utf8'))
+    raw = JSON.parse(text)
   } catch (err) {
     return {
       ok: false,
@@ -413,6 +390,35 @@ export function readPlan(cwd: string, milestonePath: string): PlanRead {
     }
   }
   return { ok: true, plan: parsed.data, path }
+}
+
+/** Read and validate a changeset's plan. */
+export function readPlan(cwd: string, changeset: string): PlanRead {
+  const path = planPathFor(changeset)
+  const full = join(cwd, path)
+  if (!existsSync(full)) {
+    return {
+      ok: false,
+      path,
+      missing: true,
+      reason: `No plan at ${path}. Write it with \`pikku knowledge plan set\` before building the changeset.`,
+    }
+  }
+  return parsePlan(readFileSync(full, 'utf8'), path)
+}
+
+/** Every plan in the project, readable or not. */
+export function readPlans(cwd: string): PlanRead[] {
+  let entries: string[]
+  try {
+    entries = readdirSync(join(cwd, PLANS_DIR))
+  } catch {
+    return []
+  }
+  return entries
+    .filter((entry) => entry.endsWith('.plan.json'))
+    .sort()
+    .map((entry) => readPlan(cwd, entry.slice(0, -'.plan.json'.length)))
 }
 
 /**
@@ -444,12 +450,12 @@ export function renderPlanForBuild(plan: Plan, closing?: string): string {
   }
 
   lines.push(
-    `PLAN — ${plan.milestone}`,
+    `PLAN — ${plan.changeset}`,
     '',
     plan.description,
     '',
-    'PASS 1 COMPLETES THIS MILESTONE. Items marked pass 2 or higher are deferred — the gate does',
-    'not ask for them and the next milestone picks them up. Build pass 1.',
+    'PASS 1 COMPLETES THIS CHANGESET. Items marked pass 2 or higher are deferred — the gate does',
+    'not ask for them and they come back as changes of their own. Build pass 1.',
     ...(closing ? [closing] : []),
     ''
   )
@@ -527,7 +533,7 @@ export function renderPlanForBuild(plan: Plan, closing?: string): string {
   if (plan.deferrals.length > 0) {
     lines.push(
       '',
-      'DEFERRED — you moved these off pass 1 already. They do NOT block this milestone and you',
+      'DEFERRED — you moved these off pass 1 already. They do NOT block this changeset and you',
       'must not build them now; the reason you gave is on the record and reaches the planner.',
       ...plan.deferrals.map((d) => `  - \`${d.item}\` — ${d.why}`)
     )
@@ -538,12 +544,9 @@ export function renderPlanForBuild(plan: Plan, closing?: string): string {
 export const planSchemaJson = (): string =>
   JSON.stringify(z.toJSONSchema(PlanSchema, { io: 'input' }))
 
-export function writePlan(
-  cwd: string,
-  milestonePath: string,
-  plan: Plan
-): string {
-  const path = planPathFor(milestonePath)
+export function writePlan(cwd: string, plan: Plan): string {
+  const path = planPathFor(plan.changeset)
+  mkdirSync(join(cwd, PLANS_DIR), { recursive: true })
   writeFileSync(join(cwd, path), `${JSON.stringify(plan, null, 2)}\n`)
   return path
 }
@@ -582,13 +585,13 @@ export function deferPlanItem(
     return {
       ok: false,
       reason:
-        `This milestone has already deferred ${plan.deferrals.length} item(s) — ${plan.deferrals
+        `This changeset has already deferred ${plan.deferrals.length} item(s) — ${plan.deferrals
           .map((d) => `\`${d.item}\``)
           .join(
             ', '
           )} — which is the limit. Everything still on pass 1 has to be built. If the ` +
-        `milestone genuinely cannot land, say which items and why in your final message and stop; ` +
-        `deferring the rest would ship a milestone that is not the one that was planned.`,
+        `changeset genuinely cannot land, ask on its change which items and why, and stop; ` +
+        `deferring the rest would ship a changeset that is not the one that was planned.`,
     }
   }
   if (plan.deferrals.some((d) => d.item === itemId)) {
@@ -665,11 +668,11 @@ export function deferPlanItem(
 }
 
 /**
- * Move every still-unbuilt pass-1 item to pass 2 at once, for a milestone that was KILLED
+ * Move every still-unbuilt pass-1 item to pass 2 at once, for a changeset that was KILLED
  * rather than finished.
  *
  * Deliberately outside `MAX_DEFERRALS`, which bounds what a build agent may talk itself out
- * of — a guillotined milestone chose nothing. Without this a killed milestone records no
+ * of — a guillotined changeset chose nothing. Without this a killed changeset records no
  * deferrals at all, so its shortfall is invisible everywhere it is read from: the user is
  * never told what is missing, and `knowledgeCoverage` reads its notes as fully discharged.
  */
@@ -720,25 +723,23 @@ export function deferOutstandingItems(
 
 /**
  * The first pass has to put something on a screen — checked as a SHAPE, which is what
- * replaced the old `MAX_ENTITIES_PER_MILESTONE` cap.
+ * replaced the old entities-per-piece cap.
  *
  * The cap was a proxy for "small enough to finish" and a bad one: three entities with
- * twenty functions sailed through while five cheap ones were refused, and a milestone
+ * twenty functions sailed through while five cheap ones were refused, and a piece of work
  * could satisfy it while delivering four unwired functions and no page — which is
  * precisely what the last build did. Size stopped being the risk once a plan made
  * partial progress resumable, so what is enforced now is ORDER: pass one is a walking
- * skeleton, and the rest of the milestone waits behind it.
+ * skeleton, and the rest of the changeset waits behind it.
  */
-export function checkFirstPass(
-  plan: Plan,
-  surface: MilestoneSurface = 'app'
-): string[] {
+export function checkFirstPass(plan: Plan): string[] {
+  const surface = plan.surface
   const problems: string[] = []
   const ui = itemsOf(plan.ui).filter((u) => u.pass === 1)
   const fns = itemsOf(plan.functions).filter((f) => f.pass === 1)
   if (surface === 'app' && ui.length === 0) {
     problems.push(
-      'Pass 1 has no `ui` item. The first pass has to reach a screen — move one route into pass 1. If this milestone reaches its person some other way, that belongs on the note as `surface:`, not in the plan.'
+      'Pass 1 has no `ui` item. The first pass has to reach a screen — move one route into pass 1. If this changeset reaches its person some other way, set the plan\'s `surface`.'
     )
   }
   if (fns.length === 0) {
@@ -756,12 +757,12 @@ export function checkFirstPass(
     )
     if (fns.length > 0 && !fns.some((f) => driven.has(f.name))) {
       problems.push(
-        `This milestone is \`surface: ${surface}\` and no backend scenario drives a pass-1 function. An app is proved in the browser; this is proved at the backend level — add a \`scenarios.backend\` item carrying \`"fn": "${fns[0]!.name}"\`.`
+        `This changeset is \`surface: ${surface}\` and no backend scenario drives a pass-1 function. An app is proved in the browser; this is proved at the backend level — add a \`scenarios.backend\` item carrying \`"fn": "${fns[0]!.name}"\`.`
       )
     }
   }
   // A scenario with no `name` is prose, and prose cannot be checked against codegen — the
-  // completion gate would certify the milestone without it. Caught at authoring time, where
+  // completion gate would certify the changeset without it. Caught at authoring time, where
   // it costs one edit, rather than at the gate, where it costs a build turn.
   for (const [level, slot] of [
     ['backend', plan.scenarios.backend],
@@ -795,45 +796,6 @@ export function checkFirstPass(
 }
 
 /**
- * What each transport promise is FOR, said in the refusal so the architect does not have
- * to guess which function should carry it.
- */
-const TRANSPORT_MEANS: Record<string, string> = {
-  workflow:
-    'the milestone promises a process that pauses on a person and then carries on, and a `status` column nothing advances renders identically and does nothing',
-  scheduler:
-    "the milestone promises work that happens on the app's own clock with nobody present, and a button someone remembers to press is a different product",
-  queue:
-    'the milestone promises work that outlives the request that asked for it',
-  channel:
-    'the milestone promises the browser pushing back up a socket mid-session',
-  http: 'the milestone promises a URL something outside this app posts to',
-}
-
-/**
- * The `transport:<name>` tokens on a milestone's `requires:` that a plan can actually
- * express. Anything the plan schema has no field for is skipped rather than demanded —
- * the librarian is taught `transport:sse`, which `WireTransport` cannot carry, and a gate
- * that refused it would be unsatisfiable.
- */
-const requiredTransports = (requires: string | undefined): string[] =>
-  listOf(requires)
-    .map((token) => token.split(':').map((part) => part.trim()))
-    .filter(([kind, name]) => kind === 'transport' && !!name)
-    .map(([, name]) => name!)
-    .filter((name) =>
-      (WireTransport.options as readonly string[]).includes(name)
-    )
-
-/**
- * Cross-checks between the plan and the milestone note it claims to implement.
- *
- * These do not prove the plan is complete — nothing can prove the architect thought of
- * what it did not think of. They prove the two documents refer to the same thing,
- * which catches the failure actually observed: a plan that quietly drifts off its own
- * milestone.
- */
-/**
  * Every `covers` entry against the note it claims: the note exists, and the hash is the
  * one that note's body has right now.
  *
@@ -841,7 +803,7 @@ const requiredTransports = (requires: string | undefined): string[] =>
  * nothing else validates it — `knowledgeCoverage` only compares it much later, where a
  * hash that was never right is indistinguishable from a note somebody edited afterwards.
  * So a plan written with a placeholder is accepted, and the note it claims silently reads
- * as `changed` from the moment the milestone ships.
+ * as `changed` from the moment the changeset merges.
  *
  * The refusal carries the correct hash, which is also the only way an author gets one:
  * write anything, send it, and be told what the note actually hashes to.
@@ -871,65 +833,7 @@ export function checkCovers(
     const current = noteHash(body)
     if (entry.hash !== current) {
       problems.push(
-        `covers — \`${entry.note}\` hashes to \`${current}\`, not \`${entry.hash}\`. Use the current one: a hash that was never right makes the note read as edited-since the moment this milestone ships, and it drops back into the backlog nobody planned.`
-      )
-    }
-  }
-  return problems
-}
-
-/**
- * Compare a milestone's words against a plan's identifiers without caring how either
- * spelled them. A note says `entities: repair job` and a plan says `repairJob`,
- * `repair_jobs`, `RepairJobRow` — all the same thing, and a plain substring match
- * refuses the plan over the separator. Collapsing to letters and digits makes the
- * comparison about the word, which is what the check was always asking.
- */
-const squash = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '')
-
-export function checkAgainstMilestone(
-  plan: Plan,
-  milestone: { entities?: string; path: string; requires?: string },
-  personas: string[],
-  surface: MilestoneSurface = 'app'
-): string[] {
-  const problems: string[] = []
-  const wired = new Set<string>(
-    itemsOf(plan.functions).flatMap((f) => (f.wire ? [f.wire.transport] : []))
-  )
-  for (const transport of requiredTransports(milestone.requires)) {
-    if (wired.has(transport)) continue
-    problems.push(
-      `${milestone.path} requires \`transport:${transport}\` and no function in the plan wires one — ${TRANSPORT_MEANS[transport]}. Give the function that does that work \`"wire": { "transport": "${transport}" }\`. If the milestone genuinely does not need it, that is a conversation with the user about the note, not a token to drop from \`requires:\`.`
-    )
-  }
-  const entities = listOf(milestone.entities)
-  const haystack = squash(
-    [
-      ...itemsOf(plan.functions).map((f) => `${f.name} ${f.description}`),
-      ...itemsOf(plan.model).map((m) => `${m.table} ${m.description}`),
-    ].join(' ')
-  )
-  for (const entity of entities) {
-    if (!haystack.includes(squash(entity))) {
-      problems.push(
-        `${milestone.path} is about \`${entity}\` but no function or table in the plan mentions it.`
-      )
-    }
-  }
-  const driving =
-    surface === 'app'
-      ? itemsOf(plan.scenarios.browser)
-      : [...itemsOf(plan.scenarios.browser), ...itemsOf(plan.scenarios.backend)]
-  for (const persona of personas) {
-    const driven = driving.some((s) =>
-      squash(s.scenario).includes(squash(persona))
-    )
-    if (!driven) {
-      problems.push(
-        surface === 'app'
-          ? `'${persona}' is named in the milestone's scenario but no browser scenario drives them. A persona nobody puts through the UI is a milestone that built a backend. Name them in that scenario's \`scenario\` line.`
-          : `'${persona}' is named in the milestone's scenario but no scenario drives them. Name them in the \`scenario\` line of a \`scenarios.backend\` item — a person the plan never puts through the surface is a person nothing proves.`
+        `covers — \`${entry.note}\` hashes to \`${current}\`, not \`${entry.hash}\`. Use the current one: a hash that was never right makes the note read as edited-since the moment this changeset merges, and it drops back into the backlog nobody planned.`
       )
     }
   }
@@ -1040,7 +944,7 @@ export type NoteCoverage = {
   note: string
   state: CoverageState
   by: string[]
-  /** What the milestones that claimed this note deferred and never built. Empty unless `partial`. */
+  /** What the changesets that claimed this note deferred and never built. Empty unless `partial`. */
   leftBehind: Deferral[]
 }
 
@@ -1048,56 +952,55 @@ export type NoteCoverage = {
  * Which knowledge notes are discharged, which are spoken for, which have moved on
  * since they were planned, and which nobody has planned at all.
  *
- * This is the ledger that replaces re-reading the whole knowledge graph every turn:
- *
- *   covered   — a BUILT milestone claimed it complete, and it has not changed since
+ *   covered   — a MERGED changeset claimed it complete, and it has not changed since
  *   changed   — it was claimed, but the note has been edited since; the new content
  *               was never planned by anyone, so it is backlog again
- *   partial   — the milestone that claimed it landed, but with deferrals: part of what
- *               it promised was never built, and no later milestone owns that yet
- *   claimed   — a plan claims it and that milestone has not landed yet
+ *   partial   — the changeset that claimed it merged, but with deferrals: part of what
+ *               it promised was never built, and nothing later owns that yet
+ *   claimed   — a plan claims it and that changeset has not merged yet
  *   uncovered — nobody has planned it
  *
- * `partial` is what stops a deferral falling out of the world. A deferred item leaves the
- * pass it was planned in and nothing picks it up, so keyed on the milestone alone the note
- * read `covered` and the librarian never wrote the milestone that would finish it. It
- * settles on its own: a follow-up milestone claiming the note makes it `claimed` again.
+ * `partial` is what stops a deferral falling out of the world: a deferred item leaves
+ * the pass it was planned in and nothing picks it up unless the note says so.
  *
  * `changed` is the state that keeps the ledger honest over time. Coverage keyed on a
- * path alone silently freezes: the interview keeps running, a sentence gets added to a
- * note that shipped three milestones ago, and nothing ever surfaces it.
+ * path alone silently freezes: a sentence gets added to a note that shipped three
+ * changesets ago, and nothing ever surfaces it.
  */
 export function knowledgeCoverage(
   notes: Array<{ path: string; body?: string; reserved?: string }>,
-  plans: Array<{ plan: Plan; status?: string }>
+  plans: Array<{ plan: Plan; merged: boolean }>
 ): NoteCoverage[] {
   const claims = new Map<
     string,
     Array<{
-      milestone: string
+      changeset: string
       hash: string
       built: boolean
       leftBehind: Deferral[]
     }>
   >()
-  for (const { plan, status } of plans) {
-    const landed = status === 'built'
+  const key = (path: string): string =>
+    path.startsWith(`${KNOWLEDGE_DIR}/`)
+      ? path.slice(KNOWLEDGE_DIR.length + 1)
+      : path
+  for (const { plan, merged } of plans) {
     for (const entry of plan.covers) {
-      claims.set(entry.note, [
-        ...(claims.get(entry.note) ?? []),
+      claims.set(key(entry.note), [
+        ...(claims.get(key(entry.note)) ?? []),
         {
-          milestone: plan.milestone,
+          changeset: plan.changeset,
           hash: entry.hash,
-          built: entry.complete && landed && plan.deferrals.length === 0,
-          leftBehind: entry.complete && landed ? plan.deferrals : [],
+          built: entry.complete && merged && plan.deferrals.length === 0,
+          leftBehind: entry.complete && merged ? plan.deferrals : [],
         },
       ])
     }
   }
   return notes
-    .filter((n) => !n.reserved && !n.path.startsWith(`${MILESTONES_DIR}/`))
+    .filter((n) => !n.reserved)
     .map((n) => {
-      const claimed = claims.get(n.path)
+      const claimed = claims.get(key(n.path))
       if (!claimed)
         return {
           note: n.path,
@@ -1105,7 +1008,7 @@ export function knowledgeCoverage(
           by: [],
           leftBehind: [],
         }
-      const by = claimed.map((c) => c.milestone)
+      const by = claimed.map((c) => c.changeset)
       const current = n.body === undefined ? null : noteHash(n.body)
       const stale = current !== null && !claimed.some((c) => c.hash === current)
       if (stale)
