@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { PREVIEW_SCOPE, scopeThemeCss } from '@/lib/themeCss'
 
 export function PreviewProvider({
@@ -13,7 +13,11 @@ export function PreviewProvider({
   return (
     <>
       <style>{scopeThemeCss(css)}</style>
-      <div className={`${PREVIEW_SCOPE}${colorScheme === 'dark' ? ' dark' : ''}`}>{children}</div>
+      <div
+        className={`${PREVIEW_SCOPE}${colorScheme === 'dark' ? ' dark' : ''}`}
+      >
+        {children}
+      </div>
     </>
   )
 }

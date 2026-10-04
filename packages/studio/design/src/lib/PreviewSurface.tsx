@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 export function PreviewSurface({
@@ -15,7 +15,7 @@ export function PreviewSurface({
       className={cn(
         'rounded-xl bg-background p-3 font-sans text-foreground',
         framed && 'border border-border',
-        className,
+        className
       )}
     >
       {children}

@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
+import type * as PlaywrightModule from '@pikku/playwright'
 import { basename, join, relative, resolve } from 'node:path'
 import type { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -23,7 +24,7 @@ import { resolveEnvironment } from './environment.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 
-type PlaywrightDriver = typeof import('@pikku/playwright')
+type PlaywrightDriver = typeof PlaywrightModule
 
 const parseParams = (raw?: string): Record<string, string> =>
   Object.fromEntries(
@@ -201,7 +202,9 @@ export const renderPagesScreenshot = (
         : `  ${changed('✗')} ${shot.path} ${dim(shot.error ?? 'no image')}\n`
     )
     for (const problem of shot.problems)
-      process.stdout.write(`      ${dim(problem.split('\n')[0]!.slice(0, 160))}\n`)
+      process.stdout.write(
+        `      ${dim(problem.split('\n')[0]!.slice(0, 160))}\n`
+      )
   }
   if (skipped.length) {
     process.stdout.write(
