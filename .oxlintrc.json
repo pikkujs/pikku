@@ -1,8 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config/refs/heads/main/schema.json",
   "ignorePatterns": [
-    "packages/cli/examples/**",
-    "packages/frontend/mantine/blocks/**"
+    "packages/cli/examples/**"
   ],
   "rules": {
     "no-unused-vars": "off",

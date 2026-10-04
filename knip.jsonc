@@ -47,6 +47,5 @@
     "**/.pikku/**",
     "**/*.gen.ts",
     "**/*.gen.d.ts",
-    "packages/frontend/mantine/blocks/**",
   ],
 }
