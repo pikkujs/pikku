@@ -48,6 +48,7 @@ const skipped = new Set([
   // into `generated/` and leaves them behind, so a second test run in the same
   // checkout (a retried push, say) scanned CLI output this repo does not own.
   'generated',
+  'starter-template',
 ])
 
 const findProjects = (dir: string, out: string[] = []): string[] => {
