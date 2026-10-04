@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && cp -r .pikku dist/",
+    "build": "tsc && node -e \"require('fs').cpSync('.pikku','dist/.pikku',{recursive:true})\"",
     "pikku": "pikku all"
   },
   "peerDependencies": {
