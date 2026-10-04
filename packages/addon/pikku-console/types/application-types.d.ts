@@ -11,6 +11,7 @@ import type { AddonReadinessService } from '../src/services/addon-readiness.serv
 import type { CodeEditService } from '@pikku/code-edit'
 import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
+import type { I18nService } from '@pikku/code-edit/i18n'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
@@ -34,6 +35,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   stateDiffService: StateDiffService | null
   dbSchemaService: DbSchemaService | null
   knowledgeService: KnowledgeService | null
+  i18nService: I18nService | null
   /**
    * Past scenario runs and what they recorded. Declared as the interface rather
    * than the on-disk implementation: a hosted console keeps the same runs in a

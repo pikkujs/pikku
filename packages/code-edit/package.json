@@ -17,6 +17,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n.service.d.ts",
+      "import": "./dist/i18n.service.js",
+      "default": "./dist/i18n.service.js"
+    },
+    "./workspace": {
+      "types": "./dist/workspace-root.d.ts",
+      "import": "./dist/workspace-root.js",
+      "default": "./dist/workspace-root.js"
     }
   },
   "scripts": {
