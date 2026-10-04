@@ -111,7 +111,7 @@ describe('installing an addon reaches core through its own subpath', () => {
 
     assert.match(
       content,
-      /export \{ wireAddon, wireRemoteAddon \} from '@pikku\/core\/addon'/
+      /export \{ wireAddon, wireExtension, wireRemoteAddon \} from '@pikku\/core\/addon'/
     )
     assert.ok(!content.includes('@pikku/core/rpc'))
   })
