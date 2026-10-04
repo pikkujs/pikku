@@ -7,6 +7,7 @@ import {
   remaining,
   requireProjectId,
 } from '../lib/changes.js'
+import { matchStage } from '../lib/stage.js'
 import { dim, safe, statusColor } from '../lib/output.js'
 import type { ListChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -14,6 +15,7 @@ export const FabricChangesListInput = z.object({
   apiUrl: z.string().optional(),
   projectId: z.string().optional(),
   stageId: z.string().optional(),
+  stage: z.string().optional(),
   route: z.string().optional(),
   groupId: z.string().optional(),
   pickupOnly: z.boolean().optional(),
@@ -35,9 +37,13 @@ export const FabricChangesList = pikkuSessionlessFunc({
       input.apiUrl,
       input.projectId
     )
+    const project = requireProjectId(projectId)
+    const stageId = input.stage
+      ? (await matchStage(rpc, project, input.stage)).stageId
+      : input.stageId
     return await rpc.invoke('listChanges', {
-      projectId: requireProjectId(projectId),
-      stageId: input.stageId,
+      projectId: project,
+      stageId,
       route: input.route,
       groupId: input.groupId,
       pickupOnly: input.pickupOnly ?? false,

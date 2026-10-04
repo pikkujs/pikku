@@ -19,7 +19,7 @@ time, and every source of work feeds the same queue.
 - a prompt in an existing project, which becomes changes
 - the new-project build, which files the app's first changes
 
-Storage: a local file in OSS, which can be trimmed at any time; a record on Fabric.
+Storage: one or the other, chosen by login. Logged out, a local file, which can be trimmed at any time; logged in to Fabric, the linked project's record in the cloud, and nothing local. The same `pikku changes` commands work on either.
 The same `changes` commands work against either.
 
 ## Changesets

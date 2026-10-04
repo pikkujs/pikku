@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { FabricPreconditionError } from '../lib/errors.js'
-import { changesContext, nonBlank } from '../lib/changes.js'
+import { changesContext, nonBlank, requireProjectId } from '../lib/changes.js'
+import { resolveStageId } from '../lib/stage.js'
 import { dim, safe } from '../lib/output.js'
 import type { CreateChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
@@ -10,6 +11,7 @@ export const FabricChangesFileInput = z.object({
   apiUrl: z.string().optional(),
   projectId: z.string().optional(),
   stageId: z.string().optional(),
+  branch: z.string().optional(),
   title: z.string(),
   body: z.string().optional(),
   bodyFile: z.string().optional(),
@@ -39,14 +41,23 @@ export const FabricChangesFile = pikkuSessionlessFunc({
     if (input.body && input.bodyFile)
       throw new FabricPreconditionError('Pass --body or --body-file, not both.')
 
-    const { rpc } = await changesContext(input.apiUrl, input.projectId)
+    const { rpc, projectId, local } = await changesContext(
+      input.apiUrl,
+      input.projectId
+    )
+
+    const stageId =
+      input.stageId ??
+      (local
+        ? 'local'
+        : await resolveStageId(rpc, requireProjectId(projectId), input.branch))
 
     const body = input.bodyFile
       ? await readFile(input.bodyFile, 'utf8')
       : input.body
 
     return await rpc.invoke('createChange', {
-      stageId: input.stageId ?? 'local',
+      stageId,
       title: nonBlank(input.title, 'Give the item a title.'),
       body: body?.trim() || undefined,
       route: input.route,

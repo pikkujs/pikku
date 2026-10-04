@@ -96,7 +96,6 @@ describe('changes claim', () => {
         {} as any,
         {
           changeIds: ['chg_1, chg_2', ' chg_3 '],
-          needsPlan: false,
         } as any
       )
     )
@@ -109,10 +108,7 @@ describe('changes claim', () => {
 
   test('--project-id wins over the linked checkout', async () => {
     const { data } = await sent(() =>
-      FabricChangesClaim.func(
-        {} as any,
-        { projectId: 'proj_flag', needsPlan: false } as any
-      )
+      FabricChangesClaim.func({} as any, { projectId: 'proj_flag' } as any)
     )
     assert.strictEqual(data.projectId, 'proj_flag')
   })
@@ -170,7 +166,7 @@ describe('changes claim, refused', () => {
       await assert.rejects(
         FabricChangesClaim.func(
           {} as any,
-          { changeIds: ['#3', TAKEN, '#99'], needsPlan: false } as any
+          { changeIds: ['#3', TAKEN, '#99'] } as any
         ),
         (error: Error) => {
           assert.match(
@@ -208,10 +204,7 @@ describe('changes claim, refused', () => {
 
   test('short ids go to fabric as they are, to look up in the project', async () => {
     invoked.length = 0
-    await FabricChangesClaim.func(
-      {} as any,
-      { changeIds: ['#3', '4'], needsPlan: false } as any
-    )
+    await FabricChangesClaim.func({} as any, { changeIds: ['#3', '4'] } as any)
     assert.deepStrictEqual(
       invoked.map((call) => call.name),
       ['claimChanges']
@@ -293,6 +286,43 @@ describe('changes ask', () => {
 })
 
 describe('changes done', () => {
+  test('reads the branch and commit off the checkout', async () => {
+    const { name, data } = await sent(() =>
+      FabricChangesDone.func({} as any, { changeId: 'chg_1' } as any)
+    )
+    assert.strictEqual(name, 'completeChange')
+    assert.strictEqual(data.branch, 'fix/1677-changes')
+    assert.strictEqual(data.headCommit, 'abc1234def5678')
+  })
+
+  test('what the caller passed is never overwritten by git', async () => {
+    const { data } = await sent(() =>
+      FabricChangesDone.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          branch: 'release/1.0',
+          headCommit: 'deadbee',
+        } as any
+      )
+    )
+    assert.strictEqual(data.branch, 'release/1.0')
+    assert.strictEqual(data.headCommit, 'deadbee')
+  })
+
+  test('a detached checkout records the sha and no branch', async () => {
+    git = { repo: true, branch: 'HEAD', sha: 'abc1234def5678' }
+    try {
+      const { data } = await sent(() =>
+        FabricChangesDone.func({} as any, { changeId: 'chg_1' } as any)
+      )
+      assert.strictEqual(data.branch, undefined)
+      assert.strictEqual(data.headCommit, 'abc1234def5678')
+    } finally {
+      git = { repo: true, branch: 'fix/1677-changes', sha: 'abc1234def5678' }
+    }
+  })
+
   test('outside a repo it sends neither, rather than guessing', async () => {
     git = { repo: false, branch: '', sha: '' }
     try {

@@ -1,5 +1,5 @@
 /**
- * A project's change-queue events, as a wake-up signal for `changes next`.
+ * A project's change-queue events, as a wake-up signal for `changes wait`.
  *
  * fabric publishes on `changes:<projectId>` when an item is filed and when a
  * person answers on its thread. An event is only a hint — the caller re-reads

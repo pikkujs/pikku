@@ -3,11 +3,8 @@ import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
 import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
-import { currentBranch } from '../../utils/git.js'
 import {
   LOCAL_PROJECT_ID,
-  fabricLinks,
-  linkFabric,
   localChangesRPC,
   localStorePath,
   type ChangesRPC,
@@ -15,135 +12,56 @@ import {
 
 export type { ChangesRPC }
 
-type Fabric = { rpc: ChangesRPC; projectId: string }
-
-const REGISTERED = new Set([
-  'createChange',
-  'claimChanges',
-  'completeChange',
-  'askChangeQuestion',
-  'replyToChange',
-  'attachChangeShot',
-])
-
+/**
+ * Resolve the three things every `changes` command needs: the api url, a
+ * bearer, and the project the queue belongs to.
+ *
+ * `requireProject` is false for the per-item commands, which address a change
+ * by id and so work from any directory — a harness reading a queue is often
+ * not sitting in the checkout it is about to edit.
+ *
+ * Logged in to fabric, the project's cloud queue is the only store. Logged
+ * out, the checkout's local queue is, so the same commands run on open-source
+ * Pikku with no account.
+ */
 export async function changesContext(
   apiUrlOverride: string | undefined,
   projectIdOverride?: string
-): Promise<{ rpc: ChangesRPC; projectId: string; storePath: string }> {
-  const storePath = await localStorePath()
-  const local = localChangesRPC(storePath)
-  let fabric: Promise<Fabric | null> | undefined
-  const invoke = async (name: string, data: any) => {
-    const result = await local.invoke(name as any, data)
-    if (REGISTERED.has(name)) {
-      fabric ??= fabricTarget(apiUrlOverride, projectIdOverride)
-      const target = await fabric
-      if (target)
-        await register(storePath, target, name, data, result).catch(
-          (error: Error) =>
-            console.error(`Not registered with fabric: ${error.message}`)
-        )
+): Promise<{
+  rpc: ChangesRPC
+  projectId: string | null
+  apiUrl: string
+  token: string | null
+  local: boolean
+  storePath?: string
+}> {
+  const ctx = await resolveApiContext({
+    apiUrlOverride,
+    resolveProject: !projectIdOverride,
+  })
+  if (ctx.token && !projectIdOverride && !ctx.projectId)
+    throw new FabricPreconditionError(
+      'You are logged in to fabric, so changes live in the cloud, but this checkout is not linked to a project. Run `pikku fabric link`, or pass --project-id.'
+    )
+  const projectId = projectIdOverride ?? ctx.projectId
+  if (!ctx.token || !projectId) {
+    const storePath = await localStorePath()
+    return {
+      rpc: localChangesRPC(storePath),
+      projectId: LOCAL_PROJECT_ID,
+      apiUrl: ctx.apiUrl,
+      token: null,
+      local: true,
+      storePath,
     }
-    return result
   }
   return {
-    rpc: { invoke: invoke as ChangesRPC['invoke'] },
-    projectId: LOCAL_PROJECT_ID,
-    storePath,
+    rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
+    projectId,
+    apiUrl: ctx.apiUrl,
+    token: ctx.token,
+    local: false,
   }
-}
-
-async function fabricTarget(
-  apiUrlOverride: string | undefined,
-  projectIdOverride: string | undefined
-): Promise<Fabric | null> {
-  try {
-    const ctx = await resolveApiContext({
-      apiUrlOverride,
-      resolveProject: !projectIdOverride,
-    })
-    if (!ctx.token) return null
-    const projectId = projectIdOverride ?? ctx.projectId
-    if (!projectId) {
-      console.error(
-        'Not registered with fabric: this checkout is not linked to a project (pikku fabric link).'
-      )
-      return null
-    }
-    return {
-      rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
-      projectId,
-    }
-  } catch (error) {
-    console.error(`Not registered with fabric: ${(error as Error).message}`)
-    return null
-  }
-}
-
-async function fabricStage(fabric: Fabric): Promise<string> {
-  const { stages } = await fabric.rpc.invoke('listStages', {
-    projectId: fabric.projectId,
-  })
-  const branch = await currentBranch().catch(() => undefined)
-  const stage =
-    stages.find((s) => s.branch === branch) ??
-    (stages.length === 1 ? stages[0] : undefined)
-  if (!stage)
-    throw new FabricPreconditionError(
-      `no stage for ${branch ?? 'this checkout'} among ${stages.length} stages`
-    )
-  return stage.stageId
-}
-
-async function register(
-  storePath: string,
-  fabric: Fabric,
-  name: string,
-  data: any,
-  result: any
-): Promise<void> {
-  const links = await fabricLinks(storePath)
-  if (name === 'createChange') {
-    const stageId =
-      data.stageId && data.stageId !== LOCAL_PROJECT_ID
-        ? data.stageId
-        : await fabricStage(fabric)
-    const { change } = await fabric.rpc.invoke('createChange', {
-      ...data,
-      stageId,
-    })
-    await linkFabric(
-      storePath,
-      'changes',
-      result.change.changeId,
-      change.changeId
-    )
-    return
-  }
-  if (name === 'claimChanges') {
-    const changeIds = result.changes
-      .map((c: { changeId: string }) => links.changes[c.changeId])
-      .filter(Boolean)
-    if (!changeIds.length) return
-    const { group } = await fabric.rpc.invoke('claimChanges', {
-      projectId: fabric.projectId,
-      groupId: links.groups[result.group.groupId],
-      changeIds,
-      title: result.group.title,
-      claimedBy: data.claimedBy,
-      leaseMinutes: data.leaseMinutes,
-    })
-    await linkFabric(storePath, 'groups', result.group.groupId, group.groupId)
-    return
-  }
-  const localId = result.change?.changeId ?? result.message?.changeId
-  const changeId = links.changes[localId]
-  if (!changeId) return
-  await fabric.rpc.invoke(name as any, {
-    ...data,
-    changeId,
-    projectId: undefined,
-  })
 }
 
 export function requireProjectId(projectId: string | null): string {

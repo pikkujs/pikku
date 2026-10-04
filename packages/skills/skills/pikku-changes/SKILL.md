@@ -10,9 +10,9 @@ Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
 Empty the queue without making them regret filing.
 
-Run every command from the checkout. The queue lives in it (`.git/pikku-changes.json`, shared by every
-worktree). When you are logged in to Fabric and the checkout is linked to a project (`pikku fabric config`
-shows which), every write is also registered with Fabric.
+Run every command from the checkout. Logged out, the queue lives in it (`.git/pikku-changes.json`, shared
+by every worktree). Logged in to Fabric, the queue is the linked project's, in the cloud (`pikku fabric
+config` shows which), and nothing is kept locally; a checkout that is not linked says so and names the fix.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
 **Launched by `pikku changes next`?** `pikku changes next` picks one agent: a merge conflict or a changeset with no plan
@@ -23,6 +23,12 @@ As a changes agent, your work file already lists every open change. Skip the loo
 group them into changesets, and take one: claim it, build it, mark its items done, stop. `pikku changes next --loop`
 starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
 changeset needs to know goes in a commit or a `reply`.
+
+## Which stage
+
+Logged in, the queue is per project. "Against develop" or a pasted stage URL narrows it:
+`--stage` takes a branch, the stage URL (as filed, path optional) or a stage id. With
+no stage named, work the whole project. An unknown name prints the stages there are.
 
 ## The loop
 
@@ -38,7 +44,8 @@ something changed. `wait` does the waiting and exits only when there is work.
    It waits out the grace window (a just-filed item is held about a minute so a batch
    being typed arrives together), claims what is ready as one group, prints it, and
    exits. It also wakes when someone answers a question you asked under that
-   `--claimed-by`. It checks every `--interval` seconds.
+   `--claimed-by`. Logged in, it is woken by fabric's change events the moment an item is filed
+   or answered; otherwise it checks every `--interval` seconds.
 
 2. When it exits, read the exit code:
 
@@ -185,8 +192,8 @@ Scope names the screen they were looking at, not the file you edited.
 pikku changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-Branch and commit default to the checkout you are in — run it there, never type a sha. `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
+Branch and commit default to the checkout you are in — run it there, never type a sha. Logged out, `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 
-Registering writes with Fabric needs the `changes:project:write` scope.
+Logged in, writes need the `changes:project:write` scope.

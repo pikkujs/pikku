@@ -43,13 +43,19 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
   input: FabricChangesClaimInput,
   output: FabricChangesClaimOutput,
   func: async (_services, input) => {
-    const { rpc, projectId } = await changesContext(
+    const { rpc, projectId, local } = await changesContext(
       input.apiUrl,
       input.projectId
     )
     const project = requireProjectId(projectId)
     const changeIds = idList(input.changeIds)
-    const declaration = await declare(rpc, project, changeIds, input)
+    if (!local && declared(input))
+      throw new FabricPreconditionError(
+        'fabric does not record --creates/--alters/--reads/--needs-plan yet; they work on the local queue.'
+      )
+    const declaration = local
+      ? await declare(rpc, project, changeIds, input)
+      : undefined
     let claimed: ClaimChangesOutput
     try {
       claimed = await rpc.invoke('claimChanges', {

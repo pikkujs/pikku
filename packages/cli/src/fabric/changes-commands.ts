@@ -53,10 +53,15 @@ export const changesCommands = defineCLICommands({
     options: {
       projectId: {
         description:
-          'Fabric project writes are registered with (defaults to the linked checkout)',
+          'Fabric project, when logged in (defaults to the linked checkout)',
         short: 'p',
       },
       stageId: { description: 'Only changes filed on this stage' },
+      stage: {
+        description:
+          'Only changes filed on this stage, by branch, url or id — e.g. develop',
+        short: 's',
+      },
       route: {
         description: 'Only changes filed on this route, e.g. /checkout',
       },
@@ -84,8 +89,13 @@ export const changesCommands = defineCLICommands({
     options: {
       projectId: {
         description:
-          'Fabric project writes are registered with (defaults to the linked checkout)',
+          'Fabric project, when logged in (defaults to the linked checkout)',
         short: 'p',
+      },
+      stage: {
+        description:
+          'Only changes filed on this stage, by branch, url or id — e.g. develop',
+        short: 's',
       },
       route: {
         description: 'Only changes filed on this route, e.g. /checkout',
@@ -140,11 +150,14 @@ export const changesCommands = defineCLICommands({
     options: {
       projectId: {
         description:
-          'Fabric project writes are registered with (defaults to the linked checkout)',
+          'Fabric project, when logged in (defaults to the linked checkout)',
         short: 'p',
       },
       stageId: {
         description: 'Stage to file against (defaults to the only stage)',
+      },
+      branch: {
+        description: 'Resolve the stage from this branch instead',
       },
       title: {
         description: 'The requirement, in one line',
