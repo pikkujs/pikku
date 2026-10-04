@@ -146,7 +146,6 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
-import { pikkuNewExtension } from './functions/commands/new-extension.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
@@ -1805,19 +1804,6 @@ wireCLI({
             },
           },
         }),
-        extension: pikkuCLICommand({
-          func: pikkuNewExtension,
-          description:
-            'Create a new Pikku Studio extension: an addon that also ships screens',
-          parameters: '<name>',
-          options: {
-            dir: {
-              description:
-                'Where to create it (default packages/extension-<name>)',
-              short: 'd',
-            },
-          },
-        }),
         middleware: pikkuCLICommand({
           func: pikkuNewMiddleware,
           description: 'Create a new middleware file',
@@ -1858,6 +1844,11 @@ wireCLI({
             category: {
               description: 'Forge category (defaults to "General")',
               default: 'General',
+            },
+            ui: {
+              description:
+                'Scaffold an addon that also ships screens, for the host to mount with wireAddon({ ui: true })',
+              default: false,
             },
             dir: {
               description:

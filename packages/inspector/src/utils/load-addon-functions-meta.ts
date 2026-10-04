@@ -4,7 +4,7 @@ import { join, dirname, parse, relative } from 'path'
 import type {
   InspectorState,
   InspectorLogger,
-  ExtensionManifestMeta,
+  ScreensManifestMeta,
 } from '../types.js'
 import {
   addonResolutionDirs,
@@ -268,17 +268,17 @@ export const namespaceAddonWebhookSources = (
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
  */
-const loadExtensionManifest = async (
+const loadScreensManifest = async (
   require: AddonResolver,
   packageName: string
-): Promise<ExtensionManifestMeta | null> => {
+): Promise<ScreensManifestMeta | null> => {
   const path = resolveAddonMeta(
     require,
     packageName,
-    'extension/pikku-extension-meta'
+    'screens/pikku-screens-meta'
   )
   if (!path) return null
-  return JSON.parse(await readFile(path, 'utf-8')) as ExtensionManifestMeta
+  return JSON.parse(await readFile(path, 'utf-8')) as ScreensManifestMeta
 }
 
 export async function loadAddonFunctionsMeta(
@@ -296,15 +296,15 @@ export async function loadAddonFunctionsMeta(
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {
-      if (decl.extension) {
-        const manifest = await loadExtensionManifest(require, decl.package)
+      if (decl.ui) {
+        const manifest = await loadScreensManifest(require, decl.package)
         if (!manifest || manifest.screens.length === 0) {
           logger.critical(
-            ErrorCode.EXTENSION_HAS_NO_SCREENS,
-            `wireExtension('${namespace}') wires ${decl.package}, which declares no screens, so it is an addon. Use wireAddon.`
+            ErrorCode.ADDON_UI_HAS_NO_SCREENS,
+            `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a defineScreens call to the package, or drop ui.`
           )
         } else {
-          ;(state.extensions ??= {})[namespace] = {
+          ;(state.addonScreens ??= {})[namespace] = {
             ...manifest,
             scopes: [
               ...new Set([...(manifest.scopes ?? []), ...(decl.scopes ?? [])]),

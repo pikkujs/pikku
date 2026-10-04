@@ -24,11 +24,12 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
 
     const state = await getInspectorState()
     const addons = [...state.rpc.wireAddonDeclarations.entries()].map(
-      ([namespace, { package: pkg, remote, file, extension }]) => ({
+      ([namespace, { package: pkg, remote, file, ui }]) => ({
         package: pkg,
         remote,
         file,
-        extension: extension ? namespace : undefined,
+        name: namespace,
+        ui,
       })
     )
 

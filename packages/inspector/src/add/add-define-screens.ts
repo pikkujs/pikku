@@ -3,7 +3,7 @@ import { ErrorCode } from '../error-codes.js'
 import type {
   InspectorState,
   InspectorLogger,
-  ExtensionScreenMeta,
+  AddonScreenMeta,
 } from '../types.js'
 
 const propName = (prop: ts.ObjectLiteralElementLike): string | undefined => {
@@ -40,29 +40,29 @@ const lazyImportSpecifier = (node: ts.Expression): string | undefined => {
 }
 
 /**
- * Detect `defineExtension({ title, icon, screens })` and record the manifest.
+ * Detect `defineScreens({ title, icon, screens })` and record the manifest.
  * A screen with a field that is not a literal is reported and left out: a
  * navigation entry the host cannot read would otherwise vanish with no sign.
  */
-export function addDefineExtension(
+export function addDefineScreens(
   node: ts.Node,
   state: InspectorState,
   logger: InspectorLogger
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'defineExtension')
+  if (!ts.isIdentifier(expression) || expression.text !== 'defineScreens')
     return
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
 
   const fail = (message: string) =>
-    logger.critical(ErrorCode.EXTENSION_NOT_STATIC, message)
+    logger.critical(ErrorCode.ADDON_SCREENS_NOT_STATIC, message)
 
   let title: string | undefined
   let icon: string | undefined
-  const screens: ExtensionScreenMeta[] = []
+  const screens: AddonScreenMeta[] = []
 
   for (const prop of firstArg.properties) {
     const key = propName(prop)
@@ -75,14 +75,14 @@ export function addDefineExtension(
     } else if (key === 'screens') {
       if (!ts.isArrayLiteralExpression(prop.initializer)) {
         fail(
-          `defineExtension's screens must be an array literal, got: ${prop.initializer.getText()}`
+          `defineScreens's screens must be an array literal, got: ${prop.initializer.getText()}`
         )
         continue
       }
       for (const element of prop.initializer.elements) {
         if (!ts.isObjectLiteralExpression(element)) {
           fail(
-            `A defineExtension screen must be an object literal, got: ${element.getText()}`
+            `A defineScreens screen must be an object literal, got: ${element.getText()}`
           )
           continue
         }
@@ -126,7 +126,7 @@ export function addDefineExtension(
         }
         if (!path || !screenTitle || (!component && !app)) {
           fail(
-            `A defineExtension screen needs a literal path and title, and either a lazy component or an app: ${element.getText()}`
+            `A defineScreens screen needs a literal path and title, and either a lazy component or an app: ${element.getText()}`
           )
           continue
         }
@@ -142,18 +142,18 @@ export function addDefineExtension(
           ...(nav !== undefined ? { nav } : {}),
           ...(scopes ? { scopes } : {}),
           ...(component ? { component } : { app: app! }),
-        } as ExtensionScreenMeta)
+        } as AddonScreenMeta)
       }
     }
   }
 
   if (!title) {
-    fail(`defineExtension needs a literal title`)
+    fail(`defineScreens needs a literal title`)
     return
   }
 
-  logger.debug(`• Found defineExtension: ${title} (${screens.length} screens)`)
-  state.extensionManifest = {
+  logger.debug(`• Found defineScreens: ${title} (${screens.length} screens)`)
+  state.screensManifest = {
     title,
     ...(icon ? { icon } : {}),
     file: node.getSourceFile().fileName,

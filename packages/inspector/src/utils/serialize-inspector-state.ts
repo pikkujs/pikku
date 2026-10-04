@@ -298,8 +298,8 @@ export interface SerializableInspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
-  extensionManifest?: InspectorState['extensionManifest']
-  extensions?: InspectorState['extensions']
+  screensManifest?: InspectorState['screensManifest']
+  addonScreens?: InspectorState['addonScreens']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -525,8 +525,8 @@ export function serializeInspectorState(
     openAPISpec: state.openAPISpec,
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
-    extensionManifest: state.extensionManifest,
-    extensions: state.extensions,
+    screensManifest: state.screensManifest,
+    addonScreens: state.addonScreens,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -756,8 +756,8 @@ export function deserializeInspectorState(
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
     addonFunctions: data.addonFunctions || {},
-    extensionManifest: data.extensionManifest,
-    extensions: data.extensions,
+    screensManifest: data.screensManifest,
+    addonScreens: data.addonScreens,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

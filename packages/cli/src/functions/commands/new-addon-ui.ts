@@ -1,7 +1,6 @@
 import { existsSync } from 'fs'
 import { dirname, join, resolve } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku/function'
 
 const pascal = (name: string) =>
   name.replace(/(^|-)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase())
@@ -11,13 +10,13 @@ const camel = (name: string) => {
   return p[0].toLowerCase() + p.slice(1)
 }
 
-export const extensionFiles = (name: string): Record<string, string> => {
+export const addonUiFiles = (name: string): Record<string, string> => {
   const title = pascal(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2')
   const fn = camel(name)
   return {
     'package.json': JSON.stringify(
       {
-        name: `@pikku/extension-${name}`,
+        name: `@pikku/addon-${name}`,
         version: '0.0.1',
         type: 'module',
         imports: {
@@ -30,7 +29,6 @@ export const extensionFiles = (name: string): Record<string, string> => {
             import: './dist/src/index.js',
           },
           './.pikku/*': './dist/.pikku/addon/*',
-          './.pikku/extension/*': './dist/.pikku/extension/*',
         },
         files: ['dist'],
         scripts: {
@@ -89,9 +87,9 @@ export const extensionFiles = (name: string): Record<string, string> => {
       null,
       2
     ),
-    'src/extension.ts': `import { defineExtension } from '@pikku/core/addon'
+    'src/screens.ts': `import { defineScreens } from '@pikku/core/addon'
 
-export default defineExtension({
+export default defineScreens({
   title: '${title}',
   screens: [
     {
@@ -147,28 +145,24 @@ import './scopes.js'
   }
 }
 
-export const pikkuNewExtension = pikkuSessionlessFunc<
-  { name: string; dir?: string },
-  void
->({
-  func: async ({ logger }, { name, dir }) => {
-    if (!/^[a-z][a-z0-9-]*$/.test(name)) {
-      logger.error(`Extension name must be lowercase kebab-case: ${name}`)
-      process.exit(1)
-    }
-    const root = resolve(dir ?? join('packages', `extension-${name}`))
-    if (existsSync(root)) {
-      logger.error(`Directory already exists: ${root}`)
-      process.exit(1)
-    }
-    for (const [file, content] of Object.entries(extensionFiles(name))) {
-      const path = join(root, file)
-      await mkdir(dirname(path), { recursive: true })
-      await writeFile(path, content, 'utf-8')
-    }
-    logger.info(`Created extension at ${root}`)
-    logger.info(
-      `Install it in Studio with wireExtension({ name: '${name}', package: '@pikku/extension-${name}' })`
-    )
-  },
-})
+export const scaffoldAddonUi = async (
+  logger: { info: (message: string) => void; error: (message: string) => void },
+  { name, dir }: { name: string; dir?: string }
+): Promise<void> => {
+  if (!/^[a-z][a-z0-9-]*$/.test(name)) {
+    throw new Error(`Addon name must be lowercase kebab-case: ${name}`)
+  }
+  const root = resolve(dir ?? join('packages', `addon-${name}`))
+  if (existsSync(root)) {
+    throw new Error(`Directory already exists: ${root}`)
+  }
+  for (const [file, content] of Object.entries(addonUiFiles(name))) {
+    const path = join(root, file)
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(path, content, 'utf-8')
+  }
+  logger.info(`Created addon at ${root}`)
+  logger.info(
+    `Install it with wireAddon({ name: '${name}', package: '@pikku/addon-${name}', ui: true })`
+  )
+}

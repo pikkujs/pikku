@@ -19,8 +19,8 @@ import {
   type ResolvedSqliteDb,
   type SchemaArtifact,
   addonSchemaSources,
-  extensionTablePrefix,
-  unprefixedExtensionTables,
+  addonTablePrefix,
+  unprefixedAddonTables,
   computeSchemaDrift,
   baseline,
   exportSchema,
@@ -1069,65 +1069,67 @@ describe('the addon schema channel', () => {
     assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
   })
 
-  test('an extension may only create tables under its own name', async () => {
-    publishAddon('extension-labels', labels)
+  test('a ui addon may only create tables under its own name', async () => {
+    publishAddon('addon-labels-ui', labels)
 
     await assert.rejects(
       addonSchemaSources(
         root,
         'sqlite',
-        [{ package: 'extension-labels', extension: 'labels' }],
+        [{ package: 'addon-labels-ui', name: 'labels', ui: true }],
         silent
       ),
-      /creates tables without its prefix 'ext_labels_': labels/
+      /creates tables without its prefix 'labels_': labels/
     )
   })
 
-  test('an addon with the same unprefixed table is still accepted', async () => {
+  test('an addon without ui is warned about an unprefixed table, not refused', async () => {
     publishAddon('addon-plain-labels', labels)
+    const warnings: string[] = []
 
     const sources = await addonSchemaSources(
       root,
       'sqlite',
-      [{ package: 'addon-plain-labels' }],
-      silent
+      [{ package: 'addon-plain-labels', name: 'plain' }],
+      { ...silent, warn: (message: string) => warnings.push(message) } as never
     )
     assert.equal(sources.length, 1)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /'plain_': labels.*will become an error/)
   })
 
-  test('an extension whose tables are all prefixed is accepted', async () => {
+  test('an addon whose tables are all prefixed is accepted without a warning', async () => {
     const prefixed: SchemaArtifact = {
       sqlite: {
         sql: labels.sqlite!.sql,
-        tables: { ext_invoice_tracker_labels: labels.sqlite!.tables.labels! },
+        tables: { invoice_tracker_labels: labels.sqlite!.tables.labels! },
       },
     }
-    publishAddon('extension-invoice-tracker', prefixed)
+    publishAddon('addon-invoice-tracker', prefixed)
+    const warnings: string[] = []
 
     const sources = await addonSchemaSources(
       root,
       'sqlite',
-      [{ package: 'extension-invoice-tracker', extension: 'invoice-tracker' }],
-      silent
+      [{ package: 'addon-invoice-tracker', name: 'invoice-tracker', ui: true }],
+      { ...silent, warn: (message: string) => warnings.push(message) } as never
     )
     assert.equal(sources.length, 1)
+    assert.deepEqual(warnings, [])
   })
 
-  test('the prefix is the extension name with separators folded to underscores', () => {
-    assert.equal(
-      extensionTablePrefix('invoice-tracker'),
-      'ext_invoice_tracker_'
-    )
+  test('the prefix is the addon name with separators folded to underscores', () => {
+    assert.equal(addonTablePrefix('invoice-tracker'), 'invoice_tracker_')
     assert.deepEqual(
-      unprefixedExtensionTables(
+      unprefixedAddonTables(
         {
-          ext_invoice_tracker_a: [],
-          invoice_tracker_x: [],
-          'public.ext_invoice_tracker_b': [],
+          invoice_tracker_a: [],
+          tracker_x: [],
+          'public.invoice_tracker_b': [],
         },
         'invoice-tracker'
       ),
-      ['invoice_tracker_x']
+      ['tracker_x']
     )
   })
 

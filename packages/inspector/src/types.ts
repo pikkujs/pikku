@@ -578,8 +578,8 @@ export interface InspectorFeature {
 export type CredentialOverrideMeta =
   string | { name?: string; mode?: 'singleton' | 'wire' }
 
-/** A screen of an extension as `defineExtension` declares it, read statically. */
-export type ExtensionScreenMeta = {
+/** A screen of an addon as `defineScreens` declares it, read statically. */
+export type AddonScreenMeta = {
   path: string
   title: string
   nav?: boolean
@@ -589,26 +589,26 @@ export type ExtensionScreenMeta = {
   | { app: string; component?: undefined }
 )
 
-export type ExtensionManifestMeta = {
+export type ScreensManifestMeta = {
   title: string
   icon?: string
-  /** The source file whose `defineExtension` call declared this manifest. */
+  /** The source file whose `defineScreens` call declared this manifest. */
   file: string
-  screens: ExtensionScreenMeta[]
+  screens: AddonScreenMeta[]
   /**
-   * The extension's role: every scope its own functions require, derived by
-   * `pikku all` and never declared. Absent from the raw `defineExtension` read.
-   * On a wired instance it also carries the host's `wireExtension` scopes, which
+   * The addon's role: every scope its own functions require, derived by
+   * `pikku all` and never declared. Absent from the raw `defineScreens` read.
+   * On a wired instance it also carries the host's `wireAddon` scopes, which
    * the runner demands of every function in the package.
    */
   scopes?: string[]
 }
 
 export interface InspectorState {
-  /** Set when this package calls `defineExtension`: the screens it ships. */
-  extensionManifest?: ExtensionManifestMeta
-  /** The manifests of the extensions this project wires, by namespace. */
-  extensions?: Record<string, ExtensionManifestMeta>
+  /** Set when this package calls `defineScreens`: the screens it ships. */
+  screensManifest?: ScreensManifestMeta
+  /** The screens of the addons this project wires with `ui: true`, by namespace. */
+  addonScreens?: Record<string, ScreensManifestMeta>
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -709,8 +709,8 @@ export interface InspectorState {
         package: string
         /** The app source file whose `wireAddon` call declared this instance. */
         file?: string
-        /** Declared with `wireExtension`: the package must ship screens, or it is an addon. */
-        extension?: boolean
+        /** Declared with `ui: true`: the package must ship screens, and the host mounts them. */
+        ui?: boolean
         rpcEndpoint?: string
         /**
          * `true` offers every function the addon declared `mcp: true`; a list

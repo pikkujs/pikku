@@ -111,7 +111,7 @@ describe('installing an addon reaches core through its own subpath', () => {
 
     assert.match(
       content,
-      /export \{ wireAddon, wireExtension, wireRemoteAddon \} from '@pikku\/core\/addon'/
+      /export \{ wireAddon, wireRemoteAddon \} from '@pikku\/core\/addon'/
     )
     assert.ok(!content.includes('@pikku/core/rpc'))
   })
@@ -130,15 +130,5 @@ describe('installing an addon reaches core through its own subpath', () => {
     assert.ok(content.includes('pikkuAddonServices'))
     assert.ok(!content.includes('wireAddon'))
     assert.ok(!content.includes('wireRemoteAddon'))
-  })
-})
-
-describe('wireExtension', () => {
-  test('is installable from #pikku/addon whether or not any addon is installed', () => {
-    assert.match(serializeAddonInstallTypes({}), /wireExtension/)
-    assert.match(
-      serializeAddonInstallTypes({ '@a/b': ['x'] }),
-      /export \{ wireExtension, wireRemoteAddon \}/
-    )
   })
 })

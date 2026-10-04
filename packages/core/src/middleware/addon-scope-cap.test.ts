@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { extensionScopeCap } from './extension-scope-cap.js'
+import { addonScopeCap } from './addon-scope-cap.js'
 import { intersectScopes } from '../scopes.js'
 import { ForbiddenError } from '../errors/errors.js'
 import type { CoreUserSession } from '../types/core.types.js'
@@ -17,7 +17,7 @@ const run = async (
   const sessions = new PikkuSessionService<CoreUserSession>()
   if (session) sessions.setInitial(session)
   let nextCalled = false
-  await extensionScopeCap({ resolve: (name) => roles[name] })(
+  await addonScopeCap({ resolve: (name) => roles[name] })(
     {} as any,
     {
       ...createMiddlewareSessionWireProps(sessions),
@@ -56,12 +56,12 @@ describe('intersectScopes', () => {
   })
 })
 
-describe('extensionScopeCap', () => {
+describe('addonScopeCap', () => {
   const roles = { invoices: ['invoices:read'] }
 
-  test('narrows an admin to the extension role', async () => {
+  test('narrows an admin to the addon role', async () => {
     const { session, nextCalled } = await run(
-      { 'x-pikku-extension': 'invoices' },
+      { 'x-pikku-addon': 'invoices' },
       { userId: 'u', scopes: ['admin', 'invoices:*'] },
       roles
     )
@@ -70,7 +70,7 @@ describe('extensionScopeCap', () => {
     assert.equal(session?.userId, 'u')
   })
 
-  test('leaves a call that names no extension untouched', async () => {
+  test('leaves a call that names no addon untouched', async () => {
     const original = { userId: 'u', scopes: ['admin'] }
     const { session } = await run({}, original, roles)
     assert.deepEqual(session, original)
@@ -78,7 +78,7 @@ describe('extensionScopeCap', () => {
 
   test('has nothing to narrow without a session', async () => {
     const { session, nextCalled } = await run(
-      { 'x-pikku-extension': 'invoices' },
+      { 'x-pikku-addon': 'invoices' },
       undefined,
       roles
     )
@@ -86,10 +86,10 @@ describe('extensionScopeCap', () => {
     assert.equal(session, undefined)
   })
 
-  test('refuses an extension the host does not know', async () => {
+  test('refuses an addon the host does not know', async () => {
     await assert.rejects(
       run(
-        { 'x-pikku-extension': 'ghost' },
+        { 'x-pikku-addon': 'ghost' },
         { userId: 'u', scopes: ['admin'] },
         roles
       ),

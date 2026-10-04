@@ -20,6 +20,7 @@ import {
   type AuthConfig,
   type ParsedSpec,
 } from '@pikku/openapi-parser'
+import { scaffoldAddonUi } from './new-addon-ui.js'
 import { installAddonIntoApp, type AddonAuthMode } from './install-addon.js'
 
 /**
@@ -1219,6 +1220,7 @@ function findAppProject(
 
 export type NewAddonInput = {
     name: string
+    ui?: boolean
     displayName?: string
     description?: string
     category?: string
@@ -1479,6 +1481,10 @@ export async function newAddon(
 
 export const pikkuNewAddon = pikkuSessionlessFunc<NewAddonInput, void>({
   func: async ({ logger, config }, input) => {
+    if (input.ui) {
+      await scaffoldAddonUi(logger, { name: input.name, dir: input.dir })
+      return
+    }
     console.log(await newAddon({ logger, config }, input))
   },
 })
