@@ -8,7 +8,7 @@ export interface BuilderAi {
   proxy?: { url: string; key: string }
 }
 
-export const EXTENSIONS = ['proxy-provider.mjs', 'codegen-diagnostics.mjs', 'edit-files-extension.mjs', 'write-files-extension.mjs']
+export const EXTENSIONS = ['proxy-provider.mjs', 'codegen-diagnostics.mjs', 'edit-files-extension.mjs', 'write-files-extension.mjs', 'navigate-extension.mjs']
 
 export const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 

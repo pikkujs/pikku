@@ -13,6 +13,7 @@ export type BuilderItem =
   | { kind: 'tool'; id: string; name: string; summary: string; status: 'running' | 'done' | 'error'; at: number }
   | { kind: 'error'; text: string; at: number }
   | { kind: 'loop'; text: string; at: number }
+  | { kind: 'navigate'; screen: string; id?: string; title?: string; at: number }
 
 export interface BuilderState {
   busy: boolean
@@ -232,6 +233,8 @@ export class BuilderSession {
       const id = event.toolCallId == null ? null : String(event.toolCallId)
       const tool = state.items.findLast((i) => i.kind === 'tool' && (id === null || i.id === id))
       if (tool?.kind === 'tool') tool.status = event.isError ? 'error' : 'done'
+      const navigate = event.isError ? null : event.result?.details?.navigate
+      if (navigate?.screen) state.items.push({ kind: 'navigate', ...navigate, at: Date.now() })
     } else if (event.type === 'message_end' && event.message?.stopReason === 'error') {
       this.push(key, String(event.message?.errorMessage ?? 'The model returned an error'))
     } else if (event.type === 'response' && event.success === false) {
