@@ -1806,7 +1806,7 @@
         "@pikku/better-auth": "^0.12.52",
         "@pikku/bun-server": "^0.12.13",
         "@pikku/cloudflare": "^0.12.28",
-        "@pikku/core": "0.12.133",
+        "@pikku/core": "0.12.136",
         "@pikku/fetch": "0.12.12",
         "@pikku/kysely": "0.13.33",
         "@pikku/kysely-bun-sqlite": "^0.12.10",
@@ -6482,8 +6482,6 @@
 
     "@project/root/@pikku/cli": ["@pikku/cli@0.12.177", "", { "dependencies": { "@ai-sdk/openai": "^4.0.42", "@ai-sdk/openai-compatible": "^3.0.30", "@electric-sql/pglite": "0.5.8", "@electric-sql/pglite-pgvector": "0.0.9", "@jridgewell/trace-mapping": "^0.3.31", "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4", "@pikku/ai-vercel": "^0.12.14", "@pikku/better-auth": "^0.12.52", "@pikku/bun-server": "^0.12.13", "@pikku/code-edit": "^0.12.2", "@pikku/deploy": "^0.12.13", "@pikku/deploy-cloudflare": "^0.12.19", "@pikku/deploy-standalone": "^0.12.24", "@pikku/fetch": "^0.12.12", "@pikku/inspector": "^0.12.98", "@pikku/knowledge": "^0.12.16", "@pikku/kysely": "^0.13.33", "@pikku/migrator-sql": "^0.12.6", "@pikku/n8n-import": "^0.0.8", "@pikku/node-http-server": "^0.12.18", "@pikku/openapi-parser": "^0.12.23", "@pikku/schedule": "^0.12.8", "@pikku/skills": "^0.12.46", "@pikku/websocket": "^0.12.5", "@types/cookie": "^1.0.0", "@types/json-schema": "^7.0.15", "ai": "^7.0.66", "chalk": "^6.0.0", "chokidar": "^5.0.0", "esbuild": "~0.28.2", "giget": "^3.3.1", "istanbul-lib-instrument": "^6.0.3", "kysely": "^0.29.5", "open": "^11.0.1", "openapi-types": "^12.1.3", "path-to-regexp": "^8.4.2", "pg": "^8.23.0", "semver": "^7.8.5", "sqlite-vec": "0.1.9", "tinyglobby": "^0.2.17", "ts-json-schema-generator": "2.9.1-next.18", "tsx": "^4.23.12", "yaml": "^2.9.0", "zod": "^4.4.3" }, "peerDependencies": { "@pikku/core": "^0.12.133", "@pikku/playwright": "^0.12.86", "@pikku/ws": "^0.12.10", "better-auth": "^1.7.5", "ws": "^8.21.3" }, "optionalPeers": ["@pikku/playwright", "@pikku/ws", "better-auth", "ws"], "bin": { "pikku": "dist/bin/pikku.js" } }, "sha512-IYKyGhf53WFkK/fcqIXlY079M0X+uA63PPs5CgpBFTyQxGs1EzcbIVtCgCwmD/cH5jqNJNkeBJoc+2FKcZShig=="],
 
-    "@project/root/@pikku/core": ["@pikku/core@0.12.133", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@types/json-schema": "^7.0.15", "cookie": "^2.0.1", "json-schema": "^0.4.0", "path-to-regexp": "^8.4.2", "picoquery": "^2.5.0" } }, "sha512-rE0TjmWtrr2AHebQO3QKHAu/M37Qz/H06Ul0k9uOI+gZKVXxIy3injuLRHZxt490tVw22i8VR0kbg9WEiKWIlw=="],
-
     "@project/root/@pikku/kysely": ["@pikku/kysely@0.13.33", "", { "dependencies": { "kysely": "^0.29.5" }, "peerDependencies": { "@pikku/core": "^0.12.133" }, "bin": { "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js" } }, "sha512-CN6acy+obJgLfqbFKLeKRom+ESsh4kxRr1PLhSUahGm1WoIZIJcgj5sXqe5vSZK3mqlGepX/JjEdnLxJM2UV7w=="],
 
     "@project/root/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -7359,8 +7357,6 @@
     "@pikku/example-online-shop/@ai-sdk/openai-compatible/@ai-sdk/provider-utils/undici": ["undici@6.28.1", "", {}, "sha512-zWpdTVD54H48CIybL0rWQ3ukpb9d23wM7eH5RtfdmeP70cWHNjtfo7P4vZX+5CoDcO53J4Pu5uXp7lNfjc6DRA=="],
 
     "@pikku/example-online-shop/ai/@ai-sdk/provider-utils/undici": ["undici@6.28.1", "", {}, "sha512-zWpdTVD54H48CIybL0rWQ3ukpb9d23wM7eH5RtfdmeP70cWHNjtfo7P4vZX+5CoDcO53J4Pu5uXp7lNfjc6DRA=="],
-
-    "@project/root/@pikku/cli/@pikku/kysely/@pikku/core": ["@pikku/core@workspace:packages/core"],
 
     "@xyflow/system/d3-zoom/d3-transition/d3-ease": ["d3-ease@3.0.1", "", {}, "sha512-wR/XK3D3XcLIZwpbvQwQ5fK+8Ykds1ip7A2Txe0yxncXSdq1L9skcG7blcedkOX+ZcgxGAmLX1FrRGbADwzi0w=="],
 
