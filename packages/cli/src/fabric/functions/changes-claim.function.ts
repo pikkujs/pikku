@@ -43,7 +43,7 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
   input: FabricChangesClaimInput,
   output: FabricChangesClaimOutput,
   func: async (_services, input) => {
-    const { rpc, projectId, local } = await changesContext(
+    const { rpc, projectId } = await changesContext(
       input.apiUrl,
       input.projectId
     )
