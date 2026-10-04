@@ -385,11 +385,7 @@ async function downloadWithRetry(
   )
 }
 
-async function cloneRepo(
-  cliOptions: CliOptions,
-  repoName: string,
-  source = `gh:pikkujs/${repoName}`
-) {
+async function cloneRepo(cliOptions: CliOptions, repoName: string) {
   const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
@@ -400,7 +396,7 @@ async function cloneRepo(
     const tmpDirPrefix = tmpdir()
     const repoDirPath = `${tmpDirPrefix}/pikku/${repoName}`
     await downloadWithRetry(
-      `${source}${versionRef}`,
+      `gh:pikkujs/${repoName}${versionRef}`,
       repoDirPath,
       spinner
     )
@@ -543,11 +539,7 @@ async function setupFabric(cliOptions: CliOptions) {
   // Clone the starter first so the picker reflects whatever apps the
   // template *actually* ships — avoids drift between this CLI and the
   // template repo when new scaffolds are added.
-  const targetPath = await cloneRepo(
-    cliOptions,
-    'starter-template',
-    `${BASE_URL}/starter-template`
-  )
+  const targetPath = await cloneRepo(cliOptions, 'starter-template')
   const appsDir = path.join(targetPath, 'apps')
 
   if (!fs.existsSync(appsDir)) {

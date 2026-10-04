@@ -1,8 +1,0 @@
-.thumb {
-  border: 0.0625rem solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-2));
-  width: 1.75rem;
-  height: 1.375rem;
-  color: var(--mantine-color-gray-5);
-  background-color: var(--mantine-color-white);
-  border-radius: var(--mantine-radius-sm);
-}
