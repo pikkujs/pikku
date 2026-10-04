@@ -91,17 +91,20 @@ Projected subagents (`pikku skills install --agent pi`) inline their skill
 | Agent | Job |
 |---|---|
 | main (new-project build, changes) | talks to the user, groups, judges, dispatches; writes no code |
-| `pikku-knowledge` | writes knowledge; reconciles it against code and files a change per gap |
+| `pikku-knowledge` | writes knowledge; `pikku knowledge gaps` lists what to file as changes |
 | `pikku-architect` | plans one changeset when the judge asks for it |
 | `pikku-build` | builds one changeset: a commit per change, then `done` |
 
-## First slice
+## Plans and gaps
 
-Before milestones are removed or any skill is rewritten, prove one changeset end to
-end on a real app:
+A changeset that creates or alters a table, or has many changes, needs a plan; for
+anything else `claim` asks the judge at `PIKKU_PLAN_JUDGE_URL` when one is configured,
+and a judge that fails says plan. The plan is `knowledge/plans/<changeset>.plan.json`,
+written with `pikku knowledge plan set` and committed on the changeset's branch. `done`
+refuses the first change until it reads and the last until `pikku knowledge plan
+progress` is clean, and `pikku next` will not merge a planned changeset without one.
 
-1. a local changes store behind the existing `changes` commands
-2. `claim` records `creates` / `alters` / `reads` and `needsPlan`
-3. `pikku next` with two routes: open changes → changes agent; nothing → exit
-4. `Change:` commits, the `Changeset:` merge, and the `db/` diff check at `done`
-5. 3–4 real changes, one needing a new table, worked through pi
+`pikku knowledge gaps` is what the knowledge agent files from: notes no change builds
+yet, notes changed since, code a merged plan built that has since gone, and covered
+notes that were deleted. A change filed for a gap ends its body with the gap's
+`Knowledge: <note>@<hash>` line, which is how the gap stops being reported.
