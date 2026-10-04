@@ -5,8 +5,8 @@ description: >-
   the tables, functions, wires, roles, scopes, screens and scenarios it owes, split into passes and
   written through `pikku knowledge plan set <changeset>`. The plan is the denominator
   `pikku knowledge plan progress` divides by, so it is written BEFORE any of the changeset's code
-  exists and never edited afterwards to match what got built. TRIGGER when: `pikku fabric changes
-  claim` says a changeset needs a plan, `changes done` or `pikku next` refuses one for having no
+  exists and never edited afterwards to match what got built. TRIGGER when: `pikku changes
+  claim` says a changeset needs a plan, `changes done` or `pikku changes next` refuses one for having no
   plan, or the user asks to plan or architect a changeset. DO NOT TRIGGER when: the knowledge notes
   themselves are still being written (use pikku-knowledge), the plan already exists and the job is
   to build it (use pikku-changes), or the changeset was claimed with no plan needed.
@@ -43,7 +43,7 @@ than no plan.
 **When a changeset needs one.** `changes claim` decides: a changeset that creates or alters a table,
 or one with many changes, is planned; anything else is put to the configured judge, and a judge that
 fails says plan. The claim prints which, and why. `changes done` then refuses the first change of a
-planned changeset until its plan reads, and the last until the plan's first pass exists; `pikku next`
+planned changeset until its plan reads, and the last until the plan's first pass exists; `pikku changes next`
 will not merge it without the plan on its branch.
 
 ---
@@ -92,13 +92,13 @@ pikku meta context --json         # what the app already declares
 pikku knowledge plan schema       # the only spec for what you are about to write
 ```
 
-Then read the changeset's changes in full (`pikku fabric changes show <n>` for each), every
+Then read the changeset's changes in full (`pikku changes show <n>` for each), every
 knowledge note they touch — the entity notes, and the note a change's `Knowledge:` line names — the
 decisions that constrain them, and the migrations already in `db/sqlite/`: those say whether your
 tables are new or an alter.
 
 **Do not re-interview.** If a change leaves something that alters the schema or a screen genuinely
-undecided, `pikku fabric changes ask` on it and plan the rest; otherwise plan the reading that
+undecided, `pikku changes ask` on it and plan the rest; otherwise plan the reading that
 builds LESS. A smaller changeset that ships is worth more than a complete one that does not, and
 what you leave out is named in `covers` for the next changeset to pick up.
 

@@ -123,7 +123,7 @@ Each section answers exactly one question, which is what lets a reader find a no
 ## Work is changes, not notes
 
 The base says what the app IS. What still has to be built is not written here: it is filed as
-**changes** on the project's queue (`pikku fabric changes file`), grouped into changesets, and built
+**changes** on the project's queue (`pikku changes file`), grouped into changesets, and built
 one commit per change — the pikku-changes skill. A note never carries status, size or a gherkin
 block; a behaviour the app must have is a sentence in the note it is about.
 
@@ -144,7 +144,7 @@ The first three are work: file a change for each, and end its body with the gap'
 knowledge disagree about something that was built — read `git log` for who removed it and why, then
 either bring the knowledge into line (edit or delete the note, or file a change that removes the
 code) or file a change that restores it. When you cannot tell which, file the change and ask on it.
-`pikku next` hands open gaps to a knowledge agent when there is nothing else to do.
+`pikku changes next` hands open gaps to a knowledge agent when there is nothing else to do.
 
 ## Showing it
 

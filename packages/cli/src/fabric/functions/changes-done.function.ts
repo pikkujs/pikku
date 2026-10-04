@@ -51,11 +51,11 @@ export const FabricChangesDone = pikkuSessionlessFunc({
       headCommit ??= await headSha().catch(() => undefined)
     }
 
-    const { rpc, projectId, local } = await changesContext(input.apiUrl)
-    if (local && headCommit)
+    const { rpc, projectId } = await changesContext(input.apiUrl)
+    if (headCommit)
       headCommit = await checkCommit(
         rpc,
-        projectId!,
+        projectId,
         input.changeId,
         input.headCommit ?? null
       )

@@ -344,7 +344,7 @@ serves, written into `knowledge/decisions/`.
 
 Turn the app into changes on the project's queue — the pikku-changes skill.
 `pikku knowledge gaps` lists every note no change builds yet; file each as one
-or more changes with `pikku fabric changes file`, one commit's worth each, and
+or more changes with `pikku changes file`, one commit's worth each, and
 end every body with the gap's `Knowledge:` line so it is not filed twice.
 
 What a change is:
@@ -373,7 +373,7 @@ How they group into changesets, in order:
 
 **One approval, then build to the end.** Show the picture of the screens and
 the changes together, in one message, as the plan. That is the only approval you
-ask for. Once they approve it, or don't answer, run `pikku next --exec <harness>
+ask for. Once they approve it, or don't answer, run `pikku changes next --exec <harness>
 --loop`: it hands each changeset to a fresh agent, merges it, and moves on. Post
 one line as each changeset merges, and carry on. Stop only for what is theirs to
 decide: a credential you don't have, spending money, posting in public, deleting
@@ -381,7 +381,7 @@ or overwriting their data, or a finding that changes the plan.
 
 ## 5a. The technical plan — per changeset, before you build it
 
-`pikku fabric changes claim` decides whether a changeset needs a **plan**: one
+`pikku changes claim` decides whether a changeset needs a **plan**: one
 that creates or alters a table always does, and the judge decides the rest. The
 plan says what has to exist: the tables, functions, wires, roles, scopes,
 screens and scenarios, split into passes. It is JSON at

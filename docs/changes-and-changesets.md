@@ -53,7 +53,7 @@ under `db/<engine>/` without declaring a table change fails and is re-queued.
 - `git log --grep "Changeset: <id>"` is the history once the changes file is
   trimmed.
 
-## The router: `pikku next`
+## The router: `pikku changes next`
 
 A deterministic command decides what runs, so no agent starts by working out the
 project's state. It checks these in order:
@@ -68,7 +68,7 @@ project's state. It checks these in order:
 | prompt in an existing project | → files changes | the prompt |
 | nothing to do | none, exit | |
 
-`pikku next --json` prints `{ agent, skill, refs, context }`. `pikku next --exec
+`pikku changes next --json` prints `{ agent, skill, refs, context }`. `pikku changes next --exec
 <harness>` launches it:
 
 - the role skill goes into the system prompt (`--append-system-prompt`)
@@ -102,7 +102,7 @@ anything else `claim` asks the judge at `PIKKU_PLAN_JUDGE_URL` when one is confi
 and a judge that fails says plan. The plan is `knowledge/plans/<changeset>.plan.json`,
 written with `pikku knowledge plan set` and committed on the changeset's branch. `done`
 refuses the first change until it reads and the last until `pikku knowledge plan
-progress` is clean, and `pikku next` will not merge a planned changeset without one.
+progress` is clean, and `pikku changes next` will not merge a planned changeset without one.
 
 `pikku knowledge gaps` is what the knowledge agent files from: notes no change builds
 yet, notes changed since, code a merged plan built that has since gone, and covered

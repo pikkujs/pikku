@@ -69,7 +69,7 @@ export async function syncWithUpstream(): Promise<string | null> {
     return upstream
   }
   throw new FabricPreconditionError(
-    `${await currentBranch()} and ${upstream} have both moved on. Reconcile them, then run pikku next again.`
+    `${await currentBranch()} and ${upstream} have both moved on. Reconcile them, then run pikku changes next again.`
   )
 }
 

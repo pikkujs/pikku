@@ -10,6 +10,7 @@ import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { fabricCommands } from './fabric/fabric-commands.js'
+import { changesCommands } from './fabric/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -48,7 +49,6 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
-import { next, renderNext } from './functions/commands/next.js'
 import {
   examplesAdd,
   examplesList,
@@ -941,40 +941,11 @@ wireCLI({
         },
       },
     },
-    next: pikkuCLICommand({
-      func: next,
-      render: renderNext,
+    changes: {
       description:
-        'Decide what should run next — the agent, its skill and its work — from the state of the project',
-      options: {
-        prompt: {
-          description:
-            'A request for this project; it is turned into changes first',
-        },
-        exec: {
-          description:
-            'Launch the chosen agent in this harness (pi or claude) instead of printing it',
-        },
-        harnessArg: {
-          description: 'Passed through to the harness, e.g. -p — repeatable',
-          type: 'string[]',
-        },
-        loop: {
-          description:
-            'With --exec, route again after each agent until there is nothing to do',
-          type: 'boolean',
-        },
-        parallel: {
-          description:
-            'Route an agent even while another changeset is running; each works its own in a worktree',
-          type: 'boolean',
-        },
-        push: {
-          description: 'Push after merging finished changesets',
-          type: 'boolean',
-        },
-      },
-    }),
+        "The project's todo list: read what is open, file what was decided, claim a batch, ask what you need to know, tick items off, and route what runs next. Kept in the checkout, and registered with fabric when you are logged in",
+      subcommands: changesCommands,
+    },
     validate: pikkuCLICommand({
       func: validate,
       render: renderValidate,

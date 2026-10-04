@@ -43,6 +43,12 @@ type Store = {
   changes: Change[]
   groups: Group[]
   messages: Message[]
+  fabric?: FabricLinks
+}
+
+export type FabricLinks = {
+  changes: Record<string, string>
+  groups: Record<string, string>
 }
 
 type LocalMap = {
@@ -334,6 +340,22 @@ export async function releaseChangeset(
   await withStore(path, (store) => {
     const group = store.groups.find((g) => g.groupId === groupId)
     if (group) group.claimExpiresAt = new Date()
+  })
+}
+
+export async function fabricLinks(path: string): Promise<FabricLinks> {
+  return (await read(path)).fabric ?? { changes: {}, groups: {} }
+}
+
+export async function linkFabric(
+  path: string,
+  kind: keyof FabricLinks,
+  localId: string,
+  fabricId: string
+): Promise<void> {
+  await withStore(path, (store) => {
+    store.fabric ??= { changes: {}, groups: {} }
+    store.fabric[kind][localId] = fabricId
   })
 }
 
