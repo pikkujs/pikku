@@ -53,7 +53,7 @@ allowed is landing on one because it was nearest to hand.
 
 ## Offer to draw the screens before you build them
 
-Before the first milestone, **ask** whether they want to see the screens first.
+Before the first changeset, **ask** whether they want to see the screens first.
 One question, in §1's round, not a gate of its own, with yes marked
 recommended every time:
 
@@ -120,7 +120,7 @@ Write it to `knowledge/decisions/design/screens.html` and treat it as **source o
 truth for the screens** once they approve it. That has consequences worth
 stating:
 
-- The milestones are read off it. A screen in the mock that no milestone builds
+- The changes are read off it. A screen in the mock that no change builds
   is a gap in the plan, not a spare drawing.
 - A screen the build turns out to need that the mock does not have means the
   mock was wrong. Update it, and say you did. Do not let the app and the mock
@@ -194,14 +194,14 @@ the thing that made it is always yes. Use evidence.
   `Page.captureScreenshot`, write the PNG, and open it. Sign in the way a person
   does — click the dev actor switcher on the login page — rather than reaching
   for the secret the client uses; the UI path is shorter and it also proves the
-  login screen works. Keep the script; you will run it at every milestone.
+  login screen works. Keep the script; you will run it at every changeset.
 - **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
   screenshots. It is external, it does not flatter, and it scores execution
   against interaction heuristics. But it audits how well you executed the design
   you chose — it will award a clean bill of health to a perfectly executed
   default. It checks step 2; it never replaces it.
-- **Look at every milestone, not once at the end.** A screen that was fine at
-  three rows is a different screen at sixty, and the milestone that added the
+- **Look at every changeset, not once at the end.** A screen that was fine at
+  three rows is a different screen at sixty, and the changeset that added the
   sixty is the cheapest place to notice.
 
 Questions worth answering honestly, per screen. The answers are yours; only the
@@ -245,23 +245,23 @@ uses a design system and an app that looks like one.
 The tell that you skipped this: your `components/` directory maps one-to-one onto
 your data model and contains nothing that names a *quality* of the product.
 
-## Design is a gate on the milestone, not a phase at the end
+## Design is a gate on the changeset, not a phase at the end
 
 The loop that actually runs is plan, build, prove, close. Design advice that
 lives outside that loop does not run — it gets read, agreed with, and skipped,
-because nothing blocks on it. Milestones close on green scenarios, and scenarios
+because nothing blocks on it. Changesets close on green scenarios, and scenarios
 say nothing about how anything looks.
 
-So put it in the loop. **A milestone is not built until its screens have been
+So put it in the loop. **A changeset is not built until its screens have been
 looked at**, in the same sense that it is not built until its scenario passes:
 
-- Screenshot every screen the milestone touched, at both widths, with the seed
+- Screenshot every screen the changeset touched, at both widths, with the seed
   in place.
 - Look at the images. Not the JSX.
-- Fix what they show, in this milestone, while it is one screen and not eight.
-- Say in the milestone note what you looked at and what you changed.
+- Fix what they show, in this changeset, while it is one screen and not eight.
+- Say in the `changes done --note` what you looked at and what you changed.
 
-A milestone closed without that is closed on a claim, not on evidence. The cost
+A changeset closed without that is closed on a claim, not on evidence. The cost
 of being honest about it now is minutes; the cost at §8 is a repaint of the whole
 app, and by then the wrong register has been inherited by every screen so the
 repaint is a rewrite.
@@ -275,7 +275,7 @@ an empty state.
 This is a real and quiet failure: a list app whose seed has no list, a countdown
 whose seed has no dates, judged for weeks against its own empty state while the
 screen it was built for was never once looked at. The empty state is worth
-designing and is not what the milestone is about.
+designing and is not what the changeset is about.
 
 Seed enough to be judged against: several rows, not three identical ones, and a
 deliberate spread of the cases the screen has to hold — a long title that wraps,

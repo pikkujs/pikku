@@ -2,7 +2,7 @@
 
 **This skill is a delta. `references/app.md` is the base — read it and follow it in
 full.** Everything there applies: knowledge base first, personas and roles,
-milestones planned then built one at a time, scenarios, design pass, deploy
+changes grouped into changesets, planned then built one at a time, scenarios, design pass, deploy
 gates, Fabric-readiness. This file adds the surfaces that turn an app into a
 demonstration of the platform, and says where each one slots into that workflow.
 
@@ -20,13 +20,13 @@ Each surface lands with its console link, filtered by the person's level
 (SKILL.md, "Who you are talking to"): a non-technical person sees the workflow
 or agent page, never the queue, scheduler or wire pages behind it.
 
-Budget the extra surfaces at one milestone each. They are not free, and a
+Budget the extra surfaces at one changeset each. They are not free, and a
 half-wired workflow engine is worse than no workflow engine.
 
 ## Choosing surfaces — during `references/app.md` §5 (planning)
 
-When you plan milestones, each surface below becomes its own milestone note in
-`knowledge/milestones/`, ordered after the spine it depends on.
+When you file the work, each surface below becomes its own changeset, ordered
+after the spine it depends on.
 
 **Five are required, and if the domain does not motivate them you chose the
 wrong domain:** workflows, schedules, queues, an AI agent, and realtime. They are
@@ -166,18 +166,18 @@ bunx --bun pikku versions init
 ```
 
 The CLI suggests this on every run of a project without it. Versioning a function
-contract, then changing it, is a short milestone that shows something no
+contract, then changing it, is a short changeset that shows something no
 scaffold demonstrates on its own. `pikku release` derives the release version by
 comparing this build's surface against the last release, then ships it.
 
 ### Addons — `pikku-addon`
 
-`pikku new addon` scaffolds a publishable addon package. Worth one milestone if
+`pikku new addon` scaffolds a publishable addon package. Worth one changeset if
 the domain has a piece that genuinely belongs to no single app.
 
 ## Coverage — where the bar is higher than the base workflow
 
-`references/app.md` §7a already has the mechanics and the per-milestone habit:
+`references/app.md` §7a already has the mechanics and the per-changeset habit:
 run the server instrumented, run the scenarios against it, read
 `coverage/scenario-coverage.json`, and triage every gap as a missing scenario, a
 function that should not exist, or a documented deferral. Do all of that here.

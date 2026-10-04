@@ -8,7 +8,7 @@ signed-in screens in as few steps as possible.
 | Skipped | Cost |
 |---|---|
 | `knowledge/` | Another agent — or you next week — cannot resume this. Nothing records *why*. |
-| Milestone planning | No build order, no per-piece proof. Fine at this size, painful past it. |
+| Changesets and plans | No build order, no per-piece proof. Fine at this size, painful past it. |
 | Design direction | It will look like the template. |
 | Refusal scenarios | Access control is asserted, not proven. |
 
@@ -227,7 +227,7 @@ bunx --bun pikku scenario run local --spawn
 Tell the user, in one short paragraph and at their level (SKILL.md, "Who you
 are talking to"), with console links rather than descriptions: what runs, what
 it is seeded with, and that this is a quick build — no knowledge base, no
-milestones, no design pass, access control clicked-through rather than proven.
+changesets, no design pass, access control clicked-through rather than proven.
 
 **Upgrading to a real build is additive, not a rewrite.** If they want it, switch
 to `references/app.md` and do this, in order:
@@ -235,11 +235,11 @@ to `references/app.md` and do this, in order:
 1. Write `knowledge/` for what already exists — `entities/` for what you built,
    `decisions/` for what you chose silently, `questions/` for what you guessed
    at. Then `pikku knowledge index && pikku knowledge validate`.
-2. Backfill a milestone note per screen you built, at `status: built`, each with
-   its gherkin block.
+2. Backfill an entity note for each thing the app holds, so `pikku knowledge
+   gaps` has something to measure against.
 3. Write the refusal scenarios — the ones proving one persona cannot reach
    another's rows. This is the gap that matters most.
-4. Then pick up `references/app.md` at its §4 (apps) or §5 (milestones) for
+4. Then pick up `references/app.md` at its §4 (apps) or §5 (changes) for
    anything new.
 
 Nothing built here has to be thrown away to do that — which is the whole reason

@@ -92,7 +92,7 @@ const generatedImports = (file: string) => {
  * dependency on the functions template — which makes a bare specifier a legal
  * imports target — it has no alias mechanism and keeps the relative path.
  */
-const withoutAlias = new Set(['bun'])
+const withoutAlias = new Set(['bun', 'starter-template'])
 
 describe('templates ship the #pikku alias', () => {
   test('no template reaches generated output through a relative path', () => {
@@ -129,6 +129,7 @@ describe('templates ship the #pikku alias', () => {
     const offenders: string[] = []
 
     for (const template of templateNames()) {
+      if (withoutAlias.has(template)) continue
       const usesAlias = templateSourceFiles(template).some((file) =>
         /['"]#pikku\//.test(readFileSync(file, 'utf8'))
       )

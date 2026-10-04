@@ -1,7 +1,7 @@
 # Adding a second frontend
 
 Read this when the split you recorded in Phase 2 is "separate apps" and you have
-reached the milestone that needs the second one. **Not before.** Cloning
+reached the changeset that needs the second one. **Not before.** Cloning
 `apps/app` materialises a directory of copied screens; doing it during planning
 leaves `frontends` in `pikku.config.json` pointing at an app nobody has designed yet.
 

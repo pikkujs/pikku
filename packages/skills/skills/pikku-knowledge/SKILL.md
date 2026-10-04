@@ -4,11 +4,11 @@ description: >-
   Use when writing, reading, reorganising or validating a project's knowledge/ directory — the
   notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
   note (path-as-identity markdown, YAML frontmatter, only `type` required), the app-project
-  profile's sections (milestones, entities, decisions, questions, wishlist) and what each answers,
-  milestone status/entities/gherkin rules, the `resource:` URI scheme tying a note to its code,
-  what is NOT a knowledge base, and `pikku knowledge validate|index`. TRIGGER when: user asks to
+  profile's sections (entities, decisions, questions, wishlist) and what each answers, how notes
+  become changes (`pikku knowledge gaps`), the changeset plan, the `resource:` URI scheme tying a
+  note to its code, what is NOT a knowledge base, and `pikku knowledge validate|index|gaps`. TRIGGER when: user asks to
   write down a decision, requirement, entity or open question; asks what the app does or is; asks
-  about knowledge/, notes, milestones, an index.md, or a diagram, callout or decision block; or
+  about knowledge/, notes, an index.md, or a diagram, callout or decision block; or
   hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes,
   tables or permissions exist (that is `pikku meta` / `pikku info`, never a note), or to write a
   scenario test (use pikku-scenario).
@@ -75,7 +75,7 @@ Frontmatter fields:
 
 | Field         | Meaning                                                                                                                 |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `type`        | **The only required field.** One of `milestone`, `entity`, `decision`, `note`, `overview`. Lowercase — every gate compares it literally, and `milestone` is the exact string `readMilestones` filters on, so a near-miss is a note no command can see. |
+| `type`        | **The only required field.** One of `entity`, `decision`, `note`, `overview`. Lowercase — every gate compares it literally, so a near-miss is a note no command can see. |
 | `title`       | What to call the note in a listing. Falls back to the first heading, then the filename.                                 |
 | `description` | One line, used as the note's subtitle in a section index.                                                               |
 | `resource`    | Comma-separated `<kind>:<id>` URIs — the code this note is about. See below.                                            |
@@ -91,9 +91,6 @@ Plain markdown links between notes — `[revocation](../decisions/revocation-end
 ```
 knowledge/
   index.md                                  # type: overview — the map
-  milestones/
-    index.md
-    01-the-daily-entry.md                   # type: milestone
   entities/
     index.md
     entry.md                                # type: entity
@@ -115,7 +112,6 @@ Each section answers exactly one question, which is what lets a reader find a no
 
 | Section               | The question it answers                                            |
 | --------------------- | ------------------------------------------------------------------ |
-| `milestones/`         | What is one buildable piece of this app, and what proves it works? |
 | `entities/`           | What is this thing, in the words users use for it?                 |
 | `decisions/`          | What was chosen, and what does that rule out?                      |
 | `decisions/security/` | Who may do what?                                                   |
@@ -124,36 +120,31 @@ Each section answers exactly one question, which is what lets a reader find a no
 
 **Create a section the turn you have a note for it** — never a scaffold of empty directories, and never a section without its own `index.md`. A section index says in one line what belongs in it; that sentence is the reason the file exists, so `pikku knowledge index` writes only the note listing and leaves your prose alone.
 
-## Milestones
+## Work is changes, not notes
 
-A milestone is the one note type that is a piece of _work_ rather than a fact, so it alone carries state and size. It lives in `knowledge/milestones/` and nowhere else: `readMilestones` matches on that directory literally, so the same note under another section is invisible to every gate and command below.
+The base says what the app IS. What still has to be built is not written here: it is filed as
+**changes** on the project's queue (`pikku changes file`), grouped into changesets, and built
+one commit per change — the pikku-changes skill. A note never carries status, size or a gherkin
+block; a behaviour the app must have is a sentence in the note it is about.
 
-````markdown
----
-type: milestone
-title: The daily entry
-description: An owner writes one entry per day, and sees it on the day.
-status: proposed
-entities: entry, day
-resource: func:createEntry
----
-
-# The daily entry
-
-An owner writes at most one entry per day. Writing again replaces it.
-
-```gherkin
-Given 'owner' has no entry for today
-When 'owner' writes one
-Then it appears on today's day
-And writing again replaces it rather than adding a second
+```bash
+pikku knowledge gaps            # the notes no change builds yet
 ```
-````
 
-- **`status`** is `proposed` → `dispatched` → `built`. Nothing else — `MILESTONE_STATUSES` is those three, and every gate compares them literally, so an invented status fails `validate` rather than degrading. Only `proposed` is dispatchable. A profile may add one of its own ahead of `proposed` for work that is written down but must not be built yet; that is the profile's to define and validate, not core's.
-- **`statusAt:` and `attempts:` are bookkeeping, not content — never hand-edit them.** A loop driving this base writes both. `statusAt:` is stamped by whatever moved the status, and is what makes "how long has this been building?" answerable; the file's mtime is not the transition time, because a note is edited after dispatch for all sorts of reasons. `attempts:` is `seat@hash` entries recording which seat has already tried to move this note forward, against the content it was trying to move — it is the loop's only brake, and clearing it by hand hands back a budget that exists to stop a note nothing can satisfy being rewritten forever. Rewriting the note's real content refunds that budget on its own, which is the point: an answer that changes the note is what unsticks it.
-- **`entities`** lists what the milestone touches, **at most three**. Past three it is not one buildable piece — split it.
-- **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected. The console draws the keywords as a column and each quoted persona as a chip, so a first-person scenario is visibly a block with no personas in it.
+`gaps` compares the notes against the plans of merged changesets and the changes already filed:
+
+- **`uncovered`** — no plan covers the note.
+- **`changed`** — the note was edited after the changeset that built it merged.
+- **`partial`** — it merged with items deferred; they are listed.
+- **`removed`** — code a merged changeset built for the note is gone from the generated meta.
+- **`deleted`** — the note is gone and the code a changeset built for it is not.
+
+The first three are work: file a change for each, and end its body with the gap's
+`Knowledge: <note>@<hash>` line so it is not filed again. The last two mean the code and the
+knowledge disagree about something that was built — read `git log` for who removed it and why, then
+either bring the knowledge into line (edit or delete the note, or file a change that removes the
+code) or file a change that restores it. When you cannot tell which, file the change and ask on it.
+`pikku changes next` hands open gaps to a knowledge agent when there is nothing else to do.
 
 ## Showing it
 
@@ -230,7 +221,7 @@ These are all things that exist somewhere better, so a note is always the copy t
 | Do not write                        | Because it lives in                                        |
 | ----------------------------------- | ---------------------------------------------------------- |
 | a `personas/` section               | `definePersonas()` in the project's own code               |
-| a `scenarios/` section              | the gherkin block inside the milestone it belongs to       |
+| a `scenarios/` section              | the `scenarios` of the plan for the changeset that builds it |
 | a `permissions/` section            | a decision note under `decisions/security/`                |
 | a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |
 | a changelog                         | `CHANGELOG.md` at the repo root                            |
@@ -249,66 +240,35 @@ pikku knowledge index           # refresh every index.md
 pikku knowledge index --check   # report stale indexes without writing (CI gate)
 ```
 
-`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, milestones with a bad or missing `status`, milestones over three entities, milestones with no gherkin block or a first-person one, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
+`validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, plans under `knowledge/plans/` that do not read or contradict themselves, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
 
-### What to do next
+### The changeset plan
 
-```bash
-pikku knowledge next            # the one thing to do next, derived from what is on disk
-```
-
-`next` is a pure read: it looks at the notes and answers with exactly one action —
-`repair-note`, `write-plan`, `ask-user`, `dispatch`, `hold`, or `idle`. Nothing has to
-be armed by whoever noticed a transition, so calling it twice is free and a state
-nobody anticipated is a missing answer rather than a run that quietly stops.
-
-Two things about the output matter if you are driving it:
-
-- **`reason` is machine wording.** It names the note, the frontmatter key and what the
-  gate wanted. Never repeat it to a person — they have not seen a note and it will read
-  as gibberish about files.
-- **`ask-user` carries a `question` as well.** That IS the version for a person: a
-  `header`, the question in the language of their app, and `options` when the answer
-  comes from a closed vocabulary (which `status:` it is, which `surface:` it is).
-  `options` is empty when the answer is free text, and an empty list means offer free
-  text — never invent choices to fill it.
-
-`hold` means a profile's own gate is holding the milestone and nothing this loop knows
-about can clear it. It names the hold and the notes it is about; what to do then
-belongs to that profile, not here.
-
-### The milestone plan
-
-A milestone note says what the app must DO. Its **plan** — JSON beside the note, not prose — says what has to exist for it, and is what a finished build is measured against:
+A changeset that creates or alters a table, or that the judge says needs one, is planned before any
+of its code. The **plan** — JSON at `knowledge/plans/<changeset>.plan.json`, committed on the
+changeset's branch — says what has to exist for it, which notes it `covers`, and is what a finished
+build is measured against:
 
 ```bash
 pikku knowledge plan schema                        # the format, in full
-pikku knowledge plan set <milestone> <file>        # validate and write it
-pikku knowledge plan show <milestone> --for-build  # the ordered work a build follows
-pikku knowledge plan progress <milestone>          # what it still owes, read from .pikku/
-pikku knowledge plan defer <milestone> <item> -r "<why>"
+pikku knowledge plan set <changeset> <file>        # validate and write it
+pikku knowledge plan show <changeset> --for-build  # the ordered work a build follows
+pikku knowledge plan progress <changeset>          # what it still owes, read from .pikku/
+pikku knowledge plan defer <changeset> <item> -r "<why>"
 ```
 
-`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. How a plan is written is `pikku-architect`; building against one, and the order plan-then-build, is `pikku-build`.
+`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. How a plan is written is `pikku-architect`; building against one is `pikku-changes`, whose `done` refuses the last change of a planned changeset until `progress` is clean.
 
-### A finished milestone is a tombstone
+### A merged plan is a tombstone
 
-**Once a milestone reaches `built`, its note and its plan are closed. Do not edit either.** Not to correct the wording, not to fold in what the build actually turned out to need, not to add the item everyone agrees should have been there. A finished milestone is the record of what was agreed and what was measured against it, and a record that can be revised afterwards measures nothing.
+**Once a changeset merges, its plan is closed. Do not edit it.** Not to correct the wording, not to fold in what the build actually turned out to need. A merged plan is the record of what was agreed and what was measured against it, and a record that can be revised afterwards measures nothing.
 
-This is the rule the shape of the thing already implies. `progress` reconciles a plan against generated meta and fails when what shipped contradicts it — a check with no force at all if the losing side of the contradiction may simply be rewritten. `attempts:` brakes a note nothing can satisfy, and refunds that budget when the note's content really changes; a `built` note that keeps changing is that brake removed. Both only work while the plan stays still.
-
-So when a `built` milestone turns out to be wrong or incomplete, **the answer is always a new note, never an edit to the old one**:
-
-- It needed more than it said → a new milestone, which may name the old one.
-- It was built differently than planned → that is what `progress` is for. Reconcile forward, or record a decision saying why the plan was not the right shape.
-- It was simply wrong → a decision note that supersedes it. The wrong milestone stays where it is; a base whose history is edited cannot answer *why* anything is the way it is, which is most of what a base is for.
-
-The exception, and it is narrow: bookkeeping the loop owns. `statusAt:` and `attempts:` are written by whatever moved the note, at any status, and are bookkeeping rather than content. Nothing else about a `built` note moves again.
+Notes are different: they say what the app is now, so they change whenever it does. Editing a note a merged changeset covered is exactly how new work arrives — `gaps` reads it as `changed`, and it is filed again.
 
 ## Profiles built on this one
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.
 
-Fabric is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — a `screens/` section, and a `design:` field on a milestone pointing at the design options it was built from. Both are Fabric's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.
+Fabric is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `screens/` section. Both are Fabric's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.

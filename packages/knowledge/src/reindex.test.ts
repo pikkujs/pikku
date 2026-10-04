@@ -18,14 +18,14 @@ const project = async (files: Record<string, string>): Promise<string> => {
 const read = (root: string, rel: string) =>
   readFile(join(root, ...rel.split('/')), 'utf8')
 
-const milestone = (title: string, description: string) =>
-  `---\ntype: milestone\ntitle: ${title}\ndescription: ${description}\nstatus: proposed\n---\nbody`
+const feature = (title: string, description: string) =>
+  `---\ntype: feature\ntitle: ${title}\ndescription: ${description}\nstatus: proposed\n---\nbody`
 
 describe('runKnowledgeIndex', () => {
   test('creates a missing section index listing its notes', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nThe app.',
-      'knowledge/milestones/01-a.md': milestone(
+      'knowledge/features/01-a.md': feature(
         'The daily entry',
         'One buildable piece.'
       ),
@@ -35,10 +35,10 @@ describe('runKnowledgeIndex', () => {
       result.files.map((f) => [f.path, f.action]),
       [
         ['knowledge/index.md', 'updated'],
-        ['knowledge/milestones/index.md', 'created'],
+        ['knowledge/features/index.md', 'created'],
       ]
     )
-    const created = await read(root, 'knowledge/milestones/index.md')
+    const created = await read(root, 'knowledge/features/index.md')
     assert.match(created, /^type: overview$/m)
     assert.match(
       created,
@@ -49,17 +49,17 @@ describe('runKnowledgeIndex', () => {
   test('the root index maps the sections before any loose note', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nThe app.',
-      'knowledge/milestones/index.md': '---\ntype: overview\n---\nPieces.',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/index.md': '---\ntype: overview\n---\nPieces.',
+      'knowledge/features/01-a.md': feature('A', 'a'),
       'knowledge/entities/index.md': '---\ntype: overview\n---\nThings.',
       'knowledge/entities/entry.md': '---\ntype: entity\ntitle: Entry\n---\nx',
     })
     await runKnowledgeIndex(root)
     const index = await read(root, 'knowledge/index.md')
     assert.match(index, /- \[entities\]\(entities\/index\.md\)/)
-    assert.match(index, /- \[milestones\]\(milestones\/index\.md\)/)
+    assert.match(index, /- \[features\]\(features\/index\.md\)/)
     assert.ok(
-      index.indexOf('entities/index.md') < index.indexOf('milestones/index.md')
+      index.indexOf('entities/index.md') < index.indexOf('features/index.md')
     )
   })
 
@@ -109,12 +109,12 @@ describe('runKnowledgeIndex', () => {
   test('replaces only the generated block, keeping the prose a human wrote', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/index.md': [
+      'knowledge/features/index.md': [
         '---',
         'type: overview',
         '---',
         '',
-        '# Milestones',
+        '# Features',
         '',
         'Read these in order — each one builds on the last.',
         '',
@@ -124,13 +124,13 @@ describe('runKnowledgeIndex', () => {
         '',
         'Anything below survives too.',
       ].join('\n'),
-      'knowledge/milestones/01-a.md': milestone(
+      'knowledge/features/01-a.md': feature(
         'The daily entry',
         'One piece.'
       ),
     })
     await runKnowledgeIndex(root)
-    const index = await read(root, 'knowledge/milestones/index.md')
+    const index = await read(root, 'knowledge/features/index.md')
     assert.match(index, /Read these in order/)
     assert.match(index, /Anything below survives too\./)
     assert.match(index, /The daily entry/)
@@ -140,12 +140,12 @@ describe('runKnowledgeIndex', () => {
   test('appends the block to an index that has no markers, destroying nothing', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/index.md':
-        '---\ntype: overview\n---\n\n# Milestones\n\nHand written.\n',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/index.md':
+        '---\ntype: overview\n---\n\n# Features\n\nHand written.\n',
+      'knowledge/features/01-a.md': feature('A', 'a'),
     })
     await runKnowledgeIndex(root)
-    const index = await read(root, 'knowledge/milestones/index.md')
+    const index = await read(root, 'knowledge/features/index.md')
     assert.match(index, /Hand written\./)
     assert.match(index, /<!-- pikku:knowledge-index -->/)
   })
@@ -153,33 +153,33 @@ describe('runKnowledgeIndex', () => {
   test('is idempotent — a second run changes nothing', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/01-a.md': feature('A', 'a'),
     })
     await runKnowledgeIndex(root)
-    const first = await read(root, 'knowledge/milestones/index.md')
+    const first = await read(root, 'knowledge/features/index.md')
     const second = await runKnowledgeIndex(root)
     assert.deepEqual(
       second.files.map((f) => f.action),
       ['unchanged', 'unchanged']
     )
-    assert.equal(await read(root, 'knowledge/milestones/index.md'), first)
+    assert.equal(await read(root, 'knowledge/features/index.md'), first)
   })
 
   test('check mode reports staleness and writes nothing', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/01-a.md': feature('A', 'a'),
     })
     const result = await runKnowledgeIndex(root, true)
     assert.equal(result.ok, false)
     assert.equal(result.check, true)
-    await assert.rejects(() => read(root, 'knowledge/milestones/index.md'))
+    await assert.rejects(() => read(root, 'knowledge/features/index.md'))
   })
 
   test('check mode passes once the indexes are current', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/01-a.md': feature('A', 'a'),
     })
     await runKnowledgeIndex(root)
     assert.equal((await runKnowledgeIndex(root, true)).ok, true)
@@ -188,13 +188,13 @@ describe('runKnowledgeIndex', () => {
   test('falls back to the first heading, then the filename, for a note with no title', async () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md':
-        '---\ntype: milestone\n---\n# From the heading\n',
-      'knowledge/milestones/02-b.md':
-        '---\ntype: milestone\n---\nNo heading at all.',
+      'knowledge/features/01-a.md':
+        '---\ntype: feature\n---\n# From the heading\n',
+      'knowledge/features/02-b.md':
+        '---\ntype: feature\n---\nNo heading at all.',
     })
     await runKnowledgeIndex(root)
-    const index = await read(root, 'knowledge/milestones/index.md')
+    const index = await read(root, 'knowledge/features/index.md')
     assert.match(index, /- \[From the heading\]\(01-a\.md\)/)
     assert.match(index, /- \[02-b\]\(02-b\.md\)/)
   })
@@ -203,8 +203,8 @@ describe('runKnowledgeIndex', () => {
     const root = await project({
       'knowledge/index.md': '---\ntype: overview\n---\nx',
       'knowledge/log.md': '---\ntype: note\n---\nx',
-      'knowledge/milestones/index.md': '---\ntype: overview\n---\nx',
-      'knowledge/milestones/01-a.md': milestone('A', 'a'),
+      'knowledge/features/index.md': '---\ntype: overview\n---\nx',
+      'knowledge/features/01-a.md': feature('A', 'a'),
     })
     await runKnowledgeIndex(root)
     const index = await read(root, 'knowledge/index.md')

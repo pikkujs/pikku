@@ -5,14 +5,14 @@ import { join } from 'node:path'
 import { describe, test, type TestContext } from 'node:test'
 import { parseNote, readKnowledgeNotes, resourceIds } from './notes.js'
 
-const note = (body: string) => parseNote('knowledge/milestones/01-a.md', body)
+const note = (body: string) => parseNote('knowledge/features/01-a.md', body)
 
 describe('parseNote', () => {
   test('reads the scalars and leaves the body', () => {
     const parsed = note(
       [
         '---',
-        'type: milestone',
+        'type: feature',
         'title: The daily entry',
         'description: One buildable piece.',
         'resource: func:createEntry',
@@ -24,7 +24,7 @@ describe('parseNote', () => {
         'Body text.',
       ].join('\n')
     )
-    assert.equal(parsed.type, 'milestone')
+    assert.equal(parsed.type, 'feature')
     assert.equal(parsed.title, 'The daily entry')
     assert.equal(parsed.description, 'One buildable piece.')
     assert.equal(parsed.resource, 'func:createEntry')
@@ -33,16 +33,16 @@ describe('parseNote', () => {
   })
 
   test('lowercases type and status, because every gate compares them literally', () => {
-    // A title-cased `type: Milestone` read as a different type entirely, so readiness
-    // gates saw zero milestones against a file that plainly was one.
-    const parsed = note('---\ntype: Milestone\nstatus: Proposed\n---\nbody')
-    assert.equal(parsed.type, 'milestone')
+    // A title-cased `type: Feature` read as a different type entirely, so readiness
+    // gates saw zero notes of that type against a file that plainly was one.
+    const parsed = note('---\ntype: Feature\nstatus: Proposed\n---\nbody')
+    assert.equal(parsed.type, 'feature')
     assert.equal(parsed.status, 'proposed')
   })
 
   test('keeps the case of every other scalar, which is prose', () => {
     const parsed = note(
-      '---\ntype: milestone\ntitle: The Daily Entry\n---\nbody'
+      '---\ntype: feature\ntitle: The Daily Entry\n---\nbody'
     )
     assert.equal(parsed.title, 'The Daily Entry')
   })
@@ -64,33 +64,33 @@ describe('parseNote', () => {
     // Reading only the scalar form left `entities` unset on a note that listed
     // them, and the readiness gate refused a correct file.
     const parsed = note(
-      '---\ntype: milestone\nentities:\n  - entry\n  - day\n---\nx'
+      '---\ntype: feature\nentities:\n  - entry\n  - day\n---\nx'
     )
     assert.equal(parsed.entities, 'entry, day')
   })
 
   test('strips quotes from values', () => {
-    const parsed = note('---\ntype: "milestone"\ntitle: \'Quoted\'\n---\nx')
-    assert.equal(parsed.type, 'milestone')
+    const parsed = note('---\ntype: "feature"\ntitle: \'Quoted\'\n---\nx')
+    assert.equal(parsed.type, 'feature')
     assert.equal(parsed.title, 'Quoted')
   })
 
   test('ignores an empty value rather than storing an empty string', () => {
-    assert.equal(note('---\ntype: milestone\ntitle:\n---\nx').title, undefined)
+    assert.equal(note('---\ntype: feature\ntitle:\n---\nx').title, undefined)
   })
 
   test('leaves unknown keys alone — OKF permits them and profiles add their own', () => {
     const parsed = note(
-      '---\ntype: milestone\ndesign: design/a.tsx#Option B\n---\nx'
+      '---\ntype: feature\ndesign: design/a.tsx#Option B\n---\nx'
     )
-    assert.equal(parsed.type, 'milestone')
+    assert.equal(parsed.type, 'feature')
     assert.equal((parsed as Record<string, unknown>).design, undefined)
   })
 
   test("reads a profile's own scalars when it names them", () => {
     const parsed = parseNote(
-      'knowledge/milestones/01-a.md',
-      '---\ntype: milestone\ndesign: design/a.tsx#Option B\nroute: /entries\n---\nx',
+      'knowledge/features/01-a.md',
+      '---\ntype: feature\ndesign: design/a.tsx#Option B\nroute: /entries\n---\nx',
       ['design', 'route'] as const
     )
     assert.equal(parsed.design, 'design/a.tsx#Option B')
@@ -99,21 +99,21 @@ describe('parseNote', () => {
 
   test("a profile's scalars keep their case — only this profile's vocabularies are closed", () => {
     const parsed = parseNote(
-      'knowledge/milestones/01-a.md',
-      '---\ntype: MILESTONE\nscreens: DailyEntry\n---\nx',
+      'knowledge/features/01-a.md',
+      '---\ntype: FEATURE\nscreens: DailyEntry\n---\nx',
       ['screens'] as const
     )
-    assert.equal(parsed.type, 'milestone')
+    assert.equal(parsed.type, 'feature')
     assert.equal(parsed.screens, 'DailyEntry')
   })
 
   test('a named scalar this profile already owns is read by this profile, not overwritten', () => {
     const parsed = parseNote(
-      'knowledge/milestones/01-a.md',
-      '---\ntype: MILESTONE\n---\nx',
+      'knowledge/features/01-a.md',
+      '---\ntype: FEATURE\n---\nx',
       ['type'] as const
     )
-    assert.equal(parsed.type, 'milestone')
+    assert.equal(parsed.type, 'feature')
   })
 
   test('tolerates CRLF frontmatter', () => {
@@ -134,12 +134,12 @@ describe('parseNote', () => {
   test('marks the reserved filenames, case-insensitively', () => {
     assert.equal(parseNote('knowledge/index.md', 'x').reserved, 'index')
     assert.equal(
-      parseNote('knowledge/milestones/INDEX.md', 'x').reserved,
+      parseNote('knowledge/features/INDEX.md', 'x').reserved,
       'index'
     )
     assert.equal(parseNote('knowledge/log.md', 'x').reserved, 'log')
     assert.equal(
-      parseNote('knowledge/milestones/01-a.md', 'x').reserved,
+      parseNote('knowledge/features/01-a.md', 'x').reserved,
       undefined
     )
   })
@@ -187,15 +187,15 @@ describe('readKnowledgeNotes', () => {
   test('reads nested notes, path-sorted, with paths relative to the root', async (t) => {
     const root = await bundle(t, {
       'knowledge/index.md': '---\ntype: overview\n---\nroot',
-      'knowledge/milestones/01-a.md': '---\ntype: milestone\n---\na',
+      'knowledge/features/01-a.md': '---\ntype: feature\n---\na',
       'knowledge/decisions/why.md': '---\ntype: decision\n---\nwhy',
     })
     assert.deepEqual(
       (await readKnowledgeNotes(root)).map((n) => n.path),
       [
         join('knowledge', 'decisions', 'why.md'),
+        join('knowledge', 'features', '01-a.md'),
         join('knowledge', 'index.md'),
-        join('knowledge', 'milestones', '01-a.md'),
       ]
     )
   })

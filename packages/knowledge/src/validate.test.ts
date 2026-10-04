@@ -21,26 +21,16 @@ const validate = (root: string) =>
 
 const ids = (findings: { id: string }[]) => findings.map((f) => f.id)
 
-const MILESTONE = [
-  '---',
-  'type: milestone',
-  'status: proposed',
-  'entities: entry',
-  '---',
-  '',
-  '```gherkin',
-  "Given 'owner' has no entry for today",
-  "When 'owner' writes one",
-  'Then it appears on the day',
-  '```',
-].join('\n')
+const NOTE = ['---', 'type: entity', 'title: Entry', '---', '', 'A day of writing.'].join('\n')
+
+const withResource = (resource: string) =>
+  NOTE.replace('title: Entry', `title: Entry\nresource: ${resource}`)
 
 /** The smallest bundle that should produce no findings at all. */
 const CLEAN = {
   'knowledge/index.md': '---\ntype: overview\n---\nThe app.',
-  'knowledge/milestones/index.md':
-    '---\ntype: overview\n---\nBuildable pieces.',
-  'knowledge/milestones/01-the-daily-entry.md': MILESTONE,
+  'knowledge/entities/index.md': '---\ntype: overview\n---\nThings.',
+  'knowledge/entities/entry.md': NOTE,
 }
 
 describe('runKnowledgeValidate', () => {
@@ -63,8 +53,8 @@ describe('runKnowledgeValidate', () => {
   test('a bundle with no index.md has no entry point', async () => {
     const result = await validate(
       await project({
-        'knowledge/milestones/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/milestones/01-a.md': MILESTONE,
+        'knowledge/entities/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/entities/01-a.md': NOTE,
       })
     )
     assert.ok(ids(result.findings).includes('knowledge-no-index'))
@@ -75,11 +65,11 @@ describe('runKnowledgeValidate', () => {
     const result = await validate(
       await project({
         'knowledge/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/milestones/01-a.md': MILESTONE,
+        'knowledge/entities/01-a.md': NOTE,
       })
     )
     assert.deepEqual(ids(result.findings), [
-      'knowledge-section-no-index-milestones',
+      'knowledge-section-no-index-entities',
     ])
     assert.equal(result.findings[0]!.severity, 'warn')
     assert.equal(result.ok, true)
@@ -199,124 +189,12 @@ describe('runKnowledgeValidate', () => {
   })
 })
 
-describe('runKnowledgeValidate on milestones', () => {
-  const withMilestone = async (body: string) =>
-    validate(
-      await project({
-        'knowledge/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/milestones/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/milestones/01-a.md': body,
-      })
-    )
-
-  test('a milestone with no status cannot be gated on', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('status: proposed\n', '')
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-no-status-')
-      )
-    )
-  })
-
-  test('a status outside the vocabulary fails, because gates compare it literally', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('status: proposed', 'status: in-progress')
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-bad-status-')
-      )
-    )
-  })
-
-  test('a title-cased status still passes, because the parser lowercases it', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('status: proposed', 'status: Built')
-    )
-    assert.deepEqual(result.findings, [])
-  })
-
-  test('a milestone naming no entities warns — its size cannot be judged', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('entities: entry\n', '')
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-no-entities-')
-      )
-    )
-    assert.equal(result.ok, true)
-  })
-
-  test('a milestone touching more than three entities is not one buildable piece', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('entities: entry', 'entities: entry, day, user, grant')
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-too-big-')
-      )
-    )
-    assert.equal(result.ok, false)
-  })
-
-  test('a milestone with no gherkin block has nothing to verify against', async () => {
-    const result = await withMilestone(
-      '---\ntype: milestone\nstatus: proposed\nentities: entry\n---\n\nJust prose.'
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-no-scenario-')
-      )
-    )
-  })
-
-  test('a first-person scenario hides who is acting', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace(
-        "Given 'owner' has no entry for today",
-        'Given I have no entry'
-      )
-    )
-    assert.ok(
-      ids(result.findings).some((id) =>
-        id.startsWith('knowledge-milestone-first-person-')
-      )
-    )
-    assert.equal(result.ok, false)
-  })
-
-  test('a quoted persona named Ida is not the pronoun I', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace("Given 'owner'", "Given 'ida'")
-    )
-    assert.deepEqual(result.findings, [])
-  })
-
-  test('only milestones are held to the milestone rules', async () => {
-    const result = await validate(
-      await project({
-        'knowledge/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/entities/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/entities/entry.md':
-          '---\ntype: entity\n---\nA day of writing.',
-      })
-    )
-    assert.deepEqual(result.findings, [])
-  })
-})
-
 describe('runKnowledgeValidate on resources', () => {
   test('a dangling resource is reported as an error against the note', async () => {
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/milestones/02-b.md': MILESTONE.replace(
-        'entities: entry',
-        'entities: entry\nresource: func:gone'
-      ),
+      'knowledge/entities/02-b.md': withResource('func:gone'),
     })
     const result = await validate(root)
     assert.ok(
@@ -331,15 +209,12 @@ describe('runKnowledgeValidate on resources', () => {
     // Each note is its own thing to fix, so each needs an id something can key
     // on — an id built from the uri alone made the second finding a duplicate of
     // the first.
-    const dangling = MILESTONE.replace(
-      'entities: entry',
-      'entities: entry\nresource: func:gone'
-    )
+    const dangling = withResource('func:gone')
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/milestones/02-b.md': dangling,
-      'knowledge/milestones/03-c.md': dangling,
+      'knowledge/entities/02-b.md': dangling,
+      'knowledge/entities/03-c.md': dangling,
     })
     const resourceIds = ids((await validate(root)).findings).filter((id) =>
       id.startsWith('knowledge-resource-')
@@ -352,10 +227,7 @@ describe('runKnowledgeValidate on resources', () => {
     const root = await project({
       ...CLEAN,
       '.pikku/function/pikku-functions-meta.gen.json': '{"createEntry":{}}',
-      'knowledge/milestones/02-b.md': MILESTONE.replace(
-        'entities: entry',
-        'entities: entry\nresource: func:createEntry'
-      ),
+      'knowledge/entities/02-b.md': withResource('func:createEntry'),
     })
     assert.deepEqual((await validate(root)).findings, [])
   })
@@ -442,58 +314,26 @@ describe('runKnowledgeValidate on decisions', () => {
     assert.equal(new Set(ids(result.findings)).size, 2)
   })
 
-  test('a milestone may state a decision too', async () => {
+  test('an entity may state a decision too', async () => {
     const root = await project({
       ...CLEAN,
-      'knowledge/milestones/02-b.md': `${MILESTONE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
+      'knowledge/entities/02-b.md': `${NOTE}\n\n\`\`\`decision\nchosen: One entry per day\n\`\`\``,
     })
     assert.deepEqual(ids((await validate(root)).findings), [
-      'knowledge-decision-nothing-ruled-out-knowledge/milestones/02-b.md-1',
+      'knowledge-decision-nothing-ruled-out-knowledge/entities/02-b.md-1',
     ])
   })
 
-  // The three outcomes the plan pass exists to tell apart: an item that landed, one that
-  // was deferred and says so, and one that is neither — a promise that left the world
-  // without anybody recording that it had.
+  // What landed is checked against codegen when the changeset merges; here a plan is
+  // only held to what can be decided from the plan itself.
   describe('plans', () => {
-    const BUILT = MILESTONE.replace('status: proposed', 'status: built')
-    const PLAN_PATH = 'knowledge/milestones/01-the-daily-entry.plan.json'
-    const plan = (
-      edit: (p: ReturnType<typeof basePlan>) => void = () => {}
-    ) => {
-      const p = basePlan()
-      edit(p)
-      return JSON.stringify(p, null, 2)
-    }
-    /** Codegen that ran and produced something, but not what the plan promised. */
-    const OTHER_META = {
-      '.pikku/function/pikku-functions-meta.gen.json': JSON.stringify({
-        somethingElse: { auth: true },
-      }),
-    }
+    const PLAN_PATH = 'knowledge/plans/the-daily-entry.plan.json'
 
-    test('a milestone with no plan is silent on a project that does not plan', async () => {
+    test('a plan that holds adds no finding', async () => {
       const result = await validate(
-        await project({
-          ...CLEAN,
-          'knowledge/milestones/01-the-daily-entry.md': BUILT,
-        })
+        await project({ ...CLEAN, [PLAN_PATH]: JSON.stringify(basePlan()) })
       )
       assert.deepEqual(ids(result.findings), [])
-    })
-
-    test('a milestone with no plan is reported once the project plans at all', async () => {
-      const result = await validate(
-        await project({
-          ...CLEAN,
-          'knowledge/milestones/01-the-daily-entry.md': BUILT,
-          [PLAN_PATH]: plan(),
-          'knowledge/milestones/02-b.md': BUILT,
-        })
-      )
-      assert.deepEqual(ids(result.findings), [
-        'knowledge-plan-missing-knowledge/milestones/02-b.md',
-      ])
     })
 
     test('a plan that does not parse is an error against the plan file', async () => {
@@ -502,69 +342,9 @@ describe('runKnowledgeValidate on decisions', () => {
       )
       assert.equal(result.ok, false)
       assert.deepEqual(ids(result.findings), [
-        'knowledge-plan-unreadable-knowledge/milestones/01-the-daily-entry.md',
+        `knowledge-plan-unreadable-${PLAN_PATH}`,
       ])
       assert.equal(result.findings[0]!.path, PLAN_PATH)
-    })
-
-    test('no codegen means no verdict on what was built', async () => {
-      // A knowledge base is validated long before there is code. Reporting every
-      // planned item as unbuilt here would make the command useless on day one.
-      const result = await validate(
-        await project({
-          ...CLEAN,
-          'knowledge/milestones/01-the-daily-entry.md': BUILT,
-          [PLAN_PATH]: plan(),
-        })
-      )
-      assert.deepEqual(ids(result.findings), [])
-    })
-
-    test('a pass-1 promise the code does not have is reported as unbuilt', async () => {
-      const result = await validate(
-        await project({
-          ...CLEAN,
-          'knowledge/milestones/01-the-daily-entry.md': BUILT,
-          [PLAN_PATH]: plan(),
-          ...OTHER_META,
-        })
-      )
-      assert.equal(result.ok, false)
-      assert.ok(
-        ids(result.findings).some((id) =>
-          id.startsWith('knowledge-plan-unbuilt-')
-        ),
-        `expected an unbuilt finding, got ${ids(result.findings).join(', ')}`
-      )
-    })
-
-    test('the same promise deferred to a later pass is info, not an error', async () => {
-      const result = await validate(
-        await project({
-          ...CLEAN,
-          'knowledge/milestones/01-the-daily-entry.md': BUILT,
-          [PLAN_PATH]: plan((p) => {
-            if (p.functions.kind === 'built') {
-              for (const item of p.functions.items) item.pass = 2
-            }
-          }),
-          ...OTHER_META,
-        })
-      )
-      const deferred = result.findings.filter((f) =>
-        f.id.startsWith('knowledge-plan-deferred-')
-      )
-      assert.ok(deferred.length > 0, 'expected the deferral to be reported')
-      assert.deepEqual(
-        new Set(deferred.map((f) => f.severity)),
-        new Set(['info'])
-      )
-      assert.equal(
-        ids(result.findings).some((id) =>
-          id.startsWith('knowledge-plan-unbuilt-createEntry')
-        ),
-        false
-      )
     })
   })
 })

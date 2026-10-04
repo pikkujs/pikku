@@ -54,10 +54,11 @@ await runKnowledgeIndex(root) // pass `true` to check without writing
 Each `index.md` keeps whatever prose a human wrote; only the block between
 `<!-- pikku:knowledge-index -->` markers is regenerated.
 
-## Measuring a milestone against its plan
+## Measuring a changeset against its plan
 
-A milestone note says what the app must DO; its plan — JSON beside the note — says
-what has to EXIST for it, in passes. `planShortfall` reconciles that plan against
+A changeset that touches the schema or adds an entity is planned before any code:
+its plan — JSON at `knowledge/plans/<groupId>.plan.json`, committed on the
+changeset's branch — says what has to EXIST for it, in passes. `planShortfall` reconciles that plan against
 pikku's generated meta under `.pikku/`, so "was this function written, this route
 wired, this scenario exported" is set membership rather than anyone's status:
 
@@ -69,7 +70,7 @@ import {
   readPlan,
 } from '@pikku/knowledge'
 
-const read = readPlan(root, 'knowledge/milestones/01-the-daily-entry.md')
+const read = readPlan(root, groupId)
 if (read.ok) {
   const { missing, deferred, problems } = planShortfall(
     read.plan,
@@ -91,8 +92,9 @@ pikku knowledge index
 pikku knowledge index --check
 
 pikku knowledge plan schema                        # the plan format, in full
-pikku knowledge plan set <milestone> <file>        # validate against the note, then write
-pikku knowledge plan show <milestone> --for-build  # the ordered work a build follows
-pikku knowledge plan progress <milestone>          # what it still owes; non-zero while short
-pikku knowledge plan defer <milestone> <item> -r "<why>"
+pikku knowledge plan set <changeset> <file>        # validate, then write
+pikku knowledge plan show <changeset> --for-build  # the ordered work a build follows
+pikku knowledge plan progress <changeset>          # what it still owes; non-zero while short
+pikku knowledge plan defer <changeset> <item> -r "<why>"
+pikku knowledge gaps                               # notes no change builds yet
 ```

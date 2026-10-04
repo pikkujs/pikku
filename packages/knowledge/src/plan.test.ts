@@ -6,7 +6,6 @@ import { join } from 'node:path'
 import {
   MAX_DEFERRALS,
   PLAN_VERSION,
-  checkAgainstMilestone,
   deferPlanItem,
   itemsOf,
   checkFirstPass,
@@ -30,14 +29,6 @@ test('a well-formed plan passes every check', () => {
   const plan = basePlan()
   assert.deepEqual(checkFirstPass(plan), [])
   assert.deepEqual(checkPlanInternals(plan), [])
-  assert.deepEqual(
-    checkAgainstMilestone(
-      plan,
-      { entities: 'entry', path: 'knowledge/milestones/01.md' },
-      ['owner']
-    ),
-    []
-  )
 })
 
 test('pass 1 without a screen is refused — the cap this replaces let that through', () => {
@@ -48,7 +39,7 @@ test('pass 1 without a screen is refused — the cap this replaces let that thro
   assert.match(problems[0]!, /no `ui` item/)
 })
 
-test('a cli milestone passes pass 1 with no ui at all', () => {
+test('a cli changeset passes pass 1 with no ui at all', () => {
   // The `ui` slot's whole reason for existing is that "not needed, and here's why" can
   // be said out loud — and `checkFirstPass` used to make that legal to write and
   // impossible to pass, for a CLI as much as for an app.
@@ -56,15 +47,17 @@ test('a cli milestone passes pass 1 with no ui at all', () => {
   plan.ui = { kind: 'n/a', description: 'A command, not a page.' }
   if (plan.scenarios.backend.kind === 'built')
     plan.scenarios.backend.items[0]!.fn = 'createEntry'
-  assert.deepEqual(checkFirstPass(plan, 'cli'), [])
+  plan.surface = 'cli'
+  assert.deepEqual(checkFirstPass(plan), [])
 })
 
-test('a cli milestone with nothing driving what it wires is refused', () => {
+test('a cli changeset with nothing driving what it wires is refused', () => {
   // The obligation does not disappear with the surface, only the level it is met at:
   // an app is proved in the browser, a command at the backend.
   const plan = basePlan()
   plan.ui = { kind: 'n/a', description: 'A command, not a page.' }
-  const problems = checkFirstPass(plan, 'cli')
+  plan.surface = 'cli'
+  const problems = checkFirstPass(plan)
   assert.equal(problems.length, 1)
   assert.match(problems[0]!, /"fn": "createEntry"/)
 })
@@ -97,8 +90,7 @@ test('a function touching personal data with no permission rule is flagged', () 
 // It used to offer a second: say in the `description` that anyone signed in may call it.
 // Nothing read the description for that, and the trigger IS the description naming the
 // table — so following the advice could only keep the refusal firing. The architect spent
-// its whole attempt budget on it, the milestone got no plan, and every later
-// `fabric build-milestone` refused with "has no plan and one could not be written".
+// its whole attempt budget on it, and the work got no plan at all.
 test('an open function touching personal data clears once a scenario names it', () => {
   const plan = basePlan()
   if (plan.functions.kind === 'built')
@@ -117,47 +109,6 @@ test('a declared scope that gates nothing is flagged', () => {
   assert.ok(problems.some((p) => /entry:write.*gates no function/.test(p)))
 })
 
-test('a milestone entity no function or table mentions is flagged', () => {
-  const plan = basePlan()
-  const problems = checkAgainstMilestone(
-    plan,
-    { entities: 'entry, reminder', path: 'knowledge/milestones/01.md' },
-    []
-  )
-  assert.equal(problems.length, 1)
-  assert.match(problems[0]!, /reminder/)
-})
-
-test('an entity spelled with spaces matches an identifier spelled in camelCase', () => {
-  // A note says `entities: repair job` and the plan says `repairJob`. Refusing over the
-  // separator cost the first proof run two turns of editing a note that was already right.
-  const plan = basePlan()
-  assert.deepEqual(
-    checkAgainstMilestone(plan, { entities: 'create entry', path: 'x.md' }, []),
-    []
-  )
-})
-
-test('a hyphenated persona is driven by a scenario that spells it with a space', () => {
-  const plan = basePlan()
-  if (plan.scenarios.browser.kind === 'built')
-    plan.scenarios.browser.items[0]!.scenario = 'The front desk clerk books a slot'
-  assert.deepEqual(
-    checkAgainstMilestone(plan, { entities: 'entry', path: 'x.md' }, ['front-desk']),
-    []
-  )
-})
-
-test('a persona nobody drives through the UI is flagged', () => {
-  const plan = basePlan()
-  const problems = checkAgainstMilestone(
-    plan,
-    { entities: 'entry', path: 'x.md' },
-    ['owner', 'admin']
-  )
-  assert.ok(problems.some((p) => /'admin'/.test(p)))
-})
-
 test('coverage separates built from merely claimed', () => {
   const notes = [
     { path: 'entities/entry.md', body: 'entry body' },
@@ -166,7 +117,7 @@ test('coverage separates built from merely claimed', () => {
   ]
   const built = basePlan()
   const claimed = basePlan()
-  claimed.milestone = 'knowledge/milestones/02-tags.md'
+  claimed.changeset = 'tags'
   claimed.covers = [
     {
       note: 'decisions/privacy.md',
@@ -175,8 +126,8 @@ test('coverage separates built from merely claimed', () => {
     },
   ]
   const coverage = knowledgeCoverage(notes, [
-    { plan: built, status: 'built' },
-    { plan: claimed, status: 'proposed' },
+    { plan: built, merged: true },
+    { plan: claimed, merged: false },
   ])
   assert.deepEqual(
     coverage.map((c) => [c.note, c.state]),
@@ -199,12 +150,12 @@ test('a partial claim never discharges the note', () => {
   ]
   const coverage = knowledgeCoverage(
     [{ path: 'entities/entry.md', body: 'entry body' }],
-    [{ plan, status: 'built' }]
+    [{ plan, merged: true }]
   )
   assert.equal(coverage[0]!.state, 'claimed')
 })
 
-test('a milestone that landed with deferrals leaves its note part-built', () => {
+test('a changeset that merged with deferrals leaves its note part-built', () => {
   const plan = basePlan()
   plan.deferrals = [
     {
@@ -215,7 +166,7 @@ test('a milestone that landed with deferrals leaves its note part-built', () => 
   ]
   const coverage = knowledgeCoverage(
     [{ path: 'entities/entry.md', body: 'entry body' }],
-    [{ plan, status: 'built' }]
+    [{ plan, merged: true }]
   )
   assert.equal(coverage[0]!.state, 'partial')
   assert.deepEqual(
@@ -224,9 +175,9 @@ test('a milestone that landed with deferrals leaves its note part-built', () => 
   )
 })
 
-// The termination property: the librarian is told once, writes the milestone, and the
-// note stops being backlog. Without it the same directive fires on every planner turn.
-test('a follow-up milestone claiming the note takes it out of the backlog', () => {
+// The termination property: the gap is filed once, a changeset plans it, and the note
+// stops being backlog. Without it the same gap is filed on every pass.
+test('a follow-up changeset claiming the note takes it out of the backlog', () => {
   const built = basePlan()
   built.deferrals = [
     {
@@ -235,18 +186,18 @@ test('a follow-up milestone claiming the note takes it out of the backlog', () =
       at: '2026-08-29T00:00:00.000Z',
     },
   ]
-  const followUp = basePlan('knowledge/milestones/02-writing-it.md')
+  const followUp = basePlan('writing-it')
   const coverage = knowledgeCoverage(
     [{ path: 'entities/entry.md', body: 'entry body' }],
     [
-      { plan: built, status: 'built' },
-      { plan: followUp, status: 'proposed' },
+      { plan: built, merged: true },
+      { plan: followUp, merged: false },
     ]
   )
   assert.equal(coverage[0]!.state, 'claimed')
 })
 
-test('a killed milestone defers everything pass 1 still owed, past the voluntary limit', () => {
+test('a killed changeset defers everything pass 1 still owed, past the voluntary limit', () => {
   const plan = basePlan()
   const { plan: after, deferred } = deferOutstandingItems(
     plan,
@@ -256,7 +207,7 @@ test('a killed milestone defers everything pass 1 still owed, past the voluntary
       'scenario:ownerWritesTodayScenario',
       'wire:POST /entry',
     ],
-    'the milestone was stopped at its cap'
+    'the changeset was stopped at its cap'
   )
   assert.deepEqual(deferred, [
     'function:createEntry',
@@ -280,25 +231,23 @@ test('a note edited after it was built goes back to the backlog', () => {
         body: 'entry body, plus a rule added later',
       },
     ],
-    [{ plan, status: 'built' }]
+    [{ plan, merged: true }]
   )
   assert.equal(coverage[0]!.state, 'changed')
-  assert.deepEqual(coverage[0]!.by, [
-    'knowledge/milestones/01-the-daily-entry.md',
-  ])
+  assert.deepEqual(coverage[0]!.by, ['the-daily-entry'])
 })
 
 test('a schema failure names the field path so the reader can fix it in one edit', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'plan-'))
   try {
-    mkdirSync(join(cwd, 'knowledge/milestones'), { recursive: true })
+    mkdirSync(join(cwd, 'knowledge/plans'), { recursive: true })
     const plan = basePlan() as unknown as Record<string, unknown>
     delete (plan.functions as Record<string, unknown>).description
     writeFileSync(
-      join(cwd, planPathFor('knowledge/milestones/01.md')),
+      join(cwd, planPathFor('cs-1')),
       JSON.stringify(plan)
     )
-    const read = readPlan(cwd, 'knowledge/milestones/01.md')
+    const read = readPlan(cwd, 'cs-1')
     assert.equal(read.ok, false)
     if (!read.ok) assert.match(read.reason, /functions/)
   } finally {
@@ -312,13 +261,13 @@ test('a plan from a version this reader does not know is refused as a version', 
   // the reader spends its turn editing fields to match a schema it cannot satisfy.
   const cwd = mkdtempSync(join(tmpdir(), 'plan-'))
   try {
-    mkdirSync(join(cwd, 'knowledge/milestones'), { recursive: true })
+    mkdirSync(join(cwd, 'knowledge/plans'), { recursive: true })
     const plan = { ...basePlan(), version: PLAN_VERSION + 1 }
     writeFileSync(
-      join(cwd, planPathFor('knowledge/milestones/01.md')),
+      join(cwd, planPathFor('cs-1')),
       JSON.stringify(plan)
     )
-    const read = readPlan(cwd, 'knowledge/milestones/01.md')
+    const read = readPlan(cwd, 'cs-1')
     assert.equal(read.ok, false)
     if (!read.ok) assert.match(read.reason, /only understands 1/)
   } finally {
@@ -329,7 +278,7 @@ test('a plan from a version this reader does not know is refused as a version', 
 test('a missing plan says so rather than passing silently', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'plan-'))
   try {
-    const read = readPlan(cwd, 'knowledge/milestones/01.md')
+    const read = readPlan(cwd, 'cs-1')
     assert.equal(read.ok, false)
     if (!read.ok) assert.match(read.reason, /No plan at/)
   } finally {
@@ -542,58 +491,6 @@ test('the architect is told what `app` means on a role, not just on a screen', (
   assert.ok(
     role.required.includes('app'),
     'app is required, so one app is a decision the architect states rather than an omission'
-  )
-})
-
-test('a milestone requiring a workflow is refused a plan that wires none', () => {
-  const plan = basePlan()
-  const problems = checkAgainstMilestone(
-    plan,
-    {
-      entities: 'entry',
-      path: 'knowledge/milestones/01.md',
-      requires: 'transport:workflow',
-    },
-    ['owner']
-  )
-  assert.equal(problems.length, 1)
-  assert.match(problems[0]!, /requires `transport:workflow`/)
-  assert.match(problems[0]!, /not a token to drop from/)
-})
-
-test('wiring the transport the milestone asked for satisfies it', () => {
-  const plan = basePlan()
-  if (plan.functions.kind === 'built')
-    plan.functions.items[0]!.wire = { transport: 'workflow' }
-  assert.deepEqual(
-    checkAgainstMilestone(
-      plan,
-      {
-        entities: 'entry',
-        path: 'knowledge/milestones/01.md',
-        requires: 'transport:workflow',
-      },
-      ['owner']
-    ),
-    []
-  )
-})
-
-// The librarian is taught `transport:sse` and the plan schema has no field that can carry
-// it, so demanding it would refuse every plan for a live board with no way to comply.
-test('a transport the plan cannot express is not demanded', () => {
-  const plan = basePlan()
-  assert.deepEqual(
-    checkAgainstMilestone(
-      plan,
-      {
-        entities: 'entry',
-        path: 'knowledge/milestones/01.md',
-        requires: '[transport:sse]',
-      },
-      ['owner']
-    ),
-    []
   )
 })
 

@@ -2,7 +2,6 @@ export {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
   type ProfileNote,
-  MILESTONE_TYPE,
   listOf,
   noteHash,
   readKnowledgeNotes,
@@ -15,18 +14,6 @@ export {
   decisionFences,
   parseDecisionFence,
 } from './decision-fence.js'
-
-export {
-  ATTEMPTS_KEY,
-  type AttemptOptions,
-  type NoteAttempt,
-  type RecordAttemptOptions,
-  attemptsSpent,
-  noteAttempts,
-  noteFingerprint,
-  recordNoteAttempt,
-  setNoteScalars,
-} from './ledger.js'
 
 export { type ResourcePrefix, type ResourceUri } from './resource-uri.js'
 
@@ -41,9 +28,6 @@ export {
 } from './check-resources.js'
 
 export {
-  MILESTONE_SECTION,
-  MILESTONE_STATUSES,
-  type MilestoneStatus,
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
   type KnowledgeFinding,
@@ -83,16 +67,18 @@ export {
   itemsOf,
   scenarioPass,
   plannedApps,
+  PLAN_SURFACES,
+  PLANS_DIR,
+  type PlanSurface,
   planPathFor,
-  planIdFor,
-  milestonePathForPlanId,
+  parsePlan,
   readPlan,
+  readPlans,
   writePlan,
   renderPlanForBuild,
   deferPlanItem,
   deferOutstandingItems,
   checkFirstPass,
-  checkAgainstMilestone,
   checkCovers,
   checkPlanInternals,
   knowledgeCoverage,
@@ -111,28 +97,6 @@ export {
   cascadeProblems,
   planShortfall,
 } from './plan-meta.js'
-
-export {
-  MILESTONES_DIR,
-  MILESTONE_SURFACES,
-  type MilestoneSurface,
-  inMilestonesDir,
-  withoutMilestonesDir,
-  surfaceOf,
-  readMilestones,
-  gherkinOf,
-  personasIn,
-  quotedIn,
-  entitiesOf,
-  toolsOf,
-  addonsOf,
-  firstPersonStep,
-  setMilestoneStatus,
-  nominatedMilestone,
-  dispatchedMilestone,
-  markDispatchedMilestoneBuilt,
-  holdMilestoneLifecycle,
-} from './milestone.js'
 
 export {
   type ScenarioDepth,
@@ -163,39 +127,17 @@ export {
   runKnowledgePlanDefer,
 } from './plan-command.js'
 
-export { type MilestoneNote, MILESTONE_SCALARS } from './milestone.js'
-
 export {
-  type MilestoneHold,
-  type MilestoneReadiness,
-  type MilestoneRefusal,
-  type MilestoneGate,
-  type ReadyMilestoneOptions,
-  readyMilestone,
-} from './milestone-gate.js'
-
-export {
-  KnowledgeQuestionOptionSchema,
-  KnowledgeQuestionSchema,
-  type KnowledgeQuestion,
-  type KnowledgeQuestionOption,
-  STATUS_DESCRIPTIONS,
-  SURFACE_DESCRIPTIONS,
-  askFreely,
-  chooseFrom,
-} from './question.js'
-
-export {
-  MAX_ATTEMPTS,
-  SEATS,
-  type Seat,
-  type ReconcileAction,
-  type ReconcileOptions,
-  nextAction,
-  KnowledgeReconcileInput,
-  KnowledgeReconcileOutput,
-  type KnowledgeReconcileResult,
-  runKnowledgeReconcile,
+  KNOWLEDGE_LINE,
+  KnowledgeGapSchema,
+  type KnowledgeGap,
+  type KnowledgeGapOptions,
+  KnowledgeGapsInput,
+  KnowledgeGapsOutput,
+  type KnowledgeGapsResult,
+  filedKnowledge,
+  knowledgeLine,
+  runKnowledgeGaps,
 } from './reconcile.js'
 
 export { basePlan } from './plan-fixture.js'

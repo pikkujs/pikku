@@ -1,6 +1,6 @@
 # Shipping, and staying Fabric-ready
 
-Read this when the milestones are built and the scenarios are green — it is
+Read this when the changes queue is empty and the scenarios are green — it is
 the last phase, and nothing in it is needed before then.
 
 ## Ship it — open source, no platform
@@ -128,8 +128,8 @@ bun run build                     # every frontend workspace, type-checked
 ```
 
 Keep `--coverage` on the release run even though you have been reading it per
-milestone (§7a). Each of those readings only covered the functions that
-milestone added; this is the first time the whole surface is measured at once,
+changeset (§7a). Each of those readings only covered the functions that
+changeset added; this is the first time the whole surface is measured at once,
 and it is where a function orphaned by a later refactor shows up.
 
 **The last two lines are not optional, and one of them is easy to talk yourself
@@ -168,15 +168,15 @@ Everything above is open source. This is the contract that keeps
 - **One `definePersonas` call**, every persona reachable through exactly one
   frontend. Fabric materialises these as its virtual users; a persona nobody
   serves imports as a person with no way in.
-- **`knowledge/` passes `validate`, with every milestone at `built`.** This is
+- **`knowledge/` passes `validate`, and `pikku knowledge gaps` lists nothing.** This is
   the part Fabric itself reads and continues from.
-- **Every `built` milestone passes `pikku knowledge plan progress`.** A note that
-  says `built` is a claim; the plan reconciled against the generated meta is the
-  check. Anything the first pass still owes is either built now or deferred with
+- **Every plan under `knowledge/plans/` passes `pikku knowledge plan progress`.**
+  A merged changeset is a claim; the plan reconciled against the generated meta
+  is the check. Anything the first pass still owes is either built now or deferred with
   its reason on the record; anything the check calls a problem — something that
   exists and does not do what was planned — is fixed, whatever pass it came from,
   because deferring it defers a hole rather than the work.
-- **Every milestone has a passing scenario**, including its refusals.
+- **Every changeset has a passing scenario**, including its refusals.
 - **Permissions live in the `permissions` field**, not in function bodies and not
   in the frontends. A check hidden in a component does not survive a new client.
 - **Nothing hardcodes a host, a port, or a `process.env` read inside a

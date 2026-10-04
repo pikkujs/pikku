@@ -6,9 +6,8 @@ import {
   functionsDirFor,
   planShortfall,
   readKnowledgeNotes,
-  readMilestones,
   readPikkuMeta,
-  readPlan,
+  readPlans,
   runKnowledgeValidate,
 } from '@pikku/knowledge'
 
@@ -20,7 +19,7 @@ import {
  * an inferred type that deep — the whole bundle then names a schema nobody
  * generated, and `getKnowledge` fails at runtime with `MissingSchemaError`.
  *
- * Nothing here is free to drift: `readPlan` hands back the zod type and it is
+ * Nothing here is free to drift: `readPlans` hands back the zod type and it is
  * assigned straight into this field, so a plan schema that grows a case these
  * interfaces do not have stops compiling.
  */
@@ -89,7 +88,8 @@ export interface PlanCovers {
 
 export interface WirePlan {
   version: number
-  milestone: string
+  changeset: string
+  surface: 'app' | 'cli' | 'mcp' | 'agent' | 'backend'
   description: string
   covers: PlanCovers[]
   model: PlanSlot<PlanModelItem>
@@ -105,20 +105,20 @@ export interface WirePlan {
 }
 
 /**
- * One milestone's technical plan, reconciled against the generated meta.
+ * One changeset's technical plan, reconciled against the generated meta.
  *
- * The milestone note is the ask — a title and a Gherkin block. The plan beside it is
- * the answer: the tables, functions, roles, screens and scenarios that were promised.
+ * The changeset's changes are the ask. The plan is the answer: the tables, functions,
+ * roles, screens and scenarios that were promised.
  * The checklist rides along rather than being a second call, because every row is a
  * set-membership test against the same meta read, and a checklist fetched separately
  * could disagree with the plan it is drawn beside.
  */
-export interface KnowledgeMilestonePlan {
+export interface KnowledgePlan {
   plan: WirePlan | null
   /**
    * Why there is no plan, for the reader to be told instead of being shown an empty
-   * one. `readPlan` already separates "nobody wrote one" from "one is there and will
-   * not parse", and those want different words in front of a person.
+   * one: a plan file that will not parse wants different words in front of a person
+   * than one that reads.
    */
   unavailable: string | null
   checklist: PlanChecklistItem[]
@@ -129,8 +129,8 @@ export interface KnowledgeBundle extends KnowledgeGraph {
   /** What `pikku knowledge validate` would report, so the console shows the same verdict. */
   findings: KnowledgeFinding[]
   ok: boolean
-  /** Keyed by the milestone note's path, so a note document can find its own plan. */
-  plans: Record<string, KnowledgeMilestonePlan>
+  /** Keyed by changeset, or by the plan file's path when it will not parse. */
+  plans: Record<string, KnowledgePlan>
 }
 
 /**
@@ -162,18 +162,17 @@ export class KnowledgeService {
     return { ...graph, ok, findings, plans: await this.getPlans() }
   }
 
-  private async getPlans(): Promise<Record<string, KnowledgeMilestonePlan>> {
-    const milestones = await readMilestones(this.projectRoot)
-    if (milestones.length === 0) return {}
-    // Read once for every milestone rather than per note: the meta is the whole
-    // project's, so re-reading it per plan would say the same thing several times
-    // over and let two milestones on one page disagree about what exists.
+  private async getPlans(): Promise<Record<string, KnowledgePlan>> {
+    const reads = readPlans(this.projectRoot)
+    if (reads.length === 0) return {}
+    // Read once for every plan rather than per plan: the meta is the whole project's,
+    // so re-reading it per plan would let two plans on one page disagree about what
+    // exists.
     const meta = readPikkuMeta(functionsDirFor(this.projectRoot))
-    const plans: Record<string, KnowledgeMilestonePlan> = {}
-    for (const note of milestones) {
-      const read = readPlan(this.projectRoot, note.path)
+    const plans: Record<string, KnowledgePlan> = {}
+    for (const read of reads) {
       if (!read.ok) {
-        plans[note.path] = {
+        plans[read.path] = {
           plan: null,
           unavailable: read.reason,
           checklist: [],
@@ -182,7 +181,7 @@ export class KnowledgeService {
         continue
       }
       const { items, missing } = planShortfall(read.plan, meta)
-      plans[note.path] = {
+      plans[read.plan.changeset] = {
         plan: read.plan,
         unavailable: null,
         checklist: items,

@@ -4,7 +4,7 @@ A scenario is a user journey run as one of your personas, over the real transpor
 persona's session. It is the only kind of test worth writing here, because a passing one proves the
 app works the way a signed-in person experiences it.
 
-The traps below all cost a real milestone a red run, and most of them are invisible on the run that
+The traps below all cost a real changeset a red run, and most of them are invisible on the run that
 introduces them. Read the section that matches what you are writing.
 
 1. [The shape of a scenario](#the-shape-of-a-scenario)
@@ -20,8 +20,8 @@ introduces them. Read the section that matches what you are writing.
 
 ## The shape of a scenario
 
-Three ship in `packages/functions/test/scenarios/` — keep them green — and every milestone's gherkin
-block from §5 becomes one more.
+Three ship in `packages/functions/test/scenarios/` — keep them green — and every scenario a
+changeset's plan names becomes one more.
 
 ```typescript
 import { pikkuScenario } from '#pikku/scenarios'
@@ -83,7 +83,7 @@ how the value stays inspectable when the step's output is what the scenario retu
 **Only `const`/`let`, `if`/`else`, `switch`, `for..of`, `return`, `throw` and workflow calls
 survive.** A counting `for` is refused by PKU679, and so is a `for..of` whose iterable is written
 inline — it must be a named identifier or a field (`data.items`). Bind the seat numbers, the ids,
-the rows to a `const` above the loop and iterate that. One milestone here lost a codegen round to
+the rows to a `const` above the loop and iterate that. One changeset here lost a codegen round to
 each half of that rule, because the first half does not imply the second.
 
 **Write each scenario's setup out in full rather than sharing a local helper.** A helper holding
@@ -137,7 +137,7 @@ one that archives a product unarchives it, the one that cancels a plan restarts 
 second run starts where its first one stopped.
 
 **Run the suite twice and require the second run green.** A suite that only passes on a fresh
-database is a suite that passes once. Two corollaries, both of which cost a milestone a red run:
+database is a suite that passes once. Two corollaries, both of which cost a changeset a red run:
 
 - **Name nothing a setup step might already own.** `setsUpHerCompany` returns the company that actor
   already has rather than renaming it, so a later step passed the literal name it had asked for and
@@ -160,11 +160,11 @@ when a sweep surprises you, the next rule in the calendar is the first place to 
 
 ## Steps rot as the app grows
 
-A step is shared, so it is the one thing in the suite that a milestone which never mentions it can
+A step is shared, so it is the one thing in the suite that a changeset which never mentions it can
 break. Whatever a step selects by, ask what ELSE will match it after the suite has run a hundred
 times.
 
-**Drive a new step from both sides in the milestone that adds it.** A step is only as proven as its
+**Drive a new step from both sides in the changeset that adds it.** A step is only as proven as its
 best-exercised branch: one here read the wrong field off a raw invocation (`attempt.data`; the
 payload is `attempt.body`), so its found-case could never pass — invisible for as long as every
 caller asked for ABSENCE.
@@ -175,9 +175,9 @@ moment a second function produces X: a renewal job that raised invoices broke th
 scenarios that had been green for months.
 
 **A selector on IDENTITY alone rots the same way once rows gain a lifecycle.** One reused the first
-licence assigned to an email regardless of its state, which was correct until a new milestone's
+licence assigned to an email regardless of its state, which was correct until a new changeset's
 refusal scenarios left that actor holding cancelled ones — it then handed back a dead licence, read
-as success, and failed a scenario two milestones older at a step that needed a live one.
+as success, and failed a scenario two changesets older at a step that needed a live one.
 
 **A step's input is a recorded contract, and it does not take a version.** Widening one — an extra
 optional field so a step can name a particular row — trips PKU861 exactly like a function's does,
@@ -218,10 +218,10 @@ Both are screen defects before they are test defects: a field whose label change
 and a list whose rows are indistinguishable to anyone on the phone to support.
 
 **A route nested under an existing screen is unreachable until its parent renders an `Outlet`.** A
-milestone added `/app/academy/$slug` under an `/app/academy` that already had a component of its
+changeset added `/app/academy/$slug` under an `/app/academy` that already had a component of its
 own; the parent swallowed the child, so the editor's URL rendered the list — every link, every route
 file and every type check looked right, and the only thing that noticed was a browser scenario that
-OPENED the child path and found the parent's controls on screen. When a milestone deepens a path an
+OPENED the child path and found the parent's controls on screen. When a changeset deepens a path an
 earlier one already owns, split the parent into a layout (`Outlet`) and an `index` route in the same
 change, and make one scenario open the child by path rather than reach it by clicking.
 
@@ -248,9 +248,9 @@ environment's `appUrls` map, so there is no second environment to run.
 browser pass needs the environment's `appUrl` and a browser driver installed — without them the run
 fails fast rather than half-running.
 
-**Run the whole suite, not the milestone's own scenarios.** The milestone's scenarios are the ones
+**Run the whole suite, not the changeset's own scenarios.** The changeset's scenarios are the ones
 you wrote to pass; the regression lives in someone else's. Tightening what "archived" means is a
-one-function change that reads as local and quietly breaks the milestone-01 scenario nobody re-ran.
+one-function change that reads as local and quietly breaks the first changeset's scenario nobody re-ran.
 
 **Restart the server after adding a function.** Hot reload does not register a new RPC and does not
 re-run `afterStart`, so a fresh function answers 404 and anything provisioned at boot is missing —
@@ -272,9 +272,9 @@ That writes `coverage/scenario-coverage.json` — which functions each journey e
 no scenario touches has never been run by anything but you, by hand, once.** It compiles, it
 typechecks, `pikku all` is happy, and nobody has proven it does what it says.
 
-Run it **as each milestone closes**, not once at the end. Coverage read per milestone is a short
-list you can act on — the milestone you just built either covered its own functions or it did not.
-Read for the first time after ten milestones it is a wall of red that nobody triages, and the honest
+Run it **as each changeset closes**, not once at the end. Coverage read per changeset is a short
+list you can act on — the changeset you just built either covered its own functions or it did not.
+Read for the first time after ten changesets it is a wall of red that nobody triages, and the honest
 response to a wall of red is to ignore it.
 
 Every gap is one of three things, and naming which is the point of looking:
@@ -285,8 +285,8 @@ Every gap is one of three things, and naming which is the point of looking:
 - **A function that should not exist** — nothing reaches it because nothing needs it. Delete it. An
   unused exposed function is also reachable over `POST /rpc/:rpcName`, so this is a security finding,
   not only dead weight.
-- **Genuinely deferred** — real, not yet reachable from the UI. Say so in the milestone note that
-  will cover it, so the gap is a decision rather than a hole.
+- **Genuinely deferred** — real, not yet reachable from the UI. File it as a change, so the gap is
+  a decision rather than a hole.
 
-Report the number when you hand the milestone over. A number nobody says out loud is a number nobody
+Report the number when you hand the changeset over. A number nobody says out loud is a number nobody
 acts on.

@@ -1,6 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a Fabric project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku fabric changes next|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout linked to a Fabric project (`pikku fabric config` shows one). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
+description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
 installGroups: [fabric]
 ---
 
@@ -10,60 +10,107 @@ Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
 Empty the queue without making them regret filing.
 
-Run every command from the checkout: the project comes from its git remote (`pikku fabric config` shows which).
+Run every command from the checkout. The queue lives in it (`.git/pikku-changes.json`, shared by every
+worktree). When you are logged in to Fabric and the checkout is linked to a project (`pikku fabric config`
+shows which), every write is also registered with Fabric.
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
-## Which stage
-
-The queue is per project. "Against develop" or a pasted stage URL narrows it:
-`--stage` takes a branch, the stage URL (as filed, path optional) or a stage id. With
-no stage named, work the whole project. An unknown name prints the stages there are.
+**Launched by `pikku changes next`?** `pikku changes next` picks one agent: a merge conflict or a changeset with no plan
+goes back to a changes agent; open changes go to a changes agent; a pikku version bump goes to an
+upgrade agent, and knowledge no change builds yet (`pikku knowledge gaps`) to a knowledge agent — both
+of those only file changes. A change filed for a gap ends its body with the gap's `Knowledge:` line.
+As a changes agent, your work file already lists every open change. Skip the loop below,
+group them into changesets, and take one: claim it, build it, mark its items done, stop. `pikku changes next --loop`
+starts a fresh agent for the next one, so nothing you hold in context carries over — whatever the next
+changeset needs to know goes in a commit or a `reply`.
 
 ## The loop
 
 **Never poll.** No `sleep` loops, no repeated `list`, no re-running `show` to see if
-something changed. `next` does the waiting and exits only when there is work.
+something changed. `wait` does the waiting and exits only when there is work.
 
-1. Start `next` as a **background** command, and stop there until it exits:
+1. Start `wait` as a **background** command, and stop there until it exits:
 
    ```bash
-   pikku fabric changes next --stage develop --claim --claimed-by claude-code
+   pikku changes wait --claim --claimed-by claude-code
    ```
 
    It waits out the grace window (a just-filed item is held about a minute so a batch
    being typed arrives together), claims what is ready as one group, prints it, and
    exits. It also wakes when someone answers a question you asked under that
-   `--claimed-by`. It is woken by fabric's change events the moment an item is filed
-   or answered, and sleeps exactly until a held item becomes claimable; when the event
-   stream is unavailable it falls back to checking every `--interval` seconds.
+   `--claimed-by`. It checks every `--interval` seconds.
 
 2. When it exits, read the exit code:
 
    | code | meaning                                                | do                                              |
    | ---- | ------------------------------------------------------ | ----------------------------------------------- |
    | 0    | work printed (claimed, and/or `Answered`)              | work it, then step 3                            |
-   | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `next`                         |
+   | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `wait`                         |
    | 3    | session refused                                        | tell the user to run `pikku fabric login`; stop |
-   | 1    | anything else (bad `--stage`, fabric down for minutes) | report the message; stop                        |
+   | 1    | anything else                                          | report the message; stop                        |
 
 3. For each item: `show` → fix → commit → `done`; or `ask` and move on; or `reply`
-   saying why you are leaving it. Then start `next` again, in the background.
+   saying why you are leaving it. Then start `wait` again, in the background.
 
 Without `--claim` it only reports what is claimable; claim it yourself:
 
 ```bash
-pikku fabric changes claim --change-ids 3,4 --title "Checkout pass" --claimed-by claude-code
+pikku changes claim --change-ids 3,4 --title "Checkout pass" --claimed-by claude-code
 ```
 
 A `claim` refused with a 409 says per item why — held for the filer, inside another
 group's lease, done — and when a held or leased item is **claimable at** (a local
 `HH:MM`; `list` and `show` print the same). An item inside someone else's live lease
-cannot be taken. For held items, run `next --claim` rather than retrying. The lease is 30 minutes
+cannot be taken. For held items, run `wait --claim` rather than retrying. The lease is 30 minutes
 (`--lease-minutes`); an abandoned claim returns to the queue by itself.
+
+## Changesets
+
+Group related items into changesets and claim each one as a group, saying which tables it touches —
+the entity notes' `resource:` lines name them:
+
+```bash
+pikku changes claim --change-ids 1,3 --title "Waitlist" --claimed-by pi --creates waitlist --reads booking
+```
+
+The claim says whether the changeset needs a plan, and why: one that creates or alters a table, or
+has many changes, always does; anything else goes to the judge configured with
+`PIKKU_PLAN_JUDGE_URL` (any endpoint answering `{verdict, reason}` to `{question, context}`), and a
+judge that fails says plan. With no judge configured only the fixed rules apply. `--needs-plan
+true|false` overrides all of it.
+
+A planned changeset is planned before any code, with the pikku-architect skill:
+`pikku knowledge plan set <groupId> <file>` writes `knowledge/plans/<groupId>.plan.json`; commit it on
+the changeset's branch. `done` refuses the first change until the plan reads and the last until
+`pikku knowledge plan progress <groupId>` is clean, and `pikku changes next` will not merge a planned
+changeset whose branch has no plan.
+
+Build each changeset on its own branch, `changeset/<slug>`, cut from the branch you started on, one
+commit per item (see Committing), and mark each item `done`. Launched by `pikku changes next`, stop there:
+it merges finished changesets itself, as one `--no-ff` commit with a `Changeset:` trailer, and if the
+merge conflicts it hands that back to an agent to resolve on the changeset's branch. Working by hand,
+merge it yourself from the branch it goes into:
+
+```bash
+pikku changes merge --group-id <id>
+```
+
+Never `git merge` a changeset branch yourself — a fast-forward leaves no changeset commit, and
+`changes merge` refuses a branch that is already in.
+
+Changesets that create or alter tables go one at a time; one that reads a table waits for the
+changeset creating it; the rest can run side by side. On the local queue, `claim` refuses a changeset
+that would break that order, and `done` refuses a commit that adds a migration under `db/` when its
+changeset declared no `--creates`/`--alters`.
+
+When other agents are working changesets at the same time (your work says so), claim with
+`--worktree`: it creates `changeset/<slug>` in its own checkout beside the repo and prints the path.
+Build and commit there and run `done` there; the merge removes the worktree. If the claim is refused because of a running changeset, claim one that does not
+clash, or stop.
 
 ## Reading an item
 
-`pikku fabric changes show 3` gives, most trustworthy first:
+`pikku changes show 3` gives, most trustworthy first:
 
 1. **Their words.** The title and body are the requirement. Everything else is evidence.
 2. **The screenshot.** What they saw, at their width, with their data. When the other
@@ -84,11 +131,11 @@ One decision, in their vocabulary, with the choices as `--option` flags — each
 a button. Include "hold until I check" when it is real. Batch questions per group.
 
 ```bash
-pikku fabric changes ask --change-id 3 --question "Make the total stand out — which way?" \
+pikku changes ask --change-id 3 --question "Make the total stand out — which way?" \
   --option "Bigger" --option "Move it above the delivery line" --author-name claude-code
 ```
 
-Then **park it** and move on. The answer wakes `next` (same `--claimed-by`); it prints
+Then **park it** and move on. The answer wakes `wait` (same `--claimed-by`); it prints
 under `Answered`, and `show` has the reply.
 
 If the answer is visual and you can build it, build each variant, screenshot all of
@@ -96,7 +143,7 @@ them in one pass at one width (baseline included), and attach them — the panel
 `--kind option` shots into a pick-one:
 
 ```bash
-pikku fabric changes shot --change-id 3 --label "Bigger" --kind option --image a.png
+pikku changes shot --change-id 3 --label "Bigger" --kind option --image a.png
 ```
 
 `--kind evidence` is a picture that proves something, shown inline.
@@ -112,7 +159,7 @@ item's status exactly where it was:
 - you could not reproduce it — attach what you saw.
 
 ```bash
-pikku fabric changes reply 3 --message "Cannot reproduce on develop @ a91c4e2 — this is what I see." \
+pikku changes reply 3 --message "Cannot reproduce on develop @ a91c4e2 — this is what I see." \
   --image seen.png --image-label "develop @ a91c4e2" --author-name claude-code
 ```
 
@@ -135,12 +182,11 @@ Scope names the screen they were looking at, not the file you edited.
 ## Finishing
 
 ```bash
-pikku fabric changes done --change-id 7 --note "What you did, for whoever reads the thread"
+pikku changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-Branch and commit default to the checkout you are in — run it there, never type a sha.
+Branch and commit default to the checkout you are in — run it there, never type a sha. `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 
-Writes need the `changes:project:write` scope; `list`, `show` and `next` without
-`--claim` are reads.
+Registering writes with Fabric needs the `changes:project:write` scope.

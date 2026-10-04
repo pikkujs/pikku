@@ -1,4 +1,4 @@
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import type { ChangesRPC } from './changes-local.js'
 import type {
   ClaimChangesOutput,
   ListChangesOutput,
@@ -115,7 +115,7 @@ export function soonestClaimable(
  * answer cannot wake `next` forever.
  */
 async function answered(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   candidates: Change[]
 ): Promise<Change[]> {
   const ready: Change[] = []
@@ -155,7 +155,7 @@ export const backoffMs = (failures: number, intervalMs: number): number =>
  * `SAFETY_POLL_MS` while there is one.
  */
 export async function waitForNext(
-  rpc: PikkuRPC,
+  rpc: ChangesRPC,
   options: NextOptions,
   clock: Clock,
   log: (line: string) => void = () => {},

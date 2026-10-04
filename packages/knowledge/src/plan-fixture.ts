@@ -8,12 +8,11 @@ import { noteHash } from './notes.js'
  * second hand-written one drifts the moment a schema rule changes — the failure would show
  * as an unrelated suite going red for a plan that was never the point of it.
  */
-export const basePlan = (
-  milestone = 'knowledge/milestones/01-the-daily-entry.md'
-): Plan => ({
+export const basePlan = (changeset = 'the-daily-entry'): Plan => ({
   version: PLAN_VERSION,
   deferrals: [],
-  milestone,
+  changeset,
+  surface: 'app',
   description: 'One person writes one entry a day and reads their own back.',
   covers: [
     {
