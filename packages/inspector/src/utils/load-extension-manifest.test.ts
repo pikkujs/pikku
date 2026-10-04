@@ -54,6 +54,7 @@ describe('loadAddonFunctionsMeta — wireExtension', () => {
   const manifest = {
     title: 'Invoices',
     file: 'x.ts',
+    scopes: ['invoices:read', 'invoices:write'],
     screens: [{ path: '/', title: 'Overview', component: './screens/o' }],
   }
 
@@ -76,6 +77,29 @@ describe('loadAddonFunctionsMeta — wireExtension', () => {
     await loadAddonFunctionsMeta(logger, state)
     assert.deepEqual(criticals, [])
     assert.deepEqual(state.extensions?.invoices, manifest)
+  })
+
+  test('the wired role is the derived scopes plus the host scopes on that instance', async () => {
+    criticals = []
+    const state = makeState(
+      rootDir,
+      new Map([
+        [
+          'invoices',
+          {
+            package: '@acme/extension-invoices',
+            extension: true,
+            scopes: ['admin', 'invoices:read'],
+          },
+        ],
+      ])
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    assert.deepEqual(state.extensions?.invoices?.scopes, [
+      'admin',
+      'invoices:read',
+      'invoices:write',
+    ])
   })
 
   test('a package with no screens is an addon, and wireExtension says so', async () => {

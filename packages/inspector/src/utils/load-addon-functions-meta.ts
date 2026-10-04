@@ -304,7 +304,12 @@ export async function loadAddonFunctionsMeta(
             `wireExtension('${namespace}') wires ${decl.package}, which declares no screens, so it is an addon. Use wireAddon.`
           )
         } else {
-          ;(state.extensions ??= {})[namespace] = manifest
+          ;(state.extensions ??= {})[namespace] = {
+            ...manifest,
+            scopes: [
+              ...new Set([...(manifest.scopes ?? []), ...(decl.scopes ?? [])]),
+            ].sort(),
+          }
         }
       }
 

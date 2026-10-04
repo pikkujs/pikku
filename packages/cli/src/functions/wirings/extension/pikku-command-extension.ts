@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
+  deriveExtensionScopes,
   serializeExtensionMeta,
   serializeExtensionScreens,
 } from './serialize-extension.js'
@@ -13,7 +14,7 @@ export const pikkuExtension = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
-    const { extensionManifest } = await getInspectorState()
+    const { extensionManifest, functions } = await getInspectorState()
     if (!extensionManifest) {
       return false
     }
@@ -21,7 +22,11 @@ export const pikkuExtension = pikkuSessionlessFunc<void, boolean>({
     await writeFileInDir(
       logger,
       extensionMetaJsonFile,
-      serializeExtensionMeta(extensionManifest, rootDir)
+      serializeExtensionMeta(
+        extensionManifest,
+        rootDir,
+        deriveExtensionScopes(functions.meta)
+      )
     )
     await writeFileInDir(
       logger,

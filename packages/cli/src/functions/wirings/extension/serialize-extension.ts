@@ -39,17 +39,32 @@ export const serializeExtensionScreens = (
 }
 
 /**
+ * The extension's role: the scopes its own functions require, and nothing it
+ * declares by hand, so it cannot drift from what the functions enforce.
+ */
+export const deriveExtensionScopes = (
+  functionsMeta: Record<string, { scopes?: string[] }>
+): string[] =>
+  [
+    ...new Set(
+      Object.values(functionsMeta).flatMap((meta) => meta.scopes ?? [])
+    ),
+  ].sort()
+
+/**
  * The manifest a consuming project reads to tell an extension from an addon.
  * `file` is made relative to the package so the published meta does not carry
  * the author's machine path.
  */
 export const serializeExtensionMeta = (
   manifest: ExtensionManifestMeta,
-  rootDir: string
+  rootDir: string,
+  scopes: string[]
 ): string =>
   JSON.stringify(
     {
       ...manifest,
+      scopes,
       file: posix.normalize(toPosix(relative(rootDir, manifest.file))),
     },
     null,
