@@ -146,6 +146,7 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuNewExtension } from './functions/commands/new-extension.js'
 import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
@@ -714,10 +715,12 @@ wireCLI({
         list: pikkuCLICommand({
           func: pagesList,
           render: renderPagesList,
-          description: 'List every page: app, route path, route file and params',
+          description:
+            'List every page: app, route path, route file and params',
           options: {
             app: {
-              description: 'Only this frontend, by its directory (e.g. apps/app)',
+              description:
+                'Only this frontend, by its directory (e.g. apps/app)',
               type: 'string',
             },
           },
@@ -729,7 +732,8 @@ wireCLI({
             "Photograph one frontend's pages on a running server, signed out or as a persona",
           options: {
             baseUrl: {
-              description: 'Where the frontend is served, e.g. http://localhost:7104',
+              description:
+                'Where the frontend is served, e.g. http://localhost:7104',
               type: 'string',
             },
             app: {
@@ -747,7 +751,8 @@ wireCLI({
               type: 'string',
             },
             as: {
-              description: 'Sign in as this persona first, the way scenario actors do',
+              description:
+                'Sign in as this persona first, the way scenario actors do',
               type: 'string',
             },
             environment: {
@@ -780,8 +785,7 @@ wireCLI({
               description: 'Preset id to start from (see `pikku theme list`)',
             },
             structure: {
-              description:
-                'Structure id for depth: shadows, radius, density',
+              description: 'Structure id for depth: shadows, radius, density',
             },
             primary: { description: 'Primary colour, as hex' },
             secondary: { description: 'Secondary colour, as hex' },
@@ -795,7 +799,8 @@ wireCLI({
       },
     },
     addons: {
-      description: 'Addons this app uses — published packages, or generated from an OpenAPI spec',
+      description:
+        'Addons this app uses — published packages, or generated from an OpenAPI spec',
       subcommands: {
         add: pikkuCLICommand({
           func: pikkuAddonsAdd,
@@ -808,13 +813,16 @@ wireCLI({
                 'Required for a spec: user (each user connects their own account), shared (one key behind every user) or none (public API)',
             },
             name: {
-              description: 'For a spec: the addon name (defaults to the spec title)',
+              description:
+                'For a spec: the addon name (defaults to the spec title)',
             },
             openapiHeader: {
               description:
                 'For a spec URL: header sent when fetching it, as "Name: value" (repeatable)',
             },
-            tags: { description: 'For a spec: keep only operations with these tags' },
+            tags: {
+              description: 'For a spec: keep only operations with these tags',
+            },
             include: {
               description:
                 'For a spec: keep only operations matching these globs (operationId, /path or "METHOD /path")',
@@ -836,7 +844,8 @@ wireCLI({
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuComponentsList,
-          description: "List the shadcn components in the app's src/components/ui",
+          description:
+            "List the shadcn components in the app's src/components/ui",
         }),
         add: pikkuCLICommand({
           func: pikkuComponentsAdd,
@@ -846,19 +855,25 @@ wireCLI({
         }),
         show: pikkuCLICommand({
           func: pikkuComponentsShow,
-          description: "One component's variants, sizes and defaults, read from its cva definition",
+          description:
+            "One component's variants, sizes and defaults, read from its cva definition",
           parameters: '<name>',
         }),
       },
     },
     blocks: {
-      description: 'Ready-made, i18n-safe shadcn page sections to copy into an app',
+      description:
+        'Ready-made, i18n-safe shadcn page sections to copy into an app',
       subcommands: {
         list: pikkuCLICommand({
           func: pikkuBlocksList,
           description: 'List the blocks and their tags',
           options: {
-            tag: { description: 'Only blocks with this tag (e.g. headers, heroes, auth)', type: 'string' },
+            tag: {
+              description:
+                'Only blocks with this tag (e.g. headers, heroes, auth)',
+              type: 'string',
+            },
           },
         }),
         show: pikkuCLICommand({
@@ -867,13 +882,18 @@ wireCLI({
             'Print a block with every block it composes: its files, the i18n keys to add and any npm packages it needs',
           parameters: '<name>',
           options: {
-            out: { description: 'Write the files into this folder instead, skipping any that exist', type: 'string' },
+            out: {
+              description:
+                'Write the files into this folder instead, skipping any that exist',
+              type: 'string',
+            },
           },
         }),
       },
     },
     design: {
-      description: "The app's brand assets: placeholder names, icons, design tokens and imagery",
+      description:
+        "The app's brand assets: placeholder names, icons, design tokens and imagery",
       subcommands: {
         placeholders: pikkuCLICommand({
           func: pikkuDesignPlaceholders,
@@ -885,11 +905,27 @@ wireCLI({
           description:
             "Render the favicon, apple-touch and PWA icons into the app's public/ from a logo or a glyph, and link them from the document head. Needs playwright's chromium",
           options: {
-            app: { description: 'The frontend, when there is more than one', type: 'string' },
-            source: { description: 'Logo image (SVG/PNG/JPG/WebP), relative to the app, its public/ or the workspace', type: 'string' },
-            emoji: { description: 'Emoji to draw instead of a logo', type: 'string' },
-            letter: { description: 'One or two letters to draw instead of a logo', type: 'string' },
-            background: { description: 'Background colour, as hex', type: 'string' },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+            source: {
+              description:
+                'Logo image (SVG/PNG/JPG/WebP), relative to the app, its public/ or the workspace',
+              type: 'string',
+            },
+            emoji: {
+              description: 'Emoji to draw instead of a logo',
+              type: 'string',
+            },
+            letter: {
+              description: 'One or two letters to draw instead of a logo',
+              type: 'string',
+            },
+            background: {
+              description: 'Background colour, as hex',
+              type: 'string',
+            },
           },
         }),
         extract: pikkuCLICommand({
@@ -898,9 +934,19 @@ wireCLI({
             'Reduce a live site (needs playwright) or a W3C design-tokens file to colours, fonts and structure, and the theme input they imply',
           options: {
             url: { description: 'Site to read the design off', type: 'string' },
-            file: { description: 'DTCG tokens.json to read instead', type: 'string' },
-            preset: { description: 'Preset the extracted colours and fonts layer over', type: 'string' },
-            apply: { description: 'Write the theme and make it active, as `pikku theme apply` does', default: false },
+            file: {
+              description: 'DTCG tokens.json to read instead',
+              type: 'string',
+            },
+            preset: {
+              description: 'Preset the extracted colours and fonts layer over',
+              type: 'string',
+            },
+            apply: {
+              description:
+                'Write the theme and make it active, as `pikku theme apply` does',
+              default: false,
+            },
           },
         }),
         images: pikkuCLICommand({
@@ -909,9 +955,18 @@ wireCLI({
             "Search Unsplash with your UNSPLASH_ACCESS_KEY and download photos into the app's public/stock/, with the credit Unsplash requires",
           parameters: '<query>',
           options: {
-            count: { description: 'How many photos, up to 30 (default 8)', type: 'string' },
-            orientation: { description: 'landscape, portrait or squarish', type: 'string' },
-            app: { description: 'The frontend, when there is more than one', type: 'string' },
+            count: {
+              description: 'How many photos, up to 30 (default 8)',
+              type: 'string',
+            },
+            orientation: {
+              description: 'landscape, portrait or squarish',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
           },
         }),
         crawl: pikkuCLICommand({
@@ -920,8 +975,14 @@ wireCLI({
             "Crawl a site on your own Cloudflare account (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN) and return each page as markdown, its images saved into the app's public/crawled/",
           parameters: '<url>',
           options: {
-            maxPages: { description: 'Most pages to crawl (default 20)', type: 'string' },
-            app: { description: 'The frontend, when there is more than one', type: 'string' },
+            maxPages: {
+              description: 'Most pages to crawl (default 20)',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
           },
         }),
       },
@@ -1498,7 +1559,7 @@ wireCLI({
               type: 'string',
             },
             data: {
-              description: "The RPC's input as JSON, e.g. '{\"id\":\"1\"}'",
+              description: 'The RPC\'s input as JSON, e.g. \'{"id":"1"}\'',
               type: 'string',
             },
             environment: {
@@ -1741,6 +1802,19 @@ wireCLI({
                 'Wiring type: http (default), channel, scheduler, queue, mcp, cli, or trigger',
               short: 't',
               default: 'http',
+            },
+          },
+        }),
+        extension: pikkuCLICommand({
+          func: pikkuNewExtension,
+          description:
+            'Create a new Pikku Studio extension: an addon that also ships screens',
+          parameters: '<name>',
+          options: {
+            dir: {
+              description:
+                'Where to create it (default packages/extension-<name>)',
+              short: 'd',
             },
           },
         }),
