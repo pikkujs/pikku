@@ -546,7 +546,7 @@ async function setupFabric(cliOptions: CliOptions) {
   const targetPath = await cloneRepo(
     cliOptions,
     'starter-template',
-    'gh:pikkujs/pikku/examples/starter-template'
+    `${BASE_URL}/starter-template`
   )
   const appsDir = path.join(targetPath, 'apps')
 

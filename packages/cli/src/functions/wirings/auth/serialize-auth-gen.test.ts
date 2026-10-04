@@ -154,7 +154,7 @@ describe('serializeAuthGen', () => {
     assert.match(wiring, /export const authHandler = pikkuSessionlessFunc/)
     assert.match(wiring, /route: '\/api\/auth\{\/\*splat\}', func: authHandler/)
     assert.match(secrets, /secretId: 'BETTER_AUTH_SECRET'/)
-    assert.doesNotMatch(secrets, /MicrosoftOAuthSchema/)
+    assert.doesNotMatch(secrets, /AppleOAuthSchema/)
   })
 
   test('generates code for multiple providers', () => {

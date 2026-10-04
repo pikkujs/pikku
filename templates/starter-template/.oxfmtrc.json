@@ -1,0 +1,11 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "ignorePatterns": [
+    "**/*.gen.ts",
+    "**/*.gen.tsx",
+    "**/.pikku/**",
+    "**/.deploy/**",
+    "**/node_modules/**"
+  ]
+}

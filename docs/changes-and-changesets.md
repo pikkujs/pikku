@@ -19,7 +19,7 @@ time, and every source of work feeds the same queue.
 - a prompt in an existing project, which becomes changes
 - the new-project build, which files the app's first changes
 
-Storage: one or the other, chosen by login. Logged out, a local file, which can be trimmed at any time; logged in to Fabric, the linked project's record in the cloud, and nothing local. The same `pikku changes` commands work on either.
+Storage: a local file in OSS, which can be trimmed at any time; a record on Fabric.
 The same `changes` commands work against either.
 
 ## Changesets
@@ -91,17 +91,20 @@ Projected subagents (`pikku skills install --agent pi`) inline their skill
 | Agent | Job |
 |---|---|
 | main (new-project build, changes) | talks to the user, groups, judges, dispatches; writes no code |
-| `pikku-knowledge` | writes knowledge; reconciles it against code and files a change per gap |
+| `pikku-knowledge` | writes knowledge; `pikku knowledge gaps` lists what to file as changes |
 | `pikku-architect` | plans one changeset when the judge asks for it |
 | `pikku-build` | builds one changeset: a commit per change, then `done` |
 
-## First slice
+## Plans and gaps
 
-Before milestones are removed or any skill is rewritten, prove one changeset end to
-end on a real app:
+A changeset that creates or alters a table, or has 6 or more changes, needs a plan; for
+anything else `claim` asks the judge at `PIKKU_PLAN_JUDGE_URL` when one is configured,
+and a judge that fails says plan. The plan is `knowledge/plans/<changeset>.plan.json`,
+written with `pikku knowledge plan set` and committed on the changeset's branch. `done`
+refuses the first change until it reads and the last until `pikku knowledge plan
+progress` is clean, and `pikku changes next` will not merge a planned changeset without one.
 
-1. a local changes store behind the existing `changes` commands
-2. `claim` records `creates` / `alters` / `reads` and `needsPlan`
-3. `pikku changes next` with two routes: open changes → changes agent; nothing → exit
-4. `Change:` commits, the `Changeset:` merge, and the `db/` diff check at `done`
-5. 3–4 real changes, one needing a new table, worked through pi
+`pikku knowledge gaps` is what the knowledge agent files from: notes no change builds
+yet, notes changed since, code a merged plan built that has since gone, and covered
+notes that were deleted. A change filed for a gap ends its body with the gap's
+`Knowledge: <note>@<hash>` line, which is how the gap stops being reported.

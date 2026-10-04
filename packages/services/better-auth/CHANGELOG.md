@@ -1,5 +1,11 @@
 # @pikku/better-auth
 
+## 0.12.53
+
+### Patch Changes
+
+- 1b7268b: The OAuth proxy accepts 30 better-auth providers instead of only Google and GitHub, and `cloudflare` and `paybin` join the provider registry.
+
 ## 0.12.52
 
 ### Patch Changes

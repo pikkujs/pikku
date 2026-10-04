@@ -33,6 +33,7 @@ export const httpPlanJudge = (url: string, token?: string): PlanJudge => ({
   async judge({ title, changes, reads }) {
     const response = await fetch(url, {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: {
         'content-type': 'application/json',
         ...(token ? { authorization: `Bearer ${token}` } : {}),

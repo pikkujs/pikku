@@ -111,7 +111,7 @@ Write it to `knowledge/decisions/design/screens.html` and treat it as **source o
 truth for the screens** once they approve it. That has consequences worth
 stating:
 
-- The milestones are read off it. A screen in the mock that no milestone builds
+- The changes are read off it. A screen in the mock that no change builds
   is a gap in the plan, not a spare drawing.
 - A screen the build turns out to need that the mock does not have means the
   mock was wrong. Update it, and say you did. Do not let the app and the mock

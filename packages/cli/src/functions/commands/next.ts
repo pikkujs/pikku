@@ -79,7 +79,6 @@ async function route(
       projectId: projectId!,
       includeDone: true,
       pickupOnly: false,
-      limit: 200,
     })
   )
   if (finished.length) await syncWithUpstream()

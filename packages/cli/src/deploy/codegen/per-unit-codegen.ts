@@ -45,6 +45,12 @@ export interface PerUnitCodegenOptions {
     status: 'start' | 'done' | 'error',
     error?: string
   ) => void
+  /**
+   * Filter names added to every unit's own. A merged server unit has role
+   * 'function', so the agent, MCP and channel names of the units folded into it
+   * are not derivable from the unit itself.
+   */
+  extraFilterNames?: string[]
   /** Resolve unit output directory (defaults to <deployDir>/<unit-name>) */
   resolveUnitDir?: (unit: DeploymentUnit, baseDeployDir: string) => string
   /**
@@ -328,12 +334,12 @@ export async function generatePerUnitCodegen(
 
     // Generate codegen for each unit
     for (const unit of manifest.units) {
-      const filterNames = collectFilterNames(
-        unit,
-        manifest,
-        inspectorState,
-        workflowQueues
-      )
+      const filterNames = [
+        ...new Set([
+          ...collectFilterNames(unit, manifest, inspectorState, workflowQueues),
+          ...(options.extraFilterNames ?? []),
+        ]),
+      ]
 
       if (filterNames.length === 0) {
         errors.push({

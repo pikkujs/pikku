@@ -1,0 +1,44 @@
+{
+  "name": "Neutral",
+  "description": "Unopinionated monochrome scaffold — system fonts, ink accent, zinc surfaces. Reshape from here.",
+  "brand": {
+    "colors": { "primary": "#18181b" }
+  },
+  "structure": {
+    "defaultRadius": "md",
+    "autoContrast": true,
+    "primaryShade": { "light": 9, "dark": 0 },
+    "defaultColorScheme": "light",
+    "radius": {
+      "xs": "2px",
+      "sm": "6px",
+      "md": "10px",
+      "lg": "16px",
+      "xl": "24px"
+    },
+    "shadows": {
+      "xs": "0 1px 2px rgba(24,24,27,0.05)",
+      "sm": "0 1px 2px rgba(24,24,27,0.05)",
+      "md": "0 1px 2px rgba(24,24,27,0.04), 0 10px 30px rgba(24,24,27,0.06)",
+      "lg": "0 1px 2px rgba(24,24,27,0.04), 0 16px 40px rgba(24,24,27,0.08)",
+      "xl": "0 1px 2px rgba(24,24,27,0.04), 0 24px 56px rgba(24,24,27,0.10)"
+    },
+    "darkColors": [
+      "#fafafa",
+      "#d4d4d8",
+      "#a1a1a6",
+      "#8b8b90",
+      "#33333a",
+      "#202024",
+      "#161617",
+      "#0c0c0d",
+      "#0a0a0b",
+      "#080809"
+    ],
+    "components": {
+      "Card": { "defaultProps": { "shadow": "sm", "radius": "md", "withBorder": true } },
+      "Paper": { "defaultProps": { "shadow": "sm", "radius": "md" } },
+      "NavLink": { "defaultProps": { "variant": "light" } }
+    }
+  }
+}

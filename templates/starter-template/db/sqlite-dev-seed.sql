@@ -1,0 +1,4 @@
+-- Dev seed. `pikku db reset` applies this file after replaying the migrations;
+-- it is the ONLY seed file the CLI reads, and the name is exact.
+-- The starter is auth-only, so there's nothing to seed yet. Add your own
+-- INSERT … ON CONFLICT DO NOTHING rows here as you grow the schema.

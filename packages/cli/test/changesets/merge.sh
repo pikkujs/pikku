@@ -59,7 +59,7 @@ scenario "merge removes the changeset's worktree"
 fresh_repo
 file_changes Side
 pk changes claim --change-ids 1 --title Side --claimed-by a --worktree >/dev/null
-(cd "$REPO-changesets/side" && cp "$REPO/pikku.config.json" . && commit_change 1 && pk changes done 1 >/dev/null)
+(cd "$REPO-changesets/side" && commit_change 1 && pk changes done 1 >/dev/null)
 out=$(pk changes merge --group-id "$(group_of Side)")
 expect_contains "$out" "removed worktree"
 expect_eq "$(git worktree list | wc -l | tr -d ' ')" "1"

@@ -23,10 +23,12 @@ export const renderKnowledgeValidate = (
   // Orphans are one finding each so a consumer can act on one at a time, but a
   // project with no knowledge base yet reports every function it has — printing
   // those in full buries the findings somebody can actually fix.
-  const orphans = infos.filter((f) => f.id.startsWith('knowledge-orphan-'))
-  const rest = infos.filter((f) => !f.id.startsWith('knowledge-orphan-'))
+  const isOrphan = (f: { id: string }) => f.id.startsWith('knowledge-orphan-')
+  const orphans = warns.filter(isOrphan)
+  const rest = infos
+  const otherWarns = warns.filter((f) => !isOrphan(f))
 
-  for (const finding of [...errors, ...warns, ...rest]) {
+  for (const finding of [...errors, ...otherWarns, ...rest]) {
     const icon =
       finding.severity === 'error'
         ? removed('✗')
@@ -41,7 +43,7 @@ export const renderKnowledgeValidate = (
   if (orphans.length) {
     const shown = orphans.slice(0, ORPHANS_SHOWN)
     console.log(
-      `${dim('ℹ')}  ${orphans.length} thing${orphans.length !== 1 ? 's' : ''} in the code that no note describes`
+      `${changed('⚠')}  ${orphans.length} thing${orphans.length !== 1 ? 's' : ''} in the code that no note describes`
     )
     for (const orphan of shown) {
       console.log(`   ${dim(orphan.id.slice('knowledge-orphan-'.length))}`)

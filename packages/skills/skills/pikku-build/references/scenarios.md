@@ -248,9 +248,9 @@ environment's `appUrls` map, so there is no second environment to run.
 browser pass needs the environment's `appUrl` and a browser driver installed — without them the run
 fails fast rather than half-running.
 
-**Run the whole suite, not the milestone's own scenarios.** The milestone's scenarios are the ones
+**Run the whole suite, not the changeset's own scenarios.** The changeset's scenarios are the ones
 you wrote to pass; the regression lives in someone else's. Tightening what "archived" means is a
-one-function change that reads as local and quietly breaks the milestone-01 scenario nobody re-ran.
+one-function change that reads as local and quietly breaks the first changeset's scenario nobody re-ran.
 
 **Restart the server after adding a function.** Hot reload does not register a new RPC and does not
 re-run `afterStart`, so a fresh function answers 404 and anything provisioned at boot is missing —

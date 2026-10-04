@@ -46,6 +46,7 @@ const oauth = (key: string, displayName: string): AuthProviderDef => ({
 export const PROVIDER_REGISTRY = {
   apple: oauth('apple', 'Apple OAuth'),
   atlassian: oauth('atlassian', 'Atlassian OAuth'),
+  cloudflare: oauth('cloudflare', 'Cloudflare OAuth'),
   cognito: {
     ...oauth('cognito', 'AWS Cognito OAuth'),
     variables: {
@@ -89,6 +90,7 @@ export const PROVIDER_REGISTRY = {
   },
   naver: oauth('naver', 'Naver OAuth'),
   notion: oauth('notion', 'Notion OAuth'),
+  paybin: oauth('paybin', 'Paybin OAuth'),
   paypal: oauth('paypal', 'PayPal OAuth'),
   polar: oauth('polar', 'Polar OAuth'),
   railway: oauth('railway', 'Railway OAuth'),
