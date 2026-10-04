@@ -4,6 +4,8 @@ import {
   deriveScreensScopes,
   serializeScreensMeta,
   serializeScreens,
+  serializeAddonRoles,
+  serializeInstalledAddons,
 } from './serialize-screens.js'
 
 const manifest = {
@@ -71,5 +73,32 @@ describe('the published meta', () => {
       serializeScreensMeta(manifest as any, '/pkg', ['invoices:read'])
     )
     assert.deepEqual(meta.scopes, ['invoices:read'])
+  })
+})
+
+describe('host emit', () => {
+  const installed = [
+    {
+      name: 'invoices',
+      package: '@acme/addon-invoices',
+      manifest: {
+        ...manifest,
+        file: 'src/screens.ts',
+        scopes: ['invoices:read'],
+      },
+    },
+  ]
+
+  test('imports components through the package screens export', () => {
+    assert.match(
+      serializeInstalledAddons(installed as any),
+      /import\("@acme\/addon-invoices\/screens\/overview"\)/
+    )
+  })
+
+  test('the role map is plain data', () => {
+    const out = serializeAddonRoles(installed as any)
+    assert.match(out, /"invoices": \[\s*"invoices:read"\s*\]/)
+    assert.doesNotMatch(out, /import/)
   })
 })

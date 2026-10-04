@@ -299,6 +299,12 @@ export interface PikkuCLICoreOutputFiles {
   // Addon screens (lazy imports of each screen) — what the host imports
   screensFile: string
 
+  // Host: the addons wired with ui: true and their screens (lazy imports)
+  installedAddonsFile: string
+
+  // Host: scopes each ui addon's role is capped to, as plain data for the server
+  addonRolesFile: string
+
   // Personas (PersonaId union + typed definePersonas)
   personasFile: string
 
