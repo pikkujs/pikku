@@ -32,6 +32,11 @@
       "types": "./dist/emails/index.d.ts",
       "import": "./dist/emails/index.js",
       "default": "./dist/emails/index.js"
+    },
+    "./files": {
+      "types": "./dist/workspace-files.d.ts",
+      "import": "./dist/workspace-files.js",
+      "default": "./dist/workspace-files.js"
     }
   },
   "scripts": {
