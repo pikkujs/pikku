@@ -29,7 +29,7 @@ export function parseErrors(cwd, paths) {
     return null
   }
   if (run.error || run.status !== SYNTAX_EXIT) return null
-  const lines = `${run.stdout ?? ''}\n${run.stderr ?? ''}`.split('\n')
+  const lines = `${run.stdout ?? ''}\n${run.stderr ?? ''}`.replace(/\u001b\[[0-9;]*m/g, '').split('\n')
   const first = lines.findIndex((line) => /^\s*[x×] /.test(line))
   if (first === -1) return null
   const output = lines

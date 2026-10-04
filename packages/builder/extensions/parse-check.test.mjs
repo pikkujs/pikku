@@ -4,7 +4,6 @@ import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import { parseErrors } from './parse-check.mjs'
 
@@ -36,14 +35,8 @@ test('a file that does not parse is reported with its line', { skip: !available 
       'src/ok.ts': 'export const ok = 1\n',
       'src/bad.tsx': 'export function App() {\n  return <div>{x.map((i) => <b>{i}</b>)}\n}\n',
     },
-    (cwd, paths) => {
-      const found = parseErrors(cwd, paths)
-      if (found) return found
-      const probe = spawnSync(join(cwd, 'node_modules/.bin/oxfmt'), ['--check', ...paths], { cwd, encoding: 'utf8' })
-      return `PROBE ${JSON.stringify({ status: probe.status, signal: probe.signal, error: String(probe.error), out: probe.stdout, err: probe.stderr })}`
-    },
+    (cwd, paths) => parseErrors(cwd, paths),
   )
-  assert.doesNotMatch(found ?? '', /PROBE/, found)
   assert.ok(found, 'a broken file should be reported')
   assert.match(found, /DO NOT PARSE/)
   assert.match(found, /src\/bad\.tsx:\d+/)
