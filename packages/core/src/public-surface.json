@@ -215,8 +215,10 @@
   ],
   "./addon": [
     "RemoteAddonAuthError",
+    "defineExtension",
     "resolveRemoteAddonToken",
     "wireAddon",
+    "wireExtension",
     "wireRemoteAddon"
   ],
   "./safe-fetch": [

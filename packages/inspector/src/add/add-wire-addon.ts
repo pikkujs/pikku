@@ -88,7 +88,7 @@ function parseCredentialOverrideRecord(
 }
 
 /**
- * Detect wireAddon({ name: '...', package: '...' }) call expressions and
+ * Detect wireAddon / wireExtension({ name: '...', package: '...' }) call expressions and
  * populate state.rpc.wireAddonDeclarations and state.rpc.usedAddons.
  */
 export function addWireAddon(
@@ -99,7 +99,12 @@ export function addWireAddon(
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireAddon') return
+  if (
+    !ts.isIdentifier(expression) ||
+    (expression.text !== 'wireAddon' && expression.text !== 'wireExtension')
+  )
+    return
+  const extension = expression.text === 'wireExtension'
 
   const [firstArg] = args
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
@@ -204,9 +209,10 @@ export function addWireAddon(
 
   if (!name || !pkg) return
 
-  logger.debug(`• Found wireAddon: ${name} → ${pkg}`)
+  logger.debug(`• Found ${expression.text}: ${name} → ${pkg}`)
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
+    ...(extension ? { extension } : {}),
     file: node.getSourceFile().fileName,
     rpcEndpoint,
     mcp,
