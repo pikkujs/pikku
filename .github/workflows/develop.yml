@@ -270,7 +270,7 @@ jobs:
       # exactly as `pikku app native init`'s next steps tell a user to.
       - name: Create the native project
         working-directory: e2e
-        run: npx pikku app native init web
+        run: bunx pikku app native init web
       - name: Generate the icon set
         working-directory: e2e/packages/web
         run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png
