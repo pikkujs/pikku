@@ -27,6 +27,16 @@ runs:
     - uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.4.0
+    # templates/starter-template and examples/field-service are git submodules.
+    # The CLI build embeds recipes from field-service and fails without it. The
+    # container jobs run as a user that does not own the checkout, so mark it
+    # safe first; a failure here is a warning because only the jobs that build
+    # the CLI need the submodules, and they fail loudly on their own.
+    - name: Check out submodules
+      shell: bash
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git submodule update --init --recursive || echo "::warning::could not check out the submodules"
     - name: Download build output
       if: ${{ inputs.download-build == 'true' }}
       uses: ./.github/actions/download-tar
