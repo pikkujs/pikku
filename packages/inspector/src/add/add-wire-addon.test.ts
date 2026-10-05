@@ -75,6 +75,10 @@ describe('addWireAddon', () => {
       credentialGrants: undefined,
       globalSecrets: undefined,
       globalCredentials: undefined,
+      contentBucket: undefined,
+      contentGrants: undefined,
+      globalContent: undefined,
+      uses: undefined,
     })
   })
 
