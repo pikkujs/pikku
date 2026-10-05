@@ -74,6 +74,7 @@ const EMPTY_META: PikkuMetaState = {
   workflows: {},
   personas: {},
   systemRoles: {},
+  scopes: {},
   featureFlags: {},
   analyticsEvents: {},
   features: {},
@@ -154,6 +155,7 @@ export const PikkuMetaProvider: React.FC<{
         systemRoles:
           (allMeta as { systemRoles?: SystemRoleDefinitionsMeta })
             .systemRoles ?? {},
+        scopes: allMeta.scopes ?? {},
         featureFlags: allMeta.featureFlags ?? {},
         analyticsEvents: allMeta.analyticsEvents ?? {},
         features: allMeta.features ?? {},
