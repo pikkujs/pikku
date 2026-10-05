@@ -16,7 +16,7 @@ test('console RPCs invoke via HTTP /rpc/ path', async () => {
 
   try {
     const client = pikku({ serverUrl: 'https://example.com/api' })
-    const result = await client.rpc.invoke('console:getAllMeta')
+    const result = await client.rpc.invoke('console:getAllMeta', {})
 
     assert.deepEqual(result, { ok: true })
     assert.equal(calls.length, 1)
@@ -41,7 +41,7 @@ test('console RPCs forward the credentials mode for cross-origin cookie auth', a
       serverUrl: 'https://example.com/api',
       credentials: 'include',
     })
-    await client.rpc.invoke('console:getAllMeta')
+    await client.rpc.invoke('console:getAllMeta', {})
 
     assert.equal(seen[0], 'include')
   } finally {

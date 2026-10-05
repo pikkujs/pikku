@@ -135,7 +135,7 @@ export const PikkuMetaProvider: React.FC<{
     setLoading(true)
     setError(null)
     try {
-      const allMeta = await rpc.invoke('console:getAllMeta')
+      const allMeta = await rpc.invoke('console:getAllMeta', {})
       const gatewayMeta = allMeta.gatewayMeta ?? []
       setMeta({
         functions: allMeta.functions,

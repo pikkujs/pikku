@@ -16,7 +16,7 @@ export const useFunctionsMeta = () => {
   const rpc = usePikkuRPC()
   return useQuery({
     queryKey: ['functions-meta'],
-    queryFn: () => rpc.invoke('console:getFunctionsMeta'),
+    queryFn: () => rpc.invoke('console:getFunctionsMeta', {}),
   })
 }
 

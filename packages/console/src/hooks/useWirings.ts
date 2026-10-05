@@ -28,7 +28,7 @@ export function useFunctionsMeta() {
   return useQuery({
     queryKey: ['functions', 'meta'],
     queryFn: async () => {
-      return await rpc.invoke('console:getFunctionsMeta')
+      return await rpc.invoke('console:getFunctionsMeta', {})
     },
   })
 }
