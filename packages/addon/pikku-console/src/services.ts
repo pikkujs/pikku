@@ -13,7 +13,7 @@ import { WorkspaceFilesService } from '@pikku/code-edit/files'
 import { GitService } from '@pikku/code-edit/git'
 import { PagesService } from '@pikku/code-edit/routes'
 import { PageScreenshotService } from './services/page-screenshot.service.js'
-import { TypeScriptService } from '@pikku/code-edit/typescript'
+import type { TypeScriptService } from '@pikku/code-edit/typescript'
 import { VerifyService } from '@pikku/code-edit/verify'
 import { resolveStudioHost, type StudioHost } from './services/studio-host.service.js'
 import { DesignService } from './services/design.service.js'
@@ -83,7 +83,13 @@ export const createSingletonServices = pikkuAddonServices(
       designService = new DesignService(findWorkspaceRoot(projectRoot))
       studioHost = await resolveStudioHost(projectRoot)
       verifyService = new VerifyService(projectRoot)
-      typeScriptService = new TypeScriptService(findWorkspaceRoot(projectRoot))
+      try {
+        const typeScriptPath = '@pikku/code-edit/typescript'
+        const { TypeScriptService: Service } = await import(typeScriptPath)
+        typeScriptService = new Service(findWorkspaceRoot(projectRoot))
+      } catch {
+        // typeScriptService stays null; get-file-diagnostics reports it unavailable.
+      }
       pagesService = new PagesService(findWorkspaceRoot(projectRoot))
       pageScreenshotService = new PageScreenshotService(
         pagesService,
