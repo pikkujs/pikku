@@ -67,3 +67,19 @@ describe('the generated analytics meta', () => {
     })
   })
 })
+
+describe('the scaffolded ingest', () => {
+  const functions: Record<string, { tags?: string[] }> = JSON.parse(
+    readFileSync(
+      new URL(
+        '../.pikku/function/pikku-functions-meta.gen.json',
+        import.meta.url
+      ),
+      'utf-8'
+    )
+  )
+
+  test("is tagged as pikku's own, so the console lists it as built-in", () => {
+    assert.deepEqual(functions.analyticsIngest?.tags, ['pikku', 'analytics'])
+  })
+})

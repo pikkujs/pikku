@@ -1,0 +1,21 @@
+{
+  // Consumed by @cloudflare/vite-plugin. `main` is TanStack Start's built-in
+  // server entry (no hand-written worker file); the plugin wires client assets
+  // and the ssr environment automatically.
+  "name": "app",
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The plugin serves dist/client, but leaves trailing-slash handling at
+  // "auto-trailing-slash", which answers a prerendered /route with a 307 to
+  // /route/ -- a redirect on every indexable URL, to a path that contradicts
+  // the canonical tag and the sitemap. An app that never prerenders is
+  // unaffected; one that starts prerendering later inherits the bug silently,
+  // so state the intent up front.
+  "assets": {
+    "html_handling": "drop-trailing-slash",
+    // Default. Explicit because an unmatched path has to reach the Worker:
+    // it owns the redirects, the catch-all, and any locale negotiation.
+    "not_found_handling": "none",
+  },
+}

@@ -253,7 +253,7 @@ export const capturesPage = pikkuScenarioStep({
     // still worth a picture, and the issue list will say why.
     await actor.page.waitForLoadState('networkidle').catch(() => {})
     await actor.page
-      .locator('[class*="mantine-Skeleton-root"]')
+      .locator('[data-slot="skeleton"]')
       .first()
       .waitFor({ state: 'detached', timeout: 5_000 })
       .catch(() => {})
@@ -413,7 +413,7 @@ export const clicksNear = pikkuScenarioStep({
     const actor = session(browser)
     const control = actor.page.getByRole('button', { name, exact: true })
     const container = actor.page
-      .locator('[class*="mantine-Card-root"], tr, li, article')
+      .locator('[data-slot="card"], tr, li, article')
       .filter({ hasText: near })
       .filter({ has: control })
       .last()
