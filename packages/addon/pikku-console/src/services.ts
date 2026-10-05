@@ -16,6 +16,7 @@ import { PageScreenshotService } from './services/page-screenshot.service.js'
 import { TypeScriptService } from '@pikku/code-edit/typescript'
 import { VerifyService } from '@pikku/code-edit/verify'
 import { resolveStudioHost, type StudioHost } from './services/studio-host.service.js'
+import { DesignService } from './services/design.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { join } from 'node:path'
 import { FileScenarioRunStore } from '@pikku/core/services'
@@ -62,6 +63,7 @@ export const createSingletonServices = pikkuAddonServices(
     let dbSchemaService: DbSchemaService | null = null
     let knowledgeService: KnowledgeService | null = null
     let i18nService: I18nService | null = null
+    let designService: DesignService | null = null
     let studioHost: StudioHost | null = null
     let verifyService: VerifyService | null = null
     let typeScriptService: TypeScriptService | null = null
@@ -76,6 +78,7 @@ export const createSingletonServices = pikkuAddonServices(
       dbSchemaService = new DbSchemaService(metaService)
       knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
       i18nService = new I18nService(findWorkspaceRoot(projectRoot))
+      designService = new DesignService(findWorkspaceRoot(projectRoot))
       studioHost = await resolveStudioHost(projectRoot)
       verifyService = new VerifyService(projectRoot)
       typeScriptService = new TypeScriptService(findWorkspaceRoot(projectRoot))
@@ -129,6 +132,7 @@ export const createSingletonServices = pikkuAddonServices(
       dbSchemaService,
       knowledgeService,
       i18nService,
+      designService,
       studioHost,
       verifyService,
       typeScriptService,
