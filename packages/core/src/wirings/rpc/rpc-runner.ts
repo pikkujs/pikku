@@ -522,6 +522,9 @@ export class ContextAwareRPCService {
     if (!this.services.workflowService) {
       throw new Error('WorkflowService service not available')
     }
+    if (workflowName.includes(':')) {
+      workflowName = this.mapUsedAddon(workflowName)
+    }
     const parentRunId = this.wire.workflowStep?.runId ?? this.wire.graph?.runId
     const wire = options?.wire ?? {
       type: this.wire.wireType ?? 'unknown',
