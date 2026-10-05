@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { dirname, extname, join, relative } from 'path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -119,6 +119,8 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     include?: string[]
     exclude?: string[]
     build?: boolean
+    dependencies?: boolean
+    dryRun?: boolean
   },
   void
 >({
@@ -183,6 +185,9 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     }
 
     const lines: string[] = []
+    const addedPackages: string[] = []
+    const wroteFiles: string[] = []
+    const missing: string[] = []
     const install = (packageName: string, chain: string[]): string => {
       const already = wiredName(packageName)
       if (already) return already
@@ -199,12 +204,18 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
         logger.error(`${packageManager} add ${packageName} failed`)
         process.exit(1)
       }
+      addedPackages.push(packageName)
       const installed = installedPackageDir(packageDir, packageName)
       const uses: Record<string, string> = {}
       for (const needed of installed ? addonNeeds(installed) : []) {
+        if (!input.dependencies && !wiredName(needed)) {
+          missing.push(`${packageName} needs ${needed}`)
+          continue
+        }
         logger.info(`${packageName} needs ${needed}`)
         uses[needed] = install(needed, [...chain, packageName])
       }
+      if (missing.length) return ''
       const camelName = addonCamelName(packageName)
       const wirePath = join(addonsDir, `${camelName}.addon.ts`)
       mkdirSync(addonsDir, { recursive: true })
@@ -225,6 +236,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
           uses,
         })
       )
+      wroteFiles.push(wirePath)
       logger.info(`  wrote ${relative(root, wirePath)}`)
       if (installed) {
         lines.push(`${packageName}:`, ...requirementLines(addonRequirements(installed)))
@@ -237,6 +249,26 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       return
     }
     install(source.packageName, [])
+    const undo = () => {
+      for (const file of wroteFiles) rmSync(file, { force: true })
+      if (addedPackages.length) {
+        spawnSync(packageManager, ['remove', ...addedPackages], {
+          cwd: packageDir,
+          stdio: 'inherit',
+        })
+      }
+    }
+    if (missing.length) {
+      undo()
+      logger.error(
+        `${missing.join('; ')}. Nothing was installed. Re-run with --dependencies to install them too.`
+      )
+      process.exit(1)
+    }
     for (const line of lines) logger.info(line)
+    if (input.dryRun) {
+      undo()
+      logger.info('Dry run: nothing was installed.')
+    }
   },
 })

@@ -830,6 +830,14 @@ wireCLI({
               description:
                 'For a spec: drop operations matching these globs (operationId, /path or "METHOD /path")',
             },
+            dependencies: {
+              description:
+                'Also install the addons this addon needs. Without it, a missing one is an error',
+            },
+            dryRun: {
+              description:
+                'Show what would be installed and which secrets it needs, then undo it',
+            },
             build: {
               description: 'For a spec: install and build the generated addon',
               default: true,
