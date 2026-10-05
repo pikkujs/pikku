@@ -712,6 +712,8 @@ export interface InspectorState {
         /** Declared with `ui: true`: the package must ship screens, and the host mounts them. */
         ui?: boolean
         rpcEndpoint?: string
+        /** The other addons this instance may call: package -> the name it is wired under. */
+        uses?: Record<string, string>
         /**
          * `true` offers every function the addon declared `mcp: true`; a list
          * names the functions to offer, whatever the addon declared. Absent
