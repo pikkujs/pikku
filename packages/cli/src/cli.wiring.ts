@@ -102,6 +102,7 @@ import {
   personaSecret,
 } from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
+import { personaRpc } from './functions/commands/persona-rpc.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
@@ -113,6 +114,7 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuAddonsAdd } from './functions/commands/addons.js'
 import { pikkuAppNew, renderAppNew } from './functions/commands/app-new.js'
 import {
   appList,
@@ -1121,6 +1123,47 @@ wireCLI({
         }),
       },
     },
+    addons: {
+      description:
+        'Addons this app uses — published packages, or generated from an OpenAPI spec',
+      subcommands: {
+        add: pikkuCLICommand({
+          func: pikkuAddonsAdd,
+          description:
+            'Add an addon to this app: a published name (@pikku/addon-stripe, or just stripe) is installed and wired; an OpenAPI spec path or URL is generated into packages/, wired and built. With no argument it uses specs/api-spec.yaml|yml|json. Prints the secrets, variables and credentials to fill in',
+          parameters: '[nameOrSpec]',
+          options: {
+            auth: {
+              description:
+                'Required for a spec: user (each user connects their own account), shared (one key behind every user) or none (public API)',
+            },
+            name: {
+              description:
+                'For a spec: the addon name (defaults to the spec title)',
+            },
+            openapiHeader: {
+              description:
+                'For a spec URL: header sent when fetching it, as "Name: value" (repeatable)',
+            },
+            tags: {
+              description: 'For a spec: keep only operations with these tags',
+            },
+            include: {
+              description:
+                'For a spec: keep only operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            exclude: {
+              description:
+                'For a spec: drop operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            build: {
+              description: 'For a spec: install and build the generated addon',
+              default: true,
+            },
+          },
+        }),
+      },
+    },
     persona: {
       description:
         'The people this app is for, and running one against a real stage',
@@ -1191,6 +1234,31 @@ wireCLI({
           description:
             'Mint the actor credential for a persona from SCENARIO_ACTOR_SECRET, bound to their address. Hand these to a run as PIKKU_PERSONA_SECRETS instead of the root, which is entitled to every persona. Names none, mints all.',
           parameters: '[personas...]',
+        }),
+        rpc: pikkuCLICommand({
+          func: personaRpc,
+          description:
+            'Call one RPC on a running server signed in as a persona, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a persona that is not permitted',
+          parameters: '<rpc>',
+          options: {
+            as: {
+              description: 'The persona to sign in as',
+              type: 'string',
+            },
+            data: {
+              description: "The RPC's input as JSON, e.g. '{\"id\":\"1\"}'",
+              type: 'string',
+            },
+            environment: {
+              description:
+                'Environment in pikku.config.json to call. Defaults to local',
+              type: 'string',
+            },
+            apiUrl: {
+              description: "Override the environment's apiUrl",
+              type: 'string',
+            },
+          },
         }),
       },
     },

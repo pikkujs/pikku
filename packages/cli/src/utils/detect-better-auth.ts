@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { relative, sep } from 'node:path'
 import { findSourceFiles } from './find-source-files.js'
 
 // A pikkuBetterAuth(...) call. Used as a cheap, AST-free signal during bootstrap
@@ -21,7 +22,7 @@ export async function projectDeclaresBetterAuth(
   const files = await findSourceFiles(rootDir, srcDirectories, ignoreFiles)
 
   for (const file of files) {
-    if (file.includes('/.pikku/')) continue
+    if (relative(rootDir, file).split(sep).includes('.pikku')) continue
     // An unreadable file (race/permission) just can't match — treat as empty.
     const content = await readFile(file, 'utf-8').catch(() => '')
     if (PIKKU_BETTER_AUTH_CALL.test(content)) return true
