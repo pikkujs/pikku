@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'fs'
 import { dirname, extname, join, relative } from 'path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -8,15 +15,14 @@ import { owningPackageDir, wireAddonFile } from './install-addon.js'
 import { newAddon, parseHeaderOptions } from './new-addon.js'
 
 export type AddonSource =
-  | { kind: 'spec'; spec: string }
-  | { kind: 'package'; packageName: string }
+  { kind: 'spec'; spec: string } | { kind: 'package'; packageName: string }
 
 const SPEC_EXTENSIONS = ['.yaml', '.yml', '.json']
 
 export function discoverSpec(root: string): string | undefined {
-  return SPEC_EXTENSIONS.map((ext) => join(root, 'specs', `api-spec${ext}`)).find(
-    (path) => existsSync(path)
-  )
+  return SPEC_EXTENSIONS.map((ext) =>
+    join(root, 'specs', `api-spec${ext}`)
+  ).find((path) => existsSync(path))
 }
 
 export function addonSource(
@@ -44,7 +50,9 @@ export function addonPackageName(name: string): string {
 }
 
 export function addonCamelName(packageName: string): string {
-  const bare = packageName.replace(/^@[^/]+\//, '').replace(/^(pikku-)?addon-/, '')
+  const bare = packageName
+    .replace(/^@[^/]+\//, '')
+    .replace(/^(pikku-)?addon-/, '')
   return bare.replace(/[-_]([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 }
 
@@ -56,12 +64,14 @@ export interface AddonRequirements {
 
 const metaKeys = (path: string, pick: (entry: any, key: string) => string) =>
   existsSync(path)
-    ? Object.entries(JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>).map(
-        ([key, entry]) => pick(entry, key)
-      )
+    ? Object.entries(
+        JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>
+      ).map(([key, entry]) => pick(entry, key))
     : []
 
-export function addonRequirements(addonDir: string): AddonRequirements | undefined {
+export function addonRequirements(
+  addonDir: string
+): AddonRequirements | undefined {
   const meta = join(addonDir, 'dist', '.pikku', 'addon')
   if (!existsSync(meta)) return undefined
   return {
@@ -80,26 +90,42 @@ export function addonRequirements(addonDir: string): AddonRequirements | undefin
   }
 }
 
-export function requirementLines(requirements: AddonRequirements | undefined): string[] {
-  if (!requirements) return ['Not built yet — build the addon to see the secrets, variables and credentials it needs.']
+export function requirementLines(
+  requirements: AddonRequirements | undefined
+): string[] {
+  if (!requirements)
+    return [
+      'Not built yet — build the addon to see the secrets, variables and credentials it needs.',
+    ]
   const lines = [
     ...requirements.secrets.map((name) => `secret ${name}`),
     ...requirements.variables.map((name) => `variable ${name}`),
-    ...requirements.credentials.map((name) => `credential ${name} (each user connects their own)`),
+    ...requirements.credentials.map(
+      (name) => `credential ${name} (each user connects their own)`
+    ),
   ]
-  return lines.length ? ['Fill these in:', ...lines.map((line) => `  ${line}`)] : ['Nothing to fill in.']
+  return lines.length
+    ? ['Fill these in:', ...lines.map((line) => `  ${line}`)]
+    : ['Nothing to fill in.']
 }
 
 export function addonNeeds(addonDir: string): string[] {
   try {
-    const uses = JSON.parse(readFileSync(join(addonDir, 'package.json'), 'utf8'))?.pikku?.uses
-    return Array.isArray(uses) ? uses.filter((u): u is string => typeof u === 'string') : []
+    const uses = JSON.parse(
+      readFileSync(join(addonDir, 'package.json'), 'utf8')
+    )?.pikku?.uses
+    return Array.isArray(uses)
+      ? uses.filter((u): u is string => typeof u === 'string')
+      : []
   } catch {
     return []
   }
 }
 
-function installedPackageDir(from: string, packageName: string): string | undefined {
+function installedPackageDir(
+  from: string,
+  packageName: string
+): string | undefined {
   for (let dir = from; ; dir = dirname(dir)) {
     const candidate = join(dir, 'node_modules', packageName)
     if (existsSync(join(candidate, 'package.json'))) return candidate
@@ -119,20 +145,32 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     include?: string[]
     exclude?: string[]
     build?: boolean
+    dependencies?: boolean
+    dryRun?: boolean
   },
   void
 >({
   func: async ({ logger, config }, input) => {
     const root: string = config.rootDir
-    const srcDir = config.srcDirectories?.[0] ? join(root, config.srcDirectories[0]) : undefined
-    if (!srcDir || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
-      logger.error('pikku addons add runs inside a pikku app (a pikku.config.json that is not an addon)')
+    const srcDir = config.srcDirectories?.[0]
+      ? join(root, config.srcDirectories[0])
+      : undefined
+    if (
+      !srcDir ||
+      config.addon ||
+      !existsSync(join(root, 'pikku.config.json'))
+    ) {
+      logger.error(
+        'pikku addons add runs inside a pikku app (a pikku.config.json that is not an addon)'
+      )
       process.exit(1)
     }
 
     const source = addonSource(input.nameOrSpec, root)
     if (!source) {
-      logger.error('Name a published addon or an OpenAPI spec — no specs/api-spec.yaml|yml|json here to use')
+      logger.error(
+        'Name a published addon or an OpenAPI spec — no specs/api-spec.yaml|yml|json here to use'
+      )
       process.exit(1)
     }
 
@@ -145,19 +183,27 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       }
       const name =
         input.name ??
-        (await parseOpenAPISpec(source.spec, { headers: parseHeaderOptions(input.openapiHeader) })).info.title
-      const addonDir = await newAddon({ logger, config }, {
-        name,
-        openapi: source.spec,
-        openapiHeader: input.openapiHeader,
-        auth: input.auth,
-        tags: input.tags,
-        include: input.include,
-        exclude: input.exclude,
-        install: true,
-        build: input.build ?? true,
-      })
-      for (const line of requirementLines(addonRequirements(addonDir))) logger.info(line)
+        (
+          await parseOpenAPISpec(source.spec, {
+            headers: parseHeaderOptions(input.openapiHeader),
+          })
+        ).info.title
+      const addonDir = await newAddon(
+        { logger, config },
+        {
+          name,
+          openapi: source.spec,
+          openapiHeader: input.openapiHeader,
+          auth: input.auth,
+          tags: input.tags,
+          include: input.include,
+          exclude: input.exclude,
+          install: true,
+          build: input.build ?? true,
+        }
+      )
+      for (const line of requirementLines(addonRequirements(addonDir)))
+        logger.info(line)
       console.log(addonDir)
       return
     }
@@ -168,7 +214,9 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       logger.error(`Could not tell which package manager owns ${packageDir}`)
       process.exit(1)
     }
-    const addonsDir = existsSync(join(srcDir, 'addons')) ? join(srcDir, 'addons') : srcDir
+    const addonsDir = existsSync(join(srcDir, 'addons'))
+      ? join(srcDir, 'addons')
+      : srcDir
 
     const wiredName = (packageName: string): string | undefined => {
       if (!existsSync(addonsDir)) return undefined
@@ -183,6 +231,9 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     }
 
     const lines: string[] = []
+    const addedPackages: string[] = []
+    const wroteFiles: string[] = []
+    const missing: string[] = []
     const install = (packageName: string, chain: string[]): string => {
       const already = wiredName(packageName)
       if (already) return already
@@ -199,12 +250,18 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
         logger.error(`${packageManager} add ${packageName} failed`)
         process.exit(1)
       }
+      addedPackages.push(packageName)
       const installed = installedPackageDir(packageDir, packageName)
       const uses: Record<string, string> = {}
       for (const needed of installed ? addonNeeds(installed) : []) {
+        if (!input.dependencies && !wiredName(needed)) {
+          missing.push(`${packageName} needs ${needed}`)
+          continue
+        }
         logger.info(`${packageName} needs ${needed}`)
         uses[needed] = install(needed, [...chain, packageName])
       }
+      if (missing.length) return ''
       const camelName = addonCamelName(packageName)
       const wirePath = join(addonsDir, `${camelName}.addon.ts`)
       mkdirSync(addonsDir, { recursive: true })
@@ -225,9 +282,13 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
           uses,
         })
       )
+      wroteFiles.push(wirePath)
       logger.info(`  wrote ${relative(root, wirePath)}`)
       if (installed) {
-        lines.push(`${packageName}:`, ...requirementLines(addonRequirements(installed)))
+        lines.push(
+          `${packageName}:`,
+          ...requirementLines(addonRequirements(installed))
+        )
       }
       return camelName
     }
@@ -237,6 +298,26 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       return
     }
     install(source.packageName, [])
+    const undo = () => {
+      for (const file of wroteFiles) rmSync(file, { force: true })
+      if (addedPackages.length) {
+        spawnSync(packageManager, ['remove', ...addedPackages], {
+          cwd: packageDir,
+          stdio: 'inherit',
+        })
+      }
+    }
+    if (missing.length) {
+      undo()
+      logger.error(
+        `${missing.join('; ')}. Nothing was installed. Re-run with --dependencies to install them too.`
+      )
+      process.exit(1)
+    }
     for (const line of lines) logger.info(line)
+    if (input.dryRun) {
+      undo()
+      logger.info('Dry run: nothing was installed.')
+    }
   },
 })
