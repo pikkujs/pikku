@@ -151,7 +151,7 @@ export function useWorkflowRunNames() {
   return useQuery({
     queryKey: workflowQueryKeys.runNames(),
     queryFn: async () => {
-      return await rpc.invoke('console:getWorkflowRunNames')
+      return await rpc.invoke('console:getWorkflowRunNames', {})
     },
   })
 }
