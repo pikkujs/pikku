@@ -838,6 +838,12 @@ wireCLI({
               description:
                 'Show what would be installed and which secrets it needs, then undo it',
             },
+            yes: {
+              description:
+                'Allow add-ons to use the add-ons they need without asking first',
+              short: 'y',
+              default: false,
+            },
             build: {
               description: 'For a spec: install and build the generated addon',
               default: true,

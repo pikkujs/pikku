@@ -6,6 +6,7 @@ import { parseOpenAPISpec } from '@pikku/openapi-parser'
 import { findInstallRoot } from './update.js'
 import { owningPackageDir, wireAddonFile } from './install-addon.js'
 import { newAddon, parseHeaderOptions } from './new-addon.js'
+import { confirmGrants, grantLines } from './addon-grants.js'
 
 export type AddonSource =
   | { kind: 'spec'; spec: string }
@@ -121,6 +122,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     build?: boolean
     dependencies?: boolean
     dryRun?: boolean
+    yes?: boolean
   },
   void
 >({
@@ -187,6 +189,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     const lines: string[] = []
     const addedPackages: string[] = []
     const wroteFiles: string[] = []
+    const wired: { name: string; uses: Record<string, string> }[] = []
     const missing: string[] = []
     const install = (packageName: string, chain: string[]): string => {
       const already = wiredName(packageName)
@@ -237,6 +240,7 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
         })
       )
       wroteFiles.push(wirePath)
+      wired.push({ name: camelName, uses })
       logger.info(`  wrote ${relative(root, wirePath)}`)
       if (installed) {
         lines.push(`${packageName}:`, ...requirementLines(addonRequirements(installed)))
@@ -266,9 +270,25 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       process.exit(1)
     }
     for (const line of lines) logger.info(line)
+    const grants = grantLines(wired)
+    for (const line of grants) logger.info(line)
     if (input.dryRun) {
       undo()
       logger.info('Dry run: nothing was installed.')
+      return
+    }
+    const decision = await confirmGrants(grants, {
+      yes: input.yes,
+      interactive: !!process.stdin.isTTY && !!process.stdout.isTTY,
+    })
+    if (decision !== 'proceed') {
+      undo()
+      logger.error(
+        decision === 'declined'
+          ? 'Nothing was installed.'
+          : 'This gives add-ons access to other add-ons. Nothing was installed. Re-run with --yes to allow it.'
+      )
+      process.exit(1)
     }
   },
 })

@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { wireAddonFile } from './install-addon.js'
+import { confirmGrants, grantLines } from './addon-grants.js'
 import {
   addonCamelName,
   addonNeeds,
@@ -143,5 +144,61 @@ describe('wireAddonFile uses', () => {
 
   test('writes no uses when nothing is needed', () => {
     assert.doesNotMatch(wireAddonFile(base), /uses/)
+  })
+})
+
+describe('add-on grants', () => {
+  const lines = grantLines([
+    { name: 'mail', uses: { '@pikku/addon-stripe': 'stripe', '@pikku/addon-crm': 'crm' } },
+    { name: 'stripe', uses: {} },
+  ])
+
+  test('each dependency is named in plain words', () => {
+    assert.deepEqual(lines, ['mail can use stripe', 'mail can use crm'])
+  })
+
+  test('an add-on that needs nothing has nothing to confirm', async () => {
+    let asked = false
+    const decision = await confirmGrants([], {
+      interactive: true,
+      ask: async () => ((asked = true), false),
+    })
+    assert.equal(decision, 'proceed')
+    assert.equal(asked, false)
+  })
+
+  test('confirming proceeds', async () => {
+    assert.equal(
+      await confirmGrants(lines, { interactive: true, ask: async () => true }),
+      'proceed'
+    )
+  })
+
+  test('declining stops', async () => {
+    assert.equal(
+      await confirmGrants(lines, { interactive: true, ask: async () => false }),
+      'declined'
+    )
+  })
+
+  test('--yes skips the question', async () => {
+    let asked = false
+    const decision = await confirmGrants(lines, {
+      yes: true,
+      interactive: true,
+      ask: async () => ((asked = true), false),
+    })
+    assert.equal(decision, 'proceed')
+    assert.equal(asked, false)
+  })
+
+  test('with no terminal and no --yes it refuses and never asks', async () => {
+    let asked = false
+    const decision = await confirmGrants(lines, {
+      interactive: false,
+      ask: async () => ((asked = true), true),
+    })
+    assert.equal(decision, 'needs-confirmation')
+    assert.equal(asked, false)
   })
 })
