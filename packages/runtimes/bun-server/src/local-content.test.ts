@@ -98,7 +98,10 @@ describe('PikkuBunServer local content', () => {
 
     assert.equal(response.status, 200)
     assert.equal(
-      readFileSync(join(tmpDir, 'bucket', 'nested', 'file.bin'), 'utf8'),
+      readFileSync(
+        join(tmpDir, 'private', 'bucket', 'nested', 'file.bin'),
+        'utf8'
+      ),
       'uploaded bytes'
     )
   })
