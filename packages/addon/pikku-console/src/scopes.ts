@@ -144,6 +144,17 @@ defineScope({
               write: { description: 'Edit project files' },
             },
           },
+          git: {
+            description: 'The project git repository',
+            scopes: {
+              read: { description: 'Read status, history and diffs' },
+              write: { description: 'Commit chosen files' },
+              sync: {
+                description:
+                  'Pull from and push to the remote with your own git credentials',
+              },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {

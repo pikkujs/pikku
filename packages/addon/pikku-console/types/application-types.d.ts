@@ -12,6 +12,7 @@ import type { CodeEditService } from '@pikku/code-edit'
 import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { WorkspaceFilesService } from '@pikku/code-edit/files'
+import type { GitService } from '@pikku/code-edit/git'
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
 import type { SecretAdminService } from '../src/services/secret-admin.service.js'
@@ -37,6 +38,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   dbSchemaService: DbSchemaService | null
   knowledgeService: KnowledgeService | null
   i18nService: I18nService | null
+  gitService: GitService | null
   workspaceFilesService: WorkspaceFilesService | null
   /**
    * Past scenario runs and what they recorded. Declared as the interface rather
