@@ -1,5 +1,7 @@
 import { pikkuFunc } from '#pikku/addon/function'
 import type { FunctionMeta } from '../services/wiring.service.js'
+import { filterListByAddon } from '../lib/addon-scope.js'
+import type { AddonFilter } from '../lib/addon-scope.js'
 
 export interface FunctionVersionEntry {
   version: number
@@ -12,17 +14,24 @@ export type FunctionMetaWithVersions = FunctionMeta & {
   versions?: FunctionVersionEntry[]
 }
 
-export const getFunctionsMeta = pikkuFunc<null, FunctionMetaWithVersions[]>({
+export const getFunctionsMeta = pikkuFunc<
+  AddonFilter | null,
+  FunctionMetaWithVersions[]
+>({
   title: 'Get Functions Metadata',
   description:
     'Reads function metadata from metaService and returns it as a flat array of FunctionMeta objects, enriched with version history from the versions manifest if available.',
   expose: true,
   scopes: ['pikku:console:wirings:read'],
-  func: async ({ metaService }) => {
+  func: async ({ metaService }, input) => {
     const { readFile } = await import('node:fs/promises')
     const { join } = await import('node:path')
     const functionsMeta = await metaService.getFunctionsMeta()
-    const functions = Object.values(functionsMeta) as FunctionMetaWithVersions[]
+    const functions = filterListByAddon(
+      Object.values(functionsMeta) as FunctionMetaWithVersions[],
+      input?.addon,
+      (func) => func.pikkuFuncId
+    )
 
     let contracts: Record<
       string,

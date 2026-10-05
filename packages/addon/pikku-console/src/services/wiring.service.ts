@@ -8,6 +8,7 @@ import type { ScopeDefinitionsMeta } from '@pikku/core/scope'
 import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
 import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
 import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
+import { filterListByAddon, filterRecordByAddon } from '../lib/addon-scope.js'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -315,6 +316,64 @@ export interface PikkuMetaState {
 export interface AllMeta extends PikkuMetaState {
   functionUsedBy: Record<string, FunctionUsedBy>
   counts: MetaCounts
+}
+
+export const filterAllMetaByAddon = (
+  meta: AllMeta,
+  addon: string | undefined
+): AllMeta => {
+  if (!addon) return meta
+  const byFuncId = <T extends { pikkuFuncId?: string }>(items: T[]) =>
+    filterListByAddon(items, addon, (item) => item.pikkuFuncId)
+  const byKey = <T>(record: Record<string, T>) =>
+    filterRecordByAddon(record, addon)
+  const mcpMeta = byFuncId(meta.mcpMeta)
+  const channelsMeta = byKey(meta.channelsMeta)
+  const queueMeta = byKey(meta.queueMeta)
+  const schedulerMeta = byKey(meta.schedulerMeta)
+  const rpcMeta = byKey(meta.rpcMeta)
+  const workflows = byKey(meta.workflows)
+  const triggerMeta = byKey(meta.triggerMeta)
+  const triggerSourceMeta = byKey(meta.triggerSourceMeta)
+  const agentsMeta = byKey(meta.agentsMeta)
+  const outgoingWebhooksMeta = byKey(meta.outgoingWebhooksMeta)
+  const functions = byFuncId(meta.functions)
+  const httpMeta = byFuncId(meta.httpMeta)
+  const gatewayMeta = byFuncId(meta.gatewayMeta)
+  return {
+    ...meta,
+    functions,
+    httpMeta,
+    mcpMeta,
+    gatewayMeta,
+    channelsMeta,
+    queueMeta,
+    schedulerMeta,
+    rpcMeta,
+    workflows,
+    triggerMeta,
+    triggerSourceMeta,
+    agentsMeta,
+    outgoingWebhooksMeta,
+    webhookSourceMeta: byKey(meta.webhookSourceMeta),
+    functionUsedBy: byKey(meta.functionUsedBy),
+    counts: {
+      ...meta.counts,
+      functions: functions.length,
+      workflows: Object.keys(workflows).length,
+      httpRoutes: httpMeta.length,
+      channels: Object.keys(channelsMeta).length,
+      mcpTools: mcpMeta.filter((i) => i.method === 'tool').length,
+      gateways: gatewayMeta.length,
+      schedulers: Object.keys(schedulerMeta).length,
+      queues: Object.keys(queueMeta).length,
+      rpcMethods: Object.keys(rpcMeta).length,
+      triggers: Object.keys(triggerMeta).length,
+      triggerSources: Object.keys(triggerSourceMeta).length,
+      agents: Object.keys(agentsMeta).length,
+      outgoingWebhooks: Object.keys(outgoingWebhooksMeta).length,
+    },
+  }
 }
 
 export class NotFoundError extends Error {
