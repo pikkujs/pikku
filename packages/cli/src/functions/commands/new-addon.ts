@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs'
-import { dirname, join, relative as relativePath, sep } from 'path'
+import { dirname, join, relative as relativePath, resolve, sep } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { spawnSync } from 'node:child_process'
 import { findInstallRoot } from './update.js'
