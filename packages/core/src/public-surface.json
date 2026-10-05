@@ -99,6 +99,10 @@
     "resolveFeatureScenarios",
     "resolveScenarioSurfaces"
   ],
+  "./scenario/coverage": [
+    "aggregateScenarioCoverageGaps",
+    "readScenarioCoverage"
+  ],
   "./workflow/timeline": [
     "buildRunTimeline",
     "reconstructFinalState",
