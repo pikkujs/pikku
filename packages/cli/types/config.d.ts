@@ -977,6 +977,12 @@ export type PikkuCLIInput = {
      */
     bundler?: 'auto' | 'bun' | 'esbuild'
     /**
+     * Files a standalone binary carries, by name. Each path, relative to the
+     * project root, is embedded by `bun build --compile` and handed to the
+     * running app as `PIKKU_EMBEDDED_<NAME>` (upper-cased, `-` as `_`).
+     */
+    embed?: Record<string, string>
+    /**
      * How many deployment units the app's functions collapse into.
      *
      * `strategy` decides what happens to a function no rule matches:
