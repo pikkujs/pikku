@@ -617,6 +617,10 @@
     "packages/frontend/mantine": {
       "name": "@pikku/mantine",
       "version": "0.12.16",
+      "dependencies": {
+        "@mantine/colors-generator": "^9.2.1",
+        "chroma-js": "^3.1.2",
+      },
       "devDependencies": {
         "@mantine/core": "^9.5.1",
         "@mantine/hooks": "^9.5.1",
