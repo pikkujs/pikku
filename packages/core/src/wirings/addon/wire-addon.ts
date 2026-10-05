@@ -51,6 +51,13 @@ export type WireAddonConfig = {
   ui?: boolean
   /** Required of every function in the addon, on top of the function's own. */
   scopes?: string[]
+  /**
+   * The other addons this one may call, as `{ '<package>': '<name>' }`: the
+   * package it was written against, and the name that package is wired under
+   * in this app. The addon calls `'<package>:<function>'`; anything it did not
+   * list is refused, whatever else the app has wired.
+   */
+  uses?: Record<string, string>
   /** Points a secret the addon reads at a different key in this deployment, so two instances can hold different credentials. */
   secretOverrides?: Record<string, string>
   /** Points a variable the addon reads at a different key in this deployment. */
@@ -89,6 +96,7 @@ export const wireAddon = (config: WireAddonConfig): void => {
     tags: config.tags,
     ...(config.expose !== undefined ? { expose: config.expose } : {}),
     ...(config.scopes ? { scopes: config.scopes } : {}),
+    ...(config.uses ? { uses: config.uses } : {}),
     ...(config.secretOverrides
       ? { secretOverrides: config.secretOverrides }
       : {}),

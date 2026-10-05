@@ -68,6 +68,18 @@ addError(RemoteAddonRequestError, {
   message: 'Remote addon request failed.',
 })
 
+export class AddonNotUsedError extends PikkuError {
+  constructor(caller: string, target: string) {
+    super(
+      `Addon '${caller}' called '${target}' but does not list it in its wireAddon 'uses'.`
+    )
+  }
+}
+addError(AddonNotUsedError, {
+  status: 500,
+  message: 'Addon called another addon it does not use.',
+})
+
 export const resolveNamespace = (
   namespacedFunction: string
 ): ResolvedFunction | null => {
@@ -227,6 +239,7 @@ export class ContextAwareRPCService {
     }
 
     if (funcName.includes(':')) {
+      funcName = this.mapUsedAddon(funcName)
       const addonCall = this.resolveAddonFunction(funcName)
       if (addonCall !== NOT_RESOLVED) {
         return await this.executeAddonFunction<In, Out>(
@@ -269,6 +282,18 @@ export class ContextAwareRPCService {
       packageName: resolved.packageName,
       addonInstance,
     })
+  }
+
+  private mapUsedAddon(funcName: string): string {
+    const caller = this.wire.addonNamespace
+    if (!caller) return funcName
+    const colon = funcName.indexOf(':')
+    const prefix = funcName.slice(0, colon)
+    if (prefix === caller) return funcName
+    const uses = pikkuState(null, 'addons', 'packages').get(caller)?.uses
+    const mapped = uses?.[prefix]
+    if (mapped) return `${mapped}${funcName.slice(colon)}`
+    throw new AddonNotUsedError(caller, funcName)
   }
 
   /**

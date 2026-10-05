@@ -106,6 +106,8 @@ export interface PikkuPackageState {
         expose?: boolean | string[]
         /** Required of every function in this package, on top of the function's own */
         scopes?: string[]
+        /** Addons this instance may call: the package it was written against -> the namespace it is wired under here */
+        uses?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project secret name */
         secretOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project variable name */
