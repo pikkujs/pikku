@@ -38,7 +38,7 @@
     "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/console' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
     "build:console": "cd packages/console && bun run generate && bun run build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
-    "build:templates": "bun run --filter './templates/**' build",
+    "build:templates": "bun run --filter './templates/**' --filter '!@project/root' build",
     "build:examples": "bun run --filter './examples/**' build",
     "build:verifiers": "bun run --filter './verifiers/**' build",
     "build": "bun run build:packages && bun install && bun run build:addons && bun run pikku && bun run build:templates",
