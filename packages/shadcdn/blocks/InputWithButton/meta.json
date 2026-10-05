@@ -1,0 +1,14 @@
+{
+  "name": "InputWithButton",
+  "title": "Input with button",
+  "description": "A single-line input with an adjoining submit button.",
+  "tags": [
+    "inputs"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "inputwithbutton__label": "Email address",
+    "inputwithbutton__submit": "Subscribe"
+  }
+}

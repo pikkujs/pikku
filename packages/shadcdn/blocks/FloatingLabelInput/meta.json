@@ -1,0 +1,13 @@
+{
+  "name": "FloatingLabelInput",
+  "title": "Floating label input",
+  "description": "An input whose label sits inside until focused or filled.",
+  "tags": [
+    "inputs"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "floatinglabelinput__label": "Email"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "HeaderSearch",
+  "title": "Header with search",
+  "description": "Brand, links and a search field.",
+  "tags": [
+    "headers"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "headersearch__brand": "Your product",
+    "headersearch__l1": "Docs",
+    "headersearch__l2": "Blog",
+    "headersearch__search": "Search"
+  }
+}

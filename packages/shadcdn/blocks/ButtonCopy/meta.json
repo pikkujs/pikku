@@ -1,0 +1,17 @@
+{
+  "name": "ButtonCopy",
+  "title": "Copy button",
+  "description": "Copies a value and confirms with a changed label.",
+  "tags": [
+    "buttons"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "buttoncopy__copy": "Copy",
+    "buttoncopy__copied": "Copied",
+    "buttoncopy__value": "npm create pikku@latest"
+  }
+}

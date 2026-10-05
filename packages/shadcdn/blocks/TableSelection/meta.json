@@ -1,0 +1,20 @@
+{
+  "name": "TableSelection",
+  "title": "Selectable table",
+  "description": "Rows with a checkbox each and a header checkbox.",
+  "tags": [
+    "tables"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "tableselection__select_all": "Select all",
+    "tableselection__name": "Name",
+    "tableselection__role": "Role",
+    "tableselection__select_row": "Select row",
+    "tableselection__r1": "Ada Lovelace",
+    "tableselection__r1_role": "Admin",
+    "tableselection__r2": "Alan Turing",
+    "tableselection__r2_role": "Editor"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "ProgressCard",
+  "title": "Progress card",
+  "description": "A task with a percentage bar and a text figure.",
+  "tags": [
+    "cards"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "progresscard__title": "Profile completeness",
+    "progresscard__figure": "60% complete"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "StatsGrid",
+  "title": "Stats grid",
+  "description": "Four stat cards in a responsive grid, each with a change figure.",
+  "tags": [
+    "stats"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "statsgrid__s1": "Revenue",
+    "statsgrid__s1_v": "12,480",
+    "statsgrid__s1_c": "+8%",
+    "statsgrid__s2": "Orders",
+    "statsgrid__s2_v": "320",
+    "statsgrid__s2_c": "+3%",
+    "statsgrid__s3": "Customers",
+    "statsgrid__s3_v": "1,204",
+    "statsgrid__s3_c": "+12%",
+    "statsgrid__s4": "Refunds",
+    "statsgrid__s4_v": "9",
+    "statsgrid__s4_c": "-2%"
+  }
+}

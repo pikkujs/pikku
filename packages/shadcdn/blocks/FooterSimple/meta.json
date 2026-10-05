@@ -1,0 +1,17 @@
+{
+  "name": "FooterSimple",
+  "title": "Simple footer",
+  "description": "Brand, a row of links and a copyright line.",
+  "tags": [
+    "footers"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "footersimple__brand": "Your product",
+    "footersimple__link1": "Contact",
+    "footersimple__link2": "Privacy",
+    "footersimple__link3": "Terms",
+    "footersimple__copyright": "All rights reserved."
+  }
+}

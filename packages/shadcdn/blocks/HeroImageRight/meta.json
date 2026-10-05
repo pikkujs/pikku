@@ -1,0 +1,16 @@
+{
+  "name": "HeroImageRight",
+  "title": "Hero with image placeholder",
+  "description": "Left-aligned headline and buttons beside an image slot.",
+  "tags": [
+    "heroes"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "heroimageright__title": "A faster way to get the work done",
+    "heroimageright__description": "Explain the value in one or two sentences.",
+    "heroimageright__primary": "Start free",
+    "heroimageright__secondary": "See how it works"
+  }
+}

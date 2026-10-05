@@ -1,0 +1,17 @@
+{
+  "name": "UserButton",
+  "title": "User menu button",
+  "description": "Avatar, name and email that opens an account menu.",
+  "tags": [
+    "user"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "userbutton__name": "Ada Lovelace",
+    "userbutton__email": "ada@example.com",
+    "userbutton__initials": "AL",
+    "userbutton__profile": "Profile",
+    "userbutton__sign_out": "Sign out"
+  }
+}

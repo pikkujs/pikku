@@ -1,0 +1,15 @@
+{
+  "name": "CreateOrganizationForm",
+  "title": "Create organization",
+  "description": "A name field and a create button.",
+  "tags": [
+    "organization"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "createorganizationform__title": "Create an organization",
+    "createorganizationform__name": "Organization name",
+    "createorganizationform__submit": "Create"
+  }
+}
