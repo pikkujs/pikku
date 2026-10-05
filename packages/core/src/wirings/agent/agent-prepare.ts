@@ -601,6 +601,9 @@ export async function buildToolDefs(
                     credentialGrants: capturedAddonConfig?.credentialGrants,
                     globalSecrets: capturedAddonConfig?.globalSecrets,
                     globalCredentials: capturedAddonConfig?.globalCredentials,
+                    contentBucket: capturedAddonConfig?.contentBucket,
+                    contentGrants: capturedAddonConfig?.contentGrants,
+                    globalContent: capturedAddonConfig?.globalContent,
                   }
                 : undefined
               services = await getOrCreatePackageSingletonServices(

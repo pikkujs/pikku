@@ -360,6 +360,9 @@ export class ContextAwareRPCService {
         credentialGrants: resolved.addonConfig?.credentialGrants,
         globalSecrets: resolved.addonConfig?.globalSecrets,
         globalCredentials: resolved.addonConfig?.globalCredentials,
+        contentBucket: resolved.addonConfig?.contentBucket,
+        contentGrants: resolved.addonConfig?.contentGrants,
+        globalContent: resolved.addonConfig?.globalContent,
       },
     }
   }

@@ -122,6 +122,12 @@ export interface PikkuPackageState {
         globalSecrets?: string
         /** Why this instance gets the whole `CredentialService` rather than one scoped to its declared credentials */
         globalCredentials?: string
+        /** The folder of the content store this instance owns; defaults to its wired name */
+        contentBucket?: string
+        /** Paths outside its own folder this instance may read or write, by path prefix */
+        contentGrants?: Record<string, 'read' | 'write'>
+        /** Why this instance gets the whole `ContentService` rather than one scoped to its folder */
+        globalContent?: string
         /** Set by `wireRemoteAddon`: this namespace is consumed remotely over HTTP, not bundled */
         remote?: boolean
         /** Remote host base URL (wireRemoteAddon) — string or resolver over singleton services */

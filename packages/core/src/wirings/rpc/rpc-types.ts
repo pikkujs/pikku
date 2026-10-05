@@ -78,6 +78,12 @@ export interface ResolvedFunction {
     globalSecrets?: string
     /** Set by the consuming app: hand this instance the unscoped `CredentialService` */
     globalCredentials?: string
+    /** Set by the consuming app: the content folder this instance owns */
+    contentBucket?: string
+    /** Set by the consuming app: paths outside its folder this instance may read or write */
+    contentGrants?: Record<string, 'read' | 'write'>
+    /** Set by the consuming app: hand this instance the unscoped `ContentService` */
+    globalContent?: string
     /** Set by `wireRemoteAddon`: dispatch this namespace's RPCs over HTTP */
     remote?: boolean
     serverUrl?: string | ((services: any) => string | Promise<string>)
