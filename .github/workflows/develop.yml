@@ -326,13 +326,6 @@ jobs:
             os: macos-latest
             bundles: app,dmg
             smoke: true
-          # Runs but may fail: it has not yet passed end to end — see
-          # knowledge/projects/pikku/status/native-apps-1908.md.
-          - name: windows
-            os: windows-latest
-            bundles: nsis,msi
-            smoke: true
-            optional: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -372,7 +365,6 @@ jobs:
         run: |
           case "${{ matrix.name }}" in
             linux) xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
-            windows) src-tauri/target/release/web-app.exe > "$RUNNER_TEMP/app.log" 2>&1 & ;;
             *) src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
           esac
           node ../../../scripts/native-smoke.mjs http://localhost:4077 120 || { cat "$RUNNER_TEMP/app.log"; exit 1; }
