@@ -281,6 +281,23 @@ const loadScreensManifest = async (
   return JSON.parse(await readFile(path, 'utf-8')) as ScreensManifestMeta
 }
 
+const readAddonNeeds = async (
+  dirs: string[],
+  packageName: string
+): Promise<string[]> => {
+  const dir = findInstalledPackageDir(dirs, packageName)
+  if (!dir) return []
+  try {
+    const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf-8'))
+    const uses = pkg?.pikku?.uses
+    return Array.isArray(uses)
+      ? uses.filter((u): u is string => typeof u === 'string')
+      : []
+  } catch {
+    return []
+  }
+}
+
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
   state: InspectorState
@@ -296,6 +313,14 @@ export async function loadAddonFunctionsMeta(
     const dirs = addonResolutionDirs(state.rootDir, decl.file)
     const require = createAddonResolver(dirs)
     try {
+      for (const needed of await readAddonNeeds(dirs, decl.package)) {
+        if (!decl.uses?.[needed]) {
+          logger.critical(
+            ErrorCode.ADDON_NEEDS_NOT_MAPPED,
+            `${decl.package} needs ${needed}, but wireAddon('${namespace}') does not map it. Wire ${needed} and add uses: { '${needed}': '<name>' } to this wireAddon.`
+          )
+        }
+      }
       if (decl.ui) {
         const manifest = await loadScreensManifest(require, decl.package)
         if (!manifest || manifest.screens.length === 0) {
