@@ -272,6 +272,103 @@ describe('an addon can only start the workflows of addons it is wired to', () =>
   })
 })
 
+const screenCaller = (header: string | undefined) =>
+  new ContextAwareRPCService(
+    { logger } as never,
+    {
+      wireType: 'http',
+      wireId: 'rpc',
+      http: {
+        request: {
+          header: (name: string) =>
+            name.toLowerCase() === 'x-pikku-addon' ? header : undefined,
+        },
+      },
+    } as never,
+    { requiresAuth: false }
+  )
+
+describe("a screen's calls over HTTP stay inside its add-on and its uses", () => {
+  beforeEach(() => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', { logger } as never)
+    wireAll()
+    for (const [name, pkg] of [
+      ['send', '@addon/mail'],
+      ['charge', '@addon/stripe'],
+      ['contact', '@addon/crm'],
+      ['reveal', '@addon/vault'],
+    ] as const) {
+      pikkuState(pkg, 'function', 'meta')[name] = {
+        ...pikkuState(pkg, 'function', 'meta')[name],
+        expose: true,
+      } as never
+    }
+    pikkuState(null, 'function', 'meta').hostOnly = {
+      ...pikkuState(null, 'function', 'meta').hostOnly,
+      expose: true,
+    } as never
+  })
+
+  test('its own functions are reachable', async () => {
+    assert.equal(await screenCaller('mail').rpcExposed('mail:send', {}), 'send')
+  })
+
+  test('an add-on it lists is reachable', async () => {
+    assert.equal(
+      await screenCaller('mail').rpcExposed('stripe:charge', {}),
+      'charge'
+    )
+  })
+
+  test('an exposed add-on it does not list is refused', async () => {
+    await assert.rejects(
+      () => screenCaller('mail').rpcExposed('vault:reveal', {}),
+      AddonNotUsedError
+    )
+  })
+
+  test('what a listed add-on itself uses is not reachable', async () => {
+    await assert.rejects(
+      () => screenCaller('mail').rpcExposed('crm:contact', {}),
+      AddonNotUsedError
+    )
+    assert.equal(
+      await screenCaller('stripe').rpcExposed('crm:contact', {}),
+      'contact'
+    )
+  })
+
+  test('a host function is refused, bare or namespaced', async () => {
+    await assert.rejects(
+      () => screenCaller('mail').rpcExposed('hostOnly', {}),
+      AddonNotUsedError
+    )
+    await assert.rejects(
+      () => screenCaller('mail').rpcExposed('mail:hostOnly', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('a header naming an add-on nobody wired is refused', async () => {
+    await assert.rejects(
+      () => screenCaller('ghost').rpcExposed('mail:send', {}),
+      /Unknown addon/
+    )
+  })
+
+  test('without the header the host reaches everything exposed', async () => {
+    assert.equal(
+      await screenCaller(undefined).rpcExposed('vault:reveal', {}),
+      'reveal'
+    )
+    assert.equal(
+      await screenCaller(undefined).rpcExposed('hostOnly', {}),
+      'host-secret-data'
+    )
+  })
+})
+
 const ADDON_A = '@addon/a'
 const ADDON_B = '@addon/b'
 

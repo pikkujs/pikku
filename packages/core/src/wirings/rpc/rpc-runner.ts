@@ -1,3 +1,4 @@
+import { addonCallerOf, addonMayReach } from '../addon/addon-reach.js'
 import type {
   CoreServices,
   PikkuWire,
@@ -76,7 +77,7 @@ export class AddonNotUsedError extends PikkuError {
   }
 }
 addError(AddonNotUsedError, {
-  status: 500,
+  status: 403,
   message: 'Addon called another addon it does not use.',
 })
 
@@ -185,6 +186,10 @@ export class ContextAwareRPCService {
   ) {}
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
+    const addonCaller = addonCallerOf(this.wire)
+    if (addonCaller && !addonMayReach(addonCaller, funcName)) {
+      throw new AddonNotUsedError(addonCaller, funcName)
+    }
     let functionMeta: any
     let resolvedAddon: ResolvedFunction | null = null
     if (funcName.includes(':')) {
