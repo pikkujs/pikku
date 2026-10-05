@@ -9,6 +9,7 @@ import {
   validateSecretOverrides,
   validateCredentialOverrides,
   validateAddonUses,
+  validateAddonContentGrants,
   validateVariableOverrides,
   validateRemoteAddonDependencies,
   validateRemoteAddonAuth,
@@ -481,6 +482,25 @@ describe('override validation resolves the override target (value), not the logi
     state.rpc.wireAddonDeclarations.set('other', { package: '@a/other' } as never)
     validateAddonUses(logger, state)
     assert.equal(criticals.length, 2)
+  })
+
+  test('validateAddonContentGrants accepts a grant under a wired addon bucket, by name or contentBucket', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
+    state.rpc.wireAddonDeclarations.set('reports', { package: '@a/reports', contentGrants: { spindle: 'read', 'media/library': 'write' } } as never)
+    state.rpc.wireAddonDeclarations.set('spindle', { package: '@a/spindle' } as never)
+    state.rpc.wireAddonDeclarations.set('other', { package: '@a/other', contentBucket: 'media' } as never)
+    validateAddonContentGrants(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateAddonContentGrants flags a bucket nobody wired, a bad mode and an empty prefix', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
+    state.rpc.wireAddonDeclarations.set('reports', { package: '@a/reports', contentGrants: { ghost: 'read', reports: 'admin', '/': 'read' } } as never)
+    validateAddonContentGrants(logger, state)
+    assert.equal(criticals.length, 3)
+    assert.ok(criticals.every((c) => c.code === ErrorCode.ADDON_CONTENT_GRANT_INVALID))
   })
 
   test('validateVariableOverrides accepts an override whose value is a declared variable', () => {

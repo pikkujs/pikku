@@ -502,6 +502,38 @@ export function validateAddonUses(
   }
 }
 
+export function validateAddonContentGrants(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+): void {
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
+
+  const buckets = new Set(
+    Array.from(wireAddonDeclarations.entries()).map(
+      ([namespace, decl]) => decl.contentBucket ?? namespace,
+    ),
+  );
+
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    for (const [prefix, mode] of Object.entries(decl.contentGrants ?? {})) {
+      if (mode !== "read" && mode !== "write") {
+        logger.critical(
+          ErrorCode.ADDON_CONTENT_GRANT_INVALID,
+          `Addon '${namespace}' grants '${prefix}' as '${mode}', but a content grant must be 'read' or 'write'.`,
+        );
+      }
+      const first = prefix.split("/").find((segment) => segment !== "");
+      if (!first || !buckets.has(first)) {
+        logger.critical(
+          ErrorCode.ADDON_CONTENT_GRANT_INVALID,
+          `Addon '${namespace}' grants content under '${prefix}', but '${first ?? ""}' is not the content bucket of any wired addon. Buckets: ${Array.from(buckets).join(", ")}`,
+        );
+      }
+    }
+  }
+}
+
 export function validateCredentialOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, "typesLookup">,

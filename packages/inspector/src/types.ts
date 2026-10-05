@@ -768,6 +768,13 @@ export interface InspectorState {
          * `CredentialService` instead of one scoped to its declared credentials.
          */
         globalCredentials?: string
+        contentBucket?: string
+        contentGrants?: Record<string, string>
+        /**
+         * The app's stated reason for handing this instance the whole
+         * `ContentService` instead of one scoped to its own folder.
+         */
+        globalContent?: string
       }
     >
     wireAddonFiles: Set<string>
