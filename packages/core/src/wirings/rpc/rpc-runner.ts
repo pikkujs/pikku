@@ -114,6 +114,7 @@ const resolvePikkuFunction = (
     if (pkgMeta) {
       return { pikkuFuncId: pkgMeta.pikkuFuncId || rpcName, packageName }
     }
+    throw new RPCNotFoundError(rpcName)
   }
   const rpc = pikkuState(null, 'rpc', 'meta')
   let rpcMeta = rpc[rpcName]
@@ -255,7 +256,7 @@ export class ContextAwareRPCService {
       resolved = resolvePikkuFunction(funcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError) {
-        if (this.services.deploymentService) {
+        if (!this.packageName && this.services.deploymentService) {
           const session = await resolveWireSession(this.wire)
           return this.services.deploymentService.invoke(
             funcName,
@@ -463,6 +464,7 @@ export class ContextAwareRPCService {
     }
 
     if (rpcName.includes(':')) {
+      rpcName = this.mapUsedAddon(rpcName)
       const addonCall = this.resolveAddonFunction(rpcName)
       if (addonCall !== NOT_RESOLVED) {
         return await this.executeAddonFunction<In, Out>(
@@ -477,7 +479,11 @@ export class ContextAwareRPCService {
     try {
       resolved = resolvePikkuFunction(rpcName, this.packageName)
     } catch (e) {
-      if (e instanceof RPCNotFoundError && this.services.deploymentService) {
+      if (
+        e instanceof RPCNotFoundError &&
+        !this.packageName &&
+        this.services.deploymentService
+      ) {
         const session = await resolveWireSession(mergedWire)
         return this.services.deploymentService.invoke(
           rpcName,
