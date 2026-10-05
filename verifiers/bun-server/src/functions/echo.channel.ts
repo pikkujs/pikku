@@ -2,6 +2,6 @@ import { pikkuChannelConnectionFunc } from '#pikku/channel'
 
 export const onConnect = pikkuChannelConnectionFunc(
   async (_services, _data, { channel }) => {
-    channel.send({ connected: true })
+    await channel.send({ connected: true })
   }
 )

@@ -50,7 +50,7 @@ export const createSingletonServices = pikkuServices(
       })
       if (def.variables) {
         for (const meta of Object.values(def.variables)) {
-          variables.set(
+          await variables.set(
             meta.variableId,
             VARIABLE_VALUES[meta.variableId] ?? 'fake-value'
           )
