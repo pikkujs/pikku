@@ -5,7 +5,7 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { createReadStream } from 'node:fs'
-import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import { normalize, resolve } from 'node:path'
 
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
@@ -16,8 +16,11 @@ import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
 import {
+  UploadTooLargeError,
+  parseContentSizeLimit,
   resolveContentRequestTarget,
   signedContentPath,
+  streamUploadToFile,
 } from '@pikku/core/services/local-content'
 import type { JWTService, Logger } from '@pikku/core/services'
 import { fetchData, PikkuFetchHTTPResponse } from '@pikku/core/http'
@@ -608,14 +611,15 @@ export class PikkuNodeHTTPServer {
     const targetPath = target.path
 
     try {
-      const body = await this.readRequestBody(req, content.sizeLimit ?? '1mb')
-      const directory = targetPath.slice(0, targetPath.lastIndexOf('/'))
-      await mkdir(directory, { recursive: true })
-      await writeFile(targetPath, body)
+      await streamUploadToFile(
+        req,
+        targetPath,
+        parseContentSizeLimit(content.sizeLimit ?? '1mb')
+      )
       res.writeHead(200)
       res.end()
     } catch (err) {
-      if (err instanceof Error && err.message === 'content_too_large') {
+      if (err instanceof UploadTooLargeError) {
         res.writeHead(413, { 'content-type': 'text/plain; charset=utf-8' })
         res.end('Content too large')
         return
@@ -790,46 +794,6 @@ export class PikkuNodeHTTPServer {
       this.options.contentSigningJWT ??
       pikkuState(null, 'package', 'singletonServices')?.jwt
     )
-  }
-
-  private async readRequestBody(
-    req: IncomingMessage,
-    sizeLimit: string
-  ): Promise<Buffer> {
-    const maxBytes = this.parseSizeLimit(sizeLimit)
-    const chunks: Buffer[] = []
-    let bytesRead = 0
-
-    for await (const chunk of req) {
-      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-      bytesRead += buffer.length
-      if (bytesRead > maxBytes) {
-        throw new Error('content_too_large')
-      }
-      chunks.push(buffer)
-    }
-
-    return Buffer.concat(chunks)
-  }
-
-  private parseSizeLimit(sizeLimit: string): number {
-    const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(sizeLimit.trim())
-    if (!match) {
-      throw new Error(`Invalid size limit: ${sizeLimit}`)
-    }
-
-    const value = Number(match[1])
-    const unit = (match[2] ?? 'b').toLowerCase()
-    const multiplier =
-      unit === 'gb'
-        ? 1024 * 1024 * 1024
-        : unit === 'mb'
-          ? 1024 * 1024
-          : unit === 'kb'
-            ? 1024
-            : 1
-
-    return Math.floor(value * multiplier)
   }
 
   public async start(): Promise<void> {

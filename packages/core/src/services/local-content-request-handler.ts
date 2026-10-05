@@ -1,11 +1,13 @@
 import { createReadStream } from 'fs'
-import { mkdir, stat, writeFile } from 'fs/promises'
-import { resolve } from 'path'
+import { stat } from 'fs/promises'
 import { Readable } from 'stream'
 import type { JWTService, Logger } from '@pikku/core/services'
 import {
+  UploadTooLargeError,
+  parseContentSizeLimit,
   resolveContentRequestTarget,
   signedContentPath,
+  streamUploadToFile,
   type LocalContentConfig,
 } from './local-content.js'
 
@@ -44,24 +46,6 @@ const matchesPrefix = (pathname: string, prefix: string) =>
 
 const contentKey = (pathname: string, prefix: string) =>
   pathname.slice(prefix.length).replace(/^\/+/, '')
-
-const parseSizeLimit = (sizeLimit: string): number => {
-  const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(sizeLimit.trim())
-  if (!match) {
-    throw new Error(`Invalid size limit: ${sizeLimit}`)
-  }
-  const value = Number(match[1])
-  const unit = (match[2] ?? 'b').toLowerCase()
-  const multiplier =
-    unit === 'gb'
-      ? 1024 * 1024 * 1024
-      : unit === 'mb'
-        ? 1024 * 1024
-        : unit === 'kb'
-          ? 1024
-          : 1
-  return value * multiplier
-}
 
 const text = (status: number, body: string) =>
   new Response(body, {
@@ -194,32 +178,20 @@ export const createLocalContentRequestHandler = ({
       return text(400, 'Invalid path')
     }
 
-    const targetPath = target.path
-    const maxBytes = parseSizeLimit(content.sizeLimit ?? '1mb')
-
-    // knowledge: decisions/security/an-upload-is-counted-as-it-arrives-not-buffered-then-measured.md
-    const chunks: Buffer[] = []
-    let bytesRead = 0
-    const reader = request.body?.getReader()
-    if (reader) {
-      try {
-        for (;;) {
-          const { done, value } = await reader.read()
-          if (done) break
-          bytesRead += value.byteLength
-          if (bytesRead > maxBytes) {
-            await reader.cancel()
-            return text(413, 'Content too large')
-          }
-          chunks.push(Buffer.from(value))
-        }
-      } finally {
-        reader.releaseLock()
+    try {
+      await streamUploadToFile(
+        request.body
+          ? Readable.fromWeb(request.body as never)
+          : (async function* () {})(),
+        target.path,
+        parseContentSizeLimit(content.sizeLimit ?? '1mb')
+      )
+    } catch (error) {
+      if (error instanceof UploadTooLargeError) {
+        return text(413, 'Content too large')
       }
+      throw error
     }
-
-    await mkdir(resolve(targetPath, '..'), { recursive: true })
-    await writeFile(targetPath, Buffer.concat(chunks))
     return new Response(null, { status: 200 })
   }
 

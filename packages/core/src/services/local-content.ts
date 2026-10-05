@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
-import { mkdir, readFile, readdir, stat } from 'fs/promises'
+import { mkdir, readFile, readdir, rename, rm, stat } from 'fs/promises'
 import { resolve, normalize, sep } from 'path'
 import type {
   BucketKeyArgs,
@@ -16,7 +16,7 @@ import type {
   WriteFileArgs,
 } from '@pikku/core/services'
 import { pipeline } from 'stream/promises'
-import type { Readable } from 'stream'
+import { Transform, type Readable } from 'stream'
 
 export interface LocalContentConfig {
   localFileUploadPath: string
@@ -152,6 +152,61 @@ export const resolveContentRequestTarget = async (
 
 /** How long a presigned upload URL stays valid. Short, like an S3 PUT URL. */
 const UPLOAD_URL_TTL_MS = 15 * 60 * 1000
+
+export class UploadTooLargeError extends Error {
+  constructor() {
+    super('content_too_large')
+  }
+}
+
+export const parseContentSizeLimit = (sizeLimit: string): number => {
+  const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(sizeLimit.trim())
+  if (!match) {
+    throw new Error(`Invalid size limit: ${sizeLimit}`)
+  }
+  const unit = (match[2] ?? 'b').toLowerCase()
+  const multiplier =
+    unit === 'gb'
+      ? 1024 * 1024 * 1024
+      : unit === 'mb'
+        ? 1024 * 1024
+        : unit === 'kb'
+          ? 1024
+          : 1
+  return Number(match[1]) * multiplier
+}
+
+export const streamUploadToFile = async (
+  source: AsyncIterable<Uint8Array>,
+  targetPath: string,
+  maxBytes: number
+): Promise<number> => {
+  await mkdir(resolve(targetPath, '..'), { recursive: true })
+  const partial = `${targetPath}.${process.pid}.${Date.now()}.part`
+  let bytes = 0
+  const counter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      bytes += chunk.length
+      if (bytes > maxBytes) {
+        callback(new UploadTooLargeError())
+        return
+      }
+      callback(null, chunk)
+    },
+  })
+  try {
+    await pipeline(
+      source as AsyncIterable<Buffer>,
+      counter,
+      createWriteStream(partial)
+    )
+    await rename(partial, targetPath)
+    return bytes
+  } catch (error) {
+    await rm(partial, { force: true })
+    throw error
+  }
+}
 
 export class LocalContent implements ContentService {
   constructor(
