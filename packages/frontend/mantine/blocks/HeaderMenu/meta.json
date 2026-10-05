@@ -1,0 +1,26 @@
+{
+  "name": "HeaderMenu",
+  "title": "Header with dropdown menus",
+  "description": "A top header whose nav items expand into hover dropdown menus on desktop and collapsible groups in the mobile drawer. Use when navigation has sub-sections.",
+  "tags": ["headers"],
+  "files": ["HeaderMenu.tsx", "HeaderMenu.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "headermenu__features": "Features",
+    "headermenu__learn": "Learn",
+    "headermenu__documentation": "Documentation",
+    "headermenu__resources": "Resources",
+    "headermenu__community": "Community",
+    "headermenu__blog": "Blog",
+    "headermenu__about": "About",
+    "headermenu__pricing": "Pricing",
+    "headermenu__support": "Support",
+    "headermenu__faq": "FAQ",
+    "headermenu__book_a_demo": "Book a demo",
+    "headermenu__forums": "Forums",
+    "headermenu__toggle_navigation": "Toggle navigation",
+    "headermenu__navigation": "Navigation"
+  }
+}

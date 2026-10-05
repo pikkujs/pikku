@@ -1,0 +1,11 @@
+{
+  "name": "NavbarLinksGroup",
+  "title": "Collapsible nav link group",
+  "description": "A single expandable navigation section: an icon + label button that toggles a nested list of links. Building block for sidebar navs; usually composed, not used alone.",
+  "tags": ["navbars"],
+  "files": ["NavbarLinksGroup.tsx", "NavbarLinksGroup.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "internal": true,
+  "i18nKeys": {}
+}

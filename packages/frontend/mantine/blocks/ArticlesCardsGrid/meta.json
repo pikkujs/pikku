@@ -1,0 +1,15 @@
+{
+  "name": "ArticlesCardsGrid",
+  "title": "Articles cards grid",
+  "description": "A responsive two-column grid of image cards, each with a date and title, that lift on hover. Pass an articles array or use the sample. Use for blog or news index pages.",
+  "tags": ["cards"],
+  "files": ["ArticlesCardsGrid.tsx", "ArticlesCardsGrid.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "articlescardsgrid__title_1": "Top 10 places to visit in Norway this summer",
+    "articlescardsgrid__title_2": "Best forests to visit in North America",
+    "articlescardsgrid__title_3": "Hawaii beaches review: better than you think",
+    "articlescardsgrid__title_4": "Mountains at night: 12 best locations to enjoy the view"
+  }
+}

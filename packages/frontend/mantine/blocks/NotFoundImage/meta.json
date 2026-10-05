@@ -1,0 +1,15 @@
+{
+  "name": "NotFoundImage",
+  "title": "404 not-found page (illustration)",
+  "description": "A two-column 404 page pairing an illustration with a title, message and a 'back to home' button, collapsing to a single column with the image on top on mobile. Use as an illustrated not-found route fallback.",
+  "tags": ["errors"],
+  "files": ["NotFoundImage.tsx", "NotFoundImage.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "notfoundimage__title": "Something is not right...",
+    "notfoundimage__description": "Page you are trying to open does not exist. You may have mistyped the address, or the page has been moved to another URL. If you think this is an error contact support.",
+    "notfoundimage__back": "Get back to home page",
+    "notfoundimage__alt": "Page not found"
+  }
+}

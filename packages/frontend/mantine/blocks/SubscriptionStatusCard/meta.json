@@ -1,0 +1,23 @@
+{
+  "name": "SubscriptionStatusCard",
+  "title": "Subscription status card",
+  "description": "A billing-page card showing the current plan, a status badge (active/trialing/past-due/…), the renewal date, and a manage/upgrade button. Presentational — the page passes the subscription (from the Better Auth Stripe client) and an onManage handler that opens the customer portal.",
+  "tags": ["payments"],
+  "files": ["SubscriptionStatusCard.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "subscriptionstatuscard__title": "Subscription",
+    "subscriptionstatuscard__unknown_plan": "Current plan",
+    "subscriptionstatuscard__none": "You're not subscribed to a plan yet.",
+    "subscriptionstatuscard__manage": "Manage billing",
+    "subscriptionstatuscard__choose": "Choose a plan",
+    "subscriptionstatuscard__renews": "Renews on {date}",
+    "subscriptionstatuscard__status_active": "Active",
+    "subscriptionstatuscard__status_trialing": "Trial",
+    "subscriptionstatuscard__status_past_due": "Past due",
+    "subscriptionstatuscard__status_canceled": "Canceled",
+    "subscriptionstatuscard__status_incomplete": "Incomplete"
+  },
+  "usage": "Enable the Better Auth Stripe plugin, then feed it from the Stripe client and open the portal on manage:\n\n```ts\nconst { data: subs } = useQuery({ queryKey: ['subs'], queryFn: () => client.subscription.list() })\nconst active = subs?.find((s) => s.status === 'active' || s.status === 'trialing')\nconst portal = useMutation({ mutationFn: () => client.subscription.billingPortal({ returnUrl: '/app/billing' }) })\n<SubscriptionStatusCard planName={asI18n(active?.plan)} status={active?.status ?? 'none'} renewsOn={active?.periodEnd?.toLocaleDateString()} onManage={portal.mutate} />\n```"
+}

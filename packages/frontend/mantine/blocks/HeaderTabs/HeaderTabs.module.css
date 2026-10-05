@@ -1,0 +1,74 @@
+.header {
+  padding-top: var(--mantine-spacing-sm);
+  background-color: var(--mantine-color-default);
+  border-bottom: 1px solid light-dark(var(--mantine-color-default-border), transparent);
+  margin-bottom: 7.5rem;
+}
+
+.mainSection {
+  padding-bottom: var(--mantine-spacing-sm);
+}
+
+.user {
+  color: var(--mantine-color-text);
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-sm);
+  transition: background-color 100ms ease;
+}
+
+.user:hover {
+  background-color: var(--mantine-color-body);
+}
+
+.userActive {
+  background-color: var(--mantine-color-body);
+}
+
+@media (max-width: 36em) {
+  .user {
+    display: none;
+  }
+}
+
+.tabsList::before {
+  display: none;
+}
+
+.tab {
+  font-weight: 500;
+  height: 2.375rem;
+  background-color: transparent;
+  position: relative;
+  bottom: -1px;
+}
+
+.tab::before,
+.tab::after {
+  background-color: light-dark(var(--mantine-color-default-border), var(--mantine-color-default));
+}
+
+.tab:hover {
+  background-color: var(--mantine-color-default-border);
+}
+
+.tab[data-active] {
+  background-color: var(--mantine-color-body);
+  border-color: light-dark(
+    var(--mantine-color-default-border),
+    var(--mantine-color-default-border)
+  );
+  border-bottom-color: transparent;
+}
+
+.drawerLink {
+  display: block;
+  padding: var(--mantine-spacing-md);
+  text-decoration: none;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+}
+
+.drawerLink:hover {
+  background-color: var(--mantine-color-default);
+}

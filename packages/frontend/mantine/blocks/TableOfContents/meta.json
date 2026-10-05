@@ -1,0 +1,20 @@
+{
+  "name": "TableOfContents",
+  "title": "Table of contents",
+  "description": "A vertical list of anchor links with a left rail, indentation per heading level, and a highlighted active section, headed by a 'Table of contents' label. Use as an in-page navigation sidebar for docs or long articles.",
+  "tags": ["navigation"],
+  "files": ["TableOfContents.tsx", "TableOfContents.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "tableofcontents__heading": "Table of contents",
+    "tableofcontents__usage": "Usage",
+    "tableofcontents__position": "Position and placement",
+    "tableofcontents__overlays": "With other overlays",
+    "tableofcontents__focus": "Manage focus",
+    "tableofcontents__examples": "Examples",
+    "tableofcontents__show_on_focus": "Show on focus",
+    "tableofcontents__show_on_hover": "Show on hover",
+    "tableofcontents__with_form": "With form"
+  }
+}

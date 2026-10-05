@@ -1,0 +1,22 @@
+{
+  "name": "UserMenu",
+  "title": "User dropdown menu",
+  "description": "An avatar-triggered dropdown menu with the signed-in user's header, quick links, settings and a danger zone. Props-driven user data. Use in app headers or account bars.",
+  "tags": ["user"],
+  "files": ["UserMenu.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "usermenu__user_settings": "User settings",
+    "usermenu__liked_posts": "Liked posts",
+    "usermenu__saved_posts": "Saved posts",
+    "usermenu__your_comments": "Your comments",
+    "usermenu__settings": "Settings",
+    "usermenu__account_settings": "Account settings",
+    "usermenu__change_account": "Change account",
+    "usermenu__logout": "Logout",
+    "usermenu__danger_zone": "Danger zone",
+    "usermenu__pause_subscription": "Pause subscription",
+    "usermenu__delete_account": "Delete account"
+  }
+}

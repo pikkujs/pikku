@@ -1,0 +1,15 @@
+{
+  "name": "PricingTable",
+  "title": "Pricing plans grid",
+  "description": "A responsive grid of pricing cards (name, price, feature list, highlighted 'popular' plan, current-plan state) with a per-plan choose button. Presentational — the page supplies plans + an onSelectPlan handler that starts Stripe checkout. Use on a /pricing or upgrade page.",
+  "tags": ["payments"],
+  "files": ["PricingTable.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "pricingtable__popular": "Most popular",
+    "pricingtable__choose": "Choose plan",
+    "pricingtable__current": "Current plan"
+  },
+  "usage": "Enable the Better Auth Stripe plugin first, then wire onSelectPlan to checkout via the Better Auth Stripe client:\n\n```ts\nimport { createAuthClient } from 'better-auth/client'\nimport { stripeClient } from '@better-auth/stripe/client'\nconst client = createAuthClient({ baseURL: `${apiUrl()}/auth`, plugins: [stripeClient({ subscription: true })] })\n\n// in the page:\nconst upgrade = useMutation({ mutationFn: (plan: string) => client.subscription.upgrade({ plan, successUrl: '/app', cancelUrl: '/pricing' }) })\n<PricingTable plans={plans} currentPlanId={active?.plan} onSelectPlan={upgrade.mutate} />\n```"
+}

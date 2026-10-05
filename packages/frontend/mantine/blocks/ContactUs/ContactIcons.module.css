@@ -1,0 +1,13 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  color: var(--mantine-color-white);
+}
+
+.title {
+  color: var(--mantine-primary-color-light);
+}
+
+.description {
+  color: var(--mantine-color-white);
+}

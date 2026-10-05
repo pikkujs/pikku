@@ -1,0 +1,12 @@
+{
+  "name": "FooterSocial",
+  "title": "Footer with brand and social icons",
+  "description": "A compact footer: brand wordmark on the left and a row of social action icons on the right, stacking on small screens. Use when the footer only needs branding plus social links.",
+  "tags": ["footers"],
+  "files": ["FooterSocial.tsx", "FooterSocial.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App"
+  }
+}

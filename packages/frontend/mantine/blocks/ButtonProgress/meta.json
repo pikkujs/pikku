@@ -1,0 +1,14 @@
+{
+  "name": "ButtonProgress",
+  "title": "Button with inline progress",
+  "description": "A full-width button that fills with a progress bar behind its label while an action runs, then flips to a success color and label. Use for uploads or long-running actions triggered from a single button.",
+  "tags": ["buttons"],
+  "files": ["ButtonProgress.tsx", "ButtonProgress.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "buttonprogress__uploading": "Uploading files",
+    "buttonprogress__uploaded": "Files uploaded",
+    "buttonprogress__upload": "Upload files"
+  }
+}

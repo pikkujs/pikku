@@ -1,0 +1,17 @@
+{
+  "name": "OrganizationInviteForm",
+  "title": "Invite a member to the organization",
+  "description": "A bordered card with an email field + role select and an Invite button that calls the Better Auth organization client (inviteMember). Inline success/error via useMutation. Use to add teammates to the active org.",
+  "tags": ["organization"],
+  "files": ["OrganizationInviteForm.tsx"],
+  "dependsOn": ["OrgAuthClient"],
+  "npmDeps": [],
+  "i18nKeys": {
+    "organizationinviteform__title": "Invite a teammate",
+    "organizationinviteform__email_label": "Email",
+    "organizationinviteform__email_placeholder": "teammate@company.com",
+    "organizationinviteform__role_label": "Role",
+    "organizationinviteform__submit": "Send invite",
+    "organizationinviteform__sent": "Invitation sent."
+  }
+}

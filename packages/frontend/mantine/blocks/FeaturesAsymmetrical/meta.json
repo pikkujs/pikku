@@ -1,0 +1,17 @@
+{
+  "name": "FeaturesAsymmetrical",
+  "title": "Asymmetrical features row",
+  "description": "A three-column row of features, each with a coloured offset overlay behind an icon, a bold title and description. Use for a compact, visually-offset feature strip.",
+  "tags": ["features"],
+  "files": ["FeaturesAsymmetrical.tsx", "FeaturesAsymmetrical.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "featuresasymmetrical__f1_title": "Free Worldwide shipping",
+    "featuresasymmetrical__f1_description": "As electricity builds up inside its body, it becomes more aggressive. One theory is that the electricity.",
+    "featuresasymmetrical__f2_title": "Best Quality Product",
+    "featuresasymmetrical__f2_description": "Slakoth's heart beats just once a minute. Whatever happens, it is content to loaf around motionless.",
+    "featuresasymmetrical__f3_title": "Very Affordable Pricing",
+    "featuresasymmetrical__f3_description": "Thought to have gone extinct, Relicanth was given a name that is a variation of the name of the person who discovered."
+  }
+}

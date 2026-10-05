@@ -1,0 +1,22 @@
+{
+  "name": "DoubleHeader",
+  "title": "Double-row header",
+  "description": "A tall header with a brand wordmark and two right-aligned rows: secondary account links above a row of primary uppercase nav links with an active underline, collapsing to a mobile drawer. Use for sites needing a secondary utility nav.",
+  "tags": ["headers"],
+  "files": ["DoubleHeader.tsx", "DoubleHeader.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "doubleheader__privacy_security": "Privacy & Security",
+    "doubleheader__account_settings": "Account settings",
+    "doubleheader__support_options": "Support options",
+    "doubleheader__book_a_demo": "Book a demo",
+    "doubleheader__documentation": "Documentation",
+    "doubleheader__community": "Community",
+    "doubleheader__academy": "Academy",
+    "doubleheader__forums": "Forums",
+    "doubleheader__toggle_navigation": "Toggle navigation",
+    "doubleheader__navigation": "Navigation"
+  }
+}

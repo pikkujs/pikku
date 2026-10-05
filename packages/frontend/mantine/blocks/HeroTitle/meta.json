@@ -1,0 +1,17 @@
+{
+  "name": "HeroTitle",
+  "title": "Centered hero with gradient title",
+  "description": "Tall centered hero featuring a gradient-highlighted headline, a large description and primary + GitHub call-to-action buttons. Use as a product landing opener.",
+  "tags": ["heroes"],
+  "files": ["HeroTitle.tsx", "HeroTitle.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "herotitle__title_start": "A ",
+    "herotitle__title_highlight": "fully featured",
+    "herotitle__title_end": " React components and hooks library",
+    "herotitle__description": "Build fully functional accessible web applications with ease – Mantine includes more than 100 customizable components and hooks to cover you in any situation",
+    "herotitle__get_started": "Get started",
+    "herotitle__github": "GitHub"
+  }
+}

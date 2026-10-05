@@ -1,0 +1,26 @@
+{
+  "name": "FaqWithHeader",
+  "title": "FAQ with header and contact panel",
+  "description": "A large gradient FAQ header with a giant watermark title, an inset contact-details card, and a grid of help-category image cards. Use as the top of a full support or help-center page.",
+  "tags": ["faq"],
+  "files": [
+    "FaqWithHeader.tsx",
+    "FaqWithHeader.module.css",
+    "ContactIcons.tsx",
+    "ContactIcons.module.css"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "faqwithheader__title": "Frequently Asked Questions",
+    "faqwithheader__faq": "FAQ",
+    "faqwithheader__contact_us": "Contact us",
+    "faqwithheader__cat_support": "Customer Support",
+    "faqwithheader__cat_guides": "User Guides",
+    "faqwithheader__cat_sales": "Sales Questions",
+    "faqwithheader__contact_email": "Email",
+    "faqwithheader__contact_phone": "Phone",
+    "faqwithheader__contact_address": "Address",
+    "faqwithheader__contact_hours": "Working hours"
+  }
+}

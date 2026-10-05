@@ -1,0 +1,22 @@
+{
+  "name": "BadgeCard",
+  "title": "Badge feature card",
+  "description": "A product/listing card with a cover image, title, country badge, description, a row of emoji feature badges, and details + like actions. Use for places, listings or plans.",
+  "tags": ["cards"],
+  "files": ["BadgeCard.tsx", "BadgeCard.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "badgecard__title": "Verudela Beach",
+    "badgecard__country": "Croatia",
+    "badgecard__description": "Completely renovated for the season 2020, Arena Verudela Bech Apartments are fully equipped and modernly furnished 4-star self-service apartments located on the Adriatic coastline by one of the most beautiful beaches in Pula.",
+    "badgecard__perfect_for": "Perfect for you, if you enjoy",
+    "badgecard__show_details": "Show details",
+    "badgecard__badge_sunny": "Sunny weather",
+    "badgecard__badge_zoo": "Onsite zoo",
+    "badgecard__badge_sea": "Sea",
+    "badgecard__badge_nature": "Nature",
+    "badgecard__badge_water_sports": "Water sports",
+    "badgecard__like": "Like"
+  }
+}

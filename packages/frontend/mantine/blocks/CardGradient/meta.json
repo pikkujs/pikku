@@ -1,0 +1,13 @@
+{
+  "name": "CardGradient",
+  "title": "Gradient accent card",
+  "description": "A bordered card with a gradient theme icon, a left gradient accent bar, a title and a description. Use as a feature or documentation highlight tile.",
+  "tags": ["cards"],
+  "files": ["CardGradient.tsx", "CardGradient.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "cardgradient__title": "Theming documentation",
+    "cardgradient__description": "Extend default theme with any amount of additional colors, replace shadows, radius, spacing, fonts and many other properties to match your design requirements. Mantine theme is just an object, you can subscribe to it in any part of application via context and use it to build your own components."
+  }
+}

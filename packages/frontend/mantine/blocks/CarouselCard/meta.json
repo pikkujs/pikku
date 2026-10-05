@@ -1,0 +1,17 @@
+{
+  "name": "CarouselCard",
+  "title": "Listing card with image carousel",
+  "description": "A bordered card whose header is a looping image carousel with hover-reveal controls and expanding dot indicators, above a title, rating, description, price, and book button. Requires importing `@mantine/carousel/styles.css` once. Use for property, product, or listing detail cards.",
+  "tags": ["carousel"],
+  "files": ["CarouselCard.tsx", "CarouselCard.module.css"],
+  "dependsOn": [],
+  "npmDeps": ["@mantine/carousel"],
+  "i18nKeys": {
+    "carouselcard__slide_alt": "Slide {index}",
+    "carouselcard__next_slide": "Next slide",
+    "carouselcard__previous_slide": "Previous slide",
+    "carouselcard__description": "Relax, rejuvenate and unplug in this unique contemporary Birdbox. Feel close to nature in ultimate comfort. Enjoy the view of the epic mountain range of Blegja and the Førdefjord.",
+    "carouselcard__per_night": " / night",
+    "carouselcard__book_now": "Book now"
+  }
+}

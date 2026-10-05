@@ -1,0 +1,96 @@
+.navbar {
+  background-color: var(--mantine-color-body);
+  height: 100dvh;
+  width: 18.75rem;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--mantine-color-default-border);
+}
+
+.wrapper {
+  display: flex;
+  flex: 1;
+}
+
+.aside {
+  flex: 0 0 3.75rem;
+  background-color: var(--mantine-color-body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid
+    light-dark(var(--mantine-color-default-border), var(--mantine-color-default-border));
+}
+
+.main {
+  flex: 1;
+  background-color: var(--mantine-color-default);
+}
+
+.mainLink {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--mantine-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mantine-color-text);
+}
+
+.mainLink:hover {
+  background-color: light-dark(var(--mantine-color-default), var(--mantine-color-default));
+}
+
+.mainLink[data-active],
+.mainLink[data-active]:hover {
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-color-blue-light-color);
+}
+
+.title {
+  margin-bottom: var(--mantine-spacing-xl);
+  background-color: var(--mantine-color-body);
+  padding: var(--mantine-spacing-md);
+  font-weight: 500;
+  padding-top: 1.125rem;
+  height: 3.75rem;
+  border-bottom: 1px solid
+    light-dark(var(--mantine-color-default-border), var(--mantine-color-default-border));
+}
+
+.logo {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  height: 3.75rem;
+  padding-top: var(--mantine-spacing-md);
+  border-bottom: 1px solid
+    light-dark(var(--mantine-color-default-border), var(--mantine-color-default-border));
+  margin-bottom: var(--mantine-spacing-xl);
+}
+
+.link {
+  display: block;
+  text-decoration: none;
+  border-top-right-radius: var(--mantine-radius-md);
+  border-bottom-right-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-text);
+  padding: 0 var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-sm);
+  margin-right: var(--mantine-spacing-md);
+  font-weight: 500;
+  height: 2.75rem;
+  line-height: 2.75rem;
+}
+
+.link:hover {
+  background-color: var(--mantine-color-default-border);
+  color: var(--mantine-color-text);
+}
+
+.link[data-active],
+.link[data-active]:hover {
+  border-left-color: var(--mantine-primary-color-filled);
+  background-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
+}

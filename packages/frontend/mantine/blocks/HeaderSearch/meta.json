@@ -1,0 +1,19 @@
+{
+  "name": "HeaderSearch",
+  "title": "Header with search",
+  "description": "A top header with a brand wordmark, inline nav links, and an autocomplete search box, plus a burger-triggered mobile drawer. Use when the header needs quick search.",
+  "tags": ["headers"],
+  "files": ["HeaderSearch.tsx", "HeaderSearch.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "headersearch__features": "Features",
+    "headersearch__pricing": "Pricing",
+    "headersearch__learn": "Learn",
+    "headersearch__community": "Community",
+    "headersearch__search_placeholder": "Search",
+    "headersearch__toggle_navigation": "Toggle navigation",
+    "headersearch__navigation": "Navigation"
+  }
+}

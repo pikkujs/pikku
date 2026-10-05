@@ -1,0 +1,16 @@
+{
+  "name": "StatsControls",
+  "title": "Date-stepped activity stats",
+  "description": "A gradient panel with a day stepper on the left and per-activity progress cards on the right. Use for a fitness/goal dashboard where stats are scoped to a chosen date.",
+  "tags": ["stats"],
+  "files": ["StatsControls.tsx", "StatsControls.module.css"],
+  "dependsOn": [],
+  "npmDeps": ["dayjs"],
+  "i18nKeys": {
+    "statscontrols__running": "Running",
+    "statscontrols__swimming": "Swimming",
+    "statscontrols__bike": "Bike",
+    "statscontrols__next_day": "Next day",
+    "statscontrols__previous_day": "Previous day"
+  }
+}

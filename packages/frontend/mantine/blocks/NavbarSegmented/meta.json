@@ -1,0 +1,29 @@
+{
+  "name": "NavbarSegmented",
+  "title": "Segmented sidebar navigation",
+  "description": "Full-height sidebar with a segmented control that switches between two nav sections (e.g. Account vs System), an account header, and account/logout actions at the bottom. Use when one sidebar hosts two related link sets.",
+  "tags": ["navbars"],
+  "files": ["NavbarSegmented.tsx", "NavbarSegmented.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "navbarsegmented__account": "Account",
+    "navbarsegmented__system": "System",
+    "navbarsegmented__notifications": "Notifications",
+    "navbarsegmented__billing": "Billing",
+    "navbarsegmented__security": "Security",
+    "navbarsegmented__ssh_keys": "SSH Keys",
+    "navbarsegmented__databases": "Databases",
+    "navbarsegmented__authentication": "Authentication",
+    "navbarsegmented__other_settings": "Other Settings",
+    "navbarsegmented__orders": "Orders",
+    "navbarsegmented__receipts": "Receipts",
+    "navbarsegmented__reviews": "Reviews",
+    "navbarsegmented__messages": "Messages",
+    "navbarsegmented__customers": "Customers",
+    "navbarsegmented__refunds": "Refunds",
+    "navbarsegmented__files": "Files",
+    "navbarsegmented__change_account": "Change account",
+    "navbarsegmented__logout": "Logout"
+  }
+}

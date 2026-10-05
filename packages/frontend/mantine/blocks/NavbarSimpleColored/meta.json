@@ -1,0 +1,21 @@
+{
+  "name": "NavbarSimpleColored",
+  "title": "Colored settings sidebar",
+  "description": "Full-height left sidebar on a filled brand background, with a header, version code, a flat list of icon links with a white active pill, and change-account/logout actions pinned to the bottom. Use for a bold, brand-colored settings shell with single-level navigation.",
+  "tags": ["navbars"],
+  "files": ["NavbarSimpleColored.tsx", "NavbarSimpleColored.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "navbarsimplecolored__notifications": "Notifications",
+    "navbarsimplecolored__billing": "Billing",
+    "navbarsimplecolored__security": "Security",
+    "navbarsimplecolored__ssh_keys": "SSH Keys",
+    "navbarsimplecolored__databases": "Databases",
+    "navbarsimplecolored__authentication": "Authentication",
+    "navbarsimplecolored__other_settings": "Other Settings",
+    "navbarsimplecolored__change_account": "Change account",
+    "navbarsimplecolored__logout": "Logout"
+  }
+}

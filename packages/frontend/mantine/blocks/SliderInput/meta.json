@@ -1,0 +1,14 @@
+{
+  "name": "SliderInput",
+  "title": "Number input fused with a slider",
+  "description": "A number input and a slider bound to the same value, stacked so the slider sits flush against the input's bottom edge. Use for a numeric field that also supports coarse drag adjustment.",
+  "tags": ["sliders"],
+  "files": ["SliderInput.tsx", "SliderInput.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "sliderinput__label": "Your daily kcal consumption",
+    "sliderinput__placeholder": "2200 is an average value",
+    "sliderinput__thumb": "Daily Kcal"
+  }
+}

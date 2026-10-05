@@ -1,0 +1,16 @@
+{
+  "name": "ArticleCardFooter",
+  "title": "Article card with footer bar",
+  "description": "A cover-image card with a category badge, title, author row, and a bordered footer showing a like count and share actions. Use in article listings.",
+  "tags": ["cards"],
+  "files": ["ArticleCardFooter.tsx", "ArticleCardFooter.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "articlecardfooter__category": "Decorations",
+    "articlecardfooter__title": "Top 50 underrated plants for house decoration",
+    "articlecardfooter__like": "Like",
+    "articlecardfooter__bookmark": "Bookmark",
+    "articlecardfooter__share": "Share"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "SliderIcon",
+  "title": "Slider with icon thumbs",
+  "description": "A single slider and a range slider whose thumbs render icons (heart / broken-heart) instead of the default handle. Use for playful rating or affinity inputs.",
+  "tags": ["sliders"],
+  "files": ["SliderIcon.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "slidericon__heart_thumb": "Slider with heart icon",
+    "slidericon__from": "Minimum range slider",
+    "slidericon__to": "Maximum range slider"
+  }
+}

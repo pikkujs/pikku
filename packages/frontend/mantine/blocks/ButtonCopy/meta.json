@@ -1,0 +1,13 @@
+{
+  "name": "ButtonCopy",
+  "title": "Copy-to-clipboard button",
+  "description": "A pill button that copies a link to the clipboard and confirms with a swapped check icon plus a transient tooltip. Use for share/copy actions.",
+  "tags": ["buttons"],
+  "files": ["ButtonCopy.tsx"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "buttoncopy__link_copied": "Link copied!",
+    "buttoncopy__copy_link": "Copy link to clipboard"
+  }
+}

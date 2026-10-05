@@ -1,0 +1,21 @@
+{
+  "name": "NavbarSimple",
+  "title": "Simple settings sidebar",
+  "description": "Full-height left sidebar with a brand header, version code, a flat list of icon links with an active state, and change-account/logout actions pinned to the bottom. Use for settings or account app shells with single-level navigation.",
+  "tags": ["navbars"],
+  "files": ["NavbarSimple.tsx", "NavbarSimple.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "app__name": "My App",
+    "navbarsimple__notifications": "Notifications",
+    "navbarsimple__billing": "Billing",
+    "navbarsimple__security": "Security",
+    "navbarsimple__ssh_keys": "SSH Keys",
+    "navbarsimple__databases": "Databases",
+    "navbarsimple__authentication": "Authentication",
+    "navbarsimple__other_settings": "Other Settings",
+    "navbarsimple__change_account": "Change account",
+    "navbarsimple__logout": "Logout"
+  }
+}

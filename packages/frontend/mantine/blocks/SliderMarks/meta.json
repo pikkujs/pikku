@@ -1,0 +1,13 @@
+{
+  "name": "SliderMarks",
+  "title": "Range slider with numbered marks",
+  "description": "A range slider with grip-handle thumbs and a scale of numbered marks interleaved with small dot ticks along the track. Use for precise range selection where the scale should be readable at a glance.",
+  "tags": ["sliders"],
+  "files": ["SliderMarks.tsx", "SliderMarks.module.css"],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "slidermarks__from": "Start",
+    "slidermarks__to": "End"
+  }
+}
