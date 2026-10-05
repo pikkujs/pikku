@@ -80,6 +80,20 @@ export type WireAddonConfig = {
    * deploy manifest, and only the consuming app can grant it.
    */
   globalCredentials?: string
+  /**
+   * The folder of the content store this instance owns. Everything it stores
+   * lands under it and it cannot see past it. Defaults to `name`.
+   */
+  contentBucket?: string
+  /**
+   * Paths outside its own folder this instance may use, by path prefix:
+   * `read` allows reads and signed downloads, `write` adds uploads, writes and
+   * deletes. The longest matching prefix decides. The addon names a granted
+   * path by starting its bucket with `@`.
+   */
+  contentGrants?: Record<string, 'read' | 'write'>
+  /** Hands over the whole `ContentService` unscoped. The value is the reason, recorded in the deploy manifest. */
+  globalContent?: string
 }
 
 /**
@@ -114,6 +128,9 @@ export const wireAddon = (config: WireAddonConfig): void => {
     ...(config.globalCredentials
       ? { globalCredentials: config.globalCredentials }
       : {}),
+    ...(config.contentBucket ? { contentBucket: config.contentBucket } : {}),
+    ...(config.contentGrants ? { contentGrants: config.contentGrants } : {}),
+    ...(config.globalContent ? { globalContent: config.globalContent } : {}),
   })
 }
 

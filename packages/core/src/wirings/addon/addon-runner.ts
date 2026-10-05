@@ -6,6 +6,7 @@ import type {
 import type { SecretService } from '../../services/secret-service.js'
 import { ScopedSecretService } from '../../services/scoped-secret-service.js'
 import { ScopedCredentialService } from '../../services/scoped-credential-service.js'
+import { ScopedContentService } from '../../services/scoped-content-service.js'
 import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { SendWebhookInput } from '../../services/webhook-service.js'
@@ -23,6 +24,12 @@ export type AddonInstance = {
   globalSecrets?: string
   /** Set by the consuming app to opt this instance out of credential scoping. */
   globalCredentials?: string
+  /** Set by the consuming app: the folder of the content store this instance owns. */
+  contentBucket?: string
+  /** Set by the consuming app: paths outside its folder this instance may read or write. */
+  contentGrants?: Record<string, 'read' | 'write'>
+  /** Set by the consuming app to opt this instance out of content scoping. */
+  globalContent?: string
 }
 
 /**
@@ -217,6 +224,18 @@ export const getOrCreatePackageSingletonServices = async (
 
   const namespace =
     addonInstance?.namespace ?? findAddonNamespaceForPackage(packageName)
+  if (!addonInstance?.globalContent && existingServices.content) {
+    existingServices = {
+      ...existingServices,
+      content: new ScopedContentService(
+        existingServices.content,
+        addonInstance?.contentBucket ??
+          namespace ??
+          packageName.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, ''),
+        addonInstance?.contentGrants
+      ),
+    }
+  }
   if (namespace && existingServices.webhookService) {
     existingServices = {
       ...existingServices,
@@ -280,5 +299,8 @@ export const addonInstanceForNamespace = (
     credentialGrants: cfg.credentialGrants,
     globalSecrets: cfg.globalSecrets,
     globalCredentials: cfg.globalCredentials,
+    contentBucket: cfg.contentBucket,
+    contentGrants: cfg.contentGrants,
+    globalContent: cfg.globalContent,
   }
 }
