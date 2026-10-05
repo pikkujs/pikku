@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { PREVIEW_SCOPE, scopeThemeCss } from '@/lib/themeCss'
 
 export function PreviewProvider({
