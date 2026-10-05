@@ -6,6 +6,7 @@ import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import {
   ContextAwareRPCService,
   RPCNotFoundError,
+  AddonNotUsedError,
   RemoteAddonRequestError,
   resolveNamespace,
   rpcService,
@@ -222,6 +223,46 @@ describe('ContextAwareRPCService.rpc', () => {
       data: { amount: 10 },
       auth: 'http',
     })
+  })
+
+  test('an addon may call only the addons it lists in uses', async () => {
+    pikkuState(null, 'addons', 'packages').set('mail', {
+      package: '@addon/mail',
+      uses: { '@addon/stripe': 'stripe' },
+    } as never)
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+    pikkuState(null, 'addons', 'packages').set('crm', {
+      package: '@addon/crm',
+    } as never)
+    registerFunction('createCharge', async (_services, data) => data, {
+      packageName: '@addon/stripe',
+    })
+    pikkuState('@addon/stripe', 'function', 'meta').createCharge = {
+      name: 'createCharge',
+      sessionless: true,
+      permissions: [],
+    } as never
+
+    const service = new ContextAwareRPCService(
+      createServices({ logger: createLogger() }),
+      { wireType: 'http', wireId: 'wire-1', addonNamespace: 'mail' } as never,
+      { requiresAuth: false }
+    )
+
+    assert.deepEqual(
+      await service.rpc('@addon/stripe:createCharge', { amount: 1 }),
+      { amount: 1 }
+    )
+    await assert.rejects(
+      () => service.rpc('crm:getContact', {}),
+      AddonNotUsedError
+    )
+    await assert.rejects(
+      () => service.rpc('stripe:createCharge', {}),
+      AddonNotUsedError
+    )
   })
 
   test('falls back to deploymentService when rpc meta is missing', async () => {
