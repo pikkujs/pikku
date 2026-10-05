@@ -32,6 +32,11 @@
     // ffprobe ships alongside.
     "ffmpeg",
     "ffprobe",
+    // The OS sandboxes Studio confines an agent's shell with: macOS ships
+    // sandbox-exec, Linux has bwrap when it is installed. Neither is ours to
+    // install, and confine.ts falls back when one is missing.
+    "sandbox-exec",
+    "bwrap",
     // Part of a Rust toolchain rather than of this repo. The test that checks
     // the generated Tauri shell parses skips itself when it is absent, so it
     // is never a dependency anyone has to install. `pikku app native` probes
