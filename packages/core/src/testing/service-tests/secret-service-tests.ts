@@ -64,6 +64,16 @@ export const defineSecretServiceTests = (
       assert.strictEqual(await service.hasSecret('to-delete'), false)
     })
 
+    test('setEncryptedSecret stores a sealed value without opening it', async (t) => {
+      const service = await factory({ key: kek })
+      if (!service.setEncryptedSecret) {
+        t.skip('store does not accept sealed secrets')
+        return
+      }
+      await service.setEncryptedSecret('sealed-key', 'opaque-envelope')
+      assert.strictEqual(await service.hasSecret('sealed-key'), true)
+    })
+
     test('rotateKEK re-wraps all secrets', async () => {
       const newKEK = 'new-key-encryption-key-rotated!'
       const oldService = await factory({ key: kek })

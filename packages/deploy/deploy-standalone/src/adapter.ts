@@ -421,6 +421,7 @@ export interface StandaloneProviderAdapterOptions {
   nativeSidecars?: ReadonlyArray<{ name: string; dir: string }>
   contributors?: PlatformServiceContributor[]
   compileTarget?: string
+  port?: number
 }
 
 const targetPlatform = (target: string | undefined): string =>
@@ -446,13 +447,16 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly singleUnit = true
   readonly bundlesSqliteLibrary: boolean
   private readonly compileTarget?: string
+  private readonly port: number
   readonly nativeSidecars: ReadonlyArray<{ name: string; dir: string }>
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.nativeSidecars = options.nativeSidecars ?? []
     this.compileTarget = options.compileTarget
-    this.bundlesSqliteLibrary = targetPlatform(options.compileTarget) === 'darwin'
+    this.port = options.port ?? 3000
+    this.bundlesSqliteLibrary =
+      targetPlatform(options.compileTarget) === 'darwin'
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -513,7 +517,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
       ...(ctx.embedded
-        ? [`import { embeddedFiles as __pikkuEmbeddedFiles } from '${STANDALONE_EMBEDDED_MANIFEST}'`]
+        ? [
+            `import { embeddedFiles as __pikkuEmbeddedFiles } from '${STANDALONE_EMBEDDED_MANIFEST}'`,
+          ]
         : []),
       ...(ctx.db
         ? [
@@ -531,10 +537,12 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import '${ctx.bootstrapPath}'`,
       ``,
       `const logger = new ConsoleLogger()`,
-      `const port = parseInt(process.env.PORT || '3000', 10)`,
+      `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
       ...(ctx.embedded
-        ? [`for (const { env, path } of __pikkuEmbeddedFiles) process.env[env] ??= path`]
+        ? [
+            `for (const { env, path } of __pikkuEmbeddedFiles) process.env[env] ??= path`,
+          ]
         : []),
       ``,
       ...commandParseLines(ctx),
@@ -814,7 +822,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     await mkdir(configDir, { recursive: true })
     await writeFile(
       join(configDir, '.env.example'),
-      ['PORT=3000', 'HOST=0.0.0.0', 'NODE_ENV=production', ''].join('\n'),
+      [`PORT=${this.port}`, 'HOST=0.0.0.0', 'NODE_ENV=production', ''].join(
+        '\n'
+      ),
       'utf-8'
     )
 

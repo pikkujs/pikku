@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseCva } from '../src/cva.js'
@@ -17,8 +17,15 @@ function imports(source: string): string[] {
   return [...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1]!)
 }
 
-const components: ComponentEntry[] = []
 const uiDir = join(ROOT, 'ui')
+const STARTER_APP = join(ROOT, '../../examples/starter-template/apps/app/src')
+if (existsSync(STARTER_APP)) {
+  const starterUi = join(STARTER_APP, 'components/ui')
+  for (const file of readdirSync(starterUi)) copyFileSync(join(starterUi, file), join(uiDir, file))
+  copyFileSync(join(STARTER_APP, 'lib/i18n-props.ts'), join(ROOT, 'lib/i18n-props.ts'))
+}
+
+const components: ComponentEntry[] = []
 for (const file of readdirSync(uiDir).sort()) {
   if (!file.endsWith('.tsx') || file.includes('.stories.')) continue
   const name = file.slice(0, -'.tsx'.length)
@@ -34,6 +41,11 @@ for (const file of readdirSync(uiDir).sort()) {
     description = storySource.match(/description:\s*'([^']+)'/)?.[1]
   }
   const specifiers = imports(source)
+  for (const lib of specifiers.filter((s) => s.startsWith('@/lib/') && s !== '@/lib/utils')) {
+    const libSource = read(join(ROOT, `${lib.slice(2)}.ts`))
+    files[`${lib.slice(2)}.ts`] = libSource
+    specifiers.push(...imports(libSource))
+  }
   const cva = parseCva(source)
   components.push({
     name,

@@ -61,3 +61,12 @@ test('ThemeWorkspace.apply writes the theme, active id and theme.css', async () 
   assert.match(css, /--primary: oklch/)
   assert.equal((await workspace.list()).activeId, id)
 })
+
+test('an ink primary turns near white in dark mode instead of mid grey', () => {
+  const ink = { name: 'Ink', brand: { colors: { primary: '#18181b' } }, structure: {} } as Theme
+  const dark = themeToCss(ink).split('.dark {')[1]!
+  const primary = Number(dark.match(/--primary: oklch\(([\d.]+)/)![1])
+  const foreground = Number(dark.match(/--primary-foreground: oklch\(([\d.]+)/)![1])
+  assert.ok(primary > 0.85, `dark primary ${primary}`)
+  assert.ok(foreground < 0.3, `dark primary-foreground ${foreground}`)
+})

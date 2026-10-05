@@ -172,6 +172,12 @@ export async function startStudioServer(options: StudioServerOptions = {}) {
       builder.cancel(key)
       return builder.state(key)
     },
+    builderConversations: async ({ key }: { key: string }) => ({ conversations: await builder.conversations(key) }),
+    builderResume: ({ key, session }: { key: string; session: string }) => builder.resume(key, session),
+    async builderForget({ key, session }: { key: string; session: string }) {
+      await builder.forget(key, session)
+      return builder.state(key)
+    },
     async builderClear({ key }: { key: string }) {
       await builder.clear(key)
       return builder.state(key)

@@ -22,6 +22,41 @@ const pascal = (name: string) =>
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join('')
 
+const UPSTREAM = 'https://ui.shadcn.com/r/styles/new-york-v4'
+
+const kebab = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+
+/** One component from the upstream shadcn registry, with its imports rewritten to the app's layout. */
+async function fetchUpstream(name: string): Promise<{
+  name: string
+  files: Array<{ name: string; content: string }>
+  dependencies: string[]
+  registryDependencies: string[]
+} | null> {
+  const response = await fetch(`${UPSTREAM}/${kebab(name)}.json`)
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`The shadcn registry answered ${response.status} for ${name}`)
+  const item = (await response.json()) as {
+    name: string
+    dependencies?: string[]
+    registryDependencies?: string[]
+    files: Array<{ path: string; content: string }>
+  }
+  const files = item.files.map((file) => ({
+    name: file.path.split('/').pop()!,
+    content: file.content
+      .replace(/from "cn"/g, "from '@/lib/utils'")
+      .replace(/from "@\/registry\/[^/"]+\/ui\/([^"]+)"/g, "from './$1'"),
+  }))
+  const imported = files.some((f) => f.content.includes('lucide-react')) ? ['lucide-react'] : []
+  return {
+    name: item.name,
+    files,
+    dependencies: [...(item.dependencies ?? []).filter((d) => d !== 'cn').map((d) => d.replace(/@latest$/, '')), ...imported],
+    registryDependencies: (item.registryDependencies ?? []).filter((d) => !d.includes('/')),
+  }
+}
+
 /** The project's shadcn components, read from the app's `src/components/ui`, and the block library from `@pikku/shadcdn`. */
 export class ShadcnCatalog {
   private app?: Promise<string | null>
@@ -63,9 +98,11 @@ export class ShadcnCatalog {
   }
 
   /**
-   * Copy shadcdn components (and the components they compose) into the app's
-   * `src/components/ui`, skipping files that exist. Stories ride along only when
-   * the app has `csf.types.ts` for them to import.
+   * Copy components into the app's `src/components/ui`, looking in the app first (a file
+   * that exists is never overwritten), then in pikku's set (`@pikku/shadcdn`, with its
+   * i18n-gated text props), then in the upstream shadcn registry. Upstream components
+   * come back in `ungated`: their text props take plain strings, so gate them by hand.
+   * Stories ride along only when the app has `csf.types.ts` for them to import.
    */
   async installComponents(names: string[]): Promise<{
     installed: string[]
@@ -73,6 +110,7 @@ export class ShadcnCatalog {
     skipped: string[]
     npmDeps: string[]
     unknown: string[]
+    ungated: string[]
   }> {
     const dir = await this.uiApp()
     if (!dir) {
@@ -80,28 +118,49 @@ export class ShadcnCatalog {
     }
     const registry = await this.components()
     const hasCsf = existsSync(join(dir, 'src/components/ui/csf.types.ts'))
-    const result = { installed: [] as string[], wrote: [] as string[], skipped: [] as string[], npmDeps: [] as string[], unknown: [] as string[] }
+    const result = { installed: [] as string[], wrote: [] as string[], skipped: [] as string[], npmDeps: [] as string[], unknown: [] as string[], ungated: [] as string[] }
     const deps = new Set<string>()
-    for (const name of names) {
-      const resolved = registry.resolveComponent(name)
-      if (!resolved) {
-        result.unknown.push(name)
-        continue
+    const write = async (file: string, content: string) => {
+      const path = join(dir, 'src', file)
+      if (existsSync(path)) {
+        result.skipped.push(path)
+        return
       }
-      result.installed.push(resolved.component.name)
-      resolved.npmDeps.forEach((d) => deps.add(d))
-      for (const [file, content] of Object.entries(resolved.files)) {
-        if (file.endsWith('.stories.tsx') && !hasCsf) continue
-        const path = join(dir, 'src', file)
-        if (existsSync(path)) {
-          result.skipped.push(path)
-          continue
-        }
-        await mkdir(dirname(path), { recursive: true })
-        await writeFile(path, content, 'utf-8')
-        result.wrote.push(path)
-      }
+      await mkdir(dirname(path), { recursive: true })
+      await writeFile(path, content, 'utf-8')
+      result.wrote.push(path)
     }
+    const seen = new Set<string>()
+    const install = async (name: string, top: boolean): Promise<void> => {
+      if (seen.has(name.toLowerCase())) return
+      seen.add(name.toLowerCase())
+      const own = join(dir, 'src/components/ui', `${kebab(name)}.tsx`)
+      if (existsSync(own)) {
+        if (top) result.skipped.push(own)
+        return
+      }
+      const resolved = registry.resolveComponent(name)
+      if (resolved) {
+        if (top) result.installed.push(resolved.component.name)
+        resolved.npmDeps.forEach((d) => deps.add(d))
+        for (const [file, content] of Object.entries(resolved.files)) {
+          if (file.endsWith('.stories.tsx') && !hasCsf) continue
+          await write(file, content)
+        }
+        return
+      }
+      const upstream = await fetchUpstream(name)
+      if (!upstream) {
+        result.unknown.push(name)
+        return
+      }
+      if (top) result.installed.push(upstream.name)
+      result.ungated.push(upstream.name)
+      upstream.dependencies.forEach((d) => deps.add(d))
+      for (const file of upstream.files) await write(`components/ui/${file.name}`, file.content)
+      for (const dep of upstream.registryDependencies) await install(dep, false)
+    }
+    for (const name of names) await install(name, true)
     result.npmDeps = [...deps].sort()
     return result
   }

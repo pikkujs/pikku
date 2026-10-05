@@ -248,13 +248,14 @@ environment's `appUrls` map, so there is no second environment to run.
 browser pass needs the environment's `appUrl` and a browser driver installed — without them the run
 fails fast rather than half-running.
 
-**Run the whole suite, not the milestone's own scenarios.** The milestone's scenarios are the ones
+**Run the whole suite, not the changeset's own scenarios.** The changeset's scenarios are the ones
 you wrote to pass; the regression lives in someone else's. Tightening what "archived" means is a
-one-function change that reads as local and quietly breaks the milestone-01 scenario nobody re-ran.
+one-function change that reads as local and quietly breaks the first changeset's scenario nobody re-ran.
 
-**Restart the server after adding a function.** Hot reload does not register a new RPC and does not
-re-run `afterStart`, so a fresh function answers 404 and anything provisioned at boot is missing —
-failures that read like a wiring bug and are nothing but a stale process.
+**Leave the server running.** `pikku dev` regenerates on save and loads new and changed functions
+and routes without a restart. Restart only after changing `afterStart` work, which runs once at
+boot. Never start the server yourself and `sleep` for it: `--spawn` starts its own, on a free port
+when the configured one is taken, and waits for the real ready line.
 
 ---
 

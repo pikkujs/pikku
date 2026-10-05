@@ -70,14 +70,12 @@ If they accept, this is the cheapest decision in the project — a picture of ei
 screens costs a fraction of eight built screens, and it is the only point where
 "that is not what I meant" is free.
 
-**Author the theme first, then draw the mock from it.** This order is the whole
-point. A beautiful page in hand-rolled CSS sets a bar the real components then miss, and
-what the user approved is not what ships — they signed off on a picture and
-received an approximation of it. So write `themes/<name>.json` first
-(`references/theming.md`), run `pikku theme apply`, and let the mock take its
-every value from the generated `theme.css`: the palette, `--radius`, the spacing
-scale, the fonts. Approving the mock then approves the theme, and the built screens
-inherit it rather than chase it.
+**Draw it with the pikku-artifacts skill.** For a new project or a redesign that is an
+*exploration*: very different directions for the first screens, the person picks one,
+and its tokens become the theme before any screen is built. For a screen added to an
+app that already has its look it is an *addition*, drawn in the app's own theme. Either
+way, what the person approves is drawn in the theme's token names, so approving the
+picture approves the theme, and the built screens inherit it rather than chase it.
 
 **The mock has two halves, and only one of them is shadcn's.** This is the same
 split the built screen lives under, applied a step earlier so the two agree by
@@ -107,11 +105,10 @@ nothing works. The page opens with a banner that stays in view: "A picture of
 the planned screens. Nothing is built yet." The message that shows it says the
 same, then says what happens next: "Once you're happy with it, I'll build it."
 
-Write it to `knowledge/decisions/design/screens.html` and treat it as **source of
-truth for the screens** once they approve it. That has consequences worth
+Treat the approved artifacts as **source of truth for the screens**. That has consequences worth
 stating:
 
-- The milestones are read off it. A screen in the mock that no milestone builds
+- The changes are read off it. A screen in the mock that no change builds
   is a gap in the plan, not a spare drawing.
 - A screen the build turns out to need that the mock does not have means the
   mock was wrong. Update it, and say you did. Do not let the app and the mock

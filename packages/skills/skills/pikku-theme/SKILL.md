@@ -144,8 +144,10 @@ colour literals.
 `pikku components list` prints the shadcn components in the app's `src/components/ui/`.
 `pikku components show <Name>` prints one component's props, variants, sizes and default variants,
 read from its `cva` definition. Check it before guessing a `variant` or `size` value.
-`pikku components add <name...>` copies shadcdn components the app lacks (and the ones they compose)
-into `src/components/ui/`, skipping files that exist, and prints the npm packages to `bun add`.
+`pikku components add <name...>` copies components the app lacks (and the ones they compose)
+into `src/components/ui/`: from pikku's set first, then the upstream shadcn registry, never
+overwriting a file. It prints the npm packages to `bun add` and names any upstream component
+whose text props still need gating with `WithText`/`WithLabels`.
 
 A custom variant is added where the component defines its variants, in the component file:
 

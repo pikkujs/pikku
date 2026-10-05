@@ -184,16 +184,126 @@ function stockStoriesPlugin(): PluginOption {
 // handing it to the HTML plugin would inject the dev client into someone else's
 // document.
 // ─────────────────────────────────────────────────────────────────────────────
-const ARTIFACT_FILE_RE = /^([a-z0-9][a-z0-9-]*)-v(\d+)\.html$/i
+const ARTIFACT_FILE_RE = /^([a-z0-9][a-z0-9-]*)-v(\d+)\.(?:html|tsx)$/i
 const ARTIFACT_TITLE_RE = /<title[^>]*>([^<]*)<\/title>/i
+const ARTIFACT_TSX_TITLE_RE = /export\s+const\s+title\s*=\s*['"`]([^'"`]+)['"`]/
+
+function tsxArtifactPage(path: string, theme: string | null): string {
+  return `<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>*,::before,::after{border-color:var(--border)}body{background:var(--background);color:var(--foreground)}</style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import '${base}src/index.css'
+      ${theme ? `import '${base}@fs${theme}'` : ''}
+      import { createElement } from 'react'
+      import { flushSync } from 'react-dom'
+      import { createRoot } from 'react-dom/client'
+      import Artifact from '${base}@fs${path}'
+      const root = createRoot(document.getElementById('root'))
+      flushSync(() => root.render(createElement(Artifact)))
+    </script>
+  </body>
+</html>`
+}
 const ARTIFACT_OPTION_RE = /data-artifact-option\s*=\s*"([^"]+)"/g
 
+type ArtifactEntry = { file: string; name: string }
+
+type ExploreFolder = {
+  folder: string
+  directions: ArtifactEntry[]
+  pages: ArtifactEntry[]
+  notes: string[]
+}
+
 type ArtifactRow = {
+  kind: 'addition' | 'explore'
   id: string
   file: string
   name: string
   versions: string[]
   options: string[]
+  folders?: ExploreFolder[]
+}
+
+const EXPLORE_FOLDER_RE = /^([a-z0-9][a-z0-9-]*)-v(\d+)$/i
+const EXPLORE_PAGE_RE = /^[a-z0-9][a-z0-9-]*\.html$/i
+const EXPLORE_NOTES = ['brief', 'routes', 'decisions', 'gaps', 'tokens']
+const EXPLORE_SERVED_RE =
+  /^artifact\/explore\/([a-z0-9][a-z0-9-]*-v\d+)\/((?:directions|pages)\/[a-z0-9][a-z0-9-]*\.html|directions\/assets\/[a-z0-9][a-z0-9-]*\.(?:glb|png|jpg|webp)|[a-z]+\.md)$/i
+const EXPLORE_ASSET_TYPES: Record<string, string> = {
+  glb: 'model/gltf-binary',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+}
+
+function titleOf(path: string, fallback: string): string {
+  try {
+    return ARTIFACT_TITLE_RE.exec(readFileSync(path, 'utf-8'))?.[1]?.trim() || fallback
+  } catch {
+    return fallback
+  }
+}
+
+function listPages(dir: string): ArtifactEntry[] {
+  let files: string[]
+  try {
+    files = readdirSync(dir)
+  } catch {
+    return []
+  }
+  return files
+    .filter((file) => EXPLORE_PAGE_RE.test(file))
+    .sort()
+    .map((file) => ({ file, name: titleOf(join(dir, file), file.replace(/\.html$/, '')) }))
+}
+
+function readExplorations(root: string): ArtifactRow[] {
+  let folders: string[]
+  try {
+    folders = readdirSync(root)
+  } catch {
+    return []
+  }
+  const byName = new Map<string, { folder: string; version: number }[]>()
+  for (const folder of folders) {
+    const match = EXPLORE_FOLDER_RE.exec(folder)
+    if (!match) continue
+    const name = match[1]!.toLowerCase()
+    const list = byName.get(name) ?? []
+    list.push({ folder, version: Number(match[2]) })
+    byName.set(name, list)
+  }
+  return [...byName.entries()].map(([name, entries]) => {
+    const sorted = entries.sort((a, b) => b.version - a.version)
+    const read = sorted.map(({ folder }): ExploreFolder => {
+      const dir = join(root, folder)
+      return {
+        folder,
+        directions: listPages(join(dir, 'directions')),
+        pages: listPages(join(dir, 'pages')),
+        notes: EXPLORE_NOTES.filter((note) => existsSync(join(dir, `${note}.md`))),
+      }
+    })
+    let heading = ''
+    try {
+      heading = /^#\s+(.+)$/m.exec(readFileSync(join(root, sorted[0]!.folder, 'brief.md'), 'utf-8'))?.[1] ?? ''
+    } catch {}
+    return {
+      kind: 'explore' as const,
+      id: `explore/${name}`,
+      file: `explore/${sorted[0]!.folder}`,
+      name: heading.trim() || name,
+      versions: sorted.map(({ folder }) => `explore/${folder}`),
+      options: [],
+      folders: read,
+    }
+  })
 }
 
 function readArtifacts(dir: string): ArtifactRow[] {
@@ -213,7 +323,7 @@ function readArtifacts(dir: string): ArtifactRow[] {
     bySlug.set(slug, list)
   }
   return [...bySlug.entries()]
-    .map(([id, entries]) => {
+    .map(([id, entries]): ArtifactRow => {
       const sorted = entries.sort((a, b) => b.version - a.version)
       const file = sorted[0]!.file
       let source = ''
@@ -225,9 +335,10 @@ function readArtifacts(dir: string): ArtifactRow[] {
         console.warn(`[design-server] cannot read artifact ${file}:`, error)
       }
       return {
+        kind: 'addition',
         id,
         file,
-        name: ARTIFACT_TITLE_RE.exec(source)?.[1]?.trim() || id,
+        name: (ARTIFACT_TITLE_RE.exec(source) ?? ARTIFACT_TSX_TITLE_RE.exec(source))?.[1]?.trim() || id,
         versions: sorted.map((entry) => entry.file),
         options: [...source.matchAll(ARTIFACT_OPTION_RE)].map((match) => match[1]!),
       }
@@ -248,7 +359,33 @@ function artifactIndexPlugin(): PluginOption {
         if (rel === 'artifacts.json') {
           res.setHeader('Content-Type', 'application/json')
           res.setHeader('Cache-Control', 'no-store')
-          res.end(JSON.stringify({ dir, artifacts: readArtifacts(dir) }))
+          res.end(
+            JSON.stringify({
+              dir,
+              artifacts: readArtifacts(dir),
+              explorations: readExplorations(join(dir, 'explore')),
+            }),
+          )
+          return
+        }
+        const explored = EXPLORE_SERVED_RE.exec(decodeURIComponent(rel))
+        if (explored) {
+          const ext = explored[2]!.slice(explored[2]!.lastIndexOf('.') + 1).toLowerCase()
+          const asset = EXPLORE_ASSET_TYPES[ext]
+          let body: Buffer
+          try {
+            body = readFileSync(join(dir, 'explore', explored[1]!, explored[2]!))
+          } catch {
+            res.statusCode = 404
+            res.end('no such artifact')
+            return
+          }
+          res.setHeader(
+            'Content-Type',
+            asset ?? (ext === 'html' ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8'),
+          )
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(body)
           return
         }
         const served = /^artifact\/([^/]+)$/.exec(rel)
@@ -259,17 +396,24 @@ function artifactIndexPlugin(): PluginOption {
           res.end('not an artifact filename')
           return
         }
-        let source: string
-        try {
-          source = readFileSync(join(dir, file), 'utf-8')
-        } catch {
+        const target = join(dir, file)
+        if (!existsSync(target)) {
           res.statusCode = 404
           res.end('no such artifact')
           return
         }
         res.setHeader('Content-Type', 'text/html; charset=utf-8')
         res.setHeader('Cache-Control', 'no-store')
-        res.end(source)
+        if (!file.endsWith('.tsx')) return res.end(readFileSync(target, 'utf-8'))
+        server
+          .transformIndexHtml(req.url ?? '/', tsxArtifactPage(
+              realpathSync(target),
+              existsSync(join(workspaceReal(), 'packages/theme/theme.css'))
+                ? realpathSync(join(workspaceReal(), 'packages/theme/theme.css'))
+                : null,
+            ),
+          )
+          .then((html) => res.end(html), next)
       })
     },
   }

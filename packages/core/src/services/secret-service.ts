@@ -13,6 +13,12 @@ export interface SecretService {
   /** Answers for any key, including a disallowed one — it must not throw. */
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  /**
+   * Stores a value sealed to this service's public key, so the plaintext never
+   * reaches the caller's process. `sealed` is the serialized envelope, opaque
+   * here. Optional: only stores that hold a sealing key implement it.
+   */
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   /**
    * Missing keys are omitted rather than throwing, hence `Partial<T>`: callers

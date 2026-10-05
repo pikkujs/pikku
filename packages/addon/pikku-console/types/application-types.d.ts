@@ -12,6 +12,7 @@ import type { CodeEditService } from '@pikku/code-edit'
 import type { StateDiffService } from '../src/services/state-diff.service.js'
 import type { DbSchemaService } from '../src/services/db-schema.service.js'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
+import type { ArtifactsService } from '../src/services/artifacts.service.js'
 import type { DesignService } from '../src/services/design.service.js'
 import type { PageScreenshotService } from '../src/services/page-screenshot.service.js'
 import type { I18nService } from '@pikku/code-edit/i18n'
@@ -44,6 +45,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   stateDiffService: StateDiffService | null
   dbSchemaService: DbSchemaService | null
   knowledgeService: KnowledgeService | null
+  artifactsService: ArtifactsService | null
   designService: DesignService | null
   i18nService: I18nService | null
   workspaceFilesService: WorkspaceFilesService | null

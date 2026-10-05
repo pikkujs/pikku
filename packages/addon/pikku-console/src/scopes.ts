@@ -129,6 +129,12 @@ defineScope({
               read: { description: 'Read the knowledge notes' },
             },
           },
+          artifacts: {
+            description: 'The designs, pages and documents the builder made',
+            scopes: {
+              read: { description: 'Read the artifacts' },
+            },
+          },
           changes: {
             description:
               'Changes to make to the app — local, or filed by Fabric against the deployed app',

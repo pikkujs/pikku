@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { cn } from '@/lib/utils'
+import type { WithText } from '@/lib/i18n-props'
 
 const DropdownMenu = DropdownMenuPrimitive.Root
 
@@ -26,7 +27,7 @@ function DropdownMenuContent({
   )
 }
 
-function DropdownMenuItem({ className, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Item>) {
+function DropdownMenuItem({ className, ...props }: WithText<React.ComponentProps<typeof DropdownMenuPrimitive.Item>>) {
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -39,7 +40,7 @@ function DropdownMenuItem({ className, ...props }: React.ComponentProps<typeof D
   )
 }
 
-function DropdownMenuLabel({ className, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Label>) {
+function DropdownMenuLabel({ className, ...props }: WithText<React.ComponentProps<typeof DropdownMenuPrimitive.Label>>) {
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"

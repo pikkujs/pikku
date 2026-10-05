@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import { useDevActors } from '@pikku/react'
+import { asI18n, useDevActors } from '@pikku/react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -30,11 +30,11 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({ apiUrl, app, onSig
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="secondary" className="fixed end-4 bottom-4 z-50">
-          {label}
+          {asI18n(label)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="top">
-        <DropdownMenuLabel>Scenario personas (dev only)</DropdownMenuLabel>
+        <DropdownMenuLabel>{asI18n('Scenario personas (dev only)')}</DropdownMenuLabel>
         {actors.map((actor) => (
           <DropdownMenuItem key={actor.id} disabled={isPending} onSelect={() => signInAs(actor.id)}>
             <span className="flex flex-col">

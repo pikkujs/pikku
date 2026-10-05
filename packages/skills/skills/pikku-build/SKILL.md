@@ -37,7 +37,7 @@ agent:
 | A spike, a throwaway demo, an idea nobody has committed to                  | `references/quick.md`                                                    |
 | A showcase meant to exercise every Pikku surface                            | `references/platform.md`, which is a delta on top of `references/app.md` |
 | A feature added to an app that already has its knowledge base               | `references/feature.md`                                                  |
-| The person wants to see and click through the app before it is built        | `references/prototype.md`                                                |
+| The person wants to see and click through the app before it is built        | `references/prototype.md` only. Skip bootstrap and every `pikku` command |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App

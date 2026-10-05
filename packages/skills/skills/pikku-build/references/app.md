@@ -671,26 +671,18 @@ In a multi-app project that one run covers both frontends: each persona carries
 its own `app` and `@pikku/playwright` resolves the base url from the
 environment's `appUrls` map, so there is no second environment to run.
 
-**Run the whole suite, not the milestone's own scenarios.** The milestone's
+**Run the whole suite, not the changeset's own scenarios.** The changeset's
 scenarios are the ones you wrote to pass; the regression lives in someone
 else's. Tightening what "archived" means is a one-function change that reads as
-local and quietly breaks the milestone-01 scenario nobody re-ran.
+local and quietly breaks the first changeset's scenario nobody re-ran.
 
-**Restart the server after adding a function.** Hot reload does not register a
-new RPC and does not re-run `afterStart`, so a fresh function answers 404 and
-anything provisioned at boot is missing — failures that read like a wiring bug
-and are nothing but a stale process.
-
-**Run the whole suite, not the milestone's own scenarios.** The milestone's
-scenarios are the ones you wrote to pass; the regression lives in someone
-else's. Tightening what "archived" means is a one-function change that reads as
-local and quietly breaks the milestone-01 scenario nobody re-ran.
-
-**Restart the server after adding a function, and never edit one while a run is
-in flight.** Hot reload does not register a new RPC and does not re-run
-`afterStart`, so a fresh function answers 404 and anything provisioned at boot
-is missing — failures that read like a wiring bug and are nothing but a stale
-process. The same reload is what makes a run unrepeatable if you edit during
+**Leave the server running, and never edit a function while a run is in
+flight.** `pikku dev` regenerates on save and loads new and changed functions
+and routes without a restart. Restart only after changing `afterStart` work,
+which runs once at boot. Never start the server yourself and `sleep` for it:
+`--spawn` starts its own, on a free port when the configured one is taken, and
+waits for the real ready line. The
+same reload is what makes a run unrepeatable if you edit during
 it: a browser pass is long enough to feel like free time, and a schema touched
 at minute four hot-reloads into a half-generated contract, so every scenario
 after that point fails on something you have already fixed. Wait for the run or
@@ -784,10 +776,12 @@ the component inventory.
   for history, `Tabs` or a stepper recipe for multi-step progress, `Card` in a
   `grid` for a gallery, `Progress` for completion, `Badge` for status.
 
-The starter ships a few. Add any other with `pikku components add <name...>`
-(Select, Table, Tabs, Dialog, Avatar, Checkbox, Switch, Sheet, Tooltip and more, copied lint-clean from
-`@pikku/shadcdn`), then `bun add` the npm packages it prints. Do not use `bunx shadcn add`: stock
-shadcn files break `@shadcn/lint`. Use the real component.
+The starter ships pikku's set: Button, Input, Select, Table, Tabs, Sheet, Avatar, Checkbox,
+Switch, Tooltip and the rest, in `src/components/ui`. Their text props are typed so only an
+`m.*()` message (or `asI18n` server data) fits. Add any other with `pikku components add <name...>`,
+then `bun add` the npm packages it prints. It looks in the app, then pikku's set, then the upstream
+shadcn registry. An upstream component arrives ungated: wrap its props in `WithText` or `WithLabels`
+from `@/lib/i18n-props`, as `button.tsx` does, before using it. Do not use `bunx shadcn add`.
 
 Then critique it. Free, and works across coding agents:
 

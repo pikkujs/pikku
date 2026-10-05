@@ -1,3 +1,4 @@
+import { asI18n } from '@pikku/react'
 import type { Story, StoryMeta } from './csf.types'
 import { Button } from './button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './dialog'
@@ -13,15 +14,15 @@ export const Default: Story = {
   render: () => (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">Delete project</Button>
+        <Button variant="outline">{asI18n('Delete project')}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete this project?</DialogTitle>
-          <DialogDescription>This removes its files and cannot be undone.</DialogDescription>
+          <DialogTitle>{asI18n('Delete this project?')}</DialogTitle>
+          <DialogDescription>{asI18n('This removes its files and cannot be undone.')}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="destructive">Delete</Button>
+          <Button variant="destructive">{asI18n('Delete')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

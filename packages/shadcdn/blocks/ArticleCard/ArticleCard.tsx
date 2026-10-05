@@ -1,3 +1,4 @@
+import { Dot } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { m } from '@/i18n/messages'
@@ -9,7 +10,13 @@ export function ArticleCard() {
       <CardHeader>
         <Badge variant="secondary" className="w-fit">{m.articlecard__category()}</Badge>
         <CardTitle>{m.articlecard__title()}</CardTitle>
-        <CardDescription>{m.articlecard__author()} · {m.articlecard__date()}</CardDescription>
+        <CardDescription>
+          <span className="flex items-center">
+            {m.articlecard__author()}
+            <Dot className="size-4" aria-hidden />
+            {m.articlecard__date()}
+          </span>
+        </CardDescription>
       </CardHeader>
     </Card>
   )

@@ -4,13 +4,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { m } from '@/i18n/messages'
+import type { I18nString } from '@pikku/react'
 
 export type AuthFormValues = { email: string; password: string }
 
 export type AuthCardProps = {
-  title: string
-  description: string
-  cta: string
+  title: I18nString
+  description: I18nString
+  cta: I18nString
   passwordAutoComplete: 'current-password' | 'new-password'
   busy: boolean
   error: string | null

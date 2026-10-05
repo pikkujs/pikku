@@ -6,6 +6,7 @@ import type { CodeEditService } from '@pikku/code-edit'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
+import { ArtifactsService } from './services/artifacts.service.js'
 import { DesignService } from './services/design.service.js'
 import { PageScreenshotService } from './services/page-screenshot.service.js'
 import { I18nService } from '@pikku/code-edit/i18n'
@@ -63,6 +64,7 @@ export const createSingletonServices = pikkuAddonServices(
     let stateDiffService: StateDiffService | null = null
     let dbSchemaService: DbSchemaService | null = null
     let knowledgeService: KnowledgeService | null = null
+    let artifactsService: ArtifactsService | null = null
     let designService: DesignService | null = null
     let i18nService: I18nService | null = null
     let workspaceFilesService: WorkspaceFilesService | null = null
@@ -79,6 +81,7 @@ export const createSingletonServices = pikkuAddonServices(
       stateDiffService = new StateDiffService(projectRoot)
       dbSchemaService = new DbSchemaService(metaService)
       knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
+      artifactsService = new ArtifactsService(findWorkspaceRoot(projectRoot))
       designService = new DesignService(findWorkspaceRoot(projectRoot))
       i18nService = new I18nService(findWorkspaceRoot(projectRoot))
       workspaceFilesService = new WorkspaceFilesService(
@@ -158,6 +161,7 @@ export const createSingletonServices = pikkuAddonServices(
       stateDiffService,
       dbSchemaService,
       knowledgeService,
+      artifactsService,
       designService,
       i18nService,
       workspaceFilesService,

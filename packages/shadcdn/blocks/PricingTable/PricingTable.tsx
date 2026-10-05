@@ -21,7 +21,10 @@ export function PricingTable() {
                 {plan.highlight && <Badge>{m.pricingtable__popular()}</Badge>}
               </CardTitle>
               <CardDescription>
-                <span className="text-3xl font-bold text-foreground">{plan.price}</span> {m.pricingtable__per_month()}
+                <span className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                  {m.pricingtable__per_month()}
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent layout="stack">

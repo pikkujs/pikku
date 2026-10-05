@@ -137,7 +137,7 @@ function darkPalette(theme: Theme): Palette {
   const text = at(0, 0.96)
   const secondaryFill = secondary ? { ...hexToLch(secondary), l: clamp(hexToLch(secondary).l * 0.55) } : muted
   const accentFill = accent ? { ...hexToLch(accent), l: clamp(hexToLch(accent).l * 0.6) } : border
-  const primaryOnDark = reach(brand, background, 3)
+  const primaryOnDark = brand.c < 0.03 ? { l: 0.92, c: brand.c, h: hue } : reach(brand, background, 3)
   return {
     background,
     foreground: reach(text, background, 7),

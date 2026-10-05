@@ -1,3 +1,4 @@
+import { asI18n } from '@pikku/react'
 import type { Story, StoryMeta } from './csf.types'
 import { Button } from './button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from './dropdown-menu'
@@ -12,12 +13,12 @@ export default {
 const Example = () => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline">Options</Button>
+      <Button variant="outline">{asI18n('Options')}</Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuLabel>Account</DropdownMenuLabel>
-      <DropdownMenuItem>Profile</DropdownMenuItem>
-      <DropdownMenuItem>Sign out</DropdownMenuItem>
+      <DropdownMenuLabel>{asI18n('Account')}</DropdownMenuLabel>
+      <DropdownMenuItem>{asI18n('Profile')}</DropdownMenuItem>
+      <DropdownMenuItem>{asI18n('Sign out')}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 )

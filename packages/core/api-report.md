@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3236 observable things**: 1076 exported names, plus
-2160 members on the classes and interfaces among them, reachable
+**3244 observable things**: 1077 exported names, plus
+2167 members on the classes and interfaces among them, reachable
 through 57 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 175 | 143 | 465 |
+| `./services` | 175 | 143 | 467 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
@@ -23,11 +23,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
-| `./http` | 26 | 26 | 56 |
+| `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
-| `./services/local-meta` | 22 | 2 | 42 |
+| `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -45,9 +45,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./rpc` | 7 | 7 | 6 |
+| `./scope` | 13 | 13 | 0 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
-| `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -160,6 +160,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -2785,6 +2786,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   public send(data: any): this
   public redirect(location: string, status: number = 302): this
   public close(): this
+  public onClose(callback: () => void): void
   public toResponse(args?: Record<string, any>): Response
 }
 export interface PikkuHTTP<In = unknown> {
@@ -2823,6 +2825,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
   send?(data: string | ArrayBuffer | ArrayBufferView): this
   redirect(location: string, status?: number): this
   close?: () => void
+  onClose?: (callback: () => void) => void
   setMode?: (mode: 'stream') => void
   flushHeaders?: () => void
 }
@@ -4290,6 +4293,7 @@ export type ScopeDefinitionMeta = {
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
   sourceFile?: string
+  origin?: ScopeOrigin
 }
 export type ScopeDefinitions = ScopeDefinitionMeta[]
 export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
@@ -4298,6 +4302,10 @@ export type ScopeNodeMeta = {
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
 }
+export type ScopeOrigin =
+  | { kind: 'app' }
+  | { kind: 'generated' }
+  | { kind: 'addon'; package: string; displayName?: string }
 validateAndBuildScopeDefinitionsMeta: (definitions: ScopeDefinitions) => ScopeDefinitionsMeta
 verifyScopes: (required: readonly string[] | undefined, session: CoreUserSession | undefined) => void
 ```
@@ -5312,6 +5320,7 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
@@ -5511,6 +5520,7 @@ export class ScopedSecretService implements SecretService {
   async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async hasSecret(key: string): Promise<boolean>
   async setSecret(_key: string, _value: unknown): Promise<void>
+  async setEncryptedSecret(_key: string, _sealed: string): Promise<void>
   async deleteSecret(_key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5550,6 +5560,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5688,6 +5699,7 @@ export class TypedSecretService< TMap = Record<string, unknown>, > implements Se
   async getSecret(key: string): Promise<unknown>
   async hasSecret(key: string): Promise<boolean>
   async setSecret<K extends string>(key: K, value: K extends keyof TMap ? TMap[K] : unknown): Promise<void>
+  async setEncryptedSecret(key: string, sealed: string): Promise<void>
   async deleteSecret(key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
   async getAllStatus(): Promise<CredentialStatus[]>
@@ -5950,6 +5962,7 @@ export class LocalMetaService implements MetaService {
   async getWorkflowMeta(): Promise<WorkflowsMeta>
   async getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  async getScopesMeta(): Promise<ScopeDefinitionsMeta>
   async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   async getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   async getFeaturesMeta(): Promise<FeaturesMeta>
@@ -5993,6 +6006,7 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
