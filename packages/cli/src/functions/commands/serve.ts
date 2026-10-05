@@ -40,6 +40,8 @@ import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { addGlobalMiddleware } from '@pikku/core/middleware'
+import { startRunTelemetry } from '../../utils/run-telemetry.js'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; model?: string },
@@ -53,6 +55,7 @@ export const serve = pikkuSessionlessFunc<
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     disableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
+    const telemetry = startRunTelemetry({ rootDir: config.rootDir, command: 'serve' })
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const bindHostname = '127.0.0.1'
@@ -70,6 +73,7 @@ export const serve = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
+    if (telemetry.middleware) addGlobalMiddleware([telemetry.middleware])
 
     // Scenario instrumentation exists only on a locally served project: the
     // runner calls it over RPC to reset and snapshot coverage and stub calls.
