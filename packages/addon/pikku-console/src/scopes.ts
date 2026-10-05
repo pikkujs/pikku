@@ -137,6 +137,13 @@ defineScope({
               write: { description: 'Edit, add and remove locales' },
             },
           },
+          files: {
+            description: 'The project files on disk',
+            scopes: {
+              read: { description: 'Browse and read project files' },
+              write: { description: 'Edit project files' },
+            },
+          },
           emails: {
             description: 'Email templates',
             scopes: {
