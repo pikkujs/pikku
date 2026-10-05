@@ -56,6 +56,8 @@ export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-servic
 export { LocalGatewayService } from './local-gateway-service.js'
 export type {
   ContentService,
+  ContentVisibility,
+  GetDownloadURLArgs,
   SignContentKeyArgs,
   SignURLArgs,
   GetUploadURLArgs,

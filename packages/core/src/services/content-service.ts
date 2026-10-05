@@ -1,6 +1,9 @@
+export type ContentVisibility = 'private' | 'public'
+
 export interface SignContentKeyArgs<TBucket extends string = string> {
   bucket: TBucket
   contentKey: string
+  visibility?: ContentVisibility
   dateLessThan: Date
   dateGreaterThan?: Date
 }
@@ -16,7 +19,7 @@ export interface GetUploadURLArgs<TBucket extends string = string> {
   fileKey: string
   contentType: string
   size?: number
-  visibility?: 'private' | 'public'
+  visibility?: ContentVisibility
 }
 
 export interface UploadURLResult {
@@ -29,6 +32,13 @@ export interface UploadURLResult {
 export interface BucketKeyArgs<TBucket extends string = string> {
   bucket: TBucket
   key: string
+  visibility?: ContentVisibility
+}
+
+export interface GetDownloadURLArgs<
+  TBucket extends string = string,
+> extends BucketKeyArgs<TBucket> {
+  expiresInSeconds?: number
 }
 
 export interface WriteFileArgs<
@@ -62,4 +72,21 @@ export interface ContentService<TBucket extends string = string> {
   ): Promise<ReadableStream | NodeJS.ReadableStream>
 
   readFileAsBuffer(args: BucketKeyArgs<TBucket>): Promise<Buffer>
+
+  /** A signed URL for private content, the plain URL for public content. */
+  getDownloadURL(args: GetDownloadURLArgs<TBucket>): Promise<string>
+
+  /** Returns how many files were deleted. */
+  deleteByPrefix(
+    bucket: TBucket,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<number>
+
+  /** Returns the keys, relative to the bucket, that start with the prefix. */
+  listFilesByPrefix(
+    bucket: TBucket,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<string[]>
 }
