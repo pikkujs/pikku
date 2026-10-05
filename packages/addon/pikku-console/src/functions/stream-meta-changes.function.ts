@@ -15,7 +15,7 @@ export const streamMetaChanges = pikkuFunc<null, any>({
     const watcher = watch(dir, { recursive: true }, (_event, file) => {
       if (file && !String(file).endsWith('.json')) return
       clearTimeout(timer)
-      timer = setTimeout(() => channel.send({ pikkuMeta: 'changed' }), 300)
+      timer = setTimeout(() => void channel.send({ pikkuMeta: 'changed' }), 300)
     })
 
     await new Promise<void>((resolve) => {
