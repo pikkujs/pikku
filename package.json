@@ -63,7 +63,7 @@
     "test:e2e:ai-live": "bun run --filter @pikku/e2e test:ai-live",
     "test": "bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --sequential test",
     "test:coverage": "bun run --filter '*' --sequential test:coverage",
-    "lint": "oxlint --type-aware",
+    "lint": "oxlint --type-aware benchmarks docs e2e examples packages scripts verifiers templates/[!s]*",
     "prettier": "npx --yes prettier . --write --log-level warn",
     "worktrees": "node scripts/merged-worktrees.mjs",
     "changeset": "npx changeset",
