@@ -6,6 +6,7 @@ import {
   runAddonPackageChecks,
 } from './addon-package-checks.js'
 import { runCoreImportChecks } from './core-import-checks.js'
+import { hasBlocksDir, runBlockChecks } from './block-checks.js'
 import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
@@ -118,6 +119,12 @@ export const CHECKS: ValidateCheck[] = [
     // application's are.
     applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
     run: async ({ dir }) => runCoreImportChecks(dir),
+  },
+  {
+    id: 'blocks',
+    subject: 'block set',
+    applies: async ({ dir }) => hasBlocksDir(dir),
+    run: async ({ dir }) => runBlockChecks(dir),
   },
   {
     id: 'addon-package',
