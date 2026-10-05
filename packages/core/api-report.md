@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3209 observable things**: 1068 exported names, plus
-2141 members on the classes and interfaces among them, reachable
+**3212 observable things**: 1069 exported names, plus
+2143 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -27,7 +27,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
-| `./services/local-meta` | 22 | 2 | 42 |
+| `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -44,9 +44,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./rpc` | 7 | 7 | 6 |
+| `./scope` | 13 | 13 | 0 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
-| `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -4252,6 +4252,7 @@ export type ScopeDefinitionMeta = {
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
   sourceFile?: string
+  origin?: ScopeOrigin
 }
 export type ScopeDefinitions = ScopeDefinitionMeta[]
 export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
@@ -4260,6 +4261,10 @@ export type ScopeNodeMeta = {
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
 }
+export type ScopeOrigin =
+  | { kind: 'app' }
+  | { kind: 'generated' }
+  | { kind: 'addon'; package: string; displayName?: string }
 validateAndBuildScopeDefinitionsMeta: (definitions: ScopeDefinitions) => ScopeDefinitionsMeta
 verifyScopes: (required: readonly string[] | undefined, session: CoreUserSession | undefined) => void
 ```
@@ -5274,6 +5279,7 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
@@ -5912,6 +5918,7 @@ export class LocalMetaService implements MetaService {
   async getWorkflowMeta(): Promise<WorkflowsMeta>
   async getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  async getScopesMeta(): Promise<ScopeDefinitionsMeta>
   async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   async getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   async getFeaturesMeta(): Promise<FeaturesMeta>
@@ -5955,6 +5962,7 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
   getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
