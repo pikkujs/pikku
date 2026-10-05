@@ -4,6 +4,7 @@ import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type { FeaturesMeta } from '@pikku/core/scenario'
 import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { ScopeDefinitionsMeta } from '@pikku/core/scope'
 import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
 import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
 import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
@@ -282,6 +283,12 @@ export interface PikkuMetaState {
    */
   systemRoles: SystemRoleDefinitionsMeta
   /**
+   * The declared scope trees, keyed by root, each saying whether the app, a
+   * file the CLI generated, or an installed addon put it there. The grantable
+   * ids themselves come from the scope store.
+   */
+  scopes: ScopeDefinitionsMeta
+  /**
    * The declared flags, keyed by name — the half a deploy decides.
    *
    * The operator half is deliberately not here: the switch, the rollout and the
@@ -317,6 +324,9 @@ export class NotFoundError extends Error {
   }
 }
 
+const isAppFunction = (func: FunctionMeta): boolean =>
+  !func.tags?.includes('pikku') && !func.scenario && !func.scenarioStep
+
 export class WiringService {
   constructor(private metaService: MetaService) {}
 
@@ -334,6 +344,7 @@ export class WiringService {
       workflows,
       personas,
       systemRoles,
+      scopes,
       featureFlags,
       analyticsEvents,
       features,
@@ -361,6 +372,7 @@ export class WiringService {
       this.metaService.getWorkflowMeta(),
       this.metaService.getPersonasMeta(),
       this.metaService.getSystemRolesMeta(),
+      this.metaService.getScopesMeta(),
       this.metaService.getFeatureFlagsMeta(),
       this.metaService.getAnalyticsMeta(),
       this.metaService.getFeaturesMeta(),
@@ -600,7 +612,7 @@ export class WiringService {
     }
 
     const counts: MetaCounts = {
-      functions: Object.values(functions).length,
+      functions: Object.values(functions).filter(isAppFunction).length,
       workflows: Object.keys(workflows).length,
       httpRoutes: httpMeta.length,
       channels: Object.keys(channelsMeta).length,
@@ -635,6 +647,7 @@ export class WiringService {
       workflows,
       personas,
       systemRoles,
+      scopes,
       featureFlags,
       analyticsEvents,
       features,

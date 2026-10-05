@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import type { AddWiring, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
-import type { ScopeNodeMeta } from '@pikku/core/scope'
+import type { ScopeNodeMeta, ScopeOrigin } from '@pikku/core/scope'
 
 const SEPARATOR = ':'
 const WILDCARD = '*'
@@ -155,6 +155,11 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
   }
 
   const sourceFile = node.getSourceFile().fileName
+  // A `.gen.ts` is one the CLI wrote into the project, the same test
+  // `claimSingleDeclaration` exempts it by.
+  const origin: ScopeOrigin = sourceFile.endsWith('.gen.ts')
+    ? { kind: 'generated' }
+    : { kind: 'app' }
 
   // Roots are keyed exactly like the nodes beneath them, so each property of
   // the call's single argument is one tree.
@@ -216,6 +221,7 @@ export const addScope: AddWiring = (logger, node, checker, state, _options) => {
       description: descriptionValue || undefined,
       scopes,
       sourceFile,
+      origin,
     })
   }
 }

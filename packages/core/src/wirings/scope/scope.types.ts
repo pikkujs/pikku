@@ -24,12 +24,22 @@ export type ScopeNodeMeta = {
   scopes?: Record<string, ScopeNodeMeta>
 }
 
+/**
+ * Who put a scope tree into the app: the app's own `defineScope`, a file the
+ * CLI generated into the project, or an installed addon.
+ */
+export type ScopeOrigin =
+  | { kind: 'app' }
+  | { kind: 'generated' }
+  | { kind: 'addon'; package: string; displayName?: string }
+
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
   description?: string
   scopes?: Record<string, ScopeNodeMeta>
   sourceFile?: string
+  origin?: ScopeOrigin
 }
 
 export type ScopeDefinitions = ScopeDefinitionMeta[]

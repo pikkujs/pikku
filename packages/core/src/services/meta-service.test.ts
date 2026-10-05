@@ -73,3 +73,42 @@ describe('LocalMetaService reads the scenario meta alongside the app meta', () =
     await rm(empty, { recursive: true, force: true })
   })
 })
+
+describe('LocalMetaService reads where each scope tree came from', () => {
+  test('a root keeps its display name and its origin', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-meta-scopes-'))
+    await mkdir(join(dir, 'scopes'), { recursive: true })
+    await writeFile(
+      join(dir, 'scopes', 'pikku-scopes-meta.gen.json'),
+      JSON.stringify({
+        reports: { name: 'reports', origin: { kind: 'app' } },
+        admin: {
+          name: 'admin',
+          displayName: 'Administration',
+          origin: {
+            kind: 'addon',
+            package: '@pikku/addon-admin',
+            displayName: 'Pikku Admin',
+          },
+        },
+      })
+    )
+
+    const meta = await new LocalMetaService(dir).getScopesMeta()
+    assert.deepEqual(meta['admin']!.origin, {
+      kind: 'addon',
+      package: '@pikku/addon-admin',
+      displayName: 'Pikku Admin',
+    })
+    assert.equal(meta['admin']!.displayName, 'Administration')
+    assert.deepEqual(meta['reports']!.origin, { kind: 'app' })
+
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a project declaring no scopes reads an empty set', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-meta-noscopes-'))
+    assert.deepEqual(await new LocalMetaService(dir).getScopesMeta(), {})
+    await rm(dir, { recursive: true, force: true })
+  })
+})

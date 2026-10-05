@@ -107,6 +107,22 @@ describe('validateAndBuildScopeDefinitionsMeta', () => {
     assert.equal(Object.keys(meta).length, 1)
   })
 
+  test('keeps where each tree came from', () => {
+    const meta = validateAndBuildScopeDefinitionsMeta([
+      { name: 'reports', origin: { kind: 'app' } },
+      {
+        name: 'admin',
+        origin: { kind: 'addon', package: '@pikku/addon-admin' },
+      },
+    ])
+
+    assert.deepEqual(meta['reports']!.origin, { kind: 'app' })
+    assert.deepEqual(meta['admin']!.origin, {
+      kind: 'addon',
+      package: '@pikku/addon-admin',
+    })
+  })
+
   test('a conflicting duplicate throws and names both files', () => {
     assert.throws(
       () =>

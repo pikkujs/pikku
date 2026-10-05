@@ -70,5 +70,6 @@ export const buildAppScopeDefinition = (
     displayName: 'Apps',
     description: 'Which frontend a person may sign in to',
     scopes,
+    origin: { kind: 'generated' },
   }
 }
