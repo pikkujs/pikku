@@ -126,6 +126,9 @@ export function addWireAddon(
   let credentialGrants: string[] | undefined
   let globalSecrets: string | undefined
   let globalCredentials: string | undefined
+  let contentBucket: string | undefined
+  let contentGrants: Record<string, string> | undefined
+  let globalContent: string | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -216,6 +219,20 @@ export function addWireAddon(
       globalCredentials = ts.isStringLiteral(prop.initializer)
         ? prop.initializer.text
         : prop.initializer.getText()
+    } else if (
+      key === 'contentBucket' &&
+      ts.isStringLiteral(prop.initializer)
+    ) {
+      contentBucket = prop.initializer.text
+    } else if (
+      key === 'contentGrants' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      contentGrants = parseStringRecord(prop.initializer)
+    } else if (key === 'globalContent') {
+      globalContent = ts.isStringLiteral(prop.initializer)
+        ? prop.initializer.text
+        : prop.initializer.getText()
     }
   }
 
@@ -241,6 +258,9 @@ export function addWireAddon(
     credentialGrants,
     globalSecrets,
     globalCredentials,
+    contentBucket,
+    contentGrants,
+    globalContent,
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)

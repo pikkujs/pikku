@@ -179,6 +179,9 @@ export interface SerializableInspectorState {
           credentialGrants?: string[]
           globalSecrets?: string
           globalCredentials?: string
+          contentBucket?: string
+          contentGrants?: Record<string, string>
+          globalContent?: string
         },
       ]
     >
