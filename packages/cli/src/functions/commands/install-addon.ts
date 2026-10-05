@@ -18,6 +18,7 @@ export interface AddonInstall {
   /** Generated function file contents by function name. */
   functions: Record<string, string>
   baseUrl?: string
+  uses?: Record<string, string>
 }
 
 export interface InstallResult {
@@ -74,6 +75,12 @@ export function exposedFunctions(install: AddonInstall): string[] {
   return names.filter((fn) => /\.call\("GET"/.test(install.functions[fn]!))
 }
 
+const usesLine = (uses: Record<string, string> | undefined): string => {
+  const entries = Object.entries(uses ?? {})
+  if (!entries.length) return ''
+  return `\n  uses: { ${entries.map(([pkg, name]) => `'${pkg}': '${name}'`).join(', ')} },`
+}
+
 export function wireAddonFile(install: AddonInstall): string {
   const expose = exposedFunctions(install)
   const list = expose.length
@@ -85,7 +92,7 @@ wireAddon({
   name: '${install.camelName}',
   package: '${install.packageName}',
   auth: true,
-  expose: ${list},
+  expose: ${list},${usesLine(install.uses)}
 })
 `
 }

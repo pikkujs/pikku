@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, extname, join, relative } from 'path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -90,6 +90,15 @@ export function requirementLines(requirements: AddonRequirements | undefined): s
   return lines.length ? ['Fill these in:', ...lines.map((line) => `  ${line}`)] : ['Nothing to fill in.']
 }
 
+export function addonNeeds(addonDir: string): string[] {
+  try {
+    const uses = JSON.parse(readFileSync(join(addonDir, 'package.json'), 'utf8'))?.pikku?.uses
+    return Array.isArray(uses) ? uses.filter((u): u is string => typeof u === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 function installedPackageDir(from: string, packageName: string): string | undefined {
   for (let dir = from; ; dir = dirname(dir)) {
     const candidate = join(dir, 'node_modules', packageName)
@@ -159,22 +168,45 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
       logger.error(`Could not tell which package manager owns ${packageDir}`)
       process.exit(1)
     }
-    logger.info(`${packageManager} add ${source.packageName} (${packageDir})`)
-    const added = spawnSync(packageManager, ['add', source.packageName], {
-      cwd: packageDir,
-      stdio: 'inherit',
-    })
-    if (added.status !== 0) {
-      logger.error(`${packageManager} add ${source.packageName} failed`)
-      process.exit(1)
+    const addonsDir = existsSync(join(srcDir, 'addons')) ? join(srcDir, 'addons') : srcDir
+
+    const wiredName = (packageName: string): string | undefined => {
+      if (!existsSync(addonsDir)) return undefined
+      for (const file of readdirSync(addonsDir)) {
+        if (!file.endsWith('.addon.ts')) continue
+        const text = readFileSync(join(addonsDir, file), 'utf8')
+        if (text.includes(`package: '${packageName}'`)) {
+          return text.match(/name:\s*'([^']+)'/)?.[1]
+        }
+      }
+      return undefined
     }
 
-    const camelName = addonCamelName(source.packageName)
-    const addonsDir = existsSync(join(srcDir, 'addons')) ? join(srcDir, 'addons') : srcDir
-    const wirePath = join(addonsDir, `${camelName}.addon.ts`)
-    if (existsSync(wirePath)) {
-      logger.warn(`${relative(root, wirePath)} already exists — left as it is`)
-    } else {
+    const lines: string[] = []
+    const install = (packageName: string, chain: string[]): string => {
+      const already = wiredName(packageName)
+      if (already) return already
+      if (chain.includes(packageName)) {
+        logger.error(`${[...chain, packageName].join(' -> ')} needs itself`)
+        process.exit(1)
+      }
+      logger.info(`${packageManager} add ${packageName} (${packageDir})`)
+      const added = spawnSync(packageManager, ['add', packageName], {
+        cwd: packageDir,
+        stdio: 'inherit',
+      })
+      if (added.status !== 0) {
+        logger.error(`${packageManager} add ${packageName} failed`)
+        process.exit(1)
+      }
+      const installed = installedPackageDir(packageDir, packageName)
+      const uses: Record<string, string> = {}
+      for (const needed of installed ? addonNeeds(installed) : []) {
+        logger.info(`${packageName} needs ${needed}`)
+        uses[needed] = install(needed, [...chain, packageName])
+      }
+      const camelName = addonCamelName(packageName)
+      const wirePath = join(addonsDir, `${camelName}.addon.ts`)
       mkdirSync(addonsDir, { recursive: true })
       writeFileSync(
         wirePath,
@@ -185,17 +217,26 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
           camelName,
           pascalName: camelName,
           screamingName: camelName,
-          packageName: source.packageName,
+          packageName,
           addonDir: '',
           inWorkspace: false,
           mode: 'none',
           functions: {},
+          uses,
         })
       )
       logger.info(`  wrote ${relative(root, wirePath)}`)
+      if (installed) {
+        lines.push(`${packageName}:`, ...requirementLines(addonRequirements(installed)))
+      }
+      return camelName
     }
 
-    const installed = installedPackageDir(packageDir, source.packageName)
-    if (installed) for (const line of requirementLines(addonRequirements(installed))) logger.info(line)
+    if (wiredName(source.packageName)) {
+      logger.warn(`${source.packageName} is already wired — left as it is`)
+      return
+    }
+    install(source.packageName, [])
+    for (const line of lines) logger.info(line)
   },
 })
