@@ -6,7 +6,7 @@ import {
   runAddonPackageChecks,
 } from './addon-package-checks.js'
 import { runCoreImportChecks } from './core-import-checks.js'
-import { blocksDir, runBlockChecks } from './block-checks.js'
+import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
 import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
@@ -123,8 +123,9 @@ export const CHECKS: ValidateCheck[] = [
   {
     id: 'blocks',
     subject: 'block set',
-    applies: async ({ dir }) => blocksDir(dir) !== undefined,
-    run: async ({ dir }) => runBlockChecks(dir),
+    applies: async ({ dir, label }) =>
+      label === '.' && declaredBlockPackages(dir) !== undefined,
+    run: async ({ dir }) => runBlockChecks(dir, await discoverTargets(dir)),
   },
   {
     id: 'addon-package',

@@ -547,10 +547,11 @@ export type PikkuCLIInput = {
   frontends?: Record<string, PikkuFrontendInput>
 
   /**
-   * Marks this package as a block library, so `pikku validate` checks its
-   * blocks. `true` means `src/blocks`; a string names another directory.
+   * Names of the workspace packages that are block libraries, so
+   * `pikku validate` checks their `src/blocks`. A name that matches no package
+   * is an error.
    */
-  blocks?: boolean | string
+  blocks?: string[]
 
   /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).

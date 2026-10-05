@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { blocksDir, runBlockChecks } from './block-checks.js'
+import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
 
 const write = async (root: string, rel: string, content: string) => {
   const file = join(root, rel)
@@ -11,46 +11,45 @@ const write = async (root: string, rel: string, content: string) => {
   await writeFile(file, content)
 }
 
-const project = async (config: object = { blocks: true }) => {
+const project = async (blocks: string[] = ['@x/ui']) => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-blocks-'))
-  await write(root, 'pikku.config.json', JSON.stringify(config))
+  await write(root, 'pikku.config.json', JSON.stringify({ blocks }))
+  await write(root, 'package.json', JSON.stringify({ name: '@x/ui' }))
   return root
 }
+
+const run = (root: string) => runBlockChecks(root, [{ dir: root }])
 
 const clean = `export const Card = ({ title }: { title: string }) => <h1 title={title}>{title}</h1>\n`
 
 describe('block checks', () => {
-  test('applies only where pikku.config.json declares blocks', async () => {
-    const plain = await project({})
+  test('only listed packages are checked', async () => {
+    const root = await project([])
     await write(
-      plain,
+      root,
       'src/blocks/Card.tsx',
       `export const Card = () => <h1>Your app</h1>\n`
     )
-    assert.equal(blocksDir(plain), undefined)
-    assert.deepEqual(await runBlockChecks(plain), [])
-    assert.equal(blocksDir(await project()), 'src/blocks')
-    assert.equal(blocksDir(await project({ blocks: 'lib/ui' })), 'lib/ui')
-    assert.equal(blocksDir(await project({ blocks: false })), undefined)
+    assert.deepEqual(declaredBlockPackages(root), [])
+    assert.deepEqual(await run(root), [])
   })
 
-  test('a declared directory is the one that is checked', async () => {
-    const root = await project({ blocks: 'lib/ui' })
-    await write(
-      root,
-      'lib/ui/Card.tsx',
-      `export const Card = () => <h1>Your app</h1>\n`
+  test('a listed package that does not exist is an error', async () => {
+    const root = await project(['@x/ui', '@x/missing'])
+    await write(root, 'src/blocks/Card.tsx', clean)
+    const missing = (await run(root)).filter(
+      (f) => f.id === 'block-package-missing'
     )
-    await write(
-      root,
-      'src/blocks/Other.tsx',
-      `export const Other = () => <h1>Other text</h1>\n`
-    )
-    const findings = await runBlockChecks(root)
-    assert.equal(
-      findings.filter((f) => f.id === 'block-literal-string').length,
-      1
-    )
+    assert.equal(missing.length, 1)
+    assert.equal(missing[0].severity, 'error')
+    assert.match(missing[0].message, /@x\/missing/)
+  })
+
+  test('a listed package with no src/blocks is an error', async () => {
+    const root = await project()
+    const findings = await run(root)
+    assert.equal(findings[0]?.id, 'block-package-no-blocks')
+    assert.equal(findings[0]?.severity, 'error')
   })
 
   test('a literal string in text is an error', async () => {
@@ -60,7 +59,7 @@ describe('block checks', () => {
       'src/blocks/Card.tsx',
       `export const Card = () => <h1>Your app</h1>\n`
     )
-    const findings = await runBlockChecks(root)
+    const findings = await run(root)
     const error = findings.find((f) => f.id === 'block-literal-string')
     assert.equal(error?.severity, 'error')
     assert.match(error!.message, /Your app/)
@@ -77,7 +76,7 @@ describe('block checks', () => {
       'src/blocks/Card.tsx',
       `export const Card = () => <input placeholder="Search" />\n`
     )
-    const findings = await runBlockChecks(root)
+    const findings = await run(root)
     assert.equal(
       findings.filter((f) => f.id === 'block-literal-string').length,
       1
@@ -91,7 +90,7 @@ describe('block checks', () => {
       'src/blocks/Card.tsx',
       `export const Card = ({ t }: { t: string }) => <div className="flex gap-2" data-id="a">{t} · {'—'}</div>\n`
     )
-    const findings = await runBlockChecks(root)
+    const findings = await run(root)
     assert.equal(
       findings.some((f) => f.id === 'block-literal-string'),
       false
@@ -101,7 +100,7 @@ describe('block checks', () => {
   test('missing stories is a warning and the block is still productized', async () => {
     const root = await project()
     await write(root, 'src/blocks/Card.tsx', clean)
-    const findings = await runBlockChecks(root)
+    const findings = await run(root)
     assert.equal(
       findings.find((f) => f.id === 'block-missing-stories')?.severity,
       'warn'
@@ -116,7 +115,7 @@ describe('block checks', () => {
     const root = await project()
     await write(root, 'src/blocks/Card.tsx', clean)
     await write(root, 'src/blocks/Card.stories.tsx', `export default {}\n`)
-    const findings = await runBlockChecks(root)
+    const findings = await run(root)
     assert.equal(
       findings.some((f) => f.id === 'block-missing-stories'),
       false
@@ -134,6 +133,6 @@ describe('block checks', () => {
       'src/blocks/Card.stories.tsx',
       `export const S = () => <p>Hello</p>\n`
     )
-    assert.deepEqual(await runBlockChecks(root), [])
+    assert.deepEqual(await run(root), [])
   })
 })
