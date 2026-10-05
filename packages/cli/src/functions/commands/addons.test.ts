@@ -3,8 +3,10 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { wireAddonFile } from './install-addon.js'
 import {
   addonCamelName,
+  addonNeeds,
   addonPackageName,
   addonRequirements,
   addonSource,
@@ -97,5 +99,49 @@ describe('addonRequirements', () => {
   test('not built yet', () => {
     assert.equal(addonRequirements(tempApp()), undefined)
     assert.match(requirementLines(undefined)[0]!, /Not built yet/)
+  })
+})
+
+describe('addonNeeds', () => {
+  test('reads the addons a package declares in pikku.uses', () => {
+    const dir = tempApp()
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'a', pikku: { uses: ['@pikku/addon-crm'] } })
+    )
+    assert.deepEqual(addonNeeds(dir), ['@pikku/addon-crm'])
+  })
+
+  test('is empty when the package declares none', () => {
+    const dir = tempApp()
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'a' }))
+    assert.deepEqual(addonNeeds(dir), [])
+  })
+})
+
+describe('wireAddonFile uses', () => {
+  const base = {
+    projectRoot: '',
+    srcDir: '',
+    name: 'mail',
+    camelName: 'mail',
+    pascalName: 'mail',
+    screamingName: 'mail',
+    packageName: '@pikku/addon-mail',
+    addonDir: '',
+    inWorkspace: false,
+    mode: 'none' as const,
+    functions: {},
+  }
+
+  test('maps each needed package to the name it is wired under', () => {
+    assert.match(
+      wireAddonFile({ ...base, uses: { '@pikku/addon-crm': 'crm' } }),
+      /uses: \{ '@pikku\/addon-crm': 'crm' \},/
+    )
+  })
+
+  test('writes no uses when nothing is needed', () => {
+    assert.doesNotMatch(wireAddonFile(base), /uses/)
   })
 })
