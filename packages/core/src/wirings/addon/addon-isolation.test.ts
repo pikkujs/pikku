@@ -224,6 +224,54 @@ describe('an addon cannot reach anything outside its wiring', () => {
   }
 })
 
+describe('an addon can only start the workflows of addons it is wired to', () => {
+  beforeEach(() => {
+    resetPikkuState()
+    wireAll()
+  })
+
+  const started: string[] = []
+  const caller = (namespace: string, packageName: string) =>
+    new ContextAwareRPCService(
+      {
+        logger,
+        workflowService: {
+          startWorkflow: async (name: string) => {
+            started.push(name)
+            return { runId: 'r' }
+          },
+        },
+      } as never,
+      { wireType: 'http', wireId: namespace, addonNamespace: namespace } as never,
+      { requiresAuth: false },
+      packageName
+    )
+
+  beforeEach(() => {
+    started.length = 0
+  })
+
+  test('a listed addon, and its own, are startable', async () => {
+    const mail = caller('mail', '@addon/mail')
+    await mail.startWorkflow('@addon/stripe:refund', {})
+    await mail.startWorkflow('mail:digest', {})
+    assert.deepEqual(started, ['stripe:refund', 'mail:digest'])
+  })
+
+  test('an unlisted addon is refused and nothing starts', async () => {
+    const mail = caller('mail', '@addon/mail')
+    await assert.rejects(
+      () => mail.startWorkflow('@addon/vault:wipe', {}),
+      AddonNotUsedError
+    )
+    await assert.rejects(
+      () => mail.startWorkflow('vault:wipe', {}),
+      AddonNotUsedError
+    )
+    assert.deepEqual(started, [])
+  })
+})
+
 const ADDON_A = '@addon/a'
 const ADDON_B = '@addon/b'
 
