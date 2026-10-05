@@ -42,6 +42,11 @@
       "types": "./dist/git.service.d.ts",
       "import": "./dist/git.service.js",
       "default": "./dist/git.service.js"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.ts",
+      "import": "./dist/routes.js",
+      "default": "./dist/routes.js"
     }
   },
   "scripts": {
