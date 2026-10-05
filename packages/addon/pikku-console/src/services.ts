@@ -13,6 +13,8 @@ import { WorkspaceFilesService } from '@pikku/code-edit/files'
 import { GitService } from '@pikku/code-edit/git'
 import { PagesService } from '@pikku/code-edit/routes'
 import { PageScreenshotService } from './services/page-screenshot.service.js'
+import { TypeScriptService } from '@pikku/code-edit/typescript'
+import { VerifyService } from '@pikku/code-edit/verify'
 import { findProjectRoot } from './lib/find-project-root.js'
 import { join } from 'node:path'
 import { FileScenarioRunStore } from '@pikku/core/services'
@@ -59,6 +61,8 @@ export const createSingletonServices = pikkuAddonServices(
     let dbSchemaService: DbSchemaService | null = null
     let knowledgeService: KnowledgeService | null = null
     let i18nService: I18nService | null = null
+    let verifyService: VerifyService | null = null
+    let typeScriptService: TypeScriptService | null = null
     let pagesService: PagesService | null = null
     let pageScreenshotService: PageScreenshotService | null = null
     let gitService: GitService | null = null
@@ -70,6 +74,8 @@ export const createSingletonServices = pikkuAddonServices(
       dbSchemaService = new DbSchemaService(metaService)
       knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
       i18nService = new I18nService(findWorkspaceRoot(projectRoot))
+      verifyService = new VerifyService(projectRoot)
+      typeScriptService = new TypeScriptService(findWorkspaceRoot(projectRoot))
       pagesService = new PagesService(findWorkspaceRoot(projectRoot))
       pageScreenshotService = new PageScreenshotService(
         pagesService,
@@ -120,6 +126,8 @@ export const createSingletonServices = pikkuAddonServices(
       dbSchemaService,
       knowledgeService,
       i18nService,
+      verifyService,
+      typeScriptService,
       pagesService,
       pageScreenshotService,
       gitService,
