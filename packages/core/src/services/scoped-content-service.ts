@@ -1,7 +1,9 @@
 import type {
   BucketKeyArgs,
   ContentService,
+  ContentVisibility,
   CopyFileArgs,
+  GetDownloadURLArgs,
   GetUploadURLArgs,
   SignContentKeyArgs,
   SignURLArgs,
@@ -92,6 +94,14 @@ export class ScopedContentService implements ContentService {
     need: ContentGrantMode
   ): { bucket: string; key: string } {
     const cleanKey = normaliseContentPath(key)
+    return this.resolveClean(bucket, cleanKey, need)
+  }
+
+  private resolveClean(
+    bucket: string,
+    cleanKey: string,
+    need: ContentGrantMode
+  ): { bucket: string; key: string } {
     if (!bucket.startsWith('@')) {
       return {
         bucket: join(this.root, normaliseContentPath(bucket)),
@@ -124,7 +134,7 @@ export class ScopedContentService implements ContentService {
 
   async deleteFile(args: BucketKeyArgs): Promise<boolean> {
     const { bucket, key } = this.resolve(args.bucket, args.key, 'write')
-    return this.content.deleteFile({ bucket, key })
+    return this.content.deleteFile({ ...args, bucket, key })
   }
 
   async writeFile(args: WriteFileArgs): Promise<boolean> {
@@ -140,11 +150,86 @@ export class ScopedContentService implements ContentService {
     args: BucketKeyArgs
   ): Promise<ReadableStream | NodeJS.ReadableStream> {
     const { bucket, key } = this.resolve(args.bucket, args.key, 'read')
-    return this.content.readFile({ bucket, key })
+    return this.content.readFile({ ...args, bucket, key })
   }
 
   async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer> {
     const { bucket, key } = this.resolve(args.bucket, args.key, 'read')
-    return this.content.readFileAsBuffer({ bucket, key })
+    return this.content.readFileAsBuffer({ ...args, bucket, key })
+  }
+
+  async getDownloadURL(args: GetDownloadURLArgs): Promise<string> {
+    const { bucket, key } = this.resolve(args.bucket, args.key, 'read')
+    return this.content.getDownloadURL({ ...args, bucket, key })
+  }
+
+  async deleteByPrefix(
+    bucket: string,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<number> {
+    const keys = await this.keysUnder(bucket, prefix, 'write', visibility)
+    const target = this.resolvePrefix(bucket, prefix, 'write')
+    let deleted = 0
+    for (const key of keys) {
+      if (
+        await this.content.deleteFile({
+          bucket: target.bucket,
+          key,
+          visibility,
+        })
+      ) {
+        deleted++
+      }
+    }
+    return deleted
+  }
+
+  async listFilesByPrefix(
+    bucket: string,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<string[]> {
+    return this.keysUnder(bucket, prefix, 'read', visibility)
+  }
+
+  private async keysUnder(
+    bucket: string,
+    prefix: string,
+    need: ContentGrantMode,
+    visibility?: ContentVisibility
+  ): Promise<string[]> {
+    const target = this.resolvePrefix(bucket, prefix, need)
+    const keys = await this.content.listFilesByPrefix(
+      target.bucket,
+      target.prefix,
+      visibility
+    )
+    if (!bucket.startsWith('@')) return keys
+    return keys.filter((key) => {
+      try {
+        this.resolveClean(bucket, normaliseContentPath(key), need)
+        return true
+      } catch {
+        return false
+      }
+    })
+  }
+
+  private resolvePrefix(
+    bucket: string,
+    prefix: string,
+    need: ContentGrantMode
+  ): { bucket: string; prefix: string } {
+    const clean = normaliseContentPath(prefix)
+    const cleanPrefix = clean && prefix.endsWith('/') ? `${clean}/` : clean
+    if (!bucket.startsWith('@')) {
+      return {
+        bucket: join(this.root, normaliseContentPath(bucket)),
+        prefix: cleanPrefix,
+      }
+    }
+    const resolved = this.resolveClean(bucket, clean, need)
+    return { bucket: resolved.bucket, prefix: cleanPrefix }
   }
 }

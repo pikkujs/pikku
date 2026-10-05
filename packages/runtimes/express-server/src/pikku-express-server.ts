@@ -7,7 +7,7 @@ import type { CorsOptions, CorsOptionsDelegate } from 'cors'
 import getRawBody from 'raw-body'
 import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
-import { resolve, normalize } from 'path'
+import { resolve } from 'path'
 
 import type { CoreConfig } from '@pikku/core/types'
 import { stopSingletonServices } from '@pikku/core/utils'
@@ -16,10 +16,11 @@ import { pikkuState } from '@pikku/core/state'
 import type { JWTService, Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
-import type { LocalContentConfig } from '@pikku/core/services/local-content'
 import {
-  verifySignedContentRequest,
-} from '@pikku/core/services/local-content-request-handler'
+  resolveContentRequestTarget,
+  type LocalContentConfig,
+} from '@pikku/core/services/local-content'
+import { verifySignedContentRequest } from '@pikku/core/services/local-content-request-handler'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.
@@ -81,21 +82,23 @@ export class PikkuExpressServer {
     // Verify the signature first, then serve.
     this.app.get(`${configContent.assetUrlPrefix}/*path`, async (req, res) => {
       const requestUrl = new URL(req.originalUrl, 'http://localhost')
-      const signed = await verifySignedContentRequest(
-        requestUrl,
-        this.getContentSigningJWT()
-      )
-      if (!signed.ok) {
-        res.status(signed.status).end(signed.body)
-        return
-      }
-
       const key = (req.params as any).path.join('/')
-      const targetPath = resolve(basePath, normalize(key))
-      if (!targetPath.startsWith(basePath + '/')) {
+      const target = await resolveContentRequestTarget(basePath, key, 'read')
+      if (!target) {
         res.status(400).end('Invalid path')
         return
       }
+      if (target.visibility === 'private') {
+        const signed = await verifySignedContentRequest(
+          requestUrl,
+          this.getContentSigningJWT()
+        )
+        if (!signed.ok) {
+          res.status(signed.status).end(signed.body)
+          return
+        }
+      }
+      const targetPath = target.path
       res.sendFile(targetPath, (err) => {
         if (err && !res.headersSent) res.status(404).end()
       })
@@ -126,11 +129,12 @@ export class PikkuExpressServer {
       }
 
       const key = (req.params as any).path.join('/')
-      const targetPath = resolve(basePath, normalize(key))
-      if (!targetPath.startsWith(basePath + '/')) {
+      const target = await resolveContentRequestTarget(basePath, key, 'write')
+      if (!target) {
         res.status(400).end('Invalid path')
         return
       }
+      const targetPath = target.path
 
       const file = await getRawBody(req, {
         length: req.headers['content-length'],

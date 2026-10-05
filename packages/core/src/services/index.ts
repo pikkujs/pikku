@@ -62,6 +62,8 @@ export {
 } from './file-scenario-run-store.js'
 export type {
   ContentService,
+  ContentVisibility,
+  GetDownloadURLArgs,
   SignContentKeyArgs,
   SignURLArgs,
   GetUploadURLArgs,

@@ -15,7 +15,10 @@ import { stopSingletonServices } from '@pikku/core/utils'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
-import { signedContentPath } from '@pikku/core/services/local-content'
+import {
+  resolveContentRequestTarget,
+  signedContentPath,
+} from '@pikku/core/services/local-content'
 import type { JWTService, Logger } from '@pikku/core/services'
 import { fetchData, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import {
@@ -581,13 +584,18 @@ export class PikkuNodeHTTPServer {
     }
 
     const key = this.contentKey(pathname, content.uploadUrlPrefix)
-    const targetPath = this.toTargetPath(content.localFileUploadPath, key)
+    const target = await resolveContentRequestTarget(
+      content.localFileUploadPath,
+      key,
+      'write'
+    )
 
-    if (!targetPath) {
+    if (!target) {
       res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' })
       res.end('Invalid path')
       return
     }
+    const targetPath = target.path
 
     try {
       const body = await this.readRequestBody(req, content.sizeLimit ?? '1mb')
@@ -614,21 +622,29 @@ export class PikkuNodeHTTPServer {
   ): Promise<void> {
     const pathname = decodeURIComponent(requestUrl.pathname)
     const key = this.contentKey(pathname, content.assetUrlPrefix)
-    const targetPath = this.toTargetPath(content.localFileUploadPath, key)
+    const target = await resolveContentRequestTarget(
+      content.localFileUploadPath,
+      key,
+      'read'
+    )
 
-    if (!targetPath) {
+    if (!target) {
       res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' })
       res.end('Invalid path')
       return
     }
+    const targetPath = target.path
 
-    const signedAssetAccess = await this.validateSignedAssetRequest(requestUrl)
-    if (!signedAssetAccess.ok) {
-      res.writeHead(signedAssetAccess.status, {
-        'content-type': 'text/plain; charset=utf-8',
-      })
-      res.end(signedAssetAccess.body)
-      return
+    if (target.visibility === 'private') {
+      const signedAssetAccess =
+        await this.validateSignedAssetRequest(requestUrl)
+      if (!signedAssetAccess.ok) {
+        res.writeHead(signedAssetAccess.status, {
+          'content-type': 'text/plain; charset=utf-8',
+        })
+        res.end(signedAssetAccess.body)
+        return
+      }
     }
 
     try {
