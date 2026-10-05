@@ -69,6 +69,7 @@ export type {
 } from './utils/workflow/graph/index.js'
 export { resolveCoreType } from './utils/resolve-core-type.js'
 export { readModuleSpecifiers } from './utils/read-module-specifiers.js'
+export { readJsxLiteralText } from './utils/read-jsx-literal-text.js'
 export { readTsconfigOutDir } from './utils/read-tsconfig-out-dir.js'
 export {
   addonResolutionDirs,

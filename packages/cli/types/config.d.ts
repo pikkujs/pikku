@@ -547,6 +547,13 @@ export type PikkuCLIInput = {
   frontends?: Record<string, PikkuFrontendInput>
 
   /**
+   * Names of the workspace packages that are block libraries, so
+   * `pikku validate` checks their `src/blocks`. A name that matches no package
+   * is an error.
+   */
+  blocks?: string[]
+
+  /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
    * The CLI inspects this file and its generated siblings (auth-secrets.gen.ts,
    * auth-middleware.gen.ts) explicitly, so they may sit outside srcDirectories.
