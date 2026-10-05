@@ -547,6 +547,12 @@ export type PikkuCLIInput = {
   frontends?: Record<string, PikkuFrontendInput>
 
   /**
+   * Marks this package as a block library, so `pikku validate` checks its
+   * blocks. `true` means `src/blocks`; a string names another directory.
+   */
+  blocks?: boolean | string
+
+  /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
    * The CLI inspects this file and its generated siblings (auth-secrets.gen.ts,
    * auth-middleware.gen.ts) explicitly, so they may sit outside srcDirectories.

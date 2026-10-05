@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { readJsxLiteralText } from '@pikku/inspector'
@@ -9,8 +9,27 @@ const isBlock = (name: string) =>
   !name.endsWith('.stories.tsx') &&
   !name.endsWith('.test.tsx')
 
-export const hasBlocksDir = (dir: string) =>
-  existsSync(join(dir, 'src', 'blocks'))
+const DEFAULT_BLOCKS_DIR = 'src/blocks'
+
+/**
+ * The directory a package declares as its block library, or undefined.
+ *
+ * Opt-in: `"blocks": true` in pikku.config.json means `src/blocks`, a string
+ * names another directory. A folder that merely happens to be called `blocks`
+ * is not a block library.
+ */
+export const blocksDir = (dir: string): string | undefined => {
+  let config: { blocks?: unknown }
+  try {
+    config = JSON.parse(readFileSync(join(dir, 'pikku.config.json'), 'utf8'))
+  } catch {
+    return undefined
+  }
+  const declared = config.blocks
+  if (declared === true) return DEFAULT_BLOCKS_DIR
+  if (typeof declared === 'string' && declared) return declared
+  return undefined
+}
 
 const collectBlocks = async (dir: string, out: string[] = []) => {
   let entries
@@ -31,8 +50,10 @@ export const runBlockChecks = async (
   dir: string
 ): Promise<ValidateFinding[]> => {
   const findings: ValidateFinding[] = []
+  const blocks = blocksDir(dir)
+  if (!blocks) return findings
 
-  for (const file of await collectBlocks(join(dir, 'src', 'blocks'))) {
+  for (const file of await collectBlocks(join(dir, blocks))) {
     const name = relative(dir, file)
     const literals = readJsxLiteralText(file, await readFile(file, 'utf8'))
 

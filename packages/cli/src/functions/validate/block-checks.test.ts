@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { hasBlocksDir, runBlockChecks } from './block-checks.js'
+import { blocksDir, runBlockChecks } from './block-checks.js'
 
 const write = async (root: string, rel: string, content: string) => {
   const file = join(root, rel)
@@ -11,16 +11,46 @@ const write = async (root: string, rel: string, content: string) => {
   await writeFile(file, content)
 }
 
-const project = async () => mkdtemp(join(tmpdir(), 'pikku-blocks-'))
+const project = async (config: object = { blocks: true }) => {
+  const root = await mkdtemp(join(tmpdir(), 'pikku-blocks-'))
+  await write(root, 'pikku.config.json', JSON.stringify(config))
+  return root
+}
 
 const clean = `export const Card = ({ title }: { title: string }) => <h1 title={title}>{title}</h1>\n`
 
 describe('block checks', () => {
-  test('applies only where src/blocks exists', async () => {
-    const root = await project()
-    assert.equal(hasBlocksDir(root), false)
-    await write(root, 'src/blocks/Card.tsx', clean)
-    assert.equal(hasBlocksDir(root), true)
+  test('applies only where pikku.config.json declares blocks', async () => {
+    const plain = await project({})
+    await write(
+      plain,
+      'src/blocks/Card.tsx',
+      `export const Card = () => <h1>Your app</h1>\n`
+    )
+    assert.equal(blocksDir(plain), undefined)
+    assert.deepEqual(await runBlockChecks(plain), [])
+    assert.equal(blocksDir(await project()), 'src/blocks')
+    assert.equal(blocksDir(await project({ blocks: 'lib/ui' })), 'lib/ui')
+    assert.equal(blocksDir(await project({ blocks: false })), undefined)
+  })
+
+  test('a declared directory is the one that is checked', async () => {
+    const root = await project({ blocks: 'lib/ui' })
+    await write(
+      root,
+      'lib/ui/Card.tsx',
+      `export const Card = () => <h1>Your app</h1>\n`
+    )
+    await write(
+      root,
+      'src/blocks/Other.tsx',
+      `export const Other = () => <h1>Other text</h1>\n`
+    )
+    const findings = await runBlockChecks(root)
+    assert.equal(
+      findings.filter((f) => f.id === 'block-literal-string').length,
+      1
+    )
   })
 
   test('a literal string in text is an error', async () => {
