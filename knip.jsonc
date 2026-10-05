@@ -17,6 +17,9 @@
     // `cloudflare:workers` is the Workers built-in module scheme, not the
     // `cloudflare` npm package. Installing that package would be wrong.
     "cloudflare",
+    // The starter example is not a workspace, so its own dependency list is
+    // invisible here; its types import kysely from its own package.json.
+    "kysely",
   ],
 
   "ignoreBinaries": [
