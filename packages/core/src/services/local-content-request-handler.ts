@@ -1,9 +1,13 @@
 import { createReadStream } from 'fs'
 import { mkdir, stat, writeFile } from 'fs/promises'
-import { normalize, resolve } from 'path'
+import { resolve } from 'path'
 import { Readable } from 'stream'
 import type { JWTService, Logger } from '@pikku/core/services'
-import { signedContentPath, type LocalContentConfig } from './local-content.js'
+import {
+  resolveContentRequestTarget,
+  signedContentPath,
+  type LocalContentConfig,
+} from './local-content.js'
 
 /**
  * The server half of {@link LocalContent}.
@@ -40,18 +44,6 @@ const matchesPrefix = (pathname: string, prefix: string) =>
 
 const contentKey = (pathname: string, prefix: string) =>
   pathname.slice(prefix.length).replace(/^\/+/, '')
-
-/**
- * Resolve a key against the content root, or `null` if it escapes. `normalize`
- * first so `..` segments are collapsed before the prefix check, and the
- * comparison carries a trailing separator so a sibling directory whose name
- * merely starts with the root's cannot pass as being inside it.
- */
-const toTargetPath = (basePath: string, key: string): string | null => {
-  const normalizedBasePath = resolve(basePath)
-  const targetPath = resolve(normalizedBasePath, normalize(key))
-  return targetPath.startsWith(`${normalizedBasePath}/`) ? targetPath : null
-}
 
 const parseSizeLimit = (sizeLimit: string): number => {
   const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(sizeLimit.trim())
@@ -193,11 +185,16 @@ export const createLocalContentRequestHandler = ({
     }
 
     const key = contentKey(pathname, content.uploadUrlPrefix)
-    const targetPath = toTargetPath(content.localFileUploadPath, key)
-    if (!targetPath) {
+    const target = await resolveContentRequestTarget(
+      content.localFileUploadPath,
+      key,
+      'write'
+    )
+    if (!target) {
       return text(400, 'Invalid path')
     }
 
+    const targetPath = target.path
     const maxBytes = parseSizeLimit(content.sizeLimit ?? '1mb')
 
     // knowledge: decisions/security/an-upload-is-counted-as-it-arrives-not-buffered-then-measured.md
@@ -232,15 +229,22 @@ export const createLocalContentRequestHandler = ({
     pathname: string
   ): Promise<Response> => {
     const key = contentKey(pathname, content.assetUrlPrefix)
-    const targetPath = toTargetPath(content.localFileUploadPath, key)
-    if (!targetPath) {
+    const target = await resolveContentRequestTarget(
+      content.localFileUploadPath,
+      key,
+      'read'
+    )
+    if (!target) {
       return text(400, 'Invalid path')
     }
 
-    const signed = await validateSignedAssetRequest(requestUrl)
-    if (!signed.ok) {
-      return text(signed.status, signed.body)
+    if (target.visibility === 'private') {
+      const signed = await validateSignedAssetRequest(requestUrl)
+      if (!signed.ok) {
+        return text(signed.status, signed.body)
+      }
     }
+    const targetPath = target.path
 
     try {
       const file = await stat(targetPath)

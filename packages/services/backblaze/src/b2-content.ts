@@ -1,7 +1,9 @@
 import type {
   BucketKeyArgs,
   ContentService,
+  ContentVisibility,
   CopyFileArgs,
+  GetDownloadURLArgs,
   GetUploadURLArgs,
   Logger,
   SignContentKeyArgs,
@@ -22,6 +24,11 @@ export interface B2ContentConfig {
    * ContentService API are stored as path prefixes within this bucket.
    */
   bucketId: string
+  /**
+   * A bucket set to public in Backblaze, used for public content. Without it,
+   * public content is stored in `bucketId`, which then has to serve it.
+   */
+  publicBucketId?: string
 }
 
 interface B2Auth {
@@ -32,7 +39,8 @@ interface B2Auth {
 
 export class B2Content implements ContentService {
   private bucketId: string
-  private bucketName: string | null = null
+  private publicBucketId: string | undefined
+  private bucketNames = new Map<string, string>()
   private auth: B2Auth | null = null
   private credentials: string
 
@@ -41,6 +49,7 @@ export class B2Content implements ContentService {
     private logger: Logger
   ) {
     this.bucketId = config.bucketId
+    this.publicBucketId = config.publicBucketId
     this.credentials = btoa(
       `${config.applicationKeyId}:${config.applicationKey}`
     )
@@ -80,32 +89,44 @@ export class B2Content implements ContentService {
     return res.json()
   }
 
-  private async getBucketName(): Promise<string> {
-    if (!this.bucketName) {
-      const data = await this.b2Post('b2_list_buckets', {
-        accountId: ((await this.ensureAuthorized()) as any).accountId,
-        bucketId: this.bucketId,
-      })
-      this.bucketName = data.buckets[0].bucketName
-    }
-    return this.bucketName!
+  private bucketIdFor(visibility?: ContentVisibility): string {
+    return visibility === 'public' && this.publicBucketId
+      ? this.publicBucketId
+      : this.bucketId
   }
 
-  private async getUploadToken(): Promise<{
+  private isPublicBucket(visibility?: ContentVisibility): boolean {
+    return visibility === 'public'
+  }
+
+  private async getBucketName(bucketId = this.bucketId): Promise<string> {
+    let name = this.bucketNames.get(bucketId)
+    if (!name) {
+      const data = await this.b2Post('b2_list_buckets', {
+        accountId: ((await this.ensureAuthorized()) as any).accountId,
+        bucketId,
+      })
+      name = data.buckets[0].bucketName as string
+      this.bucketNames.set(bucketId, name)
+    }
+    return name
+  }
+
+  private async getUploadToken(bucketId = this.bucketId): Promise<{
     uploadUrl: string
     authorizationToken: string
   }> {
-    return await this.b2Post('b2_get_upload_url', {
-      bucketId: this.bucketId,
-    })
+    return await this.b2Post('b2_get_upload_url', { bucketId })
   }
 
   private async uploadData(
     fileName: string,
     data: Buffer | Uint8Array,
-    contentType = 'application/octet-stream'
+    contentType = 'application/octet-stream',
+    bucketId = this.bucketId
   ) {
-    const { uploadUrl, authorizationToken } = await this.getUploadToken()
+    const { uploadUrl, authorizationToken } =
+      await this.getUploadToken(bucketId)
     const sha1 = createHash('sha1').update(data).digest('hex')
     const res = await fetch(uploadUrl, {
       method: 'POST',
@@ -126,10 +147,11 @@ export class B2Content implements ContentService {
 
   private async getDownloadAuthorization(
     fileNamePrefix: string,
-    validDurationInSeconds: number
+    validDurationInSeconds: number,
+    bucketId = this.bucketId
   ): Promise<string> {
     const data = await this.b2Post('b2_get_download_authorization', {
-      bucketId: this.bucketId,
+      bucketId,
       fileNamePrefix,
       validDurationInSeconds,
     })
@@ -139,16 +161,32 @@ export class B2Content implements ContentService {
   async signContentKey(args: SignContentKeyArgs): Promise<string> {
     const fullKey = this.join(args.bucket, args.contentKey)
     const auth = await this.ensureAuthorized()
-    const bucketName = await this.getBucketName()
+    const bucketId = this.bucketIdFor(args.visibility)
+    const bucketName = await this.getBucketName(bucketId)
+    if (this.isPublicBucket(args.visibility) && this.publicBucketId) {
+      return `${auth.downloadUrl}/file/${bucketName}/${fullKey}`
+    }
     const durationSeconds = Math.max(
       1,
       Math.floor((args.dateLessThan.getTime() - Date.now()) / 1000)
     )
     const downloadAuth = await this.getDownloadAuthorization(
       fullKey,
-      durationSeconds
+      durationSeconds,
+      bucketId
     )
     return `${auth.downloadUrl}/file/${bucketName}/${fullKey}?Authorization=${downloadAuth}`
+  }
+
+  async getDownloadURL(args: GetDownloadURLArgs): Promise<string> {
+    return this.signContentKey({
+      bucket: args.bucket,
+      contentKey: args.key,
+      visibility: args.visibility,
+      dateLessThan: new Date(
+        Date.now() + (args.expiresInSeconds ?? 3600) * 1000
+      ),
+    })
   }
 
   async signURL(args: SignURLArgs): Promise<string> {
@@ -171,9 +209,10 @@ export class B2Content implements ContentService {
   }
 
   async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
-    void args.visibility
     const fullKey = this.join(args.bucket, args.fileKey)
-    const { uploadUrl, authorizationToken } = await this.getUploadToken()
+    const { uploadUrl, authorizationToken } = await this.getUploadToken(
+      this.bucketIdFor(args.visibility)
+    )
     return {
       uploadUrl,
       assetKey: fullKey,
@@ -195,7 +234,12 @@ export class B2Content implements ContentService {
       for await (const chunk of args.stream as AsyncIterable<Buffer>) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
       }
-      await this.uploadData(fullKey, Buffer.concat(chunks))
+      await this.uploadData(
+        fullKey,
+        Buffer.concat(chunks),
+        undefined,
+        this.bucketIdFor(args.visibility)
+      )
       return true
     } catch (e: any) {
       this.logger.error(`Error writing file, key: ${fullKey}`, e)
@@ -209,7 +253,12 @@ export class B2Content implements ContentService {
       this.logger.debug(
         `Uploading file, key: ${fullKey} from: ${args.fromAbsolutePath}`
       )
-      await this.uploadData(fullKey, await readFile(args.fromAbsolutePath))
+      await this.uploadData(
+        fullKey,
+        await readFile(args.fromAbsolutePath),
+        undefined,
+        this.bucketIdFor(args.visibility)
+      )
       return true
     } catch (e: any) {
       this.logger.error(`Error copying file, key: ${fullKey}`, e)
@@ -223,7 +272,9 @@ export class B2Content implements ContentService {
     const fullKey = this.join(args.bucket, args.key)
     this.logger.debug(`Reading file, key: ${fullKey}`)
     const auth = await this.ensureAuthorized()
-    const bucketName = await this.getBucketName()
+    const bucketName = await this.getBucketName(
+      this.bucketIdFor(args.visibility)
+    )
     const res = await fetch(
       `${auth.downloadUrl}/file/${bucketName}/${fullKey}`,
       { headers: { Authorization: auth.authorizationToken } }
@@ -238,7 +289,9 @@ export class B2Content implements ContentService {
     const fullKey = this.join(args.bucket, args.key)
     this.logger.debug(`Reading file as buffer, key: ${fullKey}`)
     const auth = await this.ensureAuthorized()
-    const bucketName = await this.getBucketName()
+    const bucketName = await this.getBucketName(
+      this.bucketIdFor(args.visibility)
+    )
     const res = await fetch(
       `${auth.downloadUrl}/file/${bucketName}/${fullKey}`,
       { headers: { Authorization: auth.authorizationToken } }
@@ -254,7 +307,7 @@ export class B2Content implements ContentService {
     try {
       this.logger.debug(`Deleting file: ${fullKey}`)
       const data = await this.b2Post('b2_list_file_names', {
-        bucketId: this.bucketId,
+        bucketId: this.bucketIdFor(args.visibility),
         prefix: fullKey,
         maxFileCount: 1,
       })
@@ -272,5 +325,51 @@ export class B2Content implements ContentService {
       this.logger.error(`Error deleting file: ${fullKey}`, e)
       return false
     }
+  }
+
+  async listFilesByPrefix(
+    bucket: string,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<string[]> {
+    return (await this.listFiles(bucket, prefix, visibility)).map((f) => f.key)
+  }
+
+  async deleteByPrefix(
+    bucket: string,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<number> {
+    const files = await this.listFiles(bucket, prefix, visibility)
+    for (const file of files) {
+      await this.b2Post('b2_delete_file_version', {
+        fileName: this.join(bucket, file.key),
+        fileId: file.fileId,
+      })
+    }
+    return files.length
+  }
+
+  private async listFiles(
+    bucket: string,
+    prefix: string,
+    visibility?: ContentVisibility
+  ): Promise<{ key: string; fileId: string }[]> {
+    const root = `${bucket}/`
+    const files: { key: string; fileId: string }[] = []
+    let startFileName: string | null = null
+    do {
+      const data: any = await this.b2Post('b2_list_file_names', {
+        bucketId: this.bucketIdFor(visibility),
+        prefix: `${root}${prefix}`,
+        maxFileCount: 1000,
+        ...(startFileName ? { startFileName } : {}),
+      })
+      for (const f of data.files) {
+        files.push({ key: f.fileName.slice(root.length), fileId: f.fileId })
+      }
+      startFileName = data.nextFileName ?? null
+    } while (startFileName)
+    return files
   }
 }
