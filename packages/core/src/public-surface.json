@@ -2,15 +2,15 @@
   ".": [],
   "./types": [],
   "./middleware": [
+    "ADDON_HEADER",
     "addGlobalMiddleware",
     "addGlobalPermission",
     "addTagMiddleware",
+    "addonScopeCap",
     "authAPIKey",
     "authBearer",
     "authCookie",
     "cors",
-    "ADDON_HEADER",
-    "addonScopeCap",
     "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
@@ -112,7 +112,9 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": ["runConversation"],
+  "./actor-flow": [
+    "runConversation"
+  ],
   "./virtual-user": [
     "DEFAULT_MAX_INTERVAL_MS",
     "DEFAULT_MIN_INTERVAL_MS",
@@ -175,7 +177,9 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": ["buildRemoteHeaders"],
+  "./remote": [
+    "buildRemoteHeaders"
+  ],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -229,7 +233,10 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
+  "./node-host-resolver": [
+    "installNodeHostResolver",
+    "nodeHostResolver"
+  ],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -316,7 +323,10 @@
     "wantsStackTrace",
     "wireCLI"
   ],
-  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
+  "./cli/command-parser": [
+    "generateCommandHelp",
+    "parseCLIArguments"
+  ],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -377,8 +387,13 @@
     "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
   ],
-  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
-  "./webhook": ["defineOutgoingWebhook"],
+  "./variable": [
+    "defineVariable",
+    "validateAndBuildVariableDefinitionsMeta"
+  ],
+  "./webhook": [
+    "defineOutgoingWebhook"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -447,18 +462,17 @@
     "InMemoryWorkflowService",
     "IncomingWebhookService",
     "JsonConsoleLogger",
+    "LeaseLostError",
+    "LeaseTakenError",
     "LocalCredentialService",
     "LocalEmailService",
     "LocalGatewayService",
     "LocalSecretService",
     "LocalVariablesService",
-    "LeaseLostError",
-    "LeaseTakenError",
     "LogLevel",
     "NoopAuditService",
     "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
     "PikkuCredentialWireService",
-    "holdLease",
     "PikkuSessionService",
     "QueueWebhookService",
     "REMOTE_JOBS_SECRET_HEADER",
@@ -466,6 +480,7 @@
     "REMOTE_QUEUE_JOB_PATH",
     "REMOTE_SCHEDULER_JOB_PATH",
     "SchedulerService",
+    "ScopedContentService",
     "ScopedCredentialService",
     "ScopedSecretService",
     "SecretAccessDeniedError",
@@ -482,6 +497,7 @@
     "createStubProxy",
     "deriveActorSecret",
     "getStubTracker",
+    "holdLease",
     "isTestRun",
     "pikkuRemoteQueueJobFunc",
     "pikkuRemoteScheduledJobFunc",
@@ -507,10 +523,27 @@
     "subjectIdOf",
     "validateAndBuildFeatureFlagDefinitionsMeta"
   ],
-  "./services/local-meta": ["LocalMetaService"],
-  "./services/v8-coverage": ["V8CoverageService"],
-  "./services/istanbul-coverage": ["IstanbulCoverageService"],
-  "./services/local-content": ["LocalContent", "signedContentPath"],
+  "./services/local-meta": [
+    "LocalMetaService"
+  ],
+  "./services/v8-coverage": [
+    "V8CoverageService"
+  ],
+  "./services/istanbul-coverage": [
+    "IstanbulCoverageService"
+  ],
+  "./services/local-content": [
+    "CONTENT_VISIBILITIES",
+    "LocalContent",
+    "PUBLIC_URL_SEGMENT",
+    "UploadTooLargeError",
+    "parseContentSizeLimit",
+    "parseContentUrlPath",
+    "resolveContentRequestTarget",
+    "resolveVisibilityPath",
+    "signedContentPath",
+    "streamUploadToFile"
+  ],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -594,6 +627,13 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
-  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineServiceTests"
+  ],
+  "./dev": [
+    "pikkuDevReloader",
+    "reconcileAddonRegistry",
+    "reloadGeneratedMeta"
+  ]
 }
