@@ -1,0 +1,24 @@
+[package]
+name = "pikku-studio"
+version = "0.0.0"
+description = "Pikku Studio"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+serde_json = "1"
+tauri-plugin-opener = "2"
+tauri-plugin-deep-link = "2"
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

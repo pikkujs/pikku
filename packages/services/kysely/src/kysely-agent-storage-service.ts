@@ -269,6 +269,7 @@ export class KyselyAgentStorageService
     for (const toolMsg of toolMessages) {
       if (!toolMsg.toolResults) continue
       for (const tr of toolMsg.toolResults) {
+        if (tr.result === undefined) continue
         await this.db
           .updateTable('agentToolCall')
           .set({ result: tr.result })
