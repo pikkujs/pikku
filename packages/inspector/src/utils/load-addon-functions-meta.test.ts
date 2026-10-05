@@ -503,3 +503,44 @@ describe('loadAddonFunctionsMeta — webhook sources an addon declares', () => {
     assert.equal(state.triggers.webhookSourceMeta['slack-support'], own)
   })
 })
+
+describe('loadAddonFunctionsMeta — addons an addon needs', () => {
+  let rootDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-needs-'))
+    writeAddonFixture(rootDir)
+    writeFileSync(
+      join(rootDir, 'node_modules', ADDON, 'package.json'),
+      JSON.stringify({ name: ADDON, pikku: { uses: ['@addon/crm'] } })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const criticalsFor = async (uses: Record<string, string> | undefined) => {
+    const criticals: string[] = []
+    const log = {
+      ...logger,
+      critical: (_code: unknown, message: string) => criticals.push(message),
+    } as unknown as InspectorLogger
+    await loadAddonFunctionsMeta(
+      log,
+      makeState(
+        rootDir,
+        new Map<string, any>([['slack', { package: ADDON, uses }]])
+      )
+    )
+    return criticals
+  }
+
+  test('fails when a needed addon is not mapped in uses', async () => {
+    assert.equal((await criticalsFor(undefined)).length, 1)
+  })
+
+  test('passes when every needed addon is mapped', async () => {
+    assert.deepEqual(await criticalsFor({ '@addon/crm': 'crm' }), [])
+  })
+})
