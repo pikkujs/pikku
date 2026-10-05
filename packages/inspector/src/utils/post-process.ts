@@ -477,6 +477,31 @@ export function validateSecretOverrides(
   }
 }
 
+export function validateAddonUses(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, "typesLookup">,
+): void {
+  const { wireAddonDeclarations } = state.rpc;
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return;
+
+  for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
+    for (const [pkg, target] of Object.entries(addonDecl.uses ?? {})) {
+      const wired = wireAddonDeclarations.get(target);
+      if (!wired) {
+        logger.critical(
+          ErrorCode.ADDON_USES_NOT_WIRED,
+          `Addon '${namespace}' uses '${pkg}' as '${target}', but no addon is wired under the name '${target}'. Wired: ${Array.from(wireAddonDeclarations.keys()).join(", ")}`,
+        );
+      } else if (wired.package !== pkg) {
+        logger.critical(
+          ErrorCode.ADDON_USES_NOT_WIRED,
+          `Addon '${namespace}' uses '${pkg}' as '${target}', but '${target}' is wired from '${wired.package}'.`,
+        );
+      }
+    }
+  }
+}
+
 export function validateCredentialOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, "typesLookup">,

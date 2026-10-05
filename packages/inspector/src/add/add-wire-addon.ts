@@ -118,6 +118,7 @@ export function addWireAddon(
   let ui: boolean | undefined
   let tags: string[] | undefined
   let scopes: string[] | undefined
+  let uses: Record<string, string> | undefined
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
   let credentialOverrides: Record<string, CredentialOverrideMeta> | undefined
@@ -182,6 +183,11 @@ export function addWireAddon(
     } else if (key === 'scopes') {
       scopes = parseStringArray(prop.initializer)
     } else if (
+      key === 'uses' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      uses = parseStringRecord(prop.initializer)
+    } else if (
       key === 'secretOverrides' &&
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
@@ -227,6 +233,7 @@ export function addWireAddon(
     auth,
     tags,
     scopes,
+    uses,
     secretOverrides,
     variableOverrides,
     credentialOverrides,

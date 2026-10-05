@@ -8,6 +8,7 @@ import {
   aggregateRequiredServices,
   validateSecretOverrides,
   validateCredentialOverrides,
+  validateAddonUses,
   validateVariableOverrides,
   validateRemoteAddonDependencies,
   validateRemoteAddonAuth,
@@ -462,6 +463,24 @@ describe('override validation resolves the override target (value), not the logi
     )
     validateCredentialOverrides(logger, state)
     assert.deepEqual(criticals, [])
+  })
+
+  test('validateAddonUses accepts a wired addon from the declared package', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
+    state.rpc.wireAddonDeclarations.set('mail', { package: '@a/mail', uses: { '@a/stripe': 'stripe' } } as never)
+    state.rpc.wireAddonDeclarations.set('stripe', { package: '@a/stripe' } as never)
+    validateAddonUses(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateAddonUses flags an addon that is not wired or wired from another package', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
+    state.rpc.wireAddonDeclarations.set('mail', { package: '@a/mail', uses: { '@a/stripe': 'stripe', '@a/crm': 'other' } } as never)
+    state.rpc.wireAddonDeclarations.set('other', { package: '@a/other' } as never)
+    validateAddonUses(logger, state)
+    assert.equal(criticals.length, 2)
   })
 
   test('validateVariableOverrides accepts an override whose value is a declared variable', () => {
