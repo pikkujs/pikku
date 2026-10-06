@@ -1,3 +1,13 @@
+## 0.12.137
+
+### Patch Changes
+
+- 0c865d9: Changes and changesets replace milestones. The changes commands run on a local queue when the checkout has no fabric project; `pikku changes next` routes to a changes, upgrade or knowledge agent and merges finished changesets. A changeset that creates or alters a table, or has 6 or more changes, needs a plan at `knowledge/plans/<changeset>.plan.json` (anything else goes to an optional judge at `PIKKU_PLAN_JUDGE_URL`), and `changes done` holds it to that plan. `pikku knowledge gaps` replaces `knowledge next`/`reconcile`, and also reports code a merged plan built that is gone and notes that were deleted.
+- c36b066: Scenario coverage moves into OSS. `@pikku/core/scenario/coverage` adds `readScenarioCoverage`, which reports the lines no scenario reaches, the mutations no scenario drives, and the pages scenarios open. It is exposed through `pikku scenario coverage`, `console:getScenarioCoverage`, and a "Not tested by any scenario" card on the Scenarios page. `LocalMetaService.getRpcMeta` now reads the `.internal.gen.json` file that codegen actually writes.
+- 0963b73: Every scope tree now records where it came from: `origin` on `ScopeDefinitionMeta` is `{ kind: 'app' }` for the app's own `defineScope`, `{ kind: 'generated' }` for a tree the CLI wrote into the project (a `.gen.ts`, or the `app` root derived from personas), and `{ kind: 'addon', package, displayName }` for one an installed addon declared. An addon's build stamps its own package and display name on its trees, and the host keeps that name while recording the package it actually installed. `MetaService.getScopesMeta()` reads the result, and the console's all-meta payload carries it as `scopes`.
+
+  The console's Scopes page becomes **Permissions** and is grouped by that origin: the app's own permissions first, then what Pikku generated into the project, then one card per addon (Pikku's own before third-party, each alphabetical), each card folding to its header — the app's own starts open, every addon's starts folded, and any search or filter opens them all. Above the cards, two filters narrow the page to what one role is given (or to what no role is given yet) and to one source. A permission group no longer says "Not part of any role yet" above lines that are each given to a role.
+
 ## 0.12.136
 
 ### Patch Changes
