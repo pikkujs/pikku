@@ -107,9 +107,10 @@ export const readMocks = async (rootDir: string): Promise<RpcMocks[]> => {
           }
           if (mock.hasData) {
             const read = await readJson(join(base, dir, `${name}.json`))
-            if (read.error)
+            if (read.error) {
               problems.push(`${name}.json is not valid JSON: ${read.error}`)
-            else mock.data = read.value
+              mock.hasData = false
+            } else mock.data = read.value
           } else {
             problems.push(`${name}.meta.json has no ${name}.json`)
           }

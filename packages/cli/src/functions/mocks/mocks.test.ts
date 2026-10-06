@@ -156,6 +156,22 @@ describe('diffMocks', () => {
     assert.strictEqual(d.rpcs[0]!.status, 'changed')
     assert.ok(d.rpcs[0]!.invalid.length > 0)
   })
+  test('an unreadable mock makes the RPC invalid and adds no shape', () => {
+    const good = mock('busy', [{ id: 'a', guests: 2 }], { default: true })
+    const garbled = {
+      name: 'garbled',
+      hasData: false,
+      problems: ['garbled.json is not valid JSON: Unexpected end'],
+    }
+    const d = diffMocks(
+      [{ rpc: 'bookings:list', mocks: [good, garbled] }],
+      surface()
+    )
+    assert.strictEqual(d.rpcs[0]!.status, 'invalid')
+    assert.deepStrictEqual(d.rpcs[0]!.changes, [])
+    assert.deepStrictEqual(d.rpcs[0]!.invalid, [])
+    assert.strictEqual(d.ok, false)
+  })
   test('warns on default problems and missing scenarios', () => {
     const two = [
       mock('a', [], { default: true, state: 'healthy' }),
@@ -254,6 +270,7 @@ describe('readMocks', () => {
       assert.strictEqual(byName.busy!.meta!.default, true)
       assert.ok(byName.busy!.problems.some((p) => p.includes('delayMs')))
       assert.ok(byName.broken!.problems[0]!.includes('not valid JSON'))
+      assert.strictEqual(byName.broken!.hasData, false)
       assert.ok(byName.orphan!.problems[0]!.includes('has no orphan.json'))
       assert.deepStrictEqual(await readMocks(join(root, 'nothing')), [])
     } finally {
