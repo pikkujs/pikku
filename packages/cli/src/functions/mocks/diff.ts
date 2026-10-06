@@ -10,7 +10,13 @@ import { validateAgainstSchema } from './validate.js'
 export interface SurfaceView {
   functions: Record<
     string,
-    { key: string; version: number; outputSchemaName: string | null }
+    {
+      key: string
+      version: number
+      outputSchemaName: string | null
+      expose?: boolean
+      platform?: boolean
+    }
   >
   schemas: Record<string, unknown>
 }
@@ -90,6 +96,11 @@ export const diffMocks = (
       report.status = 'added'
       return report
     }
+    if (!fn.expose) {
+      report.warnings.push(
+        'the function is not exposed, so the frontend cannot call it'
+      )
+    }
     const schema = fn.outputSchemaName
       ? surface.schemas[fn.outputSchemaName]
       : undefined
@@ -120,7 +131,13 @@ export const diffMocks = (
   })
   const known = new Set(rpcMocks.map((r) => r.rpc))
   const unmocked = options.all
-    ? [...new Set(Object.values(surface.functions).map((fn) => fn.key))]
+    ? [
+        ...new Set(
+          Object.values(surface.functions)
+            .filter((fn) => fn.expose && !fn.platform)
+            .map((fn) => fn.key)
+        ),
+      ]
         .filter((key) => !known.has(key))
         .sort()
     : []
