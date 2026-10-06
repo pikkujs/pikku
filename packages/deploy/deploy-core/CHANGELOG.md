@@ -1,5 +1,11 @@
 # @pikku/deploy
 
+## 0.12.14
+
+### Patch Changes
+
+- 5a50446: deploy.embed puts files into a standalone binary, so a project ships with the assets it reads at runtime.
+
 ## 0.12.13
 
 ### Patch Changes

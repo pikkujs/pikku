@@ -1,6 +1,6 @@
 {
   "name": "@pikku/code-edit",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -93,7 +93,7 @@
     "node": ">=24"
   },
   "peerDependencies": {
-    "@pikku/shadcdn": "^0.0.1"
+    "@pikku/shadcdn": "^0.0.2"
   },
   "peerDependenciesMeta": {
     "@pikku/shadcdn": {

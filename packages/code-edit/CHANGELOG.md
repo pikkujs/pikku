@@ -1,5 +1,20 @@
 # @pikku/code-edit
 
+## 0.12.3
+
+### Patch Changes
+
+- 83681ee: Ready-made transactional emails (invitation, magic link, password reset, receipt, welcome) in `@pikku/code-edit/emails`, and the console `getEmailCatalog` / `addCatalogEmail` RPCs that list them and add one to a project.
+- 4b24966: addon-console reads and edits a project's message catalogs: `getI18n`, `writeI18nLocale`, `addI18nLocale`, `deleteI18nLocale`, `syncI18n` and `setI18nDefaultLocale`, behind the `pikku:console:i18n` scopes.
+- 83e9a6a: addon-console extracts a design profile from a site, crawls it, generates a favicon, fetches stock images and lists placeholder brands (`extractDesign`, `crawlSite`, `generateFavicon`, `fetchStockImages`, `getPlaceholderBrands`, `getDesignServer`) through `@pikku/code-edit/brand`, behind the `pikku:console:design` scopes.
+- 352ab63: addon-console lists, creates, applies, edits and deletes a project's themes and reads the shadcn components and blocks, with prop edits (`getThemes`, `getThemeSpec`, `getThemePresets`, `createTheme`, `applyTheme`, `updateThemeSpec`, `setActiveTheme`, `deleteTheme`, `getUiComponents`, `getComponentMeta`, `listBlocks`, `getBlock`, `getJsxProps`, `updateJsxProp`), behind the `pikku:console:design` scopes.
+- 223eeee: addon-console lists, reads and writes a project's files (`listProjectFiles`, `listProjectFilePaths`, `readProjectFile`, `writeProjectFile`) through `@pikku/code-edit/files`, confined to the workspace, behind the `pikku:console:files` scopes.
+- 78803bf: addon-console reads a project's git status, diff and log and commits, pulls and pushes it (`getGitStatus`, `getGitDiff`, `getGitLog`, `commitGitChanges`, `pullGitChanges`, `pushGitChanges`) through `@pikku/code-edit/git`, behind the `pikku:console:git` scopes.
+- 1b7b884: addon-console lists a project's frontend pages from their route files and photographs them in a browser (`getPages`, `screenshotPages`), behind the `pikku:console:pages` scopes.
+- 6575e3d: addon-console runs verify over a project (codegen, type-checks, correctness checks) and reads the latest result and a file's type errors (`runVerify`, `getVerifyResults`, `getFileDiagnostics`), behind the `pikku:console:verify` scopes.
+- Updated dependencies [e930b7b]
+  - @pikku/shadcdn@0.0.2
+
 ## 0.12.2
 
 ### Patch Changes
