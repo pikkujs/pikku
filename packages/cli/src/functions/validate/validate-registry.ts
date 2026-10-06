@@ -1,26 +1,24 @@
-import { existsSync } from 'node:fs'
-import { readdir } from 'node:fs/promises'
-import { join, relative } from 'node:path'
-import {
-  isAddonPackage,
-  runAddonPackageChecks,
-} from './addon-package-checks.js'
-import { runCoreImportChecks } from './core-import-checks.js'
-import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
-import { runOxlintRun, runOxlintSetupChecks } from './oxlint-checks.js'
-import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
-import { runScaffoldDuplicateChecks } from './scaffold-duplicate-checks.js'
-import { runSharedProjectChecks } from './shared-checks.js'
-import { runTypeIdentityChecks } from './type-identity-checks.js'
-import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
-import type { ValidateFinding as Finding } from './persona-checks.js'
+import { existsSync } from "node:fs";
+import { readdir } from "node:fs/promises";
+import { join, relative } from "node:path";
+import { isAddonPackage, runAddonPackageChecks } from "./addon-package-checks.js";
+import { runCoreImportChecks } from "./core-import-checks.js";
+import { declaredBlockPackages, runBlockChecks } from "./block-checks.js";
+import { isShadcnApp, runComponentChecks } from "./component-checks.js";
+import { runOxlintRun, runOxlintSetupChecks } from "./oxlint-checks.js";
+import { runPikkuBarrelChecks } from "./pikku-barrel-checks.js";
+import { runScaffoldDuplicateChecks } from "./scaffold-duplicate-checks.js";
+import { runSharedProjectChecks } from "./shared-checks.js";
+import { runTypeIdentityChecks } from "./type-identity-checks.js";
+import { runWorkspaceExportsChecks } from "./workspace-exports-checks.js";
+import type { ValidateFinding as Finding } from "./persona-checks.js";
 
 export type ValidateTarget = {
   /** Absolute directory the check runs against. */
-  dir: string
+  dir: string;
   /** How the target is named in output — repo-relative, or "." for the root. */
-  label: string
-}
+  label: string;
+};
 
 /**
  * A check plus the condition under which it means anything.
@@ -33,33 +31,33 @@ export type ValidateTarget = {
  * would have had to pick.
  */
 export type ValidateCheck = {
-  id: string
+  id: string;
   /** What this check is for, shown when reporting what ran. */
-  subject: string
+  subject: string;
   /**
    * `'last'` checks run after every other check, across all targets. For work
    * that is slow or whose result is only useful once the cheap, structural
    * findings are out of the way (running a linter over the app).
    */
-  phase?: 'last'
-  applies: (target: ValidateTarget) => Promise<boolean>
-  run: (target: ValidateTarget) => Promise<Finding[]>
-}
+  phase?: "last";
+  applies: (target: ValidateTarget) => Promise<boolean>;
+  run: (target: ValidateTarget) => Promise<Finding[]>;
+};
 
 /** A hand-written `types/application-types.d.ts` beside package.json. */
-const ADDON_MARKER = join('types', 'application-types.d.ts')
+const ADDON_MARKER = join("types", "application-types.d.ts");
 
 const SKIP_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.pikku',
-  '.pikku-runtime',
-  'coverage',
-  '.next',
-  '.yarn',
-])
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".pikku",
+  ".pikku-runtime",
+  "coverage",
+  ".next",
+  ".yarn",
+]);
 
 /**
  * Every directory under `root` that holds a package.json.
@@ -70,172 +68,170 @@ const SKIP_DIRS = new Set([
  * unlisted is exactly the kind of thing worth validating. Over-collecting is
  * harmless here because the preconditions decide what actually runs.
  */
-export async function discoverTargets(
-  root: string,
-  maxDepth = 5
-): Promise<ValidateTarget[]> {
-  const targets: ValidateTarget[] = []
+export async function discoverTargets(root: string, maxDepth = 5): Promise<ValidateTarget[]> {
+  const targets: ValidateTarget[] = [];
 
   const visit = async (dir: string, depth: number): Promise<void> => {
-    if (existsSync(join(dir, 'package.json'))) {
-      targets.push({ dir, label: relative(root, dir) || '.' })
+    if (existsSync(join(dir, "package.json"))) {
+      targets.push({ dir, label: relative(root, dir) || "." });
     }
-    if (depth >= maxDepth) return
-    let entries
+    if (depth >= maxDepth) return;
+    let entries;
     try {
-      entries = await readdir(dir, { withFileTypes: true })
+      entries = await readdir(dir, { withFileTypes: true });
     } catch {
-      return
+      return;
     }
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue
-      await visit(join(dir, entry.name), depth + 1)
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
+      await visit(join(dir, entry.name), depth + 1);
     }
-  }
+  };
 
-  await visit(root, 0)
-  return targets
+  await visit(root, 0);
+  return targets;
 }
 
 export const CHECKS: ValidateCheck[] = [
   {
-    id: 'app-project',
-    subject: 'app project',
+    id: "app-project",
+    subject: "app project",
     // An addon also carries a pikku.config.json, and running the app-shaped
     // checks against one reports every app convention it has no reason to
     // follow — starting with a packages/functions/ it will never have.
     applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+      existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
   },
   {
-    id: 'scaffold-duplicates',
-    subject: 'scaffolded output elsewhere in the project',
+    id: "scaffold-duplicates",
+    subject: "scaffolded output elsewhere in the project",
     // An addon has no scaffold to duplicate.
     applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+      existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
   },
   {
-    id: 'oxlint-setup',
-    subject: 'oxlint setup',
+    id: "oxlint-setup",
+    subject: "oxlint setup",
     // App only. oxlint is how a forgotten `await` on an async helper (a webhook
     // signature check, `if (!verify(sig))`) is caught, and tsc does not.
     applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+      existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => runOxlintSetupChecks(dir),
   },
   {
-    id: 'oxlint-run',
-    subject: 'oxlint run',
-    phase: 'last',
+    id: "oxlint-run",
+    subject: "oxlint run",
+    phase: "last",
     applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+      existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => runOxlintRun(dir),
   },
   {
-    id: 'pikku-barrel',
-    subject: 'app tier imports',
+    id: "pikku-barrel",
+    subject: "app tier imports",
     // Every Pikku project, addon included: an addon never generates the wiring
     // leaves, so a barrel import there is the one that used to compile against
     // a hub whose re-exports had quietly been dropped.
-    applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
+    applies: async ({ dir }) => existsSync(join(dir, "pikku.config.json")),
     run: async ({ dir }) => runPikkuBarrelChecks(dir),
   },
   {
-    id: 'core-import',
-    subject: 'app tier imports',
+    id: "core-import",
+    subject: "app tier imports",
     // Every Pikku project, addon included: an addon generates its own leaves
     // under `#pikku/addon/*` and its functions are as typed against them as an
     // application's are.
-    applies: async ({ dir }) => existsSync(join(dir, 'pikku.config.json')),
+    applies: async ({ dir }) => existsSync(join(dir, "pikku.config.json")),
     run: async ({ dir }) => runCoreImportChecks(dir),
   },
   {
-    id: 'blocks',
-    subject: 'block set',
-    applies: async ({ dir, label }) =>
-      label === '.' && declaredBlockPackages(dir) !== undefined,
+    id: "blocks",
+    subject: "block set",
+    applies: async ({ dir, label }) => label === "." && declaredBlockPackages(dir) !== undefined,
     run: async ({ dir }) => runBlockChecks(dir, await discoverTargets(dir)),
   },
   {
-    id: 'addon-package',
-    subject: 'addon',
+    id: "components",
+    subject: "shadcn components",
+    // Any package with a components.json and a src/components/ui folder: what the shadcn CLI copies in carries literal text and physical left/right classes.
+    applies: async ({ dir }) => isShadcnApp(dir),
+    run: async ({ dir }) => runComponentChecks(dir),
+  },
+  {
+    id: "addon-package",
+    subject: "addon",
     applies: async ({ dir }) => isAddonPackage(dir),
     run: async ({ dir }) => runAddonPackageChecks(dir),
   },
   {
-    id: 'type-identity',
-    subject: 'shared dependency versions',
+    id: "type-identity",
+    subject: "shared dependency versions",
     // Root of an installed tree only. A linked or skewed dependency is a
     // property of the install as a whole, so running this per workspace package reports the
     // same pair N times — and with nothing installed there is nothing to
     // compare.
-    applies: async ({ dir, label }) =>
-      label === '.' && existsSync(join(dir, 'node_modules')),
+    applies: async ({ dir, label }) => label === "." && existsSync(join(dir, "node_modules")),
     run: async ({ dir }) => runTypeIdentityChecks(dir),
   },
   {
-    id: 'workspace-exports',
-    subject: 'workspace subpath imports',
+    id: "workspace-exports",
+    subject: "workspace subpath imports",
     // Root only: the check pairs an import in one package with the exports map
     // of another, so it needs the whole tree in view. Per-package it would see
     // the consumer without the producer and report nothing.
-    applies: async ({ label }) => label === '.',
+    applies: async ({ label }) => label === ".",
     run: async ({ dir }) => runWorkspaceExportsChecks(dir),
   },
-]
+];
 
 export type ValidationPlan = Array<{
-  check: ValidateCheck
-  target: ValidateTarget
-}>
+  check: ValidateCheck;
+  target: ValidateTarget;
+}>;
 
 export async function planValidation(root: string): Promise<ValidationPlan> {
-  const plan: ValidationPlan = []
+  const plan: ValidationPlan = [];
   for (const target of await discoverTargets(root)) {
     for (const check of CHECKS) {
-      if (await check.applies(target)) plan.push({ check, target })
+      if (await check.applies(target)) plan.push({ check, target });
     }
   }
   // Stable: `'last'` checks go after everything else, in discovery order.
   return [
-    ...plan.filter((p) => p.check.phase !== 'last'),
-    ...plan.filter((p) => p.check.phase === 'last'),
-  ]
+    ...plan.filter((p) => p.check.phase !== "last"),
+    ...plan.filter((p) => p.check.phase === "last"),
+  ];
 }
 
 export type ValidateReport = {
-  ok: boolean
-  root: string
+  ok: boolean;
+  root: string;
   /** What ran, so a clean result can say what it actually looked at. */
-  ran: Array<{ checkId: string; subject: string; target: string }>
-  findings: Finding[]
-}
+  ran: Array<{ checkId: string; subject: string; target: string }>;
+  findings: Finding[];
+};
 
 export async function runValidate(root: string): Promise<ValidateReport> {
-  const plan = await planValidation(root)
-  const findings: Finding[] = []
-  const ran: ValidateReport['ran'] = []
+  const plan = await planValidation(root);
+  const findings: Finding[] = [];
+  const ran: ValidateReport["ran"] = [];
 
   for (const { check, target } of plan) {
-    findings.push(...(await check.run(target)))
+    findings.push(...(await check.run(target)));
     ran.push({
       checkId: check.id,
       subject: check.subject,
       target: target.label,
-    })
+    });
   }
 
   return {
-    ok: !findings.some((f) => f.severity === 'error'),
+    ok: !findings.some((f) => f.severity === "error"),
     root,
     ran,
     findings,
-  }
+  };
 }
