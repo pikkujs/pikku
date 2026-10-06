@@ -156,7 +156,7 @@ export class DesignService {
   }
 
   private async jsx(): Promise<typeof CodeEdit> {
-    const codeEditPath = '@pikku/code-edit'
+    const codeEditPath = ['@pikku', 'code-edit'].join('/')
     return import(codeEditPath)
   }
 
