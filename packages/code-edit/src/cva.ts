@@ -40,7 +40,10 @@ function topLevelKeys(body: string): Array<{ key: string; start: number }> {
         const end = body.indexOf(char, i + 1)
         const after = body.slice(end + 1).match(/^\s*:/)
         if (after) {
-          keys.push({ key: body.slice(i + 1, end), start: end + 1 + after[0].length })
+          keys.push({
+            key: body.slice(i + 1, end),
+            start: end + 1 + after[0].length,
+          })
           i = end + after[0].length
           continue
         }
@@ -48,7 +51,11 @@ function topLevelKeys(body: string): Array<{ key: string; start: number }> {
       quote = char
     } else if ('{(['.includes(char)) depth++
     else if ('})]'.includes(char)) depth--
-    else if (depth === 0 && /[A-Za-z_$]/.test(char) && !/[A-Za-z0-9_$]/.test(body[i - 1] ?? ' ')) {
+    else if (
+      depth === 0 &&
+      /[A-Za-z_$]/.test(char) &&
+      !/[A-Za-z0-9_$]/.test(body[i - 1] ?? ' ')
+    ) {
       const match = body.slice(i).match(/^([A-Za-z_$][\w$]*)\s*:/)
       if (match) {
         keys.push({ key: match[1]!, start: i + match[0].length })
@@ -93,7 +100,8 @@ export function parseCva(source: string): CvaDefinition | undefined {
     if (body) {
       for (const group of topLevelKeys(body)) {
         const inner = objectAfter(body, group.start)
-        if (inner) result.variants[group.key] = topLevelKeys(inner).map((o) => o.key)
+        if (inner)
+          result.variants[group.key] = topLevelKeys(inner).map((o) => o.key)
       }
     }
   }
@@ -101,7 +109,9 @@ export function parseCva(source: string): CvaDefinition | undefined {
   if (defaultsAt) {
     const body = objectAfter(options, defaultsAt.start)
     if (body) {
-      for (const [, key, value] of body.matchAll(/([A-Za-z_$][\w$]*)\s*:\s*['"]([^'"]+)['"]/g)) {
+      for (const [, key, value] of body.matchAll(
+        /([A-Za-z_$][\w$]*)\s*:\s*['"]([^'"]+)['"]/g
+      )) {
         result.defaultVariants[key!] = value!
       }
     }

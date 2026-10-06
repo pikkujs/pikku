@@ -8,7 +8,6 @@ benchmarks/result-*.json
 *.js.map
 *.js
 meta.json
-!packages/shadcdn/blocks/*/meta.json
 .yarn
 .dist
 dist
