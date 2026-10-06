@@ -1,3 +1,39 @@
+## 0.12.57
+
+### Patch Changes
+
+- 0c865d9: Changes and changesets replace milestones. The changes commands run on a local queue when the checkout has no fabric project; `pikku changes next` routes to a changes, upgrade or knowledge agent and merges finished changesets. A changeset that creates or alters a table, or has 6 or more changes, needs a plan at `knowledge/plans/<changeset>.plan.json` (anything else goes to an optional judge at `PIKKU_PLAN_JUDGE_URL`), and `changes done` holds it to that plan. `pikku knowledge gaps` replaces `knowledge next`/`reconcile`, and also reports code a merged plan built that is gone and notes that were deleted.
+- 83681ee: Ready-made transactional emails (invitation, magic link, password reset, receipt, welcome) in `@pikku/code-edit/emails`, and the console `getEmailCatalog` / `addCatalogEmail` RPCs that list them and add one to a project.
+- 4b24966: addon-console reads and edits a project's message catalogs: `getI18n`, `writeI18nLocale`, `addI18nLocale`, `deleteI18nLocale`, `syncI18n` and `setI18nDefaultLocale`, behind the `pikku:console:i18n` scopes.
+- 9c52862: addon-console streams a notice when the project's generated meta is regenerated (`streamMetaChanges`), so the console refetches instead of polling.
+- 83e9a6a: addon-console extracts a design profile from a site, crawls it, generates a favicon, fetches stock images and lists placeholder brands (`extractDesign`, `crawlSite`, `generateFavicon`, `fetchStockImages`, `getPlaceholderBrands`, `getDesignServer`) through `@pikku/code-edit/brand`, behind the `pikku:console:design` scopes.
+- 7c95960: addon-console reads and files a project's changes and the setup wish list (`getStudioHost`, `listStudioChanges`, `createStudioChange`, `replyToStudioChange`, `setStudioChangeStatus`, `completeStudioChange`, `listStudioWishes`, `reactToStudioWish`), locally or against Fabric. `@pikku/cli` exports `@pikku/cli/fabric` for the Fabric client it uses.
+- 352ab63: addon-console lists, creates, applies, edits and deletes a project's themes and reads the shadcn components and blocks, with prop edits (`getThemes`, `getThemeSpec`, `getThemePresets`, `createTheme`, `applyTheme`, `updateThemeSpec`, `setActiveTheme`, `deleteTheme`, `getUiComponents`, `getComponentMeta`, `listBlocks`, `getBlock`, `getJsxProps`, `updateJsxProp`), behind the `pikku:console:design` scopes.
+- 223eeee: addon-console lists, reads and writes a project's files (`listProjectFiles`, `listProjectFilePaths`, `readProjectFile`, `writeProjectFile`) through `@pikku/code-edit/files`, confined to the workspace, behind the `pikku:console:files` scopes.
+- 78803bf: addon-console reads a project's git status, diff and log and commits, pulls and pushes it (`getGitStatus`, `getGitDiff`, `getGitLog`, `commitGitChanges`, `pullGitChanges`, `pushGitChanges`) through `@pikku/code-edit/git`, behind the `pikku:console:git` scopes.
+- 1b7b884: addon-console lists a project's frontend pages from their route files and photographs them in a browser (`getPages`, `screenshotPages`), behind the `pikku:console:pages` scopes.
+- 6575e3d: addon-console runs verify over a project (codegen, type-checks, correctness checks) and reads the latest result and a file's type errors (`runVerify`, `getVerifyResults`, `getFileDiagnostics`), behind the `pikku:console:verify` scopes.
+- af41d2c: The console no longer bundles the TypeScript compiler into serverless deploys: the diagnostics service loads on demand and is unavailable where it is not shipped.
+- c36b066: Scenario coverage moves into OSS. `@pikku/core/scenario/coverage` adds `readScenarioCoverage`, which reports the lines no scenario reaches, the mutations no scenario drives, and the pages scenarios open. It is exposed through `pikku scenario coverage`, `console:getScenarioCoverage`, and a "Not tested by any scenario" card on the Scenarios page. `LocalMetaService.getRpcMeta` now reads the `.internal.gen.json` file that codegen actually writes.
+- 0963b73: Every scope tree now records where it came from: `origin` on `ScopeDefinitionMeta` is `{ kind: 'app' }` for the app's own `defineScope`, `{ kind: 'generated' }` for a tree the CLI wrote into the project (a `.gen.ts`, or the `app` root derived from personas), and `{ kind: 'addon', package, displayName }` for one an installed addon declared. An addon's build stamps its own package and display name on its trees, and the host keeps that name while recording the package it actually installed. `MetaService.getScopesMeta()` reads the result, and the console's all-meta payload carries it as `scopes`.
+
+  The console's Scopes page becomes **Permissions** and is grouped by that origin: the app's own permissions first, then what Pikku generated into the project, then one card per addon (Pikku's own before third-party, each alphabetical), each card folding to its header — the app's own starts open, every addon's starts folded, and any search or filter opens them all. Above the cards, two filters narrow the page to what one role is given (or to what no role is given yet) and to one source. A permission group no longer says "Not part of any role yet" above lines that are each given to a role.
+
+- Updated dependencies [0c865d9]
+- Updated dependencies [83681ee]
+- Updated dependencies [4b24966]
+- Updated dependencies [83e9a6a]
+- Updated dependencies [352ab63]
+- Updated dependencies [223eeee]
+- Updated dependencies [78803bf]
+- Updated dependencies [1b7b884]
+- Updated dependencies [6575e3d]
+- Updated dependencies [c36b066]
+- Updated dependencies [0963b73]
+  - @pikku/knowledge@0.12.18
+  - @pikku/core@0.12.137
+  - @pikku/code-edit@0.12.3
+
 ## 0.12.56
 
 ### Patch Changes

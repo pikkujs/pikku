@@ -1,3 +1,41 @@
+## 0.12.181
+
+### Patch Changes
+
+- 3c0b151: `pikku validate` checks block libraries. The project's `pikku.config.json` lists them by package name under `blocks`; each listed package's `src/blocks` is checked. A block that renders a literal string is an error, because its words have to come from messages, and a block with no `.stories.tsx` is a warning. A block with no errors is reported as productized. A listed name that matches no package, or a package with no `src/blocks`, is an error.
+- 0c865d9: Changes and changesets replace milestones. The changes commands run on a local queue when the checkout has no fabric project; `pikku changes next` routes to a changes, upgrade or knowledge agent and merges finished changesets. A changeset that creates or alters a table, or has 6 or more changes, needs a plan at `knowledge/plans/<changeset>.plan.json` (anything else goes to an optional judge at `PIKKU_PLAN_JUDGE_URL`), and `changes done` holds it to that plan. `pikku knowledge gaps` replaces `knowledge next`/`reconcile`, and also reports code a merged plan built that is gone and notes that were deleted.
+- 9caf705: `pikku addons add` installs and wires a published addon, or generates one from an OpenAPI spec (`--auth` required for a spec) and prints the secrets, variables and credentials to fill in. `pikku persona rpc` calls one RPC as a persona against a running server and says why it failed.
+- 8c03143: `pikku i18n list|add|sync|default` manages a frontend's Paraglide message catalogs from the CLI, through `I18nService` in `@pikku/code-edit/i18n`.
+- 7c95960: addon-console reads and files a project's changes and the setup wish list (`getStudioHost`, `listStudioChanges`, `createStudioChange`, `replyToStudioChange`, `setStudioChangeStatus`, `completeStudioChange`, `listStudioWishes`, `reactToStudioWish`), locally or against Fabric. `@pikku/cli` exports `@pikku/cli/fabric` for the Fabric client it uses.
+- 9caf705: `pikku dev` records each watch codegen pass in `dev-address.json`, and `pikku dev status` reports whether dev is running, its address, and the error from a failed pass.
+- c36b066: Scenario coverage moves into OSS. `@pikku/core/scenario/coverage` adds `readScenarioCoverage`, which reports the lines no scenario reaches, the mutations no scenario drives, and the pages scenarios open. It is exposed through `pikku scenario coverage`, `console:getScenarioCoverage`, and a "Not tested by any scenario" card on the Scenarios page. `LocalMetaService.getRpcMeta` now reads the `.internal.gen.json` file that codegen actually writes.
+- 0963b73: Every scope tree now records where it came from: `origin` on `ScopeDefinitionMeta` is `{ kind: 'app' }` for the app's own `defineScope`, `{ kind: 'generated' }` for a tree the CLI wrote into the project (a `.gen.ts`, or the `app` root derived from personas), and `{ kind: 'addon', package, displayName }` for one an installed addon declared. An addon's build stamps its own package and display name on its trees, and the host keeps that name while recording the package it actually installed. `MetaService.getScopesMeta()` reads the result, and the console's all-meta payload carries it as `scopes`.
+
+  The console's Scopes page becomes **Permissions** and is grouped by that origin: the app's own permissions first, then what Pikku generated into the project, then one card per addon (Pikku's own before third-party, each alphabetical), each card folding to its header — the app's own starts open, every addon's starts folded, and any search or filter opens them all. Above the cards, two filters narrow the page to what one role is given (or to what no role is given yet) and to one source. A permission group no longer says "Not part of any role yet" above lines that are each given to a role.
+
+- 5a50446: deploy.embed puts files into a standalone binary, so a project ships with the assets it reads at runtime.
+- 31fdfe2: `pikku dev` accepts a Studio session. When `PIKKU_STUDIO_TOKEN` is set (32+ characters), a request carrying it in `x-pikku-studio` is signed in as the Studio with the `pikku:console` scope, so the console RPCs answer Pikku Studio instead of returning 401.
+- Updated dependencies [3c0b151]
+- Updated dependencies [0c865d9]
+- Updated dependencies [83681ee]
+- Updated dependencies [4b24966]
+- Updated dependencies [83e9a6a]
+- Updated dependencies [352ab63]
+- Updated dependencies [223eeee]
+- Updated dependencies [78803bf]
+- Updated dependencies [1b7b884]
+- Updated dependencies [6575e3d]
+- Updated dependencies [c36b066]
+- Updated dependencies [0963b73]
+- Updated dependencies [5a50446]
+  - @pikku/inspector@0.12.102
+  - @pikku/knowledge@0.12.18
+  - @pikku/skills@0.12.50
+  - @pikku/core@0.12.137
+  - @pikku/code-edit@0.12.3
+  - @pikku/deploy@0.12.14
+  - @pikku/deploy-standalone@0.12.25
+
 ## 0.12.180
 
 ### Patch Changes
