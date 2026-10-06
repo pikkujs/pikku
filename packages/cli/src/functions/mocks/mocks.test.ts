@@ -31,6 +31,7 @@ const surface = (schema: unknown = listSchema): SurfaceView => ({
       key: 'bookings:list',
       version: 1,
       outputSchemaName: 'BookingsOut',
+      expose: true,
     },
   },
   schemas: { BookingsOut: schema },
@@ -179,9 +180,46 @@ describe('diffMocks', () => {
     const d = diffMocks([], surface(), { all: true })
     assert.deepStrictEqual(d.unmocked, ['bookings:list'])
   })
+  test('--all skips functions the frontend cannot call', () => {
+    const base = surface()
+    const s: SurfaceView = {
+      ...base,
+      functions: {
+        ...base.functions,
+        hidden: { key: 'hidden', version: 1, outputSchemaName: null },
+        scaffold: {
+          key: 'scaffold',
+          version: 1,
+          outputSchemaName: null,
+          expose: true,
+          platform: true,
+        },
+      },
+    }
+    assert.deepStrictEqual(diffMocks([], s, { all: true }).unmocked, [
+      'bookings:list',
+    ])
+  })
+  test('a mock on a function that is not exposed warns', () => {
+    const s: SurfaceView = {
+      functions: {
+        hidden: { key: 'hidden', version: 1, outputSchemaName: null },
+      },
+      schemas: {},
+    }
+    const d = diffMocks([{ rpc: 'hidden', mocks: [mock('ok', null)] }], s)
+    assert.ok(d.rpcs[0]!.warnings.some((w) => w.includes('not exposed')))
+  })
   test('a function that returns nothing expects a null mock', () => {
     const s: SurfaceView = {
-      functions: { 'x:y': { key: 'x:y', version: 1, outputSchemaName: null } },
+      functions: {
+        'x:y': {
+          key: 'x:y',
+          version: 1,
+          outputSchemaName: null,
+          expose: true,
+        },
+      },
       schemas: {},
     }
     assert.strictEqual(
