@@ -14,6 +14,9 @@ defineFeatureFlags({
   assistantPanel: {
     description: 'The assistant panel',
   },
+  reminders: {
+    description: 'Reminders, shipped before the backend exists',
+  },
   devSwitcher: {
     description: 'The "Sign in as" persona switcher on the login screen',
   },

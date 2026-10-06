@@ -146,6 +146,59 @@ export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
   })
 }
 
+type StubOptions = { featureFlag: string }
+
+const mockEnv = (import.meta as unknown as { env: { DEV?: boolean; VITE_MOCK?: string } }).env
+const MOCKS_ENABLED = !!(mockEnv.DEV || mockEnv.VITE_MOCK)
+
+let mockFiles: Record<string, () => Promise<unknown>> = {}
+let mockMeta: Record<string, unknown> = {}
+
+export const registerMocks = (
+  files: Record<string, () => Promise<unknown>>,
+  meta: Record<string, unknown>
+) => {
+  mockFiles = files
+  mockMeta = meta
+}
+
+const unwrapDefault = (value: unknown) => (value as { default?: unknown })?.default ?? value
+
+export const defaultMock = async (name: string) => {
+  const dir = '/.mocks/' + name.replace(/:/g, '.') + '/'
+  const metas = Object.keys(mockMeta).filter((key) => key.includes(dir))
+  const chosen = metas.find((key) => (unwrapDefault(mockMeta[key]) as { default?: boolean })?.default) ?? (metas.length === 1 ? metas[0] : undefined)
+  const file = chosen && Object.keys(mockFiles).find((key) => key === chosen.replace(/\\.meta\\.json$/, '.json'))
+  if (!file) throw new Error('No default mock for ' + name + ' in .mocks/')
+  return unwrapDefault(await mockFiles[file]())
+}
+
+export const usePikkuQueryStub = <Name extends keyof FlattenedRPCMap>(
+  name: Name,
+  _stub: StubOptions,
+  data?: FlattenedRPCMap[Name]['input'],
+  options?: Omit<UseQueryOptions<FlattenedRPCMap[Name]['output'], Error>, 'queryKey' | 'queryFn'>
+) => {
+  if (!MOCKS_ENABLED) return usePikkuQuery(name, data as FlattenedRPCMap[Name]['input'], options)
+  return useQuery<FlattenedRPCMap[Name]['output'], Error>({
+    queryKey: [name, data, 'mock'],
+    queryFn: () => defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>,
+    ...options,
+  })
+}
+
+export const usePikkuMutationStub = <Name extends keyof FlattenedRPCMap>(
+  name: Name,
+  _stub: StubOptions,
+  options?: Omit<UseMutationOptions<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>, 'mutationFn'>
+) => {
+  if (!MOCKS_ENABLED) return usePikkuMutation(name, options)
+  return useMutation<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>({
+    mutationFn: () => defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>,
+    ...options,
+  })
+}
+
 type PaginatedKeys = {
   [K in keyof FlattenedRPCMap]: FlattenedRPCMap[K]['output'] extends { nextCursor?: string | null } ? K : never
 }[keyof FlattenedRPCMap]

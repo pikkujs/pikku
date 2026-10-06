@@ -74,4 +74,69 @@ describe('serializeReactQueryHooks', () => {
       assert.ok(both.includes('export const usePikkuQuery'))
     })
   })
+
+  describe('stub hooks', () => {
+    const output = serializeReactQueryHooks(RPC_MAP)
+    const segment = output.slice(
+      output.indexOf('type StubOptions'),
+      output.indexOf('type PaginatedKeys')
+    )
+    const load = (env: { DEV?: boolean; VITE_MOCK?: string }) => {
+      const code = ts.transpileModule(segment.replace(/import\.meta/g, '__meta').replace(/export const/g, 'const'), {
+        compilerOptions: { target: ts.ScriptTarget.ES2022 },
+      }).outputText
+      return new Function(
+        'useQuery',
+        'useMutation',
+        'usePikkuQuery',
+        'usePikkuMutation',
+        '__meta',
+        `${code}; return { registerMocks, defaultMock, usePikkuQueryStub, usePikkuMutationStub }`
+      )(
+        (o: unknown) => ({ via: 'useQuery', o }),
+        (o: unknown) => ({ via: 'useMutation', o }),
+        (...a: unknown[]) => ({ via: 'usePikkuQuery', a }),
+        (...a: unknown[]) => ({ via: 'usePikkuMutation', a }),
+        { env }
+      )
+    }
+    const files = {
+      '/.mocks/reminders.list/healthy.json': async () => ({ default: [{ id: 1 }] }),
+      '/.mocks/reminders.list/empty.json': async () => ({ default: [] }),
+    }
+    const meta = {
+      '/.mocks/reminders.list/healthy.meta.json': { default: { default: true } },
+      '/.mocks/reminders.list/empty.meta.json': { default: { default: false } },
+    }
+
+    test('in dev the query answers with the default mock and never calls the backend', async () => {
+      const api = load({ DEV: true })
+      api.registerMocks(files, meta)
+      const result = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' })
+      assert.strictEqual(result.via, 'useQuery')
+      assert.deepStrictEqual(await result.o.queryFn(), [{ id: 1 }])
+    })
+
+    test('VITE_MOCK enables it outside dev', async () => {
+      const api = load({ VITE_MOCK: '1' })
+      api.registerMocks(files, meta)
+      const result = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' })
+      assert.strictEqual(result.via, 'useMutation')
+      assert.deepStrictEqual(await result.o.mutationFn(), [{ id: 1 }])
+    })
+
+    test('in production both are exactly the plain hooks', () => {
+      const api = load({})
+      const q = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' }, { a: 1 }, { enabled: true })
+      assert.deepStrictEqual(q, { via: 'usePikkuQuery', a: ['reminders:list', { a: 1 }, { enabled: true }] })
+      const m = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' }, { retry: 1 })
+      assert.deepStrictEqual(m, { via: 'usePikkuMutation', a: ['reminders:list', { retry: 1 }] })
+    })
+
+    test('a stub with no default mock fails loudly', async () => {
+      const api = load({ DEV: true })
+      api.registerMocks(files, meta)
+      await assert.rejects(() => api.defaultMock('missing:rpc'), /No default mock for missing:rpc/)
+    })
+  })
 })
