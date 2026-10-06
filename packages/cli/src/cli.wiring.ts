@@ -67,6 +67,7 @@ import {
   renderI18nList,
   renderI18nSync,
 } from './functions/commands/i18n.js'
+import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
 import {
   knowledgeValidate,
   renderKnowledgeValidate,
@@ -925,6 +926,24 @@ wireCLI({
         }),
       },
     },
+    mocks: {
+      description:
+        'Mock data for RPCs, kept in .mocks/ and checked against the functions it stands in for',
+      subcommands: {
+        diff: pikkuCLICommand({
+          func: mocksDiff,
+          render: renderMocksDiff,
+          description:
+            'Report RPCs that are mocked but have no function, and mocks whose shape no longer matches their function',
+          options: {
+            all: {
+              description: 'Also list functions that have no mock',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     knowledge: {
       description:
         'Inspect and maintain the knowledge base — what this app is, in the language its users use',
@@ -1280,7 +1299,7 @@ wireCLI({
               type: 'string',
             },
             data: {
-              description: "The RPC's input as JSON, e.g. '{\"id\":\"1\"}'",
+              description: 'The RPC\'s input as JSON, e.g. \'{"id":"1"}\'',
               type: 'string',
             },
             environment: {
