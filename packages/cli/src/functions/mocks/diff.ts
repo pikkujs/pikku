@@ -124,9 +124,9 @@ export const diffMocks = (
         if (errors.length) report.invalid.push({ mock: mock.name, errors })
       }
     }
-    if (report.changes.length) report.status = 'changed'
-    else if (report.invalid.length || report.problems.length)
-      report.status = 'invalid'
+    if (report.problems.length) report.status = 'invalid'
+    else if (report.changes.length) report.status = 'changed'
+    else if (report.invalid.length) report.status = 'invalid'
     return report
   })
   const known = new Set(rpcMocks.map((r) => r.rpc))

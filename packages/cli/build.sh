@@ -102,6 +102,12 @@ echo "Bootstrapping with published @pikku/cli..."
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
 : "${BETTER_AUTH_LIB_VERSION:=1.6.25}"
+# @pikku/knowledge is the sixth transitive member: the CLI declares `^0.12.12`, so
+# it floats. 0.12.18 (2026-10-06) dropped the reconcile exports when changes
+# replaced milestones, while the published 0.12.145 CLI still imports
+# `KnowledgeReconcileInput` from it, so every bootstrap died on a missing export.
+# 0.12.17 is the last release that still has it.
+: "${PIKKU_KNOWLEDGE_VERSION:=0.12.17}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
@@ -130,6 +136,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "@pikku/ws": "${PIKKU_WS_VERSION}",
+    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   },
   "overrides": {
@@ -141,6 +148,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
     "@pikku/ws": "${PIKKU_WS_VERSION}",
+    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
     "better-auth": "${BETTER_AUTH_LIB_VERSION}"
   }
 }
