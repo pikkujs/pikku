@@ -185,11 +185,15 @@ export function addWireAddon(
       tags = parseStringArray(prop.initializer)
     } else if (key === 'scopes') {
       scopes = parseStringArray(prop.initializer)
-    } else if (
-      key === 'uses' &&
-      ts.isObjectLiteralExpression(prop.initializer)
-    ) {
-      uses = parseStringRecord(prop.initializer)
+    } else if (key === 'uses') {
+      if (ts.isObjectLiteralExpression(prop.initializer)) {
+        uses = parseStringRecord(prop.initializer)
+      } else {
+        logger.critical(
+          ErrorCode.ADDON_EXPOSE_NOT_STATIC,
+          `wireAddon's uses must be an object literal, got: ${prop.initializer.getText()}`
+        )
+      }
     } else if (
       key === 'secretOverrides' &&
       ts.isObjectLiteralExpression(prop.initializer)

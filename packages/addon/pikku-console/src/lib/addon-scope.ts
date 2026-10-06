@@ -40,8 +40,8 @@ export const pageOf = <T>(
   items: T[],
   options: { limit?: number; offset?: number } | undefined
 ): T[] => {
-  const offset = options?.offset ?? 0
+  const offset = Math.max(0, options?.offset ?? 0)
   return options?.limit === undefined
     ? items.slice(offset)
-    : items.slice(offset, offset + options.limit)
+    : items.slice(offset, offset + Math.max(0, options.limit))
 }

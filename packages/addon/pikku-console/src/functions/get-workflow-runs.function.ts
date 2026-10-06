@@ -32,11 +32,15 @@ export const getWorkflowRuns = pikkuFunc<
     const runs = (
       await Promise.all(
         names.map((workflowName) =>
-          workflowRunService.listRuns({ workflowName, status: input.status })
+          workflowRunService.listRuns({
+            workflowName,
+            status: input.status,
+            limit: (input.offset ?? 0) + (input.limit ?? 50),
+          })
         )
       )
     ).flat()
     runs.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-    return pageOf(runs, input)
+    return pageOf(runs, { ...input, limit: input.limit ?? 50 })
   },
 })

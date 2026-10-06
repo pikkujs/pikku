@@ -1270,11 +1270,15 @@ export async function newAddon(
       build = true,
     }: NewAddonInput
 ): Promise<string> {
-  if (ui) {
-    await scaffoldAddonUi(logger, { name, dir })
-    return resolve(dir ?? join('packages', `addon-${name}`))
-  }
   name = sanitizeAddonName(name)
+  if (ui) {
+    const uiRoot = join(
+      dir || config.scaffold?.addonDir || 'packages',
+      `addon-${name}`
+    )
+    await scaffoldAddonUi(logger, { name, dir: uiRoot })
+    return resolve(uiRoot)
+  }
 
   if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
     logger.error(

@@ -1,4 +1,5 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
+import { randomUUID } from 'crypto'
 import { mkdir, readFile, readdir, rename, rm, stat } from 'fs/promises'
 import { resolve, normalize, sep } from 'path'
 import type {
@@ -182,7 +183,7 @@ export const streamUploadToFile = async (
   maxBytes: number
 ): Promise<number> => {
   await mkdir(resolve(targetPath, '..'), { recursive: true })
-  const partial = `${targetPath}.${process.pid}.${Date.now()}.part`
+  const partial = `${targetPath}.${process.pid}.${Date.now()}.${randomUUID()}.part`
   let bytes = 0
   const counter = new Transform({
     transform(chunk: Buffer, _encoding, callback) {

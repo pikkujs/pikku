@@ -29,6 +29,7 @@ export const addonUiFiles = (name: string): Record<string, string> => {
             import: './dist/src/index.js',
           },
           './.pikku/*': './dist/.pikku/addon/*',
+          './screens/*': './dist/src/screens/*.js',
         },
         files: ['dist'],
         scripts: {
