@@ -69,3 +69,21 @@ Below `sm` the sidebar is gone and one of two components replaces it — never b
   transport), or for a canvas tool that wants every pixel. It needs
   `header={{ height: { base: MOBILE_HEADER_HEIGHT, sm: 0 } }}` on the shell plus a
   `<AppShell.Header hiddenFrom="sm">` to sit in, and no foot spacer.
+
+## Components
+
+An app with a `components.json` is a shadcn app: add components with the shadcn CLI, from the
+app's directory — `npx shadcn@latest add <name>`. Pikku has no installer of its own, and the
+builder, prototypes and artifacts all use this one route. The CLI copies the source into
+`src/components/ui`, so it is yours to edit, and what it copies is not ready to ship:
+
+- **Every string comes from messages.** Upstream components and blocks carry literal text
+  (a placeholder, a "Close" label, an aria-label). Replace each with `m.<key>()` from
+  `@/i18n/messages` and add the key to `messages/en.json`; a literal string in a screen is a
+  bug in every other locale.
+- **Direction is logical, never physical.** Use `ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`,
+  `text-start`/`text-end`, `rounded-s`/`rounded-e` and `border-s`/`border-e`, not
+  `ml-`/`mr-`, `pl-`/`pr-`, `left-`/`right-`, `text-left`/`text-right`, `rounded-l`/`rounded-r`
+  and `border-l`/`border-r`. A physical class is wrong in right-to-left locales (Arabic).
+
+Do both straight after the CLI runs, in the same change that adds the component.
