@@ -323,7 +323,9 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
     for (const line of grants) logger.info(line)
     if (input.dryRun) {
       undo()
-      logger.info('Dry run: nothing was installed.')
+      logger.info(
+        'Dry run: the package was installed to read what it needs, then removed again. Nothing is left in the project.'
+      )
       return
     }
     const decision = await confirmGrants(grants, {

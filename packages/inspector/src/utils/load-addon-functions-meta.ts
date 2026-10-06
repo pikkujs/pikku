@@ -322,7 +322,16 @@ export async function loadAddonFunctionsMeta(
         }
       }
       if (decl.ui) {
-        const manifest = await loadScreensManifest(require, decl.package)
+        let manifest: Awaited<ReturnType<typeof loadScreensManifest>>
+        try {
+          manifest = await loadScreensManifest(require, decl.package)
+        } catch (e) {
+          logger.critical(
+            ErrorCode.ADDON_UI_HAS_NO_SCREENS,
+            `wireAddon('${namespace}') sets ui: true, but the screens manifest of ${decl.package} could not be read: ${e instanceof Error ? e.message : e}`
+          )
+          continue
+        }
         if (!manifest || manifest.screens.length === 0) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
