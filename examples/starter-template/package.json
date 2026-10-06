@@ -5,7 +5,6 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "prototypes/*",
     "design/*",
     "!apps/_app_template_"
   ],

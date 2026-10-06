@@ -10,6 +10,15 @@
 - Layout classes are flow-relative (`ms-*`, `pe-*`, `start-*`, `text-start`) so RTL works.
 - Dates are formatted with dayjs before rendering.
 
+## Checks before you stop
+
+Run these and fix every failure; they are the rules, there is no other rulebook.
+
+- `bun run lint` in `apps/app` (shadcn rules, and `react/jsx-no-literals` for strings that skipped `m.*()`).
+- `pikku i18n list`: no locale is missing a key or has anything left to translate (`pikku i18n sync` adds missing keys).
+- `pikku mocks diff`: every mocked RPC either has a real function or is behind a feature flag, and no mock has drifted from its function.
+- `pikku validate`.
+
 ## First run
 
 `bun install` (the `bunfig.toml` pins the hoisted linker; the isolated one installs two copies of vite and every
