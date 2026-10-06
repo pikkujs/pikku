@@ -460,7 +460,7 @@ export const dev = pikkuSessionlessFunc<
 
     let watcher: FSWatcher | undefined
 
-    process.once('SIGINT', async () => {
+    const onSigint = async () => {
       logger.info('Stopping dev server...')
       try {
         await lifecycle?.beforeStop?.(resolvedServices)
@@ -472,7 +472,10 @@ export const dev = pikkuSessionlessFunc<
         clearDevAddress(resolvedRuntimeDir)
         process.exit(0)
       }
-    })
+    }
+    // Fire-and-forget signal handler: the finally block always exits the process,
+    // so there is no caller to propagate a rejection to.
+    process.once('SIGINT', () => void onSigint())
 
     const devReloader = enableHmr
       ? await pikkuDevReloader({
@@ -492,7 +495,7 @@ export const dev = pikkuSessionlessFunc<
         ignored: genIgnore,
       })
 
-      watcher.on('ready', async () => {
+      const onReady = async () => {
         const handle = async () => {
           try {
             const start = Date.now()
@@ -567,13 +570,16 @@ export const dev = pikkuSessionlessFunc<
           if (timeout) {
             clearTimeout(timeout)
           }
-          timeout = setTimeout(runHandle, 10)
+          timeout = setTimeout(() => void runHandle(), 10)
         }
 
         watcher?.on('change', deduped)
         watcher?.on('add', deduped)
         watcher?.on('unlink', deduped)
-      })
+      }
+      // Fire-and-forget listener: errors are handled inside (handle() catches and
+      // logs them), so a rejection cannot escape.
+      watcher.on('ready', () => void onReady())
     }
 
     await new Promise(() => {})

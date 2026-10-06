@@ -73,7 +73,7 @@ export const authBearer = pikkuMiddlewareFactory<{
         }
 
         if (userSession) {
-          setSession?.(userSession)
+          await setSession?.(userSession)
         }
       }
 

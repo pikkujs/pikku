@@ -24,10 +24,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "./build.sh",
-    "pikku": "./build.sh pikku",
+    "build": "bash ./build.sh",
+    "pikku": "bash ./build.sh pikku",
     "ncu": "npx npm-check-updates",
-    "pretest": "./build.sh pikku",
+    "pretest": "bash ./build.sh pikku",
     "test": "tsc --noEmit"
   },
   "peerDependencies": {

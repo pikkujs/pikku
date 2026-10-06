@@ -36,6 +36,15 @@ export class LocalEventHubService<
     data: Data[T],
     isBinary?: boolean
   ): void | Promise<void> {
+    return this.deliver(topic, channelId, data, isBinary)
+  }
+
+  private async deliver<T extends keyof Data>(
+    topic: T,
+    channelId: string | null,
+    data: Data[T],
+    isBinary?: boolean
+  ): Promise<void> {
     const subscribedChannelIds = this.subscriptions.get(topic)
     if (!subscribedChannelIds) {
       return
@@ -45,7 +54,7 @@ export class LocalEventHubService<
       const channel = this.channels.get(toChannelId)
       if (channel) {
         try {
-          channel.send(data, isBinary)
+          await channel.send(data, isBinary)
         } catch {
           this.onChannelClosed(toChannelId)
         }

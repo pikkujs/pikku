@@ -17,6 +17,7 @@ import { deriveNamespace } from './deriveNamespace'
 import type { InstalledAddonRow, PackageMeta } from './packageMeta'
 import { PAGE_SIZE } from './packageMeta'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { handleAsync } from '../../lib/async'
 
 interface OpenApiEntry {
   name: string
@@ -177,7 +178,7 @@ export const ApisList: React.FC<{
       onCategoryChange={setCategory}
       hasMore={!!hasNextPage}
       loadingMore={isFetchingNextPage}
-      onLoadMore={fetchNextPage}
+      onLoadMore={handleAsync(() => fetchNextPage())}
       installedNames={installedNames}
       editable={editable}
       kind="api"

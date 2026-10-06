@@ -23,6 +23,7 @@ import {
   useUpdateFunctionConfig,
   useUpdateFunctionBody,
 } from '../../../hooks/useCodeEdit'
+import { handleAsync } from '../../../lib/async'
 
 interface FunctionEditorProps {
   functionName: string
@@ -262,7 +263,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
             {asI18n('Cancel')}
           </Button>
           <Button
-            onClick={handleSaveConfig}
+            onClick={handleAsync(handleSaveConfig)}
             loading={isPending}
             disabled={saved}
             color={saved ? 'green' : undefined}

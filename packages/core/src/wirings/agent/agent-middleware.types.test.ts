@@ -14,7 +14,7 @@ const _singletonServicesCompile = pikkuAgentMiddleware<{ count: number }>({
     return event
   },
   afterStep: async ({ variables }, { stepNumber }) => {
-    variables.get(`STEP_${stepNumber}`)
+    await variables.get(`STEP_${stepNumber}`)
   },
   onError: async ({ logger }, { error }) => {
     logger.error(error.message)

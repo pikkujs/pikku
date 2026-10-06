@@ -9,44 +9,52 @@ async function main(): Promise<void> {
     let returnCount = 0
     let successful = true
 
-    setTimeout(async () => {
-      try {
-        const queueJob = await queueService.add('todo-reminders', {
-          todoId: 'test-todo-123',
-          userId: 'test-user-456',
-        })
-        const job = await queueService.getJob('todo-reminders', queueJob)
-        if (!job) {
-          throw new Error('Job not found')
+    setTimeout(() => {
+      ;(async () => {
+        try {
+          const queueJob = await queueService.add('todo-reminders', {
+            todoId: 'test-todo-123',
+            userId: 'test-user-456',
+          })
+          const job = await queueService.getJob('todo-reminders', queueJob)
+          if (!job) {
+            throw new Error('Job not found')
+          }
+          const result = await job.waitForCompletion?.()
+          console.log('✓ Reminder job completed:', result)
+        } catch (error: any) {
+          console.error('✗ Reminder job failed:', error.message)
+          successful = false
+        } finally {
+          returnCount++
         }
-        const result = await job.waitForCompletion?.()
-        console.log('✓ Reminder job completed:', result)
-      } catch (error: any) {
-        console.error('✗ Reminder job failed:', error.message)
-        successful = false
-      } finally {
-        returnCount++
-      }
+      })().catch((error) => {
+        console.error(error)
+      })
     }, 2000)
 
-    setTimeout(async () => {
-      try {
-        const queueJob = await queueService.add('todo-reminders', {
-          todoId: 'another-todo-789',
-          userId: 'another-user-012',
-        })
-        const job = await queueService.getJob('todo-reminders', queueJob)
-        if (!job) {
-          throw new Error('Job not found')
+    setTimeout(() => {
+      ;(async () => {
+        try {
+          const queueJob = await queueService.add('todo-reminders', {
+            todoId: 'another-todo-789',
+            userId: 'another-user-012',
+          })
+          const job = await queueService.getJob('todo-reminders', queueJob)
+          if (!job) {
+            throw new Error('Job not found')
+          }
+          const result = await job.waitForCompletion?.()
+          console.log('✓ Second reminder job completed:', result)
+        } catch (error: any) {
+          console.error('✗ Second reminder job failed:', error.message)
+          successful = false
+        } finally {
+          returnCount++
         }
-        const result = await job.waitForCompletion?.()
-        console.log('✓ Second reminder job completed:', result)
-      } catch (error: any) {
-        console.error('✗ Second reminder job failed:', error.message)
-        successful = false
-      } finally {
-        returnCount++
-      }
+      })().catch((error) => {
+        console.error(error)
+      })
     }, 4000)
 
     setInterval(() => {
@@ -60,4 +68,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

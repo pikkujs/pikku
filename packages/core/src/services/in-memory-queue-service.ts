@@ -36,8 +36,9 @@ export class InMemoryQueueService implements QueueService {
         await runQueueJob({ job })
       } catch (e: any) {
         if (attemptsMade < maxAttempts) {
+          // Fire-and-forget retry: runAttempt catches every error itself.
           setTimeout(
-            runAttempt,
+            () => void runAttempt(),
             this.backoffDelay(options?.backoff, attemptsMade)
           )
         } else {
@@ -50,7 +51,8 @@ export class InMemoryQueueService implements QueueService {
     }
 
     const delay = options?.delay ?? 100 + Math.floor(Math.random() * 201)
-    setTimeout(runAttempt, delay)
+    // Fire-and-forget: runAttempt catches every error itself.
+    setTimeout(() => void runAttempt(), delay)
 
     return jobId
   }

@@ -153,7 +153,13 @@ export class PikkuMCPServer extends PikkuMCPFetchServer {
     const port = options?.port ?? 3000
     const host = options?.host ?? '127.0.0.1'
 
-    const httpServer = createServer(handler)
+    const httpServer = createServer((req, res) => {
+      handler(req, res).catch((error: unknown) => {
+        this.logger.error(`MCP HTTP request failed: ${error}`)
+        if (!res.headersSent) res.statusCode = 500
+        res.end()
+      })
+    })
 
     await new Promise<void>((resolve, reject) => {
       const onError = (err: Error) => {

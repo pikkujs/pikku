@@ -14,7 +14,7 @@ npm install @pikku/gateway-slack
 ```typescript
 import { verifySlackSignature } from '@pikku/gateway-slack'
 
-const valid = verifySlackSignature(signingSecret, headers, rawBody)
+const valid = await verifySlackSignature(signingSecret, headers, rawBody)
 ```
 
 Register the adapter as a gateway so Slack events dispatch to your Pikku

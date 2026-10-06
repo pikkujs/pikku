@@ -245,11 +245,16 @@ async function worker(): Promise<void> {
   const harness = await setup()
   await harness.registerQueues()
   process.send!({ ready: true })
-  process.on('message', async () => {
-    const r = report(harness)
-    await new Promise<void>((resolve) => process.send!(r, () => resolve()))
-    await harness.close()
-    process.exit(0)
+  process.on('message', () => {
+    ;(async () => {
+      const r = report(harness)
+      await new Promise<void>((resolve) => process.send!(r, () => resolve()))
+      await harness.close()
+      process.exit(0)
+    })().catch((error) => {
+      console.error(error)
+      process.exit(1)
+    })
   })
 }
 

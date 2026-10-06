@@ -407,7 +407,7 @@ export async function runCLICommand({
 
     return result
   } finally {
-    channel.close()
+    await channel.close()
   }
 }
 

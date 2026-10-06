@@ -20,8 +20,8 @@ export function useSetSecret() {
   return useMutation({
     mutationFn: ({ secretId, value }: { secretId: string; value: unknown }) =>
       rpc.invoke('console:secretSet', { secretId, value }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
         queryKey: ['secret-value', variables.secretId],
       })
     },

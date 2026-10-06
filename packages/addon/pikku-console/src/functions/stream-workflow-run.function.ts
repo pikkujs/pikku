@@ -12,7 +12,7 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
     const poll = async () => {
       const run = await workflowRunService.getRun(runId)
       if (!run) {
-        channel.close()
+        await channel.close()
         return false
       }
 
@@ -24,7 +24,7 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
 
       if (hash !== lastHash) {
         lastHash = hash
-        channel.send({ type: 'update', run, steps })
+        await channel.send({ type: 'update', run, steps })
       }
 
       if (
@@ -36,8 +36,8 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
           'compensation_failed',
         ].includes(run.status)
       ) {
-        channel.send({ type: 'done', status: run.status })
-        channel.close()
+        await channel.send({ type: 'done', status: run.status })
+        await channel.close()
         return false
       }
       return true
@@ -46,13 +46,20 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
     const shouldContinue = await poll()
     if (!shouldContinue) return
 
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(async () => {
-        const cont = await poll()
-        if (!cont) {
-          clearInterval(interval)
-          resolve()
-        }
+    await new Promise<void>((resolve, reject) => {
+      const interval = setInterval(() => {
+        poll().then(
+          (cont) => {
+            if (!cont) {
+              clearInterval(interval)
+              resolve()
+            }
+          },
+          (error) => {
+            clearInterval(interval)
+            reject(error)
+          }
+        )
       }, 1000)
     })
   },

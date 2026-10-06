@@ -209,8 +209,8 @@ const OAuthRequirementCard: React.FC<{
     mutationFn: async () => {
       await rpc.invoke('admin:credentialDelete', { name: resolvedName })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CRED_STATUS_KEY] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [CRED_STATUS_KEY] })
     },
   })
 

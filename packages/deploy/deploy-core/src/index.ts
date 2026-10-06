@@ -50,3 +50,59 @@ export {
 export { nodeBuiltinExternals } from './node-builtins.js'
 
 export { SERVER_READY_MARKER, serverReadyLine } from './server-ready.js'
+
+export {
+  DEFAULT_RUNTIME_TIER,
+  RUNTIME_TIERS,
+  isRuntimeTier,
+  resolvePackageTier,
+  resolveUnitTier,
+  subpathForFile,
+  tierFitsWithin,
+  tierRank,
+  weakestTier,
+} from './runtime-tier.js'
+export type {
+  PackageTier,
+  RuntimeDeclaration,
+  RuntimeTier,
+  UnitTier,
+} from './runtime-tier.js'
+
+export {
+  bareBuiltinName,
+  isBuiltinAllowed,
+  isBuiltinStubbed,
+  isNodeBuiltin,
+} from './runtime-profile.js'
+export type { RuntimeProfile } from './runtime-profile.js'
+
+export {
+  analyzeUnit,
+  findInMemoryClasses,
+  formatViolations,
+  formatWarnings,
+  importChain,
+} from './runtime-verify.js'
+export type {
+  AnalyzeUnitInput,
+  BuiltinImport,
+  MetafileLike,
+  OwningPackage,
+  PackageLookup,
+  RuntimeViolation,
+  RuntimeWarning,
+  UnitAnalysis,
+} from './runtime-verify.js'
+
+export { createPackageLookup } from './runtime-package-lookup.js'
+export {
+  cloudSupportFor,
+  entryToDeclaration,
+  tierOfCloud,
+  type CloudSupportBlock,
+  type CloudSupportData,
+  type CloudSupportEntry,
+  type CloudSupportMatch,
+} from './cloudsupport.js'
+export { CLOUDSUPPORT } from './cloudsupport.data.js'

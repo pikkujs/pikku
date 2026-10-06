@@ -16,11 +16,16 @@ export class CloudflareEventHubService<
     private namespace: string = 'subscriptions'
   ) {
     // Ensure state is saved before hibernation
-    ctx.blockConcurrencyWhile(async () => {
-      if (this.isDirty) {
-        await this.syncSubscriptions()
-      }
-    })
+    // A constructor cannot await, so errors are logged here instead
+    ctx
+      .blockConcurrencyWhile(async () => {
+        if (this.isDirty) {
+          await this.syncSubscriptions()
+        }
+      })
+      .catch((error: unknown) => {
+        this.logger.error('Failed to sync subscriptions:', error)
+      })
   }
 
   private async ensureSubscriptionsLoaded(): Promise<void> {
@@ -129,7 +134,7 @@ export class CloudflareEventHubService<
           // The socket doesn't exist, which means
           // we should clean it up
           console.error(`Socket ${channelId} doesn't exist, cleaning up`)
-          this.onChannelClosed(channelId)
+          await this.onChannelClosed(channelId)
         } else {
           websocket.send(JSON.stringify(data))
         }

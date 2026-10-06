@@ -7,7 +7,9 @@ import {
 } from './addon-package-checks.js'
 import { runCoreImportChecks } from './core-import-checks.js'
 import { declaredBlockPackages, runBlockChecks } from './block-checks.js'
+import { runOxlintRun, runOxlintSetupChecks } from './oxlint-checks.js'
 import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
+import { runScaffoldDuplicateChecks } from './scaffold-duplicate-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
@@ -34,6 +36,12 @@ export type ValidateCheck = {
   id: string
   /** What this check is for, shown when reporting what ran. */
   subject: string
+  /**
+   * `'last'` checks run after every other check, across all targets. For work
+   * that is slow or whose result is only useful once the cheap, structural
+   * findings are out of the way (running a linter over the app).
+   */
+  phase?: 'last'
   applies: (target: ValidateTarget) => Promise<boolean>
   run: (target: ValidateTarget) => Promise<Finding[]>
 }
@@ -103,6 +111,34 @@ export const CHECKS: ValidateCheck[] = [
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
   },
   {
+    id: 'scaffold-duplicates',
+    subject: 'scaffolded output elsewhere in the project',
+    // An addon has no scaffold to duplicate.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
+  },
+  {
+    id: 'oxlint-setup',
+    subject: 'oxlint setup',
+    // App only. oxlint is how a forgotten `await` on an async helper (a webhook
+    // signature check, `if (!verify(sig))`) is caught, and tsc does not.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }) => runOxlintSetupChecks(dir),
+  },
+  {
+    id: 'oxlint-run',
+    subject: 'oxlint run',
+    phase: 'last',
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }) => runOxlintRun(dir),
+  },
+  {
     id: 'pikku-barrel',
     subject: 'app tier imports',
     // Every Pikku project, addon included: an addon never generates the wiring
@@ -167,7 +203,11 @@ export async function planValidation(root: string): Promise<ValidationPlan> {
       if (await check.applies(target)) plan.push({ check, target })
     }
   }
-  return plan
+  // Stable: `'last'` checks go after everything else, in discovery order.
+  return [
+    ...plan.filter((p) => p.check.phase !== 'last'),
+    ...plan.filter((p) => p.check.phase === 'last'),
+  ]
 }
 
 export type ValidateReport = {

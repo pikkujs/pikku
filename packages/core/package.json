@@ -81,6 +81,7 @@
     "./services/local-content": "./dist/services/local-content.js",
     "./services/local-content-request-handler": "./dist/services/local-content-request-handler.js",
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
+    "./services/file-scenario-run-store": "./dist/services/file-scenario-run-store.js",
     "./crypto-utils": "./dist/crypto-utils.js",
     "./hmac": "./dist/utils/hmac.js",
     "./state": "./dist/pikku-state.js",
@@ -100,6 +101,7 @@
   },
   "devDependencies": {
     "@ag-ui/core": "0.0.57",
+    "@pikku/deploy": "^0.12.13",
     "@types/node": "^24.13.3",
     "esbuild": "~0.28.2",
     "tsx": "^4.23.12"

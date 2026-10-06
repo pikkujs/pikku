@@ -86,12 +86,12 @@ export async function executeRawCLIViaChannel({
   const runEnded = new AbortController()
   const approver = approve ?? approverForMode(mode, { signal: runEnded.signal })
 
-  const render = (commandId: string | undefined, data: unknown) => {
+  const render = async (commandId: string | undefined, data: unknown) => {
     const renderer =
       (commandId ? renderers[commandId] : undefined) ||
       defaultRenderer ||
       defaultJSONRenderer
-    renderer(clientServices, data, undefined)
+    await renderer(clientServices, data, undefined)
   }
 
   return new Promise<number>((resolve) => {
@@ -145,10 +145,14 @@ export async function executeRawCLIViaChannel({
       // echo, and rendering that would print noise between real output.
       switch (message?.action) {
         case 'cli-output':
-          render(message.commandId, message.data)
+          render(message.commandId, message.data).catch((e) => {
+            console.error(e)
+          })
           break
         case 'cli-result':
-          render(message.commandId, message.result)
+          render(message.commandId, message.result).catch((e) => {
+            console.error(e)
+          })
           break
         case 'cli-help':
           console.log(message.help)

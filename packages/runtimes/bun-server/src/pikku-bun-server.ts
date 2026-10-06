@@ -253,6 +253,28 @@ export class PikkuBunServer {
   public async start(): Promise<void> {
     const { config, logger, options, eventHub } = this
 
+    const handleMessage = async (
+      ws: ServerWebSocket<WsData>,
+      message: string | Buffer
+    ) => {
+      const { channelHandler } = ws.data
+      if (typeof message === 'string') {
+        const result = await channelHandler.message(message)
+        if (result) ws.send(JSON.stringify(result))
+      } else {
+        const bytes =
+          message instanceof ArrayBuffer
+            ? new Uint8Array(message)
+            : new Uint8Array(
+                message.buffer,
+                message.byteOffset,
+                message.byteLength
+              )
+        const result = await channelHandler.binaryMessage(bytes)
+        if (result) channelHandler.sendBinary(result)
+      }
+    }
+
     this.server = Bun.serve<WsData>({
       port: config.port,
       hostname: config.hostname,
@@ -339,33 +361,28 @@ export class PikkuBunServer {
           channelHandler.registerOnClose(() => {
             ws.close()
           })
-          eventHub.onChannelOpened(channelHandler.channelId, ws)
-          channelHandler.open()
+          Promise.all([
+            eventHub.onChannelOpened(channelHandler.channelId, ws),
+            channelHandler.open(),
+          ]).catch((error: unknown) => {
+            logger.error(`Error opening websocket channel: ${error}`)
+          })
         },
 
-        message: async (ws: ServerWebSocket<WsData>, message) => {
-          const { channelHandler } = ws.data
-          if (typeof message === 'string') {
-            const result = await channelHandler.message(message)
-            if (result) ws.send(JSON.stringify(result))
-          } else {
-            const bytes =
-              message instanceof ArrayBuffer
-                ? new Uint8Array(message)
-                : new Uint8Array(
-                    message.buffer,
-                    message.byteOffset,
-                    message.byteLength
-                  )
-            const result = await channelHandler.binaryMessage(bytes)
-            if (result) channelHandler.sendBinary(result)
-          }
+        message: (ws: ServerWebSocket<WsData>, message) => {
+          handleMessage(ws, message).catch((error: unknown) => {
+            logger.error(`Error handling websocket message: ${error}`)
+          })
         },
 
         close: (ws: ServerWebSocket<WsData>) => {
           const { channelHandler } = ws.data
-          eventHub.onChannelClosed(channelHandler.channelId)
-          channelHandler.close()
+          Promise.all([
+            eventHub.onChannelClosed(channelHandler.channelId),
+            channelHandler.close(),
+          ]).catch((error: unknown) => {
+            logger.error(`Error closing websocket channel: ${error}`)
+          })
         },
       },
     })
@@ -543,7 +560,12 @@ export class PikkuBunServer {
         process.exit(0)
       }
     }
-    process.once('SIGINT', () => shutdown('SIGINT'))
-    process.once('SIGTERM', () => shutdown('SIGTERM'))
+    // `shutdown` handles every phase error itself and always exits
+    process.once('SIGINT', () => {
+      void shutdown('SIGINT')
+    })
+    process.once('SIGTERM', () => {
+      void shutdown('SIGTERM')
+    })
   }
 }

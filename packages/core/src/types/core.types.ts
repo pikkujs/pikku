@@ -1,3 +1,4 @@
+import type { AbortScope } from '../function/abort-scope.js'
 import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
 import type { TriggerSourceStore } from '../services/trigger-source-store.js'
 import type { LeaseService } from '../services/lease-service.js'
@@ -367,7 +368,15 @@ export type PikkuRawWire = Omit<
   PikkuWire,
   'rpc' | 'getCredential' | 'getCredentials'
 > &
-  Partial<Pick<PikkuWire, 'getCredential' | 'getCredentials'>>
+  Partial<Pick<PikkuWire, 'getCredential' | 'getCredentials'>> & {
+    /**
+     * Whether whatever asked for this work is still there. Set by wirings that
+     * can be abandoned (an interrupted agent run); the function runner binds
+     * `wire.beginChanges` to it. Carried through nested `rpc` calls by the
+     * wire spread, so a sub-call observes the same scope.
+     */
+    abortScope?: AbortScope
+  }
 
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices

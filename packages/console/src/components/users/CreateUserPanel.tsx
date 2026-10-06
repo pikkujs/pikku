@@ -13,6 +13,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { ConsolePanel } from '../shell/ConsolePanel'
 import { useUserAdmin } from '../../context/UserAdminContext'
+import { handleAsync } from '../../lib/async'
 
 type CreateUserPanelProps = {
   opened: boolean
@@ -100,7 +101,7 @@ export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
           <Button
             loading={running}
             disabled={email.trim().length === 0}
-            onClick={run}
+            onClick={handleAsync(run)}
             data-testid="create-user-submit"
           >
             {m.users_create_action()}

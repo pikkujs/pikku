@@ -163,7 +163,7 @@ describe('agent-prepare', () => {
     assert.doesNotMatch(instructions, /When calling a sub-agent/)
   })
 
-  test('createScopedChannel forwards stream events, captures approvals, and suppresses done', () => {
+  test('createScopedChannel forwards stream events, captures approvals, and suppresses done', async () => {
     const events: AgentStreamEvent[] = []
     const channel = createScopedChannel(
       {
@@ -183,8 +183,11 @@ describe('agent-prepare', () => {
       'session-1'
     )
 
-    channel.send({ type: 'text-delta', text: 'hello' } as AgentStreamEvent)
-    channel.send({
+    await channel.send({
+      type: 'text-delta',
+      text: 'hello',
+    } as AgentStreamEvent)
+    await channel.send({
       type: 'approval-request',
       toolCallId: 'tc-1',
       toolName: 'tool-a',
@@ -192,7 +195,7 @@ describe('agent-prepare', () => {
       reason: 'Delete todo "x"',
       runId: 'run-1',
     } as AgentStreamEvent)
-    channel.send({ type: 'done' } as AgentStreamEvent)
+    await channel.send({ type: 'done' } as AgentStreamEvent)
 
     assert.equal(events.length, 1)
     assert.equal(events[0].type, 'text-delta')

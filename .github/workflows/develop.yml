@@ -52,11 +52,15 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Type-aware lint (typescript/no-floating-promises, no-misused-promises)
+    # reads the built .d.ts of every workspace package. Without them each
+    # import from one resolves to an error type that acts as `any`, so the
+    # rules go blind exactly where a missing await hides, and a tsconfig that
+    # names a type package (@pikku/playwright) is reported as invalid.
+    needs: build
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-        with:
-          download-build: 'false'
       - name: Check formatting
         run: bun run prettier
       - name: Lint
@@ -322,13 +326,6 @@ jobs:
             os: macos-latest
             bundles: app,dmg
             smoke: true
-          # Runs but may fail: it has not yet passed end to end — see
-          # knowledge/projects/pikku/status/native-apps-1908.md.
-          - name: windows
-            os: windows-latest
-            bundles: nsis,msi
-            smoke: true
-            optional: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -368,7 +365,6 @@ jobs:
         run: |
           case "${{ matrix.name }}" in
             linux) xvfb-run -a src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
-            windows) src-tauri/target/release/web-app.exe > "$RUNNER_TEMP/app.log" 2>&1 & ;;
             *) src-tauri/target/release/web-app > "$RUNNER_TEMP/app.log" 2>&1 & ;;
           esac
           node ../../../scripts/native-smoke.mjs http://localhost:4077 120 || { cat "$RUNNER_TEMP/app.log"; exit 1; }

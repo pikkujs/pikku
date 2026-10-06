@@ -188,7 +188,8 @@ export const PikkuMetaProvider: React.FC<{
   }, [rpc])
 
   useEffect(() => {
-    loadMeta()
+    // loadMeta catches its own errors and surfaces them through the error state
+    void loadMeta()
   }, [loadMeta])
 
   const functionUsedBy = useMemo(() => {

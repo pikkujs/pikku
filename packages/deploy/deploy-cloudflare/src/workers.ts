@@ -1,4 +1,5 @@
 import type { CloudflareClient } from './client.js'
+import { getCloudflareRuntimeProfile } from './runtime-profile.js'
 import type { WorkerBinding, WorkerMetadata, WorkerRoute } from './types.js'
 
 /**
@@ -127,15 +128,16 @@ interface WorkerMetadataPayload {
   compatibility_flags: string[]
 }
 
-function buildWorkerMetadataPayload(
+export function buildWorkerMetadataPayload(
   bindings: WorkerBinding[],
-  compatibilityDate: string = '2024-01-01'
+  compatibilityDate?: string
 ): WorkerMetadataPayload {
+  const profile = getCloudflareRuntimeProfile(undefined, compatibilityDate)
   return {
     main_module: 'worker.js',
     bindings,
-    compatibility_date: compatibilityDate,
-    compatibility_flags: ['nodejs_compat'],
+    compatibility_date: profile.compatDate,
+    compatibility_flags: profile.compatFlags,
   }
 }
 

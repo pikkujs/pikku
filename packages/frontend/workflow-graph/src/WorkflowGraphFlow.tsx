@@ -169,7 +169,8 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
       setNodes(layoutResult.nodes)
       setEdges(layoutResult.edges)
       const timer = setTimeout(() => {
-        fitView({ padding: 0.2 })
+        // fitView only resolves a viewport animation (boolean); nothing to propagate
+        void fitView({ padding: 0.2 })
       }, 50)
       return () => clearTimeout(timer)
     }

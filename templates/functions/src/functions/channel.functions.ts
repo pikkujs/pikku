@@ -18,7 +18,7 @@ import {
 export const onConnect = pikkuChannelConnectionFunc<{ connected: true }>(
   async ({ logger }, _, { channel }) => {
     logger.info(`WebSocket connected: ${channel.channelId}`)
-    channel.send({ connected: true })
+    await channel.send({ connected: true })
   }
 )
 

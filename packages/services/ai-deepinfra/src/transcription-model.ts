@@ -22,10 +22,20 @@ type DeepInfraTranscriptionResponse = {
  * Whatever the caller handed us, as bytes. The V3 contract allows a base64
  * string as well as a `Uint8Array`.
  */
-const toBytes = (audio: Uint8Array | string): Uint8Array =>
-  typeof audio === 'string'
-    ? Uint8Array.from(Buffer.from(audio, 'base64'))
-    : audio
+const toBytes = (audio: Uint8Array | string): Uint8Array => {
+  if (typeof audio !== 'string') return audio
+  // Lenient like `Buffer.from(_, 'base64')`: whitespace is skipped and the
+  // URL-safe alphabet and missing padding are accepted. No `Buffer`, so this
+  // runs where there is none.
+  const base64 = audio
+    .replace(/[\s=]+/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+  const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
 
 /**
  * A filename with a plausible extension.

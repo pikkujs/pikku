@@ -14,7 +14,11 @@
     "tsc": "tsc --noEmit",
     "test": "node --test --import tsx src/*.test.ts"
   },
+  "dependencies": {
+    "semver": "^7.8.5"
+  },
   "devDependencies": {
+    "@types/semver": "^7.8.0",
     "tsx": "^4.23.12"
   },
   "exports": {

@@ -1,5 +1,3 @@
-import { AsyncLocalStorage } from 'node:async_hooks'
-
 /**
  * Raised by {@link beginChanges} when the caller has gone away before anything
  * was changed. Distinct from a failure: nothing happened, so there is nothing
@@ -26,25 +24,6 @@ export interface AbortScope {
 }
 
 /**
- * The ambient "is my caller still there?" signal.
- *
- * Ambient rather than a parameter because the question is the same one for
- * every wiring — an agent run that was interrupted, an HTTP request whose
- * client disconnected, a cancelled workflow — and threading it through every
- * signature would mean changing every function that merely sits between the
- * wiring and the mutation.
- */
-const scopeStorage = new AsyncLocalStorage<AbortScope>()
-
-/** Run `fn` with an abort scope that `beginChanges()` will observe. */
-export const runInAbortScope = <T>(scope: AbortScope, fn: () => T): T =>
-  scopeStorage.run(scope, fn)
-
-/** The current scope, if the caller is running inside one. */
-export const getAbortScope = (): AbortScope | undefined =>
-  scopeStorage.getStore()
-
-/**
  * Declare that everything after this line changes something.
  *
  * ```ts
@@ -64,14 +43,18 @@ export const getAbortScope = (): AbortScope | undefined =>
  * ignoring the answer, and the failure mode of ignoring it is a mutation nobody
  * asked for.
  *
+ * The scope is passed explicitly — the function runner binds it from
+ * `wire.abortScope` — rather than looked up ambiently, so concurrent runs in
+ * one process (or one edge isolate) can never see each other's scope and core
+ * needs no `AsyncLocalStorage`.
+ *
  * Entirely cooperative, and safe to call anywhere — outside a scope it is a
  * no-op, so a function does not need to know how it was invoked. A function
  * that never calls it keeps the conservative default: if it is not marked
  * `readonly`, an interrupt assumes it changed something and says so. The tool
  * that forgot to call this is exactly the one that cannot be assumed harmless.
  */
-export const beginChanges = async (): Promise<void> => {
-  const scope = scopeStorage.getStore()
+export const beginChanges = async (scope?: AbortScope): Promise<void> => {
   if (!scope) return
   if (scope.abandoned) {
     throw new AbandonedError(scope.reason)

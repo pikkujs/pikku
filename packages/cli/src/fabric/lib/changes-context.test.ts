@@ -13,7 +13,7 @@ let linked: string | null = null
 let fabricDown = false
 const fabricCalls: { name: string; data: any }[] = []
 
-mock.module('./config.js', () => ({
+void mock.module('./config.js', () => ({
   ...configLib,
   resolveApiContext: async (opts: { resolveProject?: boolean } = {}) => ({
     apiUrl: 'https://fabric.test',
@@ -24,7 +24,7 @@ mock.module('./config.js', () => ({
   }),
 }))
 
-mock.module('./http.js', () => ({
+void mock.module('./http.js', () => ({
   ...httpLib,
   getFabricRPC: () => ({
     invoke: async (name: string, data: any) => {

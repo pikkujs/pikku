@@ -13,6 +13,10 @@ import {
   runSharedProjectChecks,
 } from '../../functions/validate/shared-checks.js'
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
+import {
+  runOxlintRun,
+  runOxlintSetupChecks,
+} from '../../functions/validate/oxlint-checks.js'
 import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { resolveApiContext } from '../lib/config.js'
@@ -719,6 +723,7 @@ export async function runValidate(
   }
 
   findings.push(...(await runTypeIdentityChecks(root)))
+  findings.push(...(await runOxlintSetupChecks(root)))
 
   // ── scaffold-implied dependencies ──────────────────────────────────────
   // `scaffold.console` makes codegen import
@@ -2377,6 +2382,13 @@ export async function runValidate(
         )
       )
     }
+  }
+
+  // ── oxlint (last: it is the slow one) ──────────────────────────────────
+  // Type-aware, so it is held back with the type-check: `skipTypecheck` is
+  // "structural checks only" (the deploy guard runs it that way).
+  if (!opts.skipTypecheck) {
+    findings.push(...(await runOxlintRun(root)))
   }
 
   const ok = !findings.some((f) => f.severity === 'error')

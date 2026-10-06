@@ -67,7 +67,7 @@ export const authCookie = pikkuMiddlewareFactory<{
         // standard JWT timestamp, so an identity-less token is treated as no
         // session rather than as an authenticated one.
         if (userSession && hasSessionIdentity(userSession)) {
-          setSession?.(userSession)
+          await setSession?.(userSession)
         }
       }
 

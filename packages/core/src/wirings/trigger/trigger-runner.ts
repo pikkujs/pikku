@@ -85,7 +85,13 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     trigger: {
       invoke: (data: unknown) => {
         singletonServices.logger.info(`Trigger fired: ${name}`)
-        onTrigger(data as TOutput)
+        // `invoke` is typed void for trigger sources, so a rejection from the
+        // trigger function is logged here rather than left unhandled.
+        Promise.resolve(onTrigger(data as TOutput)).catch((e) =>
+          singletonServices.logger.error(
+            `Trigger '${name}' handler failed: ${e?.message ?? e}`
+          )
+        )
       },
     },
   }

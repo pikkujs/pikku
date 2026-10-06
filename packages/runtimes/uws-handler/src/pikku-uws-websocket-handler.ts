@@ -107,8 +107,12 @@ export const pikkuWebsocketHandler = ({
       channelHandler.registerOnClose(() => {
         ws.close()
       })
-      eventHub.onChannelOpened(channelHandler.channelId, ws)
-      channelHandler.open()
+      Promise.all([
+        eventHub.onChannelOpened(channelHandler.channelId, ws),
+        channelHandler.open(),
+      ]).catch((error: unknown) => {
+        logger?.error(`Error opening websocket channel: ${error}`)
+      })
     },
     message: async (ws, message, isBinary) => {
       const { channelHandler } = ws.getUserData()
@@ -128,8 +132,12 @@ export const pikkuWebsocketHandler = ({
     },
     close: (ws) => {
       const { channelHandler } = ws.getUserData()
-      eventHub.onChannelClosed(channelHandler.channelId)
-      channelHandler.close()
+      Promise.all([
+        eventHub.onChannelClosed(channelHandler.channelId),
+        channelHandler.close(),
+      ]).catch((error: unknown) => {
+        logger?.error(`Error closing websocket channel: ${error}`)
+      })
     },
   } as uWS.WebSocketBehavior<{ channelHandler: PikkuLocalChannelHandler }>
 }

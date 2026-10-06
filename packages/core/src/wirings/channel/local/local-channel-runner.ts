@@ -167,7 +167,7 @@ export const runLocalChannel = async ({
           } catch (e: any) {
             singletonServices.logger.error(`Error handling onConnect: ${e}`)
             const errorResponse = getErrorResponse(e)
-            channel.send({
+            await channel.send({
               error:
                 errorResponse?.message ??
                 (isProduction() ? 'Internal server error' : e.message),
@@ -194,7 +194,7 @@ export const runLocalChannel = async ({
           } catch (e: any) {
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
             const errorResponse = getErrorResponse(e)
-            channel.send({
+            await channel.send({
               error:
                 errorResponse?.message ??
                 (isProduction() ? 'Internal server error' : e.message),
@@ -227,13 +227,17 @@ export const runLocalChannel = async ({
         } catch (e: any) {
           singletonServices.logger.error(e)
           const errorResponse = getErrorResponse(e)
-          channel.send({
+          await channel.send({
             error:
               errorResponse?.message ??
               (isProduction() ? 'Internal server error' : e.message),
             ...(!isProduction() && { errorName: e.constructor?.name }),
           })
-          setTimeout(() => channel.close(), 200)
+          setTimeout(() => {
+            Promise.resolve(channel.close()).catch((closeError) =>
+              singletonServices.logger.error(closeError)
+            )
+          }, 200)
         }
       })
       if (onBinaryMessage) {

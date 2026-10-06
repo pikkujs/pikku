@@ -17,6 +17,11 @@
     "displayName": "Pikku Console",
     "description": "Console management and monitoring",
     "categories": ["General"],
-    "icon": "./pikku-console.svg"
+    "icon": "./pikku-console.svg",
+    "serverlessIncompatible": [
+      "metaService",
+      "stateDiffService",
+      "codeEditService"
+    ]
   }
 }

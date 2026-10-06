@@ -411,7 +411,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     // and offering it there would invite the contradiction of a `readonly`
     // function announcing where its changes begin.
     if (!funcMeta.readonly) {
-      invocationWire.beginChanges = beginChanges
+      const abortScope = resolvedWire.abortScope
+      invocationWire.beginChanges = () => beginChanges(abortScope)
     }
 
     // knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md

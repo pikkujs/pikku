@@ -19,17 +19,17 @@ class MockChannelHandler implements PikkuChannelHandler {
   }
 }
 
-test('LocalEventHubService: subscribe and unsubscribe', () => {
+test('LocalEventHubService: subscribe and unsubscribe', async () => {
   const eventHub = new LocalEventHubService()
 
-  eventHub.subscribe('topic1', 'channel1')
+  await eventHub.subscribe('topic1', 'channel1')
   assert.strictEqual(eventHub['subscriptions'].get('topic1')!.size, 1)
 
-  eventHub.unsubscribe('topic1', 'channel1')
+  await eventHub.unsubscribe('topic1', 'channel1')
   assert.strictEqual(eventHub['subscriptions'].has('topic1'), false)
 })
 
-test('LocalEventHubService: publish messages', () => {
+test('LocalEventHubService: publish messages', async () => {
   const eventHub = new LocalEventHubService()
 
   const channel1 = new MockChannelHandler('channel1')
@@ -37,8 +37,8 @@ test('LocalEventHubService: publish messages', () => {
   eventHub.onChannelOpened(channel1)
   eventHub.onChannelOpened(channel2)
 
-  eventHub.subscribe('topic1', 'channel1')
-  eventHub.subscribe('topic1', 'channel2')
+  await eventHub.subscribe('topic1', 'channel1')
+  await eventHub.subscribe('topic1', 'channel2')
 
   let sendCallCount = 0
   channel1.send = () => {
@@ -48,7 +48,7 @@ test('LocalEventHubService: publish messages', () => {
     sendCallCount++
   }
 
-  eventHub.publish('topic1', 'channel1', { message: 'Hello!' })
+  await eventHub.publish('topic1', 'channel1', { message: 'Hello!' })
 
   assert.strictEqual(sendCallCount, 1)
 })
@@ -64,12 +64,12 @@ test('LocalEventHubService: onChannelOpened and onChannelClosed', () => {
   assert.strictEqual(eventHub['channels'].has('channel1'), false)
 })
 
-test('LocalEventHubService: clean up empty topics on channel close', () => {
+test('LocalEventHubService: clean up empty topics on channel close', async () => {
   const eventHub = new LocalEventHubService()
 
   const channel1 = new MockChannelHandler('channel1')
   eventHub.onChannelOpened(channel1)
-  eventHub.subscribe('topic1', 'channel1')
+  await eventHub.subscribe('topic1', 'channel1')
 
   eventHub.onChannelClosed('channel1')
 

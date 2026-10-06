@@ -1,11 +1,12 @@
 // knowledge: decisions/internals/agent-model-config-stays-a-single-resolution-seam.md
 import { pikkuState } from '../../pikku-state.js'
+import { readEnvVariable } from '../../env.js'
 
 const isProviderQualified = (model: string) => model.includes('/')
 
 /** `PIKKU_MODEL_ALIASES=cheap:openai/gpt-5-mini,tool:anthropic/claude-sonnet-5` */
 const envAliases = (): Record<string, string> => {
-  const raw = process.env.PIKKU_MODEL_ALIASES
+  const raw = readEnvVariable('PIKKU_MODEL_ALIASES')
   if (!raw) return {}
   const aliases: Record<string, string> = {}
   for (const entry of raw.split(',')) {

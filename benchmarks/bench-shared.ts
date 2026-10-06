@@ -17,7 +17,7 @@ const sessionMiddleware: CorePikkuMiddleware = async (
   wire,
   next
 ) => {
-  wire.setSession?.({ userId: 'bench-user' } as any)
+  await wire.setSession?.({ userId: 'bench-user' } as any)
   await next()
 }
 

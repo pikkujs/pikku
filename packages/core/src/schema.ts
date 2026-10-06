@@ -38,7 +38,13 @@ export const compileAllSchemas = (
   for (const [pkgName, packageState] of getAllPackageStates()) {
     const resolvedPkgName = pkgName === '__main__' ? null : pkgName
     for (const [name, schema] of packageState.misc.schemas) {
-      schemaService.compileSchema(schemaKey(name, resolvedPkgName), schema)
+      // compileSchema may be async; this function is synchronous (public
+      // signature), so a rejection is logged instead of left unhandled.
+      Promise.resolve(
+        schemaService.compileSchema(schemaKey(name, resolvedPkgName), schema)
+      ).catch((e) =>
+        logger.error(`Failed to compile schema '${name}': ${e?.message ?? e}`)
+      )
     }
   }
   validateAllSchemasLoaded(logger, schemaService)

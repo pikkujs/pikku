@@ -57,8 +57,10 @@ async function check() {
     console.error(`❌ Agent HTTP test failed after ${TIMEOUT / 1000} seconds`)
     process.exit(1)
   } else {
-    setTimeout(check, RETRY_INTERVAL)
+    setTimeout(() => {
+      check().catch((error) => console.error(error))
+    }, RETRY_INTERVAL)
   }
 }
 
-check()
+await check()

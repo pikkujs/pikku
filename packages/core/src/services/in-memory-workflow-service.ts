@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import { isExpectedError } from '../errors/error-handler.js'
 import { isStepLeaseLive } from '../wirings/workflow/workflow-constants.js'
@@ -58,7 +57,7 @@ export class InMemoryWorkflowService
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
-    const runId = randomUUID()
+    const runId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const run: WorkflowRun = {
@@ -91,7 +90,7 @@ export class InMemoryWorkflowService
     stepId: string,
     duration: number
   ): Promise<boolean> {
-    const timer = setTimeout(async () => {
+    const resume = async () => {
       this.sleepTimers.delete(timer)
       try {
         await this.executeWorkflowSleepCompleted(runId, stepId)
@@ -100,7 +99,9 @@ export class InMemoryWorkflowService
           `Failed to resume workflow sleep for runId ${runId}: ${error?.message ?? error}`
         )
       }
-    }, duration)
+    }
+    // Fire-and-forget timer callback: resume catches and logs every error.
+    const timer = setTimeout(() => void resume(), duration)
     this.sleepTimers.add(timer)
     return true
   }
@@ -138,7 +139,7 @@ export class InMemoryWorkflowService
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
-    const stepId = randomUUID()
+    const stepId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const step: StepState & { stepName: string } = {
@@ -303,7 +304,7 @@ export class InMemoryWorkflowService
     }
 
     const failedStepData = this.stepData.get(failedStepId)
-    const newStepId = randomUUID()
+    const newStepId = globalThis.crypto.randomUUID()
     const now = new Date()
 
     const newStep: StepState & { stepName: string } = {

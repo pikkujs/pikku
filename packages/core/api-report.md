@@ -5,16 +5,16 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3238 observable things**: 1076 exported names, plus
+**3239 observable things**: 1077 exported names, plus
 2162 members on the classes and interfaces among them, reachable
-through 57 entry points.
+through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 175 | 143 | 465 |
+| `./services` | 171 | 139 | 453 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
@@ -44,8 +44,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./services/file-scenario-run-store` | 4 | 4 | 12 |
+| `./scope` | 14 | 14 | 0 |
 | `./rpc` | 7 | 7 | 6 |
-| `./scope` | 13 | 13 | 0 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -4276,6 +4277,7 @@ export type CoreScopeNode = {
   scopes?: Record<string, CoreScopeNode>
 }
 export type CoreScopes = Record<string, CoreScopeNode>
+declareScopes: (_ids: string[]) => void
 defineScope: (_config: CoreScopes) => void
 export type FlatScope = {
   id: string
@@ -5022,22 +5024,6 @@ export interface FeatureFlagStore extends FeatureFlagSource {
   findStaleFlags(): Promise<string[]>
   pruneFlags(): Promise<string[]>
 }
-export class FileScenarioRunStore implements ScenarioRunStore {
-  constructor(private readonly options: FileScenarioRunStoreOptions)
-  async start(record: ScenarioRunRecord): Promise<void>
-  async recordScenario(runId: string, result: ScenarioResult): Promise<void>
-  async attachArtifacts(runId: string, artifacts: ScenarioArtifact[]): Promise<void>
-  async finish(runId: string, outcome: Pick< ScenarioRunRecord, 'status' | 'finishedAt' | 'skipped' | 'hookFailures' >): Promise<void>
-  async readArtifact(runId: string, path: string): Promise< { body: Uint8Array<ArrayBuffer>; contentType: string } | undefined >
-  async list(options: { limit?: number } = {}): Promise<ScenarioRunSummary[]>
-  async get(runId: string): Promise<ScenarioRunRecord | undefined>
-  async remove(runId: string): Promise<void>
-  runDir(runId: string): string
-}
-export interface FileScenarioRunStoreOptions {
-  dir: string
-  keep?: number
-}
 export type FlagOverrideRow = {
   subjectId: string
   subjectKind: string
@@ -5268,7 +5254,7 @@ export class LocalSecretService implements SecretService {
   public async getSecrets< T extends Record<string, unknown> = Record<string, unknown>, >(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
 export class LocalVariablesService implements VariablesService {
-  constructor(private variables: Record<string, string | undefined> = process.env)
+  constructor(variables?: Record<string, string | undefined>)
   public getAll(): Record<string, string | undefined>
   public getVariables< T extends Record<string, unknown> = Record<string, unknown>, >(names: (keyof T & string)[]): Partial<T>
   public get<T = string>(name: string): T | undefined
@@ -5464,7 +5450,6 @@ export interface Role {
 }
 export type RPCMetaRecord = Record<string, string>
 export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
-scenarioArtifactContentType: (path: string) => string
 export interface ScenarioPersona< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
   readonly name: string
   readonly email: string
@@ -5474,7 +5459,6 @@ export interface ScenarioPersona< TAgentName extends string = string, TRpcMap ex
   sessionRoles(): Promise<string[] | null>
 }
 export type ScenarioPersonas = Record<string, ScenarioPersona>
-scenarioRunSummary: (record: ScenarioRunRecord) => ScenarioRunSummary
 export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   data?: any
   session?: CoreUserSession
@@ -5761,8 +5745,8 @@ export interface WebhookJobData {
 }
 export abstract class WebhookService {
   abstract send<T extends SendWebhookInput>(input: Safe<T>): Promise<SendWebhookResult>
-  protected sign(secret: string, body: string): string
-  public verify(secret: string, signature: string, body: string): boolean
+  protected async sign(secret: string, body: string): Promise<string>
+  public async verify(secret: string, signature: string, body: string): Promise<boolean>
   public recordAttempt(_deliveryId: string, _result: WebhookAttemptResult): Promise<void>
   public async listDeliveries(_opts?: { organizationId?: string; limit?: number }): Promise<WebhookDeliveryRecord[]>
   public async getDelivery(_deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
@@ -6229,6 +6213,29 @@ export class TemporaryFileService {
 }
 ```
 
+## ./services/file-scenario-run-store
+
+```ts
+export class FileScenarioRunStore implements ScenarioRunStore {
+  constructor(private readonly options: FileScenarioRunStoreOptions)
+  async start(record: ScenarioRunRecord): Promise<void>
+  async recordScenario(runId: string, result: ScenarioResult): Promise<void>
+  async attachArtifacts(runId: string, artifacts: ScenarioArtifact[]): Promise<void>
+  async finish(runId: string, outcome: Pick< ScenarioRunRecord, 'status' | 'finishedAt' | 'skipped' | 'hookFailures' >): Promise<void>
+  async readArtifact(runId: string, path: string): Promise< { body: Uint8Array<ArrayBuffer>; contentType: string } | undefined >
+  async list(options: { limit?: number } = {}): Promise<ScenarioRunSummary[]>
+  async get(runId: string): Promise<ScenarioRunRecord | undefined>
+  async remove(runId: string): Promise<void>
+  runDir(runId: string): string
+}
+export interface FileScenarioRunStoreOptions {
+  dir: string
+  keep?: number
+}
+scenarioArtifactContentType: (path: string) => string
+scenarioRunSummary: (record: ScenarioRunRecord) => ScenarioRunSummary
+```
+
 ## ./crypto-utils
 
 ```ts
@@ -6261,12 +6268,12 @@ wrapDEK: (kek: CryptoKey, plaintextDEK: string) => Promise<WrappedValue>
 
 ```ts
 export type HmacAlgorithm = 'sha1' | 'sha256' | 'sha512'
-hmacDigest: (secret: string, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => string
-hmacSha256Hex: (secret: string, payload: string) => string
+hmacDigest: (secret: string, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => Promise<string>
+hmacSha256Hex: (secret: string, payload: string) => Promise<string>
 export type SecretEncoding = 'utf8' | 'hex' | 'base64'
 timingSafeStringEqual: (a: string, b: string) => boolean
-verifyHmacSignature: (secret: string, signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => boolean
-verifyPublicKeySignature: (publicKey: string, signature: string | undefined, payload: WebhookPayload, options?: { algorithm?: string | undefined; dsaEncoding?: "der" | "ieee-p1363" | undefined; }) => boolean
+verifyHmacSignature: (secret: string, signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: "hex" | "base64", secretEncoding?: SecretEncoding) => Promise<boolean>
+verifyPublicKeySignature: (publicKey: string, signature: string | undefined, payload: WebhookPayload, options?: { algorithm?: string | undefined; dsaEncoding?: "der" | "ieee-p1363" | undefined; }) => Promise<boolean>
 export type WebhookPayload = string | Uint8Array
 ```
 

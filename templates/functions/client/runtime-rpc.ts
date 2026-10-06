@@ -31,7 +31,9 @@ async function check() {
     process.exit(1)
   }
 
-  setTimeout(check, RETRY_INTERVAL)
+  setTimeout(() => {
+    check().catch((error) => console.error(error))
+  }, RETRY_INTERVAL)
 }
 
-check()
+await check()

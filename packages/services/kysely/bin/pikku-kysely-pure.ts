@@ -56,4 +56,7 @@ if (process.argv.length !== 4) {
 }
 
 const [, , output, input] = process.argv
-main(output!, input)
+main(output!, input).catch((err: unknown) => {
+  console.error(err)
+  process.exit(1)
+})

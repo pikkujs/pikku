@@ -800,6 +800,8 @@ export interface InspectorState {
   scopes: {
     definitions: ScopeDefinitions
     files: Set<string>
+    /** Ids from `declareScopes([...])`, merged into `definitions` once addon scopes are loaded. */
+    declared?: Map<string, string>
   }
   systemRoles: {
     definitions: SystemRoleDefinitions

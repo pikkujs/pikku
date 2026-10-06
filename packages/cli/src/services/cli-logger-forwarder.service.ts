@@ -68,7 +68,11 @@ export class CLILoggerForwarder implements Logger {
       message = messageOrObj
     }
 
-    this.channel.send({ message, level, type })
+    // Not awaited (log methods are synchronous); a failed forward is reported
+    // on the underlying logger, never back through this one.
+    Promise.resolve(this.channel.send({ message, level, type })).catch((e) =>
+      this.logger.error(`Failed to forward log message: ${e?.message ?? e}`)
+    )
   }
 
   info(messageOrObj: string | Record<string, any>, ..._meta: any[]) {

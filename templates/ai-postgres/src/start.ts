@@ -58,15 +58,20 @@ async function main(): Promise<void> {
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
 
-    process.on('SIGTERM', async () => {
-      singletonServices.logger.info('Shutting down...')
-      await pgAiStorage.close()
-      await pikkuKysely.close()
-      process.exit(0)
+    process.on('SIGTERM', () => {
+      ;(async () => {
+        singletonServices.logger.info('Shutting down...')
+        await pgAiStorage.close()
+        await pikkuKysely.close()
+        process.exit(0)
+      })().catch((error) => {
+        console.error(error)
+        process.exit(1)
+      })
     })
   } catch (e: any) {
     console.error(e.toString())
@@ -74,4 +79,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

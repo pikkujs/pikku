@@ -73,6 +73,16 @@ async function makeValidWorkspace(root: string) {
       events: true,
     },
     environments: { local: { apiUrl: 'http://localhost:4002' } },
+    // A skeleton with no toolchain; oxlint has its own tests.
+    validate: {
+      rules: {
+        'oxlint-not-installed': 'off',
+        'oxlint-config-missing': 'off',
+        'oxlint-rule-missing': 'off',
+        'oxlint-type-aware-off': 'off',
+        'oxlint-run': 'off',
+      },
+    },
   })
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],

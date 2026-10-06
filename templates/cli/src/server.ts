@@ -13,7 +13,7 @@ async function main(): Promise<void> {
       { ...config, hostname: 'localhost', port: 4002 },
       singletonServices.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
 
     console.log('🚀 CLI WebSocket server starting on ws://localhost:4002/cli')
@@ -27,4 +27,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

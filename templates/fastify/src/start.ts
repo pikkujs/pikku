@@ -12,7 +12,7 @@ async function main(): Promise<void> {
       { ...config, hostname: 'localhost', port: 4002 },
       singletonServices.logger
     )
-    appServer.enableExitOnSigInt()
+    await appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
   } catch (e: any) {
@@ -21,4 +21,7 @@ async function main(): Promise<void> {
   }
 }
 
-main()
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

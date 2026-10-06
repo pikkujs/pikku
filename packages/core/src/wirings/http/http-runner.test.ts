@@ -20,7 +20,7 @@ import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 const sessionMiddleware: CorePikkuMiddleware = async (services, wire, next) => {
-  wire.setSession?.({ userId: 'test' } as any)
+  await wire.setSession?.({ userId: 'test' } as any)
   await next()
 }
 
@@ -491,7 +491,7 @@ describe('http-runner helpers', () => {
       func: {
         func: async (_services, _data, wire) => {
           await wire.channel.send({ hello: 'world' })
-          wire.channel.close()
+          await wire.channel.close()
         },
       },
     })
@@ -528,13 +528,16 @@ describe('http-runner helpers', () => {
     const response = new TestResponse()
     await fetchData(new TestRequest('/sse-error', 'get'), response)
 
-    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
-      {
-        type: 'error',
-        errorText: 'The server cannot find the requested resource.',
-      },
-      { type: 'done' },
-    ])
+    assert.deepEqual(
+      response.frames.map((f) => JSON.parse(f as string)),
+      [
+        {
+          type: 'error',
+          errorText: 'The server cannot find the requested resource.',
+        },
+        { type: 'done' },
+      ]
+    )
   })
 
   test('a failed agui-protocol stream ends with a single RUN_ERROR frame', async () => {
@@ -556,11 +559,14 @@ describe('http-runner helpers', () => {
     const response = new TestResponse()
     await fetchData(new TestRequest('/sse-agui-error', 'get'), response)
 
-    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
-      {
-        type: 'RUN_ERROR',
-        message: 'The server cannot find the requested resource.',
-      },
-    ])
+    assert.deepEqual(
+      response.frames.map((f) => JSON.parse(f as string)),
+      [
+        {
+          type: 'RUN_ERROR',
+          message: 'The server cannot find the requested resource.',
+        },
+      ]
+    )
   })
 })

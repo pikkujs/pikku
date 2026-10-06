@@ -73,10 +73,10 @@ export class KyselyDeploymentService implements DeploymentService {
       }
     })
 
-    this.heartbeatTimer = setInterval(
-      () => this.sendHeartbeat(),
-      this.heartbeatInterval
-    )
+    this.heartbeatTimer = setInterval(() => {
+      // sendHeartbeat catches its own errors; it retries on the next tick
+      void this.sendHeartbeat()
+    }, this.heartbeatInterval)
   }
 
   async stop(): Promise<void> {

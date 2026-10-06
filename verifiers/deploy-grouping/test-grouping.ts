@@ -74,6 +74,9 @@ function withGrouping(grouping: unknown | undefined): void {
   writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
 }
 
+// Every server-target unit is merged into this one container.
+const SERVER_CONTAINER = 'pikku-server-container'
+
 function runPlan():
   { ok: true; manifest: Manifest } | { ok: false; output: string } {
   try {
@@ -134,7 +137,8 @@ try {
         (u) =>
           u.functionIds.length <= 1 ||
           u.name.startsWith('addon-') ||
-          u.name.startsWith('run-remote')
+          u.name.startsWith('run-remote') ||
+          u.name === SERVER_CONTAINER
       ),
       'an ungrouped unit holds more than one function without being an addon or job inbox'
     )
@@ -171,8 +175,12 @@ try {
         u.functionIds.includes('processReminder@v2')
       )
       assert(!!chosen, 'expected a unit holding processReminder@v2')
+      // Server units share one container, so it also holds crossed units (the
+      // console addon reads the disk) and then names their services. A unit
+      // that holds only the chosen function must name nothing.
       assert(
-        chosen!.target === 'server' && !chosen!.targetForcedBy,
+        chosen!.target === 'server' &&
+          (chosen!.name === SERVER_CONTAINER || !chosen!.targetForcedBy),
         `${chosen!.name} holds a function that declared deploy: 'server', so nothing crossed it and it must name nothing`
       )
     }
@@ -323,7 +331,6 @@ try {
 
   // The server units are merged into one container downstream of the analyzer,
   // so it is the only unit in the manifest that the strategy never named.
-  const SERVER_CONTAINER = 'pikku-server-container'
 
   check('every app unit is named after its service set', () => {
     const stray = svcUnits.filter(
