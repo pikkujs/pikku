@@ -125,6 +125,11 @@ describe('serializeReactQueryHooks', () => {
       assert.deepStrictEqual(await result.o.mutationFn(), [{ id: 1 }])
     })
 
+    test('reads the env as literal import.meta.env.* so a bundler folds the stub away in production', () => {
+      assert.match(segment, /import\.meta\.env\.DEV \|\| import\.meta\.env\.VITE_MOCK/)
+      assert.doesNotMatch(segment, /const \w+ = \(?import\.meta/)
+    })
+
     test('in production both are exactly the plain hooks', () => {
       const api = load({})
       const q = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' }, { a: 1 }, { enabled: true })

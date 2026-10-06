@@ -148,8 +148,8 @@ export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
 
 type StubOptions = { featureFlag: string }
 
-const mockEnv = (import.meta as unknown as { env: { DEV?: boolean; VITE_MOCK?: string } }).env
-const MOCKS_ENABLED = !!(mockEnv.DEV || mockEnv.VITE_MOCK)
+// @ts-ignore
+const MOCKS_ENABLED = !!(import.meta.env.DEV || import.meta.env.VITE_MOCK)
 
 let mockFiles: Record<string, () => Promise<unknown>> = {}
 let mockMeta: Record<string, unknown> = {}
