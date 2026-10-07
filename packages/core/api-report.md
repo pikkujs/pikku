@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3239 observable things**: 1077 exported names, plus
-2162 members on the classes and interfaces among them, reachable
+**3282 observable things**: 1098 exported names, plus
+2184 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 171 | 139 | 453 |
+| `./services` | 174 | 142 | 471 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
@@ -32,25 +32,25 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
+| `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
+| `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
-| `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
 | `./utils` | 22 | 21 | 2 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
 | `./workflow/timeline` | 9 | 4 | 16 |
-| `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
-| `./scope` | 14 | 14 | 0 |
+| `./addon` | 13 | 13 | 2 |
+| `./scope` | 15 | 15 | 0 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
-| `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
@@ -276,7 +276,7 @@ export type GetCredential<TCredentials = Record<string, unknown>> =
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -432,6 +432,8 @@ export type WireServices<
 ```ts
 addGlobalMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
+ADDON_HEADER: "x-pikku-addon"
+addonScopeCap: CorePikkuMiddlewareFactory<{ resolve: (name: string) => readonly string[] | Promise<readonly string[] | undefined> | undefined; }>
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }>
 authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }>
@@ -3267,6 +3269,14 @@ rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefi
 ## ./addon
 
 ```ts
+export type AddonAppScreen = AddonScreenBase & {
+  app: string
+}
+export type AddonComponentScreen = AddonScreenBase & {
+  component: () => Promise<{ default: unknown }>
+}
+export type AddonScreen = AddonComponentScreen | AddonAppScreen
+defineScreens: (manifest: ScreensManifest) => ScreensManifest
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -3290,6 +3300,11 @@ export class RemoteAddonAuthError extends PikkuError {
   constructor(namespace: string, detail: string)
 }
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
+export type ScreensManifest = {
+  title: string
+  icon?: string
+  screens: AddonScreen[]
+}
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string
@@ -3300,7 +3315,9 @@ export type WireAddonConfig = {
   expose?: boolean | string[]
   mcpEndpoint?: boolean | string
   tags?: string[]
+  ui?: boolean
   scopes?: string[]
+  uses?: Record<string, string>
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
   credentialOverrides?: CredentialOverrides
@@ -3308,6 +3325,9 @@ export type WireAddonConfig = {
   credentialGrants?: string[]
   globalSecrets?: string
   globalCredentials?: string
+  contentBucket?: string
+  contentGrants?: Record<string, 'read' | 'write'>
+  globalContent?: string
 }
 wireRemoteAddon: (config: WireRemoteAddonConfig) => void
 export type WireRemoteAddonConfig = {
@@ -4285,6 +4305,7 @@ export type FlatScope = {
 }
 flattenScopeDefinitions: (definitions: ScopeDefinitions) => FlatScope[]
 hasScopes: (required: readonly string[] | undefined, held: Iterable<string> | undefined) => boolean
+intersectScopes: (held: Iterable<string> | undefined, cap: Iterable<string> | undefined) => string[]
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
@@ -4873,6 +4894,7 @@ export type AuditUserIdentity = {
 export interface BucketKeyArgs<TBucket extends string = string> {
   bucket: TBucket
   key: string
+  visibility?: ContentVisibility
 }
 export class ConsoleLogger implements Logger {
   constructor(traceId?: string)
@@ -4894,7 +4916,11 @@ export interface ContentService<TBucket extends string = string> {
   copyFile(args: CopyFileArgs<TBucket>): Promise<boolean>
   readFile(args: BucketKeyArgs<TBucket>): Promise<ReadableStream | NodeJS.ReadableStream>
   readFileAsBuffer(args: BucketKeyArgs<TBucket>): Promise<Buffer>
+  getDownloadURL(args: GetDownloadURLArgs<TBucket>): Promise<string>
+  deleteByPrefix(bucket: TBucket, prefix: string, visibility?: ContentVisibility): Promise<number>
+  listFilesByPrefix(bucket: TBucket, prefix: string, visibility?: ContentVisibility): Promise<string[]>
 }
+export type ContentVisibility = 'private' | 'public'
 export interface CopyFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
   fromAbsolutePath: string
 }
@@ -5079,13 +5105,16 @@ export interface GatewayService {
   start(): Promise<void>
   stop(): Promise<void>
 }
+export interface GetDownloadURLArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
+  expiresInSeconds?: number
+}
 getStubTracker: () => StubTracker
 export interface GetUploadURLArgs<TBucket extends string = string> {
   bucket: TBucket
   fileKey: string
   contentType: string
   size?: number
-  visibility?: 'private' | 'public'
+  visibility?: ContentVisibility
 }
 export interface GroupMeta {
   exportName: string | null
@@ -5485,6 +5514,20 @@ export interface SchemaService {
   getSchemaNames: () => Set<string>
   getSchemaKeys: (schemaName: string) => string[]
 }
+export class ScopedContentService implements ContentService {
+  constructor(private content: ContentService, root: string, grants: Record<string, ContentGrantMode> = {})
+  async signContentKey(args: SignContentKeyArgs): Promise<string>
+  async signURL(_args: SignURLArgs): Promise<string>
+  async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult>
+  async deleteFile(args: BucketKeyArgs): Promise<boolean>
+  async writeFile(args: WriteFileArgs): Promise<boolean>
+  async copyFile(_args: CopyFileArgs): Promise<boolean>
+  async readFile(args: BucketKeyArgs): Promise<ReadableStream | NodeJS.ReadableStream>
+  async readFileAsBuffer(args: BucketKeyArgs): ReturnType<ContentService['readFileAsBuffer']>
+  async getDownloadURL(args: GetDownloadURLArgs): Promise<string>
+  async deleteByPrefix(bucket: string, prefix: string, visibility?: ContentVisibility): Promise<number>
+  async listFilesByPrefix(bucket: string, prefix: string, visibility?: ContentVisibility): Promise<string[]>
+}
 export class ScopedCredentialService implements CredentialService {
   constructor(private credentials: CredentialService, private allowedNames: Set<string>)
   async get<T = unknown>(name: string, userId?: string): Promise<T | null>
@@ -5605,6 +5648,7 @@ export interface SessionStore< UserSession extends CoreUserSession = CoreUserSes
 export interface SignContentKeyArgs<TBucket extends string = string> {
   bucket: TBucket
   contentKey: string
+  visibility?: ContentVisibility
   dateLessThan: Date
   dateGreaterThan?: Date
 }
@@ -6156,17 +6200,30 @@ export class IstanbulCoverageService implements CoverageService {
 ## ./services/local-content
 
 ```ts
+CONTENT_VISIBILITIES: readonly ContentVisibility[]
+export type ContentRequestTarget = {
+  path: string
+  visibility: ContentVisibility
+}
+export type ContentUrlPath = {
+  visibility: ContentVisibility
+  rest: string
+  prefixed: boolean
+}
 export class LocalContent implements ContentService {
   constructor(private config: LocalContentConfig, private logger: Logger, private jwt: JWTService)
   public async init(): Promise<void>
   public async signURL(args: SignURLArgs): Promise<string>
   public async signContentKey(args: SignContentKeyArgs): Promise<string>
+  public async getDownloadURL(args: GetDownloadURLArgs): Promise<string>
   public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult>
   public async writeFile(args: WriteFileArgs): Promise<boolean>
   public async copyFile(args: CopyFileArgs): Promise<boolean>
   public async readFile(args: BucketKeyArgs): Promise<ReadableStream | NodeJS.ReadableStream>
   public async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer>
   public async deleteFile(args: BucketKeyArgs): Promise<boolean>
+  public async listFilesByPrefix(bucket: string, prefix: string, visibility: ContentVisibility = 'private'): Promise<string[]>
+  public async deleteByPrefix(bucket: string, prefix: string, visibility: ContentVisibility = 'private'): Promise<number>
 }
 export interface LocalContentConfig {
   localFileUploadPath: string
@@ -6175,7 +6232,16 @@ export interface LocalContentConfig {
   server?: string
   sizeLimit?: string
 }
+parseContentSizeLimit: (sizeLimit: string) => number
+parseContentUrlPath: (key: string) => ContentUrlPath
+PUBLIC_URL_SEGMENT: "_public"
+resolveContentRequestTarget: (basePath: string, key: string, mode: "read" | "write") => Promise<ContentRequestTarget | null>
+resolveVisibilityPath: (basePath: string, visibility: ContentVisibility, bucket: string, key: string) => string | null
 signedContentPath: (urlOrPath: string) => string
+streamUploadToFile: (source: AsyncIterable<Uint8Array<ArrayBufferLike>>, targetPath: string, maxBytes: number) => Promise<number>
+export class UploadTooLargeError extends Error {
+  constructor()
+}
 ```
 
 ## ./services/local-content-request-handler
@@ -6288,7 +6354,7 @@ initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; uses?: Record<string, string>; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; contentBucket?: string; contentGrants?: Record<string, 'read' | 'write'>; globalContent?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
