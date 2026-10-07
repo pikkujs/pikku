@@ -66,7 +66,13 @@ export const readStubMocks = async (mocksDir: string): Promise<StubMock[]> => {
       const data = await readJson(join(mocksDir, dir, file))
       if (data !== undefined) samples.push(data)
     }
-    if (samples.length) stubs.push({ name: dir.replace(/\./g, ':'), outputType: typeOfSamples(samples) })
+    if (samples.length) {
+      stubs.push({ name: dir.replace(/\./g, ':'), outputType: typeOfSamples(samples) })
+    } else if (files.length) {
+      throw new Error(
+        `.mocks/${dir} has only error mocks, so its stub has no type. Add a healthy mock and mark it default (meta: { "state": "healthy", "default": true }).`
+      )
+    }
   }
   return stubs
 }

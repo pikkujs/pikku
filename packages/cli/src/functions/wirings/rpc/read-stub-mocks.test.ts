@@ -32,6 +32,25 @@ describe('readStubMocks', () => {
     assert.deepStrictEqual(stubs, [{ name: 'reminders:list', outputType: 'Array<{ "id": number }>' }])
   })
 
+  test('an RPC with only error mocks is a codegen error, not a silent drop', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'mocks-'))
+    const dir = join(root, 'reminders.list')
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'down.json'), '{"message":"nope"}')
+    writeFileSync(join(dir, 'down.meta.json'), '{"state":"error","status":500}')
+    const failure = readStubMocks(root)
+    await assert.rejects(failure, /\.mocks\/reminders\.list has only error mocks.*healthy/)
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  test('an empty RPC directory is skipped', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'mocks-'))
+    mkdirSync(join(root, 'reminders.list'))
+    const stubs = await readStubMocks(root)
+    rmSync(root, { recursive: true, force: true })
+    assert.deepStrictEqual(stubs, [])
+  })
+
   test('no .mocks dir is no stubs', async () => {
     assert.deepStrictEqual(await readStubMocks('/nonexistent-mocks-dir'), [])
   })
