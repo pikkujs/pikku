@@ -1,6 +1,7 @@
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
 import type { ContractChange } from './contract.js'
 import type { MocksDiff } from './diff.js'
+import type { Drift } from './lock.js'
 
 const kinds = (list?: string[]): string => (list ?? []).join(' | ')
 
@@ -10,6 +11,13 @@ const describe = ({ path, kind, mock, fn }: ContractChange): string =>
     : kind === 'function-only'
       ? `${removed('-')} ${path}  ${dim(`the function returns it (${kinds(fn)}), the mock does not`)}`
       : `${changed('~')} ${path}  ${dim(`mock ${kinds(mock)}, function ${kinds(fn)}`)}`
+
+const describeDrift = ({ path, kind, was, now }: Drift): string =>
+  kind === 'added'
+    ? `${added('+')} ${path}  ${dim(`new in the mock since the last sync (${now})`)}`
+    : kind === 'removed'
+      ? `${removed('-')} ${path}  ${dim(`gone from the mock since the last sync (${was})`)}`
+      : `${changed('~')} ${path}  ${dim(`since the last sync: ${was}, now ${now}`)}`
 
 export const renderMocksDiff = (_services: unknown, diff: MocksDiff): void => {
   if (!diff.rpcs.length) {
@@ -36,6 +44,13 @@ export const renderMocksDiff = (_services: unknown, diff: MocksDiff): void => {
       `${label}  ${report.rpc}  ${dim(`${report.mocks} mock${report.mocks === 1 ? '' : 's'}`)}${note}`
     )
     for (const change of report.changes) console.log(`     ${describe(change)}`)
+    if (report.unsynced) {
+      console.log(
+        `     ${changed('~')} ${dim('not in the lock yet, run pikku mocks sync')}`
+      )
+    }
+    for (const entry of report.drift)
+      console.log(`     ${describeDrift(entry)}`)
     for (const { mock, errors } of report.invalid) {
       for (const error of errors)
         console.log(`     ${removed('✗')} ${mock}: ${error}`)
@@ -44,6 +59,19 @@ export const renderMocksDiff = (_services: unknown, diff: MocksDiff): void => {
       console.log(`     ${removed('✗')} ${problem}`)
     for (const warning of report.warnings)
       console.log(`     ${changed('⚠')} ${dim(warning)}`)
+  }
+  for (const rpc of diff.lockOnly) {
+    console.log(
+      `${changed('removed')}  ${rpc}  ${dim('in the lock, but no mocks any more; pikku mocks sync drops it')}`
+    )
+  }
+  if (diff.lock === 'missing' && diff.rpcs.length) {
+    console.log()
+    console.log(
+      dim(
+        'No .mocks/mocks.lock.json yet. Run pikku mocks sync to record these mocks, then edits to them show up here.'
+      )
+    )
   }
   if (diff.unmocked.length) {
     console.log()

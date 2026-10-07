@@ -1,33 +1,7 @@
-import { readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
-import { readSurface } from '../../utils/surface.js'
-import { diffMocks } from '../mocks/diff.js'
-import { readMocks } from '../mocks/read.js'
-import {
-  callIndex,
-  checkStubs,
-  frontendRoots,
-  scanFrontend,
-  type StubCheck,
-  type StubProblemKind,
-} from '../mocks/stub-scan.js'
-
-const readDeclaredFlags = (pikkuDir: string): string[] => {
-  try {
-    return Object.keys(
-      JSON.parse(
-        readFileSync(
-          join(pikkuDir, 'scopes', 'pikku-flags-meta.gen.json'),
-          'utf8'
-        )
-      )
-    )
-  } catch {
-    return []
-  }
-}
+import { PROBLEM_REASON, runMocksCheck } from '../mocks/run-check.js'
+import type { StubCheck } from '../mocks/stub-scan.js'
 
 export const mocksCheck = pikkuSessionlessFunc<
   { src?: string; strict?: boolean },
@@ -35,45 +9,16 @@ export const mocksCheck = pikkuSessionlessFunc<
 >({
   description:
     'Block a release that would publish a stub hook without a declared featureFlag',
-  func: async ({ config }, input) => {
-    const roots = input?.src
-      ? input.src.split(',').map((dir) => resolve(config.rootDir, dir.trim()))
-      : frontendRoots(config.rootDir)
-    const pikkuDir = resolve(config.rootDir, config.outDir)
-    const surface = readSurface(pikkuDir)
-    const rpcMocks = await readMocks(config.rootDir)
-    const scan = scanFrontend(config.rootDir, roots)
-    const diff = diffMocks(rpcMocks, surface, { calls: callIndex(scan) })
-    const status = new Map(
-      diff.rpcs.map((report) => [report.rpc, report.status])
-    )
-    const keys = new Set(Object.values(surface.functions).map((fn) => fn.key))
-    return checkStubs(
-      scan,
-      readDeclaredFlags(pikkuDir),
-      {
-        hasFunction: (rpc) => keys.has(rpc),
-        status: (rpc) => status.get(rpc),
-        mocked: new Set(rpcMocks.map((entry) => entry.rpc)),
-        dead: diff.rpcs.filter((r) => r.status === 'removed').map((r) => r.rpc),
-        unused: diff.rpcs.filter((r) => r.unused).map((r) => r.rpc),
-      },
-      { strict: input?.strict === true }
-    )
-  },
+  func: async ({ config }, input) =>
+    runMocksCheck({
+      rootDir: config.rootDir,
+      outDir: config.outDir,
+      src: input?.src,
+      strict: input?.strict,
+    }),
 })
 
-const reason: Record<StubProblemKind, (flag?: string) => string> = {
-  'no-flag': () => 'no featureFlag, so it cannot be published',
-  'flag-not-literal': () =>
-    'featureFlag must be a string literal so it can be checked',
-  'undeclared-flag': (flag) =>
-    `the flag "${flag}" is not declared in the project`,
-  'backend-supports': () => 'the backend already supports this',
-  'mock-invalid': () =>
-    'its mock is invalid for the function, fix the mock (pikku mocks diff shows why)',
-  'no-mock': () => 'there is no .mocks/ directory for this RPC',
-}
+const reason = PROBLEM_REASON
 
 export const renderMocksCheck = (
   _services: unknown,

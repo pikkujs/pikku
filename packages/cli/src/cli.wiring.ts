@@ -67,8 +67,12 @@ import {
   renderI18nList,
   renderI18nSync,
 } from './functions/commands/i18n.js'
-import { mocksCheck, renderMocksCheck } from './functions/commands/mocks-check.js'
+import {
+  mocksCheck,
+  renderMocksCheck,
+} from './functions/commands/mocks-check.js'
 import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
+import { mocksSync, renderMocksSync } from './functions/commands/mocks-sync.js'
 import {
   knowledgeValidate,
   renderKnowledgeValidate,
@@ -935,7 +939,7 @@ wireCLI({
           func: mocksDiff,
           render: renderMocksDiff,
           description:
-            'Report RPCs that are mocked but have no function, and mocks whose shape no longer matches their function',
+            'Report RPCs that are mocked but have no function, and mocks whose shape no longer matches their function or the lock. Statuses: ok; added (no function yet); changed (differs from the function, or edited since the last sync); invalid (a broken file or a mock the function rejects); removed (no function and nothing calls it). removed and unused only warn; the rest exit 1. A missing lock is only a note.',
           options: {
             all: {
               description: 'Also list functions that have no mock',
@@ -947,6 +951,12 @@ wireCLI({
               type: 'string',
             },
           },
+        }),
+        sync: pikkuCLICommand({
+          func: mocksSync,
+          render: renderMocksSync,
+          description:
+            'Write .mocks/mocks.lock.json: the shape of every mock and of the function behind it. Refuses while any mock is invalid. After this, pikku mocks diff reports a mock edited since as changed.',
         }),
         check: pikkuCLICommand({
           func: mocksCheck,
