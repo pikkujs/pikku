@@ -16,8 +16,19 @@ Run these and fix every failure; they are the rules, there is no other rulebook.
 
 - `bun run lint` in `apps/app` (shadcn rules, and `react/jsx-no-literals` for strings that skipped `m.*()`).
 - `pikku i18n list`: no locale is missing a key or has anything left to translate (`pikku i18n sync` adds missing keys).
-- `pikku mocks diff`: every mocked RPC either has a real function or is behind a feature flag, and no mock has drifted from its function.
+- `pikku mocks diff`: no mock has drifted from its function.
+- `pikku mocks check`: every stub call is flagged, its flag is declared, and none is on a function that already fits.
 - `pikku validate`.
+
+## Data: real, mocked, stubbed
+
+`api.gen.ts` lists the RPCs that exist. Call those with `usePikkuQuery` / `usePikkuMutation`; they use the function's own types.
+
+If no function fits the screen, mock it: add `.mocks/<rpc.name>/<scenario>.json` and `<scenario>.meta.json` (one scenario has `default: true`; add an empty and an error one) and call `usePikkuQueryStub('rpc:name')` / `usePikkuMutationStub`. A stub always answers from the mock and its output type is inferred from the mock files. Use a stub only when the function's types are not enough: either no function exists, or the shape you need differs from its output. If the mock already fits the function, use `usePikkuQuery`.
+
+A stub with no `{ featureFlag }` works in development but cannot be published. Publishing needs `usePikkuQueryStub('rpc:name', { featureFlag: 'flag' })` with the flag declared in the project.
+
+Making a screen real: `pikku mocks check` lists every stub. For each, implement the function so its output matches the mock, then replace the stub with `usePikkuQuery`. `pikku mocks diff` confirms the mock and function agree.
 
 ## First run
 
