@@ -1,0 +1,19 @@
+{
+  "name": "FaqSimple",
+  "title": "Simple FAQ",
+  "description": "A title and a stacked list of questions with answers.",
+  "tags": [
+    "faq"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "faqsimple__title": "Frequently asked questions",
+    "faqsimple__q1": "How do I get started?",
+    "faqsimple__a1": "Create an account and follow the first-run checklist.",
+    "faqsimple__q2": "Can I cancel any time?",
+    "faqsimple__a2": "Yes. Cancel from settings and you keep access until the period ends.",
+    "faqsimple__q3": "Where is my data stored?",
+    "faqsimple__a3": "In the region you pick when you create the workspace."
+  }
+}

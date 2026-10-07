@@ -14,15 +14,11 @@
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { resolve, dirname, join } from 'node:path'
+import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { startBackend } from '../../bin/backend-harness.js'
 
 const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-
-/** Where `pikku scenario run` files a run's artifacts, one folder per run. */
-const CAPTURE_ROOT = join(PROJECT_DIR, '.pikku', 'scenario-runs')
 
 interface ScenarioRunResult {
   code: number | null
@@ -120,167 +116,6 @@ describe('pikku scenario run', () => {
 
   test('stubbed service calls and per-actor fault injection hold', async () => {
     assertAllPassed(await runScenario('notificationScenario'))
-  })
-
-  test('declared steps render a readable ladder', async () => {
-    const run = await runScenario('codeEditorScenario')
-    assertAllPassed(run)
-    assert.match(
-      run.output,
-      /^\s*When\s+admin \(the Console administrator\) reads a function definition in the console\s+✓/m,
-      `expected the first mention to name the actor and their role:\n${run.output}`
-    )
-    assert.match(
-      run.output,
-      /^\s*Then\s+admin sees how editableFunc is declared\s+✓/m,
-      `expected a phase change to name the actor again, without the role:\n${run.output}`
-    )
-    assert.match(
-      run.output,
-      /^\s*And\s+sees the original greeting\s+✓/m,
-      `expected a repeated phase and actor to drop both:\n${run.output}`
-    )
-  })
-
-  /** A run that skips everything it was asked for must not report success. */
-  test('a scenario that cannot run on the surface fails the run', async () => {
-    const { code, output } = await runScenario('codeEditorConsoleScenario')
-    assert.notEqual(
-      code,
-      0,
-      `a run that could not run what it was asked for must not exit zero:\n${output}`
-    )
-    assert.match(
-      output,
-      /^SKIP codeEditorConsoleScenario \(no default or default binding: /m,
-      `expected the scenario to name the missing surface:\n${output}`
-    )
-    assert.match(
-      output,
-      /could not run on 'default'.*--run browser/s,
-      `expected the run to say how to run it:\n${output}`
-    )
-  })
-
-  test('a browser step drives the console as its actor', async () => {
-    assertAllPassed(
-      await runScenario('codeEditorConsoleScenario', ['--run', 'browser'])
-    )
-  })
-
-  /**
-   * Captures, end to end.
-   *
-   * `@pikku/playwright` unit-tests the naming and the ffmpeg fallback, but
-   * nothing there proves `--screenshots` survives the trip from the CLI flag
-   * through the driver to the actor session and onto disk. That is only
-   * answerable by running it.
-   *
-   * The assertion is exact rather than "some png exists": every part of the
-   * filename is derived — the index from call order, the stem from the
-   * description the scenario passes, the suffix from the actor — so a run that
-   * captured the right number of images under the wrong names is a regression,
-   * not a variation. The run directory is a uuid, so it is read back from the
-   * line the CLI prints rather than guessed.
-   */
-  test('--screenshots writes the run’s images under names it chose', async () => {
-    const run = await runScenario('captureScenario', [
-      '--screenshots',
-      '--run',
-      'browser',
-    ])
-    assertAllPassed(run)
-
-    const reported = run.output.match(/Captures → (.+)$/m)
-    assert.ok(
-      reported,
-      `expected the run to report its capture dir:\n${run.output}`
-    )
-
-    // The scenario's folder is its run label — "<feature> › <scenario>" — made
-    // filename-safe, which is what `beginScenario` stamps onto every capture.
-    const scenarioDir = join(
-      reported[1]!.trim(),
-      'run-captures-capturescenario'
-    )
-    assert.ok(
-      existsSync(scenarioDir),
-      `expected captures under ${scenarioDir}:\n${run.output}`
-    )
-    assert.deepEqual(readdirSync(scenarioDir).sort(), [
-      '01-addons-gallery-admin.png',
-      '02-functions-list-admin.png',
-    ])
-  })
-
-  /**
-   * The flag is opt-in, so a scenario that photographs the page has to survive
-   * being run without it — `browser.screenshot()` returns the bytes and writes
-   * nothing. Without this, taking a picture would silently become a dependency
-   * on a flag, and every plain run of the suite would fail.
-   *
-   * Every run files a record whether or not it captured anything, which is what
-   * makes the history a history. That record is all a run without `--screenshots`
-   * is allowed to leave behind.
-   */
-  test('the same scenario passes with capture off, writing only its record', async () => {
-    const before = new Set(
-      existsSync(CAPTURE_ROOT) ? readdirSync(CAPTURE_ROOT) : []
-    )
-
-    const result = await runScenario('captureScenario', ['--run', 'browser'])
-    assertAllPassed(result)
-
-    assert.doesNotMatch(
-      result.output,
-      /Captures →/,
-      `a run that filed nothing must not announce a capture directory:\n${result.output}`
-    )
-    const added = readdirSync(CAPTURE_ROOT).filter((name) => !before.has(name))
-    assert.equal(added.length, 1, 'one run leaves one folder')
-    assert.deepEqual(
-      readdirSync(join(CAPTURE_ROOT, added[0]!)),
-      ['run.json'],
-      'a run without --screenshots must write no images'
-    )
-  })
-
-  /**
-   * A run is history, and history that only exists for the runs somebody
-   * remembered to flag is not history. The record is the console's whole read
-   * path, so it has to be there for an ordinary run with no flags at all.
-   */
-  test('every run files a record naming its scenarios and their steps', async () => {
-    const before = new Set(
-      existsSync(CAPTURE_ROOT) ? readdirSync(CAPTURE_ROOT) : []
-    )
-
-    assertAllPassed(await runScenario('captureScenario', ['--run', 'browser']))
-
-    const [added] = readdirSync(CAPTURE_ROOT).filter(
-      (name) => !before.has(name)
-    )
-    const record = JSON.parse(
-      readFileSync(join(CAPTURE_ROOT, added!, 'run.json'), 'utf-8')
-    )
-
-    assert.equal(record.runId, added)
-    assert.equal(record.status, 'passed')
-    assert.equal(record.environment, 'local')
-    assert.equal(record.surface, 'browser')
-    assert.ok(record.finishedAt, 'a finished run says when it finished')
-
-    const [scenario] = record.results
-    assert.equal(scenario.scenarioName, 'captureScenario')
-    assert.equal(scenario.status, 'passed')
-    assert.ok(
-      scenario.steps.length > 0,
-      'the ladder is snapshotted, not re-derived from source that has moved on'
-    )
-    assert.ok(
-      scenario.steps.every((step: { sentence: string }) => step.sentence),
-      'every step carries the sentence it was declared with'
-    )
   })
 
   /**

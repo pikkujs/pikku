@@ -36,6 +36,8 @@
     // for rustc only to say whether this machine can build what it wrote.
     "rustfmt",
     "rustc",
+    "sandbox-exec",
+    "bwrap",
   ],
 
   // Build output and generated sources are not hand-authored, and their
@@ -45,6 +47,5 @@
     "**/.pikku/**",
     "**/*.gen.ts",
     "**/*.gen.d.ts",
-    "packages/frontend/mantine/blocks/**",
   ],
 }

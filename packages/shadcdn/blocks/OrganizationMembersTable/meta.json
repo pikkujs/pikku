@@ -1,0 +1,20 @@
+{
+  "name": "OrganizationMembersTable",
+  "title": "Members table",
+  "description": "Members with a role select and a remove action.",
+  "tags": [
+    "organization"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "organizationmemberstable__member": "Member",
+    "organizationmemberstable__role": "Role",
+    "organizationmemberstable__remove": "Remove",
+    "organizationmemberstable__m1": "Ada Lovelace",
+    "organizationmemberstable__m2": "Alan Turing",
+    "organizationmemberstable__editor": "Editor",
+    "organizationmemberstable__admin": "Admin",
+    "organizationmemberstable__role_label": "Role"
+  }
+}

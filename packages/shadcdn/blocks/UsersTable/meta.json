@@ -1,0 +1,21 @@
+{
+  "name": "UsersTable",
+  "title": "Users table",
+  "description": "Name, role and status for a handful of people.",
+  "tags": [
+    "tables"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "userstable__name": "Name",
+    "userstable__role": "Role",
+    "userstable__status": "Status",
+    "userstable__u1_name": "Ada Lovelace",
+    "userstable__u1_role": "Admin",
+    "userstable__u1_status": "Active",
+    "userstable__u2_name": "Alan Turing",
+    "userstable__u2_role": "Editor",
+    "userstable__u2_status": "Invited"
+  }
+}

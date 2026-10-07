@@ -1,0 +1,16 @@
+{
+  "name": "LanguagePicker",
+  "title": "Language picker",
+  "description": "A select for choosing the interface language.",
+  "tags": [
+    "inputs"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "languagepicker__label": "Language",
+    "languagepicker__en": "English",
+    "languagepicker__de": "Deutsch",
+    "languagepicker__ar": "العربية"
+  }
+}

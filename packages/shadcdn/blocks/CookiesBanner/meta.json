@@ -1,0 +1,15 @@
+{
+  "name": "CookiesBanner",
+  "title": "Cookie banner",
+  "description": "A compact consent bar with accept and decline.",
+  "tags": [
+    "banners"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "cookiesbanner__text": "We use cookies to keep you signed in and to understand how the site is used.",
+    "cookiesbanner__accept": "Accept",
+    "cookiesbanner__decline": "Decline"
+  }
+}

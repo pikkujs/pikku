@@ -1,0 +1,15 @@
+{
+  "name": "ServerOverload",
+  "title": "Overload page",
+  "description": "A 503 page asking the user to retry shortly.",
+  "tags": [
+    "errors"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "serveroverload__title": "We are busier than usual",
+    "serveroverload__description": "Please try again in a few minutes.",
+    "serveroverload__retry": "Try again"
+  }
+}

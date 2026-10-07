@@ -1,0 +1,14 @@
+{
+  "name": "CheckboxCard",
+  "title": "Checkbox card",
+  "description": "A selectable card with a title and description.",
+  "tags": [
+    "cards"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "checkboxcard__title": "Weekly digest",
+    "checkboxcard__description": "A Monday summary of what changed."
+  }
+}

@@ -282,7 +282,7 @@ export const runKnowledgeValidate = async (
 
   for (const orphan of resources.orphans) {
     add(
-      'info',
+      'warn',
       `knowledge-orphan-${orphan.uri}`,
       `${orphan.uri} exists in the code and no note describes it`,
       KNOWLEDGE_DIR,

@@ -568,6 +568,22 @@ describe('analyzeDeployment - agent identifier', () => {
   })
 })
 
+describe('analyzeDeployment - agent units follow deploy.defaultTarget', () => {
+  const agentUnit = (defaultTarget?: 'serverless' | 'server') =>
+    analyzeDeployment(stateWithAgent('kanbanAgent', 'kanban-agent'), {
+      projectId: 'test',
+      defaultTarget,
+    }).units.find((u) => u.role === 'agent')
+
+  test('is serverless by default', () => {
+    assert.equal(agentUnit()?.target, 'serverless')
+  })
+
+  test('is server when the project defaults to server', () => {
+    assert.equal(agentUnit('server')?.target, 'server')
+  })
+})
+
 function stateWithExposedFunctionAndAgent(): InspectorState {
   return {
     functions: {

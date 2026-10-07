@@ -599,7 +599,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'agent',
-      target: 'serverless',
+      target: defaultTarget,
       functionIds: [],
       services: agentServices,
       dependsOn: [...toolUnitNames, ...subAgentUnitNames],
@@ -670,7 +670,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'mcp',
-      target: 'serverless',
+      target: defaultTarget,
       functionIds: [],
       services: [],
       dependsOn: toolIds.map((id) => unitFor(id)),
@@ -698,7 +698,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'mcp',
-      target: 'serverless',
+      target: defaultTarget,
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: mcpFuncUnitNames,
@@ -725,7 +725,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'channel',
-      target: 'serverless',
+      target: defaultTarget,
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: funcUnitNames,

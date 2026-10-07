@@ -17,7 +17,7 @@ runs:
         FABRIC_API_URL: http://localhost:4096
         API_URL: http://localhost:4077
       run: |
-        nohup npx pikku dev --port 4077 > "$RUNNER_TEMP/e2e-server.log" 2>&1 &
+        nohup bunx pikku dev --port 4077 > "$RUNNER_TEMP/e2e-server.log" 2>&1 &
         # `pikku: ready` is printed after afterStart, which seeds the database;
         # `listening on` comes earlier and is not readiness.
         for _ in $(seq 1 180); do

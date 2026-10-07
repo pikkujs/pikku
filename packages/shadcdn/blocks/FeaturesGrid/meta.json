@@ -1,0 +1,22 @@
+{
+  "name": "FeaturesGrid",
+  "title": "Feature grid",
+  "description": "Title, intro and a three-column grid of icon cards.",
+  "tags": [
+    "features"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "featuresgrid__title": "Everything you need",
+    "featuresgrid__description": "Three reasons teams pick this.",
+    "featuresgrid__f1_title": "Fast",
+    "featuresgrid__f1_text": "Pages load before you notice.",
+    "featuresgrid__f2_title": "Private",
+    "featuresgrid__f2_text": "Your data stays yours.",
+    "featuresgrid__f3_title": "Flexible",
+    "featuresgrid__f3_text": "Change how it looks in one place."
+  }
+}

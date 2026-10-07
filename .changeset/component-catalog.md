@@ -1,5 +1,4 @@
 ---
-'@pikku/mantine': patch
 '@pikku/code-edit': patch
 '@pikku/cli': patch
 '@pikku/addon-console': patch

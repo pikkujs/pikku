@@ -10,6 +10,7 @@ import * as httpLib from './http.js'
 
 let token: string | null = null
 let linked: string | null = null
+let fabricDown = false
 const fabricCalls: { name: string; data: any }[] = []
 
 mock.module('./config.js', () => ({
@@ -28,23 +29,27 @@ mock.module('./http.js', () => ({
   getFabricRPC: () => ({
     invoke: async (name: string, data: any) => {
       fabricCalls.push({ name, data })
+      if (fabricDown) throw new Error('fabric is down')
       if (name === 'listStages')
         return { stages: [{ stageId: 'stage_main', branch: 'main' }] }
       if (name === 'createChange')
-        return { change: { changeId: 'fab_1', shortId: 1 } }
-      if (name === 'listChanges') return { changes: [], groups: [] }
+        return { change: { changeId: `fab_${fabricCalls.length}` } }
+      if (name === 'claimChanges') return { group: { groupId: 'fab_group' } }
       return {}
     },
   }),
 }))
 
 const { changesContext } = await import('./changes.js')
+const { fabricLinks } = await import('./changes-local.js')
 const { FabricChangesFile } =
   await import('../functions/changes-file.function.js')
 const { FabricChangesList } =
   await import('../functions/changes-list.function.js')
 const { FabricChangesClaim } =
   await import('../functions/changes-claim.function.js')
+const { FabricChangesReply } =
+  await import('../functions/changes-reply.function.js')
 const { next } = await import('../../functions/commands/next.js')
 
 const home = process.cwd()
@@ -84,6 +89,7 @@ after(() => process.chdir(home))
 beforeEach(() => {
   token = null
   linked = null
+  fabricDown = false
   fabricCalls.length = 0
 })
 
@@ -116,51 +122,57 @@ describe('changes on a local project', () => {
 })
 
 describe('changes when logged in to fabric', () => {
-  const storePath = () => join(repo, '.git', 'pikku-changes.json')
-  const before = async () => {
-    try {
-      return await readFile(storePath(), 'utf8')
-    } catch {
-      return null
-    }
-  }
-
-  test('file and list use only the api and write no local file', async () => {
-    const stored = await before()
+  test('writes go to the local file and are registered with fabric', async () => {
     token = 'tok'
     linked = 'proj_1'
-    await FabricChangesFile.func({} as any, { title: 'Cloud one' } as any)
+    const { change } = await file('Registered')
     const created = fabricCalls.find((c) => c.name === 'createChange')!
     assert.strictEqual(created.data.stageId, 'stage_main')
-    assert.strictEqual(created.data.title, 'Cloud one')
-    await list()
-    const listed = fabricCalls.find((c) => c.name === 'listChanges')!
-    assert.strictEqual(listed.data.projectId, 'proj_1')
-    assert.strictEqual(await before(), stored)
-    assert.ok(!stored || !stored.includes('Cloud one'))
-  })
+    assert.strictEqual(created.data.title, 'Registered')
+    const links = await fabricLinks(join(repo, '.git', 'pikku-changes.json'))
+    const fabricId = links.changes[change.changeId]
+    assert.ok(fabricId)
 
-  test('claim goes to the api with the given ids', async () => {
-    token = 'tok'
-    linked = 'proj_1'
-    await FabricChangesClaim.func({} as any, { changeIds: ['chg_1'] } as any)
-    const claimed = fabricCalls.find((c) => c.name === 'claimChanges')!
-    assert.deepStrictEqual(claimed.data.changeIds, ['chg_1'])
-    assert.strictEqual(claimed.data.projectId, 'proj_1')
-  })
-
-  test('logged in without a linked project names the fix instead of going local', async () => {
-    token = 'tok'
-    await assert.rejects(
-      list(),
-      /not linked to a project\. Run `pikku fabric link`/
+    await FabricChangesClaim.func(
+      {} as any,
+      { changeIds: [change.shortId], needsPlan: false } as any
     )
+    const claimed = fabricCalls.find((c) => c.name === 'claimChanges')!
+    assert.deepStrictEqual(claimed.data.changeIds, [fabricId])
+    assert.strictEqual(claimed.data.projectId, 'proj_1')
+
+    await FabricChangesReply.func(
+      {} as any,
+      { changeId: change.shortId, message: 'on it' } as any
+    )
+    const replied = fabricCalls.find((c) => c.name === 'replyToChange')!
+    assert.strictEqual(replied.data.changeId, fabricId)
+    assert.strictEqual(replied.data.projectId, undefined)
+  })
+
+  test('logged in without a linked project stays local', async () => {
+    token = 'tok'
+    const { change } = await file('Logged in, unlinked')
+    const { changes } = await list()
+    assert.ok(changes.some((c: any) => c.changeId === change.changeId))
     assert.strictEqual(fabricCalls.length, 0)
   })
 
-  test('--project-id stands in for the link', async () => {
+  test('reads never call fabric', async () => {
     token = 'tok'
-    await FabricChangesList.func({} as any, { projectId: 'proj_flag' } as any)
-    assert.strictEqual(fabricCalls[0]!.data.projectId, 'proj_flag')
+    linked = 'proj_1'
+    await list()
+    const { rpc, projectId } = await changesContext(undefined)
+    await rpc.invoke('getChange', { changeId: '1', projectId })
+    assert.strictEqual(fabricCalls.length, 0)
+  })
+
+  test('a fabric failure keeps the local write', async () => {
+    token = 'tok'
+    linked = 'proj_1'
+    fabricDown = true
+    const { change } = await file('Offline')
+    const { changes } = await list()
+    assert.ok(changes.some((c: any) => c.changeId === change.changeId))
   })
 })

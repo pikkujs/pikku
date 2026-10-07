@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from 'fs'
 import { dirname, join, resolve } from 'path'
+import { pathToFileURL } from 'url'
 import {
   createFormatter,
   createParser,
@@ -513,7 +514,7 @@ async function batchImportWithRegister(
     const modules = new Map<string, Record<string, any>>()
     const results = await Promise.allSettled(
       sourceFiles.map(async (srcPath) => {
-        const mod = await import(srcPath)
+        const mod = await import(pathToFileURL(srcPath).href)
         modules.set(srcPath, mod)
       })
     )
@@ -541,7 +542,7 @@ async function importWithRegister(
 ): Promise<Record<string, any>> {
   const unregister = register()
   try {
-    return await import(sourceFile)
+    return await import(pathToFileURL(sourceFile).href)
   } finally {
     void Promise.resolve(unregister()).catch(() => {})
   }

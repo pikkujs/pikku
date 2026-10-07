@@ -1,0 +1,17 @@
+{
+  "name": "InputTooltip",
+  "title": "Input with tooltip",
+  "description": "A labelled input with a help tooltip.",
+  "tags": [
+    "inputs"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "inputtooltip__label": "Username",
+    "inputtooltip__help": "Letters and numbers only",
+    "inputtooltip__help_label": "Help"
+  }
+}

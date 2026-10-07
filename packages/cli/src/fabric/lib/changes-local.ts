@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, rmdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rmdir, stat, writeFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { git } from '../../utils/git.js'
+import { FabricPreconditionError } from './errors.js'
 import type {
   AskChangeQuestionInput,
   AskChangeQuestionOutput,
@@ -43,6 +44,12 @@ type Store = {
   changes: Change[]
   groups: Group[]
   messages: Message[]
+  fabric?: FabricLinks
+}
+
+export type FabricLinks = {
+  changes: Record<string, string>
+  groups: Record<string, string>
 }
 
 type LocalMap = {
@@ -103,8 +110,16 @@ async function withStore<T>(path: string, fn: (store: Store) => T): Promise<T> {
       await mkdir(lock)
       break
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || attempt > 200)
-        throw error
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      const held = await stat(lock).catch(() => null)
+      if (held && Date.now() - held.mtimeMs > 30_000) {
+        await rmdir(lock).catch(() => {})
+        continue
+      }
+      if (attempt > 200)
+        throw new FabricPreconditionError(
+          `${lock} is held; remove it if no pikku command is running.`
+        )
       await new Promise((resolve) => setTimeout(resolve, 25))
     }
   }
@@ -187,9 +202,10 @@ const handlers: {
         (!input.groupId || c.groupId === input.groupId) &&
         (input.includeDone || (c.status !== 'done' && c.status !== 'dismissed'))
     )
-    const groupIds = new Set(changes.map((c) => c.groupId))
+    const shown = changes.slice(0, input.limit ?? changes.length)
+    const groupIds = new Set(shown.map((c) => c.groupId))
     return {
-      changes: changes.slice(0, input.limit ?? changes.length),
+      changes: shown,
       groups: store.groups.filter((g) => groupIds.has(g.groupId)),
     }
   },
@@ -334,6 +350,22 @@ export async function releaseChangeset(
   await withStore(path, (store) => {
     const group = store.groups.find((g) => g.groupId === groupId)
     if (group) group.claimExpiresAt = new Date()
+  })
+}
+
+export async function fabricLinks(path: string): Promise<FabricLinks> {
+  return (await read(path)).fabric ?? { changes: {}, groups: {} }
+}
+
+export async function linkFabric(
+  path: string,
+  kind: keyof FabricLinks,
+  localId: string,
+  fabricId: string
+): Promise<void> {
+  await withStore(path, (store) => {
+    store.fabric ??= { changes: {}, groups: {} }
+    store.fabric[kind][localId] = fabricId
   })
 }
 

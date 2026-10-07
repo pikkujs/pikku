@@ -1,0 +1,17 @@
+{
+  "name": "NavbarMinimal",
+  "title": "Icon rail",
+  "description": "A narrow rail of icon buttons with accessible names.",
+  "tags": [
+    "navbars"
+  ],
+  "dependsOn": [],
+  "npmDeps": [
+    "lucide-react"
+  ],
+  "i18nKeys": {
+    "navbarminimal__home": "Home",
+    "navbarminimal__search": "Search",
+    "navbarminimal__settings": "Settings"
+  }
+}

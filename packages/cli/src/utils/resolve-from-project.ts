@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
 import { isAbsolute, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 /**
  * Resolves a package as the *project* would, not as the CLI would.
@@ -57,5 +58,7 @@ export const importFromProject = async <T>(
 ): Promise<T | undefined> => {
   const resolved = resolveFromProject(rootDir, specifier)
   if (!resolved) return undefined
-  return (await import(resolved)) as T
+  return (await import(
+    isAbsolute(resolved) ? pathToFileURL(resolved).href : resolved
+  )) as T
 }

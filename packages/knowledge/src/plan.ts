@@ -404,7 +404,15 @@ export function readPlan(cwd: string, changeset: string): PlanRead {
       reason: `No plan at ${path}. Write it with \`pikku knowledge plan set\` before building the changeset.`,
     }
   }
-  return parsePlan(readFileSync(full, 'utf8'), path)
+  const read = parsePlan(readFileSync(full, 'utf8'), path)
+  if (read.ok && read.plan.changeset !== changeset) {
+    return {
+      ok: false,
+      path,
+      reason: `${path} is for changeset ${read.plan.changeset}, not ${changeset}. Rename the file or fix its "changeset" field.`,
+    }
+  }
+  return read
 }
 
 /** Every plan in the project, readable or not. */

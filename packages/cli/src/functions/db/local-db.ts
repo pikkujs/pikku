@@ -603,7 +603,9 @@ async function loadCoercionPlugin(
   coercionFile: string
 ): Promise<CoercionMap | undefined> {
   try {
-    const mod = await import(coercionFile)
+    const mod = await import(
+      isAbsolute(coercionFile) ? pathToFileURL(coercionFile).href : coercionFile
+    )
     return mod.coercionMap as CoercionMap
   } catch {
     return undefined

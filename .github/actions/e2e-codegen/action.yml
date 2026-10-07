@@ -20,7 +20,7 @@ runs:
       run: |
         start=$SECONDS
         for pkg in todos emails hmac-signer oauth-api fake-crm; do
-          (cd e2e/packages/$pkg && npx pikku all)
+          (cd e2e/packages/$pkg && bunx pikku all)
         done
         echo "::notice::⏱ E2E fixture codegen: $((SECONDS - start))s"
     # The project imports types from its own .pikku, so its first run inspects
@@ -30,7 +30,7 @@ runs:
       shell: bash
       run: |
         start=$SECONDS
-        cd e2e && npx pikku all && npx pikku all
+        cd e2e && bunx pikku all && bunx pikku all
         echo "::notice::⏱ E2E project codegen: $((SECONDS - start))s"
     - name: Compile the e2e fixtures
       shell: bash

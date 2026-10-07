@@ -1,0 +1,15 @@
+{
+  "name": "HeroText",
+  "title": "Text-only hero",
+  "description": "A headline, one paragraph and a single button; no imagery.",
+  "tags": [
+    "heroes"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "herotext__title": "Say it plainly",
+    "herotext__description": "One honest paragraph about what this is for.",
+    "herotext__cta": "Get started"
+  }
+}

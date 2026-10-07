@@ -1,4 +1,5 @@
 import { readFile, stat, writeFile } from 'node:fs/promises'
+import type * as CodeEdit from '@pikku/code-edit'
 import { resolve, sep } from 'node:path'
 import { BadRequestError, NotFoundError } from '@pikku/core/errors'
 import {
@@ -10,8 +11,15 @@ import {
   type ThemeInput,
   type ThemeSpecPatch,
 } from '@pikku/code-edit/theme'
-import { ShadcnCatalog, ComponentsNotInstalledError } from '@pikku/code-edit/shadcn'
-import type { ComponentMeta, Block, ResolvedBlock } from '@pikku/code-edit/shadcn'
+import {
+  ShadcnCatalog,
+  ComponentsNotInstalledError,
+} from '@pikku/code-edit/shadcn'
+import type {
+  ComponentMeta,
+  Block,
+  ResolvedBlock,
+} from '@pikku/code-edit/shadcn'
 
 export type {
   ThemeEntry,
@@ -25,7 +33,10 @@ export type { ComponentMeta } from '@pikku/code-edit/shadcn'
 
 export type JsxPropValue = string | number | boolean
 
-export type BlockSummary = Pick<Block, 'name' | 'title' | 'description' | 'tags'>
+export type BlockSummary = Pick<
+  Block,
+  'name' | 'title' | 'description' | 'tags'
+>
 
 export type BlockDetail = BlockSummary &
   Pick<Block, 'usage'> &
@@ -41,10 +52,14 @@ export type ThemePreset = {
 
 const toPikkuError = (error: unknown): never => {
   if (error instanceof ThemeError) {
-    throw error.kind === 'missing' ? new NotFoundError(error.message) : new BadRequestError(error.message)
+    throw error.kind === 'missing'
+      ? new NotFoundError(error.message)
+      : new BadRequestError(error.message)
   }
-  if (error instanceof Error && error.message.startsWith('No ')) throw new BadRequestError(error.message)
-  if (error instanceof ComponentsNotInstalledError) throw new NotFoundError(error.message)
+  if (error instanceof Error && error.message.startsWith('No '))
+    throw new BadRequestError(error.message)
+  if (error instanceof ComponentsNotInstalledError)
+    throw new NotFoundError(error.message)
   throw error
 }
 
@@ -66,11 +81,23 @@ export class DesignService {
     return this.shadcn.componentNames().catch(toPikkuError)
   }
 
-  async listBlocks(tag?: string): Promise<{ tags: Array<{ tag: string; count: number }>; blocks: BlockSummary[] }> {
-    const { blockTags, listBlocks } = await this.shadcn.blocks().catch(toPikkuError)
+  async listBlocks(
+    tag?: string
+  ): Promise<{
+    tags: Array<{ tag: string; count: number }>
+    blocks: BlockSummary[]
+  }> {
+    const { blockTags, listBlocks } = await this.shadcn
+      .blocks()
+      .catch(toPikkuError)
     return {
       tags: blockTags(),
-      blocks: listBlocks(tag).map(({ name, title, description, tags }) => ({ name, title, description, tags })),
+      blocks: listBlocks(tag).map(({ name, title, description, tags }) => ({
+        name,
+        title,
+        description,
+        tags,
+      })),
     }
   }
 
@@ -116,7 +143,9 @@ export class DesignService {
     return this.themes.update(patch).catch(toPikkuError)
   }
 
-  async applyTheme(input: ThemeInput): Promise<{ activeId: string; emails: boolean }> {
+  async applyTheme(
+    input: ThemeInput
+  ): Promise<{ activeId: string; emails: boolean }> {
     const { id, emails } = await this.themes.apply(input).catch(toPikkuError)
     return { activeId: id, emails }
   }
@@ -134,10 +163,15 @@ export class DesignService {
     })
   }
 
-  async readJsxProps(path: string, line: number, col: number): Promise<Record<string, JsxPropValue>> {
+  async readJsxProps(
+    path: string,
+    line: number,
+    col: number
+  ): Promise<Record<string, JsxPropValue>> {
     const { readJsxProps } = await this.jsx()
     const props = readJsxProps(await this.readSource(path), line, col)
-    if (!props) throw new NotFoundError(`No JSX element at ${path}:${line}:${col}`)
+    if (!props)
+      throw new NotFoundError(`No JSX element at ${path}:${line}:${col}`)
     return props
   }
 
@@ -151,16 +185,18 @@ export class DesignService {
     const { writeJsxProp } = await this.jsx()
     const source = await this.readSource(path)
     const updated = writeJsxProp(source, line, col, name, value)
-    if (updated !== source) await writeFile(this.sourcePath(path), updated, 'utf-8')
+    if (updated !== source)
+      await writeFile(this.sourcePath(path), updated, 'utf-8')
   }
 
-  private async jsx(): Promise<typeof import('@pikku/code-edit')> {
+  private async jsx(): Promise<typeof CodeEdit> {
     return import('@pikku/code-edit')
   }
 
   private sourcePath(path: string): string {
     const abs = resolve(this.workspaceRoot, path)
-    if (!abs.startsWith(this.workspaceRoot + sep)) throw new BadRequestError('Path escapes the project')
+    if (!abs.startsWith(this.workspaceRoot + sep))
+      throw new BadRequestError('Path escapes the project')
     return abs
   }
 

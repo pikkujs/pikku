@@ -40,7 +40,7 @@ expect_refused pk changes done 1
 expect_contains "$REFUSAL" "declared no table it creates or alters"
 
 scenario "a declared migration is accepted"
-pk changes claim --change-ids 1 --group-id "$(group_of Waitlist)" --creates waitlist --needs-plan false --claimed-by a >/dev/null
+pk changes claim --change-ids 1 --group-id "$(group_of Waitlist)" --creates waitlist --claimed-by a >/dev/null
 expect_ok pk changes done 1
 
 finish

@@ -1,3 +1,0 @@
-.progressSection:not(:first-of-type) {
-  border-left: 0.1875rem solid var(--mantine-color-body);
-}

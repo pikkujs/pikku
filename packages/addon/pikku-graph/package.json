@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "./build.sh",
+    "build": "bash ./build.sh",
     "pikku": "./build.sh pikku",
     "ncu": "npx npm-check-updates",
     "pretest": "./build.sh pikku",

@@ -1,0 +1,16 @@
+{
+  "name": "AcceptInvitationCard",
+  "title": "Accept invitation",
+  "description": "Shows who invited you and offers accept or decline.",
+  "tags": [
+    "organization"
+  ],
+  "dependsOn": [],
+  "npmDeps": [],
+  "i18nKeys": {
+    "acceptinvitationcard__title": "You are invited to Acme",
+    "acceptinvitationcard__description": "Ada Lovelace invited you to join as an editor.",
+    "acceptinvitationcard__accept": "Accept",
+    "acceptinvitationcard__decline": "Decline"
+  }
+}
