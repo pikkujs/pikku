@@ -362,3 +362,61 @@ const usePikkuQueryStubby = 1`
     rmSync(root, { recursive: true, force: true })
   })
 })
+
+describe('stub fit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'stubfit-'))
+  mkdirSync(join(root, 'apps/app/src'), { recursive: true })
+  writeFileSync(
+    join(root, 'apps/app/src/screen.tsx'),
+    `usePikkuQueryStub('bookings:list', { featureFlag: 'rooms' })
+usePikkuQueryStub('guests:list', { featureFlag: 'rooms' })
+usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`
+  )
+  const fitting = (...mocks: { rpc: string; mocks: ReturnType<typeof mock>[] }[]) =>
+    new Set(
+      diffMocks(mocks, {
+        functions: {
+          ...surface().functions,
+          'guests:list': {
+            key: 'guests:list',
+            version: 1,
+            outputSchemaName: 'BookingsOut',
+            expose: true,
+          },
+        },
+        schemas: surface().schemas,
+      })
+        .rpcs.filter((r) => r.status === 'ok')
+        .map((r) => r.rpc)
+    )
+  const grown = mock('busy', [{ id: 'a', guests: 2, room: 'r1' }], {
+    default: true,
+  })
+  const result = checkStubs(
+    root,
+    frontendRoots(root),
+    ['rooms'],
+    (rpc) =>
+      fitting(
+        { rpc: 'bookings:list', mocks: [healthy] },
+        { rpc: 'guests:list', mocks: [grown] },
+        { rpc: 'rooms:list', mocks: [healthy] }
+      ).has(rpc)
+  )
+  const problem = (rpc: string) =>
+    result.calls.find((c) => c.rpc === rpc)!.problem
+
+  test('a stub on a function the mock already fits is blocked', () => {
+    assert.strictEqual(problem('bookings:list'), 'backend-supports')
+    assert.strictEqual(result.ok, false)
+  })
+
+  test('a stub on a function whose shape the mock changes is allowed', () => {
+    assert.strictEqual(problem('guests:list'), undefined)
+  })
+
+  test('a stub on an RPC with no function is allowed', () => {
+    assert.strictEqual(problem('rooms:list'), undefined)
+    rmSync(root, { recursive: true, force: true })
+  })
+})

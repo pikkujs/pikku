@@ -4,7 +4,11 @@ import ts from 'typescript'
 
 const STUB_HOOKS = new Set(['usePikkuQueryStub', 'usePikkuMutationStub'])
 
-export type StubProblemKind = 'no-flag' | 'flag-not-literal' | 'undeclared-flag'
+export type StubProblemKind =
+  | 'no-flag'
+  | 'flag-not-literal'
+  | 'undeclared-flag'
+  | 'backend-supports'
 
 export type StubCall = {
   file: string
@@ -139,7 +143,8 @@ export const frontendRoots = (rootDir: string): string[] => {
 export const checkStubs = (
   rootDir: string,
   roots: string[],
-  declaredFlags: string[]
+  declaredFlags: string[],
+  mockFitsFunction: (rpc: string) => boolean = () => false
 ): StubCheck => {
   const declared = new Set(declaredFlags)
   const calls: StubCall[] = []
@@ -149,7 +154,9 @@ export const checkStubs = (
         relative(rootDir, file),
         readFileSync(file, 'utf8')
       )) {
-        if (!call.problem && call.flag && !declared.has(call.flag)) {
+        if (call.rpc && mockFitsFunction(call.rpc)) {
+          call.problem = 'backend-supports'
+        } else if (!call.problem && call.flag && !declared.has(call.flag)) {
           call.problem = 'undeclared-flag'
         }
         calls.push(call)
