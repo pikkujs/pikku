@@ -191,7 +191,7 @@ export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
 
 type StubMap = ${stubMap}
 
-type StubName = Exclude<keyof StubMap, keyof FlattenedRPCMap>
+type StubName = keyof StubMap
 
 type StubOptions = { featureFlag?: string; input?: Record<string, unknown> }
 

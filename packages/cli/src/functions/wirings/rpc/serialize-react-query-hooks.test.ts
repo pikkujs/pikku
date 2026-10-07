@@ -174,7 +174,7 @@ describe('serializeReactQueryHooks', () => {
     describe('types', () => {
       const dir = mkdtempSync(join(tmpdir(), 'stub-hooks-'))
       const write = (name: string, body: string) => writeFileSync(join(dir, name), body)
-      write('pikku-rpc-map.gen.d.ts', `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] } }`)
+      write('pikku-rpc-map.gen.d.ts', `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }`)
       write('shims.d.ts', `
 declare module '@tanstack/react-query' {
   export type UseQueryOptions<T, E> = { [k: string]: unknown }
@@ -198,17 +198,20 @@ usePikkuMutationStub('reminders:list', { featureFlag: 'x' })
 usePikkuQueryStub('reminders:list')
 usePikkuMutationStub('reminders:list')
 usePikkuQuery('bookings:list', { page: 1 })
-// @ts-expect-error a stub name that has a real function
-usePikkuQueryStub('bookings:list', { featureFlag: 'x' })
-// @ts-expect-error the plain hook does not accept a stub-only name
-usePikkuQuery('reminders:list', {})
+// @ts-expect-error the plain hook does not accept a name with no function
+usePikkuQuery('stub:only', {})
+const real = usePikkuQuery('reminders:list', {})
+const realId: string | undefined = real.data?.[0]?.id
+const stubId: number | undefined = ok.data?.[0]?.id
+// @ts-expect-error the stub output is the mock shape, not the function's
+const mixed: string | undefined = ok.data?.[0]?.id
 // @ts-expect-error a stub name that has no mock
 usePikkuQueryStub('nothing:here', { featureFlag: 'x' })
 // @ts-expect-error the output is the mock shape
 const wrong: string = ok.data?.[0]?.id
-export { first, note, wrong }
+export { first, note, wrong, realId, stubId, mixed }
 `)
-      test('stub names are the mock-only RPCs and the output is the inferred mock shape', () => {
+      test('stub names are any RPC with a mock and the output is the inferred mock shape, not the function output', () => {
         const program = ts.createProgram(
           ['pikku-rpc-map.gen.d.ts', 'shims.d.ts', 'api.ts', 'use.ts'].map((f) => join(dir, f)),
           { noEmit: true, strict: true, skipLibCheck: true, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, target: ts.ScriptTarget.ES2022 }
