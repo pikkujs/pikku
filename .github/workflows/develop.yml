@@ -21,7 +21,7 @@ jobs:
   validate-deps:
     name: Validate Package Deps
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -50,7 +50,7 @@ jobs:
   lint:
     name: Lint & Format
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     # Type-aware lint (typescript/no-floating-promises, no-misused-promises)
     # reads the built .d.ts of every workspace package. Without them each
@@ -76,7 +76,7 @@ jobs:
   build:
     name: Build
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -95,7 +95,7 @@ jobs:
   # run package-parallel on the other.
   unit-tests:
     name: Unit Tests (sequential)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     steps:
@@ -126,7 +126,7 @@ jobs:
 
   unit-tests-parallel:
     name: Unit Tests (parallel)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     steps:
@@ -136,7 +136,7 @@ jobs:
 
   e2e:
     name: E2E Standard
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
       credentials:
@@ -159,7 +159,7 @@ jobs:
   # in no job until now.
   e2e-cli:
     name: E2E CLI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
       credentials:
@@ -179,7 +179,7 @@ jobs:
   # `continue-on-error` keeps that from blocking; remove it once it settles.
   e2e-console:
     name: E2E Console
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
       credentials:
@@ -201,7 +201,7 @@ jobs:
   ai-gate:
     name: AI e2e gate
     if: ${{ vars.AI_LIVE_E2E == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       run: ${{ steps.decide.outputs.run }}
@@ -219,7 +219,7 @@ jobs:
 
   e2e-ai-live:
     name: E2E AI (live)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
       credentials:
@@ -260,7 +260,7 @@ jobs:
   native-gate:
     name: Native apps gate
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       run: ${{ steps.decide.outputs.run }}
@@ -276,7 +276,7 @@ jobs:
 
   native-web:
     name: Native web dist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [build, native-gate]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
@@ -319,7 +319,7 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-latest
+            os: ubuntu-24.04
             bundles: deb,appimage
             smoke: true
           - name: macos
@@ -371,7 +371,7 @@ jobs:
 
   native-android:
     name: Native Android
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     needs: [build, native-gate, native-web]
     if: ${{ needs.native-gate.outputs.run == 'true' }}

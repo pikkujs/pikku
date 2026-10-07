@@ -34,7 +34,7 @@ jobs:
   validate-deps:
     name: Validate Package Deps
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -69,7 +69,7 @@ jobs:
     # rules go blind exactly where a missing await hides, and a tsconfig that
     # names a type package (@pikku/playwright) is reported as invalid.
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -84,7 +84,7 @@ jobs:
   e2e:
     name: E2E Standard
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
       credentials:
@@ -102,7 +102,7 @@ jobs:
   build:
     name: Build
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -113,7 +113,7 @@ jobs:
 
   codegen-perf:
     name: Codegen Perf (500 functions ≤ 30s)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build
     steps:
@@ -124,7 +124,7 @@ jobs:
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build
     strategy:
@@ -178,7 +178,7 @@ jobs:
   # own fetches reach the API on the same origin.
   verifiers-fullstack:
     name: Fullstack (browser)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     steps:
@@ -201,7 +201,7 @@ jobs:
         # Corepack's Yarn 4 in the shared setup action, breaking `bun install`.
         # The pikku-windows-x64.exe is still cross-compiled and published on each
         # release (see packages/cli/build.sh).
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -224,7 +224,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -244,7 +244,7 @@ jobs:
   # and asserts every node's state — provenance + cycles — on both transports.
   verifiers-workflows-db:
     name: Verifiers (workflows, db-backed)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     services:
@@ -296,7 +296,7 @@ jobs:
   # It gets a database of its own: the run drops and recreates `public`.
   verifiers-db-schema-db:
     name: Verifiers (db-schema, postgres)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     services:
@@ -326,7 +326,7 @@ jobs:
   # It gets a database of its own: the run drops every table in it.
   verifiers-db-schema-mysql:
     name: Verifiers (db-schema, mysql)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     services:
@@ -351,7 +351,7 @@ jobs:
 
   verifier-coverage:
     name: Verifier Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     steps:
@@ -369,7 +369,7 @@ jobs:
 
   unit-coverage:
     name: Unit Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: build
     services:
@@ -440,7 +440,7 @@ jobs:
 
   examples:
     name: Example (${{ matrix.example }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     strategy:
@@ -457,7 +457,7 @@ jobs:
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build
     services:
@@ -571,7 +571,7 @@ jobs:
 
   templates-no-services:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: build
     strategy:
@@ -623,7 +623,7 @@ jobs:
 
   template-runtime-targets:
     name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     services:

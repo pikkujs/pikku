@@ -30,7 +30,7 @@ jobs:
   # for that commit the result of the commit below it is what counts.
   gate:
     name: Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event.workflow_run.conclusion != 'cancelled'
     timeout-minutes: 100
     permissions:
@@ -78,7 +78,7 @@ jobs:
 
   publish:
     name: Publish
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: gate
     if: needs.gate.outputs.ok == 'true'
     # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
@@ -200,7 +200,7 @@ jobs:
 
   sync-templates-stackblitz:
     name: Sync Templates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: publish
     if: needs.publish.outputs.published == 'true'
     environment: sync-templates-approval
