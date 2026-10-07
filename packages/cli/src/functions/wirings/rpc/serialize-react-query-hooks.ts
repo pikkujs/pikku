@@ -1,8 +1,15 @@
+import type { StubMock } from './read-stub-mocks.js'
+
 export const serializeReactQueryHooks = (
   rpcMapPath: string,
   workflowMapPath?: string,
-  hasAuth?: boolean
+  hasAuth?: boolean,
+  stubs: StubMock[] = []
 ) => {
+  const stubMap = stubs.length
+    ? `{\n${stubs.map((stub) => `  ${JSON.stringify(stub.name)}: { output: ${stub.outputType} }`).join('\n')}\n}`
+    : '{}'
+
   const workflowImport = workflowMapPath
     ? `\nimport type { FlattenedWorkflowMap } from '${workflowMapPath}'`
     : ''
@@ -121,36 +128,6 @@ const retryUnlessClientError = (failureCount: number, error: Error) => {
   return !(status !== undefined && status >= 400 && status < 500) && failureCount < 3
 }
 
-export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
-  name: Name,
-  data: FlattenedRPCMap[Name]['input'],
-  options?: Omit<UseQueryOptions<FlattenedRPCMap[Name]['output'], Error>, 'queryKey' | 'queryFn'>
-) => {
-  const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
-  return useQuery<FlattenedRPCMap[Name]['output'], Error>({
-    queryKey: [name, data],
-    queryFn: () => rpc.invoke(name, data),
-    retry: retryUnlessClientError,
-    ...options,
-  })
-}
-
-export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
-  name: Name,
-  options?: Omit<UseMutationOptions<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>, 'mutationFn'>
-) => {
-  const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
-  return useMutation<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>({
-    mutationFn: (data) => rpc.invoke(name, data),
-    ...options,
-  })
-}
-
-type StubOptions = { featureFlag: string }
-
-// @ts-ignore
-const MOCKS_ENABLED = !!(import.meta.env.DEV || import.meta.env.VITE_MOCK)
-
 let mockFiles: Record<string, () => Promise<unknown>> = {}
 let mockMeta: Record<string, unknown> = {}
 
@@ -164,37 +141,92 @@ export const registerMocks = (
 
 const unwrapDefault = (value: unknown) => (value as { default?: unknown })?.default ?? value
 
-export const defaultMock = async (name: string) => {
+const mockFileFor = (name: string) => {
   const dir = '/.mocks/' + name.replace(/:/g, '.') + '/'
   const metas = Object.keys(mockMeta).filter((key) => key.includes(dir))
   const chosen = metas.find((key) => (unwrapDefault(mockMeta[key]) as { default?: boolean })?.default) ?? (metas.length === 1 ? metas[0] : undefined)
-  const file = chosen && Object.keys(mockFiles).find((key) => key === chosen.replace(/\\.meta\\.json$/, '.json'))
+  return chosen && Object.keys(mockFiles).find((key) => key === chosen.replace(/\\.meta\\.json$/, '.json'))
+}
+
+const hasMock = (name: string) => !!mockFileFor(name)
+
+export const defaultMock = async (name: string) => {
+  const file = mockFileFor(name)
   if (!file) throw new Error('No default mock for ' + name + ' in .mocks/')
   return unwrapDefault(await mockFiles[file]())
 }
 
-export const usePikkuQueryStub = <Name extends keyof FlattenedRPCMap>(
+export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
   name: Name,
-  _stub: StubOptions,
-  data?: FlattenedRPCMap[Name]['input'],
+  data: FlattenedRPCMap[Name]['input'],
   options?: Omit<UseQueryOptions<FlattenedRPCMap[Name]['output'], Error>, 'queryKey' | 'queryFn'>
 ) => {
-  if (!MOCKS_ENABLED) return usePikkuQuery(name, data as FlattenedRPCMap[Name]['input'], options)
+  const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
   return useQuery<FlattenedRPCMap[Name]['output'], Error>({
-    queryKey: [name, data, 'mock'],
-    queryFn: () => defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>,
+    queryKey: [name, data],
+    queryFn: () => {
+      // @ts-ignore
+      if (import.meta.env.VITE_MOCK && hasMock(name as string)) return defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>
+      return rpc.invoke(name, data)
+    },
+    retry: retryUnlessClientError,
     ...options,
   })
 }
 
-export const usePikkuMutationStub = <Name extends keyof FlattenedRPCMap>(
+export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
   name: Name,
-  _stub: StubOptions,
   options?: Omit<UseMutationOptions<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>, 'mutationFn'>
 ) => {
-  if (!MOCKS_ENABLED) return usePikkuMutation(name, options)
+  const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
   return useMutation<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>({
-    mutationFn: () => defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>,
+    mutationFn: (data) => {
+      // @ts-ignore
+      if (import.meta.env.VITE_MOCK && hasMock(name as string)) return defaultMock(name as string) as Promise<FlattenedRPCMap[Name]['output']>
+      return rpc.invoke(name, data)
+    },
+    ...options,
+  })
+}
+
+type StubMap = ${stubMap}
+
+type StubName = Exclude<keyof StubMap, keyof FlattenedRPCMap>
+
+type StubOptions = { featureFlag: string; input?: Record<string, unknown> }
+
+type StubInvoke = (name: string, data: unknown) => Promise<unknown>
+
+export const usePikkuQueryStub = <Name extends StubName>(
+  name: Name,
+  stub: StubOptions,
+  options?: Omit<UseQueryOptions<StubMap[Name]['output'], Error>, 'queryKey' | 'queryFn'>
+) => {
+  const rpc = usePikkuRPC<{ invoke: StubInvoke }>()
+  return useQuery<StubMap[Name]['output'], Error>({
+    queryKey: [name, stub.input],
+    queryFn: () => {
+      // @ts-ignore
+      if (import.meta.env.DEV || import.meta.env.VITE_MOCK) return defaultMock(name) as Promise<StubMap[Name]['output']>
+      return rpc.invoke(name, stub.input) as Promise<StubMap[Name]['output']>
+    },
+    retry: retryUnlessClientError,
+    ...options,
+  })
+}
+
+export const usePikkuMutationStub = <Name extends StubName>(
+  name: Name,
+  stub: StubOptions,
+  options?: Omit<UseMutationOptions<StubMap[Name]['output'], Error, Record<string, unknown>>, 'mutationFn'>
+) => {
+  const rpc = usePikkuRPC<{ invoke: StubInvoke }>()
+  return useMutation<StubMap[Name]['output'], Error, Record<string, unknown>>({
+    mutationFn: (data) => {
+      // @ts-ignore
+      if (import.meta.env.DEV || import.meta.env.VITE_MOCK) return defaultMock(name) as Promise<StubMap[Name]['output']>
+      return rpc.invoke(name, data ?? stub.input) as Promise<StubMap[Name]['output']>
+    },
     ...options,
   })
 }

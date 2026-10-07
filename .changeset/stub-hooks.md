@@ -2,4 +2,4 @@
 '@pikku/cli': minor
 ---
 
-Generated React Query hooks gain `usePikkuQueryStub` and `usePikkuMutationStub`, plus `registerMocks`. In dev and mock mode a stub answers with the RPC's default mock from `.mocks/`; in production it is the plain hook, so an RPC without a function 404s.
+Generated React Query hooks gain `usePikkuQueryStub` and `usePikkuMutationStub` for RPCs that have `.mocks/<rpc>/` and no function. The stub names and their output types (the or of the non-error mocks, optional where scenarios differ) are generated from `.mocks/`. Dev and `VITE_MOCK` answer from the default mock; production is a plain call that 404s. `usePikkuQuery` and `usePikkuMutation` still take only real RPC names and answer from a mock when `VITE_MOCK` is set and one exists.
