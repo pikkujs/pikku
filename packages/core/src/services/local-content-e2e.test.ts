@@ -1,6 +1,11 @@
 import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { createServer, type Server } from 'node:http'
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http'
 import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -50,7 +55,7 @@ describe('local content over real HTTP', () => {
 
   before(async () => {
     dir = mkdtempSync(join(tmpdir(), 'pikku-content-e2e-'))
-    server = createServer(async (req, res) => {
+    const serve = async (req: IncomingMessage, res: ServerResponse) => {
       const url = `http://${req.headers.host}${req.url}`
       const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
       const request = new Request(url, {
@@ -72,6 +77,9 @@ describe('local content over real HTTP', () => {
       } else {
         res.end()
       }
+    }
+    server = createServer((req, res) => {
+      void serve(req, res)
     })
     await new Promise<void>((resolve) =>
       server.listen(0, '127.0.0.1', () => resolve())
@@ -101,7 +109,11 @@ describe('local content over real HTTP', () => {
   })
 
   const upload = async (
-    args: { bucket: string; fileKey: string; visibility?: 'public' | 'private' },
+    args: {
+      bucket: string
+      fileKey: string
+      visibility?: 'public' | 'private'
+    },
     body: BodyInit | Readable,
     size?: number
   ) => {
@@ -265,6 +277,9 @@ describe('local content over real HTTP', () => {
       megabytes * CHUNK.length
     )
     const growthMb = (peak - baseline) / (1024 * 1024)
-    assert.ok(growthMb < 150, `rss grew ${growthMb.toFixed(0)} MB for a 300 MB file`)
+    assert.ok(
+      growthMb < 150,
+      `rss grew ${growthMb.toFixed(0)} MB for a 300 MB file`
+    )
   })
 })

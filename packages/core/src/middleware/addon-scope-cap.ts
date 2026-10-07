@@ -39,7 +39,10 @@ export const addonScopeCap = pikkuMiddlewareFactory<{
       throw new ForbiddenError(`Unknown addon '${name}'`)
     }
 
-    setSession({ ...session, scopes: intersectScopes(session.scopes, role) })
+    await setSession({
+      ...session,
+      scopes: intersectScopes(session.scopes, role),
+    })
     return next()
   })
 )
