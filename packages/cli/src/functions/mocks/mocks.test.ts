@@ -10,7 +10,12 @@ import {
 } from './contract.js'
 import { diffMocks, type SurfaceView } from './diff.js'
 import { readMocks } from './read.js'
-import { checkStubs, frontendRoots } from './stub-scan.js'
+import {
+  callIndex,
+  checkStubs,
+  frontendRoots,
+  scanFrontend,
+} from './stub-scan.js'
 import { validateAgainstSchema } from './validate.js'
 
 const listSchema = {
@@ -314,7 +319,9 @@ const usePikkuQueryStubby = 1`
   )
   write('apps/app/src/skipped.gen.ts', `usePikkuQueryStub('x:y')`)
 
-  const result = checkStubs(root, frontendRoots(root), ['reminders'])
+  const result = checkStubs(scanFrontend(root, frontendRoots(root)), [
+    'reminders',
+  ])
   const at = (file: string) => result.calls.filter((c) => c.file.endsWith(file))
 
   test('a flagged stub with a declared flag passes', () => {
@@ -356,7 +363,7 @@ const usePikkuQueryStubby = 1`
     rmSync(join(root, 'apps/app/src/undeclared.tsx'))
     rmSync(join(root, 'apps/app/src/dynamic.tsx'))
     assert.strictEqual(
-      checkStubs(root, frontendRoots(root), ['reminders']).ok,
+      checkStubs(scanFrontend(root, frontendRoots(root)), ['reminders']).ok,
       true
     )
     rmSync(root, { recursive: true, force: true })
@@ -372,9 +379,17 @@ describe('stub fit', () => {
 usePikkuQueryStub('guests:list', { featureFlag: 'rooms' })
 usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`
   )
-  const fitting = (...mocks: { rpc: string; mocks: ReturnType<typeof mock>[] }[]) =>
-    new Set(
-      diffMocks(mocks, {
+  const grown = mock('busy', [{ id: 'a', guests: 2, room: 'r1' }], {
+    default: true,
+  })
+  const statuses = new Map(
+    diffMocks(
+      [
+        { rpc: 'bookings:list', mocks: [healthy] },
+        { rpc: 'guests:list', mocks: [grown] },
+        { rpc: 'rooms:list', mocks: [healthy] },
+      ],
+      {
         functions: {
           ...surface().functions,
           'guests:list': {
@@ -385,23 +400,13 @@ usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`
           },
         },
         schemas: surface().schemas,
-      })
-        .rpcs.filter((r) => r.status === 'ok')
-        .map((r) => r.rpc)
-    )
-  const grown = mock('busy', [{ id: 'a', guests: 2, room: 'r1' }], {
-    default: true,
-  })
+      }
+    ).rpcs.map((r) => [r.rpc, r.status] as const)
+  )
   const result = checkStubs(
-    root,
-    frontendRoots(root),
+    scanFrontend(root, frontendRoots(root)),
     ['rooms'],
-    (rpc) =>
-      fitting(
-        { rpc: 'bookings:list', mocks: [healthy] },
-        { rpc: 'guests:list', mocks: [grown] },
-        { rpc: 'rooms:list', mocks: [healthy] }
-      ).has(rpc)
+    { status: (rpc) => statuses.get(rpc) }
   )
   const problem = (rpc: string) =>
     result.calls.find((c) => c.rpc === rpc)!.problem
@@ -417,6 +422,190 @@ usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`
 
   test('a stub on an RPC with no function is allowed', () => {
     assert.strictEqual(problem('rooms:list'), undefined)
+    rmSync(root, { recursive: true, force: true })
+  })
+})
+
+const fixture = (files: Record<string, string>) => {
+  const root = mkdtempSync(join(tmpdir(), 'stubcases-'))
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(join(root, rel, '..'), { recursive: true })
+    writeFileSync(join(root, rel), text)
+  }
+  return { root, scan: scanFrontend(root, frontendRoots(root)) }
+}
+
+const withFunctions = (...keys: string[]): SurfaceView => ({
+  functions: {
+    ...surface().functions,
+    ...Object.fromEntries(
+      keys.map((key) => [
+        key,
+        { key, version: 1, outputSchemaName: 'BookingsOut', expose: true },
+      ])
+    ),
+  },
+  schemas: surface().schemas,
+})
+
+describe('stub cases', () => {
+  const { root, scan } = fixture({
+    'apps/app/src/screen.tsx': `usePikkuQueryStub('guests:list', { featureFlag: 'rooms' })
+usePikkuQueryStub('seats:list')
+usePikkuQueryStub('tables:list', { featureFlag: 'rooms' })
+usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })
+usePikkuQueryStub('ghost:list', { featureFlag: 'rooms' })
+usePikkuQuery('bookings:list')
+usePikkuQuery('orphans:list')
+usePikkuMutation('bookings:create')`,
+  })
+  const grown = mock('busy', [{ id: 'a', guests: 2, room: 'r1' }], {
+    default: true,
+  })
+  const good = mock('busy', [{ id: 'a', guests: 2 }], { default: true })
+  const garbled = {
+    name: 'garbled',
+    hasData: false,
+    problems: ['garbled.json is not valid JSON: Unexpected end'],
+  }
+  const surfaceView = withFunctions('guests:list', 'seats:list', 'tables:list')
+  const rpcMocks = [
+    { rpc: 'guests:list', mocks: [grown] },
+    { rpc: 'seats:list', mocks: [grown] },
+    { rpc: 'tables:list', mocks: [good, garbled] },
+    { rpc: 'rooms:list', mocks: [healthy] },
+  ]
+  const diff = diffMocks(rpcMocks, surfaceView, { calls: callIndex(scan) })
+  const status = new Map(diff.rpcs.map((r) => [r.rpc, r.status]))
+  const keys = new Set(Object.values(surfaceView.functions).map((f) => f.key))
+  const result = checkStubs(scan, ['rooms', 'spare'], {
+    hasFunction: (rpc) => keys.has(rpc),
+    status: (rpc) => status.get(rpc),
+    mocked: new Set(rpcMocks.map((m) => m.rpc)),
+    dead: diff.rpcs.filter((r) => r.status === 'removed').map((r) => r.rpc),
+    unused: diff.rpcs.filter((r) => r.unused).map((r) => r.rpc),
+  })
+  const problem = (rpc: string) =>
+    result.calls.find((c) => c.rpc === rpc)!.problem
+
+  test('a stub on a changed function with a flag can be published (case 10)', () => {
+    assert.strictEqual(status.get('guests:list'), 'changed')
+    assert.strictEqual(problem('guests:list'), undefined)
+  })
+
+  test('a stub on a changed function with no flag is blocked (case 11)', () => {
+    assert.strictEqual(problem('seats:list'), 'no-flag')
+  })
+
+  test('a stub on a function whose mock is invalid is blocked (case 13)', () => {
+    assert.strictEqual(status.get('tables:list'), 'invalid')
+    assert.strictEqual(problem('tables:list'), 'mock-invalid')
+  })
+
+  test('a stub on an RPC with no function is allowed (case 6)', () => {
+    assert.strictEqual(problem('rooms:list'), undefined)
+  })
+
+  test('a stub with no mock directory is blocked (case 14)', () => {
+    assert.strictEqual(problem('ghost:list'), 'no-mock')
+  })
+
+  test('a plain call with no function and no stub is an error (case 5)', () => {
+    assert.deepStrictEqual(
+      result.missing.map((c) => c.rpc),
+      ['orphans:list', 'bookings:create']
+    )
+    assert.strictEqual(result.ok, false)
+  })
+
+  test('a declared flag no stub uses is reported, never failed', () => {
+    assert.deepStrictEqual(result.orphanFlags, ['spare'])
+  })
+
+  test('only error mocks warn that no healthy mock exists (case 15)', () => {
+    const only = diffMocks(
+      [{ rpc: 'bookings:list', mocks: [error] }],
+      surface()
+    ).rpcs[0]!
+    assert.ok(only.warnings.some((w) => w.includes('only error mocks')))
+    rmSync(root, { recursive: true, force: true })
+  })
+})
+
+describe('unused and dead mocks', () => {
+  const { root, scan } = fixture({
+    'apps/app/src/screen.tsx': `usePikkuQuery('bookings:list')
+usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`,
+  })
+  const calls = callIndex(scan)
+  const rpcMocks = [
+    { rpc: 'bookings:list', mocks: [healthy, empty, error] },
+    { rpc: 'rooms:list', mocks: [healthy] },
+    { rpc: 'old:list', mocks: [healthy] },
+    { rpc: 'guests:list', mocks: [healthy] },
+  ]
+  const diff = diffMocks(rpcMocks, withFunctions('guests:list'), { calls })
+  const report = (rpc: string) => diff.rpcs.find((r) => r.rpc === rpc)!
+
+  test('a mock with no function and no call is removed, and does not fail diff', () => {
+    assert.strictEqual(report('old:list').status, 'removed')
+    assert.ok(
+      report('old:list').warnings.some(
+        (w) => w === 'unused, delete .mocks/old.list'
+      )
+    )
+  })
+
+  test('a mock with no function and a stub call stays added', () => {
+    assert.strictEqual(report('rooms:list').status, 'added')
+  })
+
+  test('a mock on a function nothing calls is unused, status unchanged', () => {
+    assert.strictEqual(report('guests:list').unused, true)
+    assert.strictEqual(report('guests:list').status, 'ok')
+    assert.strictEqual(report('bookings:list').unused, undefined)
+  })
+
+  test('removed alone does not fail diff, but added still does', () => {
+    const only = diffMocks([{ rpc: 'old:list', mocks: [healthy] }], surface(), {
+      calls,
+    })
+    assert.strictEqual(only.ok, true)
+    assert.strictEqual(diff.ok, false)
+  })
+
+  test('a call whose name is not a literal means nothing is reported unused', () => {
+    const dynamic = fixture({
+      'apps/app/src/screen.tsx': `const name = 'x'
+usePikkuQuery(name)`,
+    })
+    const index = callIndex(dynamic.scan)
+    assert.strictEqual(index.unresolved, 1)
+    const d = diffMocks(rpcMocks, withFunctions('guests:list'), {
+      calls: index,
+    })
+    assert.strictEqual(
+      d.rpcs.find((r) => r.rpc === 'old:list')!.status,
+      'added'
+    )
+    assert.strictEqual(
+      d.rpcs.find((r) => r.rpc === 'guests:list')!.unused,
+      undefined
+    )
+    assert.strictEqual(d.unresolved, 1)
+    rmSync(dynamic.root, { recursive: true, force: true })
+  })
+
+  test('check passes with dead and unused mocks, and --strict fails on them', () => {
+    const facts = {
+      hasFunction: (rpc: string) => rpc !== 'rooms:list' && rpc !== 'old:list',
+      dead: ['old:list'],
+      unused: ['guests:list'],
+    }
+    const plain = checkStubs(scan, ['rooms'], facts)
+    assert.strictEqual(plain.ok, true)
+    const strict = checkStubs(scan, ['rooms'], facts, { strict: true })
+    assert.strictEqual(strict.ok, false)
     rmSync(root, { recursive: true, force: true })
   })
 })
