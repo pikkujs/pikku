@@ -195,6 +195,8 @@ const ok = usePikkuQueryStub('reminders:list', { featureFlag: 'x', input: { a: 1
 const first: number | undefined = ok.data?.[0]?.id
 const note: string | undefined = ok.data?.[0]?.note
 usePikkuMutationStub('reminders:list', { featureFlag: 'x' })
+usePikkuQueryStub('reminders:list')
+usePikkuMutationStub('reminders:list')
 usePikkuQuery('bookings:list', { page: 1 })
 // @ts-expect-error a stub name that has a real function
 usePikkuQueryStub('bookings:list', { featureFlag: 'x' })

@@ -193,13 +193,13 @@ type StubMap = ${stubMap}
 
 type StubName = Exclude<keyof StubMap, keyof FlattenedRPCMap>
 
-type StubOptions = { featureFlag: string; input?: Record<string, unknown> }
+type StubOptions = { featureFlag?: string; input?: Record<string, unknown> }
 
 type StubInvoke = (name: string, data: unknown) => Promise<unknown>
 
 export const usePikkuQueryStub = <Name extends StubName>(
   name: Name,
-  stub: StubOptions,
+  stub: StubOptions = {},
   options?: Omit<UseQueryOptions<StubMap[Name]['output'], Error>, 'queryKey' | 'queryFn'>
 ) => {
   const rpc = usePikkuRPC<{ invoke: StubInvoke }>()
@@ -217,7 +217,7 @@ export const usePikkuQueryStub = <Name extends StubName>(
 
 export const usePikkuMutationStub = <Name extends StubName>(
   name: Name,
-  stub: StubOptions,
+  stub: StubOptions = {},
   options?: Omit<UseMutationOptions<StubMap[Name]['output'], Error, Record<string, unknown>>, 'mutationFn'>
 ) => {
   const rpc = usePikkuRPC<{ invoke: StubInvoke }>()
