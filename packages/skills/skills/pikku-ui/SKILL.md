@@ -25,8 +25,14 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
      with the output landing in the existing theme tokens and variants, never new styles;
    - who the audience is, and that jargon is a defect;
    - the checks to run (typecheck), and how to commit (path-scoped, never sweep other work in).
-3. Do not draw or restyle the screen in the main thread, even for a small screen.
-4. When the subagent reports, check that it did what it was told. If it only loaded `impeccable`
+3. A redesign refines what is there. The subagent keeps the hero, imagery, illustrations, copy tone
+   and composition unless the user named one of them as the problem. Fewer controls and more feeling is
+   the direction; never trade a hero or images for forms, toggles and buttons. The prompt must list what
+   must not change and quote the user's actual complaint. A result with less visual character than the
+   original is a failure. If it is not clear what is wrong, ask the user before starting.
+4. Do not draw or restyle the screen in the main thread, even for a small screen.
+5. When the subagent reports, look at the screen before telling the user it is done (one render or DOM
+   check). Check that it did what it was told. If it only loaded `impeccable`
    and skipped its workflow, send it back. Tell the user what changed and what it decided.
 
 ## What stays in the main thread
