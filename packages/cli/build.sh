@@ -51,6 +51,11 @@ echo "Bootstrapping with published @pikku/cli..."
 # core is a *peer* of both the CLI and the inspector, which is why it has to be
 # named here to exist at all once peer resolution is off.
 : "${PIKKU_CORE_VERSION:=0.12.107}"
+# @pikku/knowledge arrives the same way, through the CLI's own range, so it floated to
+# whatever was newest. 0.12.18 (2026-10-06) dropped `KnowledgeReconcileInput`, which the
+# bootstrap CLI imports, and every bootstrap died on the missing export, the release's
+# own Publish run included. 0.12.17 is the last release that still exports it.
+: "${PIKKU_KNOWLEDGE_VERSION:=0.12.17}"
 # @pikku/node-http-server is the third member of this family to need naming, and
 # it arrives the same way @pikku/kysely did: transitively, through the CLI's
 # `^0.12.7`, so it floats to the newest release while `overrides` holds core
@@ -120,6 +125,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",
@@ -130,6 +136,7 @@ cat > "$_bootstrap_dir/package.json" <<JSON
     "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}",
     "@pikku/inspector": "${PIKKU_INSPECTOR_VERSION}",
     "@pikku/core": "${PIKKU_CORE_VERSION}",
+    "@pikku/knowledge": "${PIKKU_KNOWLEDGE_VERSION}",
     "@pikku/node-http-server": "${PIKKU_NODE_HTTP_SERVER_VERSION}",
     "@pikku/kysely": "${PIKKU_KYSELY_VERSION}",
     "@pikku/schedule": "${PIKKU_SCHEDULE_VERSION}",

@@ -5,6 +5,12 @@
 # Draining it first is what makes a passing hook actually push.
 cat > /dev/null
 
+# Git points GIT_DIR at the worktree's gitdir when it runs a hook from a linked worktree,
+# and every child inherits it. Tests that `git init` a temp directory then act on the
+# worktree instead: they commit "init" onto the pushed branch and their own repos report
+# "not a git repository". Nothing below needs it, since git finds the repo from the cwd.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+
 set -e
 
 # `bun run build` and the binary verifier both shell out to `bun build`, which drops

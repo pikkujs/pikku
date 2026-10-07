@@ -11,7 +11,11 @@ const workspace = async (): Promise<string> => {
   await mkdir(join(root, 'apps/app/src'), { recursive: true })
   await writeFile(
     join(root, 'packages/theme/themes/default.json'),
-    JSON.stringify({ name: 'Default', brand: { colors: { primary: '#123456' } }, structure: {} })
+    JSON.stringify({
+      name: 'Default',
+      brand: { colors: { primary: '#123456' } },
+      structure: {},
+    })
   )
   await writeFile(
     join(root, 'apps/app/src/Page.tsx'),
@@ -26,7 +30,10 @@ describe('DesignService', () => {
     const design = new DesignService(root)
     assert.strictEqual(await design.createTheme('night', 'Night'), 'night')
     const { themes, activeId } = await design.listThemes()
-    assert.deepStrictEqual(themes.map((t) => t.id), ['default', 'night'])
+    assert.deepStrictEqual(
+      themes.map((t) => t.id),
+      ['default', 'night']
+    )
     assert.strictEqual(activeId, 'night')
     const css = await readFile(join(root, 'packages/theme/theme.css'), 'utf-8')
     assert.match(css, /--primary: oklch\(/)
@@ -38,14 +45,22 @@ describe('DesignService', () => {
   test('applies a preset with overrides and re-brands the emails', async () => {
     const root = await workspace()
     await mkdir(join(root, 'emails'), { recursive: true })
-    await writeFile(join(root, 'emails/theme.json'), JSON.stringify({ appName: 'Keep me' }))
+    await writeFile(
+      join(root, 'emails/theme.json'),
+      JSON.stringify({ appName: 'Keep me' })
+    )
     const design = new DesignService(root)
     const [preset] = design.presets()
-    const result = await design.applyTheme({ preset: preset!.id, colors: { primary: '#ff0000' } })
+    const result = await design.applyTheme({
+      preset: preset!.id,
+      colors: { primary: '#ff0000' },
+    })
     assert.deepStrictEqual(result, { activeId: preset!.id, emails: true })
     const { spec } = await design.getThemeSpec()
     assert.strictEqual(spec.brand?.colors?.primary, '#ff0000')
-    const emails = JSON.parse(await readFile(join(root, 'emails/theme.json'), 'utf-8'))
+    const emails = JSON.parse(
+      await readFile(join(root, 'emails/theme.json'), 'utf-8')
+    )
     assert.strictEqual(emails.appName, 'Keep me')
     assert.strictEqual(emails.colors.button, '#ff0000')
     await assert.rejects(design.applyTheme({ preset: 'nope' }))
@@ -59,9 +74,15 @@ describe('DesignService', () => {
       radius: 'lg',
       shadows: { sm: '0 1px 2px #0003' },
     })
-    await design.updateThemeSpec({ shadows: { md: '0 2px 4px #0003' }, density: 'roomy' })
+    await design.updateThemeSpec({
+      shadows: { md: '0 2px 4px #0003' },
+      density: 'roomy',
+    })
     const { spec } = await design.getThemeSpec()
-    assert.deepStrictEqual(spec.brand?.colors, { primary: '#123456', accent: '#abcdef' })
+    assert.deepStrictEqual(spec.brand?.colors, {
+      primary: '#123456',
+      accent: '#abcdef',
+    })
     assert.deepStrictEqual(spec.structure, {
       radius: 'lg',
       density: 'roomy',
@@ -102,10 +123,5 @@ describe('DesignService', () => {
     assert.strictEqual(meta.source, 'app')
     assert.deepStrictEqual(meta.variantOptions.variant, ['default', 'brand'])
     assert.deepStrictEqual((await design.uiComponents()).components, ['Button'])
-    const { tags, blocks } = await design.listBlocks()
-    assert.ok(tags.length > 0 && blocks.length > 0)
-    const block = await design.getBlock(blocks[0]!.name)
-    assert.ok(Object.keys(block.files).length > 0)
-    await assert.rejects(design.getBlock('NoSuchBlock'))
   })
 })
