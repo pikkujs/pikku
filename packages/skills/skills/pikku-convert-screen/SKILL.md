@@ -36,8 +36,8 @@ Design from the spec, not from the old screen. Never copy old markup or styles.
 - Use the components the project already uses. No modal dialogs: forms go in the side panel or a new page.
 - Plain words. The client's own vocabulary, never internal jargon.
 - Every error says what happened in plain terms and offers a way out, with an AI fix where it makes sense.
-- No static data. The screen reads through RPC hooks only. Fake data for a prototype lives in its mock RPC layer, with a populated and an empty scenario.
-- The same component serves the real app and any prototype.
+- No static data. The screen reads through RPC hooks only. Data a function does not return yet comes from `.mocks/` through the stub hooks (see the pikku-build skill, mocks reference), with a populated, an empty and an error scenario.
+- The same component serves every data state: real, mocked or stubbed.
 - Add the route and a rail entry only where the spec says people reach it.
 
 ## 4. Check against the spec
