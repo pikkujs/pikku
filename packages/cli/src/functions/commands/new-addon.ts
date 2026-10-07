@@ -1219,56 +1219,56 @@ function findAppProject(
 }
 
 export type NewAddonInput = {
-    name: string
-    ui?: boolean
-    displayName?: string
-    description?: string
-    category?: string
-    dir?: string
-    secret?: boolean
-    variable?: boolean
-    oauth?: boolean
-    credential?: string
-    test?: boolean
-    openapi?: string
-    openapiHeader?: string[]
-    tags?: string[]
-    include?: string[]
-    exclude?: string[]
-    auth?: string
-    install?: boolean
-    authConfig?: string
-    mcp?: boolean
-    camelCase?: boolean
-    build?: boolean
-  }
+  name: string
+  ui?: boolean
+  displayName?: string
+  description?: string
+  category?: string
+  dir?: string
+  secret?: boolean
+  variable?: boolean
+  oauth?: boolean
+  credential?: string
+  test?: boolean
+  openapi?: string
+  openapiHeader?: string[]
+  tags?: string[]
+  include?: string[]
+  exclude?: string[]
+  auth?: string
+  install?: boolean
+  authConfig?: string
+  mcp?: boolean
+  camelCase?: boolean
+  build?: boolean
+}
 
 export async function newAddon(
   { logger, config }: Pick<SingletonServices, 'logger' | 'config'>,
-    {
-      name,
-      ui = false,
-      displayName,
-      description,
-      category = 'General',
-      dir,
-      secret = false,
-      variable = false,
-      oauth = false,
-      credential,
-      test = true,
-      openapi,
-      openapiHeader,
-      tags,
-      include,
-      exclude,
-      auth,
-      install,
-      authConfig,
-      mcp = false,
-      camelCase = false,
-      build = true,
-    }: NewAddonInput
+  {
+    name,
+    ui = false,
+    displayName,
+    description,
+    category = 'General',
+    dir,
+    secret = false,
+    variable = false,
+    oauth = false,
+    credential,
+    test = true,
+    openapi,
+    openapiHeader,
+    tags,
+    include,
+    exclude,
+    auth,
+    install,
+    authConfig,
+    mcp = false,
+    camelCase = false,
+    build = true,
+  }: NewAddonInput
 ): Promise<string> {
   name = sanitizeAddonName(name)
   if (ui) {
@@ -1277,6 +1277,9 @@ export async function newAddon(
       `addon-${name}`
     )
     await scaffoldAddonUi(logger, { name, dir: uiRoot })
+    if (build && !buildGeneratedAddon(resolve(uiRoot), logger)) {
+      process.exit(1)
+    }
     return resolve(uiRoot)
   }
 
@@ -1454,9 +1457,7 @@ export async function newAddon(
   if (installing && app && spec) {
     const functions = Object.fromEntries(
       Object.entries(addonFiles)
-        .filter(([path]) =>
-          /^src\/functions\/[^/]+\.function\.ts$/.test(path)
-        )
+        .filter(([path]) => /^src\/functions\/[^/]+\.function\.ts$/.test(path))
         .map(([path, source]) => [
           path.slice('src/functions/'.length, -'.function.ts'.length),
           source,

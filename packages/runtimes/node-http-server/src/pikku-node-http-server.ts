@@ -612,7 +612,7 @@ export class PikkuNodeHTTPServer {
 
     try {
       await streamUploadToFile(
-        req,
+        req.iterator({ destroyOnReturn: false }),
         targetPath,
         parseContentSizeLimit(content.sizeLimit ?? '1mb')
       )
@@ -620,7 +620,10 @@ export class PikkuNodeHTTPServer {
       res.end()
     } catch (err) {
       if (err instanceof UploadTooLargeError) {
-        res.writeHead(413, { 'content-type': 'text/plain; charset=utf-8' })
+        res.writeHead(413, {
+          'content-type': 'text/plain; charset=utf-8',
+          connection: 'close',
+        })
         res.end('Content too large')
         return
       }

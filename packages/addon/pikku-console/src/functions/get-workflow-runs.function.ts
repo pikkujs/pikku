@@ -35,7 +35,7 @@ export const getWorkflowRuns = pikkuFunc<
           workflowRunService.listRuns({
             workflowName,
             status: input.status,
-            limit: (input.offset ?? 0) + (input.limit ?? 50),
+            limit: Math.max(0, input.offset ?? 0) + (input.limit ?? 50),
           })
         )
       )

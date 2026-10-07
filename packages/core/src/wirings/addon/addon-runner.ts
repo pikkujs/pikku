@@ -165,6 +165,10 @@ export const getOrCreatePackageSingletonServices = async (
   parentServices: CoreSingletonServices,
   addonInstance?: AddonInstance
 ): Promise<CoreSingletonServices> => {
+  addonInstance ??= addonInstanceForNamespace(
+    findAddonNamespaceForPackage(packageName) ?? undefined,
+    packageName
+  )
   const cacheKey = addonInstance?.namespace ?? packageName
 
   const cachedServices = pikkuState(cacheKey, 'package', 'singletonServices')

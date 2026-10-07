@@ -322,7 +322,8 @@ export async function loadAddonFunctionsMeta(
         }
       }
       if (decl.ui) {
-        let manifest: Awaited<ReturnType<typeof loadScreensManifest>>
+        let manifest: Awaited<ReturnType<typeof loadScreensManifest>> | undefined
+        let unreadable = false
         try {
           manifest = await loadScreensManifest(require, decl.package)
         } catch (e) {
@@ -330,9 +331,11 @@ export async function loadAddonFunctionsMeta(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
             `wireAddon('${namespace}') sets ui: true, but the screens manifest of ${decl.package} could not be read: ${e instanceof Error ? e.message : e}`
           )
-          continue
+          unreadable = true
         }
-        if (!manifest || manifest.screens.length === 0) {
+        if (unreadable) {
+          // reported above; the addon's functions and scopes still load
+        } else if (!manifest || manifest.screens.length === 0) {
           logger.critical(
             ErrorCode.ADDON_UI_HAS_NO_SCREENS,
             `wireAddon('${namespace}') sets ui: true, but ${decl.package} declares no screens. Add a defineScreens call to the package, or drop ui.`
