@@ -13,7 +13,7 @@ import {
 export const DEFAULT_API_URL = 'https://api.pikkufabric.com'
 
 /**
- * `~/.fabric/auth.json` keys auth tokens by api-url so a single user can
+ * `~/.pikkustudio/fabric/auth.json` (shared with Pikku Studio; `~/.fabric/auth.json` is read until the first login rewrites it) keys auth tokens by api-url so a single user can
  * stay logged into prod + local dev side-by-side.
  */
 export interface AuthFile {
@@ -25,11 +25,13 @@ export interface AuthFile {
   defaultApiUrl?: string
 }
 
-const authFilePath = join(homedir(), '.fabric', 'auth.json')
+const authFilePath = join(homedir(), '.pikkustudio', 'fabric', 'auth.json')
+const legacyAuthFilePath = join(homedir(), '.fabric', 'auth.json')
 
 export async function readAuthFile(): Promise<AuthFile> {
-  if (!existsSync(authFilePath)) return { tokens: {} }
-  const raw = await readFile(authFilePath, 'utf8')
+  const path = existsSync(authFilePath) ? authFilePath : legacyAuthFilePath
+  if (!existsSync(path)) return { tokens: {} }
+  const raw = await readFile(path, 'utf8')
   return JSON.parse(raw) as AuthFile
 }
 
@@ -94,7 +96,7 @@ export type { LinkedProject, ProjectSource }
  *   3. the api-url of the last `login`
  *   4. hardcoded default
  *
- * Token comes from ~/.fabric/auth.json keyed by the resolved api-url. The
+ * Token comes from ~/.pikkustudio/fabric/auth.json keyed by the resolved api-url. The
  * project is resolved by `resolveLinkedProject` — env, then the git
  * remote — and only when there is a token to ask fabric with.
  * `resolveProject: false` skips it for commands that never use it.
