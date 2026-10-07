@@ -10,6 +10,7 @@ import {
 } from './contract.js'
 import { diffMocks, type SurfaceView } from './diff.js'
 import { readMocks } from './read.js'
+import { checkStubs, frontendRoots } from './stub-scan.js'
 import { validateAgainstSchema } from './validate.js'
 
 const listSchema = {
@@ -276,5 +277,88 @@ describe('readMocks', () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+})
+
+describe('stub scan', () => {
+  const root = mkdtempSync(join(tmpdir(), 'stubscan-'))
+  const write = (rel: string, text: string) => {
+    mkdirSync(join(root, rel, '..'), { recursive: true })
+    writeFileSync(join(root, rel), text)
+  }
+  write(
+    'apps/app/src/ok.tsx',
+    `import { usePikkuQueryStub } from 'sdk'
+usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' })`
+  )
+  write(
+    'apps/app/src/unflagged.tsx',
+    `import { usePikkuQueryStub as stubbed, usePikkuMutationStub } from 'sdk'
+stubbed('reminders:list')
+usePikkuMutationStub('reminders:send', { input: { a: 1 } })`
+  )
+  write(
+    'apps/app/src/undeclared.tsx',
+    `api.usePikkuQueryStub('reminders:list', { featureFlag: 'ghost' })`
+  )
+  write(
+    'apps/app/src/dynamic.tsx',
+    `const f = 'x'
+usePikkuQueryStub('a:b', { featureFlag: f })`
+  )
+  write(
+    'apps/app/src/plain.tsx',
+    `usePikkuQuery('bookings:list', {})
+usePikkuMutation('bookings:create')
+const usePikkuQueryStubby = 1`
+  )
+  write('apps/app/src/skipped.gen.ts', `usePikkuQueryStub('x:y')`)
+
+  const result = checkStubs(root, frontendRoots(root), ['reminders'])
+  const at = (file: string) => result.calls.filter((c) => c.file.endsWith(file))
+
+  test('a flagged stub with a declared flag passes', () => {
+    assert.deepStrictEqual(
+      at('ok.tsx').map((c) => [c.flag, c.problem]),
+      [['reminders', undefined]]
+    )
+  })
+
+  test('an unflagged stub is blocked, through an alias and with only input', () => {
+    assert.deepStrictEqual(
+      at('unflagged.tsx').map((c) => [c.line, c.problem]),
+      [
+        [2, 'no-flag'],
+        [3, 'no-flag'],
+      ]
+    )
+  })
+
+  test('an undeclared flag is blocked, through a property access', () => {
+    assert.deepStrictEqual(
+      at('undeclared.tsx').map((c) => [c.flag, c.problem]),
+      [['ghost', 'undeclared-flag']]
+    )
+  })
+
+  test('a flag that is not a literal is blocked', () => {
+    assert.strictEqual(at('dynamic.tsx')[0].problem, 'flag-not-literal')
+  })
+
+  test('plain hooks, lookalikes and generated files are ignored', () => {
+    assert.strictEqual(at('plain.tsx').length, 0)
+    assert.strictEqual(at('skipped.gen.ts').length, 0)
+  })
+
+  test('the check fails when any stub is blocked and passes when none is', () => {
+    assert.strictEqual(result.ok, false)
+    rmSync(join(root, 'apps/app/src/unflagged.tsx'))
+    rmSync(join(root, 'apps/app/src/undeclared.tsx'))
+    rmSync(join(root, 'apps/app/src/dynamic.tsx'))
+    assert.strictEqual(
+      checkStubs(root, frontendRoots(root), ['reminders']).ok,
+      true
+    )
+    rmSync(root, { recursive: true, force: true })
   })
 })

@@ -67,6 +67,7 @@ import {
   renderI18nList,
   renderI18nSync,
 } from './functions/commands/i18n.js'
+import { mocksCheck, renderMocksCheck } from './functions/commands/mocks-check.js'
 import { mocksDiff, renderMocksDiff } from './functions/commands/mocks-diff.js'
 import {
   knowledgeValidate,
@@ -939,6 +940,19 @@ wireCLI({
             all: {
               description: 'Also list functions that have no mock',
               default: false,
+            },
+          },
+        }),
+        check: pikkuCLICommand({
+          func: mocksCheck,
+          render: renderMocksCheck,
+          description:
+            'Fail when a stub hook has no featureFlag, or names a flag the project has not declared',
+          options: {
+            src: {
+              description:
+                'Frontend source directories, comma separated (default: apps/*/src)',
+              type: 'string',
             },
           },
         }),
