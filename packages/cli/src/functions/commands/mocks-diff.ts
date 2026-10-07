@@ -4,6 +4,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { readSurface } from '../../utils/surface.js'
 import { diffMocks, type MocksDiff } from '../mocks/diff.js'
 import { readMocks } from '../mocks/read.js'
+import { callIndex, frontendRoots, scanFrontend } from '../mocks/stub-scan.js'
 import { renderMocksDiff } from '../mocks/render.js'
 
 const readFunctionMeta = (
@@ -21,7 +22,10 @@ const readFunctionMeta = (
   }
 }
 
-export const mocksDiff = pikkuSessionlessFunc<{ all?: boolean }, MocksDiff>({
+export const mocksDiff = pikkuSessionlessFunc<
+  { all?: boolean; src?: string },
+  MocksDiff
+>({
   description:
     'Compare the mocks in .mocks/ with the functions they stand in for: which RPCs are added, which have changed shape, and which mocks no longer fit their function',
   func: async ({ config }, input) => {
@@ -38,10 +42,18 @@ export const mocksDiff = pikkuSessionlessFunc<{ all?: boolean }, MocksDiff>({
         },
       ])
     )
+    const roots = input?.src
+      ? input.src.split(',').map((dir) => resolve(config.rootDir, dir.trim()))
+      : frontendRoots(config.rootDir)
     return diffMocks(
       mocks,
       { functions, schemas: surface.schemas },
-      { all: input?.all === true }
+      {
+        all: input?.all === true,
+        calls: roots.length
+          ? callIndex(scanFrontend(config.rootDir, roots))
+          : undefined,
+      }
     )
   },
 })

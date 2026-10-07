@@ -941,18 +941,27 @@ wireCLI({
               description: 'Also list functions that have no mock',
               default: false,
             },
+            src: {
+              description:
+                'Frontend source directories, comma separated (default: apps/*/src); used to find unused mocks',
+              type: 'string',
+            },
           },
         }),
         check: pikkuCLICommand({
           func: mocksCheck,
           render: renderMocksCheck,
           description:
-            'Fail when a stub hook has no featureFlag, or names a flag the project has not declared',
+            'Fail when a stub hook has no featureFlag, an undeclared flag or a mock that already fits its function, or a plain hook calls an RPC with no function; warn about unused mocks and flags',
           options: {
             src: {
               description:
                 'Frontend source directories, comma separated (default: apps/*/src)',
               type: 'string',
+            },
+            strict: {
+              description: 'Also fail on unused and dead mocks',
+              default: false,
             },
           },
         }),

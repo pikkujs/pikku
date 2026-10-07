@@ -23,9 +23,15 @@ export const renderMocksDiff = (_services: unknown, diff: MocksDiff): void => {
           ? added('added')
           : report.status === 'changed'
             ? changed('changed')
-            : removed('invalid')
+            : report.status === 'removed'
+              ? changed('removed')
+              : removed('invalid')
     const note =
-      report.status === 'added' ? dim('  mocked, no function yet') : ''
+      report.status === 'added'
+        ? dim('  mocked, no function yet')
+        : report.status === 'removed'
+          ? dim('  no function and nothing calls it')
+          : ''
     console.log(
       `${label}  ${report.rpc}  ${dim(`${report.mocks} mock${report.mocks === 1 ? '' : 's'}`)}${note}`
     )
@@ -48,12 +54,20 @@ export const renderMocksDiff = (_services: unknown, diff: MocksDiff): void => {
     )
     for (const key of diff.unmocked) console.log(`   ${dim(key)}`)
   }
+  if (diff.unresolved) {
+    console.log()
+    console.log(
+      dim(
+        `${diff.unresolved} call${diff.unresolved === 1 ? '' : 's'} with a name that is not a string literal, so no mock is reported unused`
+      )
+    )
+  }
   console.log()
   const count = (status: string) =>
     diff.rpcs.filter((r) => r.status === status).length
   console.log(
     dim(
-      `${diff.rpcs.length} mocked · ${count('ok')} ok · ${count('added')} added · ${count('changed')} changed · ${count('invalid')} invalid`
+      `${diff.rpcs.length} mocked · ${count('ok')} ok · ${count('added')} added · ${count('changed')} changed · ${count('invalid')} invalid · ${count('removed')} removed · ${diff.rpcs.filter((r) => r.unused).length} unused`
     )
   )
   if (!diff.ok) process.exitCode = 1

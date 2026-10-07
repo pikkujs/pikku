@@ -5,6 +5,7 @@ import {
   type ContractChange,
 } from './contract.js'
 import type { Mock, RpcMocks } from './read.js'
+import type { CallIndex } from './stub-scan.js'
 import { validateAgainstSchema } from './validate.js'
 
 export interface SurfaceView {
@@ -21,11 +22,12 @@ export interface SurfaceView {
   schemas: Record<string, unknown>
 }
 
-export type RpcStatus = 'ok' | 'added' | 'changed' | 'invalid'
+export type RpcStatus = 'ok' | 'added' | 'changed' | 'invalid' | 'removed'
 
 export interface RpcReport {
   rpc: string
   status: RpcStatus
+  unused?: boolean
   mocks: number
   changes: ContractChange[]
   invalid: { mock: string; errors: string[] }[]
@@ -36,6 +38,7 @@ export interface RpcReport {
 export interface MocksDiff {
   rpcs: RpcReport[]
   unmocked: string[]
+  unresolved: number
   ok: boolean
 }
 
@@ -63,6 +66,9 @@ const warningsFor = (mocks: Mock[], rootIsArray: boolean): string[] => {
   if (rootIsArray && !mocks.some((m) => m.meta?.state === 'empty')) {
     warnings.push('no empty mock, so the empty state cannot be tested')
   }
+  if (mocks.length && mocks.every(isErrorMock)) {
+    warnings.push('only error mocks, add a healthy mock and mark it default')
+  }
   if (!mocks.some(isErrorMock))
     warnings.push('no error mock, so the failed state cannot be tested')
   return warnings
@@ -71,7 +77,7 @@ const warningsFor = (mocks: Mock[], rootIsArray: boolean): string[] => {
 export const diffMocks = (
   rpcMocks: RpcMocks[],
   surface: SurfaceView,
-  options: { all?: boolean } = {}
+  options: { all?: boolean; calls?: CallIndex } = {}
 ): MocksDiff => {
   const rpcs = rpcMocks.map(({ rpc, mocks }): RpcReport => {
     const samples = mocks.filter((m) => m.hasData && !isErrorMock(m))
@@ -91,10 +97,27 @@ export const diffMocks = (
         mockContract.$?.kinds.includes('array') ?? false
       ),
     }
+    const calls = options.calls
+    const called =
+      calls && calls.unresolved === 0
+        ? calls.plain.has(rpc) || calls.stub.has(rpc)
+        : undefined
+    const dir = `.mocks/${rpc.replaceAll(':', '.')}`
     const fn = findFunction(surface, rpc)
     if (!fn) {
-      report.status = 'added'
+      if (called === false) {
+        report.status = 'removed'
+        report.warnings.push(`unused, delete ${dir}`)
+      } else {
+        report.status = 'added'
+      }
       return report
+    }
+    if (called === false) {
+      report.unused = true
+      report.warnings.push(
+        `unused, nothing in the frontend calls ${rpc}; delete ${dir} if it is no longer needed`
+      )
     }
     if (!fn.expose) {
       report.warnings.push(
@@ -141,5 +164,10 @@ export const diffMocks = (
         .filter((key) => !known.has(key))
         .sort()
     : []
-  return { rpcs, unmocked, ok: rpcs.every((r) => r.status === 'ok') }
+  return {
+    rpcs,
+    unmocked,
+    unresolved: options.calls?.unresolved ?? 0,
+    ok: rpcs.every((r) => r.status === 'ok' || r.status === 'removed'),
+  }
 }
