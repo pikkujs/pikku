@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-cloudflare",
-  "version": "0.12.19",
+  "version": "0.12.20",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -19,6 +19,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@pikku/deploy": "^0.12.9"
+    "@pikku/deploy": "^0.12.15"
   }
 }

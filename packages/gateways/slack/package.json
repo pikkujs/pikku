@@ -1,6 +1,6 @@
 {
   "name": "@pikku/gateway-slack",
-  "version": "0.12.8",
+  "version": "0.12.9",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -21,7 +21,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.108"
+    "@pikku/core": "^0.12.138"
   },
   "dependencies": {
     "@slack/web-api": "^8.0.0"
