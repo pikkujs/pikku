@@ -5,6 +5,7 @@ import { isAddonPackage, runAddonPackageChecks } from "./addon-package-checks.js
 import { runCoreImportChecks } from "./core-import-checks.js";
 import { declaredBlockPackages, runBlockChecks } from "./block-checks.js";
 import { isShadcnApp, runComponentChecks } from "./component-checks.js";
+import { runMocksChecks, usesMocks } from "./mocks-checks.js";
 import { runOxlintRun, runOxlintSetupChecks } from "./oxlint-checks.js";
 import { runPikkuBarrelChecks } from "./pikku-barrel-checks.js";
 import { runScaffoldDuplicateChecks } from "./scaffold-duplicate-checks.js";
@@ -128,6 +129,17 @@ export const CHECKS: ValidateCheck[] = [
     applies: async ({ dir }) =>
       existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => runOxlintRun(dir),
+  },
+  {
+    id: "mocks",
+    subject: "mocks and stub hooks",
+    // Only where there is a .mocks/ directory or a stub hook call. A project
+    // without either has no mocks to check and sees no change.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, "pikku.config.json")) &&
+      !existsSync(join(dir, ADDON_MARKER)) &&
+      usesMocks(dir),
+    run: async ({ dir }) => runMocksChecks(dir),
   },
   {
     id: "pikku-barrel",
