@@ -153,7 +153,9 @@ export class ScopedContentService implements ContentService {
     return this.content.readFile({ ...args, bucket, key })
   }
 
-  async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer> {
+  async readFileAsBuffer(
+    args: BucketKeyArgs
+  ): ReturnType<ContentService['readFileAsBuffer']> {
     const { bucket, key } = this.resolve(args.bucket, args.key, 'read')
     return this.content.readFileAsBuffer({ ...args, bucket, key })
   }
