@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-postgres",
-  "version": "0.12.26",
+  "version": "0.12.27",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -22,17 +22,17 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.33",
+    "@pikku/kysely": "^0.13.35",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.9"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.133"
+    "@pikku/core": "^0.12.138"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.5",
-    "@pikku/core": "^0.12.133"
+    "@pikku/core": "^0.12.138"
   },
   "exports": {
     ".": "./dist/src/index.js"
