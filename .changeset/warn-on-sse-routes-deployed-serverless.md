@@ -1,6 +1,6 @@
 ---
 '@pikku/cli': patch
-'@pikku/deploy-core': patch
+'@pikku/deploy': patch
 ---
 
 Warn when an SSE route is deployed to a serverless target.
