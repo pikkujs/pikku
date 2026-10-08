@@ -22,9 +22,14 @@ the stream from outside would still need a backplane the held invocation polls o
 subscribes to: a long-running relay built out of a runtime meant to avoid one.
 
 So a route wired with `sse: true` that subscribes through the event hub belongs
-on a server target. On a serverless target it still runs, as a plain stream the
-function writes to directly with no hub and no Durable Object, and a lint warns
-that a published event will not reach it. `LambdaEventHubService` and
+on a server target. Nothing forces it there, because most apps deploy to
+Cloudflare Workers by default and a route that streams only from its own function
+is valid on one. On a serverless target it runs as a plain stream the function
+writes to directly, with no hub and no Durable Object. The deployment manifest
+marks every SSE route (`HttpRouteInfo.sse`), and the build warns for each one on a
+serverless unit that a published event will not reach it and that it costs more
+than a WebSocket. The mark is what lets the platform recommend a server target or
+polling later, without the CLI deciding for the user. `LambdaEventHubService` and
 `CloudflareEventHubService` accept the channel and log that warning rather than
 refuse it, because a stream that only the function itself writes to is valid.
 Azure Functions has no event hub at all.
@@ -41,5 +46,6 @@ events. The route derives the topic from the session, as in
 `org:${session.orgId}:orders`.
 
 **What this rules out:** serving a hub-subscribed SSE route from a serverless
-target and expecting delivery, and holding an invocation or Durable Object open
-to relay published events into a response.
+target and expecting delivery, holding an invocation or Durable Object open to
+relay published events into a response, and moving a route to a server target
+without the user asking.
