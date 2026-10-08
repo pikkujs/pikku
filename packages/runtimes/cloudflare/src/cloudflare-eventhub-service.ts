@@ -148,9 +148,8 @@ export class CloudflareEventHubService<
   }
 
   public async onChannelOpened(): Promise<void> {
-    throw new Error(
-      'CloudflareEventHubService delivers to Durable Object WebSockets only, so it cannot serve SSE. ' +
-        'Use the WebSocket transport, or route the SSE endpoint into the Durable Object itself.'
+    this.logger.warn(
+      'CloudflareEventHubService cannot deliver to an SSE stream: a published event will not reach it. Use WebSocket, or deploy the SSE route to a server target.'
     )
   }
 

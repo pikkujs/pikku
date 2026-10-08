@@ -50,14 +50,17 @@ export const defineEventHubServiceTests = (
   makeHub: () =>
     | EventHubService<Record<string, any>>
     | Promise<EventHubService<Record<string, any>>>,
-  { expectsHandlerSupport = true }: { expectsHandlerSupport?: boolean } = {}
+  { deliversToHandlers = true }: { deliversToHandlers?: boolean } = {}
 ): void => {
   describe(`EventHubService [${name}]`, () => {
-    if (!expectsHandlerSupport) {
-      test('refuses a handler-backed channel rather than dropping it', async () => {
+    if (!deliversToHandlers) {
+      test('accepts a handler-backed channel without delivering to it', async () => {
         const hub = await makeHub()
-        const { handler } = recordingHandler('sse-1')
-        await assert.rejects(async () => hub.onChannelOpened(handler))
+        const { handler, received } = recordingHandler('sse-1')
+        await hub.onChannelOpened(handler)
+        await hub.subscribe('news', 'sse-1')
+        await hub.publish('news', null, { hello: 'world' })
+        assert.deepEqual(received, [])
       })
       return
     }

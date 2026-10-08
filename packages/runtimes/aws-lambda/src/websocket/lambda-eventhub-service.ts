@@ -48,8 +48,8 @@ export class LambdaEventHubService<
   }
 
   async onChannelOpened(): Promise<void> {
-    throw new Error(
-      'LambdaEventHubService delivers to API Gateway WebSocket connections only, so it cannot serve SSE.'
+    this.logger.warn(
+      'LambdaEventHubService cannot deliver to an SSE stream: a published event will not reach it. Use WebSocket, or deploy the SSE route to a server target.'
     )
   }
 
