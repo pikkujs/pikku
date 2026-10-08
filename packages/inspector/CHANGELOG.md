@@ -1,3 +1,14 @@
+## 0.12.103
+
+### Patch Changes
+
+- 53ac40d: An addon can ship screens: `wireAddon({ ui: true })` mounts what the package declares with `defineScreens`, the inspector reads them, `pikku all` emits the screens manifest and the installed-addons registry, and `x-pikku-addon` narrows a session to the addon's role. `pikku new addon --ui` scaffolds one; its tables must be prefixed `<name>_`.
+- Updated dependencies [a196a21]
+- Updated dependencies [53ac40d]
+- Updated dependencies [443fd40]
+- Updated dependencies [56c8047]
+  - @pikku/core@0.12.139
+
 ## 0.12.102
 
 ### Patch Changes

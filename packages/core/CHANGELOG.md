@@ -1,3 +1,12 @@
+## 0.12.139
+
+### Patch Changes
+
+- a196a21: A call over HTTP that names an add-on in `x-pikku-addon` can only reach that add-on's own functions and the add-ons it lists in `uses`. `rpc.exposed` now refuses anything else, including host functions and an add-on nobody wired, and `AddonNotUsedError` answers 403.
+- 53ac40d: An addon can ship screens: `wireAddon({ ui: true })` mounts what the package declares with `defineScreens`, the inspector reads them, `pikku all` emits the screens manifest and the installed-addons registry, and `x-pikku-addon` narrows a session to the addon's role. `pikku new addon --ui` scaffolds one; its tables must be prefixed `<name>_`.
+- 443fd40: Local content uploads stream to disk instead of being buffered in memory, and a rejected or aborted upload leaves no file behind. A 300 MB upload and read no longer grows the server's memory with the file.
+- 56c8047: Content services support `visibility: 'private' | 'public'` (default private). `ContentService` gains `getDownloadURL`, `deleteByPrefix` and `listFilesByPrefix`. `LocalContent` stores under `private/` and `public/` and serves public files unsigned at `<assetUrlPrefix>/_public/<bucket>/<key>`; unprefixed files from before still read as private, and a private bucket may not be named `_public`. S3 makes public objects `public-read` per object (the bucket must allow ACLs), Backblaze uses `publicBucketId` when set, and the scoped addon content service passes visibility through and keeps the new methods inside the addon's folder.
+
 ## 0.12.138
 
 ### Patch Changes
