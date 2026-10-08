@@ -1263,8 +1263,10 @@ async function desiredPostgresAuthSchema(
       })
       if (!options) return null
 
-      const { runMigrations, compileMigrations } =
-        await getAuthMigrations(options)
+      const { runMigrations, compileMigrations } = await getAuthMigrations(
+        options,
+        'postgres'
+      )
       await runMigrations()
       const tables = await postgresDatabaseToMap(scratchDb)
       const sql = await compileMigrations()
@@ -1292,8 +1294,10 @@ async function desiredMysqlAuthSchema(
       })
       if (!options) return null
 
-      const { runMigrations, compileMigrations } =
-        await getAuthMigrations(options)
+      const { runMigrations, compileMigrations } = await getAuthMigrations(
+        options,
+        'mysql'
+      )
       await runMigrations()
       const tables = await introspectorToMap(new MysqlIntrospector(scratchDb))
       const sql = await compileMigrations()
@@ -1321,6 +1325,21 @@ export async function desiredAuthSchema(
       logger,
     })
     if (!options) return null
+    // The resolved database decides, not what the auth factory declared: a
+    // starter's `type: 'sqlite'` must not send a MySQL project down the SQLite
+    // path (see getAuthMigrations). A factory that declares a server dialect the
+    // project is not on is still an error.
+    if (resolved.dialect === 'mysql') {
+      return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
+    }
+    if (resolved.dialect === 'postgres' && !isMysqlAuthDatabase(options)) {
+      return desiredPostgresAuthSchema(
+        resolved,
+        rootDir,
+        srcDirectories,
+        logger
+      )
+    }
     if (isMysqlAuthDatabase(options)) {
       if (resolved.dialect !== 'mysql') {
         throw new Error(
@@ -1342,8 +1361,10 @@ export async function desiredAuthSchema(
         logger
       )
     }
-    const { runMigrations, compileMigrations } =
-      await getAuthMigrations(options)
+    const { runMigrations, compileMigrations } = await getAuthMigrations(
+      options,
+      'sqlite'
+    )
     await runMigrations()
     const tables = await introspectorToMap(new SqliteIntrospector(db))
     const sql = await compileMigrations()
@@ -1365,7 +1386,8 @@ async function applyAuthSchema(
   kysely: Kysely<any>,
   rootDir: string,
   srcDirectories: string[],
-  logger: { error: (msg: string) => void }
+  logger: { error: (msg: string) => void },
+  dialect: 'sqlite' | 'postgres' | 'mysql'
 ): Promise<boolean> {
   const options = await loadAuthOptions({
     rootDir,
@@ -1374,7 +1396,7 @@ async function applyAuthSchema(
     logger,
   })
   if (!options) return false
-  const { runMigrations } = await getAuthMigrations(options)
+  const { runMigrations } = await getAuthMigrations(options, dialect)
   await runMigrations()
   return true
 }
@@ -1434,7 +1456,7 @@ export async function desiredRuntimeSchema(
     schemas: PikkuSchema[]
     types: RequiredTypes
   }> => {
-    await applyAuthSchema(db, rootDir, srcDirectories, logger)
+    await applyAuthSchema(db, rootDir, srcDirectories, logger, resolved.dialect)
     const before = await introspect()
 
     const { types, unmet } = await resolveRequirements(db, declared)
