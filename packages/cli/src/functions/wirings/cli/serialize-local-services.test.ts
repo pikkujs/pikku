@@ -16,6 +16,7 @@ const noDrivers: LocalServicesDrivers = {
   bunSqlite: false,
   pg: false,
   pgTypes: false,
+  mysql: false,
 }
 
 const withCLI = (
@@ -177,6 +178,27 @@ describe('the database openers', () => {
     assert.match(code, /await import\('pg'\)/)
     assert.match(code, /allowExitOnIdle: true/)
     assert.doesNotMatch(code, /@ts-ignore/)
+  })
+
+  test('opens mysql through mysql2 only when it is declared', () => {
+    assert.doesNotMatch(emit(), /import\('mysql2'\)/)
+    assert.doesNotMatch(emit(), /MysqlDialect/)
+    assert.match(
+      emit(),
+      /database is mysql, and opening it needs the mysql2 driver/
+    )
+    const code = emit({
+      localCLI: withCLI({ drivers: { ...noDrivers, mysql: true } }),
+    })
+    assert.match(code, /await import\('mysql2'\)/)
+    assert.match(
+      code,
+      /import \{[^}]*MysqlDialect[^}]*\} from '@pikku\/kysely'/
+    )
+    assert.match(code, /if \(\/\^mysql:/)
+    assert.match(code, /return \{ mysqlUrl: url \}/)
+    assert.match(code, /if \(target\.mysqlUrl\)/)
+    assert.match(code, /new CamelCasePlugin\(\), \.\.\.\[\]/)
   })
 
   test('waives the missing pg types rather than failing the type check', () => {

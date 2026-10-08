@@ -29,7 +29,7 @@ export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-s
 // Re-exported so a generated file that constructs the services above opens and
 // types its database with the same copy of kysely those services were built
 // against, rather than a second copy the project may resolve on its own.
-export { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
+export { CamelCasePlugin, Kysely, MysqlDialect, PostgresDialect } from 'kysely'
 
 export {
   SerializePlugin,
