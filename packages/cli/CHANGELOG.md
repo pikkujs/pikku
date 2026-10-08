@@ -1,3 +1,21 @@
+## 0.12.183
+
+### Patch Changes
+
+- 53ac40d: An addon can ship screens: `wireAddon({ ui: true })` mounts what the package declares with `defineScreens`, the inspector reads them, `pikku all` emits the screens manifest and the installed-addons registry, and `x-pikku-addon` narrows a session to the addon's role. `pikku new addon --ui` scaffolds one; its tables must be prefixed `<name>_`.
+- 90cf68f: `pikku addons add` lists what each add-on will be allowed to use ("mail can use stripe") and asks before keeping the install. `--yes` / `-y` skips the question, a run with no terminal and no `--yes` refuses, and `--dry-run` prints the list and undoes everything.
+- 7a434c2: Add `pikku mocks check`: scans the frontend with the TypeScript compiler API and fails when a `usePikkuQueryStub` or `usePikkuMutationStub` call has no `featureFlag`, a non-literal flag, or a flag the project has not declared.
+- e365fbe: Add `pikku mocks diff`. Mock data for an RPC lives in `.mocks/<rpc.name>/<mock>.json`, with `<mock>.meta.json` beside it for the label, state (healthy, empty, error, slow), default, delay and status. The command validates each mock against the function's output schema, compares the shape the mocks agree on with the shape the function returns, and reports every RPC as added (mocked, no function), changed (a field added, removed or retyped) or ok, with warnings for a missing default, a mock without meta, or no empty or error scenario. It exits non-zero on anything but ok. `--all` also lists functions with no mock.
+- 39a411c: `pikku mocks diff` and `check` now scan plain `usePikkuQuery`/`usePikkuMutation` calls too: a mock nothing calls is reported `removed` (no function) or `unused` (function exists), `check` fails a plain call to an RPC with no function and a stub whose mock is invalid or has no `.mocks/` directory, and warns about declared flags no stub uses. `check --strict` also fails on unused and dead mocks.
+- ac1e826: Add `pikku mocks sync`, which writes `.mocks/mocks.lock.json` with the shape of every mock and of the function behind it (sorted keys, so the file is stable in git). It refuses to write while any RPC is invalid. `pikku mocks diff` now also compares against the lock: a mock edited since the last sync shows as changed even if the function still fits, an RPC in the lock with no mocks is reported as removed from the lock, and a missing lock is only a note. `pikku validate` runs the stub release check (`pikku mocks check`) for any project that has a `.mocks/` directory or a stub hook call, and reports its findings through the usual validate output and exit code.
+- Updated dependencies [a196a21]
+- Updated dependencies [53ac40d]
+- Updated dependencies [443fd40]
+- Updated dependencies [56c8047]
+  - @pikku/core@0.12.139
+  - @pikku/inspector@0.12.103
+  - @pikku/node-http-server@0.12.19
+
 ## 0.12.182
 
 ### Patch Changes

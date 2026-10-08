@@ -1,3 +1,14 @@
+## 0.12.59
+
+### Patch Changes
+
+- 989f1f7: The console's list calls (`getAllMeta`, `getFunctionsMeta`, `getWorkflowRuns`, `getWorkflowRunNames`, `getAgentThreads`) take an optional `addon` and then return only the items that add-on contributes, matched on the namespace before the first colon. Without it they return everything, as before.
+- Updated dependencies [a196a21]
+- Updated dependencies [53ac40d]
+- Updated dependencies [443fd40]
+- Updated dependencies [56c8047]
+  - @pikku/core@0.12.139
+
 ## 0.12.58
 
 ### Patch Changes

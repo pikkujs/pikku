@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.182",
+  "version": "0.12.183",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -46,12 +46,12 @@
     "@pikku/deploy-cloudflare": "^0.12.20",
     "@pikku/deploy-standalone": "^0.12.25",
     "@pikku/fetch": "^0.12.12",
-    "@pikku/inspector": "^0.12.102",
+    "@pikku/inspector": "^0.12.103",
     "@pikku/knowledge": "^0.12.18",
     "@pikku/kysely": "^0.13.35",
     "@pikku/migrator-sql": "^0.12.7",
     "@pikku/n8n-import": "^0.0.8",
-    "@pikku/node-http-server": "^0.12.18",
+    "@pikku/node-http-server": "^0.12.19",
     "@pikku/openapi-parser": "^0.12.23",
     "@pikku/schedule": "^0.12.9",
     "@pikku/skills": "^0.12.51",
@@ -79,14 +79,14 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.138",
+    "@pikku/core": "^0.12.139",
     "@pikku/playwright": "^0.12.86",
     "@pikku/ws": "^0.12.10",
     "better-auth": "^1.7.5",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.138",
+    "@pikku/core": "^0.12.139",
     "@pikku/playwright": "^0.12.86",
     "@pikku/ws": "^0.12.10",
     "@playwright/test": "^1.50.0",
