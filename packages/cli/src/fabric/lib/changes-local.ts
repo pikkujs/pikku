@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rmdir, stat, writeFile } from 'node:fs/promises'
-import { isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { git } from '../../utils/git.js'
 import { FabricPreconditionError } from './errors.js'
 import type {
@@ -44,12 +44,6 @@ type Store = {
   changes: Change[]
   groups: Group[]
   messages: Message[]
-  fabric?: FabricLinks
-}
-
-export type FabricLinks = {
-  changes: Record<string, string>
-  groups: Record<string, string>
 }
 
 type LocalMap = {
@@ -88,6 +82,8 @@ class LocalChangesError extends Error {
  * history is the durable record; this file may be trimmed at any time.
  */
 export async function localStorePath(cwd = process.cwd()): Promise<string> {
+  const host = process.env.PIKKU_CHANGES_DIR?.trim()
+  if (host) return join(host, STORE_FILE)
   const dir = await git(['rev-parse', '--git-common-dir'], cwd)
   return join(isAbsolute(dir) ? dir : join(cwd, dir), STORE_FILE)
 }
@@ -105,6 +101,7 @@ async function read(path: string): Promise<Store> {
 
 async function withStore<T>(path: string, fn: (store: Store) => T): Promise<T> {
   const lock = `${path}.lock`
+  await mkdir(dirname(path), { recursive: true })
   for (let attempt = 0; ; attempt++) {
     try {
       await mkdir(lock)
@@ -350,22 +347,6 @@ export async function releaseChangeset(
   await withStore(path, (store) => {
     const group = store.groups.find((g) => g.groupId === groupId)
     if (group) group.claimExpiresAt = new Date()
-  })
-}
-
-export async function fabricLinks(path: string): Promise<FabricLinks> {
-  return (await read(path)).fabric ?? { changes: {}, groups: {} }
-}
-
-export async function linkFabric(
-  path: string,
-  kind: keyof FabricLinks,
-  localId: string,
-  fabricId: string
-): Promise<void> {
-  await withStore(path, (store) => {
-    store.fabric ??= { changes: {}, groups: {} }
-    store.fabric[kind][localId] = fabricId
   })
 }
 
