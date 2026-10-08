@@ -3,11 +3,9 @@ import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
 import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
-import { currentBranch } from '../../utils/git.js'
+import { readConfigProjectId } from './project-id.js'
 import {
   LOCAL_PROJECT_ID,
-  fabricLinks,
-  linkFabric,
   localChangesRPC,
   localStorePath,
   type ChangesRPC,
@@ -15,135 +13,61 @@ import {
 
 export type { ChangesRPC }
 
-type Fabric = { rpc: ChangesRPC; projectId: string }
-
-const REGISTERED = new Set([
-  'createChange',
-  'claimChanges',
-  'completeChange',
-  'askChangeQuestion',
-  'replyToChange',
-  'attachChangeShot',
-])
-
+/**
+ * Where `pikku changes` keeps its list is decided by the project, not by
+ * whoever happens to be signed in:
+ *
+ *   - Not linked: the local file. Fabric is never called.
+ *   - Linked (`FABRIC_PROJECT_ID`, or `fabric.projectId` in pikku.config.json,
+ *     or an explicit --project-id): Fabric only. There is no local copy to
+ *     drift, so a re-clone or a sleeping sandbox cannot lose the list.
+ *
+ * A linked project that cannot reach Fabric fails; it never falls back to the
+ * local file. (An offline queue that syncs later is postponed.)
+ */
 export async function changesContext(
   apiUrlOverride: string | undefined,
   projectIdOverride?: string
 ): Promise<{ rpc: ChangesRPC; projectId: string; storePath: string }> {
   const storePath = await localStorePath()
-  const local = localChangesRPC(storePath)
-  let fabric: Promise<Fabric | null> | undefined
-  const invoke = async (name: string, data: any) => {
-    const result = await local.invoke(name as any, data)
-    if (REGISTERED.has(name)) {
-      fabric ??= fabricTarget(apiUrlOverride, projectIdOverride)
-      const target = await fabric
-      if (target)
-        await register(storePath, target, name, data, result).catch(
-          (error: Error) =>
-            console.error(`Not registered with fabric: ${error.message}`)
-        )
+  const projectId = await linkedProjectId(projectIdOverride)
+  if (!projectId)
+    return {
+      rpc: localChangesRPC(storePath),
+      projectId: LOCAL_PROJECT_ID,
+      storePath,
     }
-    return result
+  const ctx = await resolveApiContext({
+    apiUrlOverride,
+    resolveProject: false,
+  })
+  if (!ctx.token)
+    throw new FabricPreconditionError(
+      `This project is backed by Fabric (${projectId}), so its changes live there and you need to be signed in. Run \`pikku fabric login\`, or set FABRIC_TOKEN.`
+    )
+  const fabric = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+  const invoke = async (name: string, data: unknown) => {
+    try {
+      return await fabric.invoke(name as any, data as any)
+    } catch (error) {
+      if (httpStatus(error) !== undefined) throw error
+      throw new FabricPreconditionError(
+        `This project is backed by Fabric, so its changes need a connection and ${ctx.apiUrl} did not answer (${(error as Error).message}). Nothing was changed.`
+      )
+    }
   }
   return {
     rpc: { invoke: invoke as ChangesRPC['invoke'] },
-    projectId: LOCAL_PROJECT_ID,
+    projectId,
     storePath,
   }
 }
 
-async function fabricTarget(
-  apiUrlOverride: string | undefined,
-  projectIdOverride: string | undefined
-): Promise<Fabric | null> {
-  try {
-    const ctx = await resolveApiContext({
-      apiUrlOverride,
-      resolveProject: !projectIdOverride,
-    })
-    if (!ctx.token) return null
-    const projectId = projectIdOverride ?? ctx.projectId
-    if (!projectId) {
-      console.error(
-        'Not registered with fabric: this checkout is not linked to a project (pikku fabric link).'
-      )
-      return null
-    }
-    return {
-      rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
-      projectId,
-    }
-  } catch (error) {
-    console.error(`Not registered with fabric: ${(error as Error).message}`)
-    return null
-  }
-}
-
-async function fabricStage(fabric: Fabric): Promise<string> {
-  const { stages } = await fabric.rpc.invoke('listStages', {
-    projectId: fabric.projectId,
-  })
-  const branch = await currentBranch().catch(() => undefined)
-  const stage =
-    stages.find((s) => s.branch === branch) ??
-    (stages.length === 1 ? stages[0] : undefined)
-  if (!stage)
-    throw new FabricPreconditionError(
-      `no stage for ${branch ?? 'this checkout'} among ${stages.length} stages`
-    )
-  return stage.stageId
-}
-
-async function register(
-  storePath: string,
-  fabric: Fabric,
-  name: string,
-  data: any,
-  result: any
-): Promise<void> {
-  const links = await fabricLinks(storePath)
-  if (name === 'createChange') {
-    const stageId =
-      data.stageId && data.stageId !== LOCAL_PROJECT_ID
-        ? data.stageId
-        : await fabricStage(fabric)
-    const { change } = await fabric.rpc.invoke('createChange', {
-      ...data,
-      stageId,
-    })
-    await linkFabric(
-      storePath,
-      'changes',
-      result.change.changeId,
-      change.changeId
-    )
-    return
-  }
-  if (name === 'claimChanges') {
-    const changeIds = result.changes
-      .map((c: { changeId: string }) => links.changes[c.changeId])
-      .filter(Boolean)
-    if (!changeIds.length) return
-    const { group } = await fabric.rpc.invoke('claimChanges', {
-      projectId: fabric.projectId,
-      groupId: links.groups[result.group.groupId],
-      changeIds,
-      title: result.group.title,
-      claimedBy: data.claimedBy,
-      leaseMinutes: data.leaseMinutes,
-    })
-    await linkFabric(storePath, 'groups', result.group.groupId, group.groupId)
-    return
-  }
-  const localId = result.change?.changeId ?? result.message?.changeId
-  const changeId = links.changes[localId]
-  if (!changeId) return
-  await fabric.rpc.invoke(name as any, {
-    ...data,
-    changeId,
-    projectId: undefined,
-  })
+/** The Fabric project this checkout is marked as backed by, or null when it is a purely local one. */
+async function linkedProjectId(override?: string): Promise<string | null> {
+  const explicit = override?.trim() || process.env.FABRIC_PROJECT_ID?.trim()
+  if (explicit) return explicit
+  return (await readConfigProjectId())?.projectId ?? null
 }
 
 export function requireProjectId(projectId: string | null): string {

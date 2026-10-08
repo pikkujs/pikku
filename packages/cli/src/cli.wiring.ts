@@ -1062,7 +1062,7 @@ wireCLI({
     },
     changes: {
       description:
-        "The project's todo list: read what is open, file what was decided, claim a batch, ask what you need to know, tick items off, and route what runs next. Kept in the checkout, and registered with fabric when you are logged in",
+        "The project's todo list: read what is open, file what was decided, claim a batch, ask what you need to know, tick items off, and route what runs next. Kept in the checkout, or in Fabric when the project is linked to one (then you must be online and signed in)",
       subcommands: changesCommands,
     },
     validate: pikkuCLICommand({

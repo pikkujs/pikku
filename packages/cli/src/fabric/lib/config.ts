@@ -94,7 +94,8 @@ export type { LinkedProject, ProjectSource }
  *   3. the api-url of the last `login`
  *   4. hardcoded default
  *
- * Token comes from ~/.fabric/auth.json keyed by the resolved api-url. The
+ * Token comes from the FABRIC_TOKEN env var (a sandbox or CI holds no file),
+ * else ~/.fabric/auth.json keyed by the resolved api-url. The
  * project is resolved by `resolveLinkedProject` — env, then the git
  * remote — and only when there is a token to ask fabric with.
  * `resolveProject: false` skips it for commands that never use it.
@@ -115,7 +116,7 @@ export async function resolveApiContext(
         ? [auth.defaultApiUrl, 'login']
         : [DEFAULT_API_URL, 'default']
   assertSecureApiUrl(apiUrl, apiUrlSource)
-  const token = auth.tokens[apiUrl] ?? null
+  const token = process.env.FABRIC_TOKEN?.trim() || auth.tokens[apiUrl] || null
 
   const project =
     opts.resolveProject === false
