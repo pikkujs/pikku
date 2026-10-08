@@ -1332,7 +1332,12 @@ export async function desiredAuthSchema(
     if (resolved.dialect === 'mysql') {
       return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
     }
-    if (resolved.dialect === 'postgres' && !isMysqlAuthDatabase(options)) {
+    if (isMysqlAuthDatabase(options)) {
+      throw new Error(
+        'Better Auth database.type is mysql, but the resolved app database is not mysql.'
+      )
+    }
+    if (resolved.dialect === 'postgres') {
       return desiredPostgresAuthSchema(
         resolved,
         rootDir,
@@ -1340,25 +1345,9 @@ export async function desiredAuthSchema(
         logger
       )
     }
-    if (isMysqlAuthDatabase(options)) {
-      if (resolved.dialect !== 'mysql') {
-        throw new Error(
-          'Better Auth database.type is mysql, but the resolved app database is not mysql.'
-        )
-      }
-      return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
-    }
     if (isPostgresAuthDatabase(options)) {
-      if (resolved.dialect !== 'postgres') {
-        throw new Error(
-          'Better Auth database.type is postgres, but the resolved app database is not postgres.'
-        )
-      }
-      return desiredPostgresAuthSchema(
-        resolved,
-        rootDir,
-        srcDirectories,
-        logger
+      throw new Error(
+        'Better Auth database.type is postgres, but the resolved app database is not postgres.'
       )
     }
     const { runMigrations, compileMigrations } = await getAuthMigrations(
