@@ -10,11 +10,8 @@ Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
 Empty the queue without making them regret filing.
 
-Run every command from the checkout. Where the queue lives depends on the project. A project that is not
-linked to Fabric keeps it in the checkout (`.git/pikku-changes.json`, shared by every worktree). A project linked
-to Fabric (`FABRIC_PROJECT_ID`, or `fabric.projectId` in `pikku.config.json`) keeps it in Fabric only, and needs
-you online and signed in (`FABRIC_TOKEN`, or `pikku fabric login`); a command that cannot reach Fabric fails
-and changes nothing.
+Run every command from the checkout. The queue lives in it (`.git/pikku-changes.json`, shared by every
+worktree).
 `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
 **Launched by `pikku changes next`?** `pikku changes next` picks one agent: a merge conflict or a changeset with no plan
