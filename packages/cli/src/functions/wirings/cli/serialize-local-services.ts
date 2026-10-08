@@ -145,10 +145,7 @@ const mysqlOpener = (
   }
   return `const openMysql = async (url: string): Promise<Kysely<any>> => {
   const { createPool } = await import('mysql2')
-  const pool = createPool({ uri: url, connectionLimit: 10 })
-  // A CLI command returns rather than being stopped, so the pool must not hold
-  // the process open once it has printed its answer.
-  pool.on('connection', (connection) => connection.unref?.())
+  const pool = createPool({ uri: url, connectionLimit: 10, decimalNumbers: true })
   return new Kysely<any>({
     dialect: new MysqlDialect({ pool }),
     plugins: [new CamelCasePlugin(), ...${plugins}],
