@@ -4,41 +4,34 @@ import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
 import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
 import { readConfigProjectId } from './project-id.js'
-import {
-  LOCAL_PROJECT_ID,
-  localChangesRPC,
-  localStorePath,
-  type ChangesRPC,
-} from './changes-local.js'
+import type { ChangesRPC } from './changes-local.js'
+import { changesContext, registerChangesBackend } from '../../changes/context.js'
 
 export type { ChangesRPC }
+export { changesContext }
 
 /**
- * Where `pikku changes` keeps its list is decided by the project, not by
- * whoever happens to be signed in:
+ * Fabric keeps the changes of a project that is linked to it:
  *
- *   - Not linked: the local file. Fabric is never called.
  *   - Linked (`FABRIC_PROJECT_ID`, or `fabric.projectId` in pikku.config.json,
- *     or an explicit --project-id): Fabric only. There is no local copy to
- *     drift, so a re-clone or a sleeping sandbox cannot lose the list.
+ *     or an explicit --project-id): the Fabric API only. There is no local
+ *     copy, so a re-clone or a sleeping sandbox cannot lose the list.
+ *   - Not linked: this backend steps aside and the local file is used.
  *
  * A linked project that cannot reach Fabric fails; it never falls back to the
  * local file. (An offline queue that syncs later is postponed.)
  */
-export async function changesContext(
-  apiUrlOverride: string | undefined,
-  projectIdOverride?: string
-): Promise<{ rpc: ChangesRPC; projectId: string; storePath: string }> {
-  const storePath = await localStorePath()
+async function fabricBackend({
+  apiUrl,
+  projectId: projectIdOverride,
+}: {
+  apiUrl: string | undefined
+  projectId: string | undefined
+}): Promise<{ rpc: ChangesRPC; projectId: string } | null> {
   const projectId = await linkedProjectId(projectIdOverride)
-  if (!projectId)
-    return {
-      rpc: localChangesRPC(storePath),
-      projectId: LOCAL_PROJECT_ID,
-      storePath,
-    }
+  if (!projectId) return null
   const ctx = await resolveApiContext({
-    apiUrlOverride,
+    apiUrlOverride: apiUrl,
     resolveProject: false,
   })
   if (!ctx.token)
@@ -56,12 +49,10 @@ export async function changesContext(
       )
     }
   }
-  return {
-    rpc: { invoke: invoke as ChangesRPC['invoke'] },
-    projectId,
-    storePath,
-  }
+  return { rpc: { invoke: invoke as ChangesRPC['invoke'] }, projectId }
 }
+
+registerChangesBackend(fabricBackend)
 
 /** The Fabric project this checkout is marked as backed by, or null when it is a purely local one. */
 async function linkedProjectId(override?: string): Promise<string | null> {

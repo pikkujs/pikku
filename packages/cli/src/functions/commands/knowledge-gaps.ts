@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { changesContext } from '../../fabric/lib/changes.js'
+import { changesContext } from '../../changes/context.js'
 import { openKnowledgeGaps } from '../../fabric/lib/knowledge-gaps.js'
 import { renderKnowledgeGaps } from '../knowledge/render.js'
 import {

@@ -46,6 +46,7 @@ const { FabricChangesFile } =
 const { FabricChangesList } =
   await import('../functions/changes-list.function.js')
 const { next } = await import('../../functions/commands/next.js')
+const { knowledgeGaps } = await import('../../functions/commands/knowledge-gaps.js')
 
 const home = process.cwd()
 let repo: string
@@ -120,6 +121,11 @@ describe('changes on a local project', () => {
     assert.ok(store.changes.some((c: any) => c.title === 'In the host folder'))
   })
 
+  test('knowledge gaps works on a local project without calling fabric', async () => {
+    await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
+    assert.strictEqual(fabricCalls.length, 0)
+  })
+
   test('changes next routes the open changes to the changes agent', async () => {
     const route = (await next.func(
       { config: { rootDir: repo } } as any,
@@ -187,4 +193,38 @@ describe('changes on a project backed by fabric', () => {
     fabricDown = 'http'
     await assert.rejects(file('Forbidden'), /forbidden/)
   })
+
+  test('knowledge gaps reads the list from fabric, not the local file', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
+    const call = fabricCalls.find((c) => c.name === 'listChanges')!
+    assert.strictEqual(call.data.projectId, 'proj_1')
+  })
+
+  test('next picks from fabric, not the local file', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    await next.func({ config: { rootDir: repo } } as any, {} as any)
+    assert.ok(
+      fabricCalls.some(
+        (c) => c.name === 'listChanges' && c.data.projectId === 'proj_1'
+      )
+    )
+  })
+
+  test('both refuse when fabric cannot be reached', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    fabricDown = 'refused'
+    await assert.rejects(
+      knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any),
+      /need a connection/
+    )
+    await assert.rejects(
+      next.func({ config: { rootDir: repo } } as any, {} as any),
+      /need a connection/
+    )
+  })
 })
+
