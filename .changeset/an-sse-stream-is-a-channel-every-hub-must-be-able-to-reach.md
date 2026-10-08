@@ -13,9 +13,9 @@ Fix SSE channels never receiving published events.
 
 `server.publish` (Bun) and `socket.publish` (uWS) only reach WebSockets, so both hubs now also keep a `LocalEventHubService` for non-socket channels and publish to both. `PgEventHubService` routed its lifecycle to the built-in hub while everything else went to the injected one; it now uses `delivery` throughout.
 
-Lambda and Cloudflare cannot hold a stream the publisher can reach, so they throw from `onChannelOpened` rather than accept and drop. Core warns when an SSE route has no hub configured.
+Lambda and Cloudflare cannot hold a stream the publisher can reach, so a hub-subscribed SSE route belongs on a server target. Their hubs accept the channel and log a warning that published events will not reach it; the stream still works as a plain one the function writes to. Core warns when an SSE route has no hub configured.
 
-Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket.
+Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket, with `deliversToHandlers: false` for hubs that cannot.
 
 An SSE stream whose hub refuses the channel is now closed rather than left
 open: `onChannelOpened` runs before `close` is wrapped, so a rejection used to

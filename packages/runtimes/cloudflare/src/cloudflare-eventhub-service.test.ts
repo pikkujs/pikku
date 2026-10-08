@@ -22,5 +22,5 @@ const durableObjectState = {
 defineEventHubServiceTests(
   'CloudflareEventHubService',
   () => new CloudflareEventHubService(logger, durableObjectState),
-  { expectsHandlerSupport: false }
+  { deliversToHandlers: false }
 )

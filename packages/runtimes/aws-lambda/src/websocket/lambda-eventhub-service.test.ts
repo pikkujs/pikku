@@ -19,12 +19,17 @@ const service = () =>
   )
 
 describe('LambdaEventHubService channel lifecycle', () => {
-  test('refuses to open a channel it has no way to deliver to', async () => {
-    await assert.rejects(
-      service().onChannelOpened(),
-      /cannot serve SSE/,
-      'an SSE stream registered here would never receive a published event'
+  test('accepts a channel it cannot deliver to, and says so', async () => {
+    const warnings: string[] = []
+    const hub = new LambdaEventHubService(
+      { ...silentLogger, warn: (m: string) => warnings.push(m) } as never,
+      event,
+      {} as never,
+      {} as never
     )
+    await hub.onChannelOpened()
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /cannot deliver to an SSE stream/)
   })
 
   test('closing a channel it never opened is not an error', async () => {
