@@ -146,8 +146,15 @@ const mysqlOpener = (
   return `const openMysql = async (url: string): Promise<Kysely<any>> => {
   const { createPool } = await import('mysql2')
   const pool = createPool({ uri: url, connectionLimit: 10, decimalNumbers: true })
+  // A CLI command returns rather than being stopped, so an idle pooled socket
+  // must not hold the process open once it has printed its answer (mysql2 has
+  // no allowExitOnIdle). A socket is referenced while a query runs on it.
+  const socket = (connection: any) => (connection.connection ?? connection).stream
+  pool.on('acquire', (connection) => socket(connection)?.ref())
+  pool.on('release', (connection) => socket(connection)?.unref())
   return new Kysely<any>({
-    dialect: new MysqlDialect({ pool }),
+    // mysql2's callback Pool is what Kysely drives; its types differ by version.
+    dialect: new MysqlDialect({ pool: pool as any }),
     plugins: [new CamelCasePlugin(), ...${plugins}],
   })
 }`
