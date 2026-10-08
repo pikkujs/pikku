@@ -38,6 +38,8 @@ export interface HttpRouteInfo {
   method: string
   route: string
   pikkuFuncId: string
+  /** A held-open server-sent-events stream, which costs more on a serverless target than a WebSocket */
+  sse?: true
 }
 
 /**
