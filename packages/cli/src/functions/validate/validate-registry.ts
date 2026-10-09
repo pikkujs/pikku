@@ -10,6 +10,7 @@ import { runOxlintRun, runOxlintSetupChecks } from "./oxlint-checks.js";
 import { runPikkuBarrelChecks } from "./pikku-barrel-checks.js";
 import { runScaffoldDuplicateChecks } from "./scaffold-duplicate-checks.js";
 import { runSharedProjectChecks } from "./shared-checks.js";
+import { runProjectChecks } from "./project-checks.js";
 import { runTypeIdentityChecks } from "./type-identity-checks.js";
 import { runWorkspaceExportsChecks } from "./workspace-exports-checks.js";
 import type { ValidateFinding as Finding } from "./persona-checks.js";
@@ -42,7 +43,21 @@ export type ValidateCheck = {
    */
   phase?: "last";
   applies: (target: ValidateTarget) => Promise<boolean>;
-  run: (target: ValidateTarget) => Promise<Finding[]>;
+  run: (target: ValidateTarget, options: ValidateOptions) => Promise<Finding[]>;
+};
+
+export type ProjectChecksHook = (request: {
+  root: string;
+  migrationsDir?: string;
+  deployTarget?: string;
+}) => Promise<Finding[]>;
+
+export type ValidateOptions = {
+  skipTypecheck?: boolean;
+  skipDeployChecks?: boolean;
+  migrationsBase?: string;
+  deployTarget?: string;
+  projectChecks?: ProjectChecksHook;
 };
 
 /** A hand-written `types/application-types.d.ts` beside package.json. */
@@ -106,6 +121,30 @@ export const CHECKS: ValidateCheck[] = [
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
   },
   {
+    id: "project-checks",
+    subject: "deploy-readiness check",
+    applies: async ({ dir }) =>
+      existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }, options) => {
+      if (options.skipDeployChecks) return [];
+      const { findings, migrationsDir } = await runProjectChecks(dir, {
+        skipTypecheck: options.skipTypecheck,
+        migrationsBase: options.migrationsBase,
+        deployTarget: options.deployTarget,
+        withRegistryChecks: false,
+      });
+      if (!options.projectChecks) return findings;
+      return [
+        ...findings,
+        ...(await options.projectChecks({
+          root: dir,
+          migrationsDir,
+          deployTarget: options.deployTarget,
+        })),
+      ];
+    },
+  },
+  {
     id: "scaffold-duplicates",
     subject: "scaffolded output elsewhere in the project",
     // An addon has no scaffold to duplicate.
@@ -128,7 +167,7 @@ export const CHECKS: ValidateCheck[] = [
     phase: "last",
     applies: async ({ dir }) =>
       existsSync(join(dir, "pikku.config.json")) && !existsSync(join(dir, ADDON_MARKER)),
-    run: async ({ dir }) => runOxlintRun(dir),
+    run: async ({ dir }, options) => (options.skipTypecheck ? [] : runOxlintRun(dir)),
   },
   {
     id: "mocks",
@@ -226,13 +265,16 @@ export type ValidateReport = {
   findings: Finding[];
 };
 
-export async function runValidate(root: string): Promise<ValidateReport> {
+export async function runValidate(
+  root: string,
+  options: ValidateOptions = {}
+): Promise<ValidateReport> {
   const plan = await planValidation(root);
   const findings: Finding[] = [];
   const ran: ValidateReport["ran"] = [];
 
   for (const { check, target } of plan) {
-    findings.push(...(await check.run(target)));
+    findings.push(...(await check.run(target, options)));
     ran.push({
       checkId: check.id,
       subject: check.subject,

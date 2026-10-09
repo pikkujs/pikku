@@ -38,4 +38,4 @@ const deleteUser = pikkuFunc({
 
 `closeWireServices` (called automatically by the function-runner) invokes `audit.close()` → `singletonServices.audit.write(batch)` → platform-specific flush (e.g. CF Queue, libsql INSERT). No manual flushing needed.
 
-> **Fabric note:** Fabric provisions the audit queue and consumer worker automatically. The audit table schema is in `db/sqlite/0003-audit.sql` (starter-template). Run `pikku fabric validate` to confirm the migration is in place.
+> **Fabric note:** Fabric provisions the audit queue and consumer worker automatically. The audit table schema is in `db/sqlite/0003-audit.sql` (starter-template). Run `pikku validate` to confirm the migration is in place.

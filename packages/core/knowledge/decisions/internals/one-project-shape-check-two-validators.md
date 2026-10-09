@@ -7,7 +7,7 @@ tags: cli, validate, fabric
 
 # One project-shape check, called by both validators
 
-`pikku workspace validate` and `pikku fabric validate` read like one command
+`pikku workspace validate` and `pikku validate` read like one command
 with a flag. They were two implementations — 495 lines and 2026 — that walked
 the same project and emitted sixteen identical findings. `functions-dir-missing`
 existed character for character in both files. All sixteen already agreed on
@@ -48,6 +48,6 @@ config block to paste, and there was no reason workspace users were getting the
 one-line version.
 
 **What this rules out:** adding a check to one validator and not the other;
-`pikku fabric validate` reporting a corrupt config as a missing one; asserting
+`pikku validate` reporting a corrupt config as a missing one; asserting
 auth table names no scaffold generates; and reading migrations from anywhere
 other than where `pikku db migrate` reads them.

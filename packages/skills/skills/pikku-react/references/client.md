@@ -244,7 +244,7 @@ becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
 The dev-only "Sign in as …" control: one click signs in as a declared scenario
 persona with no password, so the app can be reviewed as each kind of user.
-`pikku fabric validate` **requires** any frontend with a login screen to ship one
+`pikku validate` **requires** any frontend with a login screen to ship one
 (`app-missing-actor-quick-login-<app>`) — without it a reviewer is locked out of
 their own sandbox.
 

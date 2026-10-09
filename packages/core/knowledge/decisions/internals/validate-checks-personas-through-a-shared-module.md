@@ -7,7 +7,7 @@ tags: cli, validate, scenarios, personas
 
 # Both validators check personas through one shared module, and a persona counts from either the meta or the source
 
-`pikku workspace validate` and `pikku fabric validate` read like one command
+`pikku workspace validate` and `pikku validate` read like one command
 with a flag. They are not. They are two implementations that walk the same
 project and duplicate about eighteen findings between them verbatim —
 `functions-dir-missing` exists twice, character for character, in two files.

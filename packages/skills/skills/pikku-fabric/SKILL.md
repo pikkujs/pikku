@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -10,7 +10,7 @@ installGroups: [fabric]
 
 1. **Run structural validation first.** Before any edit, run:
    ```bash
-   pikku fabric validate --json
+   pikku validate --json
    ```
    This prints every missing file, misconfigured field, and dependency gap with a `fixHint`. Address all `error` findings before proceeding — they block deploy. Resolve `warn` findings before testing — they cause runtime failures. `info` findings are best-practice gaps that are safe to defer.
 2. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
@@ -136,7 +136,7 @@ always maps to `main`; without a domain it lives on the platform
 
 The apps are the `frontends` in `pikku.config.json`,
 the same list `pikku serve`, `pikku app` and native builds read, and
-`pikku fabric validate` and `smoke` read them from there:
+`pikku validate` and `smoke` read them from there:
 
 ```json
 "frontends": {
@@ -248,7 +248,7 @@ those values.
 
 ## Deploy
 
-Flow: `pikku fabric login` (needs a human), `pikku fabric init <github url>`, `pikku fabric validate` (must pass clean), then `pikku fabric deploy apply --production -y`. `apply` waits for a terminal state and exits non-zero unless the deployment went live. Read `references/deploy.md` for organization targeting, `--reset`, exit codes, the approval gate (`awaiting_approval`, `needs_config`, `needs_attention`), CI splitting, the upstream guard, the first user and private stage links.
+Flow: `pikku fabric login` (needs a human), `pikku fabric init <github url>`, `pikku validate` (must pass clean), then `pikku fabric deploy apply --production -y`. `apply` waits for a terminal state and exits non-zero unless the deployment went live. Read `references/deploy.md` for organization targeting, `--reset`, exit codes, the approval gate (`awaiting_approval`, `needs_config`, `needs_attention`), CI splitting, the upstream guard, the first user and private stage links.
 
 ## Versioning
 
@@ -267,7 +267,7 @@ Breaking changes are reported by the version check in step 1.
 
 ### `app-missing-actor-quick-login-<app>`
 
-The `fabric validate` finding people most often misread. It fires when an app has
+The `pikku validate` finding people most often misread. It fires when an app has
 a **login screen** but no dev actor switcher, and it is not a style nit: a sandbox
 reviewer has no seed password, so without the control they are locked out of the
 app they were asked to look at.
@@ -299,14 +299,14 @@ These apply in every Fabric app:
 - **No hand-editing `.pikku/db/schema.gen.ts`** — write a migration and re-run `pikku db migrate`.
 - **One runtime unit per file** — never define multiple functions/workflows in a single source file.
 - **Workflow steps don't need manual wiring** — `pikkuSessionlessFunc` step functions in `*.steps.ts` files are auto-discovered by codegen.
-- **Identifiers are English** — functions, components, types, files, database tables and columns, in every app whatever market it serves. The team's language is `metaLocale` in `pikku.config.json` and reaches `description`/`title`/`template` only; the app's language is the message catalogue, where `baseLocale` stays `en` and `defaultLocale` decides what a visitor opens in. `pikku fabric validate` warns (`app-base-locale-not-english-<app>`) when an app repoints its base.
+- **Identifiers are English** — functions, components, types, files, database tables and columns, in every app whatever market it serves. The team's language is `metaLocale` in `pikku.config.json` and reaches `description`/`title`/`template` only; the app's language is the message catalogue, where `baseLocale` stays `en` and `defaultLocale` decides what a visitor opens in. `pikku validate` warns (`app-base-locale-not-english-<app>`) when an app repoints its base.
 
 ## Converting an existing app to Fabric format
 
 Start by running the structural validator — it tells you exactly what is missing:
 
 ```bash
-pikku fabric validate --json
+pikku validate --json
 ```
 
 Fix every `error` and `warn` in the output before continuing. Then:
@@ -318,7 +318,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles` — plus `metaLocale` if the team does not work in English, which is the language every `description`, `title` and step `template` is then authored in.
 6. **Declare the apps** as `frontends` in `pikku.config.json`. There is no fabric config file; `projectId` is optional; without it the CLI finds the project from the git remote.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
-8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.
+8. **Run `pikku validate`** once more to confirm no structural issues remain.
 
 ## A deployed stage misbehaving
 

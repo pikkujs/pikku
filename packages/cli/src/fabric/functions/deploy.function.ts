@@ -5,7 +5,11 @@ import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
 import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
 import { PreconditionError } from '../../utils/precondition-error.js'
-import { migrationHistoryErrors, runValidate } from './validate.function.js'
+import {
+  migrationHistoryErrors,
+  runProjectChecks,
+} from '../../functions/validate/project-checks.js'
+import { projectChecks } from '../lib/project-checks.js'
 import { promptConfirm } from '../lib/prompt.js'
 import {
   assertResetAllowed,
@@ -250,11 +254,19 @@ export async function guardMigrationHistory(
   input: DeployInput,
   targetBranch: string
 ): Promise<void> {
-  const { findings } = await runValidate(process.cwd(), {
+  const checked = await runProjectChecks(process.cwd(), {
     skipTypecheck: true,
     migrationsBase: input.migrationsBase,
     deployTarget: targetBranch,
   })
+  const findings = [
+    ...checked.findings,
+    ...(await projectChecks({
+      root: checked.root,
+      migrationsDir: checked.migrationsDir,
+      deployTarget: targetBranch,
+    })),
+  ]
   const errors = migrationHistoryErrors(findings)
   if (errors.length === 0) return
   throw new PreconditionError(
@@ -263,7 +275,7 @@ export async function guardMigrationHistory(
       ...errors.map((f) => `  - [${f.id}] ${f.message}`),
       '',
       'Applied migrations are forward-only: restore the original file and add a NEW migration.',
-      'Run `pikku fabric validate` for fix hints.',
+      'Run `pikku validate` for fix hints.',
     ].join('\n')
   )
 }

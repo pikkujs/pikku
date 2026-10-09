@@ -77,7 +77,7 @@
 ### Patch Changes
 
 - 5a7443e: `pikku fabric deploy apply --reset` wipes a disposable stage's database and rebuilds it from the migrations and the dev seed as part of the deploy. It refuses production/`main` and `--deployment-id`, asks first (naming the app, the stage and that all data is wiped; `-y` skips the prompt but still prints it), and fails without wiping anything when the fabric server does not report the reset.
-- 3da0f0b: `pikku fabric validate` now errors (`migration-modified-after-base-*`) when a migration file that exists on the base ref (default `origin/main`, `--migrations-base` / `PIKKU_MIGRATIONS_BASE`) is modified, deleted or renamed. `pikku fabric deploy apply` runs the migration-history checks first and refuses to create a deployment while they fail, checking the stage being deployed, the production stage and the base ref. There is no override, and a check it cannot run (ledger unreadable, base ref unresolved, not a git repository) refuses rather than being skipped. The pikku-fabric skill documents the forward-only migration rule.
+- 3da0f0b: `pikku validate` now errors (`migration-modified-after-base-*`) when a migration file that exists on the base ref (default `origin/main`, `--migrations-base` / `PIKKU_MIGRATIONS_BASE`) is modified, deleted or renamed. `pikku fabric deploy apply` runs the migration-history checks first and refuses to create a deployment while they fail, checking the stage being deployed, the production stage and the base ref. There is no override, and a check it cannot run (ledger unreadable, base ref unresolved, not a git repository) refuses rather than being skipped. The pikku-fabric skill documents the forward-only migration rule.
 - a16b0ba: Persistent workflow services take a required `leaseService` (`WorkflowServiceOptions`) and lock runs and steps on it. The Postgres advisory and MySQL `GET_LOCK` step locks, and Redis's own `SET NX` run and step locks, are removed; `RedisWorkflowService` now takes `(connection, { leaseService, keyPrefix? })`.
 
 ## 0.12.45
@@ -100,7 +100,7 @@
 
   `@pikku/better-auth`: `personaSignIn` now also serves `GET /sign-in/personas?app=`, listing exactly the personas `/sign-in/persona` accepts (narrowed to `app` when it declares its own), or none when the gate is shut. `allowed` is now optional: pass `personaSignIn: { personas, featureFlags }` and both endpoints are open under `pikku dev`, and on a deployed stage only with `allowSignIn` opted in and the `devSwitcher` flag on. `devSwitcherOn(featureFlags, optIn)` exports that same check.
 
-  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku fabric validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
+  `pikku dev` no longer mints `VITE_DEV_ACTOR_SECRETS`. The `app-missing-actor-quick-login-*` hint from `pikku validate` now describes the persona-endpoint setup, and the check also accepts `signInAsPersona(` and `/auth/sign-in/persona`.
 
 - 4e3af11: `pikku-build` says to run the whole scenario suite rather than the milestone's
   own — the regression lives in someone else's scenario — and to restart the
@@ -892,7 +892,7 @@ sees`, step templates being authored in the third person singular.
 - 4058c3a: A default skills install is now the seventeen that teach a `#pikku/*` door, not everything
 - 4058c3a: `pikku doc --ai` now names the skill that teaches each door, and pikku-concepts sends you there first
 - 4058c3a: Gate the door-to-skill table so it cannot name a skill a default install does not get
-- 9d48e8a: Fail `pikku fabric validate` when a scenario step hardcodes a string the message catalogue already owns.
+- 9d48e8a: Fail `pikku validate` when a scenario step hardcodes a string the message catalogue already owns.
 
   A browser step that says `getByLabel('Full Name')` passes only while the app happens to render the base locale, and any copy edit turns it into a selector timeout that points at the wizard rather than at the rename that caused it. Validate now reads each `apps/<app>/messages/<baseLocale>.json` and errors on any string in a `*.steps.ts` / `*.scenario.ts` that is verbatim a catalogue value, naming the key to use.
 
@@ -1029,7 +1029,7 @@ addon` still wrote the pre-split targets: `./.pikku/*` resolved to
 
   The dev-only "Sign in as …" control — one click signs in as a declared scenario
   persona, no password — was hand-copied into every app that needed it, because
-  `pikku fabric validate` requires any frontend with a login screen to have one.
+  `pikku validate` requires any frontend with a login screen to have one.
   The `devActors()` / `signInAsActor()` pair was byte-identical everywhere it
   landed, including the `import.meta.env.DEV` gate that keeps the shared secret out
   of production bundles. That is not a thing each app should be re-deriving from a
@@ -1055,7 +1055,7 @@ addon` still wrote the pre-split targets: `./.pikku/*` resolved to
   the same one a human signs in through, `pikku-react` for the hook, and
   `pikku-fabric` for the validate rule that requires it.
 
-  `fabric validate` now also accepts a `useDevActors()` call site as evidence the
+  `pikku validate` now also accepts a `useDevActors()` call site as evidence the
   control is wired, so apps that want their own UI on the shared logic pass. The
   hand-rolled shape still passes too — nothing existing breaks. Its fix text no
   longer tells you to hand-write the helper, which would have become wrong advice

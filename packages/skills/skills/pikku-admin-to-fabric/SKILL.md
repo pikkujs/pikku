@@ -165,7 +165,7 @@ impersonation and editing an FAQ all guarded identically.
 ## Stage 5 — Verify and report
 
 ```bash
-pikku all && pikku fabric validate --json
+pikku all && pikku validate --json
 ```
 
 Per resource, the parity report records:

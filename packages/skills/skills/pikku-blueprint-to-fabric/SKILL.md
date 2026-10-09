@@ -13,7 +13,7 @@ argument-hint: '<path to .knowledge/> [domain to slice next]'
 2. **Clear the decisions gate.** Unresolved `decisionsNeeded` block the domains they touch. Ask; do not invent.
 3. **Build the schema first**, from `entities.json` — everything else hangs off it.
 4. **Then one vertical slice per domain, in dependency order.** Each slice ships functions + permissions + migrations + scenarios and verifies green before the next starts.
-5. **Verify with `pikku fabric validate --json`, then codegen and `tsc`** after every slice (Stage 8 has the exact commands). Never batch a whole app and verify at the end.
+5. **Verify with `pikku validate --json`, then codegen and `tsc`** after every slice (Stage 8 has the exact commands). Never batch a whole app and verify at the end.
 6. **Write the parity report as you go**, not at the end — it is the deliverable that proves the rebuild is complete.
 
 This skill is the **translation layer** only. For how Fabric itself works (SQLite/libSQL, project linking, deploy provider, project layout) read **pikku-fabric**. For everything else, delegate to the sibling skill named at each step.
@@ -302,7 +302,7 @@ Two things to watch:
 Per slice, narrowest first:
 
 ```bash
-pikku fabric validate --json     # structural: fix every error and warn
+pikku validate --json     # structural: fix every error and warn
 yarn pikku all                   # codegen + version compliance
 yarn tsc --noEmit
 ```

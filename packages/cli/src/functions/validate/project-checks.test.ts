@@ -4,17 +4,8 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-// The link findings depend on whether there is a session, so HOME points at a
-// disposable directory before anything reads ~/.fabric/auth.json.
-process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-validate-home-'))
-delete process.env.FABRIC_API_URL
-delete process.env.FABRIC_PROJECT_ID
-const { writeAuthFile, DEFAULT_API_URL } = await import('../lib/config.js')
-const {
-  runValidate,
-  renderValidate,
-  runValidate: runLiveValidate,
-} = await import('./validate.function.js')
+const { runProjectChecks: runValidate, runProjectChecks: runLiveValidate } =
+  await import('./project-checks.js')
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -191,7 +182,7 @@ async function makeValidProject(root: string) {
   )
 }
 
-describe('pikku fabric validate', () => {
+describe('project checks', () => {
   test('empty directory → errors for all required items', async () => {
     const tmp = await makeTmp()
     try {
@@ -287,38 +278,6 @@ describe('pikku fabric validate', () => {
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
-  })
-
-  describe('fabric project link', () => {
-    test('logged out, the link is not checked', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeAuthFile({ tokens: {} })
-        const ids = (await runValidate(tmp)).findings.map((f) => f.id)
-        assert.ok(!ids.includes('fabric-project-not-linked'))
-        assert.ok(!ids.includes('fabric-project-unresolved'))
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
-    test('logged in with no matching remote → info (not blocking)', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeAuthFile({ tokens: { [DEFAULT_API_URL]: 'tok' } })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true)
-        const finding = result.findings.find(
-          (f) => f.id === 'fabric-project-not-linked'
-        )
-        assert.strictEqual(finding?.severity, 'info')
-      } finally {
-        await writeAuthFile({ tokens: {} })
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
   })
 
   describe('pikku.config.json', () => {
@@ -1803,107 +1762,9 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('renderValidate', () => {
-    function captureLog(fn: () => void): string[] {
-      const lines: string[] = []
-      const orig = console.log
-      console.log = (...args: unknown[]) => {
-        lines.push(args.map(String).join(' '))
-      }
-      try {
-        fn()
-      } finally {
-        console.log = orig
-      }
-      return lines
-    }
-
-    test('prints ok message when there are no findings', () => {
-      const lines = captureLog(() =>
-        renderValidate(null, { ok: true, root: '/tmp/proj', findings: [] })
-      )
-      assert.ok(lines.some((l) => l.includes('All checks passed')))
-    })
-
-    test('prints error, warn, and info findings with correct icons', () => {
-      const lines = captureLog(() =>
-        renderValidate(null, {
-          ok: false,
-          root: '/tmp/proj',
-          findings: [
-            {
-              id: 'e1',
-              severity: 'error',
-              message: 'bad error',
-              path: '/tmp/proj/foo',
-              fixHint: 'fix it',
-            },
-            {
-              id: 'w1',
-              severity: 'warn',
-              message: 'a warning',
-              path: '/tmp/proj/bar',
-              fixHint: 'consider this',
-            },
-            {
-              id: 'i1',
-              severity: 'info',
-              message: 'some info',
-              path: '/tmp/proj/baz',
-              fixHint: 'note this',
-            },
-          ],
-        })
-      )
-      assert.ok(lines.some((l) => l.includes('bad error')))
-      assert.ok(lines.some((l) => l.includes('a warning')))
-      assert.ok(lines.some((l) => l.includes('some info')))
-    })
-
-    test('prints no-errors footer when ok=true but findings exist', () => {
-      const lines = captureLog(() =>
-        renderValidate(null, {
-          ok: true,
-          root: '/tmp/proj',
-          findings: [
-            {
-              id: 'w1',
-              severity: 'warn',
-              message: 'a warning',
-              path: '/tmp/proj/bar',
-              fixHint: 'consider this',
-            },
-          ],
-        })
-      )
-      assert.ok(lines.some((l) => l.includes('no errors')))
-    })
-
-    test('relative path is shown instead of absolute in findings', () => {
-      const root = '/tmp/proj'
-      const lines = captureLog(() =>
-        renderValidate(null, {
-          ok: false,
-          root,
-          findings: [
-            {
-              id: 'e1',
-              severity: 'error',
-              message: 'bad error',
-              path: `${root}/packages/functions/src/services.ts`,
-              fixHint: 'fix it',
-            },
-          ],
-        })
-      )
-      assert.ok(
-        lines.some((l) => l.includes('packages/functions/src/services.ts'))
-      )
-    })
-  })
 })
 
-describe('knowledge base (live validate.function)', () => {
+describe('knowledge base (live project checks)', () => {
   test('the old flat shape is reported instead of being required', async () => {
     // This check used to demand knowledge/design-language.md, security.md and
     // technology.md. Those are three documents, not a knowledge base — nothing
@@ -2003,7 +1864,7 @@ describe('knowledge base (live validate.function)', () => {
   })
 })
 
-describe('better-auth stateless session (live validate.function)', () => {
+describe('better-auth stateless session (live project checks)', () => {
   const authFile = (cookieCache: boolean) =>
     `import { betterAuth } from 'better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
@@ -2082,7 +1943,7 @@ addHTTPMiddleware('*', [betterAuthSession()])
   })
 })
 
-describe('i18n convergence — Paraglide (live validate.function)', () => {
+describe('i18n convergence — Paraglide (live project checks)', () => {
   // Scaffold an apps/web react frontend with the given package deps + src file,
   // optionally wiring the full Paraglide stack (messages/ + project.inlang/).
   const makeApp = async (
@@ -2318,7 +2179,7 @@ describe('i18n convergence — Paraglide (live validate.function)', () => {
   })
 })
 
-describe('declared frontends + type-check (live validate.function)', () => {
+describe('declared frontends + type-check (live project checks)', () => {
   // pikku.config.json is unvalidated JSON — validate has to survive
   // whatever is in it and report the problem, not crash on a property access.
   const declareFrontends = async (root: string, frontends: unknown) => {
@@ -2444,7 +2305,7 @@ describe('declared frontends + type-check (live validate.function)', () => {
   })
 })
 
-describe('deployed frontend API base (live validate.function)', () => {
+describe('deployed frontend API base (live project checks)', () => {
   const declareWeb = async (root: string, deploy = true) => {
     await writeFrontends(root, { web: { cwd: 'apps/web', deploy } })
   }
@@ -2705,7 +2566,7 @@ describe('deployed frontend API base (live validate.function)', () => {
   })
 })
 
-describe('scenario steps vs the message catalogue (live validate.function)', () => {
+describe('scenario steps vs the message catalogue (live project checks)', () => {
   const writeCatalogue = async (
     root: string,
     messages: Record<string, string>
@@ -2983,7 +2844,7 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
   })
 })
 
-describe('an app whose baseLocale is not English (live validate.function)', () => {
+describe('an app whose baseLocale is not English (live project checks)', () => {
   const writeInlangApp = async (
     root: string,
     settings: Record<string, unknown>,

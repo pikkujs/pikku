@@ -13,7 +13,7 @@
 ```bash
 pikku fabric login              # opens a browser; needs a human, wait for it
 pikku fabric init https://github.com/<owner>/<repo>
-pikku fabric validate           # must pass clean
+pikku validate           # must pass clean
 pikku fabric deploy apply --production -y
 ```
 

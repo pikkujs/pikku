@@ -22,7 +22,7 @@ export interface FrontendTypeCheckResult {
 
 /**
  * Run each deployable frontend's type-check exactly as the Fabric build
- * container does, so a type error fails `fabric validate` on the developer's
+ * container does, so a type error fails `pikku validate` on the developer's
  * machine instead of eight minutes into a deploy.
  *
  * The container runs the frontend's own `tsc` script (falling back to

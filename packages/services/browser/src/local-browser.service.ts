@@ -50,7 +50,7 @@ interface LocalSession {
  *
  * The `puppeteer-core` peer is pinned (package.json → 22.13.1) to the exact
  * version `@cloudflare/puppeteer` forks, so a project renders identically locally
- * and on Cloudflare. That pin is the source of truth `pikku fabric validate`
+ * and on Cloudflare. That pin is the source of truth `pikku validate`
  * checks; bump it in lockstep with `@cloudflare/puppeteer` (and the injector).
  */
 export class LocalBrowserService implements BrowserService {
