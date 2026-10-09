@@ -280,7 +280,7 @@ async function launch(
   const skill = join(SKILL_DIRS[harness], current.skill!, 'SKILL.md')
   if (!existsSync(skill))
     throw new PreconditionError(
-      `${skill} is missing. Run \`pikku skills install --core --fabric --agent ${harness}\` first.`
+      `${skill} is missing. Run \`pikku skills install --core --agent ${harness}\` first.`
     )
   const work = join(await mkdtemp(join(tmpdir(), 'pikku-next-')), 'work.md')
   const refs = current.refs.length

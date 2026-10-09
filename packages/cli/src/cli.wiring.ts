@@ -2025,11 +2025,6 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [core]',
               default: false,
             },
-            fabric: {
-              description:
-                'Install skills whose frontmatter includes installGroups: [fabric]',
-              default: false,
-            },
             client: {
               description:
                 'Install skills whose frontmatter includes installGroups: [client]',

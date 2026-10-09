@@ -156,10 +156,10 @@ describe('pikku skills install', () => {
 
   test('--agent pi honours group filters', async () => {
     const dir = await inTemp()
-    await run({ agent: 'pi', fabric: true })
+    await run({ agent: 'pi', core: true })
     assert.deepEqual(
       await installed(dir, 'pi'),
-      await skillsWithGroup('fabric')
+      await skillsWithGroup('core')
     )
   })
 
@@ -178,27 +178,14 @@ describe('pikku skills install', () => {
     )
   })
 
-  test('--fabric installs the fabric-tagged skills, not the whole corpus', async () => {
+  test('--core and --client together install the union of both groups', async () => {
     const dir = await inTemp()
-    await run({ fabric: true })
-
-    const fabric = await skillsWithGroup('fabric')
-    const all = await listSkillNames()
-    assert.deepEqual(await installed(dir), fabric)
-    assert.ok(
-      fabric.length < all.length,
-      'expected --fabric to be a strict subset'
-    )
-  })
-
-  test('--core and --fabric together install the union of both groups', async () => {
-    const dir = await inTemp()
-    await run({ core: true, fabric: true })
+    await run({ core: true, client: true })
 
     const union = [
       ...new Set([
         ...(await skillsWithGroup('core')),
-        ...(await skillsWithGroup('fabric')),
+        ...(await skillsWithGroup('client')),
       ]),
     ].sort()
     assert.deepEqual(await installed(dir), union)
