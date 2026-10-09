@@ -58,6 +58,19 @@ async function fabricBackend({
 registerChangesBackend(fabricBackend)
 
 /**
+ * `createSandboxChange` is newer than the generated Fabric client, so the
+ * client's call map does not list it yet. This is its shape in Fabric:
+ * title, optional body and route in, the filed change out. Drop this when
+ * the client is regenerated.
+ */
+type SandboxFiling = {
+  invoke(
+    name: 'createSandboxChange',
+    data: { title: string; body?: string; route?: string }
+  ): Promise<{ change: { changeId: string; shortId: string; title: string } }>
+}
+
+/**
  * Filing a change needs a stage, which a person at a terminal did not name:
  * the one on the checked-out branch, else the project's only stage. A sandbox
  * may not list stages, so it files through `createSandboxChange`, which
@@ -76,7 +89,7 @@ async function fileChange(
   } catch (error) {
     if (httpStatus(error) !== 403) throw error
     const { title, body, route } = data
-    return (fabric as any).invoke('createSandboxChange', { title, body, route })
+    return (fabric as SandboxFiling).invoke('createSandboxChange', { title, body, route })
   }
   const branch = await currentBranch().catch(() => undefined)
   const stage =
