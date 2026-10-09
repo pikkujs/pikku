@@ -1,4 +1,5 @@
-import ts from 'typescript'
+import type ts from 'typescript'
+import { tsRuntime } from './lazy-typescript.js'
 import { parseSource, sourceFiles } from './verify/source-checks.js'
 
 /**
@@ -35,14 +36,14 @@ const namespaceAliases = (sf: ts.SourceFile): Set<string> => {
   const aliases = new Set<string>()
   for (const stmt of sf.statements) {
     if (
-      !ts.isImportDeclaration(stmt) ||
-      !ts.isStringLiteral(stmt.moduleSpecifier)
+      !tsRuntime.isImportDeclaration(stmt) ||
+      !tsRuntime.isStringLiteral(stmt.moduleSpecifier)
     )
       continue
     const fromMessages = MESSAGES_MODULE.test(stmt.moduleSpecifier.text)
     const bindings = stmt.importClause?.namedBindings
     if (!bindings) continue
-    if (ts.isNamespaceImport(bindings)) {
+    if (tsRuntime.isNamespaceImport(bindings)) {
       if (fromMessages) aliases.add(bindings.name.text)
       continue
     }
@@ -58,22 +59,22 @@ const namespaceAliases = (sf: ts.SourceFile): Set<string> => {
 const isDeclarationName = (node: ts.Identifier): boolean => {
   const p = node.parent
   return (
-    ((ts.isParameter(p) ||
-      ts.isVariableDeclaration(p) ||
-      ts.isBindingElement(p)) &&
+    ((tsRuntime.isParameter(p) ||
+      tsRuntime.isVariableDeclaration(p) ||
+      tsRuntime.isBindingElement(p)) &&
       p.name === node) ||
-    (ts.isPropertyAccessExpression(p) && p.name === node) ||
-    (ts.isPropertyAssignment(p) && p.name === node) ||
-    (ts.isQualifiedName(p) && p.right === node) ||
-    (ts.isJsxAttribute(p) && p.name === node)
+    (tsRuntime.isPropertyAccessExpression(p) && p.name === node) ||
+    (tsRuntime.isPropertyAssignment(p) && p.name === node) ||
+    (tsRuntime.isQualifiedName(p) && p.right === node) ||
+    (tsRuntime.isJsxAttribute(p) && p.name === node)
   )
 }
 
 const bindsName = (name: ts.BindingName, text: string): boolean =>
-  ts.isIdentifier(name)
+  tsRuntime.isIdentifier(name)
     ? name.text === text
     : name.elements.some(
-        (el) => !ts.isOmittedExpression(el) && bindsName(el.name, text)
+        (el) => !tsRuntime.isOmittedExpression(el) && bindsName(el.name, text)
       )
 
 const declaresName = (
@@ -81,44 +82,50 @@ const declaresName = (
   text: string
 ): boolean =>
   !!list &&
-  ts.isVariableDeclarationList(list) &&
+  tsRuntime.isVariableDeclarationList(list) &&
   list.declarations.some((d) => bindsName(d.name, text))
 
 /** Whether `node` refers to a local binding named `text` rather than the import (parameters, block-level declarations, loop and catch variables). */
 const isShadowed = (node: ts.Identifier): boolean => {
   const text = node.text
   for (let p: ts.Node | undefined = node.parent; p; p = p.parent) {
-    if (ts.isSourceFile(p)) return false
-    if (ts.isFunctionLike(p)) {
+    if (tsRuntime.isSourceFile(p)) return false
+    if (tsRuntime.isFunctionLike(p)) {
       if (p.parameters.some((param) => bindsName(param.name, text))) return true
       if (
-        (ts.isFunctionExpression(p) || ts.isFunctionDeclaration(p)) &&
+        (tsRuntime.isFunctionExpression(p) ||
+          tsRuntime.isFunctionDeclaration(p)) &&
         p.name?.text === text
       )
         return true
-    } else if (ts.isBlock(p) || ts.isModuleBlock(p) || ts.isCaseBlock(p)) {
-      const statements = ts.isCaseBlock(p)
+    } else if (
+      tsRuntime.isBlock(p) ||
+      tsRuntime.isModuleBlock(p) ||
+      tsRuntime.isCaseBlock(p)
+    ) {
+      const statements = tsRuntime.isCaseBlock(p)
         ? p.clauses.flatMap((c) => [...c.statements])
         : p.statements
       for (const st of statements) {
         if (
-          ts.isVariableStatement(st) &&
+          tsRuntime.isVariableStatement(st) &&
           declaresName(st.declarationList, text)
         )
           return true
         if (
-          (ts.isFunctionDeclaration(st) || ts.isClassDeclaration(st)) &&
+          (tsRuntime.isFunctionDeclaration(st) ||
+            tsRuntime.isClassDeclaration(st)) &&
           st.name?.text === text
         )
           return true
       }
     } else if (
-      ts.isForStatement(p) ||
-      ts.isForInStatement(p) ||
-      ts.isForOfStatement(p)
+      tsRuntime.isForStatement(p) ||
+      tsRuntime.isForInStatement(p) ||
+      tsRuntime.isForOfStatement(p)
     ) {
       if (declaresName(p.initializer, text)) return true
-    } else if (ts.isCatchClause(p)) {
+    } else if (tsRuntime.isCatchClause(p)) {
       if (p.variableDeclaration && bindsName(p.variableDeclaration.name, text))
         return true
     }
@@ -158,33 +165,41 @@ export function scanMessageUsage(root: string): MessageUsage {
       set.add(file)
     }
     const visit = (node: ts.Node) => {
-      if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return
       if (
-        ts.isIdentifier(node) &&
+        tsRuntime.isImportDeclaration(node) ||
+        tsRuntime.isExportDeclaration(node)
+      )
+        return
+      if (
+        tsRuntime.isIdentifier(node) &&
         aliases.has(node.text) &&
         !isDeclarationName(node) &&
         !isShadowed(node)
       ) {
         const p = node.parent
-        if (ts.isPropertyAccessExpression(p) && p.expression === node) {
+        if (tsRuntime.isPropertyAccessExpression(p) && p.expression === node) {
           use(p.name.text)
-        } else if (ts.isQualifiedName(p) && p.left === node) {
+        } else if (tsRuntime.isQualifiedName(p) && p.left === node) {
           // `typeof m.key` in a type position
           use(p.right.text)
-        } else if (ts.isElementAccessExpression(p) && p.expression === node) {
+        } else if (
+          tsRuntime.isElementAccessExpression(p) &&
+          p.expression === node
+        ) {
           const arg = p.argumentExpression
-          if (ts.isStringLiteralLike(arg)) use(arg.text)
+          if (tsRuntime.isStringLiteralLike(arg)) use(arg.text)
           else site(node, 'computed access')
         } else if (
-          ts.isVariableDeclaration(p) &&
+          tsRuntime.isVariableDeclaration(p) &&
           p.initializer === node &&
-          ts.isObjectBindingPattern(p.name)
+          tsRuntime.isObjectBindingPattern(p.name)
         ) {
           for (const el of p.name.elements) {
             const name = el.propertyName ?? el.name
             if (
               el.dotDotDotToken ||
-              (!ts.isIdentifier(name) && !ts.isStringLiteralLike(name))
+              (!tsRuntime.isIdentifier(name) &&
+                !tsRuntime.isStringLiteralLike(name))
             )
               site(node, 'destructured with rest or computed name')
             else use((name as ts.Identifier | ts.StringLiteral).text)
@@ -193,7 +208,7 @@ export function scanMessageUsage(root: string): MessageUsage {
           site(node, 'namespace used as a value')
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }

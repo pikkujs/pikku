@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import ts from 'typescript'
+import type ts from 'typescript'
+import { tsRuntime } from '../lazy-typescript.js'
 
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -62,12 +63,12 @@ export function parseSource(
   } catch {
     return null
   }
-  const sf = ts.createSourceFile(
+  const sf = tsRuntime.createSourceFile(
     file,
     text,
-    ts.ScriptTarget.Latest,
+    tsRuntime.ScriptTarget.Latest,
     true,
-    file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+    file.endsWith('.tsx') ? tsRuntime.ScriptKind.TSX : tsRuntime.ScriptKind.TS
   )
   const diagnostics = (sf as unknown as { parseDiagnostics?: unknown[] })
     .parseDiagnostics
@@ -105,11 +106,11 @@ const AS_I18N_DEFINITION_FILE = /(^|\/)react\/src\/i18n-types\.ts$/
 const unwrapReference = (expr: ts.Expression): ts.Expression => {
   let current = expr
   while (
-    ts.isParenthesizedExpression(current) ||
-    ts.isAsExpression(current) ||
-    ts.isNonNullExpression(current) ||
-    ts.isTypeAssertionExpression(current) ||
-    ts.isSatisfiesExpression(current)
+    tsRuntime.isParenthesizedExpression(current) ||
+    tsRuntime.isAsExpression(current) ||
+    tsRuntime.isNonNullExpression(current) ||
+    tsRuntime.isTypeAssertionExpression(current) ||
+    tsRuntime.isSatisfiesExpression(current)
   )
     current = current.expression
   return current
@@ -118,25 +119,28 @@ const unwrapReference = (expr: ts.Expression): ts.Expression => {
 /** True for an identifier or a property-access chain on one (`name`, `a.b.c`, `a?.b`, `a!.b`), possibly wrapped. */
 const isPlainReference = (expr: ts.Expression): boolean => {
   const inner = unwrapReference(expr)
-  if (ts.isIdentifier(inner) || inner.kind === ts.SyntaxKind.ThisKeyword)
+  if (
+    tsRuntime.isIdentifier(inner) ||
+    inner.kind === tsRuntime.SyntaxKind.ThisKeyword
+  )
     return true
-  if (ts.isPropertyAccessExpression(inner))
+  if (tsRuntime.isPropertyAccessExpression(inner))
     return isPlainReference(inner.expression)
   return false
 }
 
 const classifyAsI18nArgument = (expr: ts.Expression): AsI18nArgumentKind => {
   const inner = unwrapReference(expr)
-  if (ts.isStringLiteral(inner)) return 'a string literal'
+  if (tsRuntime.isStringLiteral(inner)) return 'a string literal'
   if (
-    ts.isNoSubstitutionTemplateLiteral(inner) ||
-    ts.isTemplateExpression(inner)
+    tsRuntime.isNoSubstitutionTemplateLiteral(inner) ||
+    tsRuntime.isTemplateExpression(inner)
   )
     return 'a template literal'
-  if (ts.isCallExpression(inner)) return 'a call'
+  if (tsRuntime.isCallExpression(inner)) return 'a call'
   if (
-    ts.isBinaryExpression(inner) &&
-    inner.operatorToken.kind === ts.SyntaxKind.PlusToken
+    tsRuntime.isBinaryExpression(inner) &&
+    inner.operatorToken.kind === tsRuntime.SyntaxKind.PlusToken
   )
     return 'a concatenation'
   return 'an expression'
@@ -151,22 +155,25 @@ const helperNames = (sf: ts.SourceFile, helper: string): Set<string> => {
   const names = new Set<string>([helper])
   for (const statement of sf.statements) {
     if (
-      ts.isImportDeclaration(statement) &&
+      tsRuntime.isImportDeclaration(statement) &&
       statement.importClause?.namedBindings &&
-      ts.isNamedImports(statement.importClause.namedBindings)
+      tsRuntime.isNamedImports(statement.importClause.namedBindings)
     ) {
       for (const spec of statement.importClause.namedBindings.elements) {
         if ((spec.propertyName ?? spec.name).text === helper)
           names.add(spec.name.text)
       }
     }
-    if (ts.isVariableStatement(statement)) {
+    if (tsRuntime.isVariableStatement(statement)) {
       for (const decl of statement.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name) && decl.name.text === helper)
+        if (tsRuntime.isIdentifier(decl.name) && decl.name.text === helper)
           names.delete(helper)
       }
     }
-    if (ts.isFunctionDeclaration(statement) && statement.name?.text === helper)
+    if (
+      tsRuntime.isFunctionDeclaration(statement) &&
+      statement.name?.text === helper
+    )
       names.delete(helper)
   }
   return names
@@ -191,11 +198,11 @@ export function asI18nArguments(dir: string): AsI18nArgumentHit[] {
     const names = helperNames(sf, 'asI18n')
     const lines = text.split('\n')
     const visit = (node: ts.Node) => {
-      if (ts.isCallExpression(node)) {
+      if (tsRuntime.isCallExpression(node)) {
         const callee = node.expression
         const isAsI18n =
-          (ts.isIdentifier(callee) && names.has(callee.text)) ||
-          (ts.isPropertyAccessExpression(callee) &&
+          (tsRuntime.isIdentifier(callee) && names.has(callee.text)) ||
+          (tsRuntime.isPropertyAccessExpression(callee) &&
             callee.name.text === 'asI18n')
         const arg = node.arguments[0]
         if (isAsI18n && arg && !isPlainReference(arg)) {
@@ -204,13 +211,13 @@ export function asI18nArguments(dir: string): AsI18nArgumentHit[] {
             file,
             line: line + 1,
             text: (lines[line] ?? '').trim().slice(0, 160),
-            kind: ts.isSpreadElement(arg)
+            kind: tsRuntime.isSpreadElement(arg)
               ? 'an expression'
               : classifyAsI18nArgument(arg),
           })
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
@@ -240,17 +247,18 @@ export function asI18nStubs(dir: string): AsI18nStubHit[] {
     const names = helperNames(sf, 'asI18nStub')
     const lines = text.split('\n')
     const visit = (node: ts.Node) => {
-      if (ts.isCallExpression(node)) {
+      if (tsRuntime.isCallExpression(node)) {
         const callee = node.expression
         const isStub =
-          (ts.isIdentifier(callee) && names.has(callee.text)) ||
-          (ts.isPropertyAccessExpression(callee) &&
+          (tsRuntime.isIdentifier(callee) && names.has(callee.text)) ||
+          (tsRuntime.isPropertyAccessExpression(callee) &&
             callee.name.text === 'asI18nStub')
         if (isStub) {
           const [arg] = node.arguments
           const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line
           const copy = arg
-            ? ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)
+            ? tsRuntime.isStringLiteral(arg) ||
+              tsRuntime.isNoSubstitutionTemplateLiteral(arg)
               ? arg.text
               : arg.getText(sf)
             : ''
@@ -262,7 +270,7 @@ export function asI18nStubs(dir: string): AsI18nStubHit[] {
           })
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
@@ -298,8 +306,8 @@ const importedHelperBindings = (
   const inReactSource = REACT_SOURCE_FILE.test(file)
   for (const statement of sf.statements) {
     if (
-      !ts.isImportDeclaration(statement) ||
-      !ts.isStringLiteral(statement.moduleSpecifier)
+      !tsRuntime.isImportDeclaration(statement) ||
+      !tsRuntime.isStringLiteral(statement.moduleSpecifier)
     )
       continue
     const spec = statement.moduleSpecifier.text
@@ -310,7 +318,8 @@ const importedHelperBindings = (
       continue
     const bindings = statement.importClause?.namedBindings
     if (!bindings) continue
-    if (ts.isNamespaceImport(bindings)) namespaces.add(bindings.name.text)
+    if (tsRuntime.isNamespaceImport(bindings))
+      namespaces.add(bindings.name.text)
     else
       for (const el of bindings.elements)
         if ((el.propertyName ?? el.name).text === helper)
@@ -341,24 +350,26 @@ export function sepArguments(dir: string): SepArgumentHit[] {
     if (names.size === 0 && namespaces.size === 0) continue
     const lines = text.split('\n')
     const visit = (node: ts.Node) => {
-      if (ts.isCallExpression(node)) {
+      if (tsRuntime.isCallExpression(node)) {
         const callee = node.expression
         const isSep =
-          (ts.isIdentifier(callee) && names.has(callee.text)) ||
-          (ts.isPropertyAccessExpression(callee) &&
+          (tsRuntime.isIdentifier(callee) && names.has(callee.text)) ||
+          (tsRuntime.isPropertyAccessExpression(callee) &&
             callee.name.text === 'sep' &&
-            ts.isIdentifier(callee.expression) &&
+            tsRuntime.isIdentifier(callee.expression) &&
             namespaces.has(callee.expression.text))
         if (isSep) {
           const arg = node.arguments[0]
           const inner =
-            arg && !ts.isSpreadElement(arg) ? unwrapReference(arg) : undefined
+            arg && !tsRuntime.isSpreadElement(arg)
+              ? unwrapReference(arg)
+              : undefined
           let reason: string | undefined
           if (
             !inner ||
             !(
-              ts.isStringLiteral(inner) ||
-              ts.isNoSubstitutionTemplateLiteral(inner)
+              tsRuntime.isStringLiteral(inner) ||
+              tsRuntime.isNoSubstitutionTemplateLiteral(inner)
             )
           )
             reason = 'not a string literal'
@@ -378,7 +389,7 @@ export function sepArguments(dir: string): SepArgumentHit[] {
           }
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
@@ -459,13 +470,13 @@ export const hasI18nGate = (dir: string): boolean =>
 
 /** A lowercase tag (`div`, `svg`, `text`): a DOM or SVG element, whose text the gate types. Components, member tags and fragments are not. */
 const isIntrinsicTag = (tag: ts.JsxTagNameExpression): boolean =>
-  ts.isIdentifier(tag) && /^[a-z]/.test(tag.text)
+  tsRuntime.isIdentifier(tag) && /^[a-z]/.test(tag.text)
 
 /** The element a child (JsxText or JsxExpression) or an attribute belongs to, or null for a fragment. */
 const owningTag = (node: ts.Node): ts.JsxTagNameExpression | null => {
   const parent = node.parent
-  if (ts.isJsxElement(parent)) return parent.openingElement.tagName
-  if (ts.isJsxAttributes(parent)) return parent.parent.tagName
+  if (tsRuntime.isJsxElement(parent)) return parent.openingElement.tagName
+  if (tsRuntime.isJsxAttributes(parent)) return parent.parent.tagName
   return null
 }
 
@@ -491,12 +502,12 @@ export function jsxLiteralText(
     if (!file.endsWith('.tsx') || JSX_LITERAL_SKIP_FILE.test(file)) continue
     const text = readSafe(file)
     if (!text) continue
-    const sf = ts.createSourceFile(
+    const sf = tsRuntime.createSourceFile(
       file,
       text,
-      ts.ScriptTarget.Latest,
+      tsRuntime.ScriptTarget.Latest,
       true,
-      ts.ScriptKind.TSX
+      tsRuntime.ScriptKind.TSX
     )
     const report = (node: ts.Node, value: string) => {
       const tag = owningTag(node)
@@ -508,18 +519,19 @@ export function jsxLiteralText(
       hits.push({ file, line: line + 1, text: trimmed.slice(0, 160) })
     }
     const visit = (node: ts.Node) => {
-      if (ts.isJsxText(node)) {
+      if (tsRuntime.isJsxText(node)) {
         report(node, node.text)
       } else if (
-        ts.isJsxExpression(node) &&
+        tsRuntime.isJsxExpression(node) &&
         node.expression &&
-        (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent)) &&
-        (ts.isStringLiteral(node.expression) ||
-          ts.isNoSubstitutionTemplateLiteral(node.expression))
+        (tsRuntime.isJsxElement(node.parent) ||
+          tsRuntime.isJsxFragment(node.parent)) &&
+        (tsRuntime.isStringLiteral(node.expression) ||
+          tsRuntime.isNoSubstitutionTemplateLiteral(node.expression))
       ) {
         report(node, node.expression.text)
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
@@ -615,26 +627,32 @@ export function looksLikeCopy(
 
 /** The literal strings an expression can evaluate to directly: through ternaries, `||`, `??`, `&&`, parentheses and template literals. Calls are not entered. */
 function literalStrings(expr: ts.Expression): string[] {
-  if (ts.isParenthesizedExpression(expr) || ts.isAsExpression(expr))
+  if (
+    tsRuntime.isParenthesizedExpression(expr) ||
+    tsRuntime.isAsExpression(expr)
+  )
     return literalStrings(expr.expression)
-  if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr))
+  if (
+    tsRuntime.isStringLiteral(expr) ||
+    tsRuntime.isNoSubstitutionTemplateLiteral(expr)
+  )
     return [expr.text]
-  if (ts.isTemplateExpression(expr)) {
+  if (tsRuntime.isTemplateExpression(expr)) {
     return [
       expr.head.text +
         expr.templateSpans.map((s) => '{…}' + s.literal.text).join(''),
     ]
   }
-  if (ts.isConditionalExpression(expr))
+  if (tsRuntime.isConditionalExpression(expr))
     return [...literalStrings(expr.whenTrue), ...literalStrings(expr.whenFalse)]
-  if (ts.isBinaryExpression(expr)) {
+  if (tsRuntime.isBinaryExpression(expr)) {
     const op = expr.operatorToken.kind
     if (
-      op === ts.SyntaxKind.BarBarToken ||
-      op === ts.SyntaxKind.QuestionQuestionToken
+      op === tsRuntime.SyntaxKind.BarBarToken ||
+      op === tsRuntime.SyntaxKind.QuestionQuestionToken
     )
       return [...literalStrings(expr.left), ...literalStrings(expr.right)]
-    if (op === ts.SyntaxKind.AmpersandAmpersandToken)
+    if (op === tsRuntime.SyntaxKind.AmpersandAmpersandToken)
       return literalStrings(expr.right)
   }
   return []
@@ -642,16 +660,17 @@ function literalStrings(expr: ts.Expression): string[] {
 
 /** True for an attribute or child of a lowercase element: copy the type gate already rejects. Helper-call arguments never are. */
 const ownedByGate = (node: ts.Node): boolean => {
-  if (!ts.isJsxAttribute(node) && !ts.isJsxExpression(node)) return false
+  if (!tsRuntime.isJsxAttribute(node) && !tsRuntime.isJsxExpression(node))
+    return false
   const tag = owningTag(node)
   return tag !== null && isIntrinsicTag(tag)
 }
 
 const inCodeElement = (node: ts.Node): boolean => {
   for (let p: ts.Node | undefined = node.parent; p; p = p.parent) {
-    const tag = ts.isJsxElement(p)
+    const tag = tsRuntime.isJsxElement(p)
       ? p.openingElement.tagName.getText()
-      : ts.isJsxSelfClosingElement(p)
+      : tsRuntime.isJsxSelfClosingElement(p)
         ? p.tagName.getText()
         : ''
     if (tag === 'code' || tag === 'pre') return true
@@ -698,7 +717,7 @@ export function jsxLiteralProps(
       })
     }
     const visit = (node: ts.Node) => {
-      if (ts.isJsxAttribute(node) && node.initializer) {
+      if (tsRuntime.isJsxAttribute(node) && node.initializer) {
         const name = node.name.getText(sf)
         const isCopy =
           !NON_COPY_PROPS.has(name) &&
@@ -706,30 +725,32 @@ export function jsxLiteralProps(
           (props.includes(name) || COPY_PROP_PATTERN.test(name))
         if (isCopy && !inCodeElement(node)) {
           const init = node.initializer
-          const exprs = ts.isStringLiteral(init)
+          const exprs = tsRuntime.isStringLiteral(init)
             ? [init as ts.Expression]
-            : ts.isJsxExpression(init) && init.expression
+            : tsRuntime.isJsxExpression(init) && init.expression
               ? [init.expression]
               : []
           for (const e of exprs)
             for (const s of literalStrings(e)) report(node, s, name)
         }
       } else if (
-        ts.isJsxExpression(node) &&
+        tsRuntime.isJsxExpression(node) &&
         node.expression &&
-        (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent)) &&
+        (tsRuntime.isJsxElement(node.parent) ||
+          tsRuntime.isJsxFragment(node.parent)) &&
         !inCodeElement(node)
       ) {
         const e = node.expression
         const direct =
-          ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)
+          tsRuntime.isStringLiteral(e) ||
+          tsRuntime.isNoSubstitutionTemplateLiteral(e)
         if (!direct) for (const s of literalStrings(e)) report(node, s, 'child')
-      } else if (ts.isCallExpression(node)) {
+      } else if (tsRuntime.isCallExpression(node)) {
         const callee = node.expression
-        const name = ts.isIdentifier(callee)
+        const name = tsRuntime.isIdentifier(callee)
           ? callee.text
-          : ts.isPropertyAccessExpression(callee) &&
-              ts.isIdentifier(callee.expression)
+          : tsRuntime.isPropertyAccessExpression(callee) &&
+              tsRuntime.isIdentifier(callee.expression)
             ? callee.expression.text
             : ''
         if (name && helpers.includes(name) && !inCodeElement(node)) {
@@ -737,7 +758,7 @@ export function jsxLiteralProps(
             for (const s of literalStrings(arg)) report(arg, s, `${name}()`)
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
@@ -1028,36 +1049,39 @@ export function readsAsEnglish(text: string): boolean {
 const rootName = (expr: ts.Expression): string => {
   let cur: ts.Expression = expr
   while (true) {
-    if (ts.isPropertyAccessExpression(cur) || ts.isElementAccessExpression(cur))
+    if (
+      tsRuntime.isPropertyAccessExpression(cur) ||
+      tsRuntime.isElementAccessExpression(cur)
+    )
       cur = cur.expression
-    else if (ts.isCallExpression(cur)) cur = cur.expression
+    else if (tsRuntime.isCallExpression(cur)) cur = cur.expression
     else if (
-      ts.isNonNullExpression(cur) ||
-      ts.isParenthesizedExpression(cur) ||
-      ts.isAsExpression(cur)
+      tsRuntime.isNonNullExpression(cur) ||
+      tsRuntime.isParenthesizedExpression(cur) ||
+      tsRuntime.isAsExpression(cur)
     )
       cur = cur.expression
     else break
   }
-  if (ts.isIdentifier(cur)) return cur.text
-  if (cur.kind === ts.SyntaxKind.ImportKeyword) return 'import'
+  if (tsRuntime.isIdentifier(cur)) return cur.text
+  if (cur.kind === tsRuntime.SyntaxKind.ImportKeyword) return 'import'
   return ''
 }
 
 const memberName = (callee: ts.Expression): string =>
-  ts.isPropertyAccessExpression(callee)
+  tsRuntime.isPropertyAccessExpression(callee)
     ? callee.name.text
-    : ts.isIdentifier(callee)
+    : tsRuntime.isIdentifier(callee)
       ? callee.text
       : ''
 
 const propertyKeyName = (name: ts.PropertyName): string =>
-  ts.isIdentifier(name) ||
-  ts.isStringLiteral(name) ||
-  ts.isNumericLiteral(name) ||
-  ts.isNoSubstitutionTemplateLiteral(name)
+  tsRuntime.isIdentifier(name) ||
+  tsRuntime.isStringLiteral(name) ||
+  tsRuntime.isNumericLiteral(name) ||
+  tsRuntime.isNoSubstitutionTemplateLiteral(name)
     ? name.text
-    : ts.isComputedPropertyName(name)
+    : tsRuntime.isComputedPropertyName(name)
       ? ''
       : name.getText()
 
@@ -1071,28 +1095,29 @@ function copyPosition(
   let parent: ts.Node | undefined = node.parent
   while (parent) {
     if (
-      ts.isParenthesizedExpression(parent) ||
-      ts.isAsExpression(parent) ||
-      ts.isSatisfiesExpression(parent) ||
-      ts.isNonNullExpression(parent) ||
-      ts.isTypeAssertionExpression(parent)
+      tsRuntime.isParenthesizedExpression(parent) ||
+      tsRuntime.isAsExpression(parent) ||
+      tsRuntime.isSatisfiesExpression(parent) ||
+      tsRuntime.isNonNullExpression(parent) ||
+      tsRuntime.isTypeAssertionExpression(parent)
     ) {
       child = parent
       parent = parent.parent
       continue
     }
-    if (ts.isConditionalExpression(parent)) {
+    if (tsRuntime.isConditionalExpression(parent)) {
       if (parent.condition === child) return false
       child = parent
       parent = parent.parent
       continue
     }
-    if (ts.isBinaryExpression(parent)) {
+    if (tsRuntime.isBinaryExpression(parent)) {
       const op = parent.operatorToken.kind
       const through =
-        op === ts.SyntaxKind.BarBarToken ||
-        op === ts.SyntaxKind.QuestionQuestionToken ||
-        (op === ts.SyntaxKind.AmpersandAmpersandToken && parent.right === child)
+        op === tsRuntime.SyntaxKind.BarBarToken ||
+        op === tsRuntime.SyntaxKind.QuestionQuestionToken ||
+        (op === tsRuntime.SyntaxKind.AmpersandAmpersandToken &&
+          parent.right === child)
       if (!through) return false
       child = parent
       parent = parent.parent
@@ -1101,7 +1126,7 @@ function copyPosition(
     break
   }
   if (!parent) return false
-  if (ts.isPropertyAssignment(parent) && parent.initializer === child) {
+  if (tsRuntime.isPropertyAssignment(parent) && parent.initializer === child) {
     const key = propertyKeyName(parent.name)
     if (
       key === '' ||
@@ -1113,25 +1138,26 @@ function copyPosition(
     // a property of a JSX-ish style object or an HTTP header map
     return true
   }
-  if (ts.isArrayLiteralExpression(parent)) return arrayIsCopy(parent)
-  if (ts.isReturnStatement(parent)) return true
-  if (ts.isArrowFunction(parent) && parent.body === child) return true
-  if (ts.isParameter(parent) && parent.initializer === child) return true
-  if (ts.isBindingElement(parent) && parent.initializer === child) return true
-  if (ts.isPropertyDeclaration(parent) && parent.initializer === child)
+  if (tsRuntime.isArrayLiteralExpression(parent)) return arrayIsCopy(parent)
+  if (tsRuntime.isReturnStatement(parent)) return true
+  if (tsRuntime.isArrowFunction(parent) && parent.body === child) return true
+  if (tsRuntime.isParameter(parent) && parent.initializer === child) return true
+  if (tsRuntime.isBindingElement(parent) && parent.initializer === child)
+    return true
+  if (tsRuntime.isPropertyDeclaration(parent) && parent.initializer === child)
     return !COPY_PROP_NAME_SKIP.test(parent.name.getText())
-  if (ts.isVariableDeclaration(parent) && parent.initializer === child) {
-    if (!ts.isIdentifier(parent.name)) return true
+  if (tsRuntime.isVariableDeclaration(parent) && parent.initializer === child) {
+    if (!tsRuntime.isIdentifier(parent.name)) return true
     return (
       (!COPY_PROP_NAME_SKIP.test(parent.name.text) &&
         !/^[A-Z][A-Z0-9_]*$/.test(parent.name.text)) ||
       /MESSAGE|COPY|TEXT|LABEL|TITLE|HINT/.test(parent.name.text)
     )
   }
-  if (ts.isCallExpression(parent) || ts.isNewExpression(parent)) {
+  if (tsRuntime.isCallExpression(parent) || tsRuntime.isNewExpression(parent)) {
     if (!parent.arguments?.includes(child as ts.Expression)) return false
     const callee = parent.expression
-    if (ts.isNewExpression(parent)) {
+    if (tsRuntime.isNewExpression(parent)) {
       const n = memberName(callee)
       if (
         /Error$|^(RegExp|Date|URL|Map|Set|Headers|URLSearchParams|Intl\w*)$/.test(
@@ -1145,14 +1171,14 @@ function copyPosition(
     if (copyHelpers.includes(root)) return !inTsx // jsxLiteralProps already reports these in .tsx
     if (
       NON_COPY_CALL_ROOTS.has(root) ||
-      (root === '' && ts.isCallExpression(callee))
+      (root === '' && tsRuntime.isCallExpression(callee))
     )
       return false
     if (NON_COPY_METHODS.has(method)) return false
     if (/Error$/.test(method) || /^(throw|fail|panic|invariant)/.test(method))
       return false
     if (
-      ts.isIdentifier(callee) &&
+      tsRuntime.isIdentifier(callee) &&
       /^(use[A-Z]|create[A-Z]|define[A-Z]|wire[A-Z]|pikku[A-Z]|import|require)/.test(
         callee.text
       )
@@ -1166,17 +1192,17 @@ function copyPosition(
 /** An array of strings that are all identifiers/keys is a list of tokens, not copy: only report arrays whose siblings are not all single words. */
 function arrayIsCopy(array: ts.ArrayLiteralExpression): boolean {
   const parent = array.parent
-  if (ts.isPropertyAssignment(parent)) {
+  if (tsRuntime.isPropertyAssignment(parent)) {
     const key = propertyKeyName(parent.name)
     if (COPY_PROP_NAME_SKIP.test(key)) return false
   }
   if (
-    ts.isVariableDeclaration(parent) &&
-    ts.isIdentifier(parent.name) &&
+    tsRuntime.isVariableDeclaration(parent) &&
+    tsRuntime.isIdentifier(parent.name) &&
     COPY_PROP_NAME_SKIP.test(parent.name.text)
   )
     return false
-  if (ts.isCallExpression(parent) && parent.arguments.includes(array)) {
+  if (tsRuntime.isCallExpression(parent) && parent.arguments.includes(array)) {
     const n = memberName(parent.expression)
     if (
       NON_COPY_METHODS.has(n) ||
@@ -1208,30 +1234,34 @@ export function stringLiteralCopy(
     const inTsx = file.endsWith('.tsx')
     const visit = (node: ts.Node) => {
       if (
-        ts.isImportDeclaration(node) ||
-        ts.isExportDeclaration(node) ||
-        ts.isImportEqualsDeclaration(node) ||
-        ts.isTypeNode(node) ||
-        ts.isJsxAttribute(node) ||
-        ts.isJsxText(node) ||
-        ts.isTypeAliasDeclaration(node) ||
-        ts.isInterfaceDeclaration(node) ||
-        ts.isDecorator(node)
+        tsRuntime.isImportDeclaration(node) ||
+        tsRuntime.isExportDeclaration(node) ||
+        tsRuntime.isImportEqualsDeclaration(node) ||
+        tsRuntime.isTypeNode(node) ||
+        tsRuntime.isJsxAttribute(node) ||
+        tsRuntime.isJsxText(node) ||
+        tsRuntime.isTypeAliasDeclaration(node) ||
+        tsRuntime.isInterfaceDeclaration(node) ||
+        tsRuntime.isDecorator(node)
       )
         return
       if (
-        ts.isJsxExpression(node) &&
-        (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent)) &&
+        tsRuntime.isJsxExpression(node) &&
+        (tsRuntime.isJsxElement(node.parent) ||
+          tsRuntime.isJsxFragment(node.parent)) &&
         node.expression &&
-        (ts.isStringLiteral(node.expression) ||
-          ts.isNoSubstitutionTemplateLiteral(node.expression) ||
-          ts.isTemplateExpression(node.expression))
+        (tsRuntime.isStringLiteral(node.expression) ||
+          tsRuntime.isNoSubstitutionTemplateLiteral(node.expression) ||
+          tsRuntime.isTemplateExpression(node.expression))
       )
         return
       let value: string | undefined
-      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+      if (
+        tsRuntime.isStringLiteral(node) ||
+        tsRuntime.isNoSubstitutionTemplateLiteral(node)
+      )
         value = node.text
-      else if (ts.isTemplateExpression(node))
+      else if (tsRuntime.isTemplateExpression(node))
         value =
           node.head.text +
           node.templateSpans.map((sp) => '{…}' + sp.literal.text).join('')
@@ -1239,7 +1269,7 @@ export function stringLiteralCopy(
         const expr = node as ts.Expression
         // a template that runs over several lines is a prompt or a document, not a label or a message
         const multiline =
-          !ts.isStringLiteral(node) && /\n/.test(node.getText(sf))
+          !tsRuntime.isStringLiteral(node) && /\n/.test(node.getText(sf))
         if (
           !multiline &&
           readsAsEnglish(value.replace(/\{…\}/g, ' ')) &&
@@ -1253,7 +1283,7 @@ export function stringLiteralCopy(
           })
         }
       }
-      ts.forEachChild(node, visit)
+      tsRuntime.forEachChild(node, visit)
     }
     visit(sf)
   }
