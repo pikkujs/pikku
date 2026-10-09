@@ -3,7 +3,10 @@ import { createHttpPersonas } from '@pikku/core/persona'
 import { PikkuError } from '@pikku/core/errors'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import {
+  resolvePersonaCredentials,
+  loadConfiguredSignIn,
+} from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 
 const unreachable = (error: unknown): boolean => {
@@ -73,7 +76,11 @@ export const personaRpc = pikkuSessionlessFunc<
     })
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,
-      ...(await resolvePersonaCredentials(variables, 'an RPC call')),
+      ...(await resolvePersonaCredentials(
+        variables,
+        'an RPC call',
+        await loadConfiguredSignIn(config)
+      )),
       personas,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,

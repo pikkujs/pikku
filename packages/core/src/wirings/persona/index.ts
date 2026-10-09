@@ -57,6 +57,8 @@ export {
   IMPERSONATE_USER_ID_HEADER,
   type ActorSecretResolver,
   type PersonaSignIn,
+  type PersonaSignInContext,
+  type PersonaSignInFactory,
   type OperatorSignInOptions,
   type OperatorSessionResult,
   authMount,

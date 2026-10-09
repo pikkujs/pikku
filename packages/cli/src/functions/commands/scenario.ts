@@ -37,7 +37,10 @@ import {
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import {
+  resolvePersonaCredentials,
+  loadConfiguredSignIn,
+} from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import {
   checkGuideCoverage,
@@ -295,7 +298,8 @@ export const scenarioRun = pikkuSessionlessFunc<
 
     const credentials = await resolvePersonaCredentials(
       variables,
-      'scenario actors'
+      'scenario actors',
+      await loadConfiguredSignIn(config)
     )
     // Every declared persona, with its address filled in. Resolved once: the
     // HTTP personas and the Playwright provider below must see the same

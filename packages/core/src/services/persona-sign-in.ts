@@ -31,6 +31,16 @@ export interface PersonaSignIn {
   headers(): Record<string, string>
 }
 
+export interface PersonaSignInContext {
+  apiUrl: string
+  fetch: typeof fetch
+  signInPath?: string
+}
+
+export type PersonaSignInFactory = (
+  context: PersonaSignInContext
+) => PersonaSignIn
+
 /**
  * A sign-in the target refused. `PikkuError`, not `Error`, so the CLI prints
  * this message alone: an expired token or a persona the stage has never seen is

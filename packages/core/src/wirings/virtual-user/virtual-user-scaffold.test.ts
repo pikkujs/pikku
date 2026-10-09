@@ -22,6 +22,7 @@ import type {
   VirtualUserScheduleRecord,
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
+import { createHttpPersonas } from '../../services/http-personas.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
@@ -896,6 +897,30 @@ describe('executeVirtualUserRun', () => {
     await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
     assert.equal(options.secret, 'shh')
     assert.equal(options.operator, undefined)
+  })
+
+  test('a bring-your-own sign-in needs no token or secret and is handed to createPersonas as is', async () => {
+    let options: any
+    const signIn = () => ({ login: async () => {}, headers: () => ({}) })
+    const { params: p } = params({
+      signIn,
+      operatorToken: 'ignored',
+      variables: variables({
+        VIRTUAL_USER_API_URL: 'http://localhost:4000',
+        VIRTUAL_USER_MODEL: 'a-model',
+        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/custom',
+      }),
+      createPersonas: (given: any) => {
+        options = given
+        createHttpPersonas({ ...given, personas: {} })
+        return {}
+      },
+    })
+    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
+    assert.equal(options.signIn, signIn)
+    assert.equal(options.secret, undefined)
+    assert.equal(options.operator, undefined)
+    assert.equal(options.signInPath, '/api/auth/sign-in/custom')
   })
 
   test('a persona nobody declares any more is refused before signing in', async () => {

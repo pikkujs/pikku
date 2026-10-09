@@ -16,6 +16,8 @@ import type { ResolvedPersona } from '@pikku/core/services'
 import type {
   ActorSecretResolver,
   OperatorSignInOptions,
+  PersonaSignIn,
+  PersonaSignInFactory,
 } from '@pikku/core/persona'
 
 /** The default driver, used when a project names no other. */
@@ -30,6 +32,7 @@ export interface ScenarioBrowserDriverOptions {
   secret?: string | ActorSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
+  personaSignIn?: PersonaSignIn | PersonaSignInFactory
   actors: Record<string, ResolvedPersona>
   signInPath?: string
   capture?: ScenarioCaptureOptions
@@ -100,6 +103,7 @@ export interface ResolveScenarioBrowserProviderOptions {
   secret?: string | ActorSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
+  signIn?: PersonaSignIn | PersonaSignInFactory
   actors: Record<string, ResolvedPersona>
   signInPath?: string
   /**
@@ -146,6 +150,7 @@ export const resolveScenarioBrowserProvider = async ({
   appUrls,
   secret,
   operator,
+  signIn,
   actors,
   signInPath,
   capture,
@@ -193,6 +198,7 @@ export const resolveScenarioBrowserProvider = async ({
   const options: ScenarioBrowserDriverOptions = {
     secret,
     operator,
+    personaSignIn: signIn,
     actors,
     signInPath,
     capture,

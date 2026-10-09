@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createServer } from 'node:http'
 
 import { deriveActorSecret } from '@pikku/core/persona'
 
@@ -1071,5 +1072,69 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
 
     assert.equal(provider.markVideoStep('admin'), undefined)
     await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a persona sign-in plugin plants its cookies and sends its headers from the browser', async () => {
+    const server = createServer((req, res) => {
+      res.setHeader('set-cookie', ['session=admin; Path=/; HttpOnly'])
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ actAs: { userId: 'user-7' } }))
+    })
+    await new Promise<void>((resolve) => server.listen(0, resolve))
+    const apiUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}/api`
+    try {
+      const { browser } = fakeBrowser()
+      const cookies: any[] = []
+      const routes: Array<(route: any) => Promise<void>> = []
+      const newContext = browser.newContext
+      browser.newContext = async (options: any) => {
+        const context = await newContext(options)
+        context.addCookies = async (added: any[]) => {
+          cookies.push(...added)
+        }
+        context.route = async (_pattern: string, handler: any) => {
+          routes.push(handler)
+        }
+        return context
+      }
+      let userId = ''
+      const provider = new PlaywrightScenarioBrowserProvider({
+        config: config({ apiUrl }),
+        personaSignIn: (ctx) => ({
+          login: async (_jar, persona) => {
+            const res = await ctx.fetch(`${ctx.apiUrl}/sign-in`, {
+              method: 'POST',
+              body: JSON.stringify({ actAs: { email: persona.email } }),
+            })
+            userId = ((await res.json()) as any).actAs.userId
+          },
+          headers: () => ({ 'x-pikku-impersonate-user-id': userId }),
+        }),
+        actors: { shopper: { email: 'shopper@test' } as any },
+        connectBrowser: async () => ({ browser }),
+      })
+
+      await provider.sessionFor('shopper')
+
+      assert.deepEqual(
+        cookies.map((c) => [c.name, c.value, c.httpOnly]),
+        [['session', 'admin', true]]
+      )
+      const seen: Array<Record<string, string>> = []
+      const route = (url: string) => ({
+        request: () => ({ url: () => url, headers: () => ({ a: '1' }) }),
+        fallback: async (o?: { headers: Record<string, string> }) => {
+          seen.push(o?.headers ?? {})
+        },
+      })
+      await routes[0]!(route('https://app.test/page'))
+      await routes[0]!(route('https://elsewhere.test/x'))
+      assert.deepEqual(seen, [
+        { a: '1', 'x-pikku-impersonate-user-id': 'user-7' },
+        {},
+      ])
+    } finally {
+      server.close()
+    }
   })
 })

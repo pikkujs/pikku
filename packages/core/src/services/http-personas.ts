@@ -23,6 +23,7 @@ import {
   OperatorSignIn,
   type OperatorSignInOptions,
   type PersonaSignIn,
+  type PersonaSignInFactory,
   authMount,
 } from './persona-sign-in.js'
 import { getSingletonServices } from '../pikku-state.js'
@@ -58,6 +59,7 @@ export interface HttpPersonasConfig {
    * them, so no test credential has to exist on the target at all.
    */
   operator?: OperatorSignInOptions
+  signIn?: PersonaSignIn | PersonaSignInFactory
   /** Persona id → the declaration with its address filled in. */
   personas: Record<string, ResolvedPersona>
   /**
@@ -95,6 +97,18 @@ export interface HttpPersonasConfig {
   model?: string
 }
 
+const assertSingleSignIn = (config: HttpPersonasConfig): void => {
+  if (!config.signIn) return
+  const clashing = (['secret', 'operator'] as const).filter(
+    (key) => config[key]
+  )
+  if (clashing.length > 0) {
+    throw new Error(
+      `[scenario] 'signIn' replaces ${clashing.join(' and ')} — set exactly one way to sign in`
+    )
+  }
+}
+
 /**
  * Default HTTP-backed persona. Signs in lazily on first invoke, holds the
  * session cookies for its lifetime, and re-logs-in once on a 401 mid-run (long
@@ -121,7 +135,17 @@ export class HttpPersona implements ScenarioPersona {
     private config: HttpPersonasConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
-    if (config.operator) {
+    assertSingleSignIn(config)
+    if (config.signIn) {
+      this.signIn =
+        typeof config.signIn === 'function'
+          ? config.signIn({
+              apiUrl: config.apiUrl,
+              fetch: this.jar.fetch,
+              signInPath: config.signInPath,
+            })
+          : config.signIn
+    } else if (config.operator) {
       this.signIn = new OperatorSignIn(config.apiUrl, {
         ...config.operator,
         signInPath:
@@ -138,7 +162,7 @@ export class HttpPersona implements ScenarioPersona {
       )
     } else {
       throw new Error(
-        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target or 'operator' for a deployed one`
+        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target, 'operator' for a deployed one, or 'signIn' to bring your own`
       )
     }
   }
@@ -500,6 +524,7 @@ function normalizeAgentReply(raw: unknown): TargetAgentReply {
 export function createHttpPersonas(
   config: HttpPersonasConfig
 ): ScenarioPersonas {
+  assertSingleSignIn(config)
   const personas: ScenarioPersonas = {}
   for (const [id, persona] of Object.entries(config.personas)) {
     personas[id] = new HttpPersona(id, persona, config)

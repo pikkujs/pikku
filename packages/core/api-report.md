@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3282 observable things**: 1098 exported names, plus
-2184 members on the classes and interfaces among them, reachable
+**3289 observable things**: 1100 exported names, plus
+2189 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,14 +15,14 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 174 | 142 | 471 |
-| `./virtual-user` | 66 | 66 | 215 |
+| `./virtual-user` | 66 | 66 | 216 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 45 | 39 | 48 |
+| `./persona` | 47 | 41 | 52 |
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
@@ -2370,7 +2370,7 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
-executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, signIn, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined
@@ -2387,6 +2387,7 @@ export interface ExecuteVirtualUserRunParams {
   seed: number
   budget?: { steps?: number; mutations?: number; durationMs?: number }
   operatorToken?: string
+  signIn?: PersonaSignIn | PersonaSignInFactory
 }
 export interface IntentRecord {
   id: string
@@ -4412,6 +4413,7 @@ export interface HttpPersonasConfig {
   apiUrl: string
   secret?: string | ActorSecretResolver
   operator?: OperatorSignInOptions
+  signIn?: PersonaSignIn | PersonaSignInFactory
   personas: Record<string, ResolvedPersona>
   signInPath?: string
   sessionPath?: string
@@ -4482,6 +4484,14 @@ export interface PersonaSignIn {
   login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
   headers(): Record<string, string>
 }
+export interface PersonaSignInContext {
+  apiUrl: string
+  fetch: typeof fetch
+  signInPath?: string
+}
+export type PersonaSignInFactory = (
+  context: PersonaSignInContext
+) => PersonaSignIn
 export type PersonasMeta = Record<string, PersonaMeta>
 postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>
 readScenarioHttpResponse: <T = unknown>(res: Response) => Promise<ScenarioHttpResponse<T>>
