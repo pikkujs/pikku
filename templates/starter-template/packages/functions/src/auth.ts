@@ -1,13 +1,9 @@
 import { betterAuth } from 'better-auth'
 import { magicLink } from 'better-auth/plugins'
-import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor, pikkuBan, pikkuFabric } from '@pikku/better-auth'
+import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor, pikkuBan } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 import { sessionCookieCacheMaxAge } from './lib/session-cookie.js'
-import {
-  personaConfigs,
-  personaEnvironments,
-  personaList,
-} from '#pikku/scenarios/pikku-personas.gen.js'
+import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -31,7 +27,7 @@ import {
 // sendResetPassword/verification emails. It runs lazily after all services exist,
 // so never re-construct a service here or reach for a dynamic import.
 export const auth = pikkuBetterAuth(
-  async ({ kysely, secrets, variables, emailService, scopeService, featureFlags, logger }) => {
+  async ({ kysely, secrets, variables, emailService, featureFlags, logger }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
     // is one greppable call. Better Auth wants the raw string, and this is where
@@ -44,17 +40,8 @@ export const auth = pikkuBetterAuth(
       .getSecret('SCENARIO_ACTOR_SECRET')
       .then((value) => value?.reveal())
       .catch(() => undefined)
-    // Fabric operator admin: the RSA public key the control plane's token is
-    // verified against. The Fabric deployer pushes FABRIC_AUTH_PUBLIC_KEY onto
-    // every stage; locally it's simply absent, which disables /sign-in/fabric.
-    // Asymmetric — the app verifies, it can never forge an operator login.
-    const FABRIC_AUTH_PUBLIC_KEY = await variables.get('FABRIC_AUTH_PUBLIC_KEY')
-    // This stage's own identity. Every stage verifies the same public key, so
-    // without it an operator token is admin on all of them at once; a token
-    // carrying `aud` is refused unless this matches. Fabric binds it on deploy.
-    const FABRIC_STAGE_ID = await variables.get('FABRIC_STAGE_ID')
     // The scenario opt-in, read through `variables` rather than left to
-    // process.env: Fabric pushes it as a binding on every non-production stage,
+    // process.env: the host pushes it as a binding on every non-production stage,
     // and a Worker has no populated environment for the plugin to find it in.
     const ALLOW_ACTOR_SIGN_IN = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
 
@@ -115,12 +102,6 @@ export const auth = pikkuBetterAuth(
       // tab calls — administering an app is ordinary application behaviour and
       // must not depend on better-auth's `role` column.
       //
-      // fabric(): exposes /api/auth/sign-in/fabric — the Fabric control plane
-      // mints a short-lived RS256 token and signs in as a synthetic `fabric: true`
-      // operator (db/sqlite/0001-better-auth.sql) granted the umbrella `admin` scope, so
-      // the console Users tab can list/impersonate real users without the operator
-      // being one of them. Verifies against FABRIC_AUTH_PUBLIC_KEY; missing key
-      // disables the endpoint.
       plugins: [
         // Email sign-in links, and — with `disableSignUp: true` — the invite
         // flow. THE FLAG IS THE WHOLE SEMANTIC:
@@ -168,16 +149,6 @@ export const auth = pikkuBetterAuth(
           },
         }),
         pikkuBan(),
-        pikkuFabric({
-          publicKey: FABRIC_AUTH_PUBLIC_KEY,
-          audience: FABRIC_STAGE_ID,
-          scopeService,
-          logger,
-          personas: {
-            personas: personaConfigs,
-            environments: personaEnvironments,
-          },
-        }),
       ],
     })
   },

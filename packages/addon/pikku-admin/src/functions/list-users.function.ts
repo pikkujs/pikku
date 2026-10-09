@@ -3,6 +3,7 @@ import { verifyScopes } from '@pikku/core/scope'
 import {
   isPerson,
   PLATFORM_USER_ID,
+  SYNTHETIC_EMAIL_SUFFIX,
   SYNTHETIC_MARKERS,
 } from '../lib/is-person.js'
 import { ListUsersInput, ListUsersOutput } from '../lib/user.schemas.js'
@@ -40,6 +41,16 @@ const syntheticIds = async (ctx: any): Promise<string[]> => {
     for (const row of rows) {
       ids.add(row.id)
     }
+  }
+
+  const internal = (await ctx.adapter.findMany({
+    model: 'user',
+    where: [{ field: 'email', operator: 'ends_with', value: SYNTHETIC_EMAIL_SUFFIX }],
+    select: ['id'],
+    limit: SYNTHETIC_CEILING,
+  })) as Array<{ id: string }>
+  for (const row of internal) {
+    ids.add(row.id)
   }
 
   return [...ids]
