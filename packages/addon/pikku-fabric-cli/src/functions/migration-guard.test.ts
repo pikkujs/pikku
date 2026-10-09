@@ -68,7 +68,7 @@ beforeEach(async () => {
   await writeAuthFile({ tokens: { [API_URL]: 'token' } })
 })
 afterEach(restoreEnv)
-const { runProjectChecks: runValidate } = await import('@pikku/cli/addon-support')
+const { runProjectChecks: runValidate } = await import('@pikku/cli/addon-support/validate')
 const { hashMigration, projectChecks } = await import(
   '../lib/project-checks.js'
 )

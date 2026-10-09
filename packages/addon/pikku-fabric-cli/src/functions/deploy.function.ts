@@ -8,7 +8,7 @@ import { PreconditionError } from '@pikku/cli/addon-support'
 import {
   migrationHistoryErrors,
   runProjectChecks,
-} from '@pikku/cli/addon-support'
+} from '@pikku/cli/addon-support/validate'
 import { projectChecks } from '../lib/project-checks.js'
 import { promptConfirm } from '../lib/prompt.js'
 import {

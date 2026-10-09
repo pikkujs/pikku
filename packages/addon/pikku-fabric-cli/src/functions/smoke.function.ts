@@ -18,7 +18,7 @@ import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import {
   findProjectRoot,
   readJsonSafe,
-} from '@pikku/cli/addon-support'
+} from '@pikku/cli/addon-support/validate'
 import { headSha, isWorkingTreeClean } from '@pikku/cli/addon-support'
 import { added, changed, dim, removed } from '@pikku/cli/addon-support'
 import { PreconditionError } from '@pikku/cli/addon-support'

@@ -115,6 +115,11 @@
     "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
     "./server/server-ready": "./dist/src/server/server-ready.js",
     "./surface.json": "./surface.json",
+    "./addon-support/validate": {
+      "types": "./dist/src/addon-support-validate.d.ts",
+      "import": "./dist/src/addon-support-validate.js",
+      "default": "./dist/src/addon-support-validate.js"
+    },
     "./addon-support": {
       "types": "./dist/src/addon-support.d.ts",
       "import": "./dist/src/addon-support.js",

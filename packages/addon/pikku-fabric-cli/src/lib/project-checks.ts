@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { readTextSafe } from '@pikku/cli/addon-support'
+import { readTextSafe } from '@pikku/cli/addon-support/validate'
 import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 
