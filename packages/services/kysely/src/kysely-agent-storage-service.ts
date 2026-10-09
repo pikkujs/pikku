@@ -15,6 +15,7 @@ import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { upsert } from './kysely-upsert.js'
 import { agentSchema } from './schema/agent.schema.js'
 
 export class KyselyAgentStorageService
@@ -304,21 +305,17 @@ export class KyselyAgentStorageService
     scope: 'resource' | 'thread',
     data: Record<string, unknown>
   ): Promise<void> {
-    await this.db
-      .insertInto('agentWorkingMemory')
-      .values({
+    await upsert(
+      this.db,
+      this.db.insertInto('agentWorkingMemory').values({
         id,
         scope,
         data: JSON.stringify(data),
         updatedAt: new Date(),
-      })
-      .onConflict((oc) =>
-        oc.columns(['id', 'scope']).doUpdateSet({
-          data: JSON.stringify(data),
-          updatedAt: new Date(),
-        })
-      )
-      .execute()
+      }),
+      ['id', 'scope'],
+      { data: JSON.stringify(data), updatedAt: new Date() }
+    ).execute()
   }
 
   async createRun(run: CreateRunInput): Promise<string> {

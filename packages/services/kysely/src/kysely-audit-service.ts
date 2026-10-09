@@ -7,6 +7,7 @@ import type {
 } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore } from './kysely-upsert.js'
 import { auditSchema } from './schema/audit.schema.js'
 
 const jsonOrNull = (v: unknown): string | null =>
@@ -137,11 +138,10 @@ export class KyselyAuditService implements AuditService {
         data: jsonOrNull(e.metadata),
       }
     })
-    await (this.db as any)
-      .insertInto('audit')
-      .values(rows)
-      .onConflict((oc: any) => oc.doNothing())
-      .execute()
+    await insertOrIgnore(
+      this.db,
+      (this.db as any).insertInto('audit').values(rows)
+    ).execute()
   }
 
   /**

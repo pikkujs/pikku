@@ -13,6 +13,7 @@ import { CachedFlagSource, subjectIdOf } from '@pikku/core/flag'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { INSERTED, isMysql, upsert } from './kysely-upsert.js'
 import { flagSchema } from './schema/flag.schema.js'
 
 export type KyselyFeatureFlagStoreOptions = CachedFlagSourceOptions
@@ -103,26 +104,21 @@ export class KyselyFeatureFlagStore
 
     await this.db.transaction().execute(async (trx) => {
       for (const flag of flags) {
-        await trx
-          .insertInto('pikkuFeatureFlags')
-          .values({
+        // `enabled`, `rolloutPercent` and every override are the operator's
+        // and are never touched here. A deploy that re-enabled a flag
+        // somebody killed an hour earlier would make the kill switch
+        // useless exactly when it is being relied on.
+        await upsert(
+          trx,
+          trx.insertInto('pikkuFeatureFlags').values({
             name: flag.name,
             description: flag.description ?? null,
             anyOf: flag.anyOf ? JSON.stringify(flag.anyOf) : null,
             declared: true,
-          })
-          .onConflict((oc) =>
-            // `enabled`, `rolloutPercent` and every override are the operator's
-            // and are never touched here. A deploy that re-enabled a flag
-            // somebody killed an hour earlier would make the kill switch
-            // useless exactly when it is being relied on.
-            oc.column('name').doUpdateSet((eb) => ({
-              description: eb.ref('excluded.description'),
-              anyOf: eb.ref('excluded.anyOf'),
-              declared: true,
-            }))
-          )
-          .execute()
+          }),
+          ['name'],
+          { description: INSERTED, anyOf: INSERTED, declared: true }
+        ).execute()
       }
 
       const markStale = trx
@@ -233,28 +229,27 @@ export class KyselyFeatureFlagStore
         `Feature flag '${key}': an override needs an organization or a user to be about.`
       )
     }
-    await this.db
-      .insertInto('pikkuFeatureFlagOverrides')
-      .values({
+    // `grantedAt` is rewritten too: the column defaults on insert only, and the
+    // panel reads it as when the pin was last granted — not when the subject
+    // was first pinned to something else.
+    await upsert(
+      this.db,
+      this.db.insertInto('pikkuFeatureFlagOverrides').values({
         flag: key,
         subjectId,
         subjectKind: subject.organizationId ? 'organization' : 'user',
         enabled,
         grantedBy: actor ?? null,
         grantedAt: new Date(),
-      })
-      .onConflict((oc) =>
-        oc.columns(['flag', 'subjectId']).doUpdateSet((eb) => ({
-          enabled: eb.ref('excluded.enabled'),
-          subjectKind: eb.ref('excluded.subjectKind'),
-          grantedBy: eb.ref('excluded.grantedBy'),
-          // The column defaults on insert only, and the panel reads this as
-          // when the pin was last granted — not when the subject was first
-          // pinned to something else.
-          grantedAt: eb.ref('excluded.grantedAt'),
-        }))
-      )
-      .execute()
+      }),
+      ['flag', 'subjectId'],
+      {
+        enabled: INSERTED,
+        subjectKind: INSERTED,
+        grantedBy: INSERTED,
+        grantedAt: INSERTED,
+      }
+    ).execute()
     this.invalidate()
   }
 
@@ -290,15 +285,33 @@ export class KyselyFeatureFlagStore
    * live flag and cascade away every override an operator had set on it.
    */
   async pruneFlags(): Promise<string[]> {
-    const deleted = await this.db
-      .deleteFrom('pikkuFeatureFlags')
-      .where('declared', '=', false)
-      .returning('name')
-      .execute()
-    if (deleted.length === 0) {
+    // MySQL has no `returning`: the matching names are read under a lock in the
+    // same transaction as the delete, so what is reported is what was deleted.
+    const names = await this.db.transaction().execute(async (trx) => {
+      if (isMysql(trx)) {
+        const rows = await trx
+          .selectFrom('pikkuFeatureFlags')
+          .select('name')
+          .where('declared', '=', false)
+          .forUpdate()
+          .execute()
+        await trx
+          .deleteFrom('pikkuFeatureFlags')
+          .where('declared', '=', false)
+          .execute()
+        return rows.map((row) => row.name)
+      }
+      const deleted = await trx
+        .deleteFrom('pikkuFeatureFlags')
+        .where('declared', '=', false)
+        .returning('name')
+        .execute()
+      return deleted.map((row) => row.name)
+    })
+    if (names.length === 0) {
       return []
     }
     this.invalidate()
-    return deleted.map((row) => row.name).sort()
+    return names.sort()
   }
 }

@@ -10,6 +10,7 @@ import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { upsert } from './kysely-upsert.js'
 import { deploymentSchema } from './schema/deployment.schema.js'
 
 export class KyselyDeploymentService implements DeploymentService {
@@ -40,20 +41,16 @@ export class KyselyDeploymentService implements DeploymentService {
     this.deploymentConfig = { ...config, functions }
 
     await this.db.transaction().execute(async (trx) => {
-      await trx
-        .insertInto('pikkuDeployments')
-        .values({
+      await upsert(
+        trx,
+        trx.insertInto('pikkuDeployments').values({
           deploymentId: config.deploymentId,
           endpoint: config.endpoint,
           lastHeartbeat: new Date(),
-        })
-        .onConflict((oc) =>
-          oc.column('deploymentId').doUpdateSet({
-            endpoint: config.endpoint,
-            lastHeartbeat: new Date(),
-          })
-        )
-        .execute()
+        }),
+        ['deploymentId'],
+        { endpoint: config.endpoint, lastHeartbeat: new Date() }
+      ).execute()
 
       await trx
         .deleteFrom('pikkuDeploymentFunctions')

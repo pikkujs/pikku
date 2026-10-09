@@ -11,6 +11,7 @@ import type { SecretValue } from '@pikku/core/classification'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore, timestampParam, upsert } from './kysely-upsert.js'
 import { secretSchema } from './schema/secret.schema.js'
 
 export interface KyselySecretServiceConfig {
@@ -61,7 +62,7 @@ export class KyselySecretService implements SecretService {
         id: crypto.randomUUID(),
         secretKey: secretKey,
         action,
-        performedAt: new Date().toISOString() as unknown as Date,
+        performedAt: timestampParam(this.db),
       })
       .execute()
   }
@@ -78,15 +79,15 @@ export class KyselySecretService implements SecretService {
 
     let salt = existing?.salt
     if (!salt) {
-      await this.db
-        .insertInto('secretKekSalts')
-        .values({
+      await insertOrIgnore(
+        this.db,
+        this.db.insertInto('secretKekSalts').values({
           keyVersion: version,
           salt: generateKEKSalt(),
-          createdAt: new Date().toISOString() as unknown as Date,
-        })
-        .onConflict((oc) => oc.column('keyVersion').doNothing())
-        .execute()
+          createdAt: timestampParam(this.db),
+        }),
+        ['keyVersion']
+      ).execute()
 
       const row = await this.db
         .selectFrom('secretKekSalts')
@@ -145,27 +146,26 @@ export class KyselySecretService implements SecretService {
       await this.getKEK(this.keyVersion),
       isSecretValue(value) ? value.reveal() : value
     )
-    const now = new Date().toISOString()
+    const now = timestampParam(this.db)
 
-    await this.db
-      .insertInto('secrets')
-      .values({
+    await upsert(
+      this.db,
+      this.db.insertInto('secrets').values({
         key,
         ciphertext,
         wrappedDek: wrappedDEK,
         keyVersion: this.keyVersion,
-        createdAt: now as unknown as Date,
-        updatedAt: now as unknown as Date,
-      })
-      .onConflict((oc) =>
-        oc.column('key').doUpdateSet({
-          ciphertext,
-          wrappedDek: wrappedDEK,
-          keyVersion: this.keyVersion,
-          updatedAt: now as unknown as Date,
-        })
-      )
-      .execute()
+        createdAt: now,
+        updatedAt: now,
+      }),
+      ['key'],
+      {
+        ciphertext,
+        wrappedDek: wrappedDEK,
+        keyVersion: this.keyVersion,
+        updatedAt: now,
+      }
+    ).execute()
 
     await this.logAudit(key, 'write')
   }
@@ -229,7 +229,7 @@ export class KyselySecretService implements SecretService {
         .set({
           wrappedDek: newWrappedDEK,
           keyVersion: this.keyVersion,
-          updatedAt: new Date().toISOString() as unknown as Date,
+          updatedAt: timestampParam(this.db),
         })
         .where('key', '=', row.key)
         .execute()

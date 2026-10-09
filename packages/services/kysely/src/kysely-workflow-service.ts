@@ -22,6 +22,7 @@ import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore, isMysql } from './kysely-upsert.js'
 import { workflowSchema } from './schema/workflow.schema.js'
 
 /**
@@ -809,6 +810,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
    * @param json - The value as JSON text
    */
   protected jsonSetState(path: string, json: string) {
+    if (isMysql(this.db)) {
+      return sql<string>`JSON_SET(COALESCE(state, '{}'), ${path}, CAST(${json} AS JSON))`
+    }
     return sql<string>`json_set(coalesce(state, '{}'), ${path}, json(${json}))`
   }
 
@@ -958,7 +962,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         source,
         status: status ?? 'active',
       })
-      .onConflict((oc) => oc.columns(['workflowName', 'graphHash']).doNothing())
+      .$call((q) => insertOrIgnore(this.db, q, ['workflowName', 'graphHash']))
       .execute()
   }
 

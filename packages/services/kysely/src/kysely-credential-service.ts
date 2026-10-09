@@ -9,6 +9,7 @@ import type { CredentialService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore, timestampParam } from './kysely-upsert.js'
 import { credentialSchema } from './schema/credential.schema.js'
 
 export interface KyselyCredentialServiceConfig {
@@ -61,7 +62,7 @@ export class KyselyCredentialService implements CredentialService {
         credentialName: name,
         userId: userId ?? null,
         action,
-        performedAt: new Date().toISOString() as unknown as Date,
+        performedAt: timestampParam(this.db),
       })
       .execute()
   }
@@ -78,15 +79,15 @@ export class KyselyCredentialService implements CredentialService {
 
     let salt = existing?.salt
     if (!salt) {
-      await this.db
-        .insertInto('credentialKekSalts')
-        .values({
+      await insertOrIgnore(
+        this.db,
+        this.db.insertInto('credentialKekSalts').values({
           keyVersion: version,
           salt: generateKEKSalt(),
-          createdAt: new Date().toISOString() as unknown as Date,
-        })
-        .onConflict((oc) => oc.column('keyVersion').doNothing())
-        .execute()
+          createdAt: timestampParam(this.db),
+        }),
+        ['keyVersion']
+      ).execute()
 
       const row = await this.db
         .selectFrom('credentialKekSalts')
@@ -151,7 +152,7 @@ export class KyselyCredentialService implements CredentialService {
       await this.getKEK(this.keyVersion),
       plaintext
     )
-    const now = new Date().toISOString()
+    const now = timestampParam(this.db)
     const exists = await this.has(name, userId)
 
     if (exists) {
@@ -161,7 +162,7 @@ export class KyselyCredentialService implements CredentialService {
           ciphertext,
           wrappedDek: wrappedDEK,
           keyVersion: this.keyVersion,
-          updatedAt: now as unknown as Date,
+          updatedAt: now,
         })
         .where('name', '=', name)
       qb = this.whereUserId(qb, userId)
@@ -175,8 +176,8 @@ export class KyselyCredentialService implements CredentialService {
           ciphertext,
           wrappedDek: wrappedDEK,
           keyVersion: this.keyVersion,
-          createdAt: now as unknown as Date,
-          updatedAt: now as unknown as Date,
+          createdAt: now,
+          updatedAt: now,
         })
         .execute()
     }
@@ -272,7 +273,7 @@ export class KyselyCredentialService implements CredentialService {
         .set({
           wrappedDek: newWrappedDEK,
           keyVersion: this.keyVersion,
-          updatedAt: new Date().toISOString() as unknown as Date,
+          updatedAt: timestampParam(this.db),
         })
         .where('name', '=', row.name)
       qb = this.whereUserId(qb, row.userId ?? undefined)
