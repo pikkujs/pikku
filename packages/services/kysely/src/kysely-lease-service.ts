@@ -3,6 +3,7 @@ import type { Kysely, Selectable } from 'kysely'
 import type { KyselyPikkuDB, PikkuLeaseTable } from './kysely-tables.js'
 import { appNowMs, leaseUntil } from './kysely-lease-clock.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore, isMysql } from './kysely-upsert.js'
 import { leaseSchema } from './schema/lease.schema.js'
 
 const toLease = (row: Selectable<PikkuLeaseTable>): Lease => ({
@@ -35,16 +36,18 @@ export class KyselyLeaseService implements LeaseService {
 
   /** Now, in epoch milliseconds, on the clock leases are judged by. */
   protected nowMs() {
-    return appNowMs()
+    return appNowMs(isMysql(this.db))
   }
 
   /** Create the key's row, lapsed, unless it already has one. */
   protected async insertIfAbsent(key: string, holder: string): Promise<void> {
-    await this.db
-      .insertInto('pikkuLease')
-      .values({ key, holder, token: 0, expiresAt: 0 })
-      .onConflict((oc) => oc.column('key').doNothing())
-      .execute()
+    await insertOrIgnore(
+      this.db,
+      this.db
+        .insertInto('pikkuLease')
+        .values({ key, holder, token: 0, expiresAt: 0 }),
+      ['key']
+    ).execute()
   }
 
   /**
