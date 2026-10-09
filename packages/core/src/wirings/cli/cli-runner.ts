@@ -111,7 +111,7 @@ function unwrapFunc(command: any): {
   return command
 }
 
-function registerCLICommands(
+export function registerCLICommands(
   commands: Record<string, any>,
   path: string[] = [],
   inheritedOptions: Record<string, CLIOption> = {},
@@ -176,15 +176,34 @@ function registerCLICommands(
     const commandAuth = typeof command === 'object' ? command.auth : undefined
     const commandPermissions =
       typeof command === 'object' ? command.permissions : undefined
-    addFunction(
-      funcName,
-      {
-        ...unwrapped,
-        auth: commandAuth ?? unwrapped.auth,
-        permissions: commandPermissions ?? unwrapped.permissions,
-      },
-      currentMeta?.packageName
-    )
+    if (currentMeta?.packageName && !funcName.includes(':')) {
+      if (commandAuth !== undefined || commandPermissions !== undefined) {
+        const registered = pikkuState(
+          currentMeta.packageName,
+          'function',
+          'functions'
+        )
+        const existing = registered.get(funcName)
+        if (existing) {
+          registered.set(funcName, {
+            ...existing,
+            auth: commandAuth ?? existing.auth,
+            permissions: commandPermissions ?? existing.permissions,
+          })
+        }
+      }
+    }
+    if (!currentMeta?.packageName || funcName.includes(':')) {
+      addFunction(
+        funcName,
+        {
+          ...unwrapped,
+          auth: commandAuth ?? unwrapped.auth,
+          permissions: commandPermissions ?? unwrapped.permissions,
+        },
+        currentMeta?.packageName
+      )
+    }
 
     if (typeof command === 'object' && command.render) {
       if (programs[program]) {
@@ -201,14 +220,17 @@ function registerCLICommands(
 function pluckCLIData(
   mergedData: Record<string, any>,
   funcName: string,
-  availableOptions: Record<string, CLIOption>
+  availableOptions: Record<string, CLIOption>,
+  packageName?: string
 ): Record<string, any> {
-  const funcMeta = pikkuState(null, 'function', 'meta')[funcName]
+  const funcMeta = pikkuState(packageName ?? null, 'function', 'meta')[funcName]
   const schemaName = funcMeta?.inputSchemaName
   const schema = schemaName
-    ? pikkuState(funcMeta?.packageName ?? null, 'misc', 'schemas').get(
-        schemaName
-      )
+    ? pikkuState(
+        packageName ?? funcMeta?.packageName ?? null,
+        'misc',
+        'schemas'
+      ).get(schemaName)
     : null
 
   if (schema && schema.properties) {
@@ -309,7 +331,8 @@ export async function runCLICommand({
   const commandId = commandPath.join('.')
   const availableOptions = programData?.commandOptions?.[commandId] || {}
 
-  const pluckedData = () => pluckCLIData(data, funcName, availableOptions)
+  const pluckedData = () =>
+    pluckCLIData(data, funcName, availableOptions, currentCommand.packageName)
 
   const renderer =
     programData?.renderers[commandId] || programData?.defaultRenderer

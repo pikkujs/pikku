@@ -316,6 +316,8 @@
     "executeCLI",
     "formatCLIError",
     "generateCommandHelp",
+    "mountCLICommands",
+    "mountCLIExtension",
     "parseCLIArguments",
     "pikkuCLIRender",
     "runCLICommand",
