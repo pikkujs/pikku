@@ -238,7 +238,7 @@ never needs to know about scopes or roles.
 
 ### The plugins `@pikku/better-auth` ships
 
-Five, all imported from the package root and passed to `betterAuth({ plugins })`
+Four, all imported from the package root and passed to `betterAuth({ plugins })`
 like any other. None is automatic — an app wires the ones it needs.
 
 | Plugin                   | Plugin `id`        | Adds                                                                    | Use it when                                                   |
@@ -247,12 +247,11 @@ like any other. None is automatic — an app wires the ones it needs.
 | `pikkuActor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a persona              |
 | `pikkuCredentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
 | `pikkuDelegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
-| `pikkuFabric()`          | `fabric`           | `POST /sign-in/fabric`                                                  | A Fabric-deployed app lets a control-plane operator in        |
 
 Every one carries a `pikku` prefix, because a `plugins: [...]` array mixes these
 with better-auth's own and a bare `actor()` next to `organization()` says
 nothing about where it came from. The unprefixed names — `ban`, `actor`,
-`credentialOAuth`, `delegatedAuth`, `fabric` — are still exported as deprecated
+`credentialOAuth`, `delegatedAuth` — are still exported as deprecated
 aliases, so existing apps keep working.
 
 The plugin's `id` is what better-auth stores; the **export name** is what the
@@ -347,21 +346,6 @@ credential and the actor credentials into `src/auth.ts`. The config format is
 in the `pikku-build` skill's `references/openapi.md`. When the upstream later
 refuses the stored token, the addon throws `CredentialRejectedError` (403,
 `reauth: 'sign-in'`): the UI shows the sign-in again.
-
-#### `pikkuFabric()` — control-plane operator sign-in
-
-```typescript
-pikkuFabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY, scopeService, logger })
-```
-
-`POST /sign-in/fabric` verifies a short-lived RS256 token that the Fabric
-control plane signed for an operator session, then signs them into a synthetic
-`fabric-<id>@fabric.internal` row holding the `admin` scope. Asymmetric on
-purpose: the app holds only the public key, so it can never forge an operator
-login, and the same `FABRIC_AUTH_PUBLIC_KEY` is distributed to every stage with
-no per-environment secret. A missing or empty key disables the endpoint, and a
-token whose `purpose` claim is not `fabric-admin` is rejected. Without a
-`ScopeService` the operator signs in holding nothing.
 
 ### 2. Production database adapter
 
@@ -534,9 +518,9 @@ an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
 in as the personas the deployment provisioned when it started and refuses
 everything else (`No actor account exists for that address`), so holding the
 secret on such a stage does not let anyone invent identities. Those rows are
-written by the fabric plugin when an operator asks to act as an address the
-stage has no account for, so provisioning needs no actor secret and works on a
-stage whose endpoint is shut.
+written by `provisionPersonas` when an operator sign-in route is asked to act
+as an address the stage has no account for, so provisioning needs no actor
+secret and works on a stage whose endpoint is shut.
 
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
 persona.** Provisioning grants declared roles to actor accounts, so an
@@ -566,32 +550,27 @@ id to `/sign-in/persona`, both served by
 
 ### Provisioning personas
 
-Anywhere but `pikku dev`, the accounts have to exist before anyone signs in. The
-stage creates them itself, from the personas you hand `pikkuFabric`:
+Anywhere but `pikku dev`, the accounts have to exist before anyone signs in.
+`provisionPersonas` creates them from the generated personas:
 
 ```ts
-import { pikkuFabric } from '@pikku/better-auth'
+import { provisionPersonas } from '@pikku/better-auth'
 import {
   personaConfigs,
   personaEnvironments,
 } from '#pikku/pikku-personas.gen.js'
 
-pikkuFabric({
-  publicKey,
-  audience,
-  scopeService,
-  personas: {
-    personas: personaConfigs,
-    environments: personaEnvironments,
-  },
-})
+await provisionPersonas(
+  { auth, scopeService, logger },
+  { personas: personaConfigs, environments: personaEnvironments }
+)
 ```
 
-There is nothing else to call and nothing to schedule. The plugin's operator
-endpoint resolves the address the caller wants to act as; a miss provisions the
-declaration and looks again. On a stage that already holds the persona that is
-one query, and the pass only runs when there is genuinely something absent to
-create.
+`auth` only needs to resolve `{ $context }`, so the singleton `services.auth`
+works as is. Call it from whatever route resolves the address a caller wants to
+act as: a miss provisions the declaration and looks again. On a stage that
+already holds the persona that is one query, and the pass only runs when there
+is genuinely something absent to create.
 
 **Do not reach for `pikkuServerLifecycle`'s `afterStart` for this.** That hook is
 invoked by `pikku serve` and `pikku dev` and by nothing else — no deploy runtime
@@ -619,16 +598,14 @@ open. By default provisioning warns about those accounts and changes nothing.
 `orphans: 'ban'` shuts them:
 
 ```ts
-pikkuFabric({
-  publicKey,
-  audience,
-  scopeService,
-  personas: {
+await provisionPersonas(
+  { auth, scopeService, logger },
+  {
     personas: personaConfigs,
     environments: personaEnvironments,
     orphans: 'ban',
-  },
-})
+  }
+)
 ```
 
 It writes the same `banned` column the console's ban RPC writes (so it needs the

@@ -125,7 +125,7 @@ drift.
 
 `sync` **reports**; it does not provision. The CLI has no connection to a
 deployed environment's database, so the provisioning happens in the deployment —
-pass the generated personas to `pikkuFabric` from `@pikku/better-auth`.
+pass the generated personas to `provisionPersonas` from `@pikku/better-auth`.
 
 ## What NOT to do
 
