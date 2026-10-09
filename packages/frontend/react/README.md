@@ -99,6 +99,95 @@ saying so, and does not.
 `<html lang>` → `defaultLocale`. Pass your own when locale comes from somewhere
 else, such as the route or the signed-in user.
 
+## Keeping untranslated text out of the DOM
+
+`I18nString` and `asI18n` make copy a type, but nothing stops `<p>Hello</p>` on its
+own. `@pikku/react/i18n-jsx` closes that for plain DOM and SVG elements: it is React's
+automatic JSX runtime, unchanged at run time, with a JSX namespace whose intrinsic
+elements take `I18nNode` children and `I18nString` text attributes. A bare string
+there is a compile error.
+
+Turn it on in a second tsconfig, so the normal build is untouched and the gate is
+its own check:
+
+```jsonc
+// tsconfig.i18n.json, next to the project's tsconfig.json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@pikku/react/i18n-jsx"
+  }
+}
+```
+
+Run it with `tsc --noEmit -p tsconfig.i18n.json`. `pikku verify` does this for you:
+every directory under `apps/` and `packages/` (up to three levels down, so block libraries and
+`packages/addons/*` too) that has a `tsconfig.i18n.json` at its root gets its own gate run, and
+every error becomes an `i18n-gate` finding. An error two programs report (a library compiled on
+its own and through the app that imports it) is one finding. Putting the same two options
+in the main tsconfig also works, and vite/esbuild then load the runtime from the
+package (`jsxImportSource` is honoured by both). It needs TypeScript 5.1 or later.
+
+What it rejects:
+
+```tsx
+<p>Hello</p>                         // text child
+<p>text {m.title()}</p>              // text next to a message is still a string child
+<input placeholder="Search" />       // placeholder
+<button aria-label="Close" />        // title, alt, label (option, optgroup, track),
+                                     // aria-label, aria-description, aria-placeholder,
+                                     // aria-roledescription, aria-valuetext
+<p>{someReactNode}</p>               // a ReactNode may be a string
+```
+
+What it allows: `I18nString` (an `m.*()` message or `asI18n(value)`), numbers,
+booleans, `null`, `undefined`, elements, arrays of those, and `cond && <b />`.
+`className`, `data-*`, handlers and every other attribute are untouched. A file
+that starts with `/** @jsxImportSource react */` opts out (stories, tests).
+
+What it cannot see:
+
+- Fragments: `<>Hello</>` has no props to type.
+- `createElement('p', null, 'Hello')` and anything else that skips JSX.
+- Components. Their props are whatever their authors declared, so a third-party
+  `<Button label="Save" />` is as loose as that library. Type your own components'
+  copy props as `I18nString` / `I18nNode` and they are gated the same way.
+- `value` and `defaultValue`: they hold user data as often as copy, so they are not gated.
+- Numbers: `{3}` is allowed, so a hardcoded count is the author's call.
+
+Separators between translated pieces (`{' · '}`, `{' / '}`, `{'—'}`, `{' '}`) are strings too, and
+are not worth a catalogue key. Wrap them in `sep`:
+
+```tsx
+import { sep } from '@pikku/react'
+
+<p>{m.owner()}{sep(' · ')}{m.updated()}</p>
+```
+
+`sep` takes a literal made only of whitespace, punctuation and symbols (space, no-break and
+thin spaces, `. , : ; ! ? · • – — - / \ | ( ) [ ] { } < > « » “ ” ‘ ’ " ' & + = * # @ % ~ ^ _`,
+`→ ← ↑ ↓ … ✓ ✕ × € $ £`); words, digits, the empty string, a `string` variable and a template with a
+substitution are compile errors, and `pikku verify` reports them as `sep-argument` for code that
+bypasses the types. It is not for anything that changes by language: a comma-joined list, "and", a
+French space before a colon. Those are a catalogue message, or `Intl.ListFormat` for lists.
+
+The lint checks `jsx-literal-text` and `jsx-literal-prop` cover what is left. They run over
+every `apps/*` and `packages/*` directory, and over any deeper directory (to three levels) that
+has a `package.json` or a `tsconfig*.json`, such as `packages/addons/spindle`. When the
+directory has a `tsconfig.i18n.json` they skip plain DOM elements, which the gate owns, and
+keep reporting fragments, components and helper calls such as `say()` and `toast()`.
+
+English written outside JSX is `string-literal-copy` (a warning; an error under
+`pikku verify --strict`, like `i18n-stub`). It reads `.ts` and `.tsx` string and template
+literals of two or more words that sit where copy lives (object property values, array
+elements, return and arrow values, defaults, `?:` / `||` / `??` branches, call arguments and
+variable initialisers), and leaves out class names, ids, paths, URLs, code, SQL, `console.*`,
+`Error` messages, `m.*`, `asI18n`, `sep`, test helpers, and test, story, scenario, function and
+workflow files. Use `m.<key>()`, or `asI18n(variable)` for outside data. It is a heuristic:
+prompts for a model and developer-facing labels still show up, so put those folders in
+`i18n.ignore` in `pikku.config.json`.
+
 ## Photo capture
 
 ```tsx
