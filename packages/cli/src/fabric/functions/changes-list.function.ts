@@ -7,7 +7,7 @@ import {
   remaining,
   requireProjectId,
 } from '../lib/changes.js'
-import { dim, safe, statusColor } from '../lib/output.js'
+import { dim, safe, statusColor } from '../../utils/output.js'
 import type { ListChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesListInput = z.object({

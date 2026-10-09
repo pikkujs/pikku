@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { resolveOrganizationId } from './organization.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import type { getFabricRPC } from './http.js'
 
 type Org = {
@@ -72,7 +72,7 @@ describe('--organization accepts a slug, a name or an id', () => {
     await assert.rejects(
       () => resolveOrganizationId(rpcReturning(orgs), 'acme'),
       (error: unknown) => {
-        assert.ok(error instanceof FabricPreconditionError)
+        assert.ok(error instanceof PreconditionError)
         assert.match(error.message, /pikkufabric, vlandor/)
         return true
       }
@@ -87,7 +87,7 @@ describe('--organization accepts a slug, a name or an id', () => {
     await assert.rejects(
       () => resolveOrganizationId(rpcReturning(ambiguous), 'vlandor'),
       (error: unknown) => {
-        assert.ok(error instanceof FabricPreconditionError)
+        assert.ok(error instanceof PreconditionError)
         assert.match(error.message, /a, b/)
         return true
       }

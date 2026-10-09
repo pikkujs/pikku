@@ -1,4 +1,4 @@
-import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
 import type {
   ReleaseInitResult,
   ReleasePrepareResult,

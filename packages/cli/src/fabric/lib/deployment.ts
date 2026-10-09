@@ -1,6 +1,6 @@
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 import type { GetDeploymentStatusOutput } from '../sdk/rpc-map.gen.d.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 type MissingConfigEntry = GetDeploymentStatusOutput['missingSecrets'][number]
 
@@ -537,7 +537,7 @@ export function reconcileDeployedRef({
   if (actual === requested) return actual
 
   const short = (sha: string) => sha.slice(0, 8)
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     [
       `Refusing to continue: deployment ${deploymentId} is pinned to ${short(actual)}, not the ${short(requested)} you asked for.`,
       'A deployment already parked for this branch was attached to rather than a new one being cut,',

@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changeRef, changesContext } from '../lib/changes.js'
 import { currentBranch, git, headSha, isGitRepo } from '../../utils/git.js'
-import { FabricPreconditionError } from '../lib/errors.js'
-import { planRefusal } from '../lib/plan-gate.js'
-import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
-import { dim, safe } from '../lib/output.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
+import { planRefusal } from '../../changes/plan-gate.js'
+import type { ChangesRPC, Declaration } from '../../changes/changes-local.js'
+import { dim, safe } from '../../utils/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesDoneInput = z.object({
@@ -98,7 +98,7 @@ async function checkCommit(
         ])
       ).trim()
   if (!sha || !carries(await git(['log', '-1', '--format=%B', sha])))
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `${given ? `${given} is not the commit for #${change.shortId}` : `No commit on this branch is #${change.shortId}`}. Commit it with #${change.shortId} in the subject and a \`Change-Id: ${change.changeId}\` trailer, then run done again.`
     )
   const files = await git([
@@ -125,11 +125,11 @@ async function checkCommit(
     )
     const top = (await git(['rev-parse', '--show-toplevel'])).trim()
     const refusal = planRefusal(top, change.groupId, last)
-    if (refusal) throw new FabricPreconditionError(refusal)
+    if (refusal) throw new PreconditionError(refusal)
   }
   if (!migrations.length) return sha
   if (declared?.creates?.length || declared?.alters?.length) return sha
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     `#${change.shortId} adds ${migrations.join(', ')} but its changeset declared no table it creates or alters. Claim it again with --creates/--alters so it is ordered with the other schema changes, then run done again.`
   )
 }

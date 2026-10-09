@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
-import { FabricPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
-import { mergeChangeset } from '../lib/changeset-merge.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
+import { mergeChangeset } from '../../changes/changeset-merge.js'
 
 export const FabricChangesMergeInput = z.object({
   apiUrl: z.string().optional(),
@@ -41,21 +41,21 @@ export const FabricChangesMerge = pikkuSessionlessFunc({
     })
     const group = groups.find((g) => g.groupId === input.groupId)
     if (!group || !changes.length)
-      throw new FabricPreconditionError(`No changeset ${input.groupId}.`)
+      throw new PreconditionError(`No changeset ${input.groupId}.`)
     const open = changes.filter((c) => c.status !== 'done')
     if (open.length)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `Not done yet: ${open.map((c) => `#${c.shortId}`).join(', ')}.`
       )
     const branches = [...new Set(changes.map((c) => c.branch))]
     const branch = branches[0]
     if (branches.length !== 1 || !branch)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `The changes in this set landed on ${branches.map((b) => b ?? 'no branch').join(', ')}; a changeset is one branch.`
       )
     const outcome = await mergeChangeset({ group, branch }, storePath)
     if (outcome.kind === 'conflict')
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `${branch} conflicts with ${outcome.into} in ${outcome.files.join(', ')}. Merge ${outcome.into} into ${branch}${outcome.worktree ? ` in ${outcome.worktree}` : ''}, resolve, commit, and run merge again.`
       )
     return {

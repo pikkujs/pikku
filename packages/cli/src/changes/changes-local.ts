@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rmdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
-import { git } from '../../utils/git.js'
-import { FabricPreconditionError } from './errors.js'
+import { git } from '../utils/git.js'
+import { PreconditionError } from '../utils/precondition-error.js'
 import type {
   AskChangeQuestionInput,
   AskChangeQuestionOutput,
@@ -20,8 +20,8 @@ import type {
   ListChangesOutput,
   ReplyToChangeInput,
   ReplyToChangeOutput,
-} from '../sdk/rpc-map.gen.d.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+  ChangesRPC,
+} from './types.js'
 
 export const LOCAL_PROJECT_ID = 'local'
 const LOCAL_STAGE_ID = 'local'
@@ -57,7 +57,7 @@ type LocalMap = {
   attachChangeShot: [AttachChangeShotInput, AttachChangeShotOutput]
 }
 
-export type ChangesRPC = Pick<PikkuRPC, 'invoke'>
+export type { ChangesRPC }
 
 const DATES = new Set([
   'createdAt',
@@ -114,7 +114,7 @@ async function withStore<T>(path: string, fn: (store: Store) => T): Promise<T> {
         continue
       }
       if (attempt > 200)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `${lock} is held; remove it if no pikku command is running.`
         )
       await new Promise((resolve) => setTimeout(resolve, 25))
@@ -362,5 +362,5 @@ export function localChangesRPC(path: string): ChangesRPC {
       )
     return withStore(path, (store) => handler(store, data))
   }
-  return { invoke: invoke as PikkuRPC['invoke'] }
+  return { invoke: invoke as ChangesRPC['invoke'] }
 }

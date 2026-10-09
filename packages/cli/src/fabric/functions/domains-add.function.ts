@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 export const FabricDomainsAddInput = z.object({
   hostname: z.string(),
@@ -25,13 +25,13 @@ export const FabricDomainsAdd = pikkuSessionlessFunc({
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
 
     const projectId = ctx.projectId
     if (!projectId)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -42,7 +42,7 @@ export const FabricDomainsAdd = pikkuSessionlessFunc({
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
     if (!production)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No production stage exists yet — deploy the project first.'
       )
 

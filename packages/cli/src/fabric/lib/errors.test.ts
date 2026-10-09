@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { isExpectedError } from '@pikku/core/errors'
 
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { assertNamedBranchDeploySafety } from './deploy-safety.js'
 
 /**
@@ -21,7 +21,7 @@ import { assertNamedBranchDeploySafety } from './deploy-safety.js'
 describe('a fabric precondition refusal is an expected error', () => {
   test('the class carries the marker', () => {
     assert.strictEqual(
-      isExpectedError(new FabricPreconditionError('Specify --branch.')),
+      isExpectedError(new PreconditionError('Specify --branch.')),
       true
     )
   })
@@ -48,7 +48,7 @@ describe('a fabric precondition refusal is an expected error', () => {
     await assert.rejects(
       () => assertNamedBranchDeploySafety('main', cwd),
       (error: unknown) => {
-        assert.ok(error instanceof FabricPreconditionError)
+        assert.ok(error instanceof PreconditionError)
         assert.strictEqual(isExpectedError(error), true)
         assert.match((error as Error).message, /has no upstream/)
         return true
@@ -85,7 +85,7 @@ describe('no fabric command raises a bare Error', () => {
     assert.deepStrictEqual(
       offenders,
       [],
-      `Throw FabricPreconditionError (or another PikkuError) instead of Error in: ${offenders.join(', ')}`
+      `Throw PreconditionError (or another PikkuError) instead of Error in: ${offenders.join(', ')}`
     )
   })
 })

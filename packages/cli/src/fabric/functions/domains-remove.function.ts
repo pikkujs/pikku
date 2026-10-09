@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 export const FabricDomainsRemoveInput = z.object({
   hostname: z.string(),
@@ -20,13 +20,13 @@ export const FabricDomainsRemove = pikkuSessionlessFunc({
   func: async (_services, { hostname, apiUrl: apiUrlOverride }) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
 
     const projectId = ctx.projectId
     if (!projectId)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -37,7 +37,7 @@ export const FabricDomainsRemove = pikkuSessionlessFunc({
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
     if (!production)
-      throw new FabricPreconditionError('No production stage found.')
+      throw new PreconditionError('No production stage found.')
 
     const hostnamesResult = await rpc.invoke('listStageCustomHostnames', {
       stageId: production.stageId,
@@ -46,7 +46,7 @@ export const FabricDomainsRemove = pikkuSessionlessFunc({
       (h) => h.hostname === hostname.toLowerCase()
     )
     if (!match)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `Hostname "${hostname}" is not attached to this project.`
       )
 

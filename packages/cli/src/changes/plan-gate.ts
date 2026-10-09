@@ -6,7 +6,7 @@ import {
   readPikkuMeta,
   readPlan,
 } from '@pikku/knowledge'
-import { git } from '../../utils/git.js'
+import { git } from '../utils/git.js'
 
 const SET = (groupId: string) =>
   `Write it with the pikku-architect skill and \`pikku knowledge plan set ${groupId} <file>\`, commit it on this branch, then run done again.`

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { added, removed, dim } from '../lib/output.js'
+import { added, removed, dim } from '../../utils/output.js'
 
 const CheckSchema = z.object({
   name: z.string(),

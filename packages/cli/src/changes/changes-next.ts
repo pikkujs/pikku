@@ -2,10 +2,10 @@ import type { ChangesRPC } from './changes-local.js'
 import type {
   ClaimChangesOutput,
   ListChangesOutput,
-} from '../sdk/rpc-map.gen.d.js'
-import { FabricPreconditionError } from './errors.js'
-import { httpStatus } from './changes.js'
-import type { ChangeEvents } from './changes-events.js'
+} from './types.js'
+import { PreconditionError } from '../utils/precondition-error.js'
+import { httpStatus } from './http-status.js'
+import type { ChangeEvents } from './change-events.js'
 
 type Change = ListChangesOutput['changes'][number]
 type Group = ListChangesOutput['groups'][number]
@@ -39,7 +39,7 @@ export interface NextResult {
   claimed: ClaimChangesOutput | null
 }
 
-export class FabricAuthError extends FabricPreconditionError {}
+export class BackendAuthError extends PreconditionError {}
 
 export const MAX_CONSECUTIVE_FAILURES = 8
 const MAX_BACKOFF_MS = 60_000
@@ -220,13 +220,13 @@ export async function waitForNext(
     } catch (error) {
       const status = httpStatus(error)
       if (status === 401 || status === 403)
-        throw new FabricAuthError(
+        throw new BackendAuthError(
           `fabric refused the session (${explain(error)}). Run \`pikku fabric login\`, then run next again.`
         )
       if (!isTransient(error)) throw error
       failures++
       if (failures >= MAX_CONSECUTIVE_FAILURES)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `Gave up after ${failures} failed attempts to reach fabric: ${explain(error)}`
         )
       wait = backoffMs(failures, options.intervalMs)

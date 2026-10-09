@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { mock } from 'bun:test'
 import * as configLib from '../lib/config.js'
 import * as httpLib from '../lib/http.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * The command against a faked fabric: with no arguments it reads the project's
@@ -106,7 +106,7 @@ describe('parseAssignments', () => {
       assert.throws(
         () => parseAssignments([bad]),
         (error: Error) =>
-          error instanceof FabricPreconditionError &&
+          error instanceof PreconditionError &&
           /write it as key=value/.test(error.message)
       )
     }

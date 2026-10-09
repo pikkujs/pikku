@@ -3,12 +3,12 @@ import { CLIError } from '@pikku/core/cli'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
 import {
-  FabricAuthError,
+  BackendAuthError,
   waitForNext,
   type NextResult,
-} from '../lib/changes-next.js'
-import { FabricPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
+} from '../../changes/changes-next.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
 
 export const NEXT_EXIT_TIMEOUT = 2
 export const NEXT_EXIT_AUTH = 3
@@ -62,7 +62,7 @@ export const FabricChangesNext = pikkuSessionlessFunc({
   output: FabricChangesNextOutput,
   func: async (_services, input) => {
     if (input.claim && !input.claimedBy)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         '--claim needs --claimed-by, so the panel can say who is holding the batch.'
       )
 
@@ -100,7 +100,7 @@ export const FabricChangesNext = pikkuSessionlessFunc({
       if (result.outcome === 'timeout') process.exitCode = NEXT_EXIT_TIMEOUT
       return result
     } catch (error) {
-      if (!(error instanceof FabricAuthError)) throw error
+      if (!(error instanceof BackendAuthError)) throw error
       console.error(error.message)
       throw new CLIError(error.message, NEXT_EXIT_AUTH)
     }

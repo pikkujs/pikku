@@ -4,8 +4,8 @@ import { resolveApiContext } from '../lib/config.js'
 import { matchRemoteProjects } from '../lib/project-link.js'
 import { readConfigProjectId } from '../lib/project-id.js'
 import { getFabricRPC } from '../lib/http.js'
-import { dim } from '../lib/output.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { dim } from '../../utils/output.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 export const FabricProjectsListInput = z.object({
   apiUrl: z.string().optional(),
@@ -42,7 +42,7 @@ export const FabricProjectsList = pikkuSessionlessFunc({
       resolveProject: false,
     })
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
 

@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import {
   changeRef,
   changesContext,
   imageContentType,
   type ImageContentType,
 } from '../lib/changes.js'
-import { dim, safe } from '../lib/output.js'
+import { dim, safe } from '../../utils/output.js'
 import type { AttachChangeShotOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesShotInput = z.object({
@@ -38,7 +38,7 @@ export const FabricChangesShot = pikkuSessionlessFunc({
   output: FabricChangesShotOutput,
   func: async (_services, input) => {
     if (!input.image && !input.imageBase64)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Pass --image <path> or --image-base64 <data>.'
       )
 
@@ -48,7 +48,7 @@ export const FabricChangesShot = pikkuSessionlessFunc({
     if (input.image) {
       const inferred = imageContentType(input.image)
       if (!inferred && !contentType)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `Cannot tell the image type from “${input.image}” — pass --content-type.`
         )
       contentType ??= inferred

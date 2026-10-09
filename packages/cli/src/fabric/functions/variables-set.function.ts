@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { resolveStage } from '../lib/stage.js'
 import { parseVariableValue } from '../lib/variable-value.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 export const FabricVariablesSetInput = z.object({
   name: z.string(),
@@ -25,11 +25,11 @@ export const FabricVariablesSet = pikkuSessionlessFunc({
   func: async (_services, { name, branch: requested, value }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
     if (!ctx.projectId)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 

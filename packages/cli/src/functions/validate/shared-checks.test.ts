@@ -12,7 +12,7 @@ import {
   staticStubbedImports,
   WIRES_ADMIN_ADDON,
 } from './shared-checks.js'
-import { blankComments } from '../../fabric/lib/blank-comments.js'
+import { blankComments } from '../../utils/blank-comments.js'
 
 const AUTH_CONFIG = `
   export const auth = betterAuth({

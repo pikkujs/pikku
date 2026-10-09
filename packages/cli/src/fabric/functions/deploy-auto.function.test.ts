@@ -4,7 +4,7 @@ import { mock } from 'bun:test'
 import * as configLib from '../lib/config.js'
 import * as httpLib from '../lib/http.js'
 import * as stageLib from '../lib/stage.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * The command against a faked fabric: showing the flag may be a plain read of
@@ -107,7 +107,7 @@ describe('fabric deploy auto', () => {
     await assert.rejects(
       () => run({ branch: 'nope' }),
       (error: Error) => {
-        assert.ok(error instanceof FabricPreconditionError)
+        assert.ok(error instanceof PreconditionError)
         assert.match(error.message, /No stage for branch "nope"/)
         assert.match(error.message, /Existing: main, preview/)
         return true

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 export const FabricAddInput = z.object({
   id: z.string(),
@@ -117,7 +117,7 @@ export const FabricAdd = pikkuSessionlessFunc({
       `${ctx.apiUrl}/registry/packages/${encodeURIComponent(id)}/download`
     )
     if (!metaRes.ok)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `download lookup failed → ${metaRes.status}: ${await metaRes.text()}`
       )
     const { url } = (await metaRes.json()) as { url: string }
@@ -125,7 +125,7 @@ export const FabricAdd = pikkuSessionlessFunc({
     // 2. fetch the artifact
     const dl = await fetch(url)
     if (!dl.ok)
-      throw new FabricPreconditionError(`artifact fetch failed → ${dl.status}`)
+      throw new PreconditionError(`artifact fetch failed → ${dl.status}`)
     const artifact = Buffer.from(await dl.arrayBuffer())
 
     const root = resolveProjectRoot()
@@ -148,7 +148,7 @@ export const FabricAdd = pikkuSessionlessFunc({
         await readFile(join(staging, 'package.json'), 'utf8')
       ) as { name?: string; version?: string }
       if (!pkg.name)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           'artifact package.json is missing a "name" field'
         )
       const version = pkg.version ?? '0.0.0'

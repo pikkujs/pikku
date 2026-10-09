@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { getFabricRPC } from '../lib/http.js'
 import { promptSecret } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
@@ -50,11 +50,11 @@ export const FabricUserAdd = pikkuSessionlessFunc({
   func: async (_services, { email, branch: requested, name, password }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
     if (!ctx.projectId)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -108,11 +108,11 @@ export const FabricUserAdd = pikkuSessionlessFunc({
     if (!response.ok) {
       const body = await response.text().catch(() => '')
       if (response.status === 404) {
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `This stage does not expose ${rpcName} — it has not wired @pikku/addon-admin (as "admin"). Nothing was created.`
         )
       }
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         body ||
           `Stage rejected ${rpcName} (${response.status}). Nothing was created.`
       )
@@ -123,7 +123,7 @@ export const FabricUserAdd = pikkuSessionlessFunc({
       userId?: string
     } | null
     if (!parsed?.userId) {
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `Stage accepted ${rpcName} but returned no userId: ${body}`
       )
     }

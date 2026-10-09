@@ -1,4 +1,4 @@
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * `pikku fabric deploy apply --reset` — wipe the target stage's database and
@@ -22,12 +22,12 @@ export const assertResetAllowed = (target: {
   branch?: string
 }): void => {
   if (target.production || target.branch === PRODUCTION_BRANCH) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       '--reset refused: it wipes the stage database, and production (main) is never reset. Use it on a disposable stage such as `develop`.'
     )
   }
   if (target.deploymentId) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       '--reset applies to a deploy it creates, not to attaching to deployment ' +
         `${target.deploymentId} — drop --deployment-id, or drop --reset.`
     )
@@ -62,7 +62,7 @@ export const assertResetHonoured = (
   apiUrl: string
 ): void => {
   if (created.resetDatabase === true) return
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     `--reset is not supported by ${apiUrl}: the deployment ${created.deploymentId} was created WITHOUT a database reset, and has not been approved by this command. ` +
       'Update the fabric server, or drop --reset. Deployment left as-is (nothing was wiped).'
   )

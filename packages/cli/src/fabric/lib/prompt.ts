@@ -1,7 +1,7 @@
 import { createInterface } from 'node:readline/promises'
 import { createInterface as createLineInterface } from 'node:readline'
 import { stdin, stdout } from 'node:process'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * Read the first line stdin has to offer, or `null` if it has none.
@@ -44,7 +44,7 @@ export async function promptSecret(
     const piped = await readFirstLine()
     const value = piped?.trim() ?? ''
     if (!value) {
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `${label}: stdin is not a tty and nothing was piped in.\n${nonInteractiveHint}`
       )
     }
@@ -64,7 +64,7 @@ export async function promptSecret(
       new Promise<null>((resolve) => rl.once('close', () => resolve(null))),
     ])
     if (value === null) {
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `${label}: input closed before a value was given.\n${nonInteractiveHint}`
       )
     }
@@ -86,7 +86,7 @@ export async function promptConfirm(
   defaultYes = false
 ): Promise<boolean> {
   if (!stdin.isTTY) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `Cannot ask "${label}" — stdin is not a tty. Re-run interactively, or pass the flag that answers it (--force / --auto-approve / --yes).`
     )
   }

@@ -8,11 +8,11 @@ import {
   idList,
   requireProjectId,
 } from '../lib/changes.js'
-import { FabricPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
 import { git } from '../../utils/git.js'
 import { basename, dirname, join } from 'node:path'
-import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
+import type { ChangesRPC, Declaration } from '../../changes/changes-local.js'
 import type { ClaimChangesOutput } from '../sdk/rpc-map.gen.d.js'
 import { configuredPlanJudge, needsPlan } from '../lib/plan-judge.js'
 
@@ -63,7 +63,7 @@ export const FabricChangesClaim = pikkuSessionlessFunc({
       })
     } catch (error) {
       if (httpStatus(error) !== 409 || !changeIds?.length) throw error
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         await whyUnclaimable(rpc, project, changeIds, error)
       )
     }

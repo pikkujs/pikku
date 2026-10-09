@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { added, changed, removed, dim } from '../lib/output.js'
+import { added, changed, removed, dim } from '../../utils/output.js'
 import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
 import {
   readJsonSafe,
@@ -25,7 +25,7 @@ import {
   DEFAULT_BASES,
 } from '../lib/migration-base.js'
 import { getFabricRPC } from '../lib/http.js'
-import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
+import { blankComments, lineOfOffset } from '../../utils/blank-comments.js'
 import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
 
 const FindingSchema = z.object({

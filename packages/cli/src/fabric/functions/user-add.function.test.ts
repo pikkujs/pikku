@@ -4,7 +4,7 @@ import { mock } from 'bun:test'
 import * as configLib from '../lib/config.js'
 import * as httpLib from '../lib/http.js'
 import * as stageLib from '../lib/stage.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * The command itself, against a faked fabric and a faked stage: what reaches
@@ -120,7 +120,7 @@ describe('fabric user add', () => {
     await assert.rejects(
       () => run({ email: 'a@b.test', password: 'x' }),
       (error: unknown) =>
-        error instanceof FabricPreconditionError &&
+        error instanceof PreconditionError &&
         /pikku fabric login/.test(error.message)
     )
     assert.strictEqual(requests.length, 0)

@@ -1,10 +1,13 @@
 import { extname } from 'node:path'
 import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
-import { FabricPreconditionError } from './errors.js'
+import { httpStatus } from '../../changes/http-status.js'
+
+export { httpStatus }
+import { PreconditionError } from '../../utils/precondition-error.js'
 import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
 import { readConfigProjectId } from './project-id.js'
-import type { ChangesRPC } from './changes-local.js'
+import type { ChangesRPC } from '../../changes/changes-local.js'
 import { changesContext, registerChangesBackend } from '../../changes/context.js'
 
 export type { ChangesRPC }
@@ -35,7 +38,7 @@ async function fabricBackend({
     resolveProject: false,
   })
   if (!ctx.token)
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `This project is backed by Fabric (${projectId}), so its changes live there and you need to be signed in. Run \`pikku fabric login\`, or set FABRIC_TOKEN.`
     )
   const fabric = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
@@ -44,7 +47,7 @@ async function fabricBackend({
       return await fabric.invoke(name as any, data as any)
     } catch (error) {
       if (httpStatus(error) !== undefined) throw error
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `This project is backed by Fabric, so its changes need a connection and ${ctx.apiUrl} did not answer (${(error as Error).message}). Nothing was changed.`
       )
     }
@@ -63,7 +66,7 @@ async function linkedProjectId(override?: string): Promise<string | null> {
 
 export function requireProjectId(projectId: string | null): string {
   if (!projectId)
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       'No fabric project. Pass --project-id, or run `pikku fabric link` in the checkout.'
     )
   return projectId
@@ -76,7 +79,7 @@ export function requireProjectId(projectId: string | null): string {
  */
 export function nonBlank(text: string, refusal: string): string {
   const trimmed = text.trim()
-  if (!trimmed) throw new FabricPreconditionError(refusal)
+  if (!trimmed) throw new PreconditionError(refusal)
   return trimmed
 }
 
@@ -94,12 +97,6 @@ export function idList(values: string[] | undefined): string[] | undefined {
   return ids.length ? ids : undefined
 }
 
-/** The HTTP status a failed `rpc.invoke` carried, if it got as far as a response. */
-export const httpStatus = (error: unknown): number | undefined => {
-  const status = (error as { status?: unknown } | null)?.status
-  return typeof status === 'number' ? status : undefined
-}
-
 const SHORT_ID = /^#?(\d+)$/
 
 /**
@@ -115,7 +112,7 @@ export function changeRef(
   const match = changeId.match(SHORT_ID)
   if (!match) return { changeId }
   if (!projectId)
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `#${match[1]} is a short id, which only means something inside a project. Pass the uuid, or run this from the linked checkout.`
     )
   return { changeId, projectId }

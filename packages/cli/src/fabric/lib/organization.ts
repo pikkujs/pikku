@@ -1,5 +1,5 @@
 import type { getFabricRPC } from './http.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -25,13 +25,13 @@ export async function resolveOrganizationId(
 
   if (matches.length === 0) {
     const known = organizations.map((org) => org.slug).join(', ')
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `No organization named "${organization}".\nYou belong to: ${known || '(none)'}`
     )
   }
   if (matches.length > 1) {
     const ids = matches.map((org) => org.organizationId).join(', ')
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `"${organization}" matches more than one organization. Pass the id instead: ${ids}`
     )
   }

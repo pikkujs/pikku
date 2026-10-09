@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { resolveOrganizationId } from '../lib/organization.js'
 
 export const FabricInitInput = z.object({
@@ -36,7 +36,7 @@ export const FabricInit = pikkuSessionlessFunc({
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
 
@@ -44,7 +44,7 @@ export const FabricInit = pikkuSessionlessFunc({
     // is exactly the ambiguity every later command refuses to guess through.
     const existing = ctx.project
     if (existing && (existing.source === 'remote' || !force)) {
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `Already linked: ${existing.projectId} (${existing.detail}).${
           existing.source === 'remote' ? '' : ' Pass --force to replace.'
         }`

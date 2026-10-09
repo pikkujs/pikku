@@ -20,8 +20,8 @@ import {
   readJsonSafe,
 } from '../../functions/validate/validate.js'
 import { headSha, isWorkingTreeClean } from '../../utils/git.js'
-import { added, changed, dim, removed } from '../lib/output.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 const DEFAULT_BUN_VERSION = 'bun@1.4.0'
 const DEFAULT_STEP_TIMEOUT_SECONDS = 300
@@ -223,7 +223,7 @@ function rewriteFrontendCommand(command: string[]): {
   args: string[]
 } {
   if (command.length === 0) {
-    throw new FabricPreconditionError('frontend dev.command must not be empty')
+    throw new PreconditionError('frontend dev.command must not be empty')
   }
 
   if (command[0] === 'yarn') {
@@ -638,7 +638,7 @@ async function createTempWorktree(root: string): Promise<string> {
     timeoutMs: 60_000,
   })
   if (!cloneStep.ok) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `Failed to create temp checkout.\nworktree: ${step.tail || 'git worktree add failed.'}\nclone: ${cloneStep.tail || 'git clone failed.'}`
     )
   }
@@ -651,7 +651,7 @@ async function createTempWorktree(root: string): Promise<string> {
     timeoutMs: 60_000,
   })
   if (!detachStep.ok) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `Failed to detach temp checkout.\n${detachStep.tail || 'git checkout --detach failed.'}`
     )
   }

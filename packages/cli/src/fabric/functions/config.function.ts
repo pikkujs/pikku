@@ -4,9 +4,9 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { getFabricRPC } from '../lib/http.js'
-import { dim, keyValue, safe } from '../lib/output.js'
+import { dim, keyValue, safe } from '../../utils/output.js'
 
 export const FabricConfigInput = z.object({
   apiUrl: z.string().optional(),
@@ -104,7 +104,7 @@ export const parseAssignments = (
     const at = assignment.indexOf('=')
     const key = at === -1 ? '' : assignment.slice(0, at).trim()
     if (!key) {
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         `"${assignment}" is not a setting — write it as key=value, e.g. showcase.name="My app". An empty value clears the key.`
       )
     }
@@ -143,11 +143,11 @@ export const FabricConfig = pikkuSessionlessFunc({
     let settingsError: string | null = null
     if (set) {
       if (!base.token)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           'Not logged in. Run `pikku fabric login` first.'
         )
       if (!project)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           projectError ??
             'No fabric project linked. Run `pikku fabric link` first.'
         )

@@ -27,7 +27,7 @@ import {
   saveConsent,
   type ReportAnswer,
 } from '../lib/report.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * Every finding field is optional here and the strictness lives in
@@ -48,7 +48,7 @@ export const FabricReportOutput = z.object({
 
 const readStdin = async (): Promise<string> => {
   if (process.stdin.isTTY) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       '--stdin expects the finding as JSON on standard input, and nothing was piped in.'
     )
   }
@@ -100,7 +100,7 @@ export const FabricReport = pikkuSessionlessFunc({
     if (consent !== undefined) {
       answer = parseAnswer(consent)
       if (!answer) {
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `--consent is one of ${REPORT_ANSWERS.join(', ')}.`
         )
       }
@@ -126,11 +126,11 @@ export const FabricReport = pikkuSessionlessFunc({
         ? parseFindingJson(await readStdin())
         : parseFinding(flags)
       if ('problems' in parsed) {
-        throw new FabricPreconditionError(parsed.problems.join('\n'))
+        throw new PreconditionError(parsed.problems.join('\n'))
       }
       const problems = validateFinding(parsed.finding)
       if (problems.length > 0) {
-        throw new FabricPreconditionError(problems.join('\n'))
+        throw new PreconditionError(problems.join('\n'))
       }
       const payload = buildFindingPayload(
         parsed.finding,

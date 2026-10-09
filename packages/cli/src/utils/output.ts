@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 
 /**
- * Render helpers shared by the fabric read commands.
+ * Render helpers shared by the read commands.
  *
  * These run inside a command's `render` (post-return, human output only).
  * `--json` is handled globally by the CLI runner, which routes the command's

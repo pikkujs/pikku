@@ -1,5 +1,5 @@
-import type { ListChangesOutput } from '../sdk/rpc-map.gen.d.js'
-import { FabricPreconditionError } from './errors.js'
+import type { ListChangesOutput } from './types.js'
+import { PreconditionError } from '../utils/precondition-error.js'
 import { releaseChangeset } from './changes-local.js'
 import {
   currentBranch,
@@ -7,7 +7,7 @@ import {
   GitError,
   isAncestor,
   upstreamBranch,
-} from '../../utils/git.js'
+} from '../utils/git.js'
 
 type Group = ListChangesOutput['groups'][number]
 
@@ -68,7 +68,7 @@ export async function syncWithUpstream(): Promise<string | null> {
     await git(['merge', '--ff-only', '--quiet', upstream])
     return upstream
   }
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     `${await currentBranch()} and ${upstream} have both moved on. Reconcile them, then run pikku changes next again.`
   )
 }
@@ -79,12 +79,12 @@ export async function mergeChangeset(
 ): Promise<MergeOutcome> {
   const into = await currentBranch()
   if (into === branch)
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `This checkout is on ${branch} itself. Run merge from the branch it goes into.`
     )
   if (await isAncestor(branch, 'HEAD')) {
     if (storePath) await releaseChangeset(storePath, group.groupId)
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `${branch} is already in ${into} — merged by plain git, so there is no Changeset commit for “${group.title}”. Leave it as it is; next time let \`changes merge\` do the merge.`
     )
   }

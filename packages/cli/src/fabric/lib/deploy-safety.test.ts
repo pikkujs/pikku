@@ -9,7 +9,7 @@ import {
   assertDeploySafety,
   assertNamedBranchDeploySafety,
 } from './deploy-safety.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 
 const run = (cwd: string, ...args: string[]) =>
   execFileSync(
@@ -43,7 +43,7 @@ const makeRepo = async () => {
 }
 
 const refusal = (message: RegExp) => (error: unknown) => {
-  assert.ok(error instanceof FabricPreconditionError)
+  assert.ok(error instanceof PreconditionError)
   assert.match((error as Error).message, message)
   return true
 }

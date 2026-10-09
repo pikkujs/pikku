@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
 import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'
 import {
@@ -13,7 +13,7 @@ import {
   resetPrompt,
   resetWarning,
 } from '../lib/deploy-reset.js'
-import { added, changed, removed, dim, table } from '../lib/output.js'
+import { added, changed, removed, dim, table } from '../../utils/output.js'
 import {
   blockedReason,
   blockedSummary,
@@ -154,12 +154,12 @@ type FabricRPC = ReturnType<typeof getFabricRPC>
 async function prepDeploy({ branch, production, ref }: DeployInput) {
   const ctx = await resolveApiContext()
   if (!ctx.token) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       'Not logged in. Run `pikku fabric login` first.'
     )
   }
   if (!ctx.projectId) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       'No fabric project linked. Run `pikku fabric link` first.'
     )
   }
@@ -192,12 +192,12 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
 async function prepAttach() {
   const ctx = await resolveApiContext()
   if (!ctx.token) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       'Not logged in. Run `pikku fabric login` first.'
     )
   }
   if (!ctx.projectId) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       'No fabric project linked. Run `pikku fabric link` first.'
     )
   }
@@ -257,7 +257,7 @@ export async function guardMigrationHistory(
   })
   const errors = migrationHistoryErrors(findings)
   if (errors.length === 0) return
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     [
       `Refusing to deploy: ${errors.length} migration-history problem${errors.length === 1 ? '' : 's'}.`,
       ...errors.map((f) => `  - [${f.id}] ${f.message}`),
@@ -278,13 +278,13 @@ export async function applyDeploy(
 
   const timeoutSeconds = input.timeout ?? DEFAULT_TIMEOUT_SECONDS
   if (timeoutSeconds <= 0) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       '--timeout must be a positive number of seconds.'
     )
   }
 
   if (input.deploymentId && (input.branch || input.production)) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       '--deployment-id already names its target — drop the branch/--production.'
     )
   }
@@ -346,24 +346,24 @@ export async function applyDeploy(
       }
       if (!input.autoApprove) {
         if (!process.stdin.isTTY) {
-          throw new FabricPreconditionError(
+          throw new PreconditionError(
             `Refusing to reset ${branch} of "${app}" without confirmation — re-run with -y to wipe it non-interactively.`
           )
         }
         const ok = await promptConfirm(
           resetPrompt({ app, branch, ref: resolved.slice(0, 8) })
         )
-        if (!ok) throw new FabricPreconditionError('Deploy aborted.')
+        if (!ok) throw new PreconditionError('Deploy aborted.')
       }
     } else if (!input.autoApprove) {
       const target = `${branch} @ ${resolved.slice(0, 8)}`
       if (!process.stdin.isTTY) {
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `Refusing to deploy ${target} without confirmation — re-run with --auto-approve to deploy non-interactively.`
         )
       }
       if (!(await promptConfirm(`Deploy ${target}?`))) {
-        throw new FabricPreconditionError('Deploy aborted.')
+        throw new PreconditionError('Deploy aborted.')
       }
     }
 

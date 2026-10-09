@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import {
   changeRef,
   changesContext,
@@ -9,7 +9,7 @@ import {
   type ImageContentType,
   nonBlank,
 } from '../lib/changes.js'
-import { dim, safe, safeBlock } from '../lib/output.js'
+import { dim, safe, safeBlock } from '../../utils/output.js'
 import type { ReplyToChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesReplyInput = z.object({
@@ -43,7 +43,7 @@ export const FabricChangesReply = pikkuSessionlessFunc({
     if (input.image) {
       const inferred = imageContentType(input.image)
       if (!inferred && !contentType)
-        throw new FabricPreconditionError(
+        throw new PreconditionError(
           `Cannot tell the image type from “${input.image}” — pass --content-type.`
         )
       contentType ??= inferred

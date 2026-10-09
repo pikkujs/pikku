@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { FabricPreconditionError } from '../lib/errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 import { promptSecret } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
 import { seal, serializeSealedValue } from '../lib/sealed-box.js'
@@ -27,11 +27,11 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
   func: async (_services, { name, branch: requested, value }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'Not logged in. Run `pikku fabric login` first.'
       )
     if (!ctx.projectId)
-      throw new FabricPreconditionError(
+      throw new PreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -44,7 +44,7 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
         nonInteractiveHint: `Pass the value with \`--value\`, or pipe it: \`echo '<value>' | pikku fabric secrets set ${name}\`.`,
       }))
     if (!plaintext)
-      throw new FabricPreconditionError('Empty secret value — aborting.')
+      throw new PreconditionError('Empty secret value — aborting.')
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const { stageId, branch } = await resolveStage(

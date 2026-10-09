@@ -1,4 +1,4 @@
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
 export interface JudgedChange {
   title: string
   body: string | null
@@ -47,13 +47,13 @@ export const httpPlanJudge = (url: string, token?: string): PlanJudge => ({
         ].join('\n'),
       }),
     })
-    if (!response.ok) throw new FabricPreconditionError(`judge answered ${response.status}`)
+    if (!response.ok) throw new PreconditionError(`judge answered ${response.status}`)
     const { verdict, reason } = (await response.json()) as {
       verdict: unknown
       reason?: string
     }
     if (typeof verdict !== 'boolean' && verdict !== 'yes' && verdict !== 'no')
-      throw new FabricPreconditionError(`judge gave no verdict: ${JSON.stringify(verdict)}`)
+      throw new PreconditionError(`judge gave no verdict: ${JSON.stringify(verdict)}`)
     return {
       needsPlan: verdict === true || verdict === 'yes',
       why: `judge: ${reason ?? (verdict === true || verdict === 'yes' ? 'yes' : 'no')}`,

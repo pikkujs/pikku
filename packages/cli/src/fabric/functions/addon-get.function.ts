@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
-import { added, dim, removed } from '../lib/output.js'
+import { added, dim, removed } from '../../utils/output.js'
 import {
   getOpenApi,
   getPackage,

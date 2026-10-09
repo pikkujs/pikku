@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
-import { FabricPreconditionError } from '../fabric/lib/errors.js'
+import { PreconditionError } from './precondition-error.js'
 
 /**
  * Local git probes for the deploy safety checks (clean tree, HEAD == remote,
@@ -93,7 +93,7 @@ export const branchFromHead = (
   hint = 'Check out a branch, and try again.'
 ): string => {
   if (head === 'HEAD' || head === '') {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `Deployment blocked: HEAD is detached, so there is no current branch to deploy.\n${hint}`
     )
   }

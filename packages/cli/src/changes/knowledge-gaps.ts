@@ -1,5 +1,5 @@
 import { runKnowledgeGaps } from '@pikku/knowledge'
-import type { ChangesRPC } from './changes.js'
+import type { ChangesRPC } from './changes-local.js'
 
 export async function openKnowledgeGaps(
   root: string,

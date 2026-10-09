@@ -8,7 +8,7 @@ import type {
   KnowledgePlanShowResult,
   KnowledgeValidateResult,
 } from '@pikku/knowledge'
-import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
 
 const ORPHANS_SHOWN = 10
 

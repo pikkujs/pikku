@@ -1,15 +1,15 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import {
-  FabricAuthError,
+  BackendAuthError,
   HELD_MARGIN_MS,
   MAX_CONSECUTIVE_FAILURES,
   SAFETY_POLL_MS,
   waitForNext,
   type NextOptions,
 } from './changes-next.js'
-import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
-import type { ChangeEvents } from './changes-events.js'
+import type { ChangesRPC } from './types.js'
+import type { ChangeEvents } from './change-events.js'
 
 const NOW = Date.parse('2026-09-29T12:00:00Z')
 
@@ -55,7 +55,7 @@ const fakeRpc = (lists: unknown[], handlers: Record<string, Handler> = {}) => {
       if (!handler) throw new Error(`unexpected rpc ${name}`)
       return handler(data)
     },
-  } as unknown as PikkuRPC
+  } as unknown as ChangesRPC
   return { rpc, calls }
 }
 
@@ -320,7 +320,7 @@ describe('waitForNext', () => {
       await assert.rejects(
         waitForNext(rpc, options(), clock),
         (error: unknown) =>
-          error instanceof FabricAuthError &&
+          error instanceof BackendAuthError &&
           /pikku fabric login/.test(error.message)
       )
       assert.deepStrictEqual(sleeps, [])

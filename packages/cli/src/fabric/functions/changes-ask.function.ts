@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changeRef, changesContext, nonBlank } from '../lib/changes.js'
-import { dim, safe, safeBlock } from '../lib/output.js'
+import { dim, safe, safeBlock } from '../../utils/output.js'
 import type { AskChangeQuestionOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesAskInput = z.object({

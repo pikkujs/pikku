@@ -1,7 +1,7 @@
 import { PikkuError } from '@pikku/core/errors'
 
 /**
- * A fabric command refusing to run because something the user controls is not
+ * A command refusing to run because something the user controls is not
  * ready yet — a dirty tree, a branch with no upstream, a local head that is not
  * the remote's, a required argument left off.
  *
@@ -18,4 +18,4 @@ import { PikkuError } from '@pikku/core/errors'
  * sentence that says what to do. The exit code is unchanged — non-zero either
  * way.
  */
-export class FabricPreconditionError extends PikkuError {}
+export class PreconditionError extends PikkuError {}
