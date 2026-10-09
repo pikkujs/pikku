@@ -13,6 +13,7 @@ runs:
     - name: Rebuild the console and graph addons
       shell: bash
       run: |
+        bun run --filter @pikku/addon-fabric-cli build
         bun run --filter @pikku/addon-console build
         bun run --filter @pikku/addon-graph build
     - name: Generate pikku files for the e2e fixtures

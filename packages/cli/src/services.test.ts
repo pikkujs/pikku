@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test, afterEach } from 'node:test'
 import { CONFIG_FREE_COMMANDS, createConfig } from './services.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { changesCommands } from './functions/changes/changes-commands.js'
 
 const created: string[] = []
 let restoreCwd: string | undefined

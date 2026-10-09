@@ -67,4 +67,44 @@ describe('serializeAddonRefs', () => {
     assert.match(output, /const __addonHttp = \{\} as const/)
     assert.match(output, /export const refHTTP/)
   })
+  test('keeps nested groups, descriptions, parameters and renderers of a CLI contract', () => {
+    const output = serializeAddonRefs({
+      addonHttp: {},
+      addonChannel: {},
+      addonCli: {
+        ext: {
+          cmds: {
+            run: {
+              pikkuFuncId: 'ext:run',
+              packageName: '@acme/ext',
+              parameters: '<name>',
+              positionals: [{ name: 'name', required: true }],
+              options: {},
+              description: 'Run it',
+              renderName: 'renderRun',
+            },
+            group: {
+              pikkuFuncId: '',
+              positionals: [],
+              options: {},
+              description: 'A group',
+              subcommands: {
+                inner: {
+                  pikkuFuncId: 'ext:inner',
+                  packageName: '@acme/ext',
+                  positionals: [],
+                  options: {},
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    assert.match(output, /import \* as __renderers__acme_ext from '@acme\/ext\/renderers'/)
+    assert.match(output, /description: "Run it"/)
+    assert.match(output, /parameters: "<name>" as any/)
+    assert.match(output, /render: __renderers__acme_ext\["renderRun"\]/)
+    assert.match(output, /"group": \{ description: "A group", options: \{\}, subcommands: \{ "inner": \{ func: ref\("ext:inner"\)/)
+  })
 })

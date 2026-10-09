@@ -1,6 +1,6 @@
-import { getRemoteUrl, git, isGitRepo } from './git.js'
+import { getRemoteUrl, git, isGitRepo } from '@pikku/cli/addon-support'
 import { readConfigProjectId, writeConfigProjectId } from './project-id.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '@pikku/cli/addon-support'
 import type { getFabricRPC } from './http.js'
 
 /**
@@ -138,7 +138,7 @@ export const resolveLinkedProject = async ({
       const [first] = await matchRemoteProjects(projects, cwd)
       if (first) {
         if (first.matches.length > 1) {
-          throw new FabricPreconditionError(
+          throw new PreconditionError(
             [
               `${first.remote} (${first.url}) is the repo of ${first.matches.length} fabric projects:`,
               ...first.matches.map((p) => `  ${p.name}  ${p.projectId}`),

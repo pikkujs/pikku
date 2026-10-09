@@ -1,7 +1,11 @@
 {
   "name": "@pikku/addon-fabric-cli",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.12.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/addon/pikku-fabric-cli"
+  },
   "description": "The pikku fabric command group, contributed to the pikku CLI as an addon",
   "type": "module",
   "imports": {
@@ -16,6 +20,14 @@
       "types": "./dist/src/contracts.d.ts",
       "import": "./dist/src/contracts.js"
     },
+    "./renderers": {
+      "types": "./dist/src/renderers.d.ts",
+      "import": "./dist/src/renderers.js"
+    },
+    "./client": {
+      "types": "./dist/src/client.d.ts",
+      "import": "./dist/src/client.js"
+    },
     "./.pikku/*": "./dist/.pikku/addon/*",
     "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/addon/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
@@ -27,16 +39,17 @@
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && pikku dist",
-    "pikku": "pikku all"
+    "build": "tsc && pikku dist && mkdir -p dist/src/sdk && cp src/sdk/rpc-map.gen.d.ts dist/src/sdk/",
+    "pikku": "pikku all",
+    "test": "bun test --parallel src"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.139",
-    "zod": "^4"
+    "zod": "^4",
+    "@pikku/cli": "^0.12.184"
   },
   "dependencies": {
-    "@pikku/fetch": "workspace:*",
-    "chalk": "^6.0.0"
+    "@pikku/fetch": "^0.12.12"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",

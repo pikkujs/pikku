@@ -1,0 +1,769 @@
+import { z } from 'zod'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { resolveApiContext } from '../lib/config.js'
+import { getFabricRPC } from '../lib/http.js'
+import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
+import { branchFromHead, currentBranch, resolveRef } from '@pikku/cli/addon-support'
+import { PreconditionError } from '@pikku/cli/addon-support'
+import {
+  migrationHistoryErrors,
+  runProjectChecks,
+} from '@pikku/cli/addon-support'
+import { projectChecks } from '../lib/project-checks.js'
+import { promptConfirm } from '../lib/prompt.js'
+import {
+  assertResetAllowed,
+  assertResetHonoured,
+  resetPrompt,
+  resetWarning,
+} from '../lib/deploy-reset.js'
+import { added, changed, removed, dim, table } from '@pikku/cli/addon-support'
+import {
+  blockedReason,
+  blockedSummary,
+  missingConfigHints,
+  changesAreEmpty,
+  classifyStatus,
+  describeDeployment,
+  destructiveMigrations,
+  isApprovable,
+  readDeploymentStatus,
+  readWorkers,
+  reconcileDeployedRef,
+  stateLabel,
+  waitForDeployment,
+  type BlockedReason,
+  type DeploymentStatus,
+  type MigrationRisk,
+  type ProgressEvent,
+} from '../lib/deployment.js'
+
+const DEFAULT_TIMEOUT_SECONDS = 900
+
+export const FabricDeployInput = z.object({
+  branch: z.string().optional(),
+  production: z.boolean().optional(),
+  ref: z.string().optional(),
+  deploymentId: z.string().optional(),
+  detach: z.boolean().optional(),
+  autoApprove: z.boolean().optional(),
+  allowDestructive: z.boolean().optional(),
+  migrationsBase: z.string().optional(),
+  reset: z.boolean().optional(),
+  timeout: z.number().optional(),
+  json: z.boolean().optional(),
+})
+
+export const FabricDeployValidatedInput = FabricDeployInput.superRefine(
+  (value, ctx) => {
+    if (value.reset) {
+      try {
+        assertResetAllowed(value)
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: (error as Error).message,
+        })
+      }
+    }
+    if (value.deploymentId) {
+      if (value.branch || value.production) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            '--deployment-id already names its target — drop the branch/--production.',
+        })
+      }
+      return
+    }
+    if (value.branch && value.production) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'Pass a branch or --production, not both — --production is always main.',
+      })
+    }
+  }
+)
+
+const MissingConfig = z.object({
+  name: z.string(),
+  displayName: z.string().nullable(),
+  description: z.string().nullable(),
+  docsUrl: z.string().nullable(),
+})
+
+const Changes = z.object({
+  unitsAdded: z.array(z.string()),
+  unitsRemoved: z.array(z.string()),
+  handlersAdded: z.array(z.string()),
+  handlersRemoved: z.array(z.string()),
+  workflowsAdded: z.array(z.string()),
+  workflowsRemoved: z.array(z.string()),
+  workflowsChanged: z.array(z.string()),
+  functionsAdded: z.array(z.string()),
+  functionsRemoved: z.array(z.string()),
+  secretsChanged: z.array(z.string()),
+  variablesChanged: z.array(z.string()),
+  pendingMigrations: z.array(z.string()),
+  migrationRisks: z.array(
+    z.object({
+      name: z.string(),
+      level: z.enum(['destructive', 'safe']),
+      reasons: z.array(z.string()),
+    })
+  ),
+})
+
+export const FabricDeployApplyOutput = z.object({
+  event: z.literal('result'),
+  outcome: z.enum(['queued', 'succeeded', 'failed', 'blocked', 'timeout']),
+  projectId: z.string(),
+  deploymentId: z.string(),
+  branch: z.string().optional(),
+  ref: z.string().optional(),
+  status: z.string().optional(),
+  statusReason: z.string().nullable().optional(),
+  stageId: z.string().optional(),
+  runId: z.string().optional(),
+  blockedReason: z
+    .enum(['awaiting_approval', 'needs_config', 'needs_attention', 'unknown'])
+    .optional(),
+  missingSecrets: z.array(MissingConfig).optional(),
+  missingVariables: z.array(MissingConfig).optional(),
+  /**
+   * The builder's own account of a failure, when it produced one. Carried on the
+   * result so a script reading --json sees the cause, not just `failed`.
+   */
+  buildLog: z.string().nullable().optional(),
+  imageBuildLog: z.string().nullable().optional(),
+  approvalWithheld: z.literal('destructive_migrations').optional(),
+  changes: Changes.optional(),
+  workers: z
+    .array(z.object({ name: z.string(), role: z.string(), status: z.string() }))
+    .optional(),
+  url: z.string().nullable().optional(),
+  approved: z.boolean().optional(),
+  reset: z.boolean().optional(),
+  elapsedMs: z.number().optional(),
+  timeoutSeconds: z.number().optional(),
+})
+
+type DeployInput = z.infer<typeof FabricDeployInput>
+type ApplyOutput = z.infer<typeof FabricDeployApplyOutput>
+type FabricRPC = ReturnType<typeof getFabricRPC>
+
+/**
+ */
+async function prepDeploy({ branch, production, ref }: DeployInput) {
+  const ctx = await resolveApiContext()
+  if (!ctx.token) {
+    throw new PreconditionError(
+      'Not logged in. Run `pikku fabric login` first.'
+    )
+  }
+  if (!ctx.projectId) {
+    throw new PreconditionError(
+      'No fabric project linked. Run `pikku fabric link` first.'
+    )
+  }
+
+  // With no target named, deploy the branch that is checked out — the common
+  // case, and the one worth not making people type twice. It is only safe to
+  // infer because `assertNamedBranchDeploySafety` below refuses any branch that
+  // is missing an upstream or out of sync with it, so an inferred target cannot
+  // ship something that was never pushed.
+  const inferred = !production && !branch
+  const targetBranch = production
+    ? 'main'
+    : (branch ??
+      branchFromHead(
+        await currentBranch(),
+        'Check out a branch, or name the target: `pikku fabric deploy apply <branch>`.'
+      ))
+  const safety = await assertNamedBranchDeploySafety(targetBranch)
+  const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
+  return {
+    ctx,
+    projectId: ctx.projectId,
+    targetBranch,
+    resolved,
+    safety,
+    inferred,
+  }
+}
+
+async function prepAttach() {
+  const ctx = await resolveApiContext()
+  if (!ctx.token) {
+    throw new PreconditionError(
+      'Not logged in. Run `pikku fabric login` first.'
+    )
+  }
+  if (!ctx.projectId) {
+    throw new PreconditionError(
+      'No fabric project linked. Run `pikku fabric link` first.'
+    )
+  }
+  return { ctx, projectId: ctx.projectId }
+}
+
+const EXIT_BY_OUTCOME: Record<ApplyOutput['outcome'], number> = {
+  queued: 0,
+  succeeded: 0,
+  failed: 2,
+  blocked: 3,
+  timeout: 4,
+}
+
+/**
+ * The branch to deploy when none was named, read off the checkout.
+ *
+ * `git rev-parse --abbrev-ref HEAD` answers the literal string `HEAD` on a
+ * detached checkout, which is not a branch and would be reported downstream as
+ * a branch that does not exist locally. Naming the real problem here is the
+ * difference between "check out a branch" and a puzzle.
+ */
+export const FabricDeployApply = pikkuSessionlessFunc({
+  description:
+    'Build + deploy a named branch or production (main), or attach to an existing deployment.',
+  input: FabricDeployValidatedInput,
+  output: FabricDeployApplyOutput,
+  func: async (_services, input) => {
+    const started: { deploymentId?: string } = {}
+    try {
+      return await applyDeploy(input, started)
+    } catch (error) {
+      if (started.deploymentId && !input.json) {
+        console.error(resumeHint(started.deploymentId, input))
+      }
+      throw error
+    }
+  },
+})
+
+/**
+ * Refuses to create a deployment while the migration history is broken: a
+ * stage would run the migrations that exist and silently skip the ones that
+ * were edited, so it ends up with a schema no migration describes. Checked
+ * against the stage being deployed and against main, since a branch stage can
+ * be reset at will but main's history reaches production. There is no
+ * override, and a check that cannot run refuses too.
+ */
+export async function guardMigrationHistory(
+  input: DeployInput,
+  targetBranch: string
+): Promise<void> {
+  const checked = await runProjectChecks(process.cwd(), {
+    skipTypecheck: true,
+    migrationsBase: input.migrationsBase,
+    deployTarget: targetBranch,
+  })
+  const findings = [
+    ...checked.findings,
+    ...(await projectChecks({
+      root: checked.root,
+      migrationsDir: checked.migrationsDir,
+      deployTarget: targetBranch,
+    })),
+  ]
+  const errors = migrationHistoryErrors(findings)
+  if (errors.length === 0) return
+  throw new PreconditionError(
+    [
+      `Refusing to deploy: ${errors.length} migration-history problem${errors.length === 1 ? '' : 's'}.`,
+      ...errors.map((f) => `  - [${f.id}] ${f.message}`),
+      '',
+      'Applied migrations are forward-only: restore the original file and add a NEW migration.',
+      'Run `pikku validate` for fix hints.',
+    ].join('\n')
+  )
+}
+
+export async function applyDeploy(
+  input: DeployInput,
+  started: { deploymentId?: string }
+): Promise<ApplyOutput> {
+  const emit = input.json
+    ? (event: ProgressEvent) => console.log(JSON.stringify(event))
+    : () => {}
+
+  const timeoutSeconds = input.timeout ?? DEFAULT_TIMEOUT_SECONDS
+  if (timeoutSeconds <= 0) {
+    throw new PreconditionError(
+      '--timeout must be a positive number of seconds.'
+    )
+  }
+
+  if (input.deploymentId && (input.branch || input.production)) {
+    throw new PreconditionError(
+      '--deployment-id already names its target — drop the branch/--production.'
+    )
+  }
+
+  const attaching = Boolean(input.deploymentId)
+  let projectId: string
+  let deploymentId: string
+  let branch: string | undefined
+  let ref: string | undefined
+  let stageId: string | undefined
+  let runId: string | undefined
+  let rpc: FabricRPC
+
+  if (attaching) {
+    const { ctx, projectId: id } = await prepAttach()
+    projectId = id
+    rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    deploymentId = input.deploymentId!
+    started.deploymentId = deploymentId
+    const current = await readDeploymentStatus(rpc, deploymentId)
+    stageId = current.stageId
+    branch = (await describeDeployment(rpc, projectId, deploymentId))?.branch
+    emit({ event: 'attached', deploymentId, status: current.status })
+  } else {
+    const {
+      ctx,
+      projectId: id,
+      targetBranch,
+      resolved,
+      safety,
+      inferred,
+    } = await prepDeploy(input)
+    projectId = id
+    branch = targetBranch
+    ref = resolved
+    rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+
+    await guardMigrationHistory(input, targetBranch)
+
+    // An inferred target is said out loud before anything is built. Under -y
+    // there is no confirmation prompt to name it, and a deploy that never
+    // told you which branch it picked is the one that ships the wrong branch.
+    if (inferred && !input.json) {
+      console.log(dim(`Deploying the current branch: ${targetBranch}`))
+    }
+
+    // The branch may have been inferred from the checkout, so the production
+    // refusal has to run here as well as on the input.
+    if (input.reset) {
+      assertResetAllowed({ branch })
+      const status = await rpc.invoke('getProjectStatus', { projectId })
+      const app = status.projectName ?? projectId
+      if (input.json) {
+        emit({ event: 'reset', app, branch })
+      } else {
+        for (const line of resetWarning({ app, branch })) {
+          console.log(removed(line))
+        }
+      }
+      if (!input.autoApprove) {
+        if (!process.stdin.isTTY) {
+          throw new PreconditionError(
+            `Refusing to reset ${branch} of "${app}" without confirmation — re-run with -y to wipe it non-interactively.`
+          )
+        }
+        const ok = await promptConfirm(
+          resetPrompt({ app, branch, ref: resolved.slice(0, 8) })
+        )
+        if (!ok) throw new PreconditionError('Deploy aborted.')
+      }
+    } else if (!input.autoApprove) {
+      const target = `${branch} @ ${resolved.slice(0, 8)}`
+      if (!process.stdin.isTTY) {
+        throw new PreconditionError(
+          `Refusing to deploy ${target} without confirmation — re-run with --auto-approve to deploy non-interactively.`
+        )
+      }
+      if (!(await promptConfirm(`Deploy ${target}?`))) {
+        throw new PreconditionError('Deploy aborted.')
+      }
+    }
+
+    const created = await rpc.invoke('deployByStageKind', {
+      projectId,
+      branch,
+      ref: resolved,
+      expectedHeadSha: safety.headSha,
+      ...(input.reset ? { resetDatabase: true } : {}),
+    })
+    // Before `started` is set: the resume hint would offer to approve a
+    // deployment that was created without the reset that was asked for.
+    if (input.reset) assertResetHonoured(created, ctx.apiUrl)
+    deploymentId = created.deploymentId
+    started.deploymentId = deploymentId
+    stageId = created.stageId
+    runId = created.runId
+
+    // Read the commit back off the deployment rather than repeating the one
+    // that was asked for: `deployByStageKind` attaches to an already-parked
+    // plan for the branch instead of cutting a new one, and that plan is
+    // pinned to whatever commit it was created at.
+    ref = reconcileDeployedRef({
+      requested: resolved,
+      actual:
+        (await describeDeployment(rpc, projectId, deploymentId))?.gitSha ??
+        null,
+      deploymentId,
+    })
+    emit({ event: 'created', deploymentId, branch, ref })
+  }
+
+  const base = {
+    event: 'result' as const,
+    projectId,
+    deploymentId,
+    branch,
+    ...(ref ? { ref } : {}),
+    ...(input.reset ? { reset: true } : {}),
+    ...(stageId ? { stageId } : {}),
+    ...(runId ? { runId } : {}),
+  }
+
+  if (input.detach && !attaching) {
+    return { ...base, outcome: 'queued' as const }
+  }
+
+  let approvalWithheld: ApplyOutput['approvalWithheld']
+
+  const approveGate = async (status: DeploymentStatus): Promise<boolean> => {
+    const described = await describeDeployment(rpc, projectId, deploymentId)
+    const destructive = destructiveMigrations(described?.changes)
+
+    if (destructive.length > 0 && !input.allowDestructive) {
+      if (input.autoApprove || input.json || !process.stdin.isTTY) {
+        approvalWithheld = 'destructive_migrations'
+        return false
+      }
+    } else if (input.autoApprove) {
+      return true
+    }
+    if (input.json || !process.stdin.isTTY) return false
+
+    const warning =
+      destructive.length > 0
+        ? `\n${destructiveLines(destructive).join('\n')}\n`
+        : ''
+    return promptConfirm(
+      `Plan for ${branch ?? deploymentId} is ready to publish (${stateLabel(
+        status.status,
+        status.statusReason
+      )}).${warning} Approve?`
+    )
+  }
+
+  if (input.detach) {
+    const status = await readDeploymentStatus(rpc, deploymentId)
+    const klass = classifyStatus(status.status)
+    const outcome: ApplyOutput['outcome'] =
+      klass === 'in_flight' ? 'queued' : klass
+    const finished = await finalise(
+      rpc,
+      projectId,
+      deploymentId,
+      status.stageId,
+      outcome
+    )
+    process.exitCode = EXIT_BY_OUTCOME[outcome]
+    return {
+      ...base,
+      outcome,
+      status: status.status,
+      statusReason: status.statusReason,
+      url: status.hostname ? `https://${status.hostname}` : null,
+      ...(outcome === 'blocked'
+        ? {
+            blockedReason: blockedReason(status.statusReason),
+            missingSecrets: status.missingSecrets,
+            missingVariables: status.missingVariables,
+          }
+        : {}),
+      ...(status.buildLog ? { buildLog: status.buildLog } : {}),
+      ...(status.imageBuildLog ? { imageBuildLog: status.imageBuildLog } : {}),
+      ...finished,
+    }
+  }
+
+  const waited = await waitForDeployment({
+    rpc,
+    deploymentId,
+    timeoutMs: timeoutSeconds * 1000,
+    approve: approveGate,
+    onEvent: emit,
+  })
+
+  const finished = await finalise(
+    rpc,
+    projectId,
+    deploymentId,
+    waited.stageId,
+    waited.outcome
+  )
+
+  process.exitCode = EXIT_BY_OUTCOME[waited.outcome]
+  return {
+    ...base,
+    outcome: waited.outcome,
+    status: waited.status,
+    statusReason: waited.statusReason,
+    approved: waited.approved,
+    elapsedMs: waited.elapsedMs,
+    url: waited.hostname ? `https://${waited.hostname}` : null,
+    ...(waited.buildLog ? { buildLog: waited.buildLog } : {}),
+    ...(waited.imageBuildLog ? { imageBuildLog: waited.imageBuildLog } : {}),
+    ...(waited.outcome === 'timeout' ? { timeoutSeconds } : {}),
+    ...(waited.outcome === 'blocked'
+      ? {
+          blockedReason: waited.reason ?? 'unknown',
+          missingSecrets: waited.missingSecrets,
+          missingVariables: waited.missingVariables,
+          ...(approvalWithheld ? { approvalWithheld } : {}),
+        }
+      : {}),
+    ...finished,
+  }
+}
+
+async function finalise(
+  rpc: FabricRPC,
+  projectId: string,
+  deploymentId: string,
+  stageId: string,
+  outcome: ApplyOutput['outcome']
+): Promise<Partial<ApplyOutput>> {
+  const out: Partial<ApplyOutput> = {}
+  if (outcome === 'queued') return out
+  const described = await describeDeployment(rpc, projectId, deploymentId)
+  if (described?.changes) out.changes = described.changes
+  if (outcome === 'succeeded') {
+    out.workers = await readWorkers(rpc, stageId)
+  }
+  return out
+}
+
+const shortList = (names: string[], limit = 8): string =>
+  names.length <= limit
+    ? names.join(', ')
+    : `${names.slice(0, limit).join(', ')} +${names.length - limit} more`
+
+const destructiveLines = (risks: MigrationRisk[]): string[] =>
+  risks.map(
+    (r) =>
+      `  ${removed('! destructive')} ${r.name}${
+        r.reasons.length > 0 ? dim(` (${r.reasons.join(', ')})`) : ''
+      }`
+  )
+
+const changeLines = (changes: ApplyOutput['changes']): string[] => {
+  if (!changes || changesAreEmpty(changes)) return []
+  const lines: string[] = []
+  const add = (
+    label: string,
+    names: string[],
+    colour: (s: string) => string
+  ) => {
+    if (names.length > 0) lines.push(`  ${colour(label)} ${shortList(names)}`)
+  }
+  add('+ units', changes.unitsAdded, added)
+  add('- units', changes.unitsRemoved, removed)
+  add('+ handlers', changes.handlersAdded, added)
+  add('- handlers', changes.handlersRemoved, removed)
+  add('+ functions', changes.functionsAdded, added)
+  add('- functions', changes.functionsRemoved, removed)
+  add('+ workflows', changes.workflowsAdded, added)
+  add('- workflows', changes.workflowsRemoved, removed)
+  add('~ workflows', changes.workflowsChanged, changed)
+  add('~ secrets', changes.secretsChanged, changed)
+  add('~ variables', changes.variablesChanged, changed)
+  add('~ migrations', changes.pendingMigrations, changed)
+  lines.push(...destructiveLines(destructiveMigrations(changes)))
+  return lines
+}
+
+const missingLines = (
+  label: string,
+  entries: ApplyOutput['missingSecrets']
+): string[] => {
+  if (!entries || entries.length === 0) return []
+  return [
+    `  ${removed(label)}`,
+    ...entries.map(
+      (e) =>
+        `    ${e.name}${e.displayName ? dim(` (${e.displayName})`) : ''}${
+          e.docsUrl ? dim(` — ${e.docsUrl}`) : ''
+        }`
+    ),
+  ]
+}
+
+/**
+ * Print what the builder said, when it said anything.
+ *
+ * Without this a failed deploy printed `failed main in 248s` and a pointer to
+ * `fabric logs`, which serves the RUNNING stage and is empty for a build that
+ * never produced one — so the only visible evidence pointed at the project.
+ * `buildLog` is frequently the sole record of the cause (a failed deployment
+ * carries an empty manifest and plan, and `statusReason` is null for anything
+ * that is not an approval gate), and it was being dropped at the RPC boundary.
+ *
+ * Indented rather than raw so a multi-line log reads as one block, and capped:
+ * this is the summary line's neighbour, not a log viewer.
+ */
+const BUILD_LOG_LINES = 20
+
+const printBuildLog = (label: string, log: string | null | undefined): void => {
+  if (!log) return
+  const lines = log.trimEnd().split('\n')
+  const shown = lines.slice(-BUILD_LOG_LINES)
+  console.log(dim(`${label}:`))
+  for (const line of shown) console.log(dim(`  ${line}`))
+  if (shown.length < lines.length) {
+    console.log(dim(`  … ${lines.length - shown.length} earlier line(s)`))
+  }
+}
+
+const reattachHint = (deploymentId: string): string =>
+  dim(
+    `Re-attach with \`pikku fabric deploy apply --deployment-id ${deploymentId}\`.`
+  )
+
+const resumeHint = (
+  deploymentId: string,
+  { autoApprove, allowDestructive }: DeployInput
+): string =>
+  dim(
+    `Deployment ${deploymentId} was created. Resume with \`pikku fabric deploy apply --deployment-id ${deploymentId}${autoApprove ? ' -y' : ''}${allowDestructive ? ' --allow-destructive' : ''}\`.`
+  )
+
+export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
+  const {
+    outcome,
+    branch,
+    ref,
+    deploymentId,
+    status,
+    statusReason,
+    changes,
+    workers,
+    url,
+    elapsedMs,
+    timeoutSeconds,
+    approved,
+    buildLog,
+    imageBuildLog,
+  } = result
+  const where = branch ?? 'deployment'
+  const at = ref ? ` ${dim('@')} ${ref.slice(0, 8)}` : ''
+  const took =
+    elapsedMs === undefined ? '' : dim(` in ${Math.round(elapsedMs / 1000)}s`)
+
+  if (outcome === 'queued') {
+    console.log(
+      `${added('queued')} deploy ${where}${at} ${dim('·')} ${deploymentId}`
+    )
+    if (status) {
+      console.log(dim(`status ${stateLabel(status, statusReason ?? null)}`))
+    }
+    console.log(reattachHint(deploymentId))
+    return
+  }
+
+  if (outcome === 'succeeded') {
+    console.log(
+      `${added('deployed')} ${where}${at} ${dim('·')} ${deploymentId}${took}`
+    )
+    if (result.reset) {
+      console.log(
+        dim('database reset: migrations re-applied and dev seed loaded')
+      )
+    }
+    for (const line of changeLines(changes)) console.log(line)
+    if (workers && workers.length > 0) {
+      console.log(
+        table(
+          ['WORKER', 'ROLE', 'STATUS'],
+          workers.map((w) => [w.name, w.role, w.status])
+        )
+      )
+    }
+    if (url) console.log(dim(url))
+    return
+  }
+
+  if (outcome === 'blocked') {
+    const reason: BlockedReason = result.blockedReason ?? 'unknown'
+    console.log(
+      `${changed(stateLabel(status ?? 'suspended', statusReason ?? null))} ${where}${at} ${dim('·')} ${deploymentId}`
+    )
+    console.log(dim(blockedSummary(reason)))
+    for (const line of missingLines('missing secrets', result.missingSecrets)) {
+      console.log(line)
+    }
+    for (const line of missingLines(
+      'missing variables',
+      result.missingVariables
+    )) {
+      console.log(line)
+    }
+    for (const line of changeLines(changes)) console.log(line)
+    if (result.approvalWithheld === 'destructive_migrations') {
+      console.log(
+        dim(
+          'The plan drops or rewrites data. Nothing was published — review the migrations above, then re-run with `--allow-destructive` to accept them.'
+        )
+      )
+      console.log(
+        dim(
+          `\`pikku fabric deploy apply --deployment-id ${deploymentId} -y --allow-destructive\``
+        )
+      )
+    } else if (isApprovable(reason) && !approved) {
+      console.log(
+        dim(
+          `Approve it with \`pikku fabric deploy apply --deployment-id ${deploymentId} -y\`.`
+        )
+      )
+    } else if (reason === 'needs_config') {
+      for (const hint of missingConfigHints(
+        result.missingSecrets,
+        result.missingVariables
+      )) {
+        console.log(dim(hint))
+      }
+    }
+    return
+  }
+
+  if (outcome === 'timeout') {
+    console.log(
+      `${changed('timed out')} after ${timeoutSeconds}s ${dim('·')} ${deploymentId} ${dim(`(still ${status ?? 'in flight'})`)}`
+    )
+    printBuildLog('build log', buildLog)
+    printBuildLog('image build log', imageBuildLog)
+    console.log(reattachHint(deploymentId))
+    console.log(dim('Raise the ceiling with `--timeout <seconds>`.'))
+    return
+  }
+
+  console.log(
+    `${removed('failed')} ${where}${at} ${dim('·')} ${deploymentId}${took} ${dim(`(${stateLabel(status ?? 'failed', statusReason ?? null)})`)}`
+  )
+  printBuildLog('build log', buildLog)
+  printBuildLog('image build log', imageBuildLog)
+  // The builder's own output is stored apart from the deployment row, so an
+  // empty `buildLog` here does not mean nothing was recorded. It is read on
+  // request rather than printed: it can run to thousands of lines.
+  console.log(dim(`Build log: \`pikku fabric deploy logs ${deploymentId}\``))
+  if (!buildLog && !imageBuildLog) {
+    console.log(
+      dim(
+        'If that is empty too, the deploy failed before a build started — usually a fabric-side'
+      )
+    )
+    console.log(
+      dim(
+        'failure rather than a defect in this project (`pikku fabric smoke`).'
+      )
+    )
+  }
+  if (branch) console.log(dim(`Logs: \`pikku fabric logs --branch ${branch}\``))
+}

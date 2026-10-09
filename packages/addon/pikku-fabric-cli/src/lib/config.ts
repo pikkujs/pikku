@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { getFabricRPC } from './http.js'
-import { FabricPreconditionError } from './errors.js'
+import { PreconditionError } from '@pikku/cli/addon-support'
 import {
   resolveLinkedProject,
   type LinkedProject,
@@ -62,13 +62,13 @@ export function assertSecureApiUrl(apiUrl: string, source: ApiUrlSource): void {
   try {
     url = new URL(apiUrl)
   } catch {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `Invalid fabric api url "${apiUrl}" (from ${SOURCE_LABEL[source]})`
     )
   }
   if (url.protocol === 'https:') return
   if (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname)) return
-  throw new FabricPreconditionError(
+  throw new PreconditionError(
     `Refusing to use fabric api url "${apiUrl}" (from ${SOURCE_LABEL[source]}): ` +
       `it would send your token unencrypted. Use https, or http only for localhost.`
   )

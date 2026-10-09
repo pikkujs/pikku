@@ -11,8 +11,7 @@ import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { wireAddon } from '../.pikku/addon/index.js'
 import { refCLI } from '../.pikku/function/index.js'
-import { fabricCommands } from './fabric/fabric-commands.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { changesCommands } from './functions/changes/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -1547,7 +1546,7 @@ wireCLI({
     fabric: {
       description:
         'PikkuFabric commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: { ...fabricCommands, ...refCLI('fabric:fabricCommands') },
+      subcommands: { ...refCLI('fabric:fabricCommands') },
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,

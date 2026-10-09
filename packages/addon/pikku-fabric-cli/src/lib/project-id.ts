@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, realpath, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { git } from './git.js'
+import { git } from '@pikku/cli/addon-support'
 
 const CONFIG = 'pikku.config.json'
 

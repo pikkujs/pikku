@@ -18,7 +18,7 @@ export const validate = pikkuSessionlessFunc({
       skipDeployChecks,
       migrationsBase,
       projectChecks: guardProjectChecks(
-        (request) => (rpc.invoke as any)('fabric:getProjectChecks', request)
+        (request) => (rpc.invoke as any)('fabric:FabricProjectChecks', request)
       ),
     }),
 })

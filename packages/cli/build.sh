@@ -260,6 +260,24 @@ done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 echo "Building TypeScript to dist..."
 npx tsc -b || true
 
+# The pikku CLI imports @pikku/addon-fabric-cli's bootstrap at startup (it wires
+# the `fabric` command group from that addon), and the addon is built by the
+# CLI, and the addon imports `@pikku/cli/addon-support`, which the tsc pass above
+# has just emitted. So the order is: CLI tsc (this tolerated pass), then the
+# addon, then the CLI's own codegen and strict tsc below, which read the addon's
+# contract metadata. On a clean checkout the addon has no dist yet, so a
+# placeholder bootstrap lets the CLI start long enough to build it.
+echo "Building @pikku/addon-fabric-cli..."
+_fabric_addon=../addon/pikku-fabric-cli
+if [ ! -f "$_fabric_addon/dist/.pikku/addon/pikku-bootstrap.gen.js" ]; then
+  mkdir -p "$_fabric_addon/dist/.pikku/addon"
+  echo "export {}" > "$_fabric_addon/dist/.pikku/addon/pikku-bootstrap.gen.js"
+fi
+_shim_dir=$(mktemp -d)
+printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
+chmod +x "$_shim_dir/pikku"
+(cd "$_fabric_addon" && PATH="$_shim_dir:$PATH" bun run build)
+
 # Patch stale wireMCPTool import in compiled output (removed in current version)
 if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
   tmp=$(mktemp)
@@ -285,8 +303,6 @@ done
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
-# `export type *` in src/fabric/client.ts points at a hand-kept .d.ts, which tsc does not emit
-cp src/fabric/sdk/rpc-map.gen.d.ts dist/src/fabric/sdk/
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.

@@ -8,7 +8,7 @@ import {
   resolveApiContext,
   type FabricRPC,
   type ListChangesOutput,
-} from '@pikku/cli/fabric'
+} from '@pikku/addon-fabric-cli/client'
 
 export type StudioMode = 'local' | 'fabric'
 

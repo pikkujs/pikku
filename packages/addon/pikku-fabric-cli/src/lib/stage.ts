@@ -1,5 +1,7 @@
-import type { ChangesRPC } from './changes-local.js'
-import { FabricPreconditionError } from './errors.js'
+import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+
+type FabricRPC = Pick<PikkuRPC, 'invoke'>
+import { PreconditionError } from '@pikku/cli/addon-support'
 
 export interface ResolvedStage {
   stageId: string
@@ -23,7 +25,7 @@ export interface ResolvedStage {
  * case this function exists to handle.
  */
 export async function resolveStage(
-  rpc: ChangesRPC,
+  rpc: FabricRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<ResolvedStage> {
@@ -35,7 +37,7 @@ export async function resolveStage(
     if (stages.length === 1 && only) {
       return { stageId: only.stageId, branch: only.branch }
     }
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       stages.length === 0
         ? 'No stages deployed for this project yet — run `pikku fabric deploy apply <branch>` first.'
         : `--branch is required — this project has ${stages.length} stages: ${known.join(', ')}`
@@ -44,7 +46,7 @@ export async function resolveStage(
 
   const stage = stages.find((s) => s.branch === branch)
   if (!stage) {
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `No stage for branch "${branch}".${known.length ? ` Existing: ${known.join(', ')}` : ''}`
     )
   }
@@ -52,7 +54,7 @@ export async function resolveStage(
 }
 
 export async function resolveStageId(
-  rpc: ChangesRPC,
+  rpc: FabricRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<string> {
@@ -74,7 +76,7 @@ const hostOf = (value: string): string => {
  * path), or its id.
  */
 export async function matchStage(
-  rpc: ChangesRPC,
+  rpc: FabricRPC,
   projectId: string,
   ref: string
 ): Promise<ResolvedStage> {
@@ -93,7 +95,7 @@ export async function matchStage(
     const known = stages.map((s) =>
       s.url ? `${s.branch} (${s.url})` : s.branch
     )
-    throw new FabricPreconditionError(
+    throw new PreconditionError(
       `No stage matches "${wanted}".${known.length ? ` Stages: ${known.join(', ')}` : ' This project has no stages yet.'}`
     )
   }
@@ -101,7 +103,7 @@ export async function matchStage(
 }
 
 export async function autoDeployOffHints(
-  rpc: ChangesRPC,
+  rpc: FabricRPC,
   projectId: string,
   branch?: string
 ): Promise<string[]> {
