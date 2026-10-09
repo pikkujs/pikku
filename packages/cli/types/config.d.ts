@@ -541,6 +541,12 @@ export type PikkuCLIInput = {
   /** Directory containing email templates, locales, partials, and theme.json. */
   emailTemplatesDir?: string
 
+  /** Settings for the i18n checks `pikku verify` runs. */
+  i18n?: {
+    /** Workspace-relative path prefixes the jsx-literal-text and jsx-literal-prop checks skip, e.g. a developer tool that is not shipped to people. */
+    ignore?: string[]
+  }
+
   /** Settings for deploying this project on Pikku Fabric. */
   fabric?: {
     /**

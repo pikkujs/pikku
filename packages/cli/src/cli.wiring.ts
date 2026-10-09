@@ -59,12 +59,22 @@ import {
 } from './functions/commands/examples.js'
 import {
   i18nAdd,
+  i18nCheck,
   i18nDefault,
+  i18nKey,
   i18nList,
+  i18nMove,
+  i18nUsage,
+  renderI18nMove,
+  renderI18nUsage,
+  i18nUnused,
   i18nSync,
   renderI18nAdd,
+  renderI18nCheck,
   renderI18nDefault,
+  renderI18nKey,
   renderI18nList,
+  renderI18nUnused,
   renderI18nSync,
 } from './functions/commands/i18n.js'
 import {
@@ -892,7 +902,7 @@ wireCLI({
           func: i18nList,
           render: renderI18nList,
           description:
-            "Report each frontend's catalog, locales and untranslated count",
+            "Report each frontend's catalogs, locales and untranslated counts; exits 1 if a key is held by two catalogs",
         }),
         add: pikkuCLICommand({
           func: i18nAdd,
@@ -905,6 +915,11 @@ wireCLI({
               description: 'The frontend, when there is more than one',
               type: 'string',
             },
+            catalog: {
+              description:
+                'Only this catalog folder (e.g. packages/ui/messages); default is every catalog',
+              type: 'string',
+            },
           },
         }),
         sync: pikkuCLICommand({
@@ -914,6 +929,108 @@ wireCLI({
             'Add base keys a locale is missing and report keys only it has',
           options: {
             app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description:
+                'Only this catalog folder (e.g. packages/ui/messages); default is every catalog',
+              type: 'string',
+            },
+          },
+        }),
+        key: pikkuCLICommand({
+          func: i18nKey,
+          render: renderI18nKey,
+          description:
+            'Add one message in every locale: pikku i18n key account__title en="Your account" de="Dein Konto". The base locale is required; the rest are marked to translate',
+          parameters: '<name> <texts...>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+            catalog: {
+              description:
+                'The catalog folder to write to (e.g. packages/ui/messages); required when the app has several',
+              type: 'string',
+            },
+            update: {
+              description:
+                'Change a key that already exists, in the catalog that holds it',
+              type: 'boolean',
+            },
+          },
+        }),
+        check: pikkuCLICommand({
+          func: i18nCheck,
+          render: renderI18nCheck,
+          description:
+            'Read-only gate: exits 1 on keys held by two catalogs, mismatched {placeholders} or stale keys; untranslated values only with --strict',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            strict: {
+              description: 'Also fail on values still marked to translate',
+              type: 'boolean',
+            },
+          },
+        }),
+        unused: pikkuCLICommand({
+          func: i18nUnused,
+          render: renderI18nUnused,
+          description:
+            'List catalog keys no source file in the workspace uses (m.key, m["key"]); exits 1 if the namespace is read by computed access',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            fix: {
+              description:
+                'Delete the unused keys from every locale of their catalog; needs a clean git tree for those files',
+              type: 'boolean',
+            },
+            force: {
+              description: 'With --fix, go ahead when git is not available',
+              type: 'boolean',
+            },
+          },
+        }),
+        move: pikkuCLICommand({
+          func: i18nMove,
+          render: renderI18nMove,
+          description:
+            'Move keys to another catalog of the app, in every locale, all or nothing: pikku i18n move account__title card__body --to packages/ui/messages. Add --json for the list of moved keys',
+          parameters: '<keys...>',
+          options: {
+            to: {
+              description:
+                'The catalog folder to move the keys to (e.g. packages/ui/messages)',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+          },
+        }),
+        usage: pikkuCLICommand({
+          func: i18nUsage,
+          render: renderI18nUsage,
+          description:
+            'Read-only: for each key, the source files that use it; --by-package lists the workspace packages (apps/*, packages/*) instead',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            byPackage: {
+              description: 'List workspace packages instead of files',
+              type: 'boolean',
+            },
           },
         }),
         default: pikkuCLICommand({
