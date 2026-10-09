@@ -176,15 +176,17 @@ function registerCLICommands(
     const commandAuth = typeof command === 'object' ? command.auth : undefined
     const commandPermissions =
       typeof command === 'object' ? command.permissions : undefined
-    addFunction(
-      funcName,
-      {
-        ...unwrapped,
-        auth: commandAuth ?? unwrapped.auth,
-        permissions: commandPermissions ?? unwrapped.permissions,
-      },
-      currentMeta?.packageName
-    )
+    if (!currentMeta?.packageName || funcName.includes(':')) {
+      addFunction(
+        funcName,
+        {
+          ...unwrapped,
+          auth: commandAuth ?? unwrapped.auth,
+          permissions: commandPermissions ?? unwrapped.permissions,
+        },
+        currentMeta?.packageName
+      )
+    }
 
     if (typeof command === 'object' && command.render) {
       if (programs[program]) {

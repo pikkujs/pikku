@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { spawn } from 'node:child_process'
-import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import {
   readAuthFile,
   writeAuthFile,

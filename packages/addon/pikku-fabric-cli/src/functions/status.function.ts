@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { autoDeployOffHints } from '../lib/stage.js'

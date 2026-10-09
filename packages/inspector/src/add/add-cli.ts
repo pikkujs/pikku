@@ -530,15 +530,26 @@ function processCommand(
         break
 
       case 'subcommands': {
-        let subcommandsNode: ts.Node | undefined = prop.initializer
-        if (ts.isIdentifier(prop.initializer)) {
-          subcommandsNode = resolveIdentifier(prop.initializer, typeChecker, [
-            'defineCLICommands',
-          ])
-        }
-        if (subcommandsNode && ts.isObjectLiteralExpression(subcommandsNode)) {
-          meta.subcommands = {}
-          for (const subProp of subcommandsNode.properties) {
+        const subcommands: Record<string, CLICommandMeta> = {}
+        const collect = (node: ts.Node) => {
+          const refContract = resolveRefContract(
+            node,
+            'refCLI',
+            inspectorState.exportedContracts.addonCli
+          )
+          if (refContract) {
+            Object.assign(subcommands, refContract.contract)
+            return
+          }
+          const target = ts.isIdentifier(node)
+            ? resolveIdentifier(node, typeChecker, ['defineCLICommands'])
+            : node
+          if (!target || !ts.isObjectLiteralExpression(target)) return
+          for (const subProp of target.properties) {
+            if (ts.isSpreadAssignment(subProp)) {
+              collect(subProp.expression)
+              continue
+            }
             if (!ts.isPropertyAssignment(subProp)) continue
 
             const subName = getPropertyName(subProp)
@@ -558,10 +569,12 @@ function processCommand(
             )
 
             if (subCommand) {
-              meta.subcommands[subName] = subCommand
+              subcommands[subName] = subCommand
             }
           }
         }
+        collect(prop.initializer)
+        meta.subcommands = subcommands
         break
       }
 

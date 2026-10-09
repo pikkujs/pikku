@@ -22,7 +22,6 @@ import {
   defineCLICommands,
   pikkuCLICommand,
 } from '../../.pikku/cli/pikku-cli-types.gen.js'
-import { FabricLogin } from './functions/login.function.js'
 import { FabricInit } from './functions/init.function.js'
 import { FabricLink } from './functions/link.function.js'
 import {
@@ -45,7 +44,6 @@ import {
   FabricDeployAuto,
   renderDeployAuto,
 } from './functions/deploy-auto.function.js'
-import { FabricStatus, renderStatus } from './functions/status.function.js'
 import { FabricConfig, renderConfig } from './functions/config.function.js'
 import {
   FabricProjectsList,
@@ -136,23 +134,6 @@ export const fabricCommands = defineCLICommands({
       },
       port: {
         description: 'Port to use for the temporary pikku dev startup check',
-      },
-    },
-  }),
-  login: pikkuCLICommand({
-    func: FabricLogin,
-    description: 'Authenticate against fabric-api',
-    options: {
-      apiKey: { description: 'Use a static API key instead of browser flow' },
-      token: {
-        description: 'Use an existing fabric token instead of browser flow',
-      },
-      apiUrl: { description: 'Override the fabric-api URL for this login' },
-      consoleUrl: { description: 'Override the console URL the browser opens' },
-      browser: {
-        description:
-          'Open the sign-in link automatically (--no-browser to just print it)',
-        default: true,
       },
     },
   }),
@@ -560,11 +541,6 @@ export const fabricCommands = defineCLICommands({
       branch: { description: 'Target branch', short: 'b' },
       json: { description: 'Machine-readable output', default: false },
     },
-  }),
-  status: pikkuCLICommand({
-    func: FabricStatus,
-    render: renderStatus,
-    description: 'Show the linked project status (active + in-flight deploy)',
   }),
   config: pikkuCLICommand({
     func: FabricConfig,
