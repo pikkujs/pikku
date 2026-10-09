@@ -1,9 +1,9 @@
-# Shipping, and staying Fabric-ready
+# Shipping, and staying deploy-ready
 
 ## Contents
 
 - Ship it — open source, no platform
-- Staying Fabric-ready
+- Staying deploy-ready
 
 Read this when the changes queue is empty and the scenarios are green — it is
 the last phase, and nothing in it is needed before then.
@@ -86,7 +86,7 @@ Changing the strategy renames units, and a unit name is what a queue consumer, a
 scheduled task and a `dependsOn` point at. The manifest rewrites all three, but
 anything holding a unit name outside the manifest does not follow. Units dropped
 from the manifest are not deleted by OSS `deploy()` either (pikkujs/pikku#543) —
-fabric sweeps its dispatch namespace after each deploy, plain pikku leaves the
+a hosting platform may sweep them after each deploy, plain pikku leaves the
 old workers in place.
 
 `tags` matches the tags a function inherits from its wirings — `wireHTTP({ ...,
@@ -158,23 +158,22 @@ lint over function return types, catching a `Pii`/`Secret` field that leaks
 through an exposed function. Expensive, so run it before a release rather than on
 every save — but run it.
 
-## Staying Fabric-ready
+## Staying deploy-ready
 
 Everything above is open source. This is the contract that keeps
-`pikku fabric init` a one-command import later, instead of a migration.
+the project a one-command import for a hosting platform later, instead of a migration.
 
 - **`frontends` in `pikku.config.json` describes reality.** Every app has an
   entry with the right `cwd`, `kind` and `dev` (`command`, `port`); exactly one
   is `primary`; `serves` and `personas` name real personas from the personas
   section.
-- **`fabric.projectId` in `pikku.config.json` is optional.** Leave it out unless you
-  have the real id; the CLI writes it after finding the project from the git
-  remote. Do not invent a value.
+- **`projectId` in `pikku.config.json` is optional.** Leave it out unless you
+  have the real id; the CLI writes it once the project is linked. Do not invent a value.
 - **One `definePersonas` call**, every persona reachable through exactly one
-  frontend. Fabric materialises these as its virtual users; a persona nobody
+  frontend. A hosting platform may materialise these as virtual users; a persona nobody
   serves imports as a person with no way in.
 - **`knowledge/` passes `validate`, and `pikku knowledge gaps` lists nothing.** This is
-  the part Fabric itself reads and continues from.
+  the part a hosting platform reads and continues from.
 - **Every plan under `knowledge/plans/` passes `pikku knowledge plan progress`.**
   A merged changeset is a claim; the plan reconciled against the generated meta
   is the check. Anything the first pass still owes is either built now or deferred with
@@ -192,7 +191,6 @@ Everything above is open source. This is the contract that keeps
   the SDK.
 - **`pikku validate` is clean**, and `pikku all` has no critical diagnostics.
 
-What you deliberately do NOT do: run any `pikku fabric` subcommand, add a card,
-or link a project. None of it is needed to build, test, critique, or deploy — it
-is needed the day the user wants Fabric to host and build it, and on that day, if
+What you deliberately do NOT do: link a project to a hosting platform. None of it is needed to build, test, critique, or deploy — it
+is needed the day the user wants one to host and build it, and on that day, if
 this section holds, that day is one command long.

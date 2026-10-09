@@ -17,25 +17,16 @@ import {
 assert.ok(skillsDir, 'expected a skills/ directory beside this package')
 const root = skillsDir
 
-const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
+const KNOWN_INSTALL_GROUPS = new Set(['core', 'client'])
 
 /**
- * Fabric group membership is deliberate and small, so it is pinned here rather
- * than derived from the corpus — deriving it would make the assertion vacuous
- * (dropping a tag would shrink both sides and still pass). Adding a skill to
- * the Fabric set means updating this list on purpose.
- *
- * The criterion is what the skill is *about*, not who happens to use it. A
- * Fabric sandbox relies on better-auth, Kysely and the agent runner, but those
- * are general Pikku capabilities — tagging them here says Fabric depends on
- * them, which is a fact about Fabric's stack rather than about the skill. That
- * conflation grew the group to a catch-all twice; if a Fabric install needs a
- * general skill, name it in Fabric's own install rather than tagging it here.
+ * Fabric is one deployment target among several, so the OSS corpus ships no
+ * Fabric skills and has no `fabric` install group. These were moved out and
+ * must not migrate back in.
  */
-const FABRIC_SKILLS = [
+const REMOVED_FABRIC_SKILLS = [
   'pikku-admin-to-fabric',
   'pikku-blueprint-to-fabric',
-  'pikku-changes',
   'pikku-fabric',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
@@ -210,30 +201,29 @@ describe('bundled skills corpus', () => {
     }
   })
 
-  test('the fabric group holds exactly the intended skills', async () => {
-    const tagged: string[] = []
-    for (const skill of await readSkills()) {
-      if (installGroupsOf(skill).includes('fabric')) tagged.push(skill.name)
+  test('no Fabric skill or fabric install group ships in the corpus', async () => {
+    const skills = await readSkills()
+    const names = skills.map((skill) => skill.name)
+    for (const removed of REMOVED_FABRIC_SKILLS) {
+      assert.ok(!names.includes(removed), `${removed} must not ship in OSS`)
     }
-    assert.deepEqual(
-      tagged.sort(),
-      [...FABRIC_SKILLS].sort(),
-      'fabric group membership changed — update FABRIC_SKILLS if this is intended'
-    )
+    const tagged = skills
+      .filter((skill) => installGroupsOf(skill).includes('fabric'))
+      .map((skill) => skill.name)
+    assert.deepEqual(tagged, [], 'no skill belongs to a fabric install group')
   })
 
-  test('no skill outside pikku-fabric teaches a bare `fabric` command', async () => {
+  test('no skill teaches a bare `fabric` command', async () => {
     // The corpus is the OSS one: a reader running these skills has the `pikku`
     // CLI and no `fabric` binary, so `fabric verify` is a command that does not
-    // exist on their machine. Fabric's own overlay skills keep those; what must
-    // not happen is one migrating back in as a skill moves out of Fabric.
+    // exist on their machine. Fabric's own skills keep those; what must
+    // not happen is one migrating back in.
     //
     // `pikku fabric <verb>` is the real OSS command and stays, as does
     // the `fabric-theme` tool named as Fabric's, and
     // prose about the platform — only a bare `fabric ` + verb is a hit.
     const offenders: string[] = []
     for (const skill of await readSkills()) {
-      if (FABRIC_SKILLS.includes(skill.name)) continue
       const docs: Array<[string, string]> = [['SKILL.md', skill.body]]
       const refs = join(skill.dir, 'references')
       if (existsSync(refs))

@@ -1,7 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
-installGroups: [fabric]
+description: 'Work a project''s changes queue — the todo list someone filed by circling things in the running app. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage.'
 ---
 
 # Working a changes queue
@@ -44,7 +43,7 @@ something changed. `wait` does the waiting and exits only when there is work.
    | ---- | ------------------------------------------------------ | ----------------------------------------------- |
    | 0    | work printed (claimed, and/or `Answered`)              | work it, then step 3                            |
    | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `wait`                         |
-   | 3    | session refused                                        | tell the user to run `pikku fabric login`; stop |
+   | 3    | auth refused                                           | relay the CLI's message; stop                   |
    | 1    | anything else                                          | report the message; stop                        |
 
 3. For each item: `show` → fix → commit → `done`; or `ask` and move on; or `reply`
@@ -187,5 +186,3 @@ Branch and commit default to the checkout you are in — run it there, never typ
 the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
-
-Registering writes with Fabric needs the `changes:project:write` scope.

@@ -35,5 +35,5 @@ part of cleanup — this step is project hygiene, not a build.
 Templates are structure-only starting points. Without this pass, clones carry a
 misleading README, a placeholder package name, and (historically) a gitignored
 lockfile — all of which leak template assumptions into a real project. Running
-it immediately after clone keeps every Pikku project, OSS or Fabric, starting
+it immediately after clone keeps every Pikku project starting
 from a clean, honest baseline.

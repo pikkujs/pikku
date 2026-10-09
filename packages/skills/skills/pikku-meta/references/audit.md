@@ -115,7 +115,7 @@ is admin-only), so the host must have Better Auth wired — see `pikku-auth`.
   **remediation slot**.
 - `renderRemediation({ pkg, version, issue })` — the extension seam. OSS default
   is `UpdateDependencyButton` (the free bump + `bun install`). Downstream
-  consoles (Fabric) pass their own sandbox-verified action here — replace the
+  consoles pass their own sandbox-verified action here — replace the
   action, keep the view.
 - Hooks: `useSecurityAudit` (read), `useRunSecurityAudit` (run),
   `useUpdateDependency` (bump). All are `useMutation`/`useQuery` — surface

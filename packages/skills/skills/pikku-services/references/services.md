@@ -210,7 +210,7 @@ what makes the split real.
 
 ### Audit Wire Service
 
-`createInvocationAudit` + `createAuditedKysely` add per-request audit buffering that flushes on request close (no-op if `audit` is unconfigured). For the full pattern, no-op behavior, custom-event usage, and Fabric notes, read `references/audit-wire-service.md`.
+`createInvocationAudit` + `createAuditedKysely` add per-request audit buffering that flushes on request close (no-op if `audit` is unconfigured). For the full pattern, no-op behavior, custom-event usage, and hosting notes, read `references/audit-wire-service.md`.
 
 ### Built-in Services
 

@@ -271,8 +271,8 @@ Do not push without explicit confirmation. Do not merge.
 ## Report what fought you
 
 When pikku itself is what cost you time — a wrong generated type, a check that
-passed when it should not, a skill that misled you — file it with `pikku fabric
-report`. The `pikku-report` skill owns the ladder, the two kinds, the JSON-on-
+passed when it should not, a skill that misled you — file it as the
+`pikku-report` skill describes. That skill owns the ladder, the two kinds, the JSON-on-
 stdin form and asking the user at hand-over; read it before filing.
 
 Filing is permitted here (see **Hard constraints**), and sending what was filed
@@ -290,7 +290,7 @@ The skill's `allowed-tools` does **not** permit:
 - `pikku deploy apply` (never deploy)
 - secret writes
 - network calls beyond what the implementation requires, except
-  `pikku fabric report`, which is explicitly permitted
+  filing a finding as `pikku-report` describes, which is explicitly permitted
 
 If the feature genuinely needs any of these, **stop and ask** with a clear
 explanation of why and what would change.
