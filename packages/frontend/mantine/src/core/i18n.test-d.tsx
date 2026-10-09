@@ -31,6 +31,7 @@ import { asI18n } from '@pikku/react'
 import type { I18nString } from '@pikku/react'
 
 declare const t: (k: string) => I18nString
+declare const plain: string
 
 // ── Paraglide brand parity ───────────────────────────────────────────────────
 // I18nString must stay structurally identical to Paraglide JS's `LocalizedString`
@@ -39,7 +40,7 @@ declare const t: (k: string) => I18nString
 type ParaglideLocalizedString = string & { readonly __brand: 'LocalizedString' }
 declare const m: (args?: Record<string, never>) => ParaglideLocalizedString
 const _brand_ltr: I18nString = m() // LocalizedString → I18nString
-const _brand_rtl: ParaglideLocalizedString = asI18n('x') // I18nString → LocalizedString
+const _brand_rtl: ParaglideLocalizedString = asI18n(plain) // I18nString → LocalizedString
 const _ok_paraglide_child = <Text>{m()}</Text> // flows through the gate natively
 // @ts-expect-error — a different brand literal must NOT satisfy I18nString
 const _bad_brand: I18nString = '' as string & { readonly __brand: 'Other' }
@@ -78,7 +79,7 @@ const _ok_button_attrs = (
 const _ok_title = <Title order={2}>{t('page.title')}</Title>
 const _ok_icon = <ActionIcon aria-label={t('close')} />
 const _ok_input = (
-  <TextInput label={t('email')} placeholder={asI18n('you@x.com')} />
+  <TextInput label={t('email')} placeholder={asI18n(plain)} />
 )
 const _ok_select = (
   <Select data={[]} label={t('country')} nothingFoundMessage={t('none')} />
@@ -126,7 +127,7 @@ const _ok_stepper = (
 )
 
 // ── positives: newly-gated components ────────────────────────────────────────
-const _ok_highlight = <Highlight highlight="a">{asI18n('abc')}</Highlight>
+const _ok_highlight = <Highlight highlight="a">{asI18n(plain)}</Highlight>
 const _ok_blockquote = <Blockquote cite={t('src')}>{t('quote')}</Blockquote>
 const _ok_mark = <Mark>{t('marked')}</Mark>
 const _ok_pill = <Pill>{t('tag')}</Pill>
@@ -136,7 +137,7 @@ const _ok_burger = <Burger aria-label={t('menu')} />
 const _ok_pillsinput = (
   <PillsInput label={t('recipients')}>
     <Pill>{t('tag')}</Pill>
-    <PillsInput.Field placeholder={asI18n('add…')} />
+    <PillsInput.Field placeholder={asI18n(plain)} />
   </PillsInput>
 )
 const _ok_list = (
