@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
-import { I18nService, MISSING_MARKER } from './i18n.service.js'
+import { I18nService, INLANG_SCHEMA, MISSING_MARKER } from './i18n.service.js'
 
 const workspace = async (): Promise<string> => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-i18n-'))
@@ -50,6 +50,13 @@ describe('I18nService', () => {
       baseLocale: 'en',
       defaultLocale: 'en',
       locales: { en: { hello: 'Hello', bye: 'Bye' } },
+      catalogs: [
+        {
+          catalog: 'apps/app/messages',
+          locales: { en: { hello: 'Hello', bye: 'Bye' } },
+        },
+      ],
+      duplicates: [],
     })
   })
 
@@ -61,10 +68,19 @@ describe('I18nService', () => {
       path: 'apps/app/messages/de.json',
       keys: 2,
       translated: 1,
+      files: [
+        {
+          catalog: 'apps/app/messages',
+          path: 'apps/app/messages/de.json',
+          keys: 2,
+          translated: 1,
+        },
+      ],
     })
     assert.deepStrictEqual(
       await json(join(root, 'apps/app/messages/de.json')),
       {
+        $schema: INLANG_SCHEMA,
         bye: `${MISSING_MARKER} Bye`,
         hello: 'Hallo',
       }
@@ -89,6 +105,7 @@ describe('I18nService', () => {
     const [report] = await i18n.sync()
     assert.deepStrictEqual(report, {
       app: 'apps/app',
+      catalog: 'apps/app/messages',
       locale: 'fr',
       added: ['bye'],
       stale: ['old'],
@@ -102,5 +119,130 @@ describe('I18nService', () => {
     )
     await assert.rejects(i18n.writeLocale('../..', 'de', {}))
     await assert.rejects(i18n.writeLocale('apps/app', '../x', {}))
+  })
+})
+
+const multi = async (
+  pathPattern: string | string[],
+  shared: Record<string, string> = { card: 'Card' }
+): Promise<string> => {
+  const root = await workspace()
+  await writeFile(
+    join(root, 'apps/app/project.inlang/settings.json'),
+    JSON.stringify({
+      baseLocale: 'en',
+      locales: ['en'],
+      'plugin.inlang.messageFormat': { pathPattern },
+    })
+  )
+  await mkdir(join(root, 'packages/ui/messages'), { recursive: true })
+  await writeFile(
+    join(root, 'packages/ui/messages/en.json'),
+    JSON.stringify(shared)
+  )
+  return root
+}
+
+const both = [
+  './messages/{locale}.json',
+  '../../packages/ui/messages/{locale}.json',
+]
+
+describe('I18nService with several catalogs', () => {
+  test('accepts a string or an array pathPattern', async () => {
+    const [one] = await new I18nService(
+      await multi('./messages/{locale}.json')
+    ).listApps()
+    assert.strictEqual(one!.catalogs.length, 1)
+    const [two] = await new I18nService(await multi(both)).listApps()
+    assert.deepStrictEqual(
+      two!.catalogs.map((c) => c.catalog),
+      ['apps/app/messages', 'packages/ui/messages']
+    )
+    assert.deepStrictEqual(two!.locales.en, {
+      hello: 'Hello',
+      bye: 'Bye',
+      card: 'Card',
+    })
+    assert.deepStrictEqual(two!.duplicates, [])
+  })
+
+  test('add and sync work per catalog against its own base', async () => {
+    const root = await multi(both)
+    const i18n = new I18nService(root)
+    const result = await i18n.addLocale('apps/app', 'de', { card: 'Karte' })
+    assert.deepStrictEqual(
+      result.files.map((f) => [f.catalog, f.keys, f.translated]),
+      [
+        ['apps/app/messages', 2, 0],
+        ['packages/ui/messages', 1, 1],
+      ]
+    )
+    assert.deepStrictEqual(
+      await json(join(root, 'packages/ui/messages/de.json')),
+      {
+        $schema: INLANG_SCHEMA,
+        card: 'Karte',
+      }
+    )
+    await writeFile(
+      join(root, 'packages/ui/messages/en.json'),
+      JSON.stringify({ card: 'Card', more: 'More' })
+    )
+    const report = await i18n.sync('apps/app')
+    assert.deepStrictEqual(
+      report.map((r) => [r.catalog, r.added]),
+      [
+        ['apps/app/messages', []],
+        ['packages/ui/messages', ['more']],
+      ]
+    )
+    assert.deepStrictEqual(
+      (await json(join(root, 'packages/ui/messages/de.json'))).more,
+      `${MISSING_MARKER} More`
+    )
+    assert.strictEqual(
+      (await json(join(root, 'apps/app/messages/de.json'))).card,
+      undefined
+    )
+  })
+
+  test('single-key writes need a catalog unless the keys name one', async () => {
+    const root = await multi(both)
+    const i18n = new I18nService(root)
+    await assert.rejects(
+      i18n.writeLocale('apps/app', 'de', { newKey: 'x' }),
+      /apps\/app\/messages, packages\/ui\/messages/
+    )
+    await assert.rejects(i18n.deleteLocale('apps/app', 'de'))
+    await assert.rejects(
+      i18n.writeLocale('apps/app', 'de', { hello: 'a', card: 'b' })
+    )
+    assert.strictEqual(
+      await i18n.writeLocale('apps/app', 'de', { card: 'Karte' }),
+      'packages/ui/messages/de.json'
+    )
+    assert.strictEqual(
+      await i18n.writeLocale(
+        'apps/app',
+        'fr',
+        { newKey: 'x' },
+        'apps/app/messages'
+      ),
+      'apps/app/messages/fr.json'
+    )
+    await assert.rejects(i18n.writeLocale('apps/app', 'it', {}, 'nope'))
+    await i18n.deleteLocale('apps/app', 'de', 'packages/ui/messages')
+  })
+
+  test('duplicate keys are reported and block add and sync', async () => {
+    const root = await multi(both, { card: 'Card', hello: 'Hi' })
+    const i18n = new I18nService(root)
+    const [app] = await i18n.listApps()
+    assert.deepStrictEqual(app!.duplicates, [
+      { key: 'hello', catalogs: ['apps/app/messages', 'packages/ui/messages'] },
+    ])
+    await assert.rejects(i18n.addLocale('apps/app', 'de'), /hello/)
+    await assert.rejects(i18n.sync('apps/app'), /hello/)
   })
 })
