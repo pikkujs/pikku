@@ -56,8 +56,6 @@ export type {
   ProvisionPersonasResult,
   ProvisionPersonasServices,
 } from './provision-personas.js'
-export { pikkuFabric } from './fabric-plugin.js'
-export type { FabricPluginOptions } from './fabric-plugin.js'
 export {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,
