@@ -776,8 +776,8 @@ describe('string-literal-copy', () => {
         h.text,
       ]),
       [
-        ['src/b.ts', 'Saved it now'],
         ['src/a.tsx', 'Standalone label'],
+        ['src/b.ts', 'Saved it now'],
       ]
     )
   })
