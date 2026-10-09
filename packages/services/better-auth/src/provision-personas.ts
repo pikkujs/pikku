@@ -7,6 +7,7 @@ import type { PersonaEnvironment } from '@pikku/core/persona'
 import { appScopeId, personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import type { AuthGetter } from './admin-users.js'
+import type { BetterAuthInstance } from './define-auth.js'
 import { setAuthUserBanned } from './admin-users.js'
 import { BAN_PLUGIN_ID } from './ban-plugin.js'
 
@@ -18,7 +19,7 @@ import { BAN_PLUGIN_ID } from './ban-plugin.js'
  * having to name the same type.
  */
 export interface ProvisionPersonasServices {
-  auth: AuthGetter
+  auth: (() => Promise<Pick<BetterAuthInstance, '$context'>>) | undefined
   scopeService: Pick<
     ScopeService,
     'addScopeToUser' | 'addUserToRole' | 'listUserRoles' | 'listUserScopes'
@@ -120,7 +121,7 @@ type ActorUser = {
  * a thing to do quietly.
  */
 export const provisionPersonas = async (
-  { auth, scopeService, logger }: ProvisionPersonasServices,
+  { auth: contextOnlyAuth, scopeService, logger }: ProvisionPersonasServices,
   {
     personas,
     environments,
@@ -141,6 +142,7 @@ export const provisionPersonas = async (
     unbanned: 0,
   }
 
+  const auth = contextOnlyAuth as AuthGetter
   const entries = Object.entries(personas)
 
   // Removing the last persona is the one case where there is no work to do and
