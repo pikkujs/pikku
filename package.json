@@ -15,6 +15,7 @@
       "packages/gateways/*",
       "packages/runtimes/*",
       "packages/deploy/*",
+      "packages/deprecated/*",
       "templates/*",
       "!templates/starter-template",
       "examples/*",

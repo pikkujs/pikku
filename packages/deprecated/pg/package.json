@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/pg",
+  "version": "0.12.1",
+  "description": "DEPRECATED: use @pikku/kysely-postgres",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/deprecated/pg"
+  },
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "files": [
+    "README.md",
+    "LICENSE"
+  ]
+}

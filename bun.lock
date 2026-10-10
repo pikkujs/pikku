@@ -529,6 +529,26 @@
         "@pikku/migrator-sql": "^0.12.6",
       },
     },
+    "packages/deprecated/auth-js": {
+      "name": "@pikku/auth-js",
+      "version": "0.12.5",
+    },
+    "packages/deprecated/console": {
+      "name": "@pikku/console",
+      "version": "0.12.96",
+    },
+    "packages/deprecated/external-console": {
+      "name": "@pikku/external-console",
+      "version": "0.12.0",
+    },
+    "packages/deprecated/pg": {
+      "name": "@pikku/pg",
+      "version": "0.12.1",
+    },
+    "packages/deprecated/pikku-vscode": {
+      "name": "pikku-vscode",
+      "version": "0.1.17",
+    },
     "packages/frontend/mantine": {
       "name": "@pikku/mantine",
       "version": "0.12.16",
@@ -3172,6 +3192,8 @@
 
     "@pikku/assistant-ui": ["@pikku/assistant-ui@workspace:packages/assistant-ui"],
 
+    "@pikku/auth-js": ["@pikku/auth-js@workspace:packages/deprecated/auth-js"],
+
     "@pikku/aws-services": ["@pikku/aws-services@workspace:packages/services/aws-services"],
 
     "@pikku/azure-functions": ["@pikku/azure-functions@workspace:packages/runtimes/azure-functions"],
@@ -3189,6 +3211,8 @@
     "@pikku/cloudflare": ["@pikku/cloudflare@workspace:packages/runtimes/cloudflare"],
 
     "@pikku/code-edit": ["@pikku/code-edit@workspace:packages/code-edit"],
+
+    "@pikku/console": ["@pikku/console@workspace:packages/deprecated/console"],
 
     "@pikku/core": ["@pikku/core@workspace:packages/core"],
 
@@ -3217,6 +3241,8 @@
     "@pikku/express": ["@pikku/express@workspace:packages/runtimes/express-server"],
 
     "@pikku/express-middleware": ["@pikku/express-middleware@workspace:packages/runtimes/express-middleware"],
+
+    "@pikku/external-console": ["@pikku/external-console@workspace:packages/deprecated/external-console"],
 
     "@pikku/fastify": ["@pikku/fastify@workspace:packages/runtimes/fastify-server"],
 
@@ -3265,6 +3291,8 @@
     "@pikku/openapi-to-zod-schema": ["@pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema"],
 
     "@pikku/paraglide": ["@pikku/paraglide@workspace:packages/paraglide"],
+
+    "@pikku/pg": ["@pikku/pg@workspace:packages/deprecated/pg"],
 
     "@pikku/pino": ["@pikku/pino@workspace:packages/services/pino"],
 
@@ -5213,6 +5241,8 @@
     "picoquery": ["picoquery@2.5.0", "", {}, "sha512-j1kgOFxtaCyoFCkpoYG2Oj3OdGakadO7HZ7o5CqyRazlmBekKhbDoUnNnXASE07xSY4nDImWZkrZv7toSxMi/g=="],
 
     "pikku": ["pikku@workspace:packages/pikku"],
+
+    "pikku-vscode": ["pikku-vscode@workspace:packages/deprecated/pikku-vscode"],
 
     "pino": ["pino@10.3.1", "", { "dependencies": { "@pinojs/redact": "^0.4.0", "atomic-sleep": "^1.0.0", "on-exit-leak-free": "^2.1.0", "pino-abstract-transport": "^3.0.0", "pino-std-serializers": "^7.0.0", "process-warning": "^5.0.0", "quick-format-unescaped": "^4.0.3", "real-require": "^0.2.0", "safe-stable-stringify": "^2.3.1", "sonic-boom": "^4.0.1", "thread-stream": "^4.0.0" }, "bin": { "pino": "bin.js" } }, "sha512-r34yH/GlQpKZbU1BvFFqOjhISRo1MNx1tWYsYvmj6KIRHSPMT2+yHOEb1SG6NMvRoHRF0a07kCOox/9yakl1vg=="],
 
