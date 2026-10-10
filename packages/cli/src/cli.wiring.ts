@@ -51,6 +51,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -1219,6 +1220,32 @@ wireCLI({
       render: renderValidate,
       description:
         'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+    }),
+    verify: pikkuCLICommand({
+      func: pikkuVerify,
+      render: renderPikkuVerify,
+      description:
+        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
+      options: {
+        skipCodegen: {
+          description:
+            'Check the tree as it stands, without running codegen first',
+          default: false,
+        },
+        skipTypecheck: {
+          description: 'Skip the backend type-check',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
+          default: false,
+        },
+        strict: {
+          description:
+            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
+          default: false,
+        },
+      },
     }),
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',
