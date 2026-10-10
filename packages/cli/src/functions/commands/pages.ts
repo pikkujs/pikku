@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { basename, join, relative, resolve } from 'node:path'
 import type { z } from 'zod'
+import type * as PlaywrightModule from '@pikku/playwright'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   discoverPages,
@@ -23,7 +24,7 @@ import { resolveEnvironment } from './environment.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 
-type PlaywrightDriver = typeof import('@pikku/playwright')
+type PlaywrightDriver = typeof PlaywrightModule
 
 const parseParams = (raw?: string): Record<string, string> =>
   Object.fromEntries(
