@@ -95,7 +95,12 @@ export const createSourceFileCacheHost = (
         )
       )
       const fileName = resolved.resolvedModule?.resolvedFileName
-      if (fileName && !isInspectedDependency(fileName)) {
+      if (
+        fileName &&
+        containingFile.includes('/node_modules/') &&
+        !/^[./#]/.test(literal.text) &&
+        !isInspectedDependency(fileName)
+      ) {
         return { resolvedModule: undefined }
       }
       return resolved
