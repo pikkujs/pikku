@@ -1,4 +1,4 @@
-import { existsSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
 import { unresolvedSchemaReferences } from '@pikku/inspector'
@@ -71,6 +71,12 @@ const scaffoldFiles = (
   return files
 }
 
+const RUN_RECORDS_DIR = 'runs'
+
+const hasGeneratedOutput = (outDir: string): boolean =>
+  existsSync(outDir) &&
+  readdirSync(outDir).some((entry) => entry !== RUN_RECORDS_DIR)
+
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
   func: async ({ logger, config, getInspectorState }, _data, { workflow }) => {
@@ -86,7 +92,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
 
-    const needsBootstrap = !existsSync(config.outDir)
+    const needsBootstrap = !hasGeneratedOutput(config.outDir)
     // Only a MySQL project needs its createConfig read this early: its scratch
     // database is on a server that only the config names.
     let mysqlUserConfig: { mysqlUrl?: string } | undefined
