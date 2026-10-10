@@ -2,7 +2,9 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { join } from 'node:path'
 import { serializeReactQueryHooks } from './serialize-react-query-hooks.js'
+import { readStubMocks } from './read-stub-mocks.js'
 
 export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -40,11 +42,14 @@ export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
       )
     }
 
+    const stubs = await readStubMocks(join(config.rootDir, '.mocks'))
+
     // `useSession` only exists for an app that has auth at all.
     const content = serializeReactQueryHooks(
       rpcMapPath,
       workflowMapPath,
-      !!auth.definition
+      !!auth.definition,
+      stubs
     )
     await writeFileInDir(logger, reactQueryFile, content)
   },
