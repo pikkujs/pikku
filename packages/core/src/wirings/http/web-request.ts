@@ -1,5 +1,6 @@
 import type { PikkuHTTPRequest } from './http.types.js'
 import type { PikkuHTTPResponse } from './http.types.js'
+import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 
 export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   const proto = req.header('x-forwarded-proto') ?? 'http'
@@ -149,6 +150,15 @@ export async function applyWebResponse(
 
   if (setCookieValues.length > 0) {
     res.header('Set-Cookie', setCookieValues)
+  }
+
+  if (
+    webResponse.body &&
+    res instanceof PikkuFetchHTTPResponse &&
+    webResponse.headers.get('content-type')?.startsWith('text/event-stream')
+  ) {
+    res.send(webResponse.body as never)
+    return
   }
 
   const body = await readBody(webResponse)

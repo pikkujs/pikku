@@ -83,6 +83,13 @@ export const consoleRoutes = defineHTTPRoutes({
     // Authenticated even though the group is not: everything else here is
     // metadata, and these are recordings of an application being used. \`path\`
     // arrives as a query parameter because an artifact key contains slashes.
+    metaChangesStream: {
+      route: '/meta/stream',
+      method: 'get',
+      sse: true,
+      auth: true,
+      func: ref('console:streamMetaChanges'),
+    },
     scenarioArtifact: {
       route: '/scenario-run/:runId/artifact',
       method: 'get',
