@@ -72,7 +72,7 @@ describe('the scaffolded ingest', () => {
   const functions: Record<string, { tags?: string[] }> = JSON.parse(
     readFileSync(
       new URL(
-        '../.pikku/function/pikku-functions-meta.gen.json',
+        '../.pikku/function/pikku-functions-meta-verbose.gen.json',
         import.meta.url
       ),
       'utf-8'
