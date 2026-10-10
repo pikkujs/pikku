@@ -185,6 +185,8 @@ export const onShutdownSignals = (
   run: (signal: NodeJS.Signals) => void | Promise<void>,
   signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 ): (() => void) => {
+  const proc = typeof process !== 'undefined' ? process : undefined
+  if (!proc?.on) return () => {}
   let stopping = false
   const handlers = signals.map((signal) => {
     const handler = () => {
@@ -192,10 +194,10 @@ export const onShutdownSignals = (
       stopping = true
       void run(signal)
     }
-    process.on(signal, handler)
+    proc.on(signal, handler)
     return [signal, handler] as const
   })
   return () => {
-    for (const [signal, handler] of handlers) process.off(signal, handler)
+    for (const [signal, handler] of handlers) proc.off(signal, handler)
   }
 }
