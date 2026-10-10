@@ -61,6 +61,7 @@
     "./analytics": "./dist/analytics/index.js",
     "./gateway": "./dist/wirings/gateway/index.js",
     "./cli": "./dist/wirings/cli/index.js",
+    "./mount": "./dist/mount/index.js",
     "./cli/command-parser": "./dist/wirings/cli/command-parser.js",
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
     "./node": "./dist/wirings/node/index.js",

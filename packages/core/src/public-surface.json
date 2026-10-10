@@ -324,6 +324,13 @@
     "wantsStackTrace",
     "wireCLI"
   ],
+  "./mount": [
+    "getMountedPackages",
+    "mountHTTPRoutes",
+    "mountMCP",
+    "mountPackage",
+    "unmountPackage"
+  ],
   "./cli/command-parser": [
     "generateCommandHelp",
     "parseCLIArguments"
