@@ -69,6 +69,7 @@ writeFileSync(${JSON.stringify(out)}, JSON.stringify({ args: process.argv.slice(
     outDir: 'o',
     logLevel: 'debug',
     output: 'json',
+    security: true,
     inheritStdout: false,
   })
   const seen = JSON.parse(readFileSync(out, 'utf-8'))
@@ -79,8 +80,33 @@ writeFileSync(${JSON.stringify(out)}, JSON.stringify({ args: process.argv.slice(
     '--outDir=o',
     '--logLevel=debug',
     '--output=json',
+    '--security',
   ])
   assert.equal(seen.logo, '1')
+})
+
+test('the parent node flags are forwarded ahead of the script', async () => {
+  const out = join(project(), 'exec.json')
+  script(
+    `import { writeFileSync } from 'node:fs'
+writeFileSync(${JSON.stringify(out)}, JSON.stringify(process.execArgv))`
+  )
+  const original = process.execArgv
+  Object.defineProperty(process, 'execArgv', {
+    value: ['--max-old-space-size=256'],
+    configurable: true,
+  })
+  try {
+    await runCodegenChild('s.json', { command: ['all'], inheritStdout: false })
+  } finally {
+    Object.defineProperty(process, 'execArgv', {
+      value: original,
+      configurable: true,
+    })
+  }
+  assert.deepEqual(JSON.parse(readFileSync(out, 'utf-8')), [
+    '--max-old-space-size=256',
+  ])
 })
 
 test('unset options are not passed to the child', async () => {

@@ -128,6 +128,7 @@ export const dev = pikkuSessionlessFunc<
           outDir: config.outDir,
           logLevel: (config as { logLevel?: string }).logLevel,
           output: (config as { output?: string }).output,
+          security: (config as { security?: boolean }).security,
           inheritStdout: true,
         })
         await loadInspectorStateFile(stateFile)

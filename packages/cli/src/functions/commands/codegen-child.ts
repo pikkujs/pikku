@@ -10,6 +10,7 @@ export type CodegenChildOptions = {
   outDir?: string
   logLevel?: string
   output?: string
+  security?: boolean
   inheritStdout: boolean
 }
 
@@ -21,6 +22,7 @@ export const runCodegenChild = (
   options: CodegenChildOptions
 ): Promise<void> => {
   const args = [
+    ...process.execArgv,
     process.argv[1]!,
     ...options.command,
     `--stateOutput=${stateFile}`,
@@ -29,6 +31,7 @@ export const runCodegenChild = (
   if (options.outDir) args.push(`--outDir=${options.outDir}`)
   if (options.logLevel) args.push(`--logLevel=${options.logLevel}`)
   if (options.output) args.push(`--output=${options.output}`)
+  if (options.security) args.push('--security')
 
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, {
