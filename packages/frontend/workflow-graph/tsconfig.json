@@ -11,7 +11,6 @@
     "jsx": "react-jsx",
     "target": "ES2017",
     "paths": {
-      "@pikku/mantine/core": ["../mantine/src/core/index.ts"],
       "@pikku/react": ["../react/src/index.ts"]
     }
   },

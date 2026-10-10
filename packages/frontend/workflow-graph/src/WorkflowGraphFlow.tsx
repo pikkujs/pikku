@@ -9,7 +9,6 @@ import {
   BackgroundVariant,
   useReactFlow,
 } from '@xyflow/react'
-import { Box } from '@pikku/mantine/core'
 import type { WorkflowGraphViewProps } from './WorkflowGraphView'
 import { WiringNode } from './components/nodes/WiringNode'
 import { FunctionNode } from './components/nodes/FunctionNode'
@@ -182,7 +181,7 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
   )
 
   return (
-    <Box style={{ width: '100%', height: '100%' }}>
+    <div className="h-full w-full">
       <style>{`
         .react-flow__handle { opacity: 0; pointer-events: none; }
         @keyframes pulse-border { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -194,12 +193,12 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
           style: {
-            stroke: 'var(--mantine-color-dimmed)',
+            stroke: 'var(--muted-foreground)',
             strokeWidth: 1.5,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: 'var(--mantine-color-dimmed)',
+            color: 'var(--muted-foreground)',
             width: 14,
             height: 14,
           },
@@ -214,11 +213,11 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
         onPaneClick={onPaneClick}
       >
         <Background
-          color="var(--mantine-color-default-border)"
+          color="var(--border)"
           variant={BackgroundVariant.Dots}
           size={1}
         />
       </ReactFlow>
-    </Box>
+    </div>
   )
 }

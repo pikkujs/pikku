@@ -72,10 +72,10 @@ function createEdge(
 function createErrorEdge(id: string, source: string, target: string): Edge {
   const edge = createEdge(id, source, target, 'on error')
   edge.animated = false
-  edge.style = { stroke: 'var(--mantine-color-red-6)', strokeDasharray: '4 4' }
+  edge.style = { stroke: 'var(--destructive)', strokeDasharray: '4 4' }
   edge.labelStyle = {
     fontSize: 10,
-    fill: 'var(--mantine-color-red-4)',
+    fill: 'var(--destructive)',
     fontFamily: 'monospace',
   }
   return edge
