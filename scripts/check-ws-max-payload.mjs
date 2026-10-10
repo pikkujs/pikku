@@ -24,7 +24,6 @@ const SKIP_DIRS = new Set([
   'dist',
   '.deploy',
   '.pikku',
-  'console-app',
 ])
 const CONSTRUCTOR = 'new WebSocketServer('
 

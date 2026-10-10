@@ -13,7 +13,7 @@ installGroups: [core]
 
 Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware('*')`
 middleware that calls `setSession`, make the function a `pikkuFunc`, and gate it with
-`scopes` (pikku-auth, `references/machine-auth.md`). A `permissions` check that verifies a
+`scopes` (pikku-auth, `../pikku-auth/references/machine-auth.md`). A `permissions` check that verifies a
 bearer token and returns `true` is authentication wearing an authorization hat, and it
 leaves the function sessionless. The only exception is a bootstrap endpoint whose caller
 has no identity yet (a shared-secret registration, a login): it is sessionless and

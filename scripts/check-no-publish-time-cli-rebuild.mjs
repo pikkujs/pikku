@@ -13,7 +13,7 @@
 // `@pikku/addon-console` against `@pikku/cli` and broke the release.
 //
 // `yarn release` already fully builds every package (`build:packages` →
-// `build:addons` → `build:console`) BEFORE `npx changeset publish`, and that
+// `build:addons`) BEFORE `npx changeset publish`, and that
 // build job propagates tsc/pikku failures (foreach returns non-zero), so a
 // publish-time rebuild is both redundant and racy. Published packages must not
 // run the workspace CLI from a publish-lifecycle script.

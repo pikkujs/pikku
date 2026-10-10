@@ -26,7 +26,6 @@ import {
 } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
-import { resolveConsoleMount } from './serve-console.js'
 import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -35,13 +34,13 @@ import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; console?: boolean; model?: string },
+  { port?: string; model?: string },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, console: serveConsole, model }
+    { port, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     disableDevActorSignIn(logger)
@@ -176,21 +175,11 @@ export const serve = pikkuSessionlessFunc<
       return m[serverLifecycleFactory.variable]
     }
 
-    const consoleMount = serveConsole ? await resolveConsoleMount() : undefined
-    if (serveConsole && !consoleMount) {
-      logger.warn(
-        'Console app not found. Please rebuild @pikku/cli with the console app bundled.'
-      )
-    }
     const frontend = servedFrontend(config.frontends)
     const frontendMount = frontend
       ? await resolveFrontendMount(frontend)
       : undefined
-    // The console goes first so a frontend mounted at `/` cannot claim
-    // `/console` before the console's own mount is offered the request, and
-    // the app's own mounts are kept ahead of the catch-all frontend.
     const staticMounts = [
-      ...(consoleMount ? [consoleMount] : []),
       ...(userConfig.staticMounts ?? []),
       ...(frontendMount ? [frontendMount] : []),
     ]
@@ -216,12 +205,6 @@ export const serve = pikkuSessionlessFunc<
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
     const boundPort = pikkuServer.port
-
-    if (consoleMount) {
-      logger.info(
-        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
-      )
-    }
 
     if (frontendMount) {
       logger.info(

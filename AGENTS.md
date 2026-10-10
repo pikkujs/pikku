@@ -189,26 +189,6 @@ yarn link -A ../pikku && yarn install
 yarn run tsc && yarn run test
 ```
 
-### Running the OSS console against the e2e project
-
-`pikku dev` serves the console same-origin at `/console` (as does `pikku serve --console`), but only when the console app is bundled at `packages/cli/console-app`. A plain package build does not produce that directory — only `packages/cli/build.sh` copies it — so a freshly built CLI serves no console UI and the `Pikku Console available at …/console` log line is absent. There is no separate `pikku console` command.
-
-Against the e2e project (backend on `4077`, from `e2e/tests/support/types.ts`):
-
-```bash
-# 1. Build the console and bundle it into the CLI
-cd packages/console && bun run build        # → packages/console/dist
-cd ../cli && rm -rf console-app && cp -r ../console/dist console-app
-chmod +x dist/bin/pikku.js
-
-# 2. Serve the e2e backend (OPENAI_API_KEY makes the agent playground work)
-cd ../../e2e
-OPENAI_API_KEY=<key> API_URL=http://localhost:4077 \
-  npx pikku serve --port 4077 --console
-```
-
-The console lands at **http://localhost:4077/console**. Being same-origin with the API, cookies are first-party and no `?server=` param is needed.
-
 ## PR checklist
 
 A PR is not "the code plus a unit test". Every item below is part of the
