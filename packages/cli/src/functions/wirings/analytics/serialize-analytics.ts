@@ -139,7 +139,7 @@ export type { AnalyticsEvent } from './analytics.schemas.gen.js'
  */
 export const analyticsIngest = pikkuSessionlessFunc({
   auth: false,
-  tags: ['analytics'],
+  tags: ['pikku', 'analytics'],
   description: 'Records product-analytics events from a client.',
   input: AnalyticsIngest,
   output: AnalyticsIngestOutput,
