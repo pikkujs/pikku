@@ -874,6 +874,10 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
     await server.start()
 
     const realExit = process.exit
+    const before = {
+      SIGTERM: process.listeners('SIGTERM'),
+      SIGINT: process.listeners('SIGINT'),
+    }
     const exited = new Promise<void>((resolve) => {
       // The shutdown ends in process.exit, which would take the test runner
       // with it; swapping it out is the only way to observe what ran first.
@@ -887,8 +891,11 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
       await exited
     } finally {
       process.exit = realExit
-      process.removeAllListeners('SIGTERM')
-      process.removeAllListeners('SIGINT')
+      for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+        for (const l of process.listeners(sig)) {
+          if (!before[sig].includes(l)) process.off(sig, l)
+        }
+      }
       await server.stop()
     }
     return { errors, listening: server.server.listening }
