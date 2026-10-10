@@ -29,7 +29,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({ label, handleId }) => {
         position={Position.Right}
         id={handleId}
         style={{
-          background: nodeColor('teal'),
+          background: nodeColor('channel'),
           width: 8,
           height: 8,
           right: -4,
@@ -63,7 +63,7 @@ export const ChannelEntryNode: React.FC<
     >
       <div
         className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md"
-        style={{ backgroundColor: nodeColor('teal') }}
+        style={{ backgroundColor: nodeColor('channel') }}
       />
 
       <div className="flex flex-col py-2">

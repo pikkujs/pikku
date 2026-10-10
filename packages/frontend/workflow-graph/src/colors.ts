@@ -8,8 +8,8 @@ const accents: Record<string, string> = {
   mcp: 'var(--chart-2)',
   schedule: 'var(--chart-3)',
   trigger: 'var(--chart-4)',
-  teal: 'var(--chart-5)',
-  violet: 'var(--chart-2)',
+  channel: 'var(--chart-5)',
+  router: 'var(--chart-2)',
   gray: 'var(--muted-foreground)',
 }
 

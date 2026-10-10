@@ -48,7 +48,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
             position={Position.Right}
             id={handleId}
             style={{
-              background: nodeColor('teal'),
+              background: nodeColor('channel'),
               width: 8,
               height: 8,
               right: -4,
@@ -128,7 +128,7 @@ export const getChannelWiringNodeConfig = (
     type: 'channelWiringNode',
     position,
     data: {
-      colorKey: 'teal',
+      colorKey: 'channel',
       channelName: wire.name || 'Channel',
       onConnect: wire.onConnect,
       onDisconnect: wire.onDisconnect,
