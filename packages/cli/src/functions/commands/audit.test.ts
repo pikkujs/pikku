@@ -151,7 +151,7 @@ const BUN_OUTDATED_WORKSPACE_TABLE = `bun outdated v1.4.0 (34cbb9a40)
 |--------------------------------------------------------------|
 | Package       | Current | Update | Latest  | Workspace       |
 |---------------|---------|--------|---------|-----------------|
-| @mantine/core | 8.4.1   | 8.4.3  | 8.4.3   | app             |
+| zod           | 4.0.1   | 4.0.3  | 4.0.3   | app             |
 |---------------|---------|--------|---------|-----------------|
 | kysely        | 0.28.9  | 0.28.9 | 0.29.0  | functions       |
 |---------------|---------|--------|---------|-----------------|
@@ -184,9 +184,9 @@ describe('parseBunOutdated', () => {
   test('reads the five-column table --filter writes', () => {
     assert.deepEqual(parseBunOutdated(BUN_OUTDATED_WORKSPACE_TABLE), [
       {
-        package: '@mantine/core',
-        current: '8.4.1',
-        latest: '8.4.3',
+        package: 'zod',
+        current: '4.0.1',
+        latest: '4.0.3',
         level: 'patch',
       },
       {
