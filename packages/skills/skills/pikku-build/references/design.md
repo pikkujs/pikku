@@ -48,9 +48,9 @@ Being ambitious is easier against a list of specific things to not be. Generated
 interfaces cluster hard, and these are the attractors — not because any is ugly,
 but because arriving at one *by default* means no choice was made:
 
-- **Stock Mantine.** The strongest pull, and the hardest to see: a component
+- **Stock component-library defaults.** The strongest pull, and the hardest to see: a component
   library's untouched defaults do not look broken, they look finished. Blue
-  accent, `#dee2e6` borders, `md` radius on everything, `Card` + `Stack` + `Text`
+  accent, grey borders, one radius on everything, `Card` + stacked text
   down every page. An app can be entirely this and never trip a critique, because
   nothing on any screen is *wrong*.
 - Warm cream ground with a serif display face and a terracotta accent.
@@ -83,7 +83,7 @@ screens costs a fraction of eight built screens, and it is the only point where
 "that is not what I meant" is free.
 
 **Author the theme first, then draw the mock from it.** This order is the whole
-point. A beautiful page in hand-rolled CSS sets a bar Mantine then misses, and
+point. A beautiful page in hand-rolled CSS sets a bar the real components then miss, and
 what the user approved is not what ships — they signed off on a picture and
 received an approximation of it. So write `themes/<name>.json` first
 (the theming reference, see SKILL.md), and let the mock take its every value from that file:
@@ -91,21 +91,21 @@ the palette, `structure.radius`, the spacing scale, the fonts, the component
 `defaultProps`. Approving the mock then approves the theme, and the built screens
 inherit it rather than chase it.
 
-**The mock has two halves, and only one of them is Mantine's.** This is the same
+**The mock has two halves, and only one of them is the component library's.** This is the same
 split the built screen lives under, applied a step earlier so the two agree by
 construction. The PAGE — the shell, the regions, the columns, the rhythm, the
 material behind the content, what overlaps what — is plain HTML and your own
 CSS, arranged however the layout decision demands; that half is free, and it is
 where the design actually happens. The COMPONENTS — anything a person would
 point at and call a control, and that the app will adopt as itself: buttons,
-inputs, selects, tables, badges, menus, modals — are drawn as *Mantine's*, at the
-metrics Mantine actually uses: its control heights, its input shapes, its table
+inputs, selects, tables, badges, menus, modals — are drawn as *shadcn's*, at the
+metrics shadcn actually uses: its control heights, its input shapes, its table
 and menu behaviour. The test is the one the build will apply too: is this thing
 the SHAPE OF THE PAGE, or a COMPONENT someone would point at?
 
 Getting that second half wrong is what makes a mock a lie. A control the mock
 invents is a promise the app cannot keep, and a beautiful hand-rolled input sets
-a bar the real one misses on screen one. If the mock wants something Mantine
+a bar the real one misses on screen one. If the mock wants something shadcn
 does not do, that is a real finding, and finding it here is the point: change the
 theme so it does, or change the mock, and say which.
 
@@ -114,7 +114,7 @@ needs — not a prototype, not a click-through. Static markup, real content from
 their domain (never lorem), the empty and error states beside the happy path,
 laid out so the whole app is legible by scrolling. Its CSS is custom properties
 on `:root` carrying the theme JSON's values, so a change to either is a change
-to one number in both. Mantine itself will not load here — it is a React library
+to one number in both. The components themselves will not load here — they are React
 and a page like this has no bundler, and on hosts that sandbox the page (a Claude
 Artifact) external stylesheets are blocked outright — so do not try; the mock
 reproduces the theme's values by hand, which is why they have to be written down
@@ -142,25 +142,25 @@ stating:
   wins; when they disagree about a *layout*, the mock wins.
 
 **Building it is then a transcription, not a translation.** Because the theme
-already exists and the mock was drawn from it, the screen is Mantine components
+already exists and the mock was drawn from it, the screen is shadcn components
 arranged the way the mock arranges them — the look arrives with the theme. Two
 rules keep it that way:
 
-- **Layout is yours to write; components are Mantine's.** The page shape — the
+- **Layout is yours to write; components are shadcn's.** The page shape — the
   regions, the columns, the rhythm, what sits beside what — is ordinary markup
   and your own CSS. Anything a person would point at and call a control comes
-  from Mantine: buttons, inputs, selects, tables, badges, menus. Those carry
+  from shadcn: buttons, inputs, selects, tables, badges, menus. Those carry
   focus rings, keyboard behaviour and i18n, and hand-rolling one throws all of
   it away.
 - **A gap goes back to the theme, never into a component override.** If a screen
   does not match the mock, the fix is a value in `themes/<name>.json`. A stack of
-  one-off `className`s and `!important` fighting Mantine's defaults looks like
+  one-off `className`s and `!important` fighting the component defaults looks like
   progress on screen one and is unmaintainable by screen five, and the screens
   drift apart because nothing central holds them together.
 
 **Checking the built screen against the mock** is a structural comparison, not a
 pixel one: the same regions in the same order, the same hierarchy, the same
-states present, the same tokens used. Do not chase pixel equality — Mantine's
+states present, the same tokens used. Do not chase pixel equality — shadcn's
 components have their own metrics and the mock was drawn without them. A built
 screen that reads as the same screen has passed.
 
@@ -320,8 +320,8 @@ These are not design opinions and are not open to a different answer.
 - **Empty, loading and error are states that exist.** The empty state is what a
   new user meets first and the one most often skipped entirely.
 - **Contrast and tap targets are measured, not judged.** `pikku-a11y` covers it.
-  One trap worth knowing: a Mantine `light` variant paints its label at the
-  generated ramp's stop, which lands just under AA on its own tint — name the
+  One trap worth knowing: a tinted badge paints its label in the
+  accent, which lands just under AA on its own tint — name the
   darker ink once and reuse it.
 
 ## Two screens that get skipped
@@ -365,5 +365,5 @@ first one.
   accent is not — the surest sign the neutrals were inherited rather than
   chosen. The theming reference (see SKILL.md) covers it.
 - It looks like the last app you built.
-- It looks like Mantine. Not *built with* Mantine, which it is and should be —
+- It looks like stock shadcn. Not *built with* shadcn, which it is and should be —
   but indistinguishable from a component gallery with the brand hue swapped in.

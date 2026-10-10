@@ -2,10 +2,10 @@
  * Generates the i18n-debug pseudo-locale: a copy of the base catalog with every
  * visible character replaced by a block glyph.
  *
- * `tsc` catches an invalid message and the `@pikku/mantine` `I18nNode` gate
+ * `tsc` catches an invalid message and the `I18nNode` gate
  * catches a raw string literal on a gated prop. Neither sees a hardcoded string
  * in plain JSX, an `aria-label`, an `alt`, a `document.title`, or anything
- * handed to a non-Mantine component. Switch to this locale and every message
+ * handed to a component that does not gate its text. Switch to this locale and every message
  * renders as blocks — whatever is still readable never went through a message.
  *
  * The obvious implementation is a runtime wrapper that walks the `m` namespace
