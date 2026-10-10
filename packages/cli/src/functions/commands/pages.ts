@@ -201,7 +201,9 @@ export const renderPagesScreenshot = (
         : `  ${changed('✗')} ${shot.path} ${dim(shot.error ?? 'no image')}\n`
     )
     for (const problem of shot.problems)
-      process.stdout.write(`      ${dim(problem.split('\n')[0]!.slice(0, 160))}\n`)
+      process.stdout.write(
+        `      ${dim(problem.split('\n')[0]!.slice(0, 160))}\n`
+      )
   }
   if (skipped.length) {
     process.stdout.write(
