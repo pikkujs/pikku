@@ -15,9 +15,9 @@ export type { CreatePikkuOptions } from './create-pikku.js'
 
 // i18n brand types — pure, framework-agnostic. `I18nString` is structurally
 // Paraglide JS's `LocalizedString`, so a Paraglide `m()` message satisfies the
-// `@pikku/mantine` gate natively.
-export type { I18nString, I18nNode } from './i18n-types.js'
-export { asI18n } from './i18n-types.js'
+// brand natively.
+export type { I18nString, I18nNode, SepChar, OnlyPunct } from './i18n-types.js'
+export { asI18n, asI18nStub, sep } from './i18n-types.js'
 
 // The reactive locale store behind those messages. An app supplies its locale
 // list, its storage key and its startup policy, and passes in Paraglide's
@@ -64,3 +64,15 @@ export type {
   UsePhotoCaptureResult,
   OpenPhotoPickerOptions,
 } from './photo-capture.js'
+
+// Typed, per-library message sets. The author writes plain English once; the
+// keys and parameter types of what a host must supply derive from that one
+// const, and the result is branded so a bare string cannot stand in for a
+// translation. Each call makes its own context.
+export { createMessages, completeMessages, mergeMessages } from './messages.js'
+export type {
+  MessageDefaults,
+  MessagesOf,
+  MessagesInput,
+  CompleteMessages,
+} from './messages.js'

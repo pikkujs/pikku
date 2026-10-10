@@ -7,6 +7,13 @@ import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
 import { useGraphActions } from '../../context/GraphHostContext'
 
+/** Handler names are code identifiers shown as written, not copy to translate. */
+const HANDLER_NAMES: Record<string, string> = {
+  onConnect: 'onConnect',
+  onMessage: 'onMessage',
+  onDisconnect: 'onDisconnect',
+}
+
 interface HandlerRowProps {
   label: I18nNode
   handleId: string
@@ -99,13 +106,22 @@ export const ChannelEntryNode: React.FC<
         </Box>
 
         {data.handlers.includes('connect') && (
-          <HandlerRow label={asI18n('onConnect')} handleId="connect" />
+          <HandlerRow
+            label={asI18n(HANDLER_NAMES.onConnect)}
+            handleId="connect"
+          />
         )}
         {data.handlers.includes('disconnect') && (
-          <HandlerRow label={asI18n('onDisconnect')} handleId="disconnect" />
+          <HandlerRow
+            label={asI18n(HANDLER_NAMES.onDisconnect)}
+            handleId="disconnect"
+          />
         )}
         {data.handlers.includes('message') && (
-          <HandlerRow label={asI18n('onMessage')} handleId="message" />
+          <HandlerRow
+            label={asI18n(HANDLER_NAMES.onMessage)}
+            handleId="message"
+          />
         )}
         {data.categories.map((cat) => (
           <HandlerRow

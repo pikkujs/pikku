@@ -47,11 +47,16 @@ const CORNERS: Record<
  * control never ships to an end user, so translating it would cost every
  * consuming app three keys for text only its own developers see.
  */
+const DEV_COPY: Record<string, string> = {
+  signInAs: 'Sign in as …',
+  personas: 'Scenario personas (dev only)',
+}
+
 export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
   apiUrl,
   app,
   onSignedIn,
-  label = asI18n('Sign in as …'),
+  label = asI18n(DEV_COPY.signInAs),
   position = 'bottom-right',
 }) => {
   const { actors, signInAs, pendingId, isPending, error } = useDevActors({
@@ -74,23 +79,27 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Label>{asI18n('Scenario personas (dev only)')}</Menu.Label>
-        {actors.map((actor) => (
-          <Menu.Item
-            key={actor.id}
-            disabled={isPending}
-            onClick={() => signInAs(actor.id)}
-          >
-            <Text size="sm" fw={500}>
-              {asI18n(pendingId === actor.id ? `${actor.name} …` : actor.name)}
-            </Text>
-            {actor.jobTitle ? (
-              <Text size="xs" c="dimmed">
-                {asI18n(actor.jobTitle)}
+        <Menu.Label>{asI18n(DEV_COPY.personas)}</Menu.Label>
+        {actors.map((actor) => {
+          const actorLabel: string =
+            pendingId === actor.id ? `${actor.name} …` : actor.name
+          return (
+            <Menu.Item
+              key={actor.id}
+              disabled={isPending}
+              onClick={() => signInAs(actor.id)}
+            >
+              <Text size="sm" fw={500}>
+                {asI18n(actorLabel)}
               </Text>
-            ) : null}
-          </Menu.Item>
-        ))}
+              {actor.jobTitle ? (
+                <Text size="xs" c="dimmed">
+                  {asI18n(actor.jobTitle)}
+                </Text>
+              ) : null}
+            </Menu.Item>
+          )
+        })}
         {error ? (
           <Text size="xs" c="red" px="sm" pt={4}>
             {asI18n(error.message)}

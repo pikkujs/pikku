@@ -17,6 +17,13 @@ interface ChannelWiringNodeData {
   onMessageRoute?: Record<string, string>
 }
 
+/** Handler names are code identifiers shown as written, not copy to translate. */
+const HANDLER_NAMES: Record<string, string> = {
+  onConnect: 'onConnect',
+  onMessage: 'onMessage',
+  onDisconnect: 'onDisconnect',
+}
+
 interface HandlerRowProps {
   label: I18nNode
   handleId: string
@@ -106,25 +113,28 @@ export const ChannelWiringNode: React.FC<
 
       <Stack gap={0} py={4}>
         <HandlerRow
-          label={asI18n('onConnect')}
+          label={asI18n(HANDLER_NAMES.onConnect)}
           handleId="onConnect"
           hasTarget={!!data.onConnect}
         />
         <HandlerRow
-          label={asI18n('onMessage')}
+          label={asI18n(HANDLER_NAMES.onMessage)}
           handleId="onMessage"
           hasTarget={!!data.onMessage}
         />
-        {routeEntries.map(([route, target]) => (
-          <HandlerRow
-            key={route}
-            label={asI18n(`→ ${route}`)}
-            handleId={`route-${route}`}
-            hasTarget={!!target}
-          />
-        ))}
+        {routeEntries.map(([route, target]) => {
+          const routeLabel: string = `→ ${route}`
+          return (
+            <HandlerRow
+              key={route}
+              label={asI18n(routeLabel)}
+              handleId={`route-${route}`}
+              hasTarget={!!target}
+            />
+          )
+        })}
         <HandlerRow
-          label={asI18n('onDisconnect')}
+          label={asI18n(HANDLER_NAMES.onDisconnect)}
           handleId="onDisconnect"
           hasTarget={!!data.onDisconnect}
         />
