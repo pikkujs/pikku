@@ -259,9 +259,7 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
 ```
 
 - **It is UI-free**, so render it however you like. For the default rendering use
-  `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
-  `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
-  and so must not export components Mantine has no counterpart for.
+  the starter template's `<DevActorSwitcher />` (`components/dev/DevActorSwitcher.tsx`).
 - **No credential reaches the bundle.** It lists from `/auth/sign-in/personas`
   and `signInAs(id)` posts only the persona id to `/auth/sign-in/persona`. The
   server decides who is offered and who may sign in, and offers nobody in
@@ -275,37 +273,6 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
 
 Do not hand-write the list-and-sign-in pair per app; that copy-paste is exactly
 what this replaced.
-
-### Linking from a Mantine element: `renderRoot`, not `component`
-
-Handing TanStack's `Link` to a Mantine element as `component={Link}` compiles,
-renders, and navigates — and silently unties the type. Mantine's polymorphic
-`component` prop widens the router generic to `AnyRouter`, so `to` and
-`params` stop being checked against your actual routes. Renaming a route then
-breaks the running app instead of the build, which is the one thing the typed
-router exists to prevent.
-
-Wrap the typed `Link` once and reach it through `renderRoot`, which passes the
-props through without re-typing the element:
-
-```tsx
-// components/links.tsx — one wrapper the whole app links through
-import { Link } from '@tanstack/react-router'
-
-export const AssessmentLink = (props: { assessmentId: string; children: React.ReactNode }) => (
-  <Link to="/assessments/$assessmentId" params={{ assessmentId: props.assessmentId }}>
-    {props.children}
-  </Link>
-)
-```
-
-```tsx
-<Button renderRoot={(p) => <AssessmentLink assessmentId={id} {...p} />}>
-  Open
-</Button>
-```
-
-The wrapper is where `to` and `params` are checked, and it is checked once.
 
 ## What NOT to do
 
