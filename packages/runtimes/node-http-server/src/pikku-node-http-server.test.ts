@@ -874,6 +874,10 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
     await server.start()
 
     const realExit = process.exit
+    const before = {
+      SIGTERM: process.listeners('SIGTERM'),
+      SIGINT: process.listeners('SIGINT'),
+    }
     const exited = new Promise<void>((resolve) => {
       // The shutdown ends in process.exit, which would take the test runner
       // with it; swapping it out is the only way to observe what ran first.
@@ -887,7 +891,11 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
       await exited
     } finally {
       process.exit = realExit
-      process.removeAllListeners('SIGTERM')
+      for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+        for (const l of process.listeners(sig)) {
+          if (!before[sig].includes(l)) process.off(sig, l)
+        }
+      }
       await server.stop()
     }
     return { errors, listening: server.server.listening }
@@ -932,5 +940,28 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
 
     assert.equal(listening, false)
     assert.ok(errors.some((e) => /afterStop failed during shutdown/.test(e)))
+  })
+
+  test('a second SIGTERM mid-shutdown neither restarts nor abandons it', async () => {
+    const events: string[] = []
+    const { errors } = await runShutdown({
+      beforeStop: async () => {
+        events.push('beforeStop:start')
+        process.emit('SIGTERM' as never)
+        process.emit('SIGINT' as never)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        events.push('beforeStop:end')
+      },
+      afterStop: async () => {
+        events.push('afterStop')
+      },
+    })
+
+    assert.deepEqual(events, [
+      'beforeStop:start',
+      'beforeStop:end',
+      'afterStop',
+    ])
+    assert.deepEqual(errors, [])
   })
 })

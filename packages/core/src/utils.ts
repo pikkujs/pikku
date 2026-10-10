@@ -180,3 +180,24 @@ export {
   isVersionedId,
   parseVersionedId,
 } from './version.js'
+
+export const onShutdownSignals = (
+  run: (signal: NodeJS.Signals) => void | Promise<void>,
+  signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
+): (() => void) => {
+  const proc = typeof process !== 'undefined' ? process : undefined
+  if (!proc?.on) return () => {}
+  let stopping = false
+  const handlers = signals.map((signal) => {
+    const handler = () => {
+      if (stopping) return
+      stopping = true
+      void run(signal)
+    }
+    proc.on(signal, handler)
+    return [signal, handler] as const
+  })
+  return () => {
+    for (const [signal, handler] of handlers) proc.off(signal, handler)
+  }
+}
