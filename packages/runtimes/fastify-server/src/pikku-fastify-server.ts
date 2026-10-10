@@ -1,7 +1,7 @@
 import Fastify from 'fastify'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { stopSingletonServices } from '@pikku/core/utils'
+import { onShutdownSignals, stopSingletonServices } from '@pikku/core/utils'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import type { Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
@@ -97,11 +97,13 @@ export class PikkuFastifyServer {
       await this.stop()
       process.exit(0)
     }
-    process.on('SIGINT', () => {
-      shutdown().catch((error: unknown) => {
-        this.logger.error(`Error while stopping server: ${error}`)
-        process.exit(1)
-      })
-    })
+    onShutdownSignals(
+      () =>
+        shutdown().catch((error: unknown) => {
+          this.logger.error(`Error while stopping server: ${error}`)
+          process.exit(1)
+        }),
+      ['SIGINT']
+    )
   }
 }

@@ -888,6 +888,7 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
     } finally {
       process.exit = realExit
       process.removeAllListeners('SIGTERM')
+      process.removeAllListeners('SIGINT')
       await server.stop()
     }
     return { errors, listening: server.server.listening }
@@ -932,5 +933,28 @@ describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
 
     assert.equal(listening, false)
     assert.ok(errors.some((e) => /afterStop failed during shutdown/.test(e)))
+  })
+
+  test('a second SIGTERM mid-shutdown neither restarts nor abandons it', async () => {
+    const events: string[] = []
+    const { errors } = await runShutdown({
+      beforeStop: async () => {
+        events.push('beforeStop:start')
+        process.emit('SIGTERM' as never)
+        process.emit('SIGINT' as never)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        events.push('beforeStop:end')
+      },
+      afterStop: async () => {
+        events.push('afterStop')
+      },
+    })
+
+    assert.deepEqual(events, [
+      'beforeStop:start',
+      'beforeStop:end',
+      'afterStop',
+    ])
+    assert.deepEqual(errors, [])
   })
 })
