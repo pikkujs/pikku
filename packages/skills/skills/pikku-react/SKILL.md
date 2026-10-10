@@ -8,7 +8,7 @@ description: >-
   data, wiring PikkuProvider, paginating, running or tracking a workflow from the client, or
   asking about useDevActors / DevActorSwitcher / quick login. DO NOT TRIGGER when: working on the
   backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), rendering fetched values such as
-  dates in Mantine (use pikku-mantine), or writing user-facing copy (use pikku-i18n).
+  dates (use pikku-tailwind), or writing user-facing copy (use pikku-i18n).
 installGroups: [client]
 ---
 

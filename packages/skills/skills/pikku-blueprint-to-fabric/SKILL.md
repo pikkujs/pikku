@@ -1,6 +1,6 @@
 ---
 name: pikku-blueprint-to-fabric
-description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+Mantine), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". Admin screens are ported by pikku-admin-to-fabric alongside it. DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), the user wants a single new feature in an existing app (use pikku-build), or the task is only the legacy admin screens of an already-started port (use pikku-admin-to-fabric).'
+description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+shadcn), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". Admin screens are ported by pikku-admin-to-fabric alongside it. DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), the user wants a single new feature in an existing app (use pikku-build), or the task is only the legacy admin screens of an already-started port (use pikku-admin-to-fabric).'
 installGroups: [fabric]
 argument-hint: '<path to .knowledge/> [domain to slice next]'
 ---
@@ -269,7 +269,7 @@ Two rules:
 
 ## Stage 7 — Frontend
 
-Only when `frontend*.json` is present. Target: TanStack Start + Mantine.
+Only when `frontend*.json` is present. Target: TanStack Start + Tailwind + shadcn.
 
 `frontend.json` records the legacy stack as facts. **It is context, not a port target** — a bespoke Sass system, a server-rendered template stack, or a different component library all land on the same target. Read `designSystemConsistency` and `designFindings` to know what _not_ to carry: findings are the drift (hardcoded colors, forked-per-locale pages, duplicated components), and the rebuild is the moment they cost nothing to drop.
 
@@ -285,9 +285,9 @@ Only when `frontend*.json` is present. Target: TanStack Start + Mantine.
 
 | `rebuild`             | What to do                                                                |
 | --------------------- | ------------------------------------------------------------------------- |
-| `mantine-standard`    | Use the Mantine component. Do not port.                                   |
-| `mantine-composition` | Compose from Mantine primitives. Do not port.                             |
-| `custom-style`        | Normalize to Mantine + theme tokens. The divergence is the thing to drop. |
+| `library-standard`    | Use the shadcn component. Do not port.                                   |
+| `library-composition` | Compose from shadcn primitives. Do not port.                             |
+| `custom-style`        | Normalize to shadcn + theme tokens. The divergence is the thing to drop. |
 | **`custom-logic`**    | **Port the behaviour.** Read `customLogic` and `dependencies`.            |
 
 The first three are the bulk and they're cheap — they're a re-expression, not a migration. **`custom-logic` is the actual project**: the bespoke chart, the virtualized table, the map surface, the rich editor, the drag interaction. Each has real behaviour that must survive, and `customLogic` says what it is.
