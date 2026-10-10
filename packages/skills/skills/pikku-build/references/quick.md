@@ -1,5 +1,15 @@
 # Build an app on Pikku, fast
 
+## Contents
+
+- Agent Operating Procedure
+- 1. One question, then build
+- 2. Personas — 60 seconds, not optional
+- 3. Build
+- 4. Look at it — actually
+- 5. One smoke scenario
+- 6. Hand it over honestly
+
 You have a scaffolded project with skills installed. Get it to working, seeded,
 signed-in screens in as few steps as possible.
 
@@ -42,7 +52,7 @@ Identifiers are English in every project, whatever the product's market;
 `template`, which the Console renders) stays `en` unless the user already told
 you otherwise. If the request says the app's UI is not English, that is the
 message catalogue only: add the locale and set `defaultLocale`, and leave
-`baseLocale` at `en`. `references/app.md` §1a has the three axes in full; getting
+`baseLocale` at `en`. the app workflow's §1a has the three axes in full; getting
 them confused is how a project ends up unable to add a second language.
 
 ## 2. Personas — 60 seconds, not optional
@@ -186,7 +196,7 @@ taller than the viewport. It is the most likely width your demo gets opened at.
 If you have five spare minutes, `npx impeccable install` (Node 22.18+) scores
 each screen against interaction heuristics and names what is wrong. Feed it
 screenshots, not source. It will polish the default look; it will not give the
-app a look — that is `references/app.md` §8a.
+app a look — that is the app workflow's §8a.
 
 ## 5. One smoke scenario
 
@@ -230,7 +240,7 @@ it is seeded with, and that this is a quick build — no knowledge base, no
 changesets, no design pass, access control clicked-through rather than proven.
 
 **Upgrading to a real build is additive, not a rewrite.** If they want it, switch
-to `references/app.md` and do this, in order:
+to the app workflow (the app reference, see SKILL.md) and do this, in order:
 
 1. Write `knowledge/` for what already exists — `entities/` for what you built,
    `decisions/` for what you chose silently, `questions/` for what you guessed
@@ -239,7 +249,7 @@ to `references/app.md` and do this, in order:
    gaps` has something to measure against.
 3. Write the refusal scenarios — the ones proving one persona cannot reach
    another's rows. This is the gap that matters most.
-4. Then pick up `references/app.md` at its §4 (apps) or §5 (changes) for
+4. Then pick up the app workflow at its §4 (apps) or §5 (changes) for
    anything new.
 
 Nothing built here has to be thrown away to do that — which is the whole reason

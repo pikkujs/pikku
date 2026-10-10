@@ -4,11 +4,11 @@ description: >-
   Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon,
   ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, addons that ship
   database tables (pikku db export), generating an addon from an OpenAPI/Swagger spec, and
-  cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user
-  asks about addons, reusable function packages, cross-project sharing, or addon package structure,
-  or the user hands over an OpenAPI/Swagger spec (file or URL) to build on. DO NOT
-  TRIGGER when: user asks about internal function composition (use pikku-wiring) or general function
-  definitions (use pikku-concepts).
+  cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, the
+  user asks about addons, reusable function packages, cross-project sharing or addon package
+  structure, or hands over an OpenAPI/Swagger spec (file or URL) to build on. DO NOT TRIGGER when:
+  the user asks about internal function composition (use pikku-wiring), general function
+  definitions (use pikku-concepts), or importing an n8n export (use pikku-n8n-import).
 installGroups: [core]
 ---
 

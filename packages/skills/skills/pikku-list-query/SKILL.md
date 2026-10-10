@@ -1,9 +1,9 @@
 ---
 name: pikku-list-query
 description: >-
-  Use when building a paginated/infinite-scroll list — any RPC that returns rows a user scrolls through (tables, card grids, search results). Covers pikkuListFunc, the ListInput/ListOutput cursor contract, and the generated usePikkuInfiniteQuery hook.
+  Use when building a paginated or infinite-scroll list: any RPC that returns rows a user scrolls through (tables, card grids, search results). Covers the backend pikkuListFunc, the ListInput/ListOutput cursor contract, the filter tree, and the generated usePikkuInfiniteQuery hook.
   TRIGGER when: user asks for infinite scroll, "load more", a paginated table/list/grid, or a list that could grow beyond a single page.
-  DO NOT TRIGGER when: the list is small and fixed (e.g. a settings page with 5 items) — a plain pikkuFunc + usePikkuQuery returning a full array is simpler and correct there.
+  DO NOT TRIGGER when: the list is small and fixed (for example 5 settings items), where a plain pikkuFunc plus usePikkuQuery returning a full array is correct, or when the task is general React provider and hook setup (use pikku-react).
 installGroups: [core, client]
 ---
 

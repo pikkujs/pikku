@@ -7,6 +7,7 @@ import type { PersonaEnvironment } from '@pikku/core/persona'
 import { appScopeId, personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import type { AuthGetter } from './admin-users.js'
+import type { BetterAuthInstance } from './define-auth.js'
 import { setAuthUserBanned } from './admin-users.js'
 import { BAN_PLUGIN_ID } from './ban-plugin.js'
 
@@ -18,7 +19,7 @@ import { BAN_PLUGIN_ID } from './ban-plugin.js'
  * having to name the same type.
  */
 export interface ProvisionPersonasServices {
-  auth: AuthGetter
+  auth: (() => Promise<Pick<BetterAuthInstance, '$context'>>) | undefined
   scopeService: Pick<
     ScopeService,
     'addScopeToUser' | 'addUserToRole' | 'listUserRoles' | 'listUserScopes'
@@ -86,9 +87,9 @@ type ActorUser = {
  * could open — true of a local stage and of nothing else. A running stage has
  * that connection by definition, so provisioning happens there.
  *
- * Not exported, and not something an app calls. The fabric plugin runs it on an
- * operator handshake that names an address the stage has no account for, which
- * is the only moment the work is both needed and cheap to detect. The obvious
+ * Meant to be called by an operator sign-in route on a handshake that names an
+ * address the stage has no account for, which is the moment the work is both
+ * needed and cheap to detect. The obvious
  * home — `pikkuServerLifecycle`'s `afterStart` — is a trap: that hook is
  * invoked by `pikku serve` and `pikku dev` and by nothing else, so every stage
  * deployed to Workers or a serverless target provisioned nothing at all.
@@ -120,7 +121,7 @@ type ActorUser = {
  * a thing to do quietly.
  */
 export const provisionPersonas = async (
-  { auth, scopeService, logger }: ProvisionPersonasServices,
+  { auth: contextOnlyAuth, scopeService, logger }: ProvisionPersonasServices,
   {
     personas,
     environments,
@@ -141,6 +142,7 @@ export const provisionPersonas = async (
     unbanned: 0,
   }
 
+  const auth = contextOnlyAuth as AuthGetter
   const entries = Object.entries(personas)
 
   // Removing the last persona is the one case where there is no work to do and

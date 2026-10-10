@@ -2,9 +2,9 @@
 
 `@pikku/ws` connects Pikku's channel system to a Node.js WebSocket server built
 on the [ws](https://github.com/websockets/ws) library. Use it for a
-WebSocket-only server; for HTTP and WebSocket on one port see `uws.md`, and when
-the WebSocket server shares a port with an existing HTTP app see `express.md` or
-`fastify.md`.
+WebSocket-only server; for HTTP and WebSocket on one port use the uWebSockets.js runtime, and when
+the WebSocket server shares a port with an existing HTTP app use the Express or
+Fastify runtime.
 
 ```bash
 yarn add @pikku/ws ws

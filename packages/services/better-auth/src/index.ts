@@ -49,9 +49,13 @@ export type {
 export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-actors.js'
 export type { DevActor, DevActorPersona } from './dev-actors.js'
 
-export type { PersonaOrphanPolicy } from './provision-personas.js'
-export { pikkuFabric } from './fabric-plugin.js'
-export type { FabricPluginOptions } from './fabric-plugin.js'
+export { provisionPersonas } from './provision-personas.js'
+export type {
+  PersonaOrphanPolicy,
+  ProvisionPersonasOptions,
+  ProvisionPersonasResult,
+  ProvisionPersonasServices,
+} from './provision-personas.js'
 export {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,

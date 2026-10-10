@@ -1,5 +1,11 @@
 # Pikku Scheduled Tasks
 
+## Contents
+
+- API Reference
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 ### `wireScheduler(config)`

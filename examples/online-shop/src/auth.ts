@@ -3,13 +3,8 @@ import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
   pikkuActor,
   pikkuBan,
-  pikkuFabric,
 } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
-import {
-  personaConfigs,
-  personaEnvironments,
-} from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -34,14 +29,7 @@ import {
 // so never re-construct a service here or reach for a dynamic import.
 // @snippet start betterAuthConfig
 export const auth = pikkuBetterAuth(
-  async ({
-    kysely,
-    secrets,
-    variables,
-    emailService,
-    scopeService,
-    logger,
-  }) => {
+  async ({ kysely, secrets, variables, emailService }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
     // is one greppable call. Better Auth wants the raw string, and this is where
@@ -56,11 +44,6 @@ export const auth = pikkuBetterAuth(
       .getSecret('SCENARIO_ACTOR_SECRET')
       .then((value) => value?.reveal())
       .catch(() => undefined)
-    // Fabric operator admin: the RSA public key the control plane's token is
-    // verified against. The Fabric deployer pushes FABRIC_AUTH_PUBLIC_KEY onto
-    // every stage; locally it's simply absent, which disables /sign-in/fabric.
-    // Asymmetric — the app verifies, it can never forge an operator login.
-    const FABRIC_AUTH_PUBLIC_KEY = await variables.get('FABRIC_AUTH_PUBLIC_KEY')
     // The opt-in that lets a deployed stage run scenarios. Read through
     // `variables` rather than left to `process.env`, because a Worker receives
     // it as a binding and has no populated environment to find it in.
@@ -100,35 +83,12 @@ export const auth = pikkuBetterAuth(
       // it authorizes on a `user.role` column while pikku authorizes on scopes,
       // and everything else it offered — list, create, ban, remove, revoke
       // sessions, set password — is scoped RPCs in @pikku/addon-admin.
-      //
-      // pikkuFabric(): exposes /api/auth/sign-in/fabric — the Fabric control plane
-      // mints a short-lived RS256 token and signs in as a synthetic `fabric: true`
-      // admin operator (db/sqlite/0004-fabric.sql), so the console Users tab can
-      // list/impersonate real users without the operator being one of them. It
-      // verifies against FABRIC_AUTH_PUBLIC_KEY; a missing key disables the
-      // endpoint.
-      //
-      // `personas` is what provisions the scenario actors. The plugin creates a
-      // declared persona's account the first time an operator asks to act as an
-      // address the stage has no row for, so a deploy carries its actors with it
-      // without a bootstrap step. This does NOT belong in `pikkuServerLifecycle`'s
-      // afterStart: that hook only ever runs under `pikku dev` and `pikku serve`,
-      // so a deployed stage would provision nobody.
       plugins: [
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
         }),
         pikkuBan(),
-        pikkuFabric({
-          publicKey: FABRIC_AUTH_PUBLIC_KEY,
-          scopeService,
-          logger,
-          personas: {
-            personas: personaConfigs,
-            environments: personaEnvironments,
-          },
-        }),
       ],
     })
   }

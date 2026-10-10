@@ -1,5 +1,12 @@
 # Pikku AI Agent Wiring
 
+## Contents
+
+- Before You Start
+- API Reference
+- Usage Patterns
+- Complete Example
+
 
 ## Before You Start
 
@@ -83,7 +90,7 @@ import cycle.
 
 `auth` defaults to `false` because agents are usually invoked from an
 already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced either
-way — see `pikku-auth`.
+way — see `pikku-permissions`.
 
 ### Invoking an agent
 

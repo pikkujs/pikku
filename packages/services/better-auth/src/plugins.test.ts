@@ -17,7 +17,6 @@ const PIKKU_PLUGINS = [
   'pikkuBan',
   'pikkuCredentialOAuth',
   'pikkuDelegatedAuth',
-  'pikkuFabric',
 ] as const
 
 /**
@@ -31,7 +30,6 @@ const FORMER_NAMES = [
   'ban',
   'credentialOAuth',
   'delegatedAuth',
-  'fabric',
 ] as const
 
 describe('pikku better-auth plugins', () => {

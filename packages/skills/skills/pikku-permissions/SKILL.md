@@ -1,13 +1,23 @@
 ---
 name: pikku-permissions
 description: >-
-  Use when deciding WHO may call a function — resource ownership, role gates, admin-only actions, or any "only their own rows" rule. Covers the `permissions` field, `pikkuPermission`, `pikkuAuth`, scopes, and where ownership belongs versus where it does not.
-  TRIGGER when: writing or reviewing any function that touches a row a user owns, gating an action on a role, building the permissions half of a contract in build PHASE 2, or about to write an `if` in a function body that decides whether the caller is allowed.
-  DO NOT TRIGGER when: the question is how to sign someone in or seed a persona (that is pikku-auth), or how to shape a paginated list (that is pikku-list-query).
+  Use when deciding WHO may call a function: resource ownership, role gates, admin-only actions, or any "only their own rows" rule. Covers the `permissions` field, `pikkuPermission`, `pikkuAuth`, scopes and `defineScope`, `addGlobalPermission`, the three gates, `permissionsInBody`, and where ownership belongs versus where it does not.
+  TRIGGER when: writing or reviewing any function that touches a row a user owns, gating an action on a role, building the permissions half of a contract in build PHASE 2, about to write an `if` in a function body that decides whether the caller is allowed, or hitting `MissingScopeError`.
+  DO NOT TRIGGER when: the question is how a caller proves who they are, such as sign-in, sessions, tokens, API keys or seeding a persona (use pikku-auth), or how to shape a paginated list (use pikku-list-query).
 installGroups: [core]
 ---
 
 # Pikku Permissions
+
+## First: is the caller a machine with a token?
+
+Then this is NOT a permissions problem. Resolve the token in `addHTTPMiddleware('*')`
+middleware that calls `setSession`, make the function a `pikkuFunc`, and gate it with
+`scopes` (pikku-auth, `references/machine-auth.md`). A `permissions` check that verifies a
+bearer token and returns `true` is authentication wearing an authorization hat, and it
+leaves the function sessionless. The only exception is a bootstrap endpoint whose caller
+has no identity yet (a shared-secret registration, a login): it is sessionless and
+declares its gate here.
 
 ## The rule
 
@@ -107,11 +117,32 @@ gets straight through if the function itself is open.
 ## Scopes
 
 `scopes: ['admin:invoices:void']` is an AND gate checked BEFORE permissions and before
-input validation. Declare the tree once with `defineScope`; a function naming an
-undeclared scope fails codegen rather than gating on nothing. A grant satisfies a scope if
-it is that scope, an ancestor, or a wildcard — a session holding `admin` satisfies
-`admin:invoices:void`. Most apps need roles, not scopes; reach for these only when the
-plan asked for granular grants.
+input validation. A function naming an undeclared scope fails codegen rather than gating on
+nothing. A grant satisfies a scope if it is that scope, an ancestor, or a wildcard. Most
+apps need roles, not scopes; reach for these only when the plan asked for granular grants.
+The `defineScope` tree, grant matching and the sessionless restriction are in
+[references/scopes.md](references/scopes.md).
+
+## Global permissions
+
+`addGlobalPermission([isEmployee])` (from `#pikku/auth`) is an app-wide baseline every
+function must additionally pass. It is an independent AND gate: it can only narrow access,
+never grant what a function's own `permissions` would deny. Multiple calls accumulate and
+are AND'd.
+
+## The three gates
+
+All must pass, in this order:
+
+1. **Scopes** (`scopes`) — AND'd, checked before input validation, fails closed.
+2. **Global permissions** (`addGlobalPermission`) — AND'd together, a baseline that only narrows.
+3. **The function's own `permissions`** — OR'd groups of AND'd entries.
+
+They are independent: a broad global (e.g. `isEmployee`) can never satisfy an admin-only
+function's own requirement. Wire-, tag- and HTTP-route-level permissions
+(`addHTTPPermission`, `addTagPermission`, a `permissions` field on a wiring) no longer
+exist; tags are organizational only. Use tag/HTTP middleware for cross-cutting request
+handling, not authorization.
 
 ## The one sanctioned exception
 
@@ -122,5 +153,5 @@ the auditor the openness is deliberate. Anything expressible as a permission mus
 
 ## After changes
 
-`pikku all` — regenerates and typechecks the checkers. A permission whose signature is
-wrong fails here, not at runtime.
+`pikku all --tsc` — regenerates, then verifies the checker types. A permission whose
+signature is wrong fails here, not at runtime.

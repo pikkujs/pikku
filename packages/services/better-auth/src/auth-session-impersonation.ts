@@ -11,9 +11,8 @@ export type ImpersonationOptions = {
   /** Header carrying the target user id. Defaults to `x-pikku-impersonate-user-id`. */
   header?: string
   /**
-   * Gate the real caller against impersonating. Defaults to a Fabric operator
-   * row, or the `admin:impersonate` scope resolved through the registered
-   * `ScopeService`.
+   * Gate the real caller against impersonating. Defaults to the `admin:impersonate`
+   * scope resolved through the registered `ScopeService`.
    */
   canImpersonate?: (
     result: SessionLike,
@@ -55,13 +54,9 @@ export type MapSession = (
  * to the real session. An unknown target is logged at `warn` — it is NOT an
  * error. Hook errors (`canImpersonate`/`loadUser`) propagate by design.
  *
- * The default gate admits two callers. A `fabric: true` row is one: that column
- * is set by nothing but {@link fabric}'s sign-in, which writes it only after
- * verifying an RS256 token against the stage's public key, so the row's very
- * existence is the authorization — and unlike a scope it needs no ScopeService
- * wired, which no app template actually does. Otherwise the caller must hold
- * `admin:impersonate`, resolved through the registered `ScopeService`; that
- * half fails closed, since with no ScopeService nothing can hold the scope.
+ * The default gate admits a caller holding `admin:impersonate`, resolved
+ * through the registered `ScopeService`. It fails closed: with no ScopeService
+ * nothing can hold the scope.
  */
 export const resolveImpersonatedSession = async (
   caller: SessionLike,
@@ -80,7 +75,6 @@ export const resolveImpersonatedSession = async (
   const canImpersonate =
     impersonation.canImpersonate ??
     ((result: SessionLike, coreServices: CoreServices) =>
-      result.user?.fabric === true ||
       userHoldsScopes(
         result.user?.id,
         [ADMIN_SCOPES.impersonate],
@@ -115,8 +109,8 @@ let warnedUnconfigured = false
  *
  * `impersonation` is opt-in, and omitting it is silent: the header is read by
  * nobody and the request runs as the real caller. That is exactly what a
- * deployed stage's scenario and virtual-user runs do — they sign in with a
- * Fabric operator token and name the persona in this header — so an app that
+ * deployed stage's scenario and virtual-user runs do — they sign in as an
+ * operator and name the persona in this header — so an app that
  * never passed the option runs every persona as the operator, a row with no
  * membership anywhere, and the only symptom is assertions failing against
  * data the persona should have been able to see.

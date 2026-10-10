@@ -1,14 +1,15 @@
 ---
 name: pikku-report
 description: >-
-  Use when pikku itself cost you time — wrong generated types, a check that passes when it
-  should not, output that is quietly wrong, a skill that misled you — or when the user asks you
-  to report a framework bug or file a finding. Owns `pikku fabric report` (a finding is about
-  pikku, not the app), the product-vs-harness kinds, the workaround-first ladder, and asking the
-  user at hand-over whether to send what was filed. TRIGGER when: the framework fought you,
-  codegen produced something broken, a skill told you to run something that does not exist, the
-  user says "report this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug is in the app you are building (fix it
-  there), or you are tempted to patch pikku's source (never do that from an app).
+  Use when pikku itself cost you time — wrong generated types, a check that passes when it should
+  not, output that is quietly wrong, a skill that misled you — or when the user asks you to report
+  a framework bug or file a finding. Owns `pikku fabric report` (a finding is about pikku, not the
+  app), the product-vs-harness kinds, the workaround-first ladder, and asking the user at hand-over
+  whether to send what was filed. TRIGGER when: the framework fought you, codegen produced
+  something broken, a skill told you to run something that does not exist, the user says "report
+  this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug
+  is in the app you are building (fix it there), you are debugging a deployed stage (use
+  pikku-fabric), or you are tempted to patch pikku's source (never do that from an app).
 installGroups: [core]
 ---
 
@@ -61,7 +62,7 @@ baseline noise that was already failing before you started.
 - `--kind harness` — a skill misled you: it told you to run something that does
   not exist, described a flag that is spelled differently, or contradicted what
   the CLI actually did. Pass `--skill <name>` and `--passage "<the line or
-section>"`. This is the most useful kind to file, because it is fixable
+  section>"`. This is the most useful kind to file, because it is fixable
   immediately — so file it even when the cost was small.
 
 ## The command
