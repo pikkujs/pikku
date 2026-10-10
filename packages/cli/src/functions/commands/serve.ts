@@ -1,4 +1,6 @@
+import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
+import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
@@ -41,19 +43,43 @@ export const serve = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async (
-    { logger, config, getInspectorState, variables, devServerRunner },
+    {
+      logger,
+      config,
+      getInspectorState,
+      loadInspectorStateFile,
+      variables,
+      devServerRunner,
+    },
     { port, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     disableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
-    const telemetry = startRunTelemetry({ rootDir: config.rootDir, command: 'serve' })
+    const telemetry = startRunTelemetry({
+      rootDir: config.rootDir,
+      command: 'serve',
+    })
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const bindHostname = '127.0.0.1'
     const pikkuDir = resolve(config.rootDir, config.outDir)
 
-    const inspectorState = await getInspectorState(true)
+    const stateFile = codegenStateFile()
+    try {
+      await runCodegenChild(stateFile, {
+        command: ['meta', 'functions', 'list'],
+        config: config.config,
+        outDir: config.outDir,
+        logLevel: (config as { logLevel?: string }).logLevel,
+        output: (config as { output?: string }).output,
+        inheritStdout: false,
+      })
+      await loadInspectorStateFile(stateFile)
+    } finally {
+      await rm(stateFile, { force: true })
+    }
+    const inspectorState = await getInspectorState()
     const { pikkuConfigFactory, singletonServicesFactory } =
       inspectorState.filesAndMethods
 

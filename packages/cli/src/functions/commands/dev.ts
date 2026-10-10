@@ -1,4 +1,10 @@
+import { rm } from 'node:fs/promises'
 import { join, resolve } from 'path'
+import {
+  codegenStateFile,
+  hasChangesSince,
+  runCodegenChild,
+} from './codegen-child.js'
 import { readMcpManifests } from './dev-mcp-manifests.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -74,12 +80,11 @@ export const dev = pikkuSessionlessFunc<
       logger,
       config,
       getInspectorState,
-      invalidateInspectorState,
+      loadInspectorStateFile,
       variables,
       devServerRunner,
     },
-    { port, watch, hmr, coverage, test, model },
-    { rpc }
+    { port, watch, hmr, coverage, test, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
@@ -87,7 +92,10 @@ export const dev = pikkuSessionlessFunc<
     )
     enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
-    const telemetry = startRunTelemetry({ rootDir: config.rootDir, command: 'dev' })
+    const telemetry = startRunTelemetry({
+      rootDir: config.rootDir,
+      command: 'dev',
+    })
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }
@@ -109,118 +117,30 @@ export const dev = pikkuSessionlessFunc<
         [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
       ),
     ] as string[]
-    const commandSingletonServices = pikkuState(
-      null,
-      'package',
-      'singletonServices'
-    )
-    const commandFunctionMeta = {
-      ...pikkuState(null, 'function', 'meta'),
-    }
-    const commandFunctions = new Map(pikkuState(null, 'function', 'functions'))
-    const commandRPCMeta = {
-      ...pikkuState(null, 'rpc', 'meta'),
-    }
-    const commandWorkflowsMeta = {
-      ...pikkuState(null, 'workflows', 'meta'),
-    }
-    const commandWorkflowRegistrations = new Map(
-      pikkuState(null, 'workflows', 'registrations')
-    )
     const workflowService = new InMemoryWorkflowService()
     const pikkuDir = resolve(config.rootDir, config.outDir)
-    const runAll = async () => {
-      await workflowService.runToCompletion('allWorkflow', {}, rpc)
-    }
-    const runAllWithCommandState = async () => {
-      const previousSingletonServices = pikkuState(
-        null,
-        'package',
-        'singletonServices'
-      )
-      const previousFunctions = pikkuState(null, 'function', 'functions')
-      const previousFunctionMeta = pikkuState(null, 'function', 'meta')
-      const previousRPCMeta = pikkuState(null, 'rpc', 'meta')
-      const previousWorkflowsMeta = pikkuState(null, 'workflows', 'meta')
-      const previousWorkflowRegistrations = pikkuState(
-        null,
-        'workflows',
-        'registrations'
-      )
-      // During hot-reload (when user services are already live), build a hybrid services
-      // object: user services (so in-flight requests keep kysely/content/etc.) overlaid
-      // with the CLI config (outDir, scaffold, schemaDirectory, etc. — required by
-      // allWorkflow for code generation paths). Replacing the entire services object with
-      // commandSingletonServices during hot-reload caused a race condition where concurrent
-      // auth requests saw CLI services (no kysely) and crashed.
-      const isHotReload =
-        previousSingletonServices !== commandSingletonServices &&
-        !!previousSingletonServices
-      // Overlaid rather than swapped: swapping left the app reading the CLI's
-      // config for as long as codegen ran.
-      const codegenServices = isHotReload
-        ? ({
-            ...previousSingletonServices,
-            config: {
-              ...previousSingletonServices.config,
-              ...commandSingletonServices?.config,
-            },
-          } as typeof previousSingletonServices)
-        : commandSingletonServices
-      pikkuState(null, 'package', 'singletonServices', codegenServices)
-      pikkuState(
-        null,
-        'function',
-        'functions',
-        new Map([...previousFunctions.entries(), ...commandFunctions.entries()])
-      )
-      pikkuState(null, 'function', 'meta', {
-        ...previousFunctionMeta,
-        ...commandFunctionMeta,
-      })
-      pikkuState(null, 'rpc', 'meta', {
-        ...previousRPCMeta,
-        ...commandRPCMeta,
-      })
-      pikkuState(null, 'workflows', 'meta', {
-        ...previousWorkflowsMeta,
-        ...commandWorkflowsMeta,
-      })
-      pikkuState(
-        null,
-        'workflows',
-        'registrations',
-        new Map([
-          ...previousWorkflowRegistrations.entries(),
-          ...commandWorkflowRegistrations.entries(),
-        ])
-      )
-
+    const runCodegen = async () => {
+      const stateFile = codegenStateFile()
       try {
-        await runAll()
+        await runCodegenChild(stateFile, {
+          command: ['all'],
+          config: config.config,
+          outDir: config.outDir,
+          logLevel: (config as { logLevel?: string }).logLevel,
+          output: (config as { output?: string }).output,
+          security: (config as { security?: boolean }).security,
+          inheritStdout: true,
+        })
+        await loadInspectorStateFile(stateFile)
       } finally {
-        pikkuState(
-          null,
-          'package',
-          'singletonServices',
-          previousSingletonServices
-        )
-        pikkuState(null, 'function', 'functions', previousFunctions)
-        pikkuState(null, 'function', 'meta', previousFunctionMeta)
-        pikkuState(null, 'rpc', 'meta', previousRPCMeta)
-        pikkuState(null, 'workflows', 'meta', previousWorkflowsMeta)
-        pikkuState(
-          null,
-          'workflows',
-          'registrations',
-          previousWorkflowRegistrations
-        )
+        await rm(stateFile, { force: true })
       }
     }
 
-    await runAllWithCommandState()
+    const startupCodegenStartedAt = Date.now()
+    await runCodegen()
 
-    const inspectorState = await getInspectorState(true)
+    const inspectorState = await getInspectorState()
     const { pikkuConfigFactory, singletonServicesFactory } =
       inspectorState.filesAndMethods
 
@@ -487,8 +407,7 @@ export const dev = pikkuSessionlessFunc<
         const handle = async () => {
           try {
             const start = Date.now()
-            invalidateInspectorState()
-            await runAllWithCommandState()
+            await runCodegen()
             workflowService.wireQueueWorkers()
             wireAgentScorerQueueWorkers()
             // Pull the regenerated meta + JSON schemas into the running
@@ -550,7 +469,9 @@ export const dev = pikkuSessionlessFunc<
           } while (queued)
         }
 
-        await runHandle()
+        if (hasChangesSince(watchDirectories, startupCodegenStartedAt)) {
+          await runHandle()
+        }
 
         let timeout: ReturnType<typeof setTimeout> | undefined
 

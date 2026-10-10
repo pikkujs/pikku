@@ -240,13 +240,8 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   SingletonServices
 > = async (config) => {
-  const {
-    rootDir,
-    srcDirectories,
-    filters,
-    preloadedInspectorState,
-    stateOutput,
-  } = config
+  const { rootDir, srcDirectories, filters, stateOutput } = config
+  let preloadedInspectorState = config.preloadedInspectorState
   const variables = new LocalVariablesService()
 
   // Store unfiltered state
@@ -490,6 +485,13 @@ export const createSingletonServices: CreateSingletonServices<
     inspectorInvalidated = true
   }
 
+  const loadInspectorStateFile = async (file: string) => {
+    const serialized = JSON.parse(await readFile(file, 'utf-8'))
+    preloadedInspectorState = deserializeInspectorState(serialized)
+    unfilteredState = preloadedInspectorState
+    unfilteredStateIsSetupOnly = false
+  }
+
   const workflowService = new InMemoryWorkflowService()
 
   // Resolve the runtime ONCE here, then inject runtime-specific implementations.
@@ -508,6 +510,7 @@ export const createSingletonServices: CreateSingletonServices<
     audit: new NoopAuditService(),
     getInspectorState,
     invalidateInspectorState,
+    loadInspectorStateFile,
     workflowService,
     bundler: bundleWithBun ? new BunBundler() : new NodeBundler(),
     devServerRunner: isBun
