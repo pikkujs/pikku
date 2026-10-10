@@ -2,10 +2,10 @@ import React from 'react'
 import type { Node } from '@xyflow/react'
 import type { GraphNodeProps } from '../../types'
 import { Handle, Position } from '@xyflow/react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
+import { nodeColor } from '../../colors'
 import { useGraphActions } from '../../context/GraphHostContext'
 
 interface ChannelWiringNodeData {
@@ -36,22 +36,10 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
   hasTarget,
 }) => {
   return (
-    <Box
-      px="xs"
-      pl="md"
-      py={4}
-      style={{
-        position: 'relative',
-        opacity: hasTarget ? 1 : 0.4,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}
+    <div
+      className={`relative flex items-center justify-between gap-2 py-1 pl-4 pr-2 ${hasTarget ? '' : 'opacity-40'}`}
     >
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
+      <span className="text-sm text-muted-foreground">{label}</span>
       {hasTarget && (
         <>
           <ArrowRight size={12} />
@@ -60,7 +48,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
             position={Position.Right}
             id={handleId}
             style={{
-              background: 'var(--mantine-color-teal-6)',
+              background: nodeColor('teal'),
               width: 8,
               height: 8,
               right: -4,
@@ -68,7 +56,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
           />
         </>
       )}
-    </Box>
+    </div>
   )
 }
 
@@ -76,7 +64,6 @@ export const ChannelWiringNode: React.FC<
   GraphNodeProps<ChannelWiringNodeData>
 > = ({ data, id }) => {
   const { openWorkflowStep } = useGraphActions()
-  const theme = useMantineTheme()
 
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'trigger')
@@ -87,31 +74,13 @@ export const ChannelWiringNode: React.FC<
     : []
 
   return (
-    <Paper
-      shadow="md"
-      radius="md"
-      w={180}
-      style={{
-        cursor: 'pointer',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
+    <div
+      className="relative w-[180px] cursor-pointer overflow-hidden rounded-md border bg-card text-card-foreground shadow-md"
       onClick={handleClick}
     >
-      <Box
-        pos="absolute"
-        left={0}
-        top={0}
-        bottom={0}
-        w={4}
-        style={{
-          backgroundColor: theme.colors.gray[5],
-          borderTopLeftRadius: theme.radius.md,
-          borderBottomLeftRadius: theme.radius.md,
-        }}
-      />
+      <div className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md bg-muted-foreground" />
 
-      <Stack gap={0} py={4}>
+      <div className="flex flex-col py-1">
         <HandlerRow
           label={asI18n(HANDLER_NAMES.onConnect)}
           handleId="onConnect"
@@ -138,8 +107,8 @@ export const ChannelWiringNode: React.FC<
           handleId="onDisconnect"
           hasTarget={!!data.onDisconnect}
         />
-      </Stack>
-    </Paper>
+      </div>
+    </div>
   )
 }
 

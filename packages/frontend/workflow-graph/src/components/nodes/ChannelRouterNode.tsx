@@ -1,10 +1,10 @@
 import React from 'react'
 import type { GraphNodeProps } from '../../types'
 import { Handle, Position } from '@xyflow/react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
+import { nodeColor } from '../../colors'
 
 interface ActionRowProps {
   label: I18nNode
@@ -13,34 +13,21 @@ interface ActionRowProps {
 
 const ActionRow: React.FC<ActionRowProps> = ({ label, handleId }) => {
   return (
-    <Box
-      px="xs"
-      pl="md"
-      py={4}
-      style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}
-    >
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
+    <div className="relative flex items-center justify-between gap-2 py-1 pl-4 pr-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <ArrowRight size={14} />
       <Handle
         type="source"
         position={Position.Right}
         id={handleId}
         style={{
-          background: 'var(--mantine-color-violet-6)',
+          background: nodeColor('violet'),
           width: 8,
           height: 8,
           right: -4,
         }}
       />
-    </Box>
+    </div>
   )
 }
 
@@ -52,43 +39,23 @@ interface ChannelRouterNodeData {
 export const ChannelRouterNode: React.FC<
   GraphNodeProps<ChannelRouterNodeData>
 > = ({ data }) => {
-  const theme = useMantineTheme()
-
   return (
-    <Paper
-      shadow="md"
-      radius="md"
-      w={200}
-      style={{
-        overflow: 'visible',
-        position: 'relative',
-      }}
-    >
+    <div className="relative w-[200px] overflow-visible rounded-md border bg-card text-card-foreground shadow-md">
       <Handle
         type="target"
         position={Position.Left}
         style={{ cursor: 'default' }}
       />
 
-      <Box
-        pos="absolute"
-        left={0}
-        top={0}
-        bottom={0}
-        w={4}
-        style={{
-          backgroundColor: theme.colors.violet[5],
-          borderTopLeftRadius: theme.radius.md,
-          borderBottomLeftRadius: theme.radius.md,
-        }}
+      <div
+        className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md"
+        style={{ backgroundColor: nodeColor('violet') }}
       />
 
-      <Stack gap={0} py="xs">
-        <Box px="md" pb={4}>
-          <Text size="sm" fw={600}>
-            {asI18n(data.category)}
-          </Text>
-        </Box>
+      <div className="flex flex-col py-2">
+        <div className="px-4 pb-1">
+          <div className="text-sm font-semibold">{asI18n(data.category)}</div>
+        </div>
 
         {data.actions.map((action) => (
           <ActionRow
@@ -97,7 +64,7 @@ export const ChannelRouterNode: React.FC<
             handleId={`action-${action}`}
           />
         ))}
-      </Stack>
-    </Paper>
+      </div>
+    </div>
   )
 }

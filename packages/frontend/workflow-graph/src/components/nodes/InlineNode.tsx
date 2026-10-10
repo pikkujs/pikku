@@ -1,7 +1,6 @@
 import React from 'react'
 import type { Node } from '@xyflow/react'
 import type { GraphNodeProps } from '../../types'
-import { SimpleGrid, Box } from '@pikku/mantine/core'
 import { GraphBadge } from '../GraphBadge'
 import { RotateCw, Timer, Code } from 'lucide-react'
 import { BaseNode } from './BaseNode'
@@ -39,59 +38,35 @@ export const InlineNode: React.FC<GraphNodeProps<InlineNodeData>> = ({
       width={200}
       additionalBody={
         data.inWorkflow ? (
-          <SimpleGrid
-            cols={2}
-            px="1rem"
-            c="dimmed"
-            mt="xs"
-            style={{ alignItems: 'center' }}
-          >
-            <Box pos="relative" style={{ justifySelf: 'center' }}>
+          <div className="mt-2 grid grid-cols-2 items-center px-4 text-muted-foreground">
+            <div className="relative justify-self-center">
               <RotateCw size={16} strokeWidth={2} />
               {data.workflowRetries !== undefined &&
                 data.workflowRetries > 0 && (
                   <GraphBadge
                     type="label"
-                    size="sm"
-                    pos="absolute"
-                    top={-8}
-                    right={-8}
-                    circle
-                    style={{
-                      minWidth: 12,
-                      height: 12,
-                      padding: 2,
-                      width: 'fit-content',
-                    }}
+                    size="xs"
+                    className="absolute -right-2 -top-2"
                   >
                     {data.workflowRetries}
                   </GraphBadge>
                 )}
-            </Box>
+            </div>
 
-            <Box pos="relative" style={{ justifySelf: 'center' }}>
+            <div className="relative justify-self-center">
               <Timer size={16} strokeWidth={2} />
               {data.workflowRetryDelay !== undefined &&
                 data.workflowRetryDelay > 0 && (
                   <GraphBadge
                     type="label"
-                    size="sm"
-                    pos="absolute"
-                    top={-8}
-                    right={-8}
-                    circle
-                    style={{
-                      minWidth: 12,
-                      height: 12,
-                      padding: 2,
-                      width: 'fit-content',
-                    }}
+                    size="xs"
+                    className="absolute -right-2 -top-2"
                   >
                     {data.workflowRetryDelay}
                   </GraphBadge>
                 )}
-            </Box>
-          </SimpleGrid>
+            </div>
+          </div>
         ) : undefined
       }
     />
