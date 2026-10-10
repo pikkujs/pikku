@@ -21,7 +21,7 @@ const ActionRow: React.FC<ActionRowProps> = ({ label, handleId }) => {
         position={Position.Right}
         id={handleId}
         style={{
-          background: nodeColor('violet'),
+          background: nodeColor('router'),
           width: 8,
           height: 8,
           right: -4,
@@ -49,7 +49,7 @@ export const ChannelRouterNode: React.FC<
 
       <div
         className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md"
-        style={{ backgroundColor: nodeColor('violet') }}
+        style={{ backgroundColor: nodeColor('router') }}
       />
 
       <div className="flex flex-col py-2">
