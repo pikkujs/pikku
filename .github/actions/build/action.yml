@@ -1,5 +1,5 @@
 name: Build
-description: Build all packages, generate pikku files, build templates + console, and upload build artifact
+description: Build all packages, generate pikku files, build templates, and upload build artifact
 
 inputs:
   templates:
@@ -19,7 +19,7 @@ runs:
         # a prefix restore-key so unrelated changes still reuse the newest cache.
         #
         # node_modules is excluded because `packages/**/dist` otherwise also
-        # matches a dependency's own dist — e.g. packages/console/node_modules/
+        # matches a dependency's own dist — e.g. a package's node_modules/
         # tinyglobby/dist. Restore happens after `bun install`, so once a run
         # where Yarn nested that dependency is cached, every later run whose
         # hoisting differs gets the directory re-created without its
@@ -80,18 +80,6 @@ runs:
         start=$SECONDS
         bun run build:templates
         echo "::notice::⏱ Build templates: $((SECONDS - start))s"
-    - name: Generate and type-check console
-      shell: bash
-      run: |
-        start=$SECONDS
-        cd packages/console && bun run generate && bun run tsc --noEmit
-        echo "::notice::⏱ Console type-check: $((SECONDS - start))s"
-    - name: Build console
-      shell: bash
-      run: |
-        start=$SECONDS
-        bun run build:console
-        echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
     # One tar rather than the tree: upload-artifact sends each file on its own,
     # and ~16 MB of small build files took two minutes that way.
@@ -110,7 +98,7 @@ runs:
         {
           find packages templates -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
             -o -path 'packages/*' -type d -name bin -print -prune
-          for dir in packages/cli/console-app templates/functions/pikku; do
+          for dir in templates/functions/pikku; do
             [ -d "$dir" ] && echo "$dir"
           done
         } > "$RUNNER_TEMP/build-output.list"
