@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3284 observable things**: 1098 exported names, plus
+**3303 observable things**: 1117 exported names, plus
 2186 members on the classes and interfaces among them, reachable
-through 58 entry points.
+through 59 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -27,9 +27,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
+| `./cli` | 21 | 19 | 26 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
-| `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
 | `./services/local-content` | 13 | 13 | 19 |
@@ -47,6 +47,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./addon` | 13 | 13 | 2 |
 | `./scope` | 15 | 15 | 0 |
+| `./mount` | 14 | 14 | 0 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
@@ -4129,12 +4130,25 @@ export interface CLICommandMeta {
   middleware?: MiddlewareMetadata[]
   isDefault?: boolean
 }
+export type CLICommandMount = {
+  program: string
+  name: string
+  meta: CLICommandMeta
+  commands: Record<string, any>
+  options?: Record<string, CLIOption>
+  packageName?: string
+}
 export class CLIError extends Error {
   constructor(message: string, public exitCode: number = 1)
 }
+export type CLIExtension = Omit<CLICommandMount, 'program'>
 export interface CLIMeta {
   programs: Record<string, CLIProgramMeta>
   renderers: RenderersMeta
+}
+export type CLIMountHandle = {
+  added: string[]
+  unmount: () => string[]
 }
 export type CLIProgramMeta = {
   program: string
@@ -4199,11 +4213,80 @@ defineCLICommands: <T extends Record<string, CoreCLICommandConfig<any, any, any,
 executeCLI: ({ programName, args, createConfig, createSingletonServices, createWireServices, }: { programName: string; args?: string[] | undefined; createConfig?: CreateConfig<any, any> | undefined; createSingletonServices: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => Promise<void>
 formatCLIError: (error: unknown, { verbose }?: { verbose?: boolean | undefined; }) => string
 generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
+mountCLICommands: ({ program, name, meta, commands, options, packageName, }: CLICommandMount) => CLIMountHandle
+mountCLIExtension: (program: string, extension: CLIExtension) => CLIMountHandle
 parseCLIArguments: (args: string[], programName: string, allMeta: CLIMeta) => ParsedCommand
 pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
 runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
 wantsStackTrace: (args: string[], env?: Record<string, string | undefined>) => boolean
 wireCLI: <Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, GlobalOptions, PikkuMiddleware extends CorePikkuMiddleware, GlobalOutput>(cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>) => void
+```
+
+## ./mount
+
+```ts
+getMountedPackages: () => MountedPackage[]
+export type HTTPMountedRoute = {
+  meta: HTTPWiringMeta
+  wiring?: HTTPRouteWiring
+}
+export type HTTPRoutesMount = {
+  routes: HTTPMountedRoute[]
+  packageName?: string
+}
+export type HTTPRouteWiring = {
+  func?: unknown
+  auth?: boolean
+  middleware?: unknown[]
+  permissions?: unknown
+  tags?: string[]
+  sse?: boolean
+  streamProtocol?: string
+  [key: string]: unknown
+}
+export type MCPMount = {
+  packageName?: string
+  tools?: Record<string, { meta: MCPToolMeta[string]; wiring?: MCPWiring }>
+  resources?: Record<
+    string,
+    { meta: MCPResourceMeta[string]; wiring?: MCPWiring }
+  >
+  prompts?: Record<string, { meta: MCPPromptMeta[string]; wiring?: MCPWiring }>
+}
+export type MCPWiring = {
+  func?: unknown
+  middleware?: unknown[]
+  tags?: string[]
+  [key: string]: unknown
+}
+export type MountedPackage = {
+  name: string
+  packageName: string
+  added: PackageMountReport
+  unmount: () => PackageMountReport
+}
+export type MountHandle = {
+  added: string[]
+  unmount: () => string[]
+}
+mountHTTPRoutes: ({ routes, packageName, }: HTTPRoutesMount) => MountHandle
+mountMCP: ({ packageName, tools, resources, prompts, }: MCPMount) => MountHandle
+mountPackage: (extension: PackageExtension) => MountedPackage
+export type PackageExtension = {
+  name: string
+  packageName: string
+  wirings: {
+    cli?: { program: string } & Omit<CLIExtension, 'packageName'>
+    http?: HTTPMountedRoute[]
+    mcp?: Omit<MCPMount, 'packageName'>
+  }
+}
+export type PackageMountReport = {
+  cli?: string[]
+  http?: string[]
+  mcp?: string[]
+}
+unmountPackage: (name: string) => PackageMountReport | undefined
 ```
 
 ## ./cli/command-parser
