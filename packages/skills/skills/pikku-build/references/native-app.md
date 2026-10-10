@@ -1,5 +1,14 @@
 # Shipping an app as a desktop or Android app
 
+## Contents
+
+- The commands
+- Pick the mode first
+- What pikku owns and what you own
+- Plugins
+- The identifier
+- Building
+
 Read this when an app in `frontends` has to be installed rather than visited: a
 desktop app, an Android APK, later an iPhone app. The app is still the same
 frontend. A native app is that frontend packaged in a Tauri shell, configured on

@@ -4,12 +4,14 @@ description: >-
   Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
   or a showcase that exercises every surface), adding a feature to an app that already exists, and
   the one-off cleanup right after a template is cloned. Covers the knowledge base, personas and
-  roles, filing the work as changes and planning each changeset, the scenario that proves each one, theming, multi-app layouts and
-  deploying. TRIGGER when: the user asks for an app to be built on Pikku, a freshly scaffolded
-  project needs turning into a product, the user asks to add a feature or wire up a new endpoint
-  in a working app, or a template was just cloned or scaffolded. DO NOT TRIGGER when: the user
-  asks for a one-off edit to an existing function, asks about Pikku concepts (use pikku-concepts),
-  or wants one specific surface explained rather than built (use that surface's skill).
+  roles, filing the work as changes, the scenario that proves each one, theming, multi-app
+  layouts and deploying. TRIGGER when: the user asks for an app to be built on
+  Pikku, a freshly scaffolded project needs turning into a product, the user asks to add a feature
+  or wire up a new endpoint in a working app, or a template was just cloned or scaffolded. DO NOT
+  TRIGGER when: the user asks for a one-off edit to an existing function, asks about Pikku concepts
+  (use pikku-concepts), wants one specific surface explained rather than built (use that surface's
+  skill), only needs the technical plan for one claimed changeset (use pikku-architect), or is
+  working items off a deployed stage's changes queue (use pikku-changes).
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
 argument-hint: '[feature description]'
 installGroups: [core]
@@ -30,29 +32,29 @@ agent:
 
 ## Which mode
 
-| The situation                                                                | Read                                                                     |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| A template was just cloned or scaffolded, and the tree still looks like one  | `references/post-clone.md` first, then come back                         |
-| A real product, meant to be picked up by someone else                        | `references/app.md` — the default                                        |
-| A spike, a throwaway demo, an idea nobody has committed to                   | `references/quick.md`                                                    |
-| A showcase meant to exercise every Pikku surface                             | `references/platform.md`, which is a delta on top of `references/app.md` |
-| A feature added to an app that already has its knowledge base               | `references/feature.md`                                                  |
+| The situation                                                                  | Read                                                                                          |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| A template was just cloned or scaffolded, and the tree still looks like one    | `references/post-clone.md` first, then come back                                              |
+| A real product, meant to be picked up by someone else                          | `references/app.md` — the default                                                             |
+| A spike, a throwaway demo, an idea nobody has committed to                     | `references/quick.md`                                                                         |
+| A showcase meant to exercise every Pikku surface                               | `references/platform.md`, read together with `references/app.md`                              |
+| A feature added to an app that already has its knowledge base                  | `references/feature.md`                                                                       |
+| Writing or fixing the scenarios that prove a changeset (app §7, §7a)           | `references/scenarios.md`                                                                     |
+| Before the first screen is built: a picture of the screens, a design direction | `references/design.md`                                                                        |
+| Authoring or changing the theme (app §8a)                                      | `references/theming.md`                                                                       |
+| Adding a second frontend (app §4), at the changeset that needs it              | `references/multi-app.md`                                                                     |
+| Shipping an app as a desktop or Android app                                    | `references/native-app.md`                                                                    |
+| Deploying, and the Fabric-readiness contract (app §9)                          | `references/ship.md`                                                                          |
+| The request is built on an OpenAPI spec (auth mode, sign-in or connect screen) | `references/openapi.md`                                                                       |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
-plus more effort" — it is App plus a deliberate surface checklist, so read the
-base first and follow it in full rather than blending the two into one plan.
+plus more effort" — it is App plus a deliberate surface checklist: read both
+files, follow the base in full, and do not blend the two into one plan.
 
-The supporting references belong to whichever mode sends you to them:
-`references/multi-app.md` (a second frontend), `references/native-app.md`
-(shipping an app as a desktop or Android app), `references/design.md` (showing
-a picture of the screens first, committing to a design direction, and judging
-whether the screens realise it — read before the first screen is built, not
-after the last), `references/theming.md`
-(authoring the theme),
-`references/ship.md` (deploying, and the Fabric-readiness contract),
-`references/openapi.md` (an app on an OpenAPI spec: the auth mode, the
-auth-config format, and the sign-in or connect screen it implies).
+Each reference names the topics it leans on but never tells you to open
+another file; this table is the only routing. Open a reference when its row
+matches, not up front.
 
 ## Bootstrap before anything else
 

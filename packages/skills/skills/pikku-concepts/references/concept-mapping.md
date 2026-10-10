@@ -1,5 +1,23 @@
 # Concept Mapping: Generic Backend → Pikku
 
+## Contents
+
+- Quick Reference Table
+- Route Handler / Controller
+- Route Parameters
+- Middleware
+- Auth Guard
+- Authorization / Role Checks
+- DTO / Request Validation
+- Dependency Injection
+- WebSocket Handlers
+- Job Queue Workers
+- Cron / Scheduled Tasks
+- Module / Feature Grouping
+- Error Handling
+- Session Management
+- API Client Generation
+
 Authoritative mapping table plus side-by-side code examples showing how common backend patterns translate to Pikku.
 
 - [Quick Reference Table](#quick-reference-table)

@@ -7,8 +7,8 @@ description: >-
   the dev actor switcher. TRIGGER when: writing a React component that fetches or mutates backend
   data, wiring PikkuProvider, paginating, running or tracking a workflow from the client, or
   asking about useDevActors / DevActorSwitcher / quick login. DO NOT TRIGGER when: working on the
-  backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), or writing
-  user-facing copy (use pikku-i18n).
+  backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), rendering fetched values such as
+  dates in Mantine (use pikku-mantine), or writing user-facing copy (use pikku-i18n).
 installGroups: [client]
 ---
 

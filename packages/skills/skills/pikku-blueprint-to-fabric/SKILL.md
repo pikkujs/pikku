@@ -1,15 +1,13 @@
 ---
 name: pikku-blueprint-to-fabric
-description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+Mantine), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), or the user wants a single new feature in an existing app (use pikku-build).'
+description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+Mantine), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". Admin screens are ported by pikku-admin-to-fabric alongside it. DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), the user wants a single new feature in an existing app (use pikku-build), or the task is only the legacy admin screens of an already-started port (use pikku-admin-to-fabric).'
 installGroups: [fabric]
 argument-hint: '<path to .knowledge/> [domain to slice next]'
 ---
 
 # Blueprint → Fabric
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
+## Operating procedure
 
 1. **Validate the blueprint before you trust it.** Run the archaeology validator; `0 error(s)` or stop.
 2. **Clear the decisions gate.** Unresolved `decisionsNeeded` block the domains they touch. Ask; do not invent.
@@ -347,19 +345,6 @@ Per domain:
 | "I'll do the parity report at the end"                                 | You will not remember why you dropped things, and dropped-on-purpose will read as regression.                                      |
 | "Verify once it's all built"                                           | No bisect point. Verify per slice; that's what slices are for.                                                                     |
 | "The blueprint has a `low`-confidence entry, I'll build my best guess" | That's inventing product. It's a gate question.                                                                                    |
-
-## Quick reference
-
-```bash
-node <archaeology-skill>/scripts/validate.mjs <repo>/.knowledge   # Stage 0 — must be 0 errors
-# Stage 1 — decisions gate: ask, don't invent
-# Stage 2 — clone starter template, then the post-clone cleanup (pikku-build)
-# Stage 3 — entities.json -> db/sqlite/NNNN-*.sql ; pikku db migrate
-# Stage 4..7 — one domain slice at a time, dependency order
-pikku fabric validate --json
-yarn pikku all && yarn tsc --noEmit
-# Stage 9 — .knowledge/parity-<domain>.md per slice
-```
 
 ## Relationship to the other skills
 

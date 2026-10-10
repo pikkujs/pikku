@@ -1,5 +1,16 @@
 # Pikku Workflows — Client Hooks
 
+## Contents
+
+- [Discover what workflows exist](#discover-what-workflows-exist)
+- [Setup](#setup)
+- [useRunWorkflow(name, options?) — run and wait](#userunworkflowname-options--run-and-wait)
+- [useStartWorkflow(name, options?) — fire-and-poll](#usestartworkflowname-options--fire-and-poll)
+- [useWorkflowStatus(workflowName, runId, options?) — observe](#useworkflowstatusworkflowname-runid-options--observe)
+- [Putting it together — start + observe](#putting-it-together--start--observe)
+- [Backend: streaming richer progress](#backend-streaming-richer-progress)
+- [What NOT to do](#what-not-to-do)
+
 
 ## Discover what workflows exist
 

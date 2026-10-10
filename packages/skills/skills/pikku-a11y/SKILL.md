@@ -1,7 +1,7 @@
 ---
 name: pikku-a11y
 description: >-
-  Accessibility rules (WCAG 2.2) for the app UI: labeled inputs, real buttons/links, keyboard and focus, contrast and not-color-alone, modals, reduced motion.
+  Accessibility rules (WCAG 2.2) for Mantine-based app UI: labeled inputs, real buttons/links, keyboard and focus, contrast and not-color-alone, modals, reduced motion.
   TRIGGER when: building forms or any interactive UI, icon-only buttons, modals/drawers, tables/lists with actions, keyboard/focus work, or the user mentions accessibility / screen readers / WCAG.
   DO NOT TRIGGER when: working on backend functions, database, or deployment with no UI.
 installGroups: [client]
@@ -10,8 +10,8 @@ installGroups: [client]
 # Accessibility Rules
 
 Mantine components are accessible ONLY when used properly — the rules below are the
-"properly". They apply to every page; heading order, landmarks, and image alt text are
-covered in the `pikku-seo` skill and apply app-wide, not just on public pages.
+"properly". They apply to every page, public or logged-in. This skill owns heading hierarchy,
+landmarks and image alt text app-wide (below); `pikku-seo` covers only public-route SEO.
 
 ## Every input has a label
 
@@ -57,3 +57,11 @@ Tab through the page once: every control reachable and visibly focused, every in
 labeled, every icon button named, every status readable without color. A browser
 scenario proves the flow works, not that it is reachable without a mouse — this
 manual pass is the only check that does.
+
+## Headings, landmarks, alt text (app-wide)
+
+- Exactly one h1 per page, naming its topic. Below it: h1 → h2 → h3, no skipped levels.
+  Never pick a level for its font size — set the size on the correct level
+  (`<Title order={2} fz="xs">`).
+- Landmarks on every page: `<nav>`, `<main>`, `<footer>` where present (Mantine: `component="nav"` etc.).
+- Every meaningful `<img>` has alt text describing it; decorative images get `alt=""`.

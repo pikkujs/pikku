@@ -1,6 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against <stage>", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
+description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-fabric for those.'
 installGroups: [fabric]
 ---
 
@@ -11,8 +11,7 @@ screenshot of what they saw, and the elements the circle enclosed. You have the 
 Empty the queue without making them regret filing.
 
 Run every command from the checkout. The queue lives in it (`.git/pikku-changes.json`, shared by every
-worktree).
-`--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
+worktree). `--json` works on all of them. Items are addressed as `2`, `#2` or their uuid.
 
 **Launched by `pikku changes next`?** `pikku changes next` picks one agent: a merge conflict or a changeset with no plan
 goes back to a changes agent; open changes go to a changes agent; a pikku version bump goes to an
@@ -104,8 +103,8 @@ changeset declared no `--creates`/`--alters`.
 
 When other agents are working changesets at the same time (your work says so), claim with
 `--worktree`: it creates `changeset/<slug>` in its own checkout beside the repo and prints the path.
-Build and commit there and run `done` there; the merge removes the worktree. If the claim is refused because of a running changeset, claim one that does not
-clash, or stop.
+Build and commit there and run `done` there; the merge removes the worktree. If the claim is refused
+because of a running changeset, claim one that does not clash, or stop.
 
 ## Reading an item
 
@@ -184,7 +183,8 @@ Scope names the screen they were looking at, not the file you edited.
 pikku changes done --change-id 7 --note "What you did, for whoever reads the thread"
 ```
 
-Branch and commit default to the checkout you are in — run it there, never type a sha. `done` finds the item's commit by its `Change-Id` trailer, so close items in any order.
+Branch and commit default to the checkout you are in — run it there, never type a sha. `done` finds
+the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 

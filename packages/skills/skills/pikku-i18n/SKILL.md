@@ -2,9 +2,9 @@
 name: pikku-i18n
 description: >-
   Use when writing user-facing text in a Pikku frontend, or making one speak another language.
-  Covers Paraglide JS message functions compiled from messages/<locale>.json, adding a second
-  language, generated enum-label maps with @pikku/paraglide, and right-to-left support for Arabic,
-  Hebrew, Farsi and Urdu. TRIGGER when: scaffolding or editing a frontend and writing display
+  Covers Paraglide JS message functions compiled from per-locale messages JSON files, adding a second
+  language, generated enum-label maps with @pikku/paraglide, and right-to-left support (document direction, flow-relative
+  styles) for Arabic, Hebrew, Farsi and Urdu. TRIGGER when: scaffolding or editing a frontend and writing display
   text, asked to make copy translatable, adding a language, labelling an enum/status/role value,
   or asked to support RTL / mirror the layout. DO NOT TRIGGER for backend functions, error
   messages thrown from functions, or log output — none of those are display strings.
@@ -49,7 +49,7 @@ the app is in. Set `defaultLocale` instead.
 Set `dir` once at the document root from the active locale and the browser (and
 Mantine) mirror everything — provided every custom style is flow-relative
 (`margin-inline-start`, `text-align: start`, Mantine `ms`/`me`) rather than
-physical (`margin-left`, `text-align: left`, `ml`/`me`'s physical twins). Write
+physical (`margin-left`, `text-align: left`, `ml`/`mr`). Write
 logical properties from the start even in an English-only app; that discipline
 is what makes an RTL language just another locale file.
 

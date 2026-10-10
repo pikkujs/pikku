@@ -1,5 +1,27 @@
 # Build a product on open-source Pikku
 
+## Contents
+
+- Agent Operating Procedure
+- 0. Bootstrap, before anything else
+- 1. One more round of questions — then stop asking
+- 1a. Three languages, and you must not collapse them
+- PHASE 1 — What the app is
+- 2. Write the knowledge graph — before any code
+- PHASE 2 — Who it is for, and what it is made of
+- 3. Declare the people — personas and roles
+- 4. Declare the apps — one API, several frontends
+- PHASE 3 — The plan
+- 5. File the work as changes
+- 5a. The technical plan — per changeset, before you build it
+- PHASE 4 — Build
+- 6. Build each changeset
+- 6a. Close the changeset against its plan, not against your memory
+- 7. Prove it — scenarios
+- 8. Make it look like someone designed it
+- 9. Ship it, and stay Fabric-ready
+- Reference
+
 You have a scaffolded project with skills installed. This skill owns everything
 from here: no Fabric account, no card, no hosted build — while keeping the
 project shaped so `pikku fabric init` later adopts it with zero rework.
@@ -15,9 +37,9 @@ The sections below follow those phases in order, and are meant to be worked
 through rather than searched: §0 bootstrap, §1-§1a the last questions and the
 three languages, §2 the knowledge graph, §3-§4 personas and apps, §5-§5a the
 changes and each changeset's technical plan, §6-§6a building and closing one,
-§7-§7a proving it, §8 design, §9 ship. Four of them hand off to their own file —
-[scenarios.md](scenarios.md), [design.md](design.md),
-[multi-app.md](multi-app.md) and [ship.md](ship.md) — at the point you need it.
+§7-§7a proving it, §8 design, §9 ship. Four of them have their own reference —
+scenarios, design, multi-app and ship, each listed in SKILL.md — to read at the
+point you need it.
 
 ## Agent Operating Procedure
 
@@ -74,10 +96,10 @@ in one message. Then stop; do not interview the user.
   their own design agent/prompt, whose output you take as the direction.
 - **Do they want to see the screens before you build them?** Offer it here, in
   this same round, with yes marked recommended, in the words of
-  `references/design.md` — "a picture of the main screens so you can say 'yes,
+  the design reference (see SKILL.md) — "a picture of the main screens so you can say 'yes,
   like that' or 'no, move this'", never "mock" or "wireframe". Behind it is one
   HTML page mocking the main screens, a few minutes of work. On a yes, or no
-  answer at all, `references/design.md` owns what to make and what it then binds — the
+  answer at all, the design reference (see SKILL.md) owns what to make and what it then binds — the
   approved page becomes source of truth for the screens, and the theme is written
   before it so what they approve is what ships. Only an explicit no skips it.
 - **May I write test records into the system it talks to?** Ask only when the
@@ -328,7 +350,7 @@ Recording the decision is Phase 2 work. **Creating the directory is not.**
 Cloning `apps/app` materialises a folder of copied screens, so it belongs to the
 changeset that first needs the second app, not to planning.
 
-When you get there, read `references/multi-app.md`. It carries the clone, the
+When you get there, read the multi-app reference (see SKILL.md). It carries the clone, the
 `package.json` edits, the `frontends` map in `pikku.config.json`, the dev-runner
 change that otherwise silently never starts your second app, the per-frontend
 scenario environments, and how sessions behave across two origins.
@@ -449,7 +471,7 @@ while the plan is short.
    every screen is `Card` + `Stack` + `Text` composed the inventory rather than a
    design. Register the screen in `useNavItems()` — that one file feeds both the
    desktop sidebar and the phone navigation.
-   **Read `references/design.md` before you write the first screen.** You commit
+   **Read the design reference (see SKILL.md) before you write the first screen.** You commit
    to a design direction there and are then accountable to it — it hands you no
    layouts, because the design is yours to make. What you build here is then
    judged at step 7, at the end of this changeset rather than once at §8, where
@@ -458,7 +480,7 @@ while the plan is short.
 7. **Look at it.** Screenshot every screen this changeset touched, at both
    widths, with the seed in place, and look at the images. This is a gate, the
    same as the scenario: a changeset whose screens nobody has seen is not built,
-   it is unproven at the one layer scenarios cannot reach. `references/design.md`
+   it is unproven at the one layer scenarios cannot reach. the design reference
    carries how to take the shot when no browser tool is wired up, and what to
    look for. Then close it against its plan (§6a) — `pikku knowledge plan
 progress` has to exit zero before the last change is done — and only then
@@ -645,7 +667,7 @@ here, because a passing one proves the app works the way a signed-in person
 experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
 green — and every scenario a changeset's plan names becomes one more.
 
-**Read [scenarios.md](scenarios.md) before writing the changeset's scenarios,
+**Read the scenarios reference (see SKILL.md) before writing the changeset's scenarios,
 and again whenever one of these describes what you are doing.** It is the file
 where the expensive lessons live, and most of them produce a GREEN suite that
 proves nothing:
@@ -701,13 +723,13 @@ webhook or a hand call leaves no trace in it. Read
 `coverage/scenario-coverage.json` **as each changeset closes** — per changeset it is a short list you can act on, whereas read for the
 first time after ten changesets it is a wall of red nobody triages. Every gap is
 a missing scenario, a function that should not exist, or a deferral worth
-writing down; [scenarios.md](scenarios.md) says how to tell them apart. Report
+writing down; the scenarios reference (see SKILL.md) says how to tell them apart. Report
 the number when you hand the changeset over.
 
 ## 8. Make it look like someone designed it
 
 **This section numbers 8, but half of it has already happened.** Read
-`references/design.md` before the first screen is built — a design pass run on
+the design reference (see SKILL.md) before the first screen is built — a design pass run on
 eight changesets of scaffolded screens is a repaint, and it shows. What is left
 here at §8 is the theme you may have deferred and the critique you cannot run
 until there are screens to critique.
@@ -720,7 +742,7 @@ looking like the template:
 - **Execution** — whether the screens actually realise that direction, or
   default to whatever component was nearest. No theme does this, and it is where
   "works but looks like nobody decided anything" comes from.
-  `references/design.md` carries the process for it, and it belongs at §6, per
+  the design reference (see SKILL.md) carries the process for it, and it belongs at §6, per
   screen.
 - **Critique** — judging how well the built screens execute the direction.
   `impeccable` does this well, and it is free.
@@ -735,7 +757,7 @@ spacing.
 The look lives in `packages/mantine-theme`, and it is data, not code:
 
 The look lives in `packages/mantine-theme`, and it is data, not code — one JSON
-per theme, `active.json` naming the live one. **Read `references/theming.md`** for
+per theme, `active.json` naming the live one. **Read the theming reference (see SKILL.md)** for
 the file layout, what each field changes, and how to turn a direction in words
 into a theme.
 
@@ -757,7 +779,7 @@ theme is; only the note records why.
 
 ### 8b. Compose real components, then critique
 
-**`references/design.md` is where design actually lives** — committing to a
+**The design reference (see SKILL.md) is where design actually lives** — committing to a
 direction before the first screen, judging the result from screenshots rather
 than from source, the two screens that get skipped, and why you reset the dev
 database before judging anything. It prescribes no layouts on purpose: two apps
@@ -801,7 +823,7 @@ them. The template already mounts a phone navigation per `AGENTS.md` — pick
 `MobileTabBar` or `MobileNavDrawer` deliberately per app, never both.
 
 The gate: **no P0 findings left on any screen, in any app, at either width**,
-and every screen honestly answers the questions in `references/design.md` —
+and every screen honestly answers the questions in the design reference —
 including whether it looks like the direction you committed to or like the
 components you had. Don't silence a finding by deleting the feature it is
 about.
@@ -815,7 +837,7 @@ problem it does not have.
 ## 9. Ship it, and stay Fabric-ready
 
 When the queue is empty, `pikku knowledge gaps` lists nothing and the scenarios are green, read
-`references/ship.md`. It carries the open-source deploy paths (`--provider
+the ship reference (see SKILL.md). It carries the open-source deploy paths (`--provider
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
 API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
 a one-command import later rather than a migration.
@@ -837,16 +859,16 @@ cheaper to honour than to retrofit:
 
 ## Reference
 
-Read these when the section that names them comes up, not up front:
+Read these when the section that names them comes up, not up front. SKILL.md
+says when to open each one:
 
-- [multi-app.md](multi-app.md) — adding a second frontend (§4), at the changeset
-  that needs it
-- [scenarios.md](scenarios.md) — writing journeys that stay proven (§7, §7a)
-- `references/design.md` — committing to a design direction, and how to tell
-  whether the screens realise it. Read BEFORE the first screen (§6), not at §8
-- `references/theming.md` — authoring the theme (§8a)
-- `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
+- multi-app — adding a second frontend (§4), at the changeset that needs it
+- scenarios — writing journeys that stay proven (§7, §7a)
+- design — committing to a design direction, and how to tell whether the
+  screens realise it. Read BEFORE the first screen (§6), not at §8
+- theming — authoring the theme (§8a)
+- ship — deploying, and the Fabric-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
   `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
-- Doing less than this: [quick.md](quick.md). Doing more: [platform.md](platform.md).
+- Doing less than this: the quick reference. Doing more: the platform reference (both in SKILL.md).

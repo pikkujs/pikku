@@ -1,5 +1,12 @@
 # Authoring the theme
 
+## Contents
+
+- Where the look lives
+- The colours the theme has no field for
+- Choose the neutrals; do not inherit them
+- If the user gave you no direction
+
 Read this at the design step, once you have a direction to turn into a theme —
 whether the user described one in words, handed you a reference, or ran their own
 design step whose output you are implementing.

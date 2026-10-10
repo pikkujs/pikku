@@ -1,5 +1,15 @@
 # Pikku Function Versioning
 
+## Contents
+
+- [Before You Start](#before-you-start)
+- [Function Versioning](#function-versioning)
+- [Version Manifest (`versions.pikku.json`)](#version-manifest-versionspikkujson)
+- [CLI Commands](#cli-commands)
+- [The `pikku release` command](#the-pikku-release-command)
+- [CI Integration](#ci-integration)
+- [Complete Example](#complete-example)
+
 ## Before You Start
 
 ```bash

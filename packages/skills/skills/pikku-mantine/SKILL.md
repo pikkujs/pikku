@@ -1,12 +1,11 @@
 ---
 name: pikku-mantine
 description: >-
-  Use when building a Mantine UI on top of a Pikku backend — rendering dates that came back from a
-  generated client, keeping layout flow-relative so the app survives an RTL locale, and branching on
-  colour scheme without hardcoding a shade. TRIGGER when: putting a value from usePikkuQuery or an
+  Use when building a Mantine UI on top of a Pikku backend — rendering Date values from the generated client (usePikkuQuery, RPC responses) with dayjs and @mantine/dates, keeping Mantine layout props flow-relative so the app survives an RTL
+  locale, and branching on colour scheme without hardcoding a shade. TRIGGER when: putting a value from usePikkuQuery or an
   RPC response on screen, writing margins/padding/alignment in Mantine props or CSS, choosing a date
   input, or handling light/dark. DO NOT TRIGGER when: the data does not come from a Pikku client
-  (this is only about what the generated clients hand you), or for user-facing copy (use pikku-i18n).
+  (this is only about what the generated clients hand you), or for user-facing copy, translated text or RTL document setup (use pikku-i18n).
 installGroups: [client]
 ---
 
@@ -62,9 +61,6 @@ Arabic, Hebrew, Farsi and Urdu support, and a physical margin is what breaks und
 | `text-align: left/right`      | `text-align: start/end`                    |
 | `margin-left`, `margin-right` | `margin-inline-start`, `margin-inline-end` |
 | `flex-direction: row-reverse` | `dir` attribute or logical properties      |
-
-Mantine shorthand: `ms` = margin-inline-start, `me` = margin-inline-end, `ps` = padding-inline-start,
-`pe` = padding-inline-end.
 
 ## Dark mode
 

@@ -1,5 +1,16 @@
 # An addon from an OpenAPI spec
 
+## Contents
+
+- Recognising one
+- 1 — Look at the spec first
+- 2 — Generate, from the app's root
+- 3 — Check what was generated
+- 4 — Call it from the app
+- 5 — Verify
+- 6 — Check the spec against the real API
+- Then
+
 When you are handed an OpenAPI or Swagger spec — a file, or a URL to one — the
 API it describes becomes an addon: one function per operation, each with its
 input and output schemas, behind one service that makes the HTTP calls. Say so
