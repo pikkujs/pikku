@@ -42,7 +42,7 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@inlang/paraglide-js": "^2.20.0",
-    "@shadcn/lint": "latest",
+    "@shadcn/lint": "^0.2.0",
     "@tailwindcss/vite": "^4.1.0",
     "@tanstack/router-generator": "^1.132.0",
     "@types/babel__core": "^7.20.5",

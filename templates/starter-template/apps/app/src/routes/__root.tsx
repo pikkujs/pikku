@@ -44,8 +44,14 @@ function RootDocument({ children }: { children: ReactNode }) {
     const publish = () => {
       if (!router.state.isLoading) root.setAttribute('data-app-hydrated', 'true')
     }
+    const clear = () => root.removeAttribute('data-app-hydrated')
     publish()
-    return router.subscribe('onResolved', publish)
+    const offStart = router.subscribe('onBeforeNavigate', clear)
+    const offResolved = router.subscribe('onResolved', publish)
+    return () => {
+      offStart()
+      offResolved()
+    }
   }, [router])
 
   useEffect(() => {
@@ -65,6 +71,7 @@ function RootDocument({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       const data = event.data
+      if (event.source !== window.parent) return
       if (data?.source !== 'fabric-console' || data.type !== 'set-theme-css') return
       let style = document.getElementById('theme-preview')
       if (!style) {
