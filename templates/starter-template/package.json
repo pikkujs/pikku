@@ -33,7 +33,6 @@
     "@pikku/kysely-bun-sqlite": "^0.12.10",
     "@pikku/kysely-node-sqlite": "^0.12.9",
     "@pikku/kysely-sqlite": "^0.12.17",
-    "@pikku/mantine": "^0.12.16",
     "@pikku/react": "^0.12.13",
     "@pikku/schedule": "^0.12.9",
     "@pikku/schema-cfworker": "^0.12.8",

@@ -1,0 +1,10 @@
+{
+  "name": "@project/theme",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./theme.css": "./theme.css",
+    "./active.json": "./active.json"
+  }
+}

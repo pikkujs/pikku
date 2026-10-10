@@ -73,7 +73,7 @@
       "primary": true,
       "deploy": true,
       "kind": "ssr",
-      "dev": { "command": ["yarn", "dev"], "port": 7104, "healthPath": "/" },
+      "dev": { "command": ["bun", "run", "dev"], "port": 7104, "healthPath": "/" },
       "serves": "visitor",
       "personas": ["visitor"]
     }
