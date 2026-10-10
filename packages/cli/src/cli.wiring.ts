@@ -599,10 +599,6 @@ wireCLI({
           default: '3000',
           short: 'p',
         },
-        console: {
-          description: 'Also serve the Pikku Console same-origin at /console',
-          default: false,
-        },
         model: {
           description:
             'Repoint model aliases for this run, e.g. \'cheap:openai/gpt-5-nano,tool:anthropic/claude-haiku-4-5\'. Overrides the "models" table in pikku.config.json without editing it',

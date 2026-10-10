@@ -30,8 +30,8 @@ const runCli = (...args: string[]) =>
     }
   )
 
-describe('pikku console command removal (#870)', () => {
-  test('`pikku console` no longer exists — dev serves the console instead', async (t) => {
+describe('pikku console command removal', () => {
+  test('`pikku console` no longer exists', async (t) => {
     if (!existsSync(cliBin)) return t.skip('dist not built')
     const help = await runCli('--help')
     const helpOutput = `${help.stdout}\n${help.stderr}`
@@ -46,21 +46,6 @@ describe('pikku console command removal (#870)', () => {
       output,
       /Start the Pikku Console UI/,
       `'pikku console' still registered:\n${output}`
-    )
-  })
-
-  test('`pikku serve --help` exposes the explicit --console flag', async (t) => {
-    if (!existsSync(cliBin)) return t.skip('dist not built')
-    const result = await runCli('serve', '--help')
-    assert.equal(
-      result.status,
-      0,
-      `expected 'pikku serve --help' to succeed:\n${result.stdout}\n${result.stderr}`
-    )
-    assert.match(
-      result.stdout,
-      /--console/,
-      `--console missing from serve help:\n${result.stdout}`
     )
   })
 })
