@@ -1,0 +1,16 @@
+{
+  "name": "pikku-vscode",
+  "version": "0.1.17",
+  "description": "DEPRECATED: use the pikku CLI (@pikku/cli)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/deprecated/pikku-vscode"
+  },
+  "author": "yasser.fadl@gmail.com",
+  "license": "BUSL-1.1",
+  "files": [
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/auth-js",
+  "version": "0.12.5",
+  "description": "DEPRECATED: use @pikku/better-auth",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/deprecated/auth-js"
+  },
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "files": [
+    "README.md",
+    "LICENSE"
+  ]
+}
