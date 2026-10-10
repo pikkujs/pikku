@@ -153,7 +153,7 @@ const hasMock = (name: string) => !!mockFileFor(name)
 export const defaultMock = async (name: string) => {
   const file = mockFileFor(name)
   if (!file) throw new Error('No default mock for ' + name + ' in .mocks/')
-  return unwrapDefault(await mockFiles[file]())
+  return unwrapDefault(await mockFiles[file]!())
 }
 
 export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
