@@ -127,6 +127,10 @@ import {
 } from './functions/commands/scenario-coverage.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
+import {
+  pikkuEmailsAdd,
+  pikkuEmailsCatalog,
+} from './functions/commands/emails-catalog.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -673,6 +677,24 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite an existing email scaffold',
+            },
+          },
+        }),
+        catalog: pikkuCLICommand({
+          func: pikkuEmailsCatalog,
+          description:
+            'List the ready-made emails (invitation, magic link, password reset, receipt, welcome), or show one with its locale block and wiring',
+          parameters: '[name]',
+        }),
+        add: pikkuCLICommand({
+          func: pikkuEmailsAdd,
+          description:
+            'Copy a ready-made email into emailTemplatesDir and merge its copy into locales/en.json',
+          parameters: '<name>',
+          options: {
+            force: {
+              description:
+                'Overwrite template files and locale keys that already exist',
             },
           },
         }),
