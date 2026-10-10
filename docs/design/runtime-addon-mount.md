@@ -97,3 +97,24 @@ came from the package's own bootstrap stay in place.
   bound at startup. Not implemented.
 - The record of mounted extensions is per process and is not part of
   `resetPikkuState`; tests unmount in teardown.
+
+## CLI extensions
+
+The `pikku` binary mounts packages that declare themselves as CLI extensions.
+A dependency of `@pikku/cli` is an extension when its `package.json` has
+`"pikku": { "cli": { "name": "<group>" } }` and exports `./cli`, whose
+`cliExtension` is `{ name, packageName, meta, commands }`.
+
+- Discovery reads the CLI's own dependencies; nothing is configured.
+- The first non-flag argument decides what loads: a built-in command loads no
+  extension, no command or only flags (`--help`) loads all, and `<group>` loads
+  only that extension.
+- The extension's `@pikku/core` must satisfy its declared peer range, and when
+  it resolves to a different copy than the CLI's it must be the same version.
+  `pikkuState` lives on `globalThis`, so two copies of one version share state;
+  two versions would corrupt it, so the mount is refused (an error for
+  `pikku <group> ...`, a warning for `--help`).
+- An installed extension whose `./cli` entry is not built is skipped silently
+  when listing and is an error when named.
+- Compiled `bun --compile` binaries have no `node_modules` to discover from and
+  carry no extensions.
