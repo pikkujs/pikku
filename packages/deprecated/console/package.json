@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.96",
+  "version": "0.12.97",
   "description": "DEPRECATED: removed, backend functions live in @pikku/addon-console",
   "repository": {
     "type": "git",
