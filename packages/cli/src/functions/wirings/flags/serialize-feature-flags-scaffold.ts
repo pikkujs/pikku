@@ -48,7 +48,7 @@ export const featureFlagsForCaller = pikkuSessionlessFunc<
   Record<FeatureFlagName, boolean>
 >({
   auth: false,
-  tags: ['feature-flags'],
+  tags: ['pikku', 'feature-flags'],
   description: 'Resolves every declared feature flag for the calling session.',
   func: async ({ featureFlags }, _data, { session }) => {
     // No source wired resolves against the compiled declaration, the same
