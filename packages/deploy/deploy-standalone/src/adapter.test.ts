@@ -69,6 +69,24 @@ describe('StandaloneProviderAdapter frontend serving', () => {
   })
 })
 
+describe('StandaloneProviderAdapter port', () => {
+  test('a bun entry listens on 3000 when nothing is configured', () => {
+    const source = new StandaloneProviderAdapter({}).generateEntrySource(
+      baseContext
+    )
+
+    assert.match(source, /process\.env\.PORT \|\| '3000'/)
+  })
+
+  test('the configured port is the default PORT overrides', () => {
+    const source = new StandaloneProviderAdapter({
+      port: 4740,
+    }).generateEntrySource(baseContext)
+
+    assert.match(source, /process\.env\.PORT \|\| '4740'/)
+  })
+})
+
 describe('StandaloneProviderAdapter deploy output', () => {
   const tempDirs: string[] = []
 
