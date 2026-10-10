@@ -53,6 +53,8 @@ import {
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { addGlobalMiddleware } from '@pikku/core/middleware'
+import { startRunTelemetry } from '../../utils/run-telemetry.js'
 import { servedFrontend } from '../../utils/frontend.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -85,6 +87,7 @@ export const dev = pikkuSessionlessFunc<
     )
     enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
+    const telemetry = startRunTelemetry({ rootDir: config.rootDir, command: 'dev' })
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }
@@ -229,6 +232,7 @@ export const dev = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
+    if (telemetry.middleware) addGlobalMiddleware([telemetry.middleware])
 
     // Scenario instrumentation exists only on a development server: the runner
     // calls it over RPC to reset and snapshot coverage and stub calls. It is
