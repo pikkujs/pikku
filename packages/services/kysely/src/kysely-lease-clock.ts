@@ -10,8 +10,11 @@ import { sql, type RawBuilder } from 'kysely'
  * worker shares. This default binds the process clock, for SQLite, where the
  * database lives in the process anyway.
  */
-export const appNowMs = (): RawBuilder<number> =>
-  sql<number>`cast(${Date.now()} as bigint)`
+export const appNowMs = (mysql = false): RawBuilder<number> =>
+  // MySQL has no `bigint` to cast to; `signed` is its 64-bit integer.
+  mysql
+    ? sql<number>`cast(${Date.now()} as signed)`
+    : sql<number>`cast(${Date.now()} as bigint)`
 
 /** `now + ms`, for a lease that runs `ms` from the clock's now. */
 export const leaseUntil = (now: RawBuilder<number>, ms: number) =>

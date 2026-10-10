@@ -10,6 +10,7 @@ import type {
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore } from './kysely-upsert.js'
 import { workflowSchema } from './schema/workflow.schema.js'
 
 /**
@@ -250,7 +251,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         source,
         status,
       })
-      .onConflict((oc) => oc.columns(['workflowName', 'graphHash']).doNothing())
+      .$call((q) => insertOrIgnore(this.db, q, ['workflowName', 'graphHash']))
       .execute()
   }
 

@@ -16,6 +16,7 @@ const noDrivers: LocalServicesDrivers = {
   bunSqlite: false,
   pg: false,
   pgTypes: false,
+  mysql: false,
 }
 
 const withCLI = (
@@ -179,6 +180,28 @@ describe('the database openers', () => {
     assert.doesNotMatch(code, /@ts-ignore/)
   })
 
+  test('opens mysql through mysql2 only when it is declared', () => {
+    assert.doesNotMatch(emit(), /import\('mysql2'\)/)
+    assert.doesNotMatch(emit(), /MysqlDialect/)
+    assert.match(
+      emit(),
+      /database is mysql, and opening it needs the mysql2 driver/
+    )
+    const code = emit({
+      localCLI: withCLI({ drivers: { ...noDrivers, mysql: true } }),
+    })
+    assert.match(code, /await import\('mysql2'\)/)
+    assert.match(
+      code,
+      /import \{[^}]*MysqlDialect[^}]*\} from '@pikku\/kysely'/
+    )
+    assert.match(code, /if \(\/\^mysql:/)
+    assert.match(code, /return \{ mysqlUrl: url \}/)
+    assert.match(code, /if \(target\.mysqlUrl\)/)
+    assert.match(code, /new CamelCasePlugin\(\), \.\.\.\[\]/)
+    assert.match(code, /pool\.on\('release'/)
+  })
+
   test('waives the missing pg types rather than failing the type check', () => {
     assert.match(
       emit({ localCLI: withCLI({ drivers: { ...noDrivers, pg: true } }) }),
@@ -340,4 +363,66 @@ describe('the generated createLocalServices', async () => {
       if (previous !== undefined) process.env.DATABASE_URL = previous
     }
   })
+
+  test('a mysql:// DATABASE_URL is mysql, not a sqlite file path', async () => {
+    const { createLocalServices } = await load('no-mysql-driver', {})
+    const previous = process.env.DATABASE_URL
+    process.env.DATABASE_URL = 'mysql://root:root@127.0.0.1:1/x'
+    try {
+      await assert.rejects(createLocalServices({}), /database is mysql/)
+    } finally {
+      if (previous === undefined) delete process.env.DATABASE_URL
+      else process.env.DATABASE_URL = previous
+    }
+  })
+
+  test('refuses mysqlUrl beside another dialect', async () => {
+    const { openLocalDatabase } = await load('mysql-and-sqlite', {})
+    const previous = process.env.DATABASE_URL
+    delete process.env.DATABASE_URL
+    try {
+      await assert.rejects(
+        openLocalDatabase({ sqliteDb: 'a.db', mysqlUrl: 'mysql://x/y' }),
+        /Configure exactly one database dialect/
+      )
+    } finally {
+      if (previous !== undefined) process.env.DATABASE_URL = previous
+    }
+  })
+
+  test(
+    'opens a live mysql database from DATABASE_URL and from config.mysqlUrl',
+    { skip: !process.env.PIKKU_TEST_MYSQL_URL },
+    async () => {
+      const { openLocalDatabase } = await load('mysql-live', {
+        localCLI: withCLI({ drivers: { ...noDrivers, mysql: true } }),
+      })
+      const url = process.env.PIKKU_TEST_MYSQL_URL!
+      const previous = process.env.DATABASE_URL
+      try {
+        for (const viaEnv of [true, false]) {
+          if (viaEnv) process.env.DATABASE_URL = url
+          else delete process.env.DATABASE_URL
+          const db = await openLocalDatabase(viaEnv ? {} : { mysqlUrl: url })
+          assert.ok(db)
+          try {
+            const { sql } = await import('kysely')
+            const { rows } = await sql<{
+              someValue: number
+            }>`select 7 as some_value, cast(1.5 as decimal(4,2)) as d`.execute(
+              db
+            )
+            // CamelCasePlugin maps the result's snake_case keys.
+            assert.equal(rows[0]!.someValue, 7)
+            assert.equal((rows[0] as any).d, 1.5)
+          } finally {
+            await db.destroy()
+          }
+        }
+      } finally {
+        if (previous === undefined) delete process.env.DATABASE_URL
+        else process.env.DATABASE_URL = previous
+      }
+    }
+  )
 })

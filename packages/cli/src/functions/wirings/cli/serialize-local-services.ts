@@ -13,6 +13,8 @@ export interface LocalServicesDrivers {
   pg: boolean
   /** `pg` ships no types, so its import needs them from `@types/pg` or a waiver. */
   pgTypes: boolean
+  /** `mysql2` ships its own types. */
+  mysql: boolean
 }
 
 /**
@@ -130,6 +132,34 @@ const postgresOpener = (
 }`
 }
 
+const mysqlOpener = (
+  drivers: LocalServicesDrivers,
+  plugins: string
+): string => {
+  if (!drivers.mysql) {
+    return `const openMysql = async (_url: string): Promise<Kysely<any>> => {
+  throw new Error(
+    "This project's database is mysql, and opening it needs the mysql2 driver. Add mysql2 to the project's dependencies."
+  )
+}`
+  }
+  return `const openMysql = async (url: string): Promise<Kysely<any>> => {
+  const { createPool } = await import('mysql2')
+  const pool = createPool({ uri: url, connectionLimit: 10, decimalNumbers: true })
+  // A CLI command returns rather than being stopped, so an idle pooled socket
+  // must not hold the process open once it has printed its answer (mysql2 has
+  // no allowExitOnIdle). A socket is referenced while a query runs on it.
+  const socket = (connection: any) => (connection.connection ?? connection).stream
+  pool.on('acquire', (connection) => socket(connection)?.ref())
+  pool.on('release', (connection) => socket(connection)?.unref())
+  return new Kysely<any>({
+    // mysql2's callback Pool is what Kysely drives; its types differ by version.
+    dialect: new MysqlDialect({ pool: pool as any }),
+    plugins: [new CamelCasePlugin(), ...${plugins}],
+  })
+}`
+}
+
 const databaseOpener = (
   localCLI: LocalCLIServicesOptions,
   coerces: boolean
@@ -145,6 +175,7 @@ const databaseOpener = (
 /** DATABASE_URL read the way \`pikku serve\` reads it. A remote libsql URL is not opened here. */
 const parseDatabaseUrl = (url: string): DatabaseTarget => {
   if (/^postgres(ql)?:\\/\\//.test(url)) return { postgresUrl: url }
+  if (/^mysql:\\/\\//.test(url)) return { mysqlUrl: url }
   if (/^(libsql|https?):\\/\\//.test(url)) return {}
   return { sqliteDb: url }
 }
@@ -152,6 +183,8 @@ const parseDatabaseUrl = (url: string): DatabaseTarget => {
 ${sqliteOpener(localCLI.drivers, plugins)}
 
 ${postgresOpener(localCLI.drivers, plugins)}
+
+${mysqlOpener(localCLI.drivers, plugins)}
 
 /**
  * Opens the database this app runs against locally, or returns undefined when
@@ -166,13 +199,23 @@ export const openLocalDatabase = async (
 ): Promise<Kysely<any> | undefined> => {
   const databaseUrl = process.env.DATABASE_URL
   const target = databaseUrl ? parseDatabaseUrl(databaseUrl) : config
-  if (target.postgresUrl && target.sqliteDb) {
+  const configured = (
+    [
+      ['postgresUrl', target.postgresUrl],
+      ['sqliteDb', target.sqliteDb],
+      ['mysqlUrl', target.mysqlUrl],
+    ] as const
+  ).filter(([, value]) => value)
+  if (configured.length > 1) {
     throw new Error(
-      'Both postgresUrl and sqliteDb are set. Configure exactly one database dialect.'
+      \`\${configured.map(([key]) => key).join(', ')} are all set. Configure exactly one database dialect.\`
     )
   }
   if (target.postgresUrl) {
     return openPostgres(target.postgresUrl)
+  }
+  if (target.mysqlUrl) {
+    return openMysql(target.mysqlUrl)
   }
   const sqliteDb = target.sqliteDb ?? conventionalSqliteDb
   if (sqliteDb) {
@@ -391,7 +434,7 @@ export const serializeLocalServices = ({
     opens &&
     !!localCLI?.coercionFile &&
     !!drivers &&
-    (drivers.nodeSqlite || drivers.bunSqlite || drivers.pg)
+    (drivers.nodeSqlite || drivers.bunSqlite || drivers.pg || drivers.mysql)
 
   const imports: string[] = []
   if (localCLI) {
@@ -404,8 +447,8 @@ export const serializeLocalServices = ({
   }
   if (database) {
     imports.push(
-      opens && drivers?.pg
-        ? `import { CamelCasePlugin, Kysely, PostgresDialect } from '@pikku/kysely'`
+      opens && (drivers?.pg || drivers?.mysql)
+        ? `import { CamelCasePlugin, Kysely${drivers?.mysql ? ', MysqlDialect' : ''}${drivers?.pg ? ', PostgresDialect' : ''} } from '@pikku/kysely'`
         : `import type { Kysely } from '@pikku/kysely'`
     )
   }
@@ -480,7 +523,7 @@ export interface LocalServicesExtras {
   /**
    * A database the host has already opened, or \`null\` for none.${
      opens
-       ? " Left out, one\n   * is opened from DATABASE_URL or the config's `sqliteDb` / `postgresUrl`."
+       ? " Left out, one\n   * is opened from DATABASE_URL or the config's `sqliteDb` / `postgresUrl` / `mysqlUrl`."
        : ''
    }
    */
@@ -498,7 +541,7 @@ export interface LocalServicesOptions {
   systemRoles?: SystemRole[]
 }
 
-type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string }
+type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string; mysqlUrl?: string }
 
 ${opens && localCLI ? databaseOpener(localCLI, coerces) : ''}
 ${database ? databaseBody(!!localCLI) : inMemoryBody(!!localCLI)}`

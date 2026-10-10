@@ -48,3 +48,42 @@ test('does nothing for a project without a database', async () => {
   const { root, outDir } = project()
   assert.equal(await ensureDbTypes(root, outDir), 'no-db')
 })
+
+function mysqlProject() {
+  const root = mkdtempSync(join(tmpdir(), 'ensure-db-types-mysql-'))
+  mkdirSync(join(root, 'db', 'mysql'), { recursive: true })
+  writeFileSync(
+    join(root, 'db', 'mysql', '0001-init.sql'),
+    'CREATE TABLE widget (id INT PRIMARY KEY);'
+  )
+  return { root, outDir: join(root, '.pikku') }
+}
+
+test('a mysql project with no server configured is stubbed, not an error', async () => {
+  const saved = process.env.DATABASE_URL
+  delete process.env.DATABASE_URL
+  try {
+    const { root, outDir } = mysqlProject()
+    assert.equal(await ensureDbTypes(root, outDir), 'stubbed')
+    assert.equal(
+      readFileSync(join(outDir, 'db', 'schema.gen.ts'), 'utf8'),
+      'export interface DB {}\n'
+    )
+  } finally {
+    if (saved !== undefined) process.env.DATABASE_URL = saved
+  }
+})
+
+test('a mysql project generates from the mysqlUrl createConfig returns', async () => {
+  const url = process.env.PIKKU_TEST_MYSQL_URL
+  if (!url) return
+  const { root, outDir } = mysqlProject()
+  assert.equal(
+    await ensureDbTypes(root, outDir, undefined, undefined, { mysqlUrl: url }),
+    'generated'
+  )
+  assert.match(
+    readFileSync(join(outDir, 'db', 'schema.gen.ts'), 'utf8'),
+    /interface Widget/
+  )
+})

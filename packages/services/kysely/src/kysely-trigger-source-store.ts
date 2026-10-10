@@ -7,6 +7,7 @@ import type {
 import type { Kysely, Selectable } from 'kysely'
 import type { KyselyPikkuDB, PikkuTriggerSourceTable } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { upsert } from './kysely-upsert.js'
 import { triggerSourceSchema } from './schema/trigger-source.schema.js'
 
 const parseState = (value: unknown) => {
@@ -50,13 +51,14 @@ export class KyselyTriggerSourceStore implements TriggerSourceStore {
           ...(baseUrl !== undefined ? { baseUrl } : {}),
           ...(labelPrefix !== undefined ? { labelPrefix } : {}),
         }
-        await trx
-          .insertInto('pikkuTriggerSource')
-          .values({ name, kind, declared: true, ...address })
-          .onConflict((oc) =>
-            oc.column('name').doUpdateSet({ kind, declared: true, ...address })
-          )
-          .execute()
+        await upsert(
+          trx,
+          trx
+            .insertInto('pikkuTriggerSource')
+            .values({ name, kind, declared: true, ...address }),
+          ['name'],
+          { kind, declared: true, ...address }
+        ).execute()
       }
       const markStale = trx
         .updateTable('pikkuTriggerSource')

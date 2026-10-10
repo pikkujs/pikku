@@ -26,6 +26,7 @@ import {
   pikkuSchemas,
   requiredPikkuSchemas,
   resolveRequirements,
+  withUserTable,
   createCoercionPlugin,
   type PikkuSchema,
   type RequiredTypes,
@@ -1263,8 +1264,10 @@ async function desiredPostgresAuthSchema(
       })
       if (!options) return null
 
-      const { runMigrations, compileMigrations } =
-        await getAuthMigrations(options)
+      const { runMigrations, compileMigrations } = await getAuthMigrations(
+        options,
+        'postgres'
+      )
       await runMigrations()
       const tables = await postgresDatabaseToMap(scratchDb)
       const sql = await compileMigrations()
@@ -1292,8 +1295,10 @@ async function desiredMysqlAuthSchema(
       })
       if (!options) return null
 
-      const { runMigrations, compileMigrations } =
-        await getAuthMigrations(options)
+      const { runMigrations, compileMigrations } = await getAuthMigrations(
+        options,
+        'mysql'
+      )
       await runMigrations()
       const tables = await introspectorToMap(new MysqlIntrospector(scratchDb))
       const sql = await compileMigrations()
@@ -1321,20 +1326,19 @@ export async function desiredAuthSchema(
       logger,
     })
     if (!options) return null
-    if (isMysqlAuthDatabase(options)) {
-      if (resolved.dialect !== 'mysql') {
-        throw new Error(
-          'Better Auth database.type is mysql, but the resolved app database is not mysql.'
-        )
-      }
+    // The resolved database decides, not what the auth factory declared: a
+    // starter's `type: 'sqlite'` must not send a MySQL project down the SQLite
+    // path (see getAuthMigrations). A factory that declares a server dialect the
+    // project is not on is still an error.
+    if (resolved.dialect === 'mysql') {
       return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
     }
-    if (isPostgresAuthDatabase(options)) {
-      if (resolved.dialect !== 'postgres') {
-        throw new Error(
-          'Better Auth database.type is postgres, but the resolved app database is not postgres.'
-        )
-      }
+    if (isMysqlAuthDatabase(options)) {
+      throw new Error(
+        'Better Auth database.type is mysql, but the resolved app database is not mysql.'
+      )
+    }
+    if (resolved.dialect === 'postgres') {
       return desiredPostgresAuthSchema(
         resolved,
         rootDir,
@@ -1342,8 +1346,15 @@ export async function desiredAuthSchema(
         logger
       )
     }
-    const { runMigrations, compileMigrations } =
-      await getAuthMigrations(options)
+    if (isPostgresAuthDatabase(options)) {
+      throw new Error(
+        'Better Auth database.type is postgres, but the resolved app database is not postgres.'
+      )
+    }
+    const { runMigrations, compileMigrations } = await getAuthMigrations(
+      options,
+      'sqlite'
+    )
     await runMigrations()
     const tables = await introspectorToMap(new SqliteIntrospector(db))
     const sql = await compileMigrations()
@@ -1365,19 +1376,29 @@ async function applyAuthSchema(
   kysely: Kysely<any>,
   rootDir: string,
   srcDirectories: string[],
-  logger: { error: (msg: string) => void }
-): Promise<boolean> {
+  logger: { error: (msg: string) => void },
+  dialect: 'sqlite' | 'postgres' | 'mysql'
+): Promise<{ userTable: string } | null> {
   const options = await loadAuthOptions({
     rootDir,
     srcDirectories,
     kysely,
     logger,
   })
-  if (!options) return false
-  const { runMigrations } = await getAuthMigrations(options)
+  if (!options) return null
+  const { runMigrations } = await getAuthMigrations(options, dialect)
   await runMigrations()
-  return true
+  const user = options.user as { modelName?: unknown } | undefined
+  return {
+    userTable:
+      typeof user?.modelName === 'string' && user.modelName
+        ? snakeCase(user.modelName)
+        : 'user',
+  }
 }
+
+const snakeCase = (name: string): string =>
+  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
 /** A runtime schema left out because nothing in the project creates what it needs. */
 export interface SkippedRuntimeSchema {
@@ -1434,10 +1455,31 @@ export async function desiredRuntimeSchema(
     schemas: PikkuSchema[]
     types: RequiredTypes
   }> => {
-    await applyAuthSchema(db, rootDir, srcDirectories, logger)
+    const auth = await applyAuthSchema(
+      db,
+      rootDir,
+      srcDirectories,
+      logger,
+      resolved.dialect
+    )
+    const userTable = auth?.userTable ?? 'user'
     const before = await introspect()
 
-    const { types, unmet } = await resolveRequirements(db, declared)
+    const mapped = withUserTable(declared, userTable)
+    const { types, unmet } = await resolveRequirements(db, mapped)
+    if (resolved.dialect === 'mysql' && types[`${userTable}.id`]) {
+      // The scratch database holds Better Auth's own `id` (text); the project's
+      // real users table (a Rails `bigint`, say) comes from its migrations. A
+      // foreign key has to match the table it points at, so the migrations win.
+      try {
+        const real = (await coveredSchema(resolved))
+          .get(userTable)
+          ?.get('id')?.type
+        if (real) types[`${userTable}.id`] = real
+      } catch {
+        // No migrations to read yet: the scratch type is the best answer.
+      }
+    }
     for (const { schema, requirement } of unmet) {
       skipped.push({
         schema: schema.name,
@@ -1446,7 +1488,7 @@ export async function desiredRuntimeSchema(
       })
     }
     const unavailable = new Set(unmet.map(({ schema }) => schema.name))
-    const schemas = declared.filter((s) => !unavailable.has(s.name))
+    const schemas = mapped.filter((s) => !unavailable.has(s.name))
 
     await applyPikkuSchemas(db, schemas)
     const after = await introspect()

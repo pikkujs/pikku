@@ -1,4 +1,6 @@
 import { existsSync } from 'fs'
+import { join } from 'path'
+import { loadUserConfigForDb } from '../commands/db-shared.js'
 import { unresolvedSchemaReferences } from '@pikku/inspector'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
@@ -85,11 +87,24 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await removeRetiredScaffoldFiles(config)
 
     const needsBootstrap = !existsSync(config.outDir)
+    // Only a MySQL project needs its createConfig read this early: its scratch
+    // database is on a server that only the config names.
+    let mysqlUserConfig: { mysqlUrl?: string } | undefined
+    if (existsSync(join(config.rootDir, 'db', 'mysql'))) {
+      try {
+        mysqlUserConfig =
+          (await loadUserConfigForDb({
+            config,
+            logger: { error() {}, warn() {} },
+          })) ?? undefined
+      } catch {}
+    }
     const dbTypes = await ensureDbTypes(
       config.rootDir,
       config.outDir,
       config.runtimeDir,
-      config.db
+      config.db,
+      mysqlUserConfig
     )
     if (dbTypes === 'stubbed') {
       logger.warn(

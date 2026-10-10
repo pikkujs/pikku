@@ -23,12 +23,14 @@ test('runs the migration before recording it, with `?` placeholders', async () =
     '0001-a.sql',
     'abc'
   )
-  assert.equal(calls[0]!.sql, 'CREATE TABLE a (id INT);')
+  assert.equal(calls[0]!.sql, 'SET FOREIGN_KEY_CHECKS = 0')
+  assert.equal(calls[1]!.sql, 'CREATE TABLE a (id INT);')
+  assert.equal(calls[2]!.sql, 'SET FOREIGN_KEY_CHECKS = 1')
   assert.match(
-    calls[1]!.sql,
+    calls[3]!.sql,
     /^INSERT INTO sql_migrations \(name, hash\) VALUES \(\?, \?\)$/
   )
-  assert.deepEqual(calls[1]!.params, ['0001-a.sql', 'abc'])
+  assert.deepEqual(calls[3]!.params, ['0001-a.sql', 'abc'])
 })
 
 test('a migration that fails is not recorded as applied', async () => {
@@ -45,6 +47,7 @@ test('a migration that fails is not recorded as applied', async () => {
     calls.filter((c) => /INSERT INTO sql_migrations/.test(c.sql)).length,
     0
   )
+  assert.equal(calls.at(-1)!.sql, 'SET FOREIGN_KEY_CHECKS = 1')
 })
 
 test('the tracking table is a VARCHAR key, because MySQL cannot index TEXT whole', async () => {

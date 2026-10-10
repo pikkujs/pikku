@@ -1,6 +1,7 @@
 import { EventHubStore } from '@pikku/core/channel'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import { insertOrIgnore } from './kysely-upsert.js'
 
 export class KyselyEventHubStore extends EventHubStore {
   private initialized = false
@@ -28,11 +29,13 @@ export class KyselyEventHubStore extends EventHubStore {
 
   public async subscribe(topic: string, channelId: string): Promise<boolean> {
     try {
-      await this.db
-        .insertInto('channelSubscriptions')
-        .values({ channelId: channelId, topic: topic as string })
-        .onConflict((oc) => oc.columns(['channelId', 'topic']).doNothing())
-        .execute()
+      await insertOrIgnore(
+        this.db,
+        this.db
+          .insertInto('channelSubscriptions')
+          .values({ channelId: channelId, topic: topic as string }),
+        ['channelId', 'topic']
+      ).execute()
       return true
     } catch {
       return false
