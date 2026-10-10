@@ -19,6 +19,13 @@ import { createHash } from 'crypto'
  */
 const cache = new Map<string, { hash: string; file: ts.SourceFile }>()
 
+const INSPECTED_DEPENDENCIES =
+  /\/node_modules\/(@pikku\/core|zod|valibot|arktype|@effect\/schema|@standard-schema\/spec)\//
+
+const isInspectedDependency = (fileName: string) =>
+  !fileName.includes('/node_modules/') ||
+  INSPECTED_DEPENDENCIES.test(fileName)
+
 export interface SourceFileCacheHost extends ts.CompilerHost {
   /** Files served from the cache by the program just built. */
   readonly reused: () => number
@@ -60,6 +67,39 @@ export const createSourceFileCacheHost = (
     cache.set(fileName, { hash, file })
     return file
   }
+
+  const resolutionCache = ts.createModuleResolutionCache(
+    host.getCurrentDirectory(),
+    host.getCanonicalFileName,
+    options
+  )
+  host.resolveModuleNameLiterals = (
+    literals,
+    containingFile,
+    redirectedReference,
+    compilerOptions,
+    containingSourceFile
+  ) =>
+    literals.map((literal) => {
+      const resolved = ts.resolveModuleName(
+        literal.text,
+        containingFile,
+        compilerOptions,
+        host,
+        resolutionCache,
+        redirectedReference,
+        ts.getModeForUsageLocation(
+          containingSourceFile,
+          literal,
+          compilerOptions
+        )
+      )
+      const fileName = resolved.resolvedModule?.resolvedFileName
+      if (fileName && !isInspectedDependency(fileName)) {
+        return { resolvedModule: undefined }
+      }
+      return resolved
+    })
 
   return Object.assign(host, {
     reused: () => reused,
