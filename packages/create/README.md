@@ -55,7 +55,7 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 | `--yarn-link <path>`          |       | Link to local Pikku development       | `--yarn-link ../pikku`       |
 | `--stackblitz`                |       | Add StackBlitz configuration          | `--stackblitz`               |
 | `--variations`                |       | Show all template variations          | `--variations`               |
-| `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend nextjs-tailwind` |
+| `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend app` |
 | `--help`                      | `-h`  | Display help information              | `--help`                     |
 
 ## Available Templates
@@ -134,7 +134,7 @@ npm create pikku@latest -- --template nextjs --name stackblitz-app --stackblitz 
 ### Starter Template
 
 ```bash
-npm create pikku@latest -- --template starter-template --frontend nextjs-tailwind --name my-app
+npm create pikku@latest -- --template starter-template --frontend app --name my-app
 ```
 
 ## Features
