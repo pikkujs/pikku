@@ -3,7 +3,7 @@
 - UI is Tailwind v4 over shadcn components in `apps/app/src/components/ui`. Use the component for the job;
   add a missing one from `apps/app` with `npx shadcn@latest add <name>`, then make it lint-clean (strings through `m.*()`, flow-relative classes).
 - Every colour, radius and font comes from `packages/theme/theme.css` tokens. Change the look with
-  `pikku ui theme apply` (it also loads the Google Fonts it names), never by editing `theme.css` or adding literals.
+  the preset files in `packages/theme/themes` (they name the Google Fonts to load), never by editing `theme.css` or adding literals.
 - After any UI change run `bun run lint` in `apps/app` and fix every error. `@shadcn/lint` names what to use
   instead; do not add disable comments.
 - User-visible strings go through `m.*()` from `@/i18n/messages`; `react/jsx-no-literals` enforces it.
