@@ -77,6 +77,11 @@ export const mountMCP = ({
     wiring: MCPWiring | undefined,
     wirings?: Map<string, any>
   ) => {
+    if (!wirings && (wiring?.middleware?.length || wiring?.tags?.length)) {
+      throw new Error(
+        `MCP ${kind} "${name}" cannot take wiring middleware or tags; put them in meta.middleware`
+      )
+    }
     const stamped = { ...meta, packageName: packageName ?? meta.packageName }
     functionRestores.push(
       ensureFunction(
