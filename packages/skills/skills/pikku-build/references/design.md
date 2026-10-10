@@ -1,5 +1,17 @@
 # Design
 
+## Contents
+
+- Commit to a direction before the first screen
+- Offer to draw the screens before you build them
+- One screen, designed properly, before the rest exist
+- Judge it — and don't grade your own homework
+- The kit is a floor, not a ceiling
+- Design is a gate on the changeset, not a phase at the end
+- Facts, not taste
+- Two screens that get skipped
+- Symptoms of a screen nobody designed
+
 Your job here is to design something worth the product — not to apply a house
 style. **There is no house style, and this file is not one.** Two apps built from
 this skill should not look like each other; if they do, something has gone wrong
@@ -23,7 +35,7 @@ never clinical" is a direction. "Clean and modern" is not — it rules nothing o
 so it cannot be departed from.
 
 Write it to `knowledge/decisions/design/`, then build the theme from it
-(`references/theming.md`). **From that point you are accountable to your own
+(the theming reference, see SKILL.md). **From that point you are accountable to your own
 direction, not to this file.** That is the whole mechanism: the freedom is real,
 and so is the commitment.
 
@@ -74,7 +86,7 @@ screens costs a fraction of eight built screens, and it is the only point where
 point. A beautiful page in hand-rolled CSS sets a bar Mantine then misses, and
 what the user approved is not what ships — they signed off on a picture and
 received an approximation of it. So write `themes/<name>.json` first
-(`references/theming.md`), and let the mock take its every value from that file:
+(the theming reference, see SKILL.md), and let the mock take its every value from that file:
 the palette, `structure.radius`, the spacing scale, the fonts, the component
 `defaultProps`. Approving the mock then approves the theme, and the built screens
 inherit it rather than chase it.
@@ -351,7 +363,7 @@ first one.
   and a display font applied to a default layout is a well-dressed default.
 - Every border, divider and disabled control is a cool blue-grey while the
   accent is not — the surest sign the neutrals were inherited rather than
-  chosen. See `references/theming.md`.
+  chosen. The theming reference (see SKILL.md) covers it.
 - It looks like the last app you built.
 - It looks like Mantine. Not *built with* Mantine, which it is and should be —
   but indistinguishable from a component gallery with the brand hue swapped in.

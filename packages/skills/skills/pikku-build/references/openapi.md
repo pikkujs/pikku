@@ -1,5 +1,12 @@
 # An app on top of an OpenAPI spec
 
+## Contents
+
+- Pick the auth mode
+- The auth-config file
+- The screens
+- Scenarios
+
 The spec becomes an addon first — the `pikku-addon` skill's
 `references/openapi.md` covers generating, verifying and checking it against
 the real API. This reference is the decision that shapes the app around it:

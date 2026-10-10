@@ -1,5 +1,11 @@
 # Personas and actors
 
+## Contents
+
+- [Declaring personas in TypeScript](#declaring-personas-in-typescript)
+- [Actors that call a third-party API](#actors-that-call-a-third-party-api)
+- [The same actors sign a human in](#the-same-actors-sign-a-human-in)
+
 A **persona** is a person your product is for; an **actor** is one body that signs in as them. Every entry materialises exactly one actor, so `actors.<id>` exists for each declared persona and there is no second way to declare a login.
 
 - Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.

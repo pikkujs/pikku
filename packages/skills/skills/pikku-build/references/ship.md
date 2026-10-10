@@ -1,5 +1,10 @@
 # Shipping, and staying Fabric-ready
 
+## Contents
+
+- Ship it — open source, no platform
+- Staying Fabric-ready
+
 Read this when the changes queue is empty and the scenarios are green — it is
 the last phase, and nothing in it is needed before then.
 
@@ -114,7 +119,7 @@ one hostname, first-party cookies — give its `frontends` entry `"serve": {}`
 and a standalone deploy then mount its built `dist`. Pikku never builds it, so
 build the frontend first. Only one entry may set `serve`.
 
-To ship an app as a desktop or Android app, read `references/native-app.md`.
+To ship an app as a desktop or Android app, read the native-app reference (see SKILL.md).
 
 Before shipping, run the full gate:
 

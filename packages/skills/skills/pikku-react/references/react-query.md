@@ -1,5 +1,16 @@
 # Pikku React Query Hooks
 
+## Contents
+
+- [Discover what's available on the client](#discover-whats-available-on-the-client)
+- [Setup (once per app)](#setup-once-per-app)
+- [TanStack Start (SSR)](#tanstack-start-ssr)
+- [The hooks](#the-hooks)
+- [Workflow hooks](#workflow-hooks)
+- [Calling RPCs without React Query](#calling-rpcs-without-react-query)
+- [Common patterns](#common-patterns)
+- [What NOT to do](#what-not-to-do)
+
 
 ## Discover what's available on the client
 

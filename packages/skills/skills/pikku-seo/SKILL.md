@@ -1,9 +1,9 @@
 ---
 name: pikku-seo
 description: >-
-  On-page SEO rules for the app's PUBLIC pages: per-route head() titles and meta descriptions, Open Graph tags, one-h1 heading hierarchy, semantic/crawlable markup, JSON-LD on the landing page, and noindex for the logged-in area.
+  On-page SEO rules for the app's PUBLIC pages: per-route head() titles and meta descriptions, Open Graph tags, crawlable links and URLs, JSON-LD on the landing page, and noindex for the logged-in area.
   TRIGGER when: building or reworking any public page (landing, pricing, about, blog/content pages), writing page titles or meta tags, or the user asks about SEO / Google / discoverability / social sharing previews.
-  DO NOT TRIGGER when: working on logged-in /app screens (they are noindexed — only the one robots rule below applies), backend functions, database, or deployment.
+  DO NOT TRIGGER when: the task is accessibility, including heading order, landmarks or alt text (use pikku-a11y), or working on logged-in /app screens (they are noindexed — only the one robots rule below applies), backend functions, database, or deployment.
 installGroups: [client]
 ---
 
@@ -42,15 +42,16 @@ export const Route = createFileRoute('/pricing')({
 gate) — write real copy for THIS app, in the app's voice.
 
 - **Title**: unique per page, 50–60 characters, the page's primary topic first,
-  brand at the end (`Topic — AppName`). The template's `__APP_TITLE__` default
-  must never survive the rebrand, on any page.
+  brand at the end (`Topic — AppName`). The template's `__APP_TITLE__` placeholder
+  (in `src/app-meta.ts` and `messages/en.json`) is filled with the app title at scaffold time
+  by `fabric-new-app`; it must never survive in any page's title.
 - **Description**: unique per page, 150–160 characters, states the concrete
   value of the page in plain language — a reason to click, not a keyword list.
 - **Dynamic public pages** (e.g. a public detail page) build both from loader
   data: `head: ({ loaderData }) => ({ meta: [{ title: `${loaderData.name} — AppName` }, ...] })`.
 - **Never invent URLs**: the deployed domain is unknown at build time, so do
   NOT emit `canonical`, `og:url`, or `og:image` pointing at a made-up domain —
-  omit them (same principle as the `/api` serverUrl rule). `og:image` only if a
+  omit them. `og:image` only if a
   real asset exists in the app.
 
 ## Logged-in area = noindex
@@ -64,24 +65,19 @@ head: () => ({ meta: [{ name: 'robots', content: 'noindex' }] })
 Never noindex a public page, and never put per-page SEO effort into `/app`
 screens — they are invisible to crawlers by design.
 
-## Headings — exactly one h1 per page
+## Headings, landmarks, alt text
 
-- Every page has EXACTLY ONE h1 (`<Title order={1}>` in Mantine, `<h1>` in
-  Tailwind) and it names the page's primary topic — aligned with the title tag,
-  not identical boilerplate.
-- Logical hierarchy below it: h1 → h2 → h3, no skipped levels, headings
-  describe the content under them. Never pick a heading level for its font
-  size — set the size on the correct level (`<Title order={2} fz="xs">`).
+Owned by `pikku-a11y` and apply app-wide; follow it. SEO addition only: the
+public page's h1 names its primary topic, aligned with the title tag (not
+identical boilerplate).
 
 ## Crawlable, semantic markup
 
-- Landmarks on public pages: `<nav>`, `<main>`, `<footer>` (Mantine: `component="nav"` etc.).
 - Navigation between public pages uses real links (`<Link>`/`<a href>`) with
   descriptive anchor text — crawlers follow hrefs; a `div onClick` navigation
   is invisible to them. No public page may be orphaned: every public page is
   reachable by link from the landing page (directly or via nav/footer).
-- Every meaningful `<img>` has alt text describing the image; decorative images
-  get `alt=""`. Prefer descriptive file names for real assets.
+- Prefer descriptive file names for real assets (alt text: see `pikku-a11y`).
 - Readable URLs: public routes are lowercase, hyphen-separated, and named for
   their content (`/pricing`, `/how-it-works`) — never `/page2` or query-param
   navigation.

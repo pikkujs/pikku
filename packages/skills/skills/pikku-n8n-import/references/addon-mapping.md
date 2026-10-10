@@ -1,5 +1,11 @@
 # Integration stub → Pikku addon
 
+## Contents
+
+- Inputs
+- Per entry, in order
+- Never
+
 Translate n8n integration nodes (`gmailTool`, `slackTool`, `googleSheetsTool`, plain
 `gmail` / `slack` action nodes, etc.) that the importer left as throwing stubs into
 real `ref('<addonRpc>')` references pointing at functions in **installed**

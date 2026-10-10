@@ -1,5 +1,17 @@
 # Pikku Realtime
 
+## Contents
+
+- 1. Declare your topics
+- 2. Enable the server side
+- 3. Generate the typed client
+- 4. Publish events from a function
+- 5. Wire it up — share fetch with PikkuRPC
+- 6. Subscribe from React
+- Other SSE / WebSocket routes
+- When to pick which transport
+- What NOT to do
+
 ## 1. Declare your topics
 
 In your project's types file (e.g. `types/eventhub-topics.d.ts`):
@@ -95,7 +107,7 @@ export class PikkuRealtime {
     handler: (data: EventHubTopics[K]) => void
   ): { close: () => void }
 
-  // generic escape hatches — see realtime-other-routes.md
+  // generic escape hatches — see "Other SSE / WebSocket routes" below
   subscribeToSSE<T>(
     path: string,
     handler: (data: T) => void
@@ -236,9 +248,27 @@ function TodoList() {
 
 ## Other SSE / WebSocket routes
 
-The same client also subscribes to generic `sse: true` routes and raw `wireChannel`
-sockets (`subscribeToSSE`, `connectToChannel`). See
-[realtime-other-routes.md](realtime-other-routes.md).
+The same client also handles generic SSE + channel routes (not just
+`/events` topics). Use the path; the base URL is inherited from `PikkuFetch`.
+
+```ts
+// Any `sse: true` HTTP route
+const sub = realtime.subscribeToSSE<{ progress: number }>(
+  `/workflow-run/${runId}/stream`,
+  (event) => setProgress(event.progress)
+)
+// later: sub.close()
+
+// Any wireChannel — open a raw socket, wrap in PikkuWebSocket for typed I/O
+const ws = realtime.connectToChannel('/ws/kanban')
+const typed = new PikkuWebSocket<'kanban-live'>(ws)
+typed.getRoute('command').subscribe('message', (data) => {
+  /* ... */
+})
+```
+
+Discover what's available with `pikku meta clients --json` — `channels` and any HTTP
+`sse: true` routes are listed there.
 
 ## When to pick which transport
 

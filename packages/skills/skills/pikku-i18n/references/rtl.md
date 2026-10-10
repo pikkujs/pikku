@@ -1,5 +1,16 @@
 # Pikku RTL (Arabic + English)
 
+## Contents
+
+- [The one idea](#the-one-idea)
+- [Agent Operating Procedure](#agent-operating-procedure)
+- [Flow-relative, not physical — the rules that make it mirror](#flow-relative-not-physical--the-rules-that-make-it-mirror)
+- [Applying direction at the root](#applying-direction-at-the-root)
+- [Directional icons — the manual bit](#directional-icons--the-manual-bit)
+- [Arabic typography niceties](#arabic-typography-niceties)
+- [Adding Arabic to an existing app — checklist](#adding-arabic-to-an-existing-app--checklist)
+- [What NOT to do](#what-not-to-do)
+
 This reference sits **on top of** `references/messages.md`. That one compiles a locale's
 messages into typed `m.*()` functions; this one adds the second axis: a locale
 also has a **direction**. Arabic is not special-cased — it is just another

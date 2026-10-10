@@ -1,5 +1,12 @@
 # Pikku HTTP Wiring
 
+## Contents
+
+- API Reference
+- Data Flow
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 All three come from `#pikku/http` (the generated `.pikku/http/index.ts`), which
@@ -14,7 +21,7 @@ Function input/output types come from the function's own `input:`/`output:` zod 
 
 Config cascading across groups: `basePath` concatenates down the chain, `tags` merge (union), `auth` child overrides parent.
 
-For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read `http-options.md`.
+For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read the HTTP options reference listed in `SKILL.md`.
 
 ### `addHTTPMiddleware(pattern, middlewares)`
 
@@ -23,7 +30,7 @@ addHTTPMiddleware('*', [authBearer()]) // All routes
 addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
 ```
 
-> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-auth`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
+> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
 
 ## Data Flow
 
@@ -86,7 +93,7 @@ wireHTTP({ method: 'get', route: '/books', func: listBooks, auth: false })
 wireHTTP({ method: 'delete', route: '/books/:bookId', func: deleteBook })
 ```
 
-Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-auth`), or app-wide via `addGlobalPermission`.
+Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-permissions`), or app-wide via `addGlobalPermission`.
 
 ### Middleware
 

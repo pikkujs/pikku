@@ -69,4 +69,4 @@ app.ws('/*', pikkuWebsocketHandler({ logger, logRoutes: true }))
 
 Both take `{ logger, logRoutes?, loadSchemas? } & RunHTTPWiringOptions`.
 
-For a WebSocket-only server on the `ws` library instead, see `ws.md`.
+For a WebSocket-only server on the `ws` library instead, use the `ws` runtime.

@@ -1,6 +1,6 @@
 ---
 name: pikku-software-archaeology
-description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner who holds the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator audience. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or an engineer-facing code review.'
+description: 'Use when reverse-engineering an existing repository into a `.knowledge/` Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner of the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator. Not the `knowledge/` notes of pikku-knowledge. DO NOT TRIGGER for: documenting code structure, API docs for a clean codebase, an engineer-facing code review, or rebuilding from an existing blueprint (use pikku-blueprint-to-fabric).'
 installGroups: [core]
 ---
 
@@ -177,17 +177,11 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 | "A component list is enough"                    | Without the `rebuild` split, you've hidden the frontend's real cost. Flag every `custom-logic` component (chart/table/canvas/editor) and say what the logic is — that's the port work. |
 | "I'll skip the validator, the JSON looks right" | Run it. Missing domains refs, dangling event names, and undescribed custom-logic components are exactly what it catches.                                                               |
 
-## Quick Reference
+## Reference files
 
-```bash
-# 1. survey + excavate + extract (you, with Read/Grep/subagents)
-# 2. write <repo>/.knowledge/*.json + blueprint.md per references/blueprint.schema.json
-# 3. validate:
-node <skill-dir>/scripts/validate.mjs <repo>/.knowledge
-```
-
-- Schema/contract: `references/blueprint.schema.json`
+- Schema and contract for every output file: `references/blueprint.schema.json` (large JSON; open it with a search for the file you are writing rather than reading it whole)
 - How Pikku consumes the blueprint: `references/pikku-mapping.md`
+- Validator: `node <skill-dir>/scripts/validate.mjs <repo>/.knowledge`
 
 ## The second phase — a report the owner can act on
 

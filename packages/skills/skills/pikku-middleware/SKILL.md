@@ -1,24 +1,15 @@
 ---
 name: pikku-middleware
 description: >-
-  Use when adding any middleware to a Pikku app — global HTTP middleware, tag-scoped middleware
-  (including service-to-service bearer auth), per-route middleware, session-setting middleware, or
-  understanding middleware execution order and priority. TRIGGER when: user wants middleware on
-  some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global
-  interceptors, or middleware priority/order questions. DO NOT TRIGGER when: user asks about
-  permissions, sessions or auth strategies like authBearer/authCookie (use
-  pikku-auth), or deployment.
+  Use when adding middleware to a Pikku app: global (addGlobalMiddleware), HTTP and prefix (addHTTPMiddleware), tag-scoped (addTagMiddleware), per-wiring, session-setting middleware, and execution order and priority. Covers the pikkuMiddleware factory, where a token is resolved into a session (HTTP middleware, cron tasks), and service-to-service bearer gates.
+  TRIGGER when: user wants middleware on some or all routes, tag-scoped cross-cutting concerns, global interceptors, middleware priority or order questions, or middleware that calls setSession for a machine caller.
+  DO NOT TRIGGER when: the question is choosing or configuring an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`), permissions or scopes (use pikku-permissions), or deployment.
 installGroups: [core]
 ---
 
 # Pikku Middleware
 
-## Agent Operating Procedure
-
-1. Discover before editing. Run `pikku info middleware --verbose` and `pikku info tags --json` to understand the existing middleware and tag landscape.
-2. Identify the source files that own the behavior — wirings files, not generated output.
-3. Register middleware at module load time — in a `wirings/*.ts` file, never inside a function body.
-4. Validate: run `pikku all --tsc` after adding or changing middleware — it regenerates and then confirms type safety in one pass.
+Register middleware at module load time in a `wirings/*.ts` file, never inside a function body. After a change, run `pikku all --tsc`.
 
 ## The `pikkuMiddleware` Factory
 
@@ -223,7 +214,7 @@ export const reportSomething = pikkuFunc({
 })
 ```
 
-An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-auth`).
+An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-permissions`).
 
 ### It MUST be `addHTTPMiddleware`, never `addTagMiddleware`
 
@@ -255,13 +246,13 @@ Unlike tag middleware over `/rpc`, this works: `runScheduledTask` builds its wir
 
 ### The one sessionless exception: bootstrap
 
-An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-auth`).
+An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-permissions`).
 
 ## Service-to-Service Bearer Auth (gate-only pattern)
 
 Use this when the callee needs to know only THAT the caller is trusted, not WHICH caller it is. If it needs to know which, use the session pattern above.
 
-A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-auth`), never inside `func`.
+A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-permissions`), never inside `func`.
 
 **On the server (the service being called):** tag the function, register a `pikkuMiddleware` that reads the `Authorization` header on that tag.
 

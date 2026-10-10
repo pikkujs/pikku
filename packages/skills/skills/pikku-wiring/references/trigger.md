@@ -1,5 +1,13 @@
 # Pikku Trigger Wiring
 
+## Contents
+
+- API Reference
+- Starting triggers
+- Webhook sources
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 All three come from `#pikku`. A trigger is deliberately split in two: the

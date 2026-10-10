@@ -1,5 +1,18 @@
 # Pikku i18n (Paraglide JS)
 
+## Contents
+
+- [Agent Operating Procedure](#agent-operating-procedure)
+- [The product's language is not the code's language](#the-products-language-is-not-the-codes-language)
+- [The moving parts (starter-template layout)](#the-moving-parts-starter-template-layout)
+- [Using messages in components](#using-messages-in-components)
+- [Keys only known at runtime (enum labels, status maps)](#keys-only-known-at-runtime-enum-labels-status-maps)
+- [Type safety — and why deploys block on i18n](#type-safety--and-why-deploys-block-on-i18n)
+- [Compile step](#compile-step)
+- [Adding a second language](#adding-a-second-language)
+- [i18n debug mode (find inlined strings)](#i18n-debug-mode-find-inlined-strings)
+- [What NOT to do](#what-not-to-do)
+
 ## Agent Operating Procedure
 
 Use this skill as an execution checklist, not reference material.

@@ -1,5 +1,17 @@
 # Product Second Opinion
 
+## Contents
+
+- Overview
+- The cardinal rule: translate, don't dump
+- Report structure (layered — skim or dive)
+- Rewire vs rebuild (say which)
+- The frontend and the other ways your app is used
+- Technology choices — the honest tradeoffs (don't be cheap on the cons)
+- Delivery
+- Red flags — you're writing the wrong report
+- Relationship to the extraction phase
+
 ## Overview
 
 Turn an extracted product blueprint into a **report a non-technical owner can act on**. Two jobs, in one voice: (1) explain, in plain language, how the app they're stuck with actually works; (2) give an honest, opinionated second opinion — what's solid, what's holding them back, and how you'd build it better, argued in business outcomes, not architecture.

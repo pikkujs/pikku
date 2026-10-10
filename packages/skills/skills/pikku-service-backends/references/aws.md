@@ -1,5 +1,11 @@
 # AWS (`@pikku/aws-services`)
 
+## Contents
+
+- [`S3Content` — ContentService](#s3content-contentservice)
+- [`SQSQueueService` — QueueService](#sqsqueueservice-queueservice)
+- [`AWSSecrets` — SecretService](#awssecrets-secretservice)
+
 ```bash
 yarn add @pikku/aws-services
 ```

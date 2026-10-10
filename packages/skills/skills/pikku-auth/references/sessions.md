@@ -1,5 +1,11 @@
 # Pikku Security (Authentication & Sessions)
 
+## Contents
+
+- [Session Management](#session-management)
+- [Built-in Auth Strategies](#built-in-auth-strategies)
+- [Complete Example](#complete-example)
+
 
 ## Session Management
 

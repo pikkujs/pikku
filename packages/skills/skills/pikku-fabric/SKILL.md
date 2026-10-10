@@ -6,9 +6,7 @@ installGroups: [fabric]
 
 # Pikku Fabric
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
+## Operating procedure
 
 1. **Run structural validation first.** Before any edit, run:
    ```bash
@@ -25,20 +23,18 @@ Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs
 
 ## Before you start
 
-Always run project discovery first:
-
 ```bash
 yarn pikku meta context --json
 ```
 
-Run `pikku meta` before grepping or editing a Fabric app.
+Run `pikku meta` before grepping or editing a Fabric app:
 
 - `pikku meta context --json` for the project map: functions, wires, workflows, capabilities, and source files.
 - `pikku meta clients --json` before frontend/RPC work.
 - `pikku meta functions --json` to list function ids, then `pikku meta functions get <id> --json` for one function.
 - `pikku meta schemas --json` to list schema names. Only request a full schema body with `pikku meta schemas get <name> --json` when you need it.
 
-Do not load every schema body by default; that wastes context and usually makes the model worse.
+Do not load every schema body by default.
 
 For database work:
 
@@ -46,127 +42,9 @@ For database work:
 - Use `pikku meta schemas` for code-level JSON Schema contracts, not database introspection.
 - Do not inspect database credentials or connect to the database directly; Fabric already exposes the safe introspection surface.
 
-## Database: SQLite via libSQL
+## Database
 
-Fabric apps use SQLite, accessed via Kysely with the libSQL HTTP adapter. NOT PostgreSQL, NOT D1.
-
-### Setup in `services.ts`
-
-```typescript
-import { Kysely, CamelCasePlugin } from 'kysely'
-import { LibsqlWebDialect } from '@pikku/kysely-sqlite'
-import type { DB } from '#pikku/db/schema.gen.js'
-
-const databaseUrl = await variables.get('DATABASE_URL')
-let kysely: Kysely<DB>
-if (databaseUrl) {
-  kysely = new Kysely<DB>({
-    dialect: new LibsqlWebDialect({ url: databaseUrl }),
-    plugins: [new CamelCasePlugin()],
-  })
-} else if (existingServices?.kysely) {
-  kysely = existingServices.kysely as Kysely<DB>
-} else {
-  throw new Error('kysely not provided and DATABASE_URL is unset')
-}
-```
-
-Fabric injects `DATABASE_URL` as a variable binding when the stage starts. In local dev, `pikku db migrate` uses a local `dev.db` SQLite file.
-
-### Migrations
-
-Migrations are plain `.sql` files at the **project root**, in a directory named
-for the engine — `db/sqlite/` for SQLite/libSQL stages, `db/postgres/` for
-Postgres ones. Never `db/migrations/`, and never under `packages/functions/`:
-the deploy pipeline stages `db/<engine>/*.sql` from the root and applies them
-after upload, so a migration anywhere else is silently never run.
-
-```
-db/sqlite/
-  0001-init.sql
-  0002-add-users.sql
-```
-
-Numbers must be consecutive and gap-free, and an applied migration is frozen —
-correct a mistake with a new forward migration, never by editing or renaming one
-that has already run (the recorded hash will no longer match).
-
-**Forward-only rule.** Once a migration exists on the base branch (or any stage
-has applied it), never edit, rename or delete it — add a NEW numbered migration
-that makes the change. A stage records a migration by name and never re-runs it,
-so an edit never reaches a database that already applied it. Two guards enforce
-this:
-
-- `pikku fabric validate` reports `migration-modified-after-base-*` (error) for
-  any `db/<engine>/*.sql` that exists on the base ref (default `origin/main`, else `main`, `origin/master`, `master`,
-  compared at the branch's merge-base; override with `--migrations-base <ref>`
-  or `PIKKU_MIGRATIONS_BASE`) but was modified, deleted or renamed in the working
-  tree. New files are fine. It is skipped outside a git repo or with no base ref.
-  In CI use a full clone (`fetch-depth: 0`) so the base ref exists.
-- `pikku fabric deploy apply` runs the migration-history checks first and
-  refuses to create a deployment if any fail. It compares against the stage
-  being deployed and the production (`main`) stage's applied ledger, and against
-  the base ref — a branch stage can be reset at will, but main's history reaches
-  production. Findings: `migration-applied-file-missing-*`, `migration-drift-*`,
-  `migration-gap`, `migration-modified-after-base-*`. Unlike `validate`, a check
-  that cannot run refuses too: an unreadable ledger (`migration-drift-unchecked`)
-  or a base ref that does not resolve (`migration-base-unresolved`). There is no
-  override flag — fix the history.
-
-Fix a finding by restoring the file (`git checkout origin/main -- db/sqlite/<file>`)
-and putting the change in a new migration.
-
-Run migrations: `pikku db migrate`. It also regenerates `.pikku/db/schema.gen.ts`
-(Kysely types) and `.pikku/db/zod.gen.ts` — there is no separate types step.
-
-**NEVER hand-edit the generated schema** — write a migration and re-run.
-
-### Dev seed data
-
-Alongside the migrations sits `db/<engine>-dev-seed.sql` — `db/sqlite-dev-seed.sql`
-or `db/postgres-dev-seed.sql`. There is no seed command. `pikku db reset` is the
-only thing that applies it: wipe, migrate, seed. `--no-seed` stops after the
-migration, for working on an empty-state or onboarding flow the test data hides.
-
-Because reset always arrives at a database it has just wiped, **the seed file is
-plain `INSERT`s** — no `INSERT OR IGNORE`, no `ON CONFLICT DO NOTHING`, no
-`IF NOT EXISTS`. Nothing applies it twice, so it never has to defend itself. If
-you find yourself reaching for an idempotent form, that's a sign the data wants
-to be a migration instead.
-
-This is **local dev data only**: enough rows that a fresh dev database isn't an
-empty app. Nothing else ever runs it. A deployed stage applies `db/<engine>/*.sql`
-and stops there — the one exception is a disposable stage deployed with
-`pikku fabric deploy apply <branch> --reset` (see Deploy), which is never
-production. Local reset refuses `NODE_ENV=production` and refuses a database
-outside the runtime directory.
-
-So the test is not "is this row realistic?", it is **"would the app be broken
-without it in production?"** If yes, it is configuration and belongs in a
-migration, however much it looks like sample data. A venue and its rooms, a
-product catalogue, a tenant, a country list, the organization the whole
-deployment hangs off — all configuration. Accounts and role grants are
-provisioning: the fabric plugin's `personas`, or a migration. What is left
-over is the seed's job — the bookings, orders and messages a demo needs and a real
-environment starts without.
-
-Get this wrong and it hides: the app is perfect locally, where reset has just
-run, and every deployed environment comes up with empty tables. The signature is
-a stage whose pages return 200 — the shell renders fine — while its first data
-read throws `no result` or a foreign-key violation on a row the seed was
-silently supplying.
-
-A Better Auth app has a second constraint: the plugins you enable (`pikkuBan()`,
-`pikkuActor()`, …) each declare columns, and `pikku db migrate` refuses to run while
-the applied schema is missing any of them. `pikku db generate` writes the
-migration that closes the gap.
-
-### Column conventions
-
-- Use `SERIAL`/`INTEGER PRIMARY KEY AUTOINCREMENT` for IDs
-- Use `TEXT` for strings, `INTEGER` for booleans (0/1) and timestamps (Unix ms)
-- Use `CHECK` constraints sparingly — prefer app-level validation
-- Table and column names: snake_case in SQL, camelCase in TypeScript (via `CamelCasePlugin`)
+Fabric apps use SQLite via Kysely and the libSQL HTTP adapter, not PostgreSQL or D1. `DATABASE_URL` is injected as a variable binding when the stage starts; locally `pikku db migrate` uses a `dev.db` file. Migrations are `.sql` files in `db/sqlite/` at the project root, numbered, gap-free and forward-only; never hand-edit `.pikku/db/schema.gen.ts`. Read `references/database.md` for the `services.ts` setup, the migration guards, dev seed rules and column conventions.
 
 ## Deploy Provider
 
@@ -370,173 +248,7 @@ those values.
 
 ## Deploy
 
-```bash
-pikku fabric login              # opens a browser; needs a human, wait for it
-pikku fabric init https://github.com/<owner>/<repo>
-pikku fabric validate           # must pass clean
-pikku fabric deploy apply --production -y
-```
-
-`init` and `link` import into whichever organization your session is in. When
-you belong to several — a personal one and a company one, say — name the target
-with `--organization`, taking a slug, a display name or an id:
-
-```bash
-pikku fabric link --organization vlandor
-```
-
-You have to be a member of the organization you name, and its GitHub account
-has to be connected already: importing a `github.com/<owner>/<repo>` repo needs
-the Fabric GitHub App installed on `<owner>` _and_ linked to that organization,
-or the import refuses by name.
-
-The branch is positional and defaults to the checked-out one, and `-y` is the
-short form of `--auto-approve`, so a one-shot deploy is:
-
-```bash
-pikku fabric deploy apply -y            # the branch you are standing on
-pikku fabric deploy apply my-branch -y  # a named one
-```
-
-`-y` answers the prompts and nothing more. It does **not** approve migrations
-that drop or rewrite data — that stays `--allow-destructive`, typed out on
-purpose.
-
-### Rebuilding a disposable stage: `--reset`
-
-A non-production stage whose migration history or schema has drifted (an app's
-`develop` branch) can be wiped and rebuilt in one deploy:
-
-```bash
-pikku fabric deploy apply develop --reset      # asks first, naming app + stage
-pikku fabric deploy apply develop --reset -y   # prints the warning, skips the prompt
-```
-
-It is the deployed counterpart of `pikku db reset`: **all data on that stage is
-deleted**, every migration is re-applied and `db/<engine>-dev-seed.sql` is
-loaded. It is refused for `--production`, for `main`, and with `--deployment-id`
-(it only applies to a deploy it creates). It needs a fabric server that reports
-the reset back on the deployment; against one that does not, the command fails
-naming the deployment it created without a reset, and wipes nothing. `-y` does
-not imply `--allow-destructive`.
-
-Inferring the branch is safe because the git safety check refuses any branch
-without an upstream or out of sync with it, so it cannot ship an unpushed
-commit; the branch it picked is printed before the build starts. A detached
-HEAD is refused by name rather than travelling on as a branch called `HEAD`.
-
-There is no `deploy plan` subcommand — `apply` runs the same auth, git-safety
-and ref resolution itself, and fabric produces the real plan server-side.
-
-`apply` confirms before deploying, and with no TTY to ask — CI, an agent shell —
-it refuses rather than hangs. `--auto-approve` (`-y`) supplies that confirmation;
-drop it only when a human is at a real terminal.
-
-`apply` waits for a terminal state and exits non-zero unless the deployment went
-live. `--detach` opts out — it queues the deploy, prints the deployment id and
-returns 0, which tells you nothing about whether it worked:
-
-| exit | meaning                                                                 |
-| ---- | ----------------------------------------------------------------------- |
-| 0    | live (or queued, under `--detach`)                                      |
-| 1    | the command could not run — not logged in, unsafe git state, bad flags  |
-| 2    | the deployment failed, errored, timed out server-side, or was cancelled |
-| 3    | the deployment is blocked and nothing the CLI can do will unblock it    |
-| 4    | the wait hit `--timeout` with the deployment still in flight            |
-
-On a failure or timeout, `apply` prints the tail of the builder's own log (and
-carries `buildLog` / `imageBuildLog` on the `--json` result). Read it before
-touching code: `fabric logs` serves the running stage, not the build. When the
-builder recorded nothing, the CLI says so — that is usually fabric-side, so run
-`pikku fabric smoke` before assuming the project is broken.
-
-Fabric parks every deploy at a gate after the plan phase (`status: suspended`).
-Why it parked is the whole story, and it is `statusReason`, not `status`:
-
-- `awaiting_approval` — the plan is fine, a human has to publish it.
-  `-y` does that; without it you get exit 3 and the command to run.
-  One exception: if fabric marked any pending migration **destructive** — a
-  drop, a truncate, a rewrite — `-y` alone declines and exits 3,
-  because a standing yes was given before anyone knew the plan dropped a table.
-  The CLI lists the migrations and fabric's reasons; `--allow-destructive`
-  accepts them for that deploy, and `-y` implies it.
-- `needs_config` — a declared secret or variable has no value covering the
-  stage. The CLI names them. `-y` will **not** force this through;
-  set the values and re-attach — `pikku fabric secrets set <name>` for a
-  declared secret, `pikku fabric variables set <name> --value <v>` for a declared
-  variable. They are separate stores: a secret is sealed to the stage and cannot
-  be read back, a variable is stored plainly and can (`variables get`). `set`
-  reads the value as JSON when it parses, so `--value true` is the boolean on a
-  stage exactly as it is from `.env`, and `--value '"true"'` is the string.
-- `needs_attention` — the plan is red. Nothing to approve.
-
-The wait defaults to a 900s ceiling; `--timeout <seconds>` moves it. On timeout
-it prints the deployment id and the re-attach command rather than lying about
-the outcome.
-
-Splitting kick-off from waiting across two CI jobs is the reason
-`--deployment-id` exists, and what `--detach` is for — the first job here has to
-return the id and exit rather than wait:
-
-```bash
-id=$(pikku fabric deploy apply --production -y --detach --json | jq -r 'select(.event=="result").deploymentId')
-# …later, in another job…
-pikku fabric deploy apply --deployment-id "$id" -y
-```
-
-`--deployment-id` skips the git safety check entirely (the deployment already
-pins a sha, and the checkout is allowed to have moved on) and refuses to be
-combined with a branch or `--production`, which would let the two disagree.
-
-Under `--json`, the wait emits one NDJSON event per line — `created`/`attached`,
-`status` on each transition, `blocked`, `approved` — and the last line is the
-terminal result object, tagged `"event": "result"`.
-
-`init` adopts a **GitHub** repo, and adoption goes through the Pikku Fabric
-GitHub App — the app has to be installed on the account or org that owns the
-repo, and if it is installed with "selected repositories" this one must be in
-the selection. There is no CLI flag that works around a missing installation:
-`init` returns "Connect the GitHub account '<owner>'". Send the user to install
-it, or create the project in the console instead (which provisions a Fabric-hosted
-git repo you push to) and clone it — the remote links the checkout, or put
-the id in `fabric.projectId` in `pikku.config.json`.
-
-Deploy refuses to run unless the target branch equals its upstream — the guard
-compares `main` against `main@{upstream}`. So the remote you pushed to must be
-the one the branch tracks; a stale `origin` left over from scaffolding blocks
-the deploy with "local HEAD … ≠ remote …" even though your code is pushed.
-`git branch --set-upstream-to=<remote>/main main` before deploying.
-
-### The first user on a deployed stage
-
-When sign-up is off, the first account has to come from outside the app.
-`pikku fabric user add <email>` is the CLI form of the console's Add user:
-
-```bash
-pikku fabric user add ada@example.com --name Ada          # prompts; blank generates one
-pikku fabric user add ada@example.com --password '<pw>' -b staging
-```
-
-It mints a short-lived operator token for the stage and calls the stage's own
-`admin:createUser`, so the stage must wire `@pikku/addon-admin` as `admin` —
-a 404 is refused by name and nothing is created. A generated password is printed
-once; one you passed is never echoed. With no TTY, pass `--password` or pipe it.
-
-### Opening a private stage
-
-A non-production stage is private: without a link it answers "This preview is
-private". `pikku fabric stage link` prints the link that opens it:
-
-```bash
-pikku fabric stage link access -b develop --route /login   # use the stage
-pikku fabric stage link changes -b develop                 # use it with the changes panel
-pikku fabric stage visibility public -b develop            # or: private
-```
-
-A stage has one live link of each kind, so asking again returns the same one
-until it expires. A `changes` link turns the panel on first; if that needs a
-deploy, the command says so. `visibility public` opens the stage to anyone with
-its URL — hand out an `access` link instead when that is all you need.
+Flow: `pikku fabric login` (needs a human), `pikku fabric init <github url>`, `pikku fabric validate` (must pass clean), then `pikku fabric deploy apply --production -y`. `apply` waits for a terminal state and exits non-zero unless the deployment went live. Read `references/deploy.md` for organization targeting, `--reset`, exit codes, the approval gate (`awaiting_approval`, `needs_config`, `needs_attention`), CI splitting, the upstream guard, the first user and private stage links.
 
 ## Versioning
 

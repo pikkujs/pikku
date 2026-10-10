@@ -1,8 +1,13 @@
 # Debugging a deployed Fabric stage
 
-## Agent Operating Procedure
+## Contents
 
-Use this skill as an execution checklist, not reference material.
+- Operating procedure
+- The loop (errors, trace, metrics, logs, status)
+- Known gaps
+- What not to do
+
+## Operating procedure
 
 1. Reproduce locally first. If it fails locally too, debug it there — the
    deployed stage adds cost and latency to every iteration.
@@ -92,9 +97,8 @@ deploy stuck in flight, explains a whole class of "my fix did nothing".
   not conclude "nothing happened in the last 15 minutes" from it. Narrow by
   `--level`, or by `--function` via `errors`, instead.
 - **`--follow` is a 2-second client-side poll, not a server stream** — despite
-  its own help text reading "Stream new logs (SSE)". Server-side SSE is planned;
-  the backend doesn't push natively today. It
-  dedups against what it already printed, so it behaves like `tail -f`, but new
+  its own help text reading "Stream new logs (SSE)". The backend does not push
+  natively. It dedups against what it already printed, so it behaves like `tail -f`, but new
   entries can appear up to ~2s late and it holds the process open until killed.
 
 ## What NOT to do

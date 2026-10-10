@@ -1,5 +1,15 @@
 # Pikku Audit
 
+## Contents
+
+- [Mental model — two layers](#mental-model-two-layers)
+- [Wiring (services.ts)](#wiring-servicests)
+- [Recording events — explicit domain events (default)](#recording-events-explicit-domain-events-default)
+- [Recording events — automatic query capture (optional)](#recording-events-automatic-query-capture-optional)
+- [Sinks](#sinks)
+- [AuditEvent shape](#auditevent-shape)
+- [Do / Don't](#do-dont)
+
 
 ## Mental model — two layers
 

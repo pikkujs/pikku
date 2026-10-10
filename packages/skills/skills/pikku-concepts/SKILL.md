@@ -13,9 +13,7 @@ installGroups: [core]
 
 # Pikku Framework Concepts
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
+## Operating procedure
 
 1. Discover before editing. Run `pikku doc --ai` for the installed API surface, and the relevant `pikku meta ... --json` for what this project has wired.
 2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
@@ -43,7 +41,7 @@ that will work anyway.
 pikku doc --ai
 ```
 
-≈480 tokens, giving the 20 `#pikku/*` doors grouped by the job they do, and beside each the
+Prints the `#pikku/*` doors, grouped by the job they do, and beside each the
 skill that teaches it. Read that routing table as the index to every other pikku skill — it is
 generated from the installed version, so it never names a skill for a door that no longer exists.
 
@@ -148,7 +146,7 @@ pikkuFunc (pure business logic)
     ├── wireChannel     → WebSocket (real-time)
     ├── wireQueueWorker → BullMQ, PgBoss (async jobs)
     ├── wireScheduler   → Cron (scheduled tasks)
-    ├── wireMCPTool     → Model Context Protocol (AI tools)
+    ├── mcp: true       → Model Context Protocol (AI tools; an option on the function, no wire call)
     ├── wireCLI         → CLI commands
     ├── wireTrigger     → Event-driven (Redis pub/sub, PG LISTEN/NOTIFY)
     ├── pikkuAgent    → AI agents / chatbots
@@ -161,6 +159,8 @@ A `pikkuFunc` receives three things:
 1. **Services** — injected dependencies (logger, db, jwt, custom stores). See `pikku-services`.
 2. **Data** — input from any source (HTTP body/query/params, WS message, queue payload, CLI args)
 3. **Wire** — transport context (session, channel, rpc, mcp, http, queue)
+
+**MCP tools:** always set `mcp: true` on the normal function; HTTP, RPC and agents can still call it. The one exception is wrapping an EXISTING function as an AI tool purely to reshape its data: use `pikkuMCPToolFunc` (calls the original via `rpc.invoke`), which makes the wrapper MCP-only. The alternative is a second normal function with `mcp: true`. See `pikku-wiring`.
 
 The function never imports Express, never reads `req.body`, never touches `ws.send()`. It just works with typed data and services.
 
@@ -353,7 +353,7 @@ src/
 ## What Language You Write In
 
 Three different things in a Pikku project have a human language, and they are **not** the same
-language. Collapsing them has already shipped in a real product:
+language. Collapsing them is the common mistake:
 
 | Axis            | Covers                                                                        | Decided by                                     |
 | --------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
@@ -370,8 +370,8 @@ language is cloned from.
 
 **When a brief tells you the product speaks a language, it is telling you about the third axis and
 nothing else.** `references/language.md` has the three settings that satisfy such a brief, and the
-build that read one sentence about a product's users as an instruction about its codebase — German
-RPC names, German tables, and no English catalogue to ever translate from.
+failure to avoid: reading one sentence about a product's users as an instruction about its codebase
+(German RPC names, German tables, no English catalogue to translate from).
 
 ## Environment Variables
 
@@ -408,12 +408,3 @@ expect(result.todos).toHaveLength(3)
 ## Available Packages
 
 Pikku ships runtime adapters (`@pikku/express-server`, `@pikku/fastify-server`, `@pikku/next`, `@pikku/aws-lambda`, `@pikku/cloudflare`, `@pikku/uws-server`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
-
-## Key Differences from Traditional Frameworks
-
-1. **No decorators** — plain functions + explicit wiring, not `@Get()` or `@Injectable()`
-2. **No classes required** — everything is functions and objects
-3. **Transport is configuration, not code** — business logic doesn't know about HTTP/WS/etc.
-4. **One function, many transports** — same function can serve HTTP, WebSocket, queue, and MCP simultaneously
-5. **Generated type safety** — clients are auto-generated with full types, not manually maintained
-6. **Schema-first validation** — Standard Schema (Zod/Valibot) replaces class-validator decorators
