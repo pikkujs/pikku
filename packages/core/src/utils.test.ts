@@ -6,6 +6,7 @@ import {
   isSerializable,
   getTagGroups,
   freezeDedupe,
+  onShutdownSignals,
   parseJson,
   stopSingletonServices,
 } from './utils.js'
@@ -372,5 +373,31 @@ describe('parseJson', () => {
   test('refuses anything that is not JSON with a BadRequestError', () => {
     assert.throws(() => parseJson('not json'), BadRequestError)
     assert.throws(() => parseJson(new Uint8Array()), BadRequestError)
+  })
+})
+
+describe('onShutdownSignals', () => {
+  test('runs once however many signals arrive while stopping', async () => {
+    const events: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const dispose = onShutdownSignals(async (signal) => {
+      events.push(`start:${signal}`)
+      await gate
+      events.push('done')
+    })
+    try {
+      process.emit('SIGTERM')
+      process.emit('SIGTERM')
+      process.emit('SIGINT')
+      await new Promise((resolve) => setImmediate(resolve))
+      assert.deepStrictEqual(events, ['start:SIGTERM'])
+      release()
+      await new Promise((resolve) => setImmediate(resolve))
+      assert.deepStrictEqual(events, ['start:SIGTERM', 'done'])
+    } finally {
+      dispose()
+    }
+    assert.strictEqual(process.listenerCount('SIGTERM'), 0)
   })
 })
