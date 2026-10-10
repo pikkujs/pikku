@@ -46,6 +46,7 @@ import {
   openSqlite,
   type SqliteExtensionContext,
 } from './sqlite/sqlite-extensions.js'
+import { wipeSqlite } from './sqlite/sqlite-wipe.js'
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
@@ -841,9 +842,7 @@ export async function reset(
         `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override sqliteDb or set runtimeDir correctly.`
       )
     }
-    if (existsSync(resolved.dbFile)) {
-      rmSync(resolved.dbFile)
-    }
+    await wipeSqlite(resolved, resolved.dbFile)
     return
   }
 
@@ -970,25 +969,7 @@ function compileClassifications(
   genJsonFile: string
 ): boolean {
   if (!existsSync(classificationsFile)) return false
-
-  let value: unknown
-  try {
-    const src = readFileSync(classificationsFile, 'utf8')
-    const { code } = transformSync(src, {
-      loader: 'ts',
-      format: 'cjs',
-    })
-    const mod: { exports: Record<string, unknown> } = { exports: {} }
-    runInNewContext(code, {
-      module: mod,
-      exports: mod.exports,
-      require: createRequire(classificationsFile),
-    })
-    value = Object.values(mod.exports)[0]
-  } catch {
-    return false // syntax/transform error — skip JSON emit
-  }
-
+  const value = loadClassifications(classificationsFile)
   if (value === undefined) return false
   const next = JSON.stringify(value, null, 2) + '\n'
   const existing = existsSync(genJsonFile)
@@ -1000,6 +981,26 @@ function compileClassifications(
     return true
   }
   return false
+}
+
+/** Evaluates the authored `db/annotations.ts` and returns its exported map, or undefined when it is missing or does not compile. */
+export function loadClassifications(classificationsFile: string): unknown {
+  if (!existsSync(classificationsFile)) return undefined
+  try {
+    const { code } = transformSync(readFileSync(classificationsFile, 'utf8'), {
+      loader: 'ts',
+      format: 'cjs',
+    })
+    const mod: { exports: Record<string, unknown> } = { exports: {} }
+    runInNewContext(code, {
+      module: mod,
+      exports: mod.exports,
+      require: createRequire(classificationsFile),
+    })
+    return Object.values(mod.exports)[0]
+  } catch {
+    return undefined
+  }
 }
 
 export async function createKysely<DB>(

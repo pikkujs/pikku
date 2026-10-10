@@ -17,6 +17,7 @@ import { pikkuDist } from './functions/commands/dist.js'
 import { watch } from './functions/commands/watch.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
+import { devStatus } from './functions/commands/dev-status.js'
 import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
@@ -27,6 +28,7 @@ import {
   webhooksTeardown,
 } from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
+import { dbAnnotate } from './functions/commands/db-annotate.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
 import { dbReset } from './functions/commands/db-reset.js'
@@ -559,6 +561,13 @@ wireCLI({
     dev: pikkuCLICommand({
       func: dev,
       description: 'Start a local development server with all services wired',
+      subcommands: {
+        status: pikkuCLICommand({
+          func: devStatus,
+          description:
+            'Report whether pikku dev is running, its address, and whether its last codegen pass failed',
+        }),
+      },
       options: {
         port: {
           description: 'Port for the dev server',
@@ -752,6 +761,11 @@ wireCLI({
           func: dbCheck,
           description:
             'Report how the configured database differs from the schema its migrations define',
+        }),
+        annotate: pikkuCLICommand({
+          func: dbAnnotate,
+          description:
+            'Add a kind to db/annotations.ts for each SQLite column declared BOOLEAN, DATE/TIMESTAMP or JSON, so it types as boolean, Date or parsed JSON',
         }),
         baseline: pikkuCLICommand({
           func: dbBaseline,
