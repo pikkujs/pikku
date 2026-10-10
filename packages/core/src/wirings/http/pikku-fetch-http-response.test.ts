@@ -121,3 +121,24 @@ describe('PikkuFetchHTTPResponse', () => {
     assert.strictEqual(res.status, 201)
   })
 })
+
+describe('PikkuFetchHTTPResponse onClose', () => {
+  test('fires when the reader cancels the stream', async () => {
+    const response = new PikkuFetchHTTPResponse()
+    response.setMode('stream')
+    let closed = 0
+    response.onClose(() => closed++)
+    await response.toResponse().body!.cancel()
+    assert.equal(closed, 1)
+  })
+
+  test('fires once when the server closes the stream', () => {
+    const response = new PikkuFetchHTTPResponse()
+    response.setMode('stream')
+    let closed = 0
+    response.onClose(() => closed++)
+    response.close()
+    response.close()
+    assert.equal(closed, 1)
+  })
+})
