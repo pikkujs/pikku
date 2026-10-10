@@ -34,10 +34,17 @@ export { expect } from '@playwright/test'
 
 export { browserConfigFromEnv, type BrowserConfig } from './config.js'
 export { registered, type ElementKind, type ElementMap } from './elements.js'
-export { ActorSession } from './actor-session.js'
+export { ActorSession, type PageIssues } from './actor-session.js'
 export { slug } from './capture.js'
 export { type BrowserConnection } from './browser-launch.js'
 export { PlaywrightScenarioBrowserProvider } from './provider.js'
 export { staticRoutes, sweepAllPages } from './pages-sweep.js'
+export {
+  openPageSession,
+  screenshotName,
+  screenshotPages,
+  type PageScreenshot,
+  type ScreenshotPagesOptions,
+} from './page-screenshots.js'
 export { testIdSelector, type LocateTestIdOptions } from './testid.js'
 export * as mantine from './locators.js'
