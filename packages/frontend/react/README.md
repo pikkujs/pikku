@@ -3,7 +3,7 @@
 React bindings for Pikku — a provider plus hooks for fetch, RPC, AI agents,
 workflows and realtime channels.
 
-Also owns the `I18nString` brand that `@pikku/mantine` uses to reject
+Also owns the `I18nString` brand that the starter template's components use to reject
 untranslated string literals at compile time.
 
 ## Install
@@ -36,7 +36,7 @@ const Todos = () => {
 `useDevActors()` powers the "Sign in as …" switcher: one click signs in as a
 declared scenario persona with no password, through Better Auth's persona
 endpoint. It is UI-free, so you can render it however you like — or use the
-ready-made `<DevActorSwitcher />` from `@pikku/mantine/dev`.
+starter template's `<DevActorSwitcher />`.
 
 ```typescript
 import { useDevActors } from '@pikku/react'

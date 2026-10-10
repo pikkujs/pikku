@@ -44,7 +44,7 @@ const SUBDIRS = ['references', 'scripts', 'example', 'assets']
  * TypeScript fences in the corpus that are not `snippet:`-backed. This number
  * is a ratchet, not a target: every conversion lowers it, no PR raises it.
  */
-const UNBACKED_TS_FENCES = 75
+const UNBACKED_TS_FENCES = 73
 
 type Frontmatter = {
   name?: unknown
@@ -219,32 +219,6 @@ describe('bundled skills corpus', () => {
       tagged.sort(),
       [...FABRIC_SKILLS].sort(),
       'fabric group membership changed — update FABRIC_SKILLS if this is intended'
-    )
-  })
-
-  test("no skill teaches a router Link through Mantine's component prop", async () => {
-    // `component={Link}` compiles and navigates, and widens the router generic
-    // to AnyRouter on the way — `to` and `params` stop being checked against
-    // the real routes, so renaming one breaks the running app instead of the
-    // build. `renderRoot` with a wrapped, typed Link keeps the checking.
-    const offenders: string[] = []
-    for (const skill of await readSkills()) {
-      // Code only: the prose that warns about it has to be able to spell it.
-      let inFence = false
-      for (const [i, line] of skill.body.split('\n').entries()) {
-        if (line.startsWith('```')) {
-          inFence = !inFence
-          continue
-        }
-        if (inFence && /component=\{Link\}/.test(line)) {
-          offenders.push(`${skill.name}:${i + 1}`)
-        }
-      }
-    }
-    assert.deepEqual(
-      offenders,
-      [],
-      `use renderRoot with a wrapped Link instead: ${offenders.join(', ')}`
     )
   })
 
