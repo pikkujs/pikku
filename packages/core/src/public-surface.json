@@ -316,11 +316,20 @@
     "executeCLI",
     "formatCLIError",
     "generateCommandHelp",
+    "mountCLICommands",
+    "mountCLIExtension",
     "parseCLIArguments",
     "pikkuCLIRender",
     "runCLICommand",
     "wantsStackTrace",
     "wireCLI"
+  ],
+  "./mount": [
+    "getMountedPackages",
+    "mountHTTPRoutes",
+    "mountMCP",
+    "mountPackage",
+    "unmountPackage"
   ],
   "./cli/command-parser": [
     "generateCommandHelp",
