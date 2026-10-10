@@ -1,0 +1,83 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "layout-panel",
+  "type": "registry:block",
+  "title": "Layout panel",
+  "description": "Shell, panel, tab bar, sheet and nav dock.",
+  "dependencies": [
+    "@radix-ui/react-dropdown-menu",
+    "@radix-ui/react-tooltip"
+  ],
+  "files": [
+    {
+      "path": "layout-panel/Panel.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/Panel.tsx"
+    },
+    {
+      "path": "layout-panel/Sheet.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/Sheet.tsx"
+    },
+    {
+      "path": "layout-panel/Shell.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/Shell.tsx"
+    },
+    {
+      "path": "layout-panel/ShellRow.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/ShellRow.tsx"
+    },
+    {
+      "path": "layout-panel/Stage.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/Stage.tsx"
+    },
+    {
+      "path": "layout-panel/dock/DockFlyout.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/DockFlyout.tsx"
+    },
+    {
+      "path": "layout-panel/dock/NavDock.module.css",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/NavDock.module.css"
+    },
+    {
+      "path": "layout-panel/dock/NavDock.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/NavDock.tsx"
+    },
+    {
+      "path": "layout-panel/dock/index.ts",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/index.ts"
+    },
+    {
+      "path": "layout-panel/dock/model.ts",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/model.ts"
+    },
+    {
+      "path": "layout-panel/dock/useDockPrefs.ts",
+      "type": "registry:component",
+      "target": "components/layout-panel/dock/useDockPrefs.ts"
+    },
+    {
+      "path": "layout-panel/index.ts",
+      "type": "registry:component",
+      "target": "components/layout-panel/index.ts"
+    },
+    {
+      "path": "layout-panel/mobile.tsx",
+      "type": "registry:component",
+      "target": "components/layout-panel/mobile.tsx"
+    },
+    {
+      "path": "layout-panel/shell.css",
+      "type": "registry:component",
+      "target": "components/layout-panel/shell.css"
+    }
+  ]
+}

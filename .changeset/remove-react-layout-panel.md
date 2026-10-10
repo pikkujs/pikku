@@ -2,4 +2,4 @@
 '@pikku/react-layout-panel': patch
 ---
 
-The shell, panel, tab bar, sheet and nav dock now live in the starter template as a block under `src/components/layout-panel`, built on the template's Radix menus and tooltips and the shadcn tokens. The package is no longer published.
+The shell, panel, tab bar, sheet and nav dock are no longer a published package and are not part of the starter template. They are a shadcn registry item under `registry/layout-panel`, installed only when an app wants them.
