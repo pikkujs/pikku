@@ -1,12 +1,4 @@
 import React from 'react'
-import {
-  Box,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  useMantineTheme,
-} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Handle, Position } from '@xyflow/react'
 import { Lock, LockOpen, Shield, Layers } from 'lucide-react'
@@ -48,11 +40,13 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   hideMetadataIndicators = false,
   inFlow = true,
 }) => {
-  const theme = useMantineTheme()
   const vertical = useFlowDirection() === 'DOWN'
 
   return (
-    <Paper shadow="md" radius="md" w={width} pos="relative">
+    <div
+      className="relative rounded-md border bg-card text-card-foreground shadow-md"
+      style={{ width }}
+    >
       {inFlow && hasInput && (
         <Handle
           type="target"
@@ -61,24 +55,22 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
         />
       )}
 
-      <Box
-        p="sm"
-        className="nodrag"
-        style={{ cursor: data.onClick ? 'pointer' : 'default' }}
+      <div
+        className={`nodrag p-3 ${data.onClick ? 'cursor-pointer' : 'cursor-default'}`}
         onClick={data.onClick}
       >
-        <Stack gap={4}>
-          <Text size="sm" c="dimmed" lineClamp={2}>
+        <div className="flex flex-col gap-1">
+          <span className="line-clamp-2 text-sm text-muted-foreground">
             {asI18n(data.title)}
-          </Text>
+          </span>
           {data.description && (
-            <Text size="sm" ff="monospace" fw={500}>
+            <span className="font-mono text-sm font-medium">
               {asI18n(data.description)}
-            </Text>
+            </span>
           )}
 
           {data.tags && data.tags.length > 0 && (
-            <Group gap={4}>
+            <div className="flex flex-wrap items-center gap-1">
               {data.tags.map((tag) => (
                 <GraphBadge
                   key={tag}
@@ -86,18 +78,17 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                   badge="tag"
                   value={tag}
                   size="sm"
-                  variant="light"
                   color={data.colorKey}
                 />
               ))}
-            </Group>
+            </div>
           )}
 
           {!hideMetadataIndicators &&
             (data.auth !== undefined ||
               (data.permissionsCount && data.permissionsCount > 0) ||
               (data.middlewareCount && data.middlewareCount > 0)) && (
-              <Group gap={6}>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {data.auth !== undefined &&
                   (data.auth ? (
                     <Lock size={12} strokeWidth={2} />
@@ -107,29 +98,29 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
 
                 {data.permissionsCount !== undefined &&
                   data.permissionsCount > 0 && (
-                    <Group gap={4}>
+                    <div className="flex items-center gap-1">
                       <Shield size={12} strokeWidth={2} />
-                      <Text size="sm" fw={500}>
+                      <span className="text-sm font-medium">
                         {asI18n(String(data.permissionsCount))}
-                      </Text>
-                    </Group>
+                      </span>
+                    </div>
                   )}
 
                 {data.middlewareCount !== undefined &&
                   data.middlewareCount > 0 && (
-                    <Group gap={4}>
+                    <div className="flex items-center gap-1">
                       <Layers size={12} strokeWidth={2} />
-                      <Text size="sm" fw={500}>
+                      <span className="text-sm font-medium">
                         {asI18n(String(data.middlewareCount))}
-                      </Text>
-                    </Group>
+                      </span>
+                    </div>
                   )}
-              </Group>
+              </div>
             )}
 
           {additionalBody}
-        </Stack>
-      </Box>
+        </div>
+      </div>
 
       {inFlow &&
         (outputHandles && outputHandles.length > 0
@@ -143,11 +134,11 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                   : minOffset + ((maxOffset - minOffset) / (total - 1)) * index
 
               return (
-                <Box
+                <div
                   key={handle.id}
-                  pos="absolute"
-                  {...(vertical ? { bottom: -12 } : { right: -12 })}
+                  className="absolute"
                   style={{
+                    ...(vertical ? { bottom: -12 } : { right: -12 }),
                     ...(vertical
                       ? {
                           left: `${offsetPercent}%`,
@@ -163,9 +154,9 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <Text size="sm" c="dimmed" ff="monospace" fw={500}>
+                  <span className="font-mono text-sm font-medium text-muted-foreground">
                     {asI18n(handle.label || handle.id)}
-                  </Text>
+                  </span>
                   <Handle
                     type="source"
                     position={vertical ? Position.Bottom : Position.Right}
@@ -177,7 +168,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                       cursor: 'default',
                     }}
                   />
-                </Box>
+                </div>
               )
             })
           : hasOutput && (
@@ -187,6 +178,6 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                 style={{ cursor: 'default' }}
               />
             ))}
-    </Paper>
+    </div>
   )
 }

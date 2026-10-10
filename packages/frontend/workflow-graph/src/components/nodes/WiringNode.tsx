@@ -16,7 +16,7 @@ import {
 import { useGraphActions } from '../../context/GraphHostContext'
 import { useGraphHighlight } from '../../context/GraphHostContext'
 import { useGraphRun } from '../../context/GraphHostContext'
-import { useMantineTheme } from '@pikku/mantine/core'
+import { nodeColor } from '../../colors'
 
 type WiringType =
   | 'http'
@@ -67,7 +67,6 @@ export const WiringNode: React.FC<GraphNodeProps<WiringNodeData>> = ({
   const { openWorkflowStep } = useGraphActions()
   const graphHighlight = useGraphHighlight()
   const run = useGraphRun()
-  const theme = useMantineTheme()
 
   const highlightType: HighlightType = React.useMemo(() => {
     if (!graphHighlight) return null
@@ -101,11 +100,9 @@ export const WiringNode: React.FC<GraphNodeProps<WiringNodeData>> = ({
     const expectedWireType = wiringTypeToWireType[data.triggerType]
     if (wire.type !== expectedWireType) return undefined
     if (data.wireId && wire.id)
-      return wire.id === data.wireId
-        ? theme.colors[data.colorKey]?.[5]
-        : undefined
-    return theme.colors[data.colorKey]?.[5]
-  }, [run?.wire, data.triggerType, data.wireId, data.colorKey, theme])
+      return wire.id === data.wireId ? nodeColor(data.colorKey) : undefined
+    return nodeColor(data.colorKey)
+  }, [run?.wire, data.triggerType, data.wireId, data.colorKey])
 
   return (
     <FlowNode

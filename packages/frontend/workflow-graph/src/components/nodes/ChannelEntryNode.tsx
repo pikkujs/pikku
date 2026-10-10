@@ -1,10 +1,10 @@
 import React from 'react'
 import type { GraphNodeProps } from '../../types'
 import { Handle, Position } from '@xyflow/react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
+import { nodeColor } from '../../colors'
 import { useGraphActions } from '../../context/GraphHostContext'
 
 /** Handler names are code identifiers shown as written, not copy to translate. */
@@ -21,34 +21,21 @@ interface HandlerRowProps {
 
 const HandlerRow: React.FC<HandlerRowProps> = ({ label, handleId }) => {
   return (
-    <Box
-      px="xs"
-      pl="md"
-      py={4}
-      style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}
-    >
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
+    <div className="relative flex items-center justify-between gap-2 py-1 pl-4 pr-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <ArrowRight size={14} />
       <Handle
         type="source"
         position={Position.Right}
         id={handleId}
         style={{
-          background: 'var(--mantine-color-teal-6)',
+          background: nodeColor('teal'),
           width: 8,
           height: 8,
           right: -4,
         }}
       />
-    </Box>
+    </div>
   )
 }
 
@@ -64,46 +51,30 @@ export const ChannelEntryNode: React.FC<
   GraphNodeProps<ChannelEntryNodeData>
 > = ({ data }) => {
   const { openChannel } = useGraphActions()
-  const theme = useMantineTheme()
 
   const handleClick = React.useCallback(() => {
     openChannel(data.channelName, data.channelMeta)
   }, [data.channelName, data.channelMeta, openChannel])
 
   return (
-    <Paper
-      shadow="md"
-      radius="md"
-      w={220}
-      style={{
-        cursor: 'pointer',
-        overflow: 'visible',
-        position: 'relative',
-      }}
+    <div
+      className="relative w-[220px] cursor-pointer overflow-visible rounded-md border bg-card text-card-foreground shadow-md"
       onClick={handleClick}
     >
-      <Box
-        pos="absolute"
-        left={0}
-        top={0}
-        bottom={0}
-        w={4}
-        style={{
-          backgroundColor: theme.colors.teal[5],
-          borderTopLeftRadius: theme.radius.md,
-          borderBottomLeftRadius: theme.radius.md,
-        }}
+      <div
+        className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md"
+        style={{ backgroundColor: nodeColor('teal') }}
       />
 
-      <Stack gap={0} py="xs">
-        <Box px="md" pb={4}>
-          <Text size="md" fw={600}>
+      <div className="flex flex-col py-2">
+        <div className="px-4 pb-1">
+          <div className="text-base font-semibold">
             {asI18n(data.channelName)}
-          </Text>
-          <Text size="sm" c="dimmed">
+          </div>
+          <div className="text-sm text-muted-foreground">
             {asI18n(data.route)}
-          </Text>
-        </Box>
+          </div>
+        </div>
 
         {data.handlers.includes('connect') && (
           <HandlerRow
@@ -130,7 +101,7 @@ export const ChannelEntryNode: React.FC<
             handleId={`category-${cat}`}
           />
         ))}
-      </Stack>
-    </Paper>
+      </div>
+    </div>
   )
 }
