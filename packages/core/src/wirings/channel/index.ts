@@ -18,6 +18,7 @@ export type {
   ChannelMessageMeta,
   ChannelMeta,
   PikkuChannel,
+  PikkuChannelHandler,
   PikkuChannelHandlerFactory,
 } from './channel.types.js'
 export { defineChannelRoutes } from './define-channel-routes.js'
