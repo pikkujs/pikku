@@ -15,7 +15,7 @@ installGroups: [client]
 
 The UI is Tailwind v4 utility classes over shadcn/ui components that live in the app's own
 `src/components/ui/`. They are source you edit, not a dependency you configure. Every colour, radius
-and font comes from CSS variables in the app's `theme.css`; change the look with `pikku theme apply`.
+and font comes from CSS variables in the app's `theme.css`; change the look with `pikku ui theme apply`.
 
 ## Components
 

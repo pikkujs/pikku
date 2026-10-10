@@ -7,7 +7,7 @@ generated `theme.css`). `bunfig.toml` pins bun's hoisted linker; see AGENTS.md f
 ## The loop
 
 ```bash
-pikku theme apply --preset <id> --primary '#...'   # writes packages/theme/theme.css
+pikku ui theme apply --preset <id> --primary '#...'   # writes packages/theme/theme.css
 npx shadcn@latest add dialog                       # from apps/app; copies into src/components/ui
 bun run lint                                        # @shadcn/lint + react/jsx-no-literals
 ```
