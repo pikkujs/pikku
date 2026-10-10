@@ -2203,7 +2203,7 @@ export async function runValidate(
         ? 'packages/theme/ not found — the Fabric console Design tab has no themes to list and reports "No themes yet"'
         : 'packages/theme/ not found — Fabric design features require a theme package',
       themePkgDir,
-      `Create packages/theme/ with themes/<id>.json and active.json, then run \`pikku theme apply\`. See ${designDocUrl}`
+      `Create packages/theme/ with themes/<id>.json and active.json, then run \`pikku ui theme apply\`. See ${designDocUrl}`
     )
   } else {
     // The Fabric console's Design tab lists a theme only when it can read a
@@ -2239,7 +2239,7 @@ export async function runValidate(
           '  "structure": { "radius": "md", "density": "comfortable", "defaultColorScheme": "light" }',
           '}',
           '2. Create packages/theme/active.json: { "id": "<id>" }',
-          '3. Run `pikku theme apply` to generate theme.css from the active spec.',
+          '3. Run `pikku ui theme apply` to generate theme.css from the active spec.',
           `See ${designDocUrl}`
         )
       )
