@@ -1,9 +1,11 @@
 import { pikkuVoidFunc } from '#pikku/function'
 import { computeMetaDiff, readMetaSnapshot } from '../../utils/meta-diff.js'
+import { startRunTelemetry } from '../../utils/run-telemetry.js'
 
 export const all = pikkuVoidFunc({
   remote: true,
   func: async ({ workflowService, logger, config }, _data, { rpc }) => {
+    startRunTelemetry({ rootDir: config.rootDir, command: 'all' })
     // --diff: snapshot the meta BEFORE codegen overwrites it, so we can report
     // exactly what this run changes. Cheap (a few small JSON reads), skipped
     // unless requested.
