@@ -1,3 +1,20 @@
+## 0.13.36
+
+### Patch Changes
+
+- e0846b5: Saving an agent's tool messages skips a tool call whose result is undefined instead of writing it. When the browser driver for a scenario cannot be loaded, the error now includes the underlying cause and tells you to `bun add -D` it.
+- 884a1b5: MySQL: the `@pikku/kysely` stores no longer emit postgres/sqlite-only SQL. Upserts use `on duplicate key update`, insert-or-ignore uses `insert ignore`, `returning` deletes read the rows first, the lease clock casts to `signed`, workflow JSON state uses `CAST(... AS JSON)`, the agent thread owner `LIKE` escapes with `!`, and timestamp columns are written as `Date`s instead of `Z`-suffixed ISO strings. `pikku db generate` now emits the `scope` schema when Better Auth's user model is a mapped table (for example a Rails `users` table), typing the key column from the real `users.id`.
+- 51ec3ac: MySQL fixes found moving a Rails database onto pikku.
+
+  - The generated local services (`pikku db baseline`, `pikku dev`, `pikku all`, a local CLI) open MySQL: a `mysql://` `DATABASE_URL` or `mysqlUrl` in the config opens through a Kysely `MysqlDialect` on a `mysql2` pool (declare `mysql2` in the project), with `CamelCasePlugin` and the coercion map like the other dialects. A `mysql://` URL was read as a sqlite file path. `db/mysql` now counts as a project database, and `@pikku/kysely` re-exports `MysqlDialect`.
+  - MySQL migrations run with `FOREIGN_KEY_CHECKS` off, so a mysqldump whose tables reference ones created later applies as it is.
+  - `TINYINT(1)` is typed `boolean` and coerced at runtime (mysql2 returns 0/1); an explicit `tsType` in `db/annotations.ts` keeps it a number. `DECIMAL` is read as a number (`decimalNumbers`), as the generated types say. `BIGINT` stays `number`, exact to 2^53, which is mysql2's default.
+  - `pikku all` no longer throws "db/mysql exists but no mysqlUrl is configured": the server comes from createConfig's `mysqlUrl`, `db.mysqlUrl` or a `mysql://` `DATABASE_URL`, and with none the stub `DB` is written.
+  - Better Auth schema derivation follows the resolved database rather than the factory's `database.type`, so a factory declaring `type: 'sqlite'` no longer sends SQLite introspection (`pragma index_list`) to a MySQL server. Set `type: 'mysql'` in the factory too, so the runtime matches.
+
+- Updated dependencies [f396538]
+  - @pikku/core@0.12.140
+
 ## 0.13.35
 
 ### Patch Changes

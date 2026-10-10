@@ -11,7 +11,7 @@
     "tsc": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/app-tsc.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/react": "^0.12.13",
+    "@pikku/react": "^0.12.14",
     "@project/functions-sdk": "workspace:*",
     "@project/theme": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.10",
