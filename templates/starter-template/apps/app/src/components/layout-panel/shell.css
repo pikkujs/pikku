@@ -13,7 +13,9 @@
   --shell-safe-left: env(safe-area-inset-left, 0px);
 
   --shell-tabbar-height: 56px;
-  --shell-tabbar-foot: calc(var(--shell-tabbar-height) + var(--shell-safe-bottom));
+  --shell-tabbar-foot: calc(
+    var(--shell-tabbar-height) + var(--shell-safe-bottom)
+  );
   /* Where a sheet's bottom edge lands. The tab bar by default, because that is what
      usually raised it — but an application whose controls sit somewhere else can raise
      this on any ancestor of the sheet and keep the symmetry described below. */
@@ -22,12 +24,12 @@
   --shell-rail-width: 34px;
   --shell-header-height: 44px;
 
-  --shell-border: var(--mantine-color-default-border, rgba(0, 0, 0, 0.12));
-  --shell-surface: var(--mantine-color-body, #fff);
-  --shell-raised: var(--mantine-color-default-hover, rgba(0, 0, 0, 0.03));
-  --shell-text: var(--mantine-color-text, #222);
-  --shell-text-dim: var(--mantine-color-dimmed, #777);
-  --shell-accent: var(--mantine-primary-color-filled, #c2410c);
+  --shell-border: var(--border, rgba(0, 0, 0, 0.12));
+  --shell-surface: var(--background, #fff);
+  --shell-raised: var(--muted, rgba(0, 0, 0, 0.03));
+  --shell-text: var(--foreground, #222);
+  --shell-text-dim: var(--muted-foreground, #777);
+  --shell-accent: var(--primary, #c2410c);
   --shell-radius: 10px;
   /* The seam between two floating surfaces, and between a surface and the window.
      One number, so the panels, the stage and the nav dock all rest on the same
@@ -180,7 +182,9 @@
   font: inherit;
 }
 
-.pk-rail:hover { color: var(--shell-text); }
+.pk-rail:hover {
+  color: var(--shell-text);
+}
 
 /* A collapsed panel is still one of the cards — it is the same object, narrowed
    to its name, and a rail that dropped the card would read as the panel having
@@ -217,7 +221,10 @@
   line-height: 1;
 }
 
-.pk-panel-collapse:hover { background: var(--shell-border); color: var(--shell-text); }
+.pk-panel-collapse:hover {
+  background: var(--shell-border);
+  color: var(--shell-text);
+}
 
 /* ------------------------------------------------------------- tab bar --- */
 
@@ -253,7 +260,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.pk-tab--active { color: var(--shell-accent); }
+.pk-tab--active {
+  color: var(--shell-accent);
+}
 
 .pk-tab-label {
   font-size: 10px;
@@ -302,7 +311,9 @@
   animation: pk-sheet-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.pk-sheet--fill { height: calc(100dvh - var(--shell-sheet-foot) - 24px); }
+.pk-sheet--fill {
+  height: calc(100dvh - var(--shell-sheet-foot) - 24px);
+}
 
 .pk-sheet-grip {
   flex-shrink: 0;
@@ -321,25 +332,31 @@
   overscroll-behavior: contain;
 }
 
-@keyframes pk-fade-in { from { opacity: 0 } to { opacity: 1 } }
-@keyframes pk-sheet-up { from { transform: translateY(12%); opacity: 0 } to { transform: none; opacity: 1 } }
-
-@media (prefers-reduced-motion: reduce) {
-  .pk-sheet, .pk-sheet-scrim { animation: none; }
-  .pk-tab { transition: none; }
+@keyframes pk-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pk-sheet-up {
+  from {
+    transform: translateY(12%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 
-/* ----------------------------------------------------- mantine appshell --- */
-
-/**
- * For an application whose shell is Mantine's `<AppShell>`: its `Main` ships
- * `min-height: 100vh`, which is a floor rather than a height, so nothing inside it can
- * size itself as a fraction of the viewport. This makes it definite without taking
- * scrolling away from the pages that want it.
- */
-.pk-shell-main {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
-  overflow-y: auto;
+@media (prefers-reduced-motion: reduce) {
+  .pk-sheet,
+  .pk-sheet-scrim {
+    animation: none;
+  }
+  .pk-tab {
+    transition: none;
+  }
 }

@@ -1,4 +1,4 @@
-import { Menu, Slider } from '@pikku/mantine/core'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import type { DockMenu, DockTile, FlyoutRow } from './model.js'
 import classes from './NavDock.module.css'
 
@@ -26,14 +26,8 @@ export function DockFlyout({
   /** Shown for a section that has no rows. */
   emptyLabel: string
 }) {
-  /* A menu holding a submenu cannot also be the thing that scrolls: `overflow`
-     of any kind makes it a clipping boundary, and floating-ui then shifts the
-     child back inside the parent it is supposed to stand beside. A settings menu
-     is short by construction, so it gives up the cap rather than the submenu. */
-  const nested = menu.sections.some((s) => s.rows.some((r) => r.rows?.length))
-
   return (
-    <Menu.Dropdown aria-label={menu.label} data-nested={nested || undefined}>
+    <>
       {menu.head && (
         <div className={classes.flyoutHead}>
           <span className={classes.flyoutHeadMark}>{menu.head.mark}</span>
@@ -54,9 +48,7 @@ export function DockFlyout({
             <hr className={classes.flyoutSep} />
           ) : null}
           {section.rows.length === 0 ? (
-            <div className={classes.fiEmpty}>
-              {section.empty ?? emptyLabel}
-            </div>
+            <div className={classes.fiEmpty}>{section.empty ?? emptyLabel}</div>
           ) : (
             section.rows.map((row) => (
               <Row
@@ -69,7 +61,7 @@ export function DockFlyout({
           )}
         </div>
       ))}
-    </Menu.Dropdown>
+    </>
   )
 }
 
@@ -84,45 +76,40 @@ function Row({
 }) {
   const active = isActiveRow(row)
 
-  /* A row that opens a submenu, the way Language and Appearance do. Mantine owns
+  /* A row that opens a submenu, the way Language and Appearance do. Radix owns
      the open/close, the hover intent and the keyboard, so this is the same Row
-     one level down. Its defaults are kept, `withinPortal: false` included: the
-     parent's click-outside only counts its own target and dropdown nodes, so a
-     portalled child would be "outside" and every pick would shut the whole menu.
-     What a submenu needs instead is a parent that does not clip it — see
-     `data-nested` on the dropdown. */
+     one level down. */
   if (row.rows?.length) {
     return (
-      // 6 to clear the parent's own padding, which the row it hangs off is
-      // inset by, and 8 for the seam every other pair of surfaces here uses.
-      <Menu.Sub offset={14}>
-        <Menu.Sub.Target>
-          <Menu.Sub.Item
-            className={classes.flyoutItem}
-            data-active={String(active)}
-          >
-            <Body row={row} />
-          </Menu.Sub.Item>
-        </Menu.Sub.Target>
-        <Menu.Sub.Dropdown
-          className={classes.flyout}
-          aria-label={row.label}
-          data-testid={`flyout-sub-${row.key}`}
+      <DropdownMenu.Sub>
+        <DropdownMenu.SubTrigger
+          className={classes.flyoutItem}
+          data-active={String(active)}
         >
-          {row.rows.map((child) => (
-            <Row
-              key={child.key}
-              row={child}
-              isActiveRow={isActiveRow}
-              onClose={onClose}
-            />
-          ))}
-        </Menu.Sub.Dropdown>
-      </Menu.Sub>
+          <Body row={row} />
+        </DropdownMenu.SubTrigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.SubContent
+            className={classes.flyout}
+            sideOffset={14}
+            aria-label={row.label}
+            data-testid={`flyout-sub-${row.key}`}
+          >
+            {row.rows.map((child) => (
+              <Row
+                key={child.key}
+                row={child}
+                isActiveRow={isActiveRow}
+                onClose={onClose}
+              />
+            ))}
+          </DropdownMenu.SubContent>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Sub>
     )
   }
 
-  /* A range, not a set of alternatives. A div rather than a Menu.Item because a
+  /* A range, not a set of alternatives. A div rather than a menu item because a
      menu item swallows the pointer and the arrow keys the slider needs — and
      closing the menu on release would put the thing you are sizing out of sight
      exactly when you want to see it. */
@@ -135,39 +122,59 @@ function Row({
         data-testid={`flyout-slider-${row.key}`}
       >
         <div className={classes.fiSliderHead}>
-          <Body row={{ ...row, hint: format ? format(value) : String(value) }} />
+          <Body
+            row={{ ...row, hint: format ? format(value) : String(value) }}
+          />
         </div>
-        <Slider
+        <input
+          type="range"
+          className={classes.fiRange}
           value={value}
           min={min}
           max={max}
           step={step}
-          onChange={onChange}
-          label={null}
-          size="sm"
+          onChange={(e) => onChange(Number(e.target.value))}
           aria-label={row.label}
         />
       </div>
     )
   }
 
-  /* A setting, not a destination. Mantine's selectable items carry the tick, the
+  /* A setting, not a destination. Selectable items carry the
      `menuitemradio`/`menuitemcheckbox` role and the `aria-checked` a screen
-     reader reads out — none of which a Menu.Item with a check glyph drawn into
+     reader reads out — none of which a plain item with a check glyph drawn into
      it has. They also stay open on click, which is what you want while trying
      appearances on. */
   if (row.checked !== undefined) {
-    const Selectable = row.exclusive ? Menu.RadioItem : Menu.CheckboxItem
-    return (
-      <Selectable
-        value={row.key}
+    const tick = (
+      <DropdownMenu.ItemIndicator forceMount className={classes.fiTick}>
+        {row.checked ? <TickIcon /> : null}
+      </DropdownMenu.ItemIndicator>
+    )
+    const keepOpen = (e: Event) => {
+      e.preventDefault()
+      row.onSelect?.()
+    }
+    return row.exclusive ? (
+      <DropdownMenu.RadioGroup value={row.checked ? row.key : ''}>
+        <DropdownMenu.RadioItem
+          value={row.key}
+          onSelect={keepOpen}
+          className={classes.flyoutItem}
+        >
+          {tick}
+          <Body row={row} />
+        </DropdownMenu.RadioItem>
+      </DropdownMenu.RadioGroup>
+    ) : (
+      <DropdownMenu.CheckboxItem
         checked={row.checked}
-        onChange={() => row.onSelect?.()}
+        onSelect={keepOpen}
         className={classes.flyoutItem}
-        classNames={{ itemIndicator: classes.fiTick }}
       >
+        {tick}
         <Body row={row} />
-      </Selectable>
+      </DropdownMenu.CheckboxItem>
     )
   }
 
@@ -183,8 +190,7 @@ function Row({
   }
 
   return (
-    <Menu.Item
-      component="button"
+    <DropdownMenu.Item
       className={classes.flyoutItem}
       data-active={String(active)}
       data-danger={row.danger ? 'true' : undefined}
@@ -198,13 +204,27 @@ function Row({
       ]
         .filter(Boolean)
         .join(', ')}
-      onClick={() => {
+      onSelect={() => {
         row.onSelect?.()
         onClose()
       }}
     >
       <Body row={row} />
-    </Menu.Item>
+    </DropdownMenu.Item>
+  )
+}
+
+function TickIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      aria-hidden
+    >
+      <path d="M5 12l5 5L20 7" />
+    </svg>
   )
 }
 

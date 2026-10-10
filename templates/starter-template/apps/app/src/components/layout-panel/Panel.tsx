@@ -80,7 +80,9 @@ export const Panel: FC<PanelProps> = ({
 
   return (
     <section
-      className={[`pk-panel pk-panel--${side}`, className].filter(Boolean).join(' ')}
+      className={[`pk-panel pk-panel--${side}`, className]
+        .filter(Boolean)
+        .join(' ')}
       style={{ width, ...style }}
       data-testid={testId}
     >

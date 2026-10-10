@@ -87,7 +87,11 @@ test('an expanded panel names its collapse control the same way', () => {
   assert.match(fromTitle, /aria-label="Muscles"/)
 
   const explicit = renderToStaticMarkup(
-    <Panel title={<span>Muscles</span>} railLabel="Muscle map" onCollapse={() => {}}>
+    <Panel
+      title={<span>Muscles</span>}
+      railLabel="Muscle map"
+      onCollapse={() => {}}
+    >
       body
     </Panel>
   )
@@ -200,7 +204,10 @@ test('only a plain left click on a tab link is routed in-app', () => {
   assert.equal(shouldFollowLinkInRouter(click({ shiftKey: true })), false)
   assert.equal(shouldFollowLinkInRouter(click({ altKey: true })), false)
   assert.equal(shouldFollowLinkInRouter(click({ button: 1 })), false)
-  assert.equal(shouldFollowLinkInRouter(click({ defaultPrevented: true })), false)
+  assert.equal(
+    shouldFollowLinkInRouter(click({ defaultPrevented: true })),
+    false
+  )
 })
 
 test('the media-query helpers read and unsubscribe through matchMedia', () => {

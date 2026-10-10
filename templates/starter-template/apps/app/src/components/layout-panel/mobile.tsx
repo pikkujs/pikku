@@ -1,4 +1,9 @@
-import { useCallback, useSyncExternalStore, type FC, type ReactNode } from 'react'
+import {
+  useCallback,
+  useSyncExternalStore,
+  type FC,
+  type ReactNode,
+} from 'react'
 
 /**
  * One breakpoint, defined once, in JS — because the phone layout is a DIFFERENT TREE,
@@ -129,7 +134,9 @@ export interface TabBarProps {
 export const TabBar: FC<TabBarProps> = ({ tabs, label, testId }) => (
   <nav className="pk-tabbar" aria-label={label} data-testid={testId}>
     {tabs.map((tab) => {
-      const className = ['pk-tab', tab.active ? 'pk-tab--active' : ''].filter(Boolean).join(' ')
+      const className = ['pk-tab', tab.active ? 'pk-tab--active' : '']
+        .filter(Boolean)
+        .join(' ')
       const body = (
         <>
           <span style={{ position: 'relative', display: 'flex' }}>
@@ -170,7 +177,9 @@ export const TabBar: FC<TabBarProps> = ({ tabs, label, testId }) => (
           key={tab.key}
           href={tab.href}
           className={className}
-          aria-current={tab.destination !== false && tab.active ? 'page' : undefined}
+          aria-current={
+            tab.destination !== false && tab.active ? 'page' : undefined
+          }
           data-testid={`shell-tab-${tab.key}`}
           onClick={(e) => {
             if (!shouldFollowLinkInRouter(e)) return

@@ -20,7 +20,12 @@ export interface ShellProps {
  *
  * Content scrolls in `Panel`, never here.
  */
-export const Shell: FC<ShellProps> = ({ phone, className, style, children }) => (
+export const Shell: FC<ShellProps> = ({
+  phone,
+  className,
+  style,
+  children,
+}) => (
   <div
     className={['pk-shell', phone ? 'pk-shell--phone' : '', className]
       .filter(Boolean)

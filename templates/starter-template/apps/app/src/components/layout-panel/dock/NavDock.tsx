@@ -8,7 +8,8 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { Menu, Tooltip } from '@pikku/mantine/core'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { DockFlyout } from './DockFlyout.js'
 import {
   isSep,
@@ -31,10 +32,10 @@ const TILE_MIN = 34
    flyout opens, a tooltip sits, and the arrow key that opens a tile's menu. A
    flyout that opened towards the edge would be half off-screen. */
 const AWAY = {
-  bottom: { menu: 'top', tooltip: 'top', key: 'ArrowUp' },
-  top: { menu: 'bottom', tooltip: 'bottom', key: 'ArrowDown' },
-  left: { menu: 'right-start', tooltip: 'right', key: 'ArrowRight' },
-  right: { menu: 'left-start', tooltip: 'left', key: 'ArrowLeft' },
+  bottom: { menu: 'top', align: 'center', tooltip: 'top', key: 'ArrowUp' },
+  top: { menu: 'bottom', align: 'center', tooltip: 'bottom', key: 'ArrowDown' },
+  left: { menu: 'right', align: 'start', tooltip: 'right', key: 'ArrowRight' },
+  right: { menu: 'left', align: 'start', tooltip: 'left', key: 'ArrowLeft' },
 } as const
 
 /** Three dots, drawn inline so the dock carries no icon dependency. */
@@ -64,7 +65,7 @@ function releaseEdges() {
 
 /**
  * The strings the dock says in its own chrome. Props rather than catalog keys
- * because this package carries no i18n — the app's own `m()` output passes
+ * because the dock carries no i18n — the app's own `m()` output passes
  * straight through.
  */
 export interface DockLabels {
@@ -374,91 +375,94 @@ export function NavDock({
   )
 
   return (
-    <div
-      className={classes.dockStrip}
-      data-open={String(open)}
-      data-pinned={String(alwaysVisible)}
-      data-side={side}
-      data-axis={vertical ? 'y' : 'x'}
-      data-testid="nav-dock"
-    >
-      <button
-        type="button"
-        className={classes.dockTrigger}
-        aria-label={alwaysVisible ? labels.unpin : labels.show}
-        aria-expanded={open}
-        aria-controls="nav-dock-row"
-        data-testid="nav-dock-trigger"
-        onClick={() => setAlwaysVisible(!alwaysVisible)}
-        onPointerEnter={raise}
-        onPointerLeave={drop}
-      >
-        <span className={classes.dockHint} />
-      </button>
+    <TooltipPrimitive.Provider>
       <div
-        id="nav-dock-row"
-        ref={dockRef}
-        role="toolbar"
-        aria-orientation={vertical ? 'vertical' : 'horizontal'}
-        aria-label={labels.nav}
-        className={classes.dock}
-        data-overflow={String(overflow)}
-        /* A dock at opacity 0 is still focusable and still read aloud. `inert`
+        className={classes.dockStrip}
+        data-open={String(open)}
+        data-pinned={String(alwaysVisible)}
+        data-side={side}
+        data-axis={vertical ? 'y' : 'x'}
+        data-testid="nav-dock"
+      >
+        <button
+          type="button"
+          className={classes.dockTrigger}
+          aria-label={alwaysVisible ? labels.unpin : labels.show}
+          aria-expanded={open}
+          aria-controls="nav-dock-row"
+          data-testid="nav-dock-trigger"
+          onClick={() => setAlwaysVisible(!alwaysVisible)}
+          onPointerEnter={raise}
+          onPointerLeave={drop}
+        >
+          <span className={classes.dockHint} />
+        </button>
+        <div
+          id="nav-dock-row"
+          ref={dockRef}
+          role="toolbar"
+          aria-orientation={vertical ? 'vertical' : 'horizontal'}
+          aria-label={labels.nav}
+          className={classes.dock}
+          data-overflow={String(overflow)}
+          /* A dock at opacity 0 is still focusable and still read aloud. `inert`
            takes it out of both, so Tab goes trigger → tiles and never into
            thin air. */
-        inert={!open}
-        onPointerEnter={raise}
-        onPointerLeave={drop}
-        onKeyDown={onKeyDown}
-        onFocus={() => {
-          if (closeTimer.current) clearTimeout(closeTimer.current)
-          setHovering(true)
-        }}
-        onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) drop()
-        }}
-        /* The tile size is written straight onto this element by `applyTile`
+          inert={!open}
+          onPointerEnter={raise}
+          onPointerLeave={drop}
+          onKeyDown={onKeyDown}
+          onFocus={() => {
+            if (closeTimer.current) clearTimeout(closeTimer.current)
+            setHovering(true)
+          }}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+              drop()
+          }}
+          /* The tile size is written straight onto this element by `applyTile`
            during the fit measurement, so this element must NOT also take a
            `style` prop — React would rewrite the attribute on every render and
            wipe the measured custom properties. */
-      >
-        {identity && (
-          <>
-            {identity.menu || identity.onSelect ? (
-              renderTile(identity, 'id')
-            ) : (
-              /* Nothing behind the mark: it says which product this is, and the
+        >
+          {identity && (
+            <>
+              {identity.menu || identity.onSelect ? (
+                renderTile(identity, 'id')
+              ) : (
+                /* Nothing behind the mark: it says which product this is, and the
                  zones beside it already ARE the navigation, so a tile that opens
                  a copy of them is a second door to the same room. */
-              <span
-                className={classes.brandPlate}
-                role="img"
-                aria-label={identity.label}
-              >
-                <span className={classes.mark}>{brand}</span>
-              </span>
-            )}
-            <Sep vertical={vertical} />
-          </>
-        )}
-        {pinned.length > 0 && renderZone(pinned, 'pinned')}
-        {shownContextual.length > 0 && (
-          <>
-            <Sep vertical={vertical} />
-            {renderZone(shownContextual, 'ctx')}
-          </>
-        )}
-        {(utility.length > 0 || accountSlot) && (
-          <>
-            <Sep vertical={vertical} />
-            <div className={classes.dockZone} data-zone="util">
-              {utility.map((t) => renderTile(t, 'util'))}
-              {accountSlot}
-            </div>
-          </>
-        )}
+                <span
+                  className={classes.brandPlate}
+                  role="img"
+                  aria-label={identity.label}
+                >
+                  <span className={classes.mark}>{brand}</span>
+                </span>
+              )}
+              <Sep vertical={vertical} />
+            </>
+          )}
+          {pinned.length > 0 && renderZone(pinned, 'pinned')}
+          {shownContextual.length > 0 && (
+            <>
+              <Sep vertical={vertical} />
+              {renderZone(shownContextual, 'ctx')}
+            </>
+          )}
+          {(utility.length > 0 || accountSlot) && (
+            <>
+              <Sep vertical={vertical} />
+              <div className={classes.dockZone} data-zone="util">
+                {utility.map((t) => renderTile(t, 'util'))}
+                {accountSlot}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipPrimitive.Provider>
   )
 }
 
@@ -548,10 +552,7 @@ function DockTileButton({
           longFired.current = false
           return
         }
-        if (hasMenu && menuOnly) {
-          onMenuChange(!menuOpen)
-          return
-        }
+        if (hasMenu && menuOnly) return
         tile.onSelect?.()
       }}
       onKeyDown={(e) => {
@@ -595,46 +596,60 @@ function DockTileButton({
   /* The shortcut hints live nowhere else, so the tooltip fires on focus as well
      as hover — a keyboard user could otherwise never see them. */
   const tipped = (
-    <Tooltip
-      label={
-        <span className={classes.dockTip}>
+    <TooltipPrimitive.Root
+      delayDuration={380}
+      open={menuOpen ? false : undefined}
+    >
+      <TooltipPrimitive.Trigger asChild>
+        {hasMenu ? (
+          <DropdownMenu.Trigger asChild>{body}</DropdownMenu.Trigger>
+        ) : (
+          body
+        )}
+      </TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          side={away.tooltip}
+          sideOffset={10}
+          className={classes.dockTip}
+        >
           {tile.label}
           {tile.shortcut && (
             <span className={classes.tipKey}>{tile.shortcut}</span>
           )}
-        </span>
-      }
-      position={away.tooltip}
-      openDelay={380}
-      offset={10}
-      withinPortal
-      disabled={menuOpen}
-    >
-      {body}
-    </Tooltip>
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   )
 
   if (!hasMenu) return <span data-zone-item={zone}>{tipped}</span>
 
   return (
-    <Menu
-      opened={menuOpen}
-      onChange={onMenuChange}
-      position={away.menu}
-      offset={14}
-      withinPortal
-      trapFocus
-      returnFocus
-      classNames={{ dropdown: classes.flyout }}
+    <DropdownMenu.Root
+      open={menuOpen}
+      onOpenChange={(v) => {
+        if (v && !menuOnly) return
+        onMenuChange(v)
+      }}
     >
-      <Menu.Target>{tipped}</Menu.Target>
-      <DockFlyout
-        menu={tile.menu!}
-        isActiveRow={isActiveRow}
-        onClose={() => onMenuChange(false)}
-        emptyLabel={emptyLabel}
-      />
-    </Menu>
+      {tipped}
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          side={away.menu}
+          align={away.align}
+          sideOffset={14}
+          aria-label={tile.menu!.label}
+          className={classes.flyout}
+        >
+          <DockFlyout
+            menu={tile.menu!}
+            isActiveRow={isActiveRow}
+            onClose={() => onMenuChange(false)}
+            emptyLabel={emptyLabel}
+          />
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   )
 }
 

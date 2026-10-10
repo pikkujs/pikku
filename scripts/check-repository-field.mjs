@@ -9,8 +9,7 @@
 // `break publishChunks` on the first failure, so every package it had not reached
 // yet is abandoned WITHOUT being named. One missing field is therefore silent for
 // every package behind it: `pikku` took @pikku/cli, @pikku/console and
-// @pikku/kysely-node-sqlite down with it, and once that was fixed the brand-new
-// @pikku/react-layout-panel did the same to @pikku/cli and @pikku/console again.
+// @pikku/kysely-node-sqlite down with it.
 // The registry is the wrong place to discover this.
 //
 // Run with --fix to write the correct field into any package missing it.
@@ -36,7 +35,9 @@ const EXPECTED = normalize(REPO_URL)
 
 function findPackageJsons(dir, out = []) {
   for (const entry of readdirSync(dir)) {
-    if (['node_modules', 'dist', '.deploy', '.pikku', '.next'].includes(entry)) {
+    if (
+      ['node_modules', 'dist', '.deploy', '.pikku', '.next'].includes(entry)
+    ) {
       continue
     }
     const full = join(dir, entry)
@@ -107,4 +108,6 @@ if (problems.length > 0) {
   )
   process.exit(1)
 }
-console.log(`✓ ${checked} publishable packages: repository field is publishable`)
+console.log(
+  `✓ ${checked} publishable packages: repository field is publishable`
+)

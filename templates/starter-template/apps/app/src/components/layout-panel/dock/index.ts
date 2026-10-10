@@ -4,8 +4,8 @@
  *
  * `NavDock` is presentational: it draws whatever zones it is handed, so an app
  * assembles its own model from its routes and data and gets the same row. This is
- * a subpath export because the dock (`@pikku/mantine`, `@mantine/hooks`) is
- * heavier than the dependency-free shell at the package root.
+ * a separate entry because the dock (Radix menus and tooltips) is heavier than the
+ * dependency-free shell.
  */
 export { NavDock, type NavDockProps, type DockLabels } from './NavDock.js'
 export { DockFlyout } from './DockFlyout.js'

@@ -11,6 +11,10 @@
  * Feature-scoped colour lives here as --pf-* locals rather than in the theme, so
  * nothing leaks into the app token namespace.
  */
+:global(:root) {
+  --nav-dock-gutter: 0.75rem;
+}
+
 .dockStrip,
 .flyout,
 .dockTip {
@@ -22,7 +26,7 @@
   /* 3.4:1 against the page ground. The sole affordance for the whole navigation
      system cannot be a hairline nobody can see. */
   --pf-hint: #8a8f98;
-  --pf-icon-fill: color-mix(in srgb, var(--app-accent) 16%, transparent);
+  --pf-icon-fill: color-mix(in srgb, var(--primary) 16%, transparent);
   --pf-status-ok: #16a34a;
   --pf-status-warn: #b45309;
   --pf-status-error: #dc2626;
@@ -33,14 +37,14 @@
   --pf-status-preview: #0891b2;
 }
 
-:global([data-mantine-color-scheme='dark']) :is(.dockStrip, .flyout, .dockTip) {
+:global(.dark) :is(.dockStrip, .flyout, .dockTip) {
   --pf-dock-fill: rgba(41, 45, 55, 0.86);
   --pf-flyout-fill: rgba(38, 42, 51, 0.94);
   --pf-tile-hover: rgba(255, 255, 255, 0.08);
   --pf-dock-shadow:
     0 10px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
   --pf-hint: #7c828e;
-  --pf-icon-fill: color-mix(in srgb, var(--app-accent) 20%, transparent);
+  --pf-icon-fill: color-mix(in srgb, var(--primary) 20%, transparent);
   --pf-status-ok: #4ade80;
   --pf-status-warn: #fbbf24;
   --pf-status-error: #f87171;
@@ -57,12 +61,12 @@
 
      The trigger line is unaffected: it stays flush at one gutter, because a
      target the cursor can overshoot is not a target. */
-  --pf-dock-lift: calc(var(--app-card-gutter) * 2);
+  --pf-dock-lift: calc(var(--nav-dock-gutter) * 2);
   position: fixed;
   inset-inline: 0;
   bottom: 0;
-  z-index: var(--mantine-z-index-app);
-  height: calc(var(--app-card-gutter) + var(--safe-bottom));
+  z-index: 50;
+  height: calc(var(--nav-dock-gutter) + var(--shell-safe-bottom));
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -91,17 +95,17 @@
   padding: 6px;
   /* The same radius as every other card on the canvas. The capsule is one more
      floating surface, not a control with a silhouette of its own. */
-  border-radius: var(--app-card-radius);
+  border-radius: var(--radius);
   background: var(--pf-dock-fill);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--border);
   box-shadow: var(--pf-dock-shadow);
   max-width: calc(100vw - 24px);
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
-  margin-bottom: calc(var(--pf-dock-lift) + var(--safe-bottom));
+  margin-bottom: calc(var(--pf-dock-lift) + var(--shell-safe-bottom));
   pointer-events: auto;
   transform: translateY(calc(100% + var(--pf-dock-lift) + 6px));
   opacity: 0;
@@ -145,11 +149,13 @@
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  height: calc(var(--app-card-gutter) + var(--safe-bottom));
+  height: calc(var(--nav-dock-gutter) + var(--shell-safe-bottom));
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-bottom));
+  padding-bottom: calc(
+    var(--nav-dock-gutter) / 2 - 1.5px + var(--shell-safe-bottom)
+  );
   background: none;
   border: 0;
   margin: 0;
@@ -162,7 +168,7 @@
    a 24px grab area; the hint stays drawn where it was. */
 @media (pointer: coarse) {
   .dockTrigger {
-    height: calc(24px + var(--safe-bottom));
+    height: calc(24px + var(--shell-safe-bottom));
   }
 }
 
@@ -177,7 +183,7 @@
 }
 
 .dockTrigger:hover .dockHint {
-  background: var(--app-accent);
+  background: var(--primary);
 }
 
 .dockStrip[data-open='true'] .dockHint {
@@ -185,7 +191,7 @@
 }
 
 .dockTrigger:focus-visible {
-  outline: 2px solid var(--app-accent);
+  outline: 2px solid var(--primary);
   outline-offset: -2px;
   border-radius: 3px;
 }
@@ -193,7 +199,7 @@
 /* Pinned: the dock stays up without the pointer, and the hint becomes the unpin
    target — the same line doing both jobs. */
 .dockStrip[data-pinned='true'] .dockHint {
-  background: var(--app-accent);
+  background: var(--primary);
 }
 
 .dockZone {
@@ -241,7 +247,7 @@
   margin: 0;
   background: none;
   border-radius: calc(var(--pf-tile) * 0.26);
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   cursor: pointer;
   font: inherit;
   -webkit-tap-highlight-color: transparent;
@@ -276,7 +282,7 @@
 
 .tile:hover {
   background: var(--pf-tile-hover);
-  color: var(--app-text);
+  color: var(--foreground);
 }
 
 .tile:hover svg {
@@ -289,13 +295,13 @@
 }
 
 .tile:focus-visible {
-  outline: 2px solid var(--app-accent);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 .tile[data-active='true'] {
-  background: var(--app-surface-info);
-  color: var(--app-accent);
+  background: var(--accent);
+  color: var(--primary);
 }
 
 /* Duotone is the state channel. A filled body gives the current tile real
@@ -335,7 +341,7 @@
 
 .tile[aria-expanded='true'] {
   background: var(--pf-tile-hover);
-  color: var(--app-text);
+  color: var(--foreground);
 }
 
 /* The dock's only channel for live state, fed by the same data the flyouts
@@ -456,7 +462,7 @@
 /* The one primary action in the row, so the one filled tile. It carries a
    heavier stroke so the category difference survives at 34px. */
 .tile[data-primary='true'] {
-  background: var(--app-accent-strong);
+  background: var(--primary);
   color: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.24);
 }
@@ -466,7 +472,7 @@
 }
 
 .tile[data-primary='true']:hover {
-  background: var(--app-accent);
+  background: var(--primary);
   color: #fff;
 }
 
@@ -474,11 +480,7 @@
   width: calc(var(--pf-tile) * 0.56);
   height: calc(var(--pf-tile) * 0.56);
   border-radius: 50%;
-  background: linear-gradient(
-    140deg,
-    var(--app-accent),
-    var(--app-accent-strong)
-  );
+  background: linear-gradient(140deg, var(--primary), var(--primary));
   color: #fff;
   display: flex;
   align-items: center;
@@ -502,9 +504,9 @@
   align-items: center;
 }
 
-/* --app-text-faint measured 4.12:1 on the light tooltip ground. */
+/* --muted-foreground measured 4.12:1 on the light tooltip ground. */
 .tipKey {
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   margin-inline-start: 8px;
   font-size: 11px;
 }
@@ -515,11 +517,11 @@
   min-width: 264px;
   max-width: 340px;
   padding: 6px;
-  border-radius: var(--app-card-radius);
+  border-radius: var(--radius);
   background: var(--pf-flyout-fill);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--border);
   box-shadow: var(--pf-dock-shadow);
   /* A menu allowed to fill the window stops reading as a menu and starts reading
      as a page — and it buries the surface it belongs to. */
@@ -547,11 +549,7 @@
   height: 26px;
   border-radius: 7px;
   flex: 0 0 26px;
-  background: linear-gradient(
-    140deg,
-    var(--app-accent),
-    var(--app-accent-strong)
-  );
+  background: linear-gradient(140deg, var(--primary), var(--primary));
   color: #fff;
   display: flex;
   align-items: center;
@@ -571,7 +569,7 @@
 .flyoutHeadTitle {
   font-size: 13px;
   font-weight: 600;
-  color: var(--app-text);
+  color: var(--foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -579,7 +577,7 @@
 
 .flyoutHeadSub {
   font-size: 11.5px;
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -591,8 +589,8 @@
   border-radius: 20px;
   font-size: 10.5px;
   font-weight: 650;
-  background: var(--app-surface-info);
-  color: var(--app-accent);
+  background: var(--accent);
+  color: var(--primary);
   letter-spacing: 0.02em;
 }
 
@@ -602,7 +600,7 @@
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--app-text-faint);
+  color: var(--muted-foreground);
 }
 
 .flyoutItem {
@@ -615,7 +613,7 @@
   border: 0;
   background: none;
   border-radius: 7px;
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   font: inherit;
   font-size: 13px;
   text-align: start;
@@ -625,18 +623,7 @@
     color 120ms ease;
 }
 
-/* Mantine's Menu.Item does not render its children into the button — it wraps
-   them all in one `itemLabel` div. That div was the button's only flex child, so
-   the row's whole layout collapsed: the icon, the label block and the end slot
-   stacked vertically instead of sitting in a row, and `> svg` matched nothing so
-   the glyph rendered at its natural size. `display: contents` dissolves the
-   wrapper so the row's own children are the flex items, which is what every rule
-   below is written against. */
-.flyoutItem > :global(.mantine-Menu-itemLabel) {
-  display: contents;
-}
-
-.flyoutItem > :global(.mantine-Menu-itemLabel) > svg {
+.flyoutItem > svg {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
@@ -656,7 +643,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--app-text);
+  color: var(--foreground);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.3;
@@ -668,7 +655,7 @@
 .fiMeta {
   font-size: 11.5px;
   line-height: 1.35;
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -688,12 +675,12 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--app-text-faint);
+  color: var(--muted-foreground);
 }
 
 .fiHint {
   font-size: 11px;
-  color: var(--app-text-faint);
+  color: var(--muted-foreground);
   letter-spacing: 0.02em;
 }
 
@@ -702,8 +689,8 @@
   border-radius: 20px;
   font-size: 10.5px;
   font-weight: 650;
-  background: var(--app-panel-bg-soft);
-  color: var(--app-text-dim);
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .fiBadge[data-tone='error'] {
@@ -717,8 +704,8 @@
 }
 
 .fiBadge[data-tone='accent'] {
-  background: var(--app-surface-info);
-  color: var(--app-accent);
+  background: var(--accent);
+  color: var(--primary);
 }
 
 .fiDot {
@@ -726,7 +713,7 @@
   height: 7px;
   border-radius: 50%;
   flex: 0 0 7px;
-  background: var(--app-text-faint);
+  background: var(--muted-foreground);
 }
 
 .fiDot[data-status='ok'] {
@@ -742,7 +729,7 @@
 }
 
 .fiDot[data-status='busy'] {
-  background: var(--app-accent);
+  background: var(--primary);
   animation: pfPulse 1.6s ease-in-out infinite;
 }
 
@@ -773,22 +760,22 @@
 }
 
 .flyoutItem:hover,
-.flyoutItem[data-hovered] {
+.flyoutItem[data-highlighted] {
   background: var(--pf-tile-hover);
 }
 
 .flyoutItem:hover .fiLabel,
-.flyoutItem[data-hovered] .fiLabel {
-  color: var(--app-text);
+.flyoutItem[data-highlighted] .fiLabel {
+  color: var(--foreground);
 }
 
 .flyoutItem[data-active='true'] {
-  background: var(--app-surface-info);
+  background: var(--accent);
 }
 
 .flyoutItem[data-active='true'] .fiLabel,
 .flyoutItem[data-active='true'] svg {
-  color: var(--app-accent);
+  color: var(--primary);
 }
 
 .flyoutItem[data-danger='true'] .fiLabel,
@@ -797,13 +784,13 @@
 }
 
 .flyoutItem:focus-visible {
-  outline: 2px solid var(--app-accent);
+  outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
 
 .flyoutSep {
   height: 1px;
-  background: var(--app-border);
+  background: var(--border);
   margin: 5px 8px;
   border: 0;
 }
@@ -821,7 +808,7 @@
   display: block;
   height: 9px;
   border-radius: 5px;
-  background: var(--app-panel-bg-soft);
+  background: var(--muted);
   animation: pfShimmer 1.2s ease-in-out infinite;
 }
 
@@ -845,20 +832,20 @@
 .fiEmpty {
   padding: 8px 10px 10px;
   font-size: 12px;
-  color: var(--app-text-faint);
+  color: var(--muted-foreground);
   line-height: 1.4;
 }
 
-/* The tick on a setting row. Mantine renders it as the item's first child, ahead
-   of the row's own glyph, so it is a fixed column every selectable row in a menu
-   shares — checked or not, which is what keeps their labels on one line. */
+/* The tick on a setting row. It is the item's first child, ahead of the row's own
+   glyph, so it is a fixed column every selectable row in a menu shares — checked
+   or not, which is what keeps their labels on one line. */
 .fiTick {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 14px;
   width: 14px;
-  color: var(--app-accent);
+  color: var(--primary);
 }
 
 .fiTick > svg {
@@ -875,7 +862,7 @@
   width: 100%;
   padding: 5px 10px;
   min-height: 34px;
-  color: var(--app-text-faint);
+  color: var(--muted-foreground);
   font-size: 13px;
   text-align: start;
 }
@@ -894,7 +881,7 @@
 .fiSlider {
   width: 100%;
   padding: 5px 10px 12px;
-  color: var(--app-text-dim);
+  color: var(--muted-foreground);
   font-size: 13px;
 }
 
@@ -934,17 +921,17 @@
    puts its edge level with the page card's and leaves the same 8px seam between
    them as between the page card and the window. */
 .dockStrip[data-pinned='true'] {
-  --pf-dock-lift: var(--app-card-gutter);
+  --pf-dock-lift: var(--nav-dock-gutter);
 }
 
 .dockStrip[data-axis='x'][data-pinned='true'] .dock {
-  width: calc(100% - var(--app-card-gutter) * 2);
+  width: calc(100% - var(--nav-dock-gutter) * 2);
   max-width: none;
   justify-content: center;
 }
 
 .dockStrip[data-axis='y'][data-pinned='true'] .dock {
-  height: calc(100% - var(--app-card-gutter) * 2);
+  height: calc(100% - var(--nav-dock-gutter) * 2);
   max-height: none;
   justify-content: flex-start;
 }
@@ -955,12 +942,12 @@
   top: 0;
   bottom: auto;
   align-items: flex-start;
-  height: calc(var(--app-card-gutter) + var(--safe-top));
+  height: calc(var(--nav-dock-gutter) + var(--shell-safe-top));
 }
 
 .dockStrip[data-side='top'] .dock {
   margin-bottom: 0;
-  margin-top: calc(var(--pf-dock-lift) + var(--safe-top));
+  margin-top: calc(var(--pf-dock-lift) + var(--shell-safe-top));
   transform: translateY(calc(-100% - var(--pf-dock-lift) - 6px));
   transform-origin: top center;
 }
@@ -973,14 +960,14 @@
   top: 0;
   bottom: auto;
   align-items: flex-start;
-  height: calc(var(--app-card-gutter) + var(--safe-top));
+  height: calc(var(--nav-dock-gutter) + var(--shell-safe-top));
   padding-bottom: 0;
-  padding-top: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-top));
+  padding-top: calc(var(--nav-dock-gutter) / 2 - 1.5px + var(--shell-safe-top));
 }
 
 @media (pointer: coarse) {
   .dockStrip[data-side='top'] .dockTrigger {
-    height: calc(24px + var(--safe-top));
+    height: calc(24px + var(--shell-safe-top));
   }
 }
 
@@ -1049,7 +1036,7 @@
 .dockStrip[data-side='left'] {
   left: 0;
   justify-content: flex-start;
-  width: calc(var(--app-card-gutter) + var(--safe-left));
+  width: calc(var(--nav-dock-gutter) + var(--shell-safe-left));
 }
 
 .dockStrip[data-side='left'][data-open='true'] {
@@ -1057,7 +1044,7 @@
 }
 
 .dockStrip[data-side='left'] .dock {
-  margin-left: calc(var(--pf-dock-lift) + var(--safe-left));
+  margin-left: calc(var(--pf-dock-lift) + var(--shell-safe-left));
   transform: translateX(calc(-100% - var(--pf-dock-lift) - 6px));
   transform-origin: left center;
 }
@@ -1069,14 +1056,16 @@
 .dockStrip[data-side='left'] .dockTrigger {
   left: 0;
   justify-content: flex-start;
-  width: calc(var(--app-card-gutter) + var(--safe-left));
-  padding-left: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-left));
+  width: calc(var(--nav-dock-gutter) + var(--shell-safe-left));
+  padding-left: calc(
+    var(--nav-dock-gutter) / 2 - 1.5px + var(--shell-safe-left)
+  );
 }
 
 .dockStrip[data-side='right'] {
   right: 0;
   justify-content: flex-end;
-  width: calc(var(--app-card-gutter) + var(--safe-right));
+  width: calc(var(--nav-dock-gutter) + var(--shell-safe-right));
 }
 
 .dockStrip[data-side='right'][data-open='true'] {
@@ -1084,7 +1073,7 @@
 }
 
 .dockStrip[data-side='right'] .dock {
-  margin-right: calc(var(--pf-dock-lift) + var(--safe-right));
+  margin-right: calc(var(--pf-dock-lift) + var(--shell-safe-right));
   transform: translateX(calc(100% + var(--pf-dock-lift) + 6px));
   transform-origin: right center;
 }
@@ -1096,17 +1085,19 @@
 .dockStrip[data-side='right'] .dockTrigger {
   right: 0;
   justify-content: flex-end;
-  width: calc(var(--app-card-gutter) + var(--safe-right));
-  padding-right: calc(var(--app-card-gutter) / 2 - 1.5px + var(--safe-right));
+  width: calc(var(--nav-dock-gutter) + var(--shell-safe-right));
+  padding-right: calc(
+    var(--nav-dock-gutter) / 2 - 1.5px + var(--shell-safe-right)
+  );
 }
 
 @media (pointer: coarse) {
   .dockStrip[data-side='left'] .dockTrigger {
-    width: calc(24px + var(--safe-left));
+    width: calc(24px + var(--shell-safe-left));
   }
 
   .dockStrip[data-side='right'] .dockTrigger {
-    width: calc(24px + var(--safe-right));
+    width: calc(24px + var(--shell-safe-right));
   }
 }
 
@@ -1131,4 +1122,13 @@
   .tile:hover .avatar {
     transform: none;
   }
+}
+
+.fiRange {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.flyoutItem:focus {
+  outline: none;
 }
