@@ -5,7 +5,6 @@ import {
   pikkuBan,
 } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
-import {} from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
