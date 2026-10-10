@@ -1,5 +1,5 @@
 ---
-'@pikku/better-auth': minor
+'@pikku/better-auth': patch
 '@pikku/addon-admin': patch
 '@pikku/skills': patch
 ---
