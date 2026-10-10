@@ -47,6 +47,7 @@ import {
 } from './utils/post-process.js'
 import { validateExposedFunctionsGated } from './utils/validate-exposed-functions-gated.js'
 import { validateTagsResolveToMiddleware } from './utils/validate-tags-resolve-to-middleware.js'
+import { validateSingleStepWorkflows } from './utils/validate-single-step-workflows.js'
 import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/state'
@@ -541,6 +542,7 @@ export const inspect = async (
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
     validateWorkflowGraphAddons(logger, state)
+    validateSingleStepWorkflows(logger, state)
     validateScenarioServices(logger, state)
     validateScenarioSteps(logger, state)
     validateScenarioFeatures(logger, state)
