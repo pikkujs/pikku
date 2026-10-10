@@ -1,3 +1,56 @@
+## 0.12.185
+
+### Patch Changes
+
+- e0846b5: Saving an agent's tool messages skips a tool call whose result is undefined instead of writing it. When the browser driver for a scenario cannot be loaded, the error now includes the underlying cause and tells you to `bun add -D` it.
+- b07ad1f: `pikku all` on a fresh project no longer skips its bootstrap pass. The run record folder it creates at startup made the output directory look already generated, so schema generation imported source files before the `#pikku/*` leaves they depend on existed.
+- d1a901a: `pikku i18n` gains `key`, `check`, `unused`, `move` and `usage`, and `--catalog` on the existing commands: add a message in every locale, gate on duplicate keys, mismatched placeholders and stale keys, list or delete unused keys, move keys between catalogs, and show where each key is used.
+- 48cebf1: `pikku dev status` is registered as a subcommand of `pikku dev`.
+- 48cebf1: `pikku db reset` empties a SQLite database in place instead of deleting the file, so a running `pikku dev` keeps a writable database rather than failing with SQLITE_READONLY_DBMOVED. New `pikku db annotate` writes a `kind` into `db/annotations.ts` for each SQLite column declared BOOLEAN, DATE/DATETIME/TIMESTAMP or JSON, leaving hand-written entries alone.
+- 56c08d9: `pikku emails catalog [name]` lists the ready-made emails (invitation, magic link, password reset, receipt, welcome) and `pikku emails add <name>` copies one into the project. `pikku emails init` now scaffolds the theme keys the templates and `applyEmailTheme` use (`canvas/surface/border/text/muted/accent/button/buttonText`) and a `common.footer` locale key.
+- d036518: Add `@pikku/react/i18n-jsx`, a JSX import source whose DOM and SVG elements only accept `I18nString` text (children and title, placeholder, alt, label, aria-label and the other aria text attributes). `pikku verify` runs `tsc -p tsconfig.i18n.json` for every directory under `apps/` and `packages/` (to three levels, library packages and `packages/addons/*` included) that has one, three at a time, and reports each error once as an `i18n-gate` finding. With the gate on, `jsx-literal-text` and `jsx-literal-prop` skip lowercase DOM elements and keep reporting fragments, components and helper calls; both lints now cover `packages/addons/*` and any directory with a `package.json` or `tsconfig*.json` to three levels. Removes the `as-i18n-misuse` check.
+
+  Add `sep` to `@pikku/react`: `sep(' · ')` brands a literal made only of whitespace, punctuation and symbols as `I18nString`, so neutral separators between translated pieces pass the gate without a message key. Letters, digits, the empty string, `string` variables and templates with substitutions are type errors. `pikku verify` reports the same misuse as `sep-argument` (error), counting only `sep` imported from `@pikku/react`.
+
+  Add the `string-literal-copy` check to `pikku verify`: English (two or more words) written as a string or template literal in `.ts`/`.tsx` outside JSX, where copy lives (property values, array elements, returns, defaults, branches, call arguments, initialisers). A warning, an error under strict; honours `i18n.ignore`.
+
+  Add `pikku verify --strict` (also `runVerify({ strict: true })`): `i18n-stub` and `string-literal-copy` become errors.
+
+- 884a1b5: MySQL: the `@pikku/kysely` stores no longer emit postgres/sqlite-only SQL. Upserts use `on duplicate key update`, insert-or-ignore uses `insert ignore`, `returning` deletes read the rows first, the lease clock casts to `signed`, workflow JSON state uses `CAST(... AS JSON)`, the agent thread owner `LIKE` escapes with `!`, and timestamp columns are written as `Date`s instead of `Z`-suffixed ISO strings. `pikku db generate` now emits the `scope` schema when Better Auth's user model is a mapped table (for example a Rails `users` table), typing the key column from the real `users.id`.
+- 51ec3ac: MySQL fixes found moving a Rails database onto pikku.
+
+  - The generated local services (`pikku db baseline`, `pikku dev`, `pikku all`, a local CLI) open MySQL: a `mysql://` `DATABASE_URL` or `mysqlUrl` in the config opens through a Kysely `MysqlDialect` on a `mysql2` pool (declare `mysql2` in the project), with `CamelCasePlugin` and the coercion map like the other dialects. A `mysql://` URL was read as a sqlite file path. `db/mysql` now counts as a project database, and `@pikku/kysely` re-exports `MysqlDialect`.
+  - MySQL migrations run with `FOREIGN_KEY_CHECKS` off, so a mysqldump whose tables reference ones created later applies as it is.
+  - `TINYINT(1)` is typed `boolean` and coerced at runtime (mysql2 returns 0/1); an explicit `tsType` in `db/annotations.ts` keeps it a number. `DECIMAL` is read as a number (`decimalNumbers`), as the generated types say. `BIGINT` stays `number`, exact to 2^53, which is mysql2's default.
+  - `pikku all` no longer throws "db/mysql exists but no mysqlUrl is configured": the server comes from createConfig's `mysqlUrl`, `db.mysqlUrl` or a `mysql://` `DATABASE_URL`, and with none the stub `DB` is written.
+  - Better Auth schema derivation follows the resolved database rather than the factory's `database.type`, so a factory declaring `type: 'sqlite'` no longer sends SQLite introspection (`pragma index_list`) to a MySQL server. Set `type: 'mysql'` in the factory too, so the runtime matches.
+
+- 5464b86: Add the `pikku verify` command over `@pikku/code-edit/verify`: codegen, the backend and frontend type-checks and static correctness checks as structured findings with fix hints. The inspector warns about single-step workflows (PKU644) and PKU111 now names the file and line.
+- 5da003f: The CLI no longer serves the Pikku Console: the `--console` flag on `pikku serve` is removed, `pikku dev` no longer mounts `/console`, and `console-app` is no longer shipped in the package.
+- be10ee1: `pikku dev`, `pikku serve` and `pikku all` record CPU, memory, event-loop delay and every invocation to `.pikku/runs/<run>` as JSONL, keeping the last 20 runs, so a slow or heavy run can be inspected afterwards.
+- 3a05c21: The analytics ingest, feature-flag resolver, realtime subscribe and channel CLI functions that `pikku all` scaffolds are tagged `pikku`, so tooling lists them as built-in rather than as the app's own functions. A test pins that every scaffold tags its functions.
+- f396538: Event-stream responses pass through `applyWebResponse` without being read, so an SSE route can proxy another stream. HTTP responses gain `onClose`, which `executeRoute` uses to tell an SSE route's event hub when the client leaves. `pikku all` wires the console's `/meta/stream` route to `console:streamMetaChanges`.
+- c607bd2: Generated React Query hooks gain `usePikkuQueryStub` and `usePikkuMutationStub` for RPCs that have `.mocks/<rpc>/` and no function. The stub names and their output types (the union of the non-error mocks, optional where scenarios differ) are generated from `.mocks/`, and an RPC with only error mocks fails codegen. Dev and `VITE_MOCK` answer from the default mock; production is a plain call that 404s. `usePikkuQuery` and `usePikkuMutation` still take only real RPC names and answer from a mock when `VITE_MOCK` is set and one exists.
+- Updated dependencies [e0846b5]
+- Updated dependencies [c3e8f50]
+- Updated dependencies [d036518]
+- Updated dependencies [e0846b5]
+- Updated dependencies [884a1b5]
+- Updated dependencies [51ec3ac]
+- Updated dependencies [5464b86]
+- Updated dependencies [39dc189]
+- Updated dependencies [11f06d2]
+- Updated dependencies [f396538]
+  - @pikku/kysely@0.13.36
+  - @pikku/code-edit@0.12.5
+  - @pikku/knowledge@0.12.19
+  - @pikku/deploy-standalone@0.12.26
+  - @pikku/migrator-sql@0.12.8
+  - @pikku/inspector@0.12.104
+  - @pikku/better-auth@0.12.55
+  - @pikku/skills@0.12.53
+  - @pikku/core@0.12.140
+
 ## 0.12.184
 
 ### Patch Changes
