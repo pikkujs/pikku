@@ -127,6 +127,7 @@ import {
   scenarioCoverage,
 } from './functions/commands/scenario-coverage.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
+import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import {
   pikkuEmailsAdd,
@@ -1367,6 +1368,36 @@ wireCLI({
               description:
                 "Prefix every figure with this instead of the path from the page to the run's artifacts — for a host that serves them at a fixed address. Route-relative (`/docs/_media/`) keeps the output portable; an origin pins it to one host",
             },
+          },
+        }),
+      },
+    },
+    theme: {
+      description: "The app's themes, in packages/theme",
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuThemeList,
+          description:
+            'List the themes, the active one, and the presets and structures a theme can start from',
+        }),
+        apply: pikkuCLICommand({
+          func: pikkuThemeApply,
+          description:
+            'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
+          options: {
+            preset: {
+              description: 'Preset id to start from (see `pikku theme list`)',
+            },
+            structure: {
+              description: 'Structure id for depth: shadows, radius, density',
+            },
+            primary: { description: 'Primary colour, as hex' },
+            secondary: { description: 'Secondary colour, as hex' },
+            accent: { description: 'Accent colour, as hex' },
+            fontHeading: { description: 'Heading font, a Google Fonts family' },
+            fontBody: { description: 'Body font, a Google Fonts family' },
+            page: { description: 'Light-mode page colour, as hex' },
+            ink: { description: 'Light-mode text colour, as hex' },
           },
         }),
       },
