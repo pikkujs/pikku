@@ -26,4 +26,8 @@ export type {
 } from './cli.types.js'
 
 export { mountCLICommands, mountCLIExtension } from './mount-cli-commands.js'
-export type { CLICommandMount, CLIExtension } from './mount-cli-commands.js'
+export type {
+  CLICommandMount,
+  CLIExtension,
+  CLIMountHandle,
+} from './mount-cli-commands.js'
