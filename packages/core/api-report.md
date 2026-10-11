@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3289 observable things**: 1100 exported names, plus
-2189 members on the classes and interfaces among them, reachable
+**3291 observable things**: 1100 exported names, plus
+2191 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -23,7 +23,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 47 | 41 | 52 |
-| `./http` | 26 | 26 | 56 |
+| `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
@@ -2788,6 +2788,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   public send(data: any): this
   public redirect(location: string, status: number = 302): this
   public close(): this
+  public onClose(callback: () => void): void
   public toResponse(args?: Record<string, any>): Response
 }
 export interface PikkuHTTP<In = unknown> {
@@ -2826,6 +2827,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
   send?(data: string | ArrayBuffer | ArrayBufferView): this
   redirect(location: string, status?: number): this
   close?: () => void
+  onClose?: (callback: () => void) => void
   setMode?: (mode: 'stream') => void
   flushHeaders?: () => void
 }
