@@ -2,6 +2,8 @@ import { request } from 'node:http'
 import { createSecretValue, type SecretValue } from '@pikku/core/classification'
 import type { SecretService, SecretValues } from '@pikku/core/services'
 
+const VAULT_TIMEOUT_MS = 5000
+
 export interface VaultConnection {
   socketPath: string
   token: string
@@ -33,13 +35,30 @@ export class VaultSecretService implements SecretService {
         (res) => {
           const chunks: Buffer[] = []
           res.on('data', (chunk) => chunks.push(chunk))
+          res.on('error', fail)
+          res.on('aborted', () => fail(new Error('Vault closed the connection mid-response')))
           res.on('end', () => {
+            if (!res.complete) return fail(new Error('Vault sent an incomplete response'))
             const text = Buffer.concat(chunks).toString('utf8')
-            resolve({ status: res.statusCode ?? 0, body: text ? JSON.parse(text) : {} })
+            try {
+              resolve({ status: res.statusCode ?? 0, body: text ? JSON.parse(text) : {} })
+            } catch {
+              fail(new Error(`Vault sent a non-JSON response (${res.statusCode})`))
+            }
           })
         }
       )
-      req.on('error', reject)
+      const deadline = setTimeout(
+        () => fail(new Error(`Vault did not answer within ${VAULT_TIMEOUT_MS}ms`)),
+        VAULT_TIMEOUT_MS
+      )
+      function fail(error: Error) {
+        clearTimeout(deadline)
+        req.destroy()
+        reject(error)
+      }
+      req.on('error', fail)
+      req.on('close', () => clearTimeout(deadline))
       req.end()
     })
   }

@@ -60,6 +60,25 @@ test('falls back to the local store for keys the vault lacks', async () => {
   })
 })
 
+test('a vault that never answers or sends junk rejects instead of hanging or crashing', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vault-cli-'))
+  const socketPath = join(dir, 'v.sock')
+  const server = createServer((req, res) => {
+    if (req.url?.includes('junk')) return res.end('<html>oops</html>')
+    res.writeHead(200)
+    res.write('{')
+  })
+  await new Promise<void>((resolve) => server.listen(socketPath, resolve))
+  try {
+    const service = new VaultSecretService({ socketPath, token: 't' })
+    await assert.rejects(() => service.getSecret('junk'), /non-JSON/)
+  } finally {
+    server.closeAllConnections()
+    await new Promise((resolve) => server.close(resolve))
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('connection comes from the environment only when both are set', () => {
   assert.equal(vaultConnectionFromEnv({ PIKKU_VAULT_SOCKET: '/s' }), undefined)
   assert.deepEqual(vaultConnectionFromEnv({ PIKKU_VAULT_SOCKET: '/s', PIKKU_VAULT_TOKEN: 't' }), {
