@@ -27,6 +27,12 @@ export class ScopedSecretService implements SecretService {
     throw new Error('setSecret is not allowed in scoped secret service')
   }
 
+  async setEncryptedSecret(_key: string, _sealed: string): Promise<void> {
+    throw new Error(
+      'setEncryptedSecret is not allowed in scoped secret service'
+    )
+  }
+
   async deleteSecret(_key: string): Promise<void> {
     throw new Error('deleteSecret is not allowed in scoped secret service')
   }

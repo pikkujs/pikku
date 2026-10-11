@@ -15,12 +15,17 @@ import {
   InMemoryTriggerSourceStore,
   InMemoryWorkflowService,
   LocalEmailService,
+  LocalSecretService,
   spy,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
+import {
+  VaultSecretService,
+  vaultConnectionFromEnv,
+} from '../../utils/vault-secret-service.js'
 import {
   LocalContent,
   type LocalContentConfig,
@@ -315,6 +320,11 @@ export const dev = pikkuSessionlessFunc<
         inspectorState.rpc.wireAddonDeclarations.size > 0,
     })
 
+    const vaultConnection = vaultConnectionFromEnv()
+    const vaultSecrets = vaultConnection
+      ? new VaultSecretService(vaultConnection, new LocalSecretService(variables))
+      : undefined
+
     const createLocalServices = await loadCreateLocalServices(
       config.rootDir,
       config.localServicesFile
@@ -329,6 +339,7 @@ export const dev = pikkuSessionlessFunc<
       {
         kysely: kysely ?? null,
         logger: new ConsoleLogger(),
+        ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
         ...(agentRunner ? { agentRunner } : {}),
         ...(test
           ? { emailService: spy('emailService', new LocalEmailService()) }

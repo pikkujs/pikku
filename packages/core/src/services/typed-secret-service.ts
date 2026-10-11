@@ -83,6 +83,14 @@ export class TypedSecretService<
     this.cache.delete(key)
   }
 
+  async setEncryptedSecret(key: string, sealed: string): Promise<void> {
+    if (!this.secrets.setEncryptedSecret) {
+      throw new Error('This secret service does not accept sealed secrets')
+    }
+    await this.secrets.setEncryptedSecret(key, sealed)
+    this.cache.delete(key)
+  }
+
   async deleteSecret(key: string): Promise<void> {
     await this.secrets.deleteSecret(key)
     this.cache.delete(key)
