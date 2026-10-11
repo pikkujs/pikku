@@ -10,7 +10,10 @@ import { mkdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { onShutdownSignals, stopSingletonServices } from '@pikku/core/utils'
+import {
+  onShutdownSignals,
+  stopSingletonServices,
+} from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { JWTService, Logger } from '@pikku/core/services'
