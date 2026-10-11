@@ -13,13 +13,13 @@ time, and every source of work feeds the same queue.
 
 ## Where changes come from
 
-- a human circling something on a stage (Fabric) or filing one locally
+- a human circling something on a deployed stage or filing one locally
 - the knowledge agent, reconciling knowledge against code
 - a pikku upgrade, from the changelog / public-surface diff
 - a prompt in an existing project, which becomes changes
 - the new-project build, which files the app's first changes
 
-Storage: a local file in OSS, which can be trimmed at any time; a record on Fabric.
+Storage: a local file in OSS, which can be trimmed at any time; a record on the hosting platform.
 The same `changes` commands work against either.
 
 ## Changesets

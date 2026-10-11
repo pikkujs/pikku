@@ -72,7 +72,7 @@ describe('local changes queue', () => {
     await claim('2', { alters: ['class'] })
   })
 
-  test('says an rpc it cannot serve needs a fabric project', async () => {
+  test('says an rpc it cannot serve needs a hosted project', async () => {
     const rpc = await store()
     await assert.rejects(rpc.invoke('listStages', { projectId: 'local' }), {
       status: 501,

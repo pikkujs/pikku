@@ -173,7 +173,7 @@ const templates = [
   {
     template: 'starter-template',
     description:
-      'The opinionated Pikku Fabric starter — backend + SDK + frontend scaffolds + Cucumber e2e',
+      'The opinionated Pikku starter — backend + SDK + frontend scaffolds + Cucumber e2e',
     supports: ['http', 'fullstack'],
   },
 ] as const
@@ -207,7 +207,7 @@ program
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--stackblitz', 'Add StackBlitz configuration')
   .option('--variations', 'Show all template variations')
-  .option('--frontend <frontend>', 'Frontend app to keep for fabric')
+  .option('--frontend <frontend>', 'Frontend app to keep from the starter')
   .parse(process.argv)
 
 const cliOptions = program.opts()

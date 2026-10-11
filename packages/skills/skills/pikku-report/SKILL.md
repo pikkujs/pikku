@@ -13,7 +13,7 @@ description: >-
 installGroups: [core]
 ---
 
-# Report a finding to Fabric
+# Report a finding to the Pikku team
 
 A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the

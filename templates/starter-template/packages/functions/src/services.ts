@@ -40,7 +40,7 @@ export const createSingletonServices = pikkuServices(async (config, existingServ
   // The template never constructs its own dialect — dialects are fabric/runtime
   // concerns — so it must always be provided by the runtime.
   if (!existingServices?.kysely) {
-    throw new Error('kysely service was not injected by the runtime (pikku dev / fabric)')
+    throw new Error('kysely service was not injected by the runtime (pikku dev or the deploy runtime)')
   }
   const kysely: Kysely<DB> = existingServices.kysely
 

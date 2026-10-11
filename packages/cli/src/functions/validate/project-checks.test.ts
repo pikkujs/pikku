@@ -485,7 +485,7 @@ describe('project checks', () => {
   })
 
   describe('packageManager', () => {
-    test('yarn → error (Fabric is bun-only)', async () => {
+    test('yarn → error (the deploy host is bun-only)', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)

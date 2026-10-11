@@ -357,7 +357,7 @@ export function localChangesRPC(path: string): ChangesRPC {
     )[name]
     if (!handler)
       throw new LocalChangesError(
-        `${name} needs a fabric project; this checkout uses the local changes queue.`,
+        `${name} needs a hosted project; this checkout uses the local changes queue.`,
         501
       )
     return withStore(path, (store) => handler(store, data))

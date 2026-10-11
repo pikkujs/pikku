@@ -221,17 +221,17 @@ export async function waitForNext(
       const status = httpStatus(error)
       if (status === 401 || status === 403)
         throw new BackendAuthError(
-          `fabric refused the session (${explain(error)}). Run \`pikku fabric login\`, then run next again.`
+          `The hosting platform refused the session (${explain(error)}). Run \`pikku fabric login\`, then run next again.`
         )
       if (!isTransient(error)) throw error
       failures++
       if (failures >= MAX_CONSECUTIVE_FAILURES)
         throw new PreconditionError(
-          `Gave up after ${failures} failed attempts to reach fabric: ${explain(error)}`
+          `Gave up after ${failures} failed attempts to reach the hosting platform: ${explain(error)}`
         )
       wait = backoffMs(failures, options.intervalMs)
       log(
-        `fabric unreachable (${explain(error)}); retrying in ${Math.round(wait / 1000)}s`
+        `Hosting platform unreachable (${explain(error)}); retrying in ${Math.round(wait / 1000)}s`
       )
     }
 

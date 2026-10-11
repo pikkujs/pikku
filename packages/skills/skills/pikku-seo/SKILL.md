@@ -44,7 +44,7 @@ gate) — write real copy for THIS app, in the app's voice.
 - **Title**: unique per page, 50–60 characters, the page's primary topic first,
   brand at the end (`Topic — AppName`). The template's `__APP_TITLE__` placeholder
   (in `src/app-meta.ts` and `messages/en.json`) is filled with the app title at scaffold time
-  by `fabric-new-app`; it must never survive in any page's title.
+  by the scaffold step; it must never survive in any page's title.
 - **Description**: unique per page, 150–160 characters, states the concrete
   value of the page in plain language — a reason to click, not a keyword list.
 - **Dynamic public pages** (e.g. a public detail page) build both from loader

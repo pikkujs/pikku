@@ -397,7 +397,7 @@ export async function runProjectChecks(
     if (!declared) {
       e(
         'package-manager-undeclared',
-        'package.json does not declare "packageManager" — Fabric is bun-only and the build container aborts with "Unsupported packageManager"',
+        'package.json does not declare "packageManager" — the deploy host is bun-only and the build container aborts with "Unsupported packageManager"',
         rootPkgPath,
         lines(
           'Add it to the root package.json:',
@@ -408,7 +408,7 @@ export async function runProjectChecks(
     } else if (!declared.startsWith('bun@')) {
       e(
         'package-manager-not-bun',
-        `package.json declares packageManager "${declared}" — Fabric is bun-only and the build container aborts with "Unsupported packageManager"`,
+        `package.json declares packageManager "${declared}" — the deploy host is bun-only and the build container aborts with "Unsupported packageManager"`,
         rootPkgPath,
         lines(
           'Set the root package.json to bun:',
@@ -459,7 +459,7 @@ export async function runProjectChecks(
     if (missing.length > 0) {
       w(
         'gitignore-missing-generated',
-        `.gitignore does not ignore Fabric generated/runtime artifacts: ${missing.join(', ')} — committing them lets a stale copy shadow the freshly generated one (e.g. a committed __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev server)`,
+        `.gitignore does not ignore generated deploy/runtime artifacts: ${missing.join(', ')} — committing them lets a stale copy shadow the freshly generated one (e.g. a committed __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev server)`,
         gitignorePath,
         lines(
           'Add these entries to .gitignore:',
@@ -539,7 +539,7 @@ export async function runProjectChecks(
       if (floor && semverLt(seen.version, floor)) {
         e(
           `pikku-version-below-min-${pkg.replace(/[@/]/g, '-')}`,
-          `${pkg} is ${seen.version.join('.')} (spec "${seen.spec}") — Fabric requires >= ${floorStr}`,
+          `${pkg} is ${seen.version.join('.')} (spec "${seen.spec}") — the deploy host requires >= ${floorStr}`,
           seen.manifest,
           lines(
             `Bump ${pkg} to ^${floorStr} (or newer) and reinstall:`,
@@ -902,7 +902,7 @@ export async function runProjectChecks(
       if (dbEngine !== 'postgres' && fnAllDeps['@pikku/kysely-postgres']) {
         e(
           'fn-pkg-postgres-dep',
-          '@pikku/kysely-postgres is in packages/functions dependencies — Fabric uses SQLite/libSQL (Turso), not PostgreSQL',
+          '@pikku/kysely-postgres is in packages/functions dependencies — the deploy host uses SQLite/libSQL (Turso), not PostgreSQL',
           fnPkgPath,
           'Remove @pikku/kysely-postgres and use @pikku/kysely-sqlite with LibsqlWebDialect instead'
         )
@@ -990,7 +990,7 @@ export async function runProjectChecks(
       ) {
         e(
           'services-wrong-db-adapter',
-          'services.ts uses Kysely but not LibsqlWebDialect — Fabric injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',
+          'services.ts uses Kysely but not LibsqlWebDialect — the deploy host injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',
           servicesPath,
           'Import LibsqlWebDialect from @pikku/kysely-sqlite and replace the dialect: new Kysely({ dialect: new LibsqlWebDialect({ url: databaseUrl }) })'
         )
@@ -1161,7 +1161,7 @@ export async function runProjectChecks(
             if (hits.length > 0) {
               e(
                 `migration-postgres-sql-${f.replace(/[^a-z0-9]/gi, '-')}`,
-                `${f} contains PostgreSQL syntax (${hits.join(', ')}) — Fabric uses SQLite/libSQL (Turso)`,
+                `${f} contains PostgreSQL syntax (${hits.join(', ')}) — the deploy host uses SQLite/libSQL (Turso)`,
                 join(migrationsDir, f),
                 "Rewrite the migration using SQLite-compatible syntax: TEXT instead of JSONB, INTEGER PRIMARY KEY for auto-increment, datetime('now') instead of NOW(), no :: casts"
               )
@@ -1289,7 +1289,7 @@ export async function runProjectChecks(
         if (!hasAuditTable) {
           info(
             'audit-table-missing',
-            'No migration creates the audit table — Fabric audit events will be dropped',
+            'No migration creates the audit table — audit events will be dropped',
             migrationsDir,
             lines(
               'Add a new migration in this directory that creates an `audit` table.',
@@ -1309,7 +1309,7 @@ export async function runProjectChecks(
               '- actor',
               '- input',
               '- metadata',
-              'At minimum, create the table so Fabric audit writes are not silently dropped.'
+              'At minimum, create the table so audit writes are not silently dropped.'
             )
           )
         }
@@ -1458,7 +1458,7 @@ export async function runProjectChecks(
       '  }',
       "  return window.location.origin + '/api'",
       '',
-      'Fabric serves the app and the API on one hostname and routes /api/* to',
+      'The deploy host serves the app and the API on one hostname and routes /api/* to',
       'the API units, so the derived value is correct on every stage, preview',
       'and custom domain. Guard the `window` read for SSR.'
     )
@@ -1472,7 +1472,7 @@ export async function runProjectChecks(
     } else if (apiEnvHits.length > 0 && !derivesOrigin) {
       e(
         `frontend-api-base-not-derived-${fe.slug}`,
-        `frontend "${fe.slug}" takes its API base from ${[...apiEnvNames].sort().join(', ')} (${sample(apiEnvHits)}) and never derives it from the page origin — fabric binds VITE_API_URL on the deployed Worker at runtime, so the build inlines nothing and whatever follows the read is what ships`,
+        `frontend "${fe.slug}" takes its API base from ${[...apiEnvNames].sort().join(', ')} (${sample(apiEnvHits)}) and never derives it from the page origin — the deploy host binds VITE_API_URL on the deployed Worker at runtime, so the build inlines nothing and whatever follows the read is what ships`,
         fe.dir,
         originFix
       )
@@ -1622,7 +1622,7 @@ export async function runProjectChecks(
         if (hasLegacyI18nDeps) {
           e(
             `app-legacy-i18next-dep-${name}`,
-            `apps/${name} still depends on i18next/react-i18next — Fabric migrated to Paraglide JS (inlang); the i18next stack must be removed`,
+            `apps/${name} still depends on i18next/react-i18next — the stack moved to Paraglide JS (inlang); the i18next stack must be removed`,
             join(appPath, 'package.json'),
             lines(
               'Remove "i18next", "react-i18next" and "i18next-browser-languagedetector".',
@@ -1652,7 +1652,7 @@ export async function runProjectChecks(
         if (!hasParaglideDep) {
           e(
             `app-missing-paraglide-${name}`,
-            `apps/${name} has no Paraglide i18n stack — every Fabric frontend must be translatable`,
+            `apps/${name} has no Paraglide i18n stack — every frontend must be translatable`,
             join(appPath, 'package.json'),
             lines(
               'Add the canonical Paraglide stack:',
@@ -2029,8 +2029,8 @@ export async function runProjectChecks(
     designSeverity(
       'theme-missing',
       hasTailwindFrontend
-        ? 'packages/theme/ not found — the Fabric console Design tab has no themes to list and reports "No themes yet"'
-        : 'packages/theme/ not found — Fabric design features require a theme package',
+        ? 'packages/theme/ not found — the hosted console Design tab has no themes to list and reports "No themes yet"'
+        : 'packages/theme/ not found — the hosted design features require a theme package',
       themePkgDir,
       `Create packages/theme/ with themes/<id>.json and active.json, then generate theme.css from the active spec. See ${designDocUrl}`
     )
@@ -2057,7 +2057,7 @@ export async function runProjectChecks(
     if (specIds.length === 0) {
       designSeverity(
         'theme-no-spec',
-        'packages/theme/ has no themes/<id>.json spec — the Fabric console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded by hand-written CSS',
+        'packages/theme/ has no themes/<id>.json spec — the hosted console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded by hand-written CSS',
         themesDir,
         lines(
           'Add a theme spec the console can read:',
@@ -2082,7 +2082,7 @@ export async function runProjectChecks(
       if (!activeId) {
         info(
           'theme-no-active',
-          'packages/theme/active.json is missing or has no string "id" — the Fabric console falls back to the "default" theme id, which may not match any themes/<id>.json',
+          'packages/theme/active.json is missing or has no string "id" — the hosted console falls back to the "default" theme id, which may not match any themes/<id>.json',
           activePath,
           lines(
             'Create packages/theme/active.json pointing at an existing spec:',
@@ -2092,7 +2092,7 @@ export async function runProjectChecks(
       } else if (!specIds.includes(activeId)) {
         info(
           'theme-active-mismatch',
-          `packages/theme/active.json points at "${activeId}" but no themes/${activeId}.json exists — the Fabric console has no active theme`,
+          `packages/theme/active.json points at "${activeId}" but no themes/${activeId}.json exists — the hosted console has no active theme`,
           activePath,
           lines(
             `Point active.json at an existing spec (${specIds.join(', ')}):`,
@@ -2116,7 +2116,7 @@ export async function runProjectChecks(
   if (hasComponentKit && storyFiles.length === 0) {
     designSeverity(
       'design-no-stories',
-      "no apps/*/src/components/**/*.stories.tsx found — the Fabric console Design tab's Library and App lenses have nothing to show",
+      "no apps/*/src/components/**/*.stories.tsx found — the hosted console Design tab Library and App lenses have nothing to show",
       join(appsDir, '*', 'src', 'components'),
       lines(
         'Add a story beside a component. The Library lens reads <Name>.stories.tsx',

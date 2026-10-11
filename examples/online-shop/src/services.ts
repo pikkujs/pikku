@@ -43,7 +43,7 @@ export const createSingletonServices = pikkuServices(
     // concerns — so it must always be provided by the runtime.
     if (!existingServices?.kysely) {
       throw new Error(
-        'kysely service was not injected by the runtime (pikku dev / fabric)'
+        'kysely service was not injected by the runtime (pikku dev or the deploy runtime)'
       )
     }
     const kysely: Kysely<DB> = existingServices.kysely
