@@ -1,27 +1,12 @@
 import type { Locator, Page } from '@playwright/test'
 import { registered, type ElementMap } from './elements.js'
 
-/**
- * Mantine-aware element resolution and drivers. Each interaction step maps to
- * a Mantine component family; the one correct way to drive that family lives
- * here — written once, instead of rediscovered per app.
- *
- * Every name resolves the same way: the registered element map (generated
- * `name → selector` upfront) → data-testid → role/label → placeholder →
- * visible text — so features stay in plain UI language, registered names are
- * exact, and unregistered UI still resolves heuristically.
- */
 
 const looksLikeCss = (s: string) =>
   /[\[#.>:\s]/.test(s) || s.startsWith('input')
 export const escapeRegex = (s: string) =>
   s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-/**
- * Resolve a form field (TextInput/Textarea/NumberInput/Select input/…).
- * Mantine parks data-testid on the wrapper div, so descend to the inner
- * control when present.
- */
 export async function field(
   page: Page,
   name: string,
@@ -87,10 +72,6 @@ async function settleAfterClick(page: Page, previousUrl?: string) {
   await page.waitForTimeout(400)
 }
 
-/**
- * Resolve something clickable (Button/ActionIcon/Anchor/NavLink/Menu.Item):
- * data-testid → interactive roles → visible text.
- */
 export async function clickable(
   page: Page,
   label: string,
@@ -126,7 +107,6 @@ export async function click(page: Page, label: string, elements?: ElementMap) {
   await settleAfterClick(page, previousUrl)
 }
 
-/** Tabs.Tab — registered selector, else role=tab by visible label. */
 export async function switchTab(
   page: Page,
   label: string,
@@ -144,10 +124,6 @@ export async function switchTab(
   await page.waitForTimeout(250)
 }
 
-/**
- * Select/MultiSelect/Autocomplete/TagsInput (combobox popover pattern) and
- * NativeSelect (<select>): open, then pick the option by visible label.
- */
 export async function selectOption(
   page: Page,
   value: string,
@@ -170,7 +146,6 @@ export async function selectOption(
   })
 }
 
-/** Radio.Group / SegmentedControl — role=radio by visible label. */
 export async function choose(
   page: Page,
   value: string,
@@ -185,7 +160,6 @@ export async function choose(
     await radio.check({ force: true })
     return
   }
-  // SegmentedControl renders labels over hidden inputs — click the label.
   const label = group.getByText(value, { exact: false }).first()
   if (!(await isVisibleWithin(label))) {
     throw new Error(`Could not choose "${value}" in "${groupName}"`)
@@ -193,12 +167,6 @@ export async function choose(
   await label.click()
 }
 
-/**
- * Checkbox/Switch/Chip — set an explicit state (idempotent; a bare toggle
- * makes scenarios depend on prior state, which is what makes them flaky).
- * Mantine visually hides the input, so state is read from the input but the
- * click lands on the wrapper.
- */
 export async function setChecked(
   page: Page,
   name: string,
@@ -211,20 +179,15 @@ export async function setChecked(
   try {
     await target.setChecked(on, { force: true })
   } catch {
-    // Input fully hidden — click the closest Mantine wrapper/label instead.
     await target.evaluate((el) => {
       const wrapper = (el as HTMLElement).closest(
-        'label, [class*="Switch"], [class*="Checkbox"], [class*="Chip"]'
+        'label, [role="checkbox"], [role="switch"], [role="button"]'
       )
       ;((wrapper ?? el) as HTMLElement).click()
     })
   }
 }
 
-/**
- * DateInput (typeable) and DatePickerInput/DateTimePicker (popover) — try
- * typing first, fall back to picking the day in the opened calendar.
- */
 export async function pickDate(
   page: Page,
   value: string,
@@ -241,11 +204,9 @@ export async function pickDate(
     })
     return
   }
-  // Button-style picker: open the popover and click the day (aria-label is the
-  // full date on Mantine day cells).
   await target.click()
   const day = page
-    .locator(`[aria-label*="${value}"], [data-date="${value}"]`)
+    .locator(`[aria-label*="${value}"], [data-day="${value}"]`)
     .first()
   if (!(await isVisibleWithin(day, 3000))) {
     throw new Error(
@@ -255,7 +216,6 @@ export async function pickDate(
   await day.click()
 }
 
-/** FileInput/Dropzone — set files on the (hidden) file input. */
 export async function upload(
   page: Page,
   filePath: string,
@@ -270,7 +230,6 @@ export async function upload(
     await target.setInputFiles(filePath)
     return
   }
-  // FileInput/Dropzone render a button/zone; the real input is hidden nearby.
   const [chooser] = await Promise.all([
     page.waitForEvent('filechooser', { timeout: 5000 }),
     target.click(),
@@ -329,10 +288,6 @@ export async function chooseFromRowMenu(
   await settleAfterClick(page)
 }
 
-/**
- * Confirm/dismiss the open Modal/Drawer/popconfirm — and native window.confirm
- * as a fallback (accepted/dismissed via a one-shot dialog handler).
- */
 export async function resolveDialog(page: Page, accept: boolean) {
   page.once('dialog', (d) => void (accept ? d.accept() : d.dismiss()))
   const dialog = page.locator('[role="dialog"], [role="alertdialog"]').last()
@@ -354,18 +309,15 @@ export async function resolveDialog(page: Page, accept: boolean) {
       'A dialog is open but no confirm-style button was found in it'
     )
   }
-  // No Mantine dialog — assume the click that follows triggers window.confirm,
-  // which the one-shot handler above resolves.
 }
 
-/** @mantine/notifications toast (falls back to role=alert). */
 export async function expectNotification(
   page: Page,
   text: string,
   timeout = 10_000
 ) {
   const toast = page
-    .locator('[class*="Notification"], [role="alert"], [role="status"]')
+    .locator('[data-sonner-toast], [role="alert"], [role="status"]')
     .filter({ hasText: text })
     .first()
   if (!(await isVisibleWithin(toast, timeout))) {

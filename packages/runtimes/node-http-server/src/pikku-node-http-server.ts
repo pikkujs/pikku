@@ -11,7 +11,10 @@ import { normalize, resolve } from 'node:path'
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { stopSingletonServices } from '@pikku/core/utils'
+import {
+  onShutdownSignals,
+  stopSingletonServices,
+} from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
@@ -889,11 +892,6 @@ export class PikkuNodeHTTPServer {
       }
     }
     // `shutdown` handles every phase error itself and always exits
-    process.once('SIGINT', () => {
-      void shutdown('SIGINT')
-    })
-    process.once('SIGTERM', () => {
-      void shutdown('SIGTERM')
-    })
+    onShutdownSignals((signal) => shutdown(signal))
   }
 }
