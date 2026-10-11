@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3284 observable things**: 1098 exported names, plus
-2186 members on the classes and interfaces among them, reachable
+**3287 observable things**: 1098 exported names, plus
+2189 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 174 | 142 | 471 |
+| `./services` | 174 | 142 | 473 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
@@ -161,6 +161,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5545,6 +5546,7 @@ export class ScopedSecretService implements SecretService {
   async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async hasSecret(key: string): Promise<boolean>
   async setSecret(_key: string, _value: unknown): Promise<void>
+  async setEncryptedSecret(_key: string, _sealed: string): Promise<void>
   async deleteSecret(_key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5584,6 +5586,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5723,6 +5726,7 @@ export class TypedSecretService< TMap = Record<string, unknown>, > implements Se
   async getSecret(key: string): Promise<unknown>
   async hasSecret(key: string): Promise<boolean>
   async setSecret<K extends string>(key: K, value: K extends keyof TMap ? TMap[K] : unknown): Promise<void>
+  async setEncryptedSecret(key: string, sealed: string): Promise<void>
   async deleteSecret(key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
   async getAllStatus(): Promise<CredentialStatus[]>
