@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { relative } from 'node:path'
 import type { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
@@ -281,9 +282,12 @@ export const addWorkflow: AddWiring = (
   const workflowName = exportedName || name
 
   if (!workflowName) {
+    const sourceFile = node.getSourceFile()
+    const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart())
     logger.critical(
       ErrorCode.MISSING_NAME,
-      `Could not determine workflow name from export.`
+      `Could not determine workflow name from export at ${relative(state.rootDir, sourceFile.fileName)}:${line + 1}. ` +
+        `Assign the \`${expression.text}(...)\` call to an exported const; that name is how it is registered.`
     )
     return
   }

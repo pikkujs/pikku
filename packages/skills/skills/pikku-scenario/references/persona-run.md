@@ -1,5 +1,15 @@
 # Running a persona as a virtual user
 
+## Contents
+
+- [The shape of a run](#the-shape-of-a-run)
+- [The dispositions](#the-dispositions)
+- [Credentials, and which one wins](#credentials-and-which-one-wins)
+- [Production is opt-in, twice](#production-is-opt-in-twice)
+- [The role check happens before the first step](#the-role-check-happens-before-the-first-step)
+- [The other subcommands](#the-other-subcommands)
+- [What NOT to do](#what-not-to-do)
+
 `pikku persona run <environment> <persona>` signs a declared persona in over the
 app's real auth and works the API in character, driven by a model. A persona
 while running **is** the virtual user — there is no second declaration for it.
@@ -125,7 +135,7 @@ drift.
 
 `sync` **reports**; it does not provision. The CLI has no connection to a
 deployed environment's database, so the provisioning happens in the deployment —
-pass the generated personas to `pikkuFabric` from `@pikku/better-auth`.
+pass the generated personas to `provisionPersonas` from `@pikku/better-auth`.
 
 ## What NOT to do
 

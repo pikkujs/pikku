@@ -582,7 +582,7 @@ describe('custom-server-bootstrap', () => {
     'pikku serve',
     'pikku serve --port 4077',
     'npx pikku dev',
-    'yarn pikku serve --console',
+    'yarn pikku serve',
     'pnpm exec pikku dev',
     'bunx pikku serve',
     'NODE_ENV=production pikku serve -p 3000',

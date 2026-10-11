@@ -1,6 +1,9 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import ts from 'typescript'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { serializeReactQueryHooks } from './serialize-react-query-hooks.js'
 
 const RPC_MAP = './pikku-rpc-map.gen.js'
@@ -72,6 +75,151 @@ describe('serializeReactQueryHooks', () => {
       assert.ok(both.includes('export const useSession'))
       assert.ok(both.includes('export const useRunWorkflow'))
       assert.ok(both.includes('export const usePikkuQuery'))
+    })
+  })
+
+  describe('stub hooks', () => {
+    const stubs = [
+      { name: 'reminders:list', outputType: 'Array<{ "id": number; "note"?: string }>' },
+    ]
+    const output = serializeReactQueryHooks(RPC_MAP, undefined, false, stubs)
+    const segment = output.slice(
+      output.indexOf('let mockFiles'),
+      output.indexOf('type PaginatedKeys')
+    )
+
+    const load = (env: { DEV?: boolean; VITE_MOCK?: string }) => {
+      const code = ts.transpileModule(
+        segment.replace(/import\.meta/g, '__meta').replace(/export const/g, 'const'),
+        { compilerOptions: { target: ts.ScriptTarget.ES2022 } }
+      ).outputText
+      const calls: unknown[][] = []
+      const api = new Function(
+        'useQuery',
+        'useMutation',
+        'usePikkuRPC',
+        'retryUnlessClientError',
+        '__meta',
+        `${code}; return { registerMocks, defaultMock, usePikkuQuery, usePikkuMutation, usePikkuQueryStub, usePikkuMutationStub }`
+      )(
+        (o: unknown) => ({ via: 'useQuery', o }),
+        (o: unknown) => ({ via: 'useMutation', o }),
+        () => ({ invoke: async (...a: unknown[]) => (calls.push(a), 'real') }),
+        () => true,
+        { env }
+      )
+      return { api, calls }
+    }
+    const files = {
+      '/.mocks/reminders.list/healthy.json': async () => ({ default: [{ id: 1 }] }),
+      '/.mocks/reminders.list/empty.json': async () => ({ default: [] }),
+    }
+    const meta = {
+      '/.mocks/reminders.list/healthy.meta.json': { default: { default: true } },
+      '/.mocks/reminders.list/empty.meta.json': { default: { default: false } },
+    }
+
+    test('in dev the stub query answers with the default mock and never calls the backend', async () => {
+      const { api, calls } = load({ DEV: true })
+      api.registerMocks(files, meta)
+      const result = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' })
+      assert.strictEqual(result.via, 'useQuery')
+      assert.deepStrictEqual(await result.o.queryFn(), [{ id: 1 }])
+      assert.strictEqual(calls.length, 0)
+    })
+
+    test('VITE_MOCK enables the stub mutation outside dev', async () => {
+      const { api } = load({ VITE_MOCK: '1' })
+      api.registerMocks(files, meta)
+      const result = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' })
+      assert.strictEqual(result.via, 'useMutation')
+      assert.deepStrictEqual(await result.o.mutationFn({}), [{ id: 1 }])
+    })
+
+    test('in production the stub is a plain backend call with its input', async () => {
+      const { api, calls } = load({})
+      api.registerMocks(files, meta)
+      const q = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders', input: { a: 1 } })
+      assert.strictEqual(await q.o.queryFn(), 'real')
+      assert.deepStrictEqual(calls[0], ['reminders:list', { a: 1 }])
+      const m = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' })
+      assert.strictEqual(await m.o.mutationFn({ b: 2 }), 'real')
+      assert.deepStrictEqual(calls[1], ['reminders:list', { b: 2 }])
+    })
+
+    test('the plain hook uses a mock only in mock mode and only when one exists', async () => {
+      const dev = load({ DEV: true })
+      dev.api.registerMocks(files, meta)
+      const devQuery = dev.api.usePikkuQuery('reminders:list', {})
+      assert.strictEqual(await devQuery.o.queryFn(), 'real')
+
+      const mocked = load({ VITE_MOCK: '1' })
+      mocked.api.registerMocks(files, meta)
+      assert.deepStrictEqual(await mocked.api.usePikkuQuery('reminders:list', {}).o.queryFn(), [{ id: 1 }])
+      assert.strictEqual(await mocked.api.usePikkuQuery('other:rpc', {}).o.queryFn(), 'real')
+    })
+
+    test('reads the env as literal import.meta.env.* so a bundler folds the mock path away in production', () => {
+      assert.match(segment, /import\.meta\.env\.DEV \|\| import\.meta\.env\.VITE_MOCK/)
+      assert.match(segment, /import\.meta\.env\.VITE_MOCK && hasMock/)
+      assert.doesNotMatch(segment, /const \w+ = \(?import\.meta/)
+    })
+
+    test('a stub with no default mock fails loudly', async () => {
+      const { api } = load({ DEV: true })
+      api.registerMocks(files, meta)
+      await assert.rejects(() => api.defaultMock('missing:rpc'), /No default mock for missing:rpc/)
+    })
+
+    describe('types', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'stub-hooks-'))
+      const write = (name: string, body: string) => writeFileSync(join(dir, name), body)
+      write('pikku-rpc-map.gen.d.ts', `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }`)
+      write('shims.d.ts', `
+declare module '@tanstack/react-query' {
+  export type UseQueryOptions<T, E> = { [k: string]: unknown }
+  export type UseInfiniteQueryOptions<A, B, C, D, E> = { [k: string]: unknown }
+  export type UseMutationOptions<T, E, V> = { [k: string]: unknown }
+  export type InfiniteData<A, B> = unknown
+  export const useQuery: <T, E>(o: { queryKey: unknown[]; queryFn: () => Promise<T> | T; [k: string]: unknown }) => { data?: T }
+  export const useInfiniteQuery: (o: any) => any
+  export const useMutation: <T, E, V>(o: { mutationFn: (v: V) => Promise<T> | T; [k: string]: unknown }) => { data?: T }
+}
+declare module '@pikku/react' { export const usePikkuRPC: <T>() => T }
+interface ImportMeta { env: Record<string, any> }
+`)
+      write('api.ts', output)
+      write('use.ts', `
+import { usePikkuQuery, usePikkuQueryStub, usePikkuMutationStub } from './api'
+const ok = usePikkuQueryStub('reminders:list', { featureFlag: 'x', input: { a: 1 } })
+const first: number | undefined = ok.data?.[0]?.id
+const note: string | undefined = ok.data?.[0]?.note
+usePikkuMutationStub('reminders:list', { featureFlag: 'x' })
+usePikkuQueryStub('reminders:list')
+usePikkuMutationStub('reminders:list')
+usePikkuQuery('bookings:list', { page: 1 })
+// @ts-expect-error the plain hook does not accept a name with no function
+usePikkuQuery('stub:only', {})
+const real = usePikkuQuery('reminders:list', {})
+const realId: string | undefined = real.data?.[0]?.id
+const stubId: number | undefined = ok.data?.[0]?.id
+// @ts-expect-error the stub output is the mock shape, not the function's
+const mixed: string | undefined = ok.data?.[0]?.id
+// @ts-expect-error a stub name that has no mock
+usePikkuQueryStub('nothing:here', { featureFlag: 'x' })
+// @ts-expect-error the output is the mock shape
+const wrong: string = ok.data?.[0]?.id
+export { first, note, wrong, realId, stubId, mixed }
+`)
+      test('stub names are any RPC with a mock and the output is the inferred mock shape, not the function output', () => {
+        const program = ts.createProgram(
+          ['pikku-rpc-map.gen.d.ts', 'shims.d.ts', 'api.ts', 'use.ts'].map((f) => join(dir, f)),
+          { noEmit: true, strict: true, skipLibCheck: true, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, target: ts.ScriptTarget.ES2022 }
+        )
+        const diagnostics = ts.getPreEmitDiagnostics(program).map((d) => `${d.file?.fileName.split('/').pop()}: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`)
+        rmSync(dir, { recursive: true, force: true })
+        assert.deepStrictEqual(diagnostics, [])
+      })
     })
   })
 })

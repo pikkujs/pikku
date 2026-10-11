@@ -1,5 +1,14 @@
 # Pikku Paraglide enum labels
 
+## Contents
+
+- [Agent Operating Procedure](#agent-operating-procedure)
+- [The rules that don't change](#the-rules-that-dont-change)
+- [The generated module](#the-generated-module)
+- [Reconciliation against the database](#reconciliation-against-the-database)
+- [Wiring](#wiring)
+- [What NOT to do](#what-not-to-do)
+
 ## Agent Operating Procedure
 
 Use this as an execution checklist, not reference material.

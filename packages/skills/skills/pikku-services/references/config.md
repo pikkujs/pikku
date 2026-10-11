@@ -1,5 +1,11 @@
 # Pikku Config, Secrets & OAuth2
 
+## Contents
+
+- [Before You Start](#before-you-start)
+- [Secrets & Variables](#secrets-variables)
+- [Credentials](#credentials)
+
 
 ## Before You Start
 

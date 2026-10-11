@@ -1,5 +1,13 @@
 # Pikku MCP Wiring
 
+## Contents
+
+- The shape of MCP in Pikku
+- API Reference
+- Reaching the server
+- Authentication
+- Red flags
+
 ## The shape of MCP in Pikku
 
 MCP has three surfaces, and Pikku wires them differently:

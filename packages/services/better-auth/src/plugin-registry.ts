@@ -35,8 +35,6 @@ export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   pikkuDelegatedAuth: { displayName: 'Delegated Auth' },
   deviceAuthorization: { displayName: 'Device Authorization' },
   emailOTP: { displayName: 'Email OTP' },
-  fabric: { displayName: 'Fabric' },
-  pikkuFabric: { displayName: 'Fabric' },
   genericOAuth: { displayName: 'Generic OAuth' },
   haveIBeenPwned: { displayName: 'Have I Been Pwned' },
   jwt: { displayName: 'JWT' },

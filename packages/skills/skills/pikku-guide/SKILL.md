@@ -1,16 +1,16 @@
 ---
 name: pikku-guide
 description: >-
-  Use when writing, rewriting or regenerating a Pikku project's user guide — the end-user
-  documentation built from the scenario suite with `pikku scenario guide`. Pages are hand-written
-  markdown, one section per task, each followed by a `<!-- pikku:guide feature=… scenario=… -->`
-  marker that pulls in the screenshot and recording that scenario filed. Covers planning pages
-  from the suite, writing task prose in the app's language, per-section markers, the capture step,
-  seed data that appears on camera, `.guide.lock` staleness, `document: false`, and the traps that
-  make a guide come out empty, refused, or as a wall of videos. TRIGGER when: user asks for a user
-  guide, help pages, docs with screenshots, "document the app", or complains that the /docs pages
-  are bad, thin, or all videos. DO NOT TRIGGER when: user asks about API reference docs, README
-  files, or writing the scenarios themselves (use pikku-scenario).
+  Use when writing, rewriting or regenerating a Pikku project's end-user guide, built from the
+  scenario suite with `pikku scenario guide`. Pages are hand-written markdown, one section per
+  task, each followed by a `pikku:guide` HTML-comment marker (feature and scenario attributes) that
+  pulls in the screenshot and recording that scenario filed. Covers planning pages from the suite,
+  writing task prose in the app's language, per-section markers, the capture step, seed data that
+  appears on camera, `.guide.lock` staleness, `document: false`, and the traps that make a guide
+  come out empty, refused, or as a wall of videos. TRIGGER when: user asks for a user guide, help
+  pages, docs with screenshots, "document the app", or complains that the /docs pages are bad,
+  thin, or all videos. DO NOT TRIGGER when: user asks about API reference docs, README files, the
+  Pikku framework's own documentation site, or writing the scenarios themselves (use pikku-scenario).
 installGroups: [core]
 ---
 

@@ -1,6 +1,7 @@
 import type { AnalyticsRecord, AnalyticsService } from '@pikku/core/analytics'
 import type { Kysely } from 'kysely'
 import { requirePikkuSchema } from './schema/index.js'
+import { insertOrIgnore } from './kysely-upsert.js'
 import { analyticsSchema } from './schema/analytics.schema.js'
 
 const jsonOrNull = (value: unknown): string | null =>
@@ -75,10 +76,9 @@ export class KyselyAnalyticsService implements AnalyticsService {
       consent: jsonOrNull(record.userIdentity?.consent),
       props: jsonOrNull(record.props),
     }))
-    await (this.db as any)
-      .insertInto('pikkuAnalyticsEvents')
-      .values(rows)
-      .onConflict((oc: any) => oc.doNothing())
-      .execute()
+    await insertOrIgnore(
+      this.db,
+      (this.db as any).insertInto('pikkuAnalyticsEvents').values(rows)
+    ).execute()
   }
 }

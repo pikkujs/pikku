@@ -1,5 +1,12 @@
 # Addon Package Manifest Reference
 
+## Contents
+
+- Package Structure
+- pikku.config.json
+- package.json (key fields)
+- tsconfig.json (key fields)
+
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
 
 ## Package Structure

@@ -1,5 +1,11 @@
 # Pikku AI Voice (Speech I/O)
 
+## Contents
+
+- `@pikku/ai-voice` is deprecated and empty
+- API Reference
+- Usage Pattern
+
 
 ## `@pikku/ai-voice` is deprecated and empty
 
@@ -9,7 +15,7 @@ dependency.
 
 Voice now lives in **`@pikku/core/agent`** as two AI middlewares, and the
 speech models are reached through the `agentRunner` (`transcribe` /
-`generateSpeech`) rather than through separate services. See `references/runner-vercel.md`.
+`generateSpeech`) rather than through separate services. The runner reference covers that wiring.
 
 ## API Reference
 

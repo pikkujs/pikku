@@ -45,13 +45,13 @@ export const ADMIN_SCOPES = {
 } as const
 
 /**
- * The scope roots a Fabric operator is granted on the stage it signs into.
+ * The scope roots an operator is granted on the stage it signs into.
  *
  * `admin` covers this package's own gates, but not a tree an app declares
  * beside it: pikku's parent-grant rule only walks *down* from a root that is
  * held. The virtual-user scaffold declares `virtualUser` as its own root
  * precisely so a role can carry `virtualUser:run` without also implying
- * administration — which leaves the operator Fabric signs in to start a run
+ * administration — which leaves the operator who signs in to start a run
  * refused by the one function the operator sign-in exists to reach.
  *
  * Listed rather than collapsed to `*`, which would make every operator a

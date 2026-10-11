@@ -1,5 +1,11 @@
 # Redis (`@pikku/redis`)
 
+## Contents
+
+- [`RedisSecretService`](#redissecretservice)
+- [`RedisLeaseService`](#redisleaseservice)
+- [Full setup](#full-setup)
+
 ```bash
 yarn add @pikku/redis
 ```

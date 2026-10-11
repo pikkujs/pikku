@@ -1,5 +1,11 @@
 # Pikku Queue Wiring
 
+## Contents
+
+- API Reference
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 ### `wireQueueWorker(config)`

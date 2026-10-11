@@ -27,9 +27,9 @@ export const hasLocalCLIEntrypoint = (config: Pick<Config, 'cli'>): boolean =>
 
 /**
  * Whether the project has a database, by the same signs `pikku serve` resolves
- * one from — a `db` config, or a `db/sqlite` or `db/postgres` directory — plus
+ * one from — a `db` config, or a `db/sqlite`, `db/postgres` or `db/mysql` directory — plus
  * the project declaring kysely itself. That last one covers an app whose
- * database comes from its own config's `postgresUrl` or `sqliteDb`, which
+ * database comes from its own config's `postgresUrl`, `mysqlUrl` or `sqliteDb`, which
  * codegen cannot evaluate; without it the dev server would find a database the
  * file has no services for.
  */
@@ -40,6 +40,7 @@ export const projectHasDatabase = (
   config.db !== undefined ||
   existsSync(join(config.rootDir, 'db', 'sqlite')) ||
   existsSync(join(config.rootDir, 'db', 'postgres')) ||
+  existsSync(join(config.rootDir, 'db', 'mysql')) ||
   declared.has('@pikku/kysely') ||
   declared.has('kysely')
 
@@ -70,6 +71,7 @@ export const writeLocalServices = async (
           bunSqlite: declared.has('@pikku/kysely-bun-sqlite'),
           pg: declared.has('pg'),
           pgTypes: declared.has('@types/pg'),
+          mysql: declared.has('mysql2'),
         },
       }
     : undefined

@@ -17,6 +17,7 @@ import { pikkuDist } from './functions/commands/dist.js'
 import { watch } from './functions/commands/watch.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
+import { devStatus } from './functions/commands/dev-status.js'
 import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
@@ -27,6 +28,7 @@ import {
   webhooksTeardown,
 } from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
+import { dbAnnotate } from './functions/commands/db-annotate.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
 import { dbReset } from './functions/commands/db-reset.js'
@@ -49,6 +51,7 @@ import {
   renderReleasePrepare,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
+import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
   examplesAdd,
   examplesList,
@@ -59,12 +62,22 @@ import {
 } from './functions/commands/examples.js'
 import {
   i18nAdd,
+  i18nCheck,
   i18nDefault,
+  i18nKey,
   i18nList,
+  i18nMove,
+  i18nUsage,
+  renderI18nMove,
+  renderI18nUsage,
+  i18nUnused,
   i18nSync,
   renderI18nAdd,
+  renderI18nCheck,
   renderI18nDefault,
+  renderI18nKey,
   renderI18nList,
+  renderI18nUnused,
   renderI18nSync,
 } from './functions/commands/i18n.js'
 import {
@@ -115,6 +128,10 @@ import {
 } from './functions/commands/scenario-coverage.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
+import {
+  pikkuEmailsAdd,
+  pikkuEmailsCatalog,
+} from './functions/commands/emails-catalog.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuUpdate } from './functions/commands/update.js'
@@ -549,6 +566,13 @@ wireCLI({
     dev: pikkuCLICommand({
       func: dev,
       description: 'Start a local development server with all services wired',
+      subcommands: {
+        status: pikkuCLICommand({
+          func: devStatus,
+          description:
+            'Report whether pikku dev is running, its address, and whether its last codegen pass failed',
+        }),
+      },
       options: {
         port: {
           description: 'Port for the dev server',
@@ -588,10 +612,6 @@ wireCLI({
           description: 'Port for the server',
           default: '3000',
           short: 'p',
-        },
-        console: {
-          description: 'Also serve the Pikku Console same-origin at /console',
-          default: false,
         },
         model: {
           description:
@@ -658,6 +678,24 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite an existing email scaffold',
+            },
+          },
+        }),
+        catalog: pikkuCLICommand({
+          func: pikkuEmailsCatalog,
+          description:
+            'List the ready-made emails (invitation, magic link, password reset, receipt, welcome), or show one with its locale block and wiring',
+          parameters: '[name]',
+        }),
+        add: pikkuCLICommand({
+          func: pikkuEmailsAdd,
+          description:
+            'Copy a ready-made email into emailTemplatesDir and merge its copy into locales/en.json',
+          parameters: '<name>',
+          options: {
+            force: {
+              description:
+                'Overwrite template files and locale keys that already exist',
             },
           },
         }),
@@ -746,6 +784,11 @@ wireCLI({
           func: dbCheck,
           description:
             'Report how the configured database differs from the schema its migrations define',
+        }),
+        annotate: pikkuCLICommand({
+          func: dbAnnotate,
+          description:
+            'Add a kind to db/annotations.ts for each SQLite column declared BOOLEAN, DATE/TIMESTAMP or JSON, so it types as boolean, Date or parsed JSON',
         }),
         baseline: pikkuCLICommand({
           func: dbBaseline,
@@ -892,7 +935,7 @@ wireCLI({
           func: i18nList,
           render: renderI18nList,
           description:
-            "Report each frontend's catalog, locales and untranslated count",
+            "Report each frontend's catalogs, locales and untranslated counts; exits 1 if a key is held by two catalogs",
         }),
         add: pikkuCLICommand({
           func: i18nAdd,
@@ -905,6 +948,11 @@ wireCLI({
               description: 'The frontend, when there is more than one',
               type: 'string',
             },
+            catalog: {
+              description:
+                'Only this catalog folder (e.g. packages/ui/messages); default is every catalog',
+              type: 'string',
+            },
           },
         }),
         sync: pikkuCLICommand({
@@ -914,6 +962,108 @@ wireCLI({
             'Add base keys a locale is missing and report keys only it has',
           options: {
             app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description:
+                'Only this catalog folder (e.g. packages/ui/messages); default is every catalog',
+              type: 'string',
+            },
+          },
+        }),
+        key: pikkuCLICommand({
+          func: i18nKey,
+          render: renderI18nKey,
+          description:
+            'Add one message in every locale: pikku i18n key account__title en="Your account" de="Dein Konto". The base locale is required; the rest are marked to translate',
+          parameters: '<name> <texts...>',
+          options: {
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+            catalog: {
+              description:
+                'The catalog folder to write to (e.g. packages/ui/messages); required when the app has several',
+              type: 'string',
+            },
+            update: {
+              description:
+                'Change a key that already exists, in the catalog that holds it',
+              type: 'boolean',
+            },
+          },
+        }),
+        check: pikkuCLICommand({
+          func: i18nCheck,
+          render: renderI18nCheck,
+          description:
+            'Read-only gate: exits 1 on keys held by two catalogs, mismatched {placeholders} or stale keys; untranslated values only with --strict',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            strict: {
+              description: 'Also fail on values still marked to translate',
+              type: 'boolean',
+            },
+          },
+        }),
+        unused: pikkuCLICommand({
+          func: i18nUnused,
+          render: renderI18nUnused,
+          description:
+            'List catalog keys no source file in the workspace uses (m.key, m["key"]); exits 1 if the namespace is read by computed access',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            fix: {
+              description:
+                'Delete the unused keys from every locale of their catalog; needs a clean git tree for those files',
+              type: 'boolean',
+            },
+            force: {
+              description: 'With --fix, go ahead when git is not available',
+              type: 'boolean',
+            },
+          },
+        }),
+        move: pikkuCLICommand({
+          func: i18nMove,
+          render: renderI18nMove,
+          description:
+            'Move keys to another catalog of the app, in every locale, all or nothing: pikku i18n move account__title card__body --to packages/ui/messages. Add --json for the list of moved keys',
+          parameters: '<keys...>',
+          options: {
+            to: {
+              description:
+                'The catalog folder to move the keys to (e.g. packages/ui/messages)',
+              type: 'string',
+            },
+            app: {
+              description: 'The frontend, when there is more than one',
+              type: 'string',
+            },
+          },
+        }),
+        usage: pikkuCLICommand({
+          func: i18nUsage,
+          render: renderI18nUsage,
+          description:
+            'Read-only: for each key, the source files that use it; --by-package lists the workspace packages (apps/*, packages/*) instead',
+          options: {
+            app: { description: 'Only this frontend', type: 'string' },
+            catalog: {
+              description: 'Only this catalog folder',
+              type: 'string',
+            },
+            byPackage: {
+              description: 'List workspace packages instead of files',
+              type: 'boolean',
+            },
           },
         }),
         default: pikkuCLICommand({
@@ -1070,6 +1220,32 @@ wireCLI({
       render: renderValidate,
       description:
         'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+    }),
+    verify: pikkuCLICommand({
+      func: pikkuVerify,
+      render: renderPikkuVerify,
+      description:
+        'Run codegen, type-check the backend and every frontend, and the correctness checks codegen and tsc cannot see; findings are located and explained',
+      options: {
+        skipCodegen: {
+          description:
+            'Check the tree as it stands, without running codegen first',
+          default: false,
+        },
+        skipTypecheck: {
+          description: 'Skip the backend type-check',
+          default: false,
+        },
+        skipFrontends: {
+          description: 'Skip the frontend type-checks',
+          default: false,
+        },
+        strict: {
+          description:
+            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings',
+          default: false,
+        },
+      },
     }),
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',

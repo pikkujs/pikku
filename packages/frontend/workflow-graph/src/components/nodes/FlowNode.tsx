@@ -1,8 +1,8 @@
 import React from 'react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Handle, Position } from '@xyflow/react'
 import { useGraphRun } from '../../context/GraphHostContext'
+import { nodeColor } from '../../colors'
 import { useFlowDirection } from '../../context/FlowDirectionContext'
 
 interface OutputHandle {
@@ -16,16 +16,16 @@ type HighlightType = 'focused' | 'referenced' | null
 
 // Workflow run-status colors are exposed as CSS variables so a host theme
 // (e.g. fabric) can override them, while the `var(..., fallback)` keeps the
-// default Mantine palette working without importing any extra stylesheet.
+// default palette working without importing any extra stylesheet.
 const runStatusColors: Record<string, string> = {
-  succeeded: 'var(--pikku-status-succeeded, var(--mantine-color-green-4))',
-  failed: 'var(--pikku-status-failed, var(--mantine-color-red-4))',
-  running: 'var(--pikku-status-running, var(--mantine-color-blue-4))',
-  scheduled: 'var(--pikku-status-scheduled, var(--mantine-color-orange-4))',
-  pending: 'var(--pikku-status-pending, var(--mantine-color-gray-4))',
-  suspended: 'var(--pikku-status-suspended, var(--mantine-color-yellow-4))',
-  cancelled: 'var(--pikku-status-cancelled, var(--mantine-color-gray-5))',
-  skipped: 'var(--pikku-status-skipped, var(--mantine-color-gray-4))',
+  succeeded: 'var(--pikku-status-succeeded, oklch(0.8 0.15 150))',
+  failed: 'var(--pikku-status-failed, oklch(0.75 0.16 25))',
+  running: 'var(--pikku-status-running, oklch(0.75 0.13 250))',
+  scheduled: 'var(--pikku-status-scheduled, oklch(0.8 0.15 60))',
+  pending: 'var(--pikku-status-pending, var(--muted-foreground))',
+  suspended: 'var(--pikku-status-suspended, oklch(0.88 0.15 100))',
+  cancelled: 'var(--pikku-status-cancelled, var(--muted-foreground))',
+  skipped: 'var(--pikku-status-skipped, var(--muted-foreground))',
 }
 
 interface FlowNodeProps {
@@ -45,13 +45,9 @@ interface FlowNodeProps {
   nodeId?: string
 }
 
-const getBorderStyle = (
-  position: BorderPosition,
-  theme: any,
-  borderColor?: string
-) => {
-  const color = borderColor || theme.colors.gray[5]
-  const radius = theme.radius.md
+const getBorderStyle = (position: BorderPosition, borderColor?: string) => {
+  const color = borderColor || 'var(--muted-foreground)'
+  const radius = 'var(--radius)'
 
   switch (position) {
     case 'left':
@@ -91,16 +87,10 @@ const getBorderStyle = (
   }
 }
 
-const getHighlightIconColor = (
-  highlightType: HighlightType,
-  theme: any
-): string | null => {
+const getHighlightIconColor = (highlightType: HighlightType): string | null => {
   if (!highlightType) return null
-  if (highlightType === 'focused')
-    return theme.colors?.primary?.[5] ?? theme.colors?.blue?.[5] ?? '#228be6'
-  return (
-    theme.colors?.referencedNode?.[5] ?? theme.colors?.violet?.[5] ?? '#7950f2'
-  )
+  if (highlightType === 'focused') return 'var(--primary)'
+  return 'var(--pikku-node-referenced, var(--chart-2))'
 }
 
 export const FlowNode: React.FC<FlowNodeProps> = ({
@@ -119,9 +109,8 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   highlightType = null,
   nodeId,
 }) => {
-  const theme = useMantineTheme()
   const vertical = useFlowDirection() === 'DOWN'
-  const highlightIconColor = getHighlightIconColor(highlightType, theme)
+  const highlightIconColor = getHighlightIconColor(highlightType)
   const run = useGraphRun()
 
   const runStatus = React.useMemo(() => {
@@ -142,27 +131,21 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   const runBgColor = runStatus ? (runStatusColors[runStatus] ?? null) : null
 
   const iconColor =
-    highlightIconColor ||
-    (runBgColor ? 'white' : theme.colors.gray[5] || colorKey)
+    highlightIconColor || (runBgColor ? 'white' : nodeColor(colorKey))
 
   return (
-    <Box
-      style={{ width: size, overflow: 'visible' }}
+    <div
+      className="overflow-visible"
+      style={{ width: size }}
       data-testid="workflow-node"
       data-node-id={nodeId}
       data-node-status={runStatus ?? 'none'}
     >
-      <Paper
-        shadow="md"
-        radius="md"
-        w={size}
-        h={size}
-        pos="relative"
+      <div
+        className={`relative flex items-center justify-center rounded-md border bg-card shadow-md ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: onClick ? 'pointer' : 'default',
+          width: size,
+          height: size,
           ...(runBgColor ? { background: runBgColor } : {}),
         }}
         onClick={onClick}
@@ -175,14 +158,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
           />
         )}
 
-        <Box style={{ verticalAlign: 'middle', color: iconColor }}>
+        <div style={{ color: iconColor }}>
           <Icon size={Math.round(size * 0.6)} />
-        </Box>
+        </div>
 
         {showBorder && (
-          <Box
-            pos="absolute"
-            style={getBorderStyle(borderPosition, theme, borderColor)}
+          <div
+            className="absolute"
+            style={getBorderStyle(borderPosition, borderColor)}
           />
         )}
 
@@ -211,10 +194,8 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   }}
                 />
                 {showLabel && (
-                  <Text
-                    size="10px"
-                    c="dimmed"
-                    pos="absolute"
+                  <span
+                    className="absolute whitespace-nowrap rounded-sm bg-background px-[5px] py-0.5 text-[10px] text-muted-foreground"
                     style={{
                       ...(vertical
                         ? {
@@ -227,27 +208,23 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                             top: `${offsetPercent}%`,
                             transform: 'translate(100%, -50%)',
                           }),
-                      whiteSpace: 'nowrap',
-                      backgroundColor: 'var(--mantine-color-body)',
-                      padding: '2px 5px',
-                      borderRadius: 2,
                     }}
                   >
                     {asI18n(handle.label!)}
-                  </Text>
+                  </span>
                 )}
               </React.Fragment>
             )
           })}
-      </Paper>
+      </div>
       {(label || subtitle) && (
-        <Box
+        <div
+          className="absolute"
           style={
             vertical
               ? {
                   // vertical flow: outgoing edges leave the bottom, so hang the
                   // label beside the node instead of underneath it
-                  position: 'absolute',
                   left: size + 12,
                   top: '50%',
                   transform: 'translateY(-50%)',
@@ -255,7 +232,6 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   width: size * 2,
                 }
               : {
-                  position: 'absolute',
                   top: size + 12,
                   left: '50%',
                   transform: 'translateX(-50%)',
@@ -265,21 +241,22 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
           }
         >
           {label && (
-            <Text
-              size="sm"
-              fw={600}
-              c={highlightIconColor || (labelDimmed ? 'dimmed' : undefined)}
+            <div
+              className={`text-sm font-semibold ${labelDimmed ? 'text-muted-foreground' : ''}`}
+              style={
+                highlightIconColor ? { color: highlightIconColor } : undefined
+              }
             >
               {asI18n(label)}
-            </Text>
+            </div>
           )}
           {subtitle && (
-            <Text size="sm" c="dimmed">
+            <div className="text-sm text-muted-foreground">
               {asI18n(subtitle)}
-            </Text>
+            </div>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   )
 }

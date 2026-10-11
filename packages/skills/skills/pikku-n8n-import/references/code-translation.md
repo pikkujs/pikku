@@ -1,5 +1,12 @@
 # n8n Code node → Pikku function
 
+## Contents
+
+- Process
+- Rubric
+- Example
+- Report
+
 Replace a Code-node stub's `throw new Error(...)` body with a faithful TypeScript
 reimplementation. The original JS is preserved verbatim in the JSDoc above the
 function. Keep the signature and JSDoc intact; only widen the Zod input/output if

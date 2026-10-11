@@ -1,5 +1,11 @@
 # Personas and actors
 
+## Contents
+
+- [Declaring personas in TypeScript](#declaring-personas-in-typescript)
+- [Actors that call a third-party API](#actors-that-call-a-third-party-api)
+- [The same actors sign a human in](#the-same-actors-sign-a-human-in)
+
 A **persona** is a person your product is for; an **actor** is one body that signs in as them. Every entry materialises exactly one actor, so `actors.<id>` exists for each declared persona and there is no second way to declare a login.
 
 - Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.
@@ -96,7 +102,7 @@ sign-in opted in **and** its `devSwitcher` feature flag on; production never
 has the opt-in, so it lists nobody and refuses every persona sign-in.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
-`<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
+the starter template's `<DevActorSwitcher />` is a ready rendering of it.
 `pikku fabric validate` **requires** any frontend with a login screen to ship
 one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them

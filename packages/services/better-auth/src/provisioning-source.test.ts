@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, test } from 'node:test'
-import { createSign, generateKeyPairSync } from 'node:crypto'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
@@ -13,7 +12,6 @@ import {
   DELEGATED_PROVIDER_ID,
   type UpstreamIdentity,
 } from './delegated-auth-plugin.js'
-import { pikkuFabric } from './fabric-plugin.js'
 import {
   pikkuCredentialOAuth,
   PLATFORM_USER_ID,
@@ -55,30 +53,6 @@ const emptyDb = (): Record<string, any[]> => ({
 })
 
 const ROOT = 'flow-secret-flow-secret-flow-secret'
-
-const b64url = (input: Buffer | string): string =>
-  (typeof input === 'string' ? Buffer.from(input) : input)
-    .toString('base64')
-    .replace(/=+$/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-
-const signFabricToken = (
-  signingKey: string,
-  claims: Record<string, unknown>
-): string => {
-  const now = Math.floor(Date.now() / 1000)
-  const payload = {
-    iss: 'test',
-    iat: now,
-    exp: now + 120,
-    purpose: 'fabric-admin',
-    ...claims,
-  }
-  const input = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(JSON.stringify(payload))}`
-  const sig = b64url(createSign('RSA-SHA256').update(input).sign(signingKey))
-  return `${input}.${sig}`
-}
 
 const post = (
   auth: ReturnType<typeof betterAuth>,
@@ -144,7 +118,6 @@ describe('every plugin tells better-auth who is provisioning the user', () => {
       emailAndPassword: { enabled: true },
       user: recorder.user,
       plugins: [
-        pikkuFabric({ publicKey: undefined }),
         pikkuDelegatedAuth({
           authenticate: async () => identity,
           storeCredential: async () => {},
@@ -159,31 +132,6 @@ describe('every plugin tells better-auth who is provisioning the user', () => {
 
     assert.equal(res.status, 200, await res.text())
     assert.deepEqual(recorder.methods, [DELEGATED_PROVIDER_ID])
-  })
-
-  test('a fabric operator is provisioned as `fabric`', async () => {
-    const db = emptyDb()
-    const recorder = sourceRecorder()
-    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    })
-    const auth = betterAuth({
-      baseURL: 'http://localhost:3000',
-      secret: 'better-auth-test-secret',
-      database: memoryAdapter(db),
-      emailAndPassword: { enabled: true },
-      user: recorder.user,
-      plugins: [pikkuFabric({ publicKey })],
-    })
-
-    const res = await post(auth, '/sign-in/fabric', {
-      token: signFabricToken(privateKey, { sub: 'op-1' }),
-    })
-
-    assert.equal(res.status, 200, await res.text())
-    assert.deepEqual(recorder.methods, ['fabric'])
   })
 
   // The platform user is provisioned mid-link rather than at sign-in, so it

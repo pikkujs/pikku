@@ -150,6 +150,7 @@ const cliCloseOnComplete = pikkuMiddleware(async (_services, { channel }, next) 
 
 export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string }>({
   auth: false,
+  tags: ['pikku'],
   func: async (_services, data: { args?: string[] }) => {
     const cliMeta = pikkuState(null, 'cli', 'meta')
     const commandPath = data?.args?.length ? data.args : []
@@ -169,6 +170,7 @@ export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string 
  */
 export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, RawCLIFrame>({
   auth: false,
+  tags: ['pikku'],
   func: async (_services, data: { args: string[] }, { channel, session }) => {
     const { help, result, error, exitCode, commandId } = await handleRawCLI({
       programName: '${programName}',
@@ -221,6 +223,7 @@ ${
  */
 export const cliRequireSession = pikkuSessionlessFunc<void, RawCLIFrame | void>({
   auth: false,
+  tags: ['pikku'],
   func: async (_services, _data, { channel, session }) => {
     if (session) {
       return

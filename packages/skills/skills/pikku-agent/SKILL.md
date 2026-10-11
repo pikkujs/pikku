@@ -4,11 +4,11 @@ description: >-
   Use when building AI agents, chatbots or LLM-powered assistants with Pikku — pikkuAgent, ref()
   tool registration, memory, streaming, tool approval, thread ownership, invocation via rpc.agent,
   the VercelAgentRunner and its provider map, and the voiceInput/voiceOutput middlewares. TRIGGER
-  when: code uses pikkuAgent/rpc.agent/runAgent/streamAgent/VercelAgentRunner/voiceInput, user asks
-  about AI agents, chatbots, tool-calling, agent memory or streaming, model providers, speech in or
-  out, or `pikku enable agent`. DO NOT TRIGGER when: user asks about MCP tool exposure (use
-  pikku-wiring), workflows (use pikku-workflow), or general function definitions (use
-  pikku-concepts).
+  when: code uses pikkuAgent/rpc.agent/runAgent/streamAgent/VercelAgentRunner/voiceInput, or the
+  user asks about AI agents, chatbots, tool-calling, agent memory or streaming, model providers,
+  speech in or out, or `pikku enable agent`. DO NOT TRIGGER when: the user asks about MCP tool
+  exposure (use pikku-wiring), workflows (use pikku-workflow), React agent hooks (use pikku-react),
+  or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
 
@@ -49,7 +49,7 @@ session, the credentials and the RPC depth for you.
   `output` schema, and the picture passed as an `attachments` entry.
 - **`auth` defaults to `false`**, because agents are normally invoked from an
   already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced
-  either way — see `pikku-auth`.
+  either way — see `pikku-permissions`.
 - **`approvalRequired` sits on the tool function, not on the agent.** The run
   then resolves `status: 'suspended'` with `pendingApprovals`; answer with
   `rpc.agent.approve(runId, approvals)`.

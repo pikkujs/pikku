@@ -31,9 +31,12 @@ type Dialect = 'sqlite' | 'postgres' | 'mysql'
  */
 function realKind(dialect: Dialect, sqlType: string): AnnotationKind | null {
   if (dialect === 'mysql') {
-    // mysql2 hands DATETIME/TIMESTAMP/DATE back as `Date`, but TINYINT(1) as a
-    // number and there is no uuid type, so only the temporal ones are trusted.
-    return /^(datetime|timestamp|date)\b/i.test(sqlType) ? 'date' : null
+    // mysql2 hands DATETIME/TIMESTAMP/DATE back as `Date`. MySQL has no boolean
+    // type — BOOLEAN is an alias for TINYINT(1), which mysqldump and Rails both
+    // write that way — so that one declared width is read as a boolean and
+    // coerced at runtime. There is no uuid type.
+    if (/^(datetime|timestamp|date)\b/i.test(sqlType)) return 'date'
+    return /^tinyint\(1\)/i.test(sqlType) ? 'bool' : null
   }
   if (dialect !== 'postgres') return null
   const u = sqlType.toUpperCase()
@@ -285,7 +288,12 @@ function emitInterface(
       // (no annotation needed); SQLite has neither native type so derives nothing.
       const real = realKind(dialect, col.type)
       const derived =
-        !ann?.tsType && (real === 'date' || real === 'uuid') ? real : undefined
+        !ann?.tsType &&
+        (real === 'date' ||
+          real === 'uuid' ||
+          (real === 'bool' && dialect === 'mysql'))
+          ? real
+          : undefined
       const typingKind: AnnotationKind | undefined = ann?.kind ?? derived
 
       // Warn (don't force) only on a genuine contradiction the real type can
@@ -811,7 +819,16 @@ export async function generateSchemaTypes(
       // Coercion is driven only by an explicit `kind` in db/annotations.ts —
       // no name inference. An unannotated `*_at` column is not coerced. `uuid`
       // is a string in both dialects, so it needs no runtime coercion.
-      const kind: AnnotationKind | undefined = tableCols[col.name]?.kind
+      const ann = tableCols[col.name]
+      // MySQL's TINYINT(1) is the one type read as a boolean without being
+      // asked, so its runtime coercion is derived the same way its type is.
+      const kind: AnnotationKind | undefined =
+        ann?.kind ??
+        (!ann?.tsType &&
+        dialect === 'mysql' &&
+        realKind('mysql', col.type) === 'bool'
+          ? 'bool'
+          : undefined)
       if (kind && kind !== 'uuid') {
         // Keyed by the name the query is written against, since that is what
         // the runtime plugin sees on the Kysely node.

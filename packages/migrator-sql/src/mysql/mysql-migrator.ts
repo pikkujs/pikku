@@ -16,8 +16,12 @@ export interface MysqlMigrationClient {
  * Write MySQL migrations so each statement tolerates that
  * (`CREATE TABLE IF NOT EXISTS`, one change per file).
  *
+ * Foreign key checks are off for the duration of each migration (so a dump's
+ * tables can appear in any order) and back on afterwards.
+ *
  * The client must run a multi-statement string in one call
- * (`multipleStatements: true` on mysql2), because a migration file is one.
+ * (`multipleStatements: true` on mysql2), because a migration file is one, and
+ * must be a single connection, because FOREIGN_KEY_CHECKS is session state.
  */
 export class MysqlMigrationExecutor implements MigrationExecutor {
   constructor(private readonly client: MysqlMigrationClient) {}
@@ -47,7 +51,16 @@ export class MysqlMigrationExecutor implements MigrationExecutor {
   }
 
   async runMigration(sql: string, name: string, hash: string): Promise<void> {
-    await this.client.query(sql)
+    // Foreign keys are not checked while a migration runs: a mysqldump lists
+    // tables alphabetically, so a table can reference one that comes after it.
+    // The setting is per session, which is why the client must be one
+    // connection, and it is restored whether or not the migration succeeds.
+    await this.client.query('SET FOREIGN_KEY_CHECKS = 0')
+    try {
+      await this.client.query(sql)
+    } finally {
+      await this.client.query('SET FOREIGN_KEY_CHECKS = 1')
+    }
     await this.recordMigration(name, hash)
   }
 }

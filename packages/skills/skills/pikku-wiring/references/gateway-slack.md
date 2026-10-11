@@ -1,5 +1,11 @@
 # Pikku Gateway Slack
 
+## Contents
+
+- Installation
+- API Reference
+- Usage Patterns
+
 ## Installation
 
 ```bash

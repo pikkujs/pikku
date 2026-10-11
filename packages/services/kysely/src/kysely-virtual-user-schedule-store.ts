@@ -16,6 +16,7 @@ import type {
 } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { upsert } from './kysely-upsert.js'
 import { virtualUserScheduleSchema } from './schema/virtual-user-schedule.schema.js'
 
 /**
@@ -84,21 +85,20 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
       nextRunAt: merged.nextRunAt.toISOString(),
     }
 
-    await this.db
-      .insertInto('virtualUserSchedule')
-      .values(values)
-      .onConflict((oc) =>
-        oc.column('persona').doUpdateSet({
-          enabled: values.enabled,
-          disposition: values.disposition,
-          goals: values.goals,
-          budget: values.budget,
-          minIntervalMs: values.minIntervalMs,
-          maxIntervalMs: values.maxIntervalMs,
-          nextRunAt: values.nextRunAt,
-        })
-      )
-      .execute()
+    await upsert(
+      this.db,
+      this.db.insertInto('virtualUserSchedule').values(values),
+      ['persona'],
+      {
+        enabled: values.enabled,
+        disposition: values.disposition,
+        goals: values.goals,
+        budget: values.budget,
+        minIntervalMs: values.minIntervalMs,
+        maxIntervalMs: values.maxIntervalMs,
+        nextRunAt: values.nextRunAt,
+      }
+    ).execute()
 
     return merged
   }

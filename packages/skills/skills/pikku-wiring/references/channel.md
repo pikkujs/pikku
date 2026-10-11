@@ -1,5 +1,11 @@
 # Pikku WebSocket Wiring
 
+## Contents
+
+- API Reference
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 ### `wireChannel(config)`
@@ -33,7 +39,7 @@ wireChannel({
 
 Note there is **no `permissions` key on a message wiring** — wire-level
 permissions were removed in #972. Authorization lives on the function's own
-`permissions` field (see `pikku-auth`).
+`permissions` field (see `pikku-permissions`).
 
 ### `pikkuChannelMiddleware(fn)`
 

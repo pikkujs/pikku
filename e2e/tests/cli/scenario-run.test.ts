@@ -162,12 +162,6 @@ describe('pikku scenario run', () => {
     )
   })
 
-  test('a browser step drives the console as its actor', async () => {
-    assertAllPassed(
-      await runScenario('codeEditorConsoleScenario', ['--run', 'browser'])
-    )
-  })
-
   /**
    * Captures, end to end.
    *

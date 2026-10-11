@@ -1,17 +1,26 @@
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { codegenFindings, resolvePikkuCli } from './codegen.js'
 import {
+  ownerDir,
   readVerifyProject,
   relativeTo,
+  workspacePackageDirs,
   type VerifyFrontend,
   type VerifyProject,
 } from './project.js'
 import { datalessDetailRoutes, orphanedChildRoutes } from './route-checks.js'
 import {
-  asI18nMisuse,
   brokenMessageCatalogs,
+  I18N_GATE_TSCONFIG,
+  jsxLiteralProps,
+  asI18nArguments,
+  asI18nStubs,
+  sepArguments,
+  jsxLiteralText,
   staleTableZod,
+  stringLiteralCopy,
 } from './source-checks.js'
 import { runTypecheck, spawnBounded, type SpawnResult } from './tsc.js'
 import { tscFindings, type TscRuleScope } from './tsc-rules.js'
@@ -28,6 +37,12 @@ export type RunVerifyOptions = {
   typecheck?: boolean
   frontends?: boolean
   pikkuCli?: string
+  /** Helper calls whose string arguments are user-facing copy (default: say, toast, notify). */
+  copyHelpers?: string[]
+  /**
+   * Release mode. Every `asI18nStub` call is a warning while prototyping and an error here.
+   */
+  strict?: boolean
   record?: boolean
   codegenTimeoutMs?: number
   typecheckTimeoutMs?: number
@@ -41,8 +56,11 @@ const tail = (run: SpawnResult, lines = 20): string =>
     .slice(-lines)
     .join('\n')
 
-/** The static source checks: generated-schema drift, route wiring and i18n misuse. Cheap, so they run before anything is spawned. */
-export function runStaticChecks(project: VerifyProject): VerifyFinding[] {
+/** The static source checks: generated-schema drift, route wiring and i18n copy. Cheap, so they run before anything is spawned. */
+export function runStaticChecks(
+  project: VerifyProject,
+  options: { copyHelpers?: readonly string[]; strict?: boolean } = {}
+): VerifyFinding[] {
   const at = (file: string) => relativeTo(project.rootDir, file)
   const findings: VerifyFinding[] = []
 
@@ -81,15 +99,91 @@ export function runStaticChecks(project: VerifyProject): VerifyFinding[] {
         hint: 'A `$param` route exists to show one record: query it with the route param.',
       })
     }
-    for (const hit of asI18nMisuse(join(app.dir, 'src'))) {
+  }
+
+  const ignored = (file: string): boolean => {
+    const rel = relative(project.workspaceRoot, file)
+    return project.i18nIgnore.some((p) => rel === p || rel.startsWith(`${p}/`))
+  }
+  const packageDirs = workspacePackageDirs(project.workspaceRoot)
+  /** A nested package's files are checked under that package's own rules (its own gate), not its parent's. */
+  const owned = (dir: string, file: string) =>
+    ownerDir(packageDirs, file) === dir
+  for (const dir of packageDirs) {
+    for (const hit of jsxLiteralText(dir)) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
       findings.push({
-        id: 'as-i18n-misuse',
+        id: 'jsx-literal-text',
         severity: 'warn',
         step: 'checks',
         file: at(hit.file),
         line: hit.line,
-        message: `asI18n wraps a message or a template literal: ${hit.text}`,
-        hint: '`m.*()` is already an I18nString, so drop the wrapper. A template literal hides hardcoded copy: move it into a message key with params. asI18n is only for opaque runtime values.',
+        message: `Hardcoded text in JSX: "${hit.text}"`,
+        hint: 'Move the text into a message key and render `{m.your_key()}`, so it can be translated. Separators (`·`, `—`, `…`) are fine as they are. Copy in props is checked by jsx-literal-prop.',
+      })
+    }
+    for (const hit of asI18nArguments(dir)) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
+      findings.push({
+        id: 'as-i18n-argument',
+        severity: 'error',
+        step: 'checks',
+        file: at(hit.file),
+        line: hit.line,
+        message: `${at(hit.file)}:${hit.line} passes ${hit.kind} to asI18n: ${hit.text}`,
+        hint: 'pass a variable that already holds outside data; for your own copy add a message key and call m.<key>()',
+      })
+    }
+    for (const hit of sepArguments(dir)) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
+      findings.push({
+        id: 'sep-argument',
+        severity: 'error',
+        step: 'checks',
+        file: at(hit.file),
+        line: hit.line,
+        message: `${at(hit.file)}:${hit.line} sep() argument is ${hit.reason}: ${hit.text}`,
+        hint: 'sep() takes a literal of whitespace, punctuation and symbols only (for example " · " or "/"). Words, digits and anything that changes by language belong in a message key, m.<key>(), or Intl.ListFormat.',
+      })
+    }
+    for (const hit of asI18nStubs(dir)) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
+      findings.push({
+        id: 'i18n-stub',
+        severity: options.strict ? 'error' : 'warn',
+        step: 'checks',
+        file: at(hit.file),
+        line: hit.line,
+        message: `${at(hit.file)}:${hit.line} asI18nStub("${hit.copy}") — fixture text; productise before release`,
+        hint: 'Works in dev. Replace it with real data (asI18n(variable)) or a message key (m.<key>()) before release.',
+      })
+    }
+    for (const hit of stringLiteralCopy(dir, {
+      copyHelpers: options.copyHelpers,
+    })) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
+      findings.push({
+        id: 'string-literal-copy',
+        severity: options.strict ? 'error' : 'warn',
+        step: 'checks',
+        file: at(hit.file),
+        line: hit.line,
+        message: `${at(hit.file)}:${hit.line} "${hit.text.slice(0, 60)}" — English outside JSX; use m.<key>() or asI18n(variable)`,
+        hint: 'Text a person reads belongs in a message key (m.<key>()), or comes from outside data wrapped with asI18n(variable). Keys, ids, paths, class names and internal error messages are fine as they are; if this is one of those, add the folder to i18n.ignore.',
+      })
+    }
+    for (const hit of jsxLiteralProps(dir, {
+      helpers: options.copyHelpers,
+    })) {
+      if (ignored(hit.file) || !owned(dir, hit.file)) continue
+      findings.push({
+        id: 'jsx-literal-prop',
+        severity: 'warn',
+        step: 'checks',
+        file: at(hit.file),
+        line: hit.line,
+        message: `Hardcoded copy in ${hit.via === 'child' ? 'a JSX child expression' : hit.via.endsWith('()') ? `a ${hit.via} call` : `the ${hit.via} prop`}: "${hit.text}"`,
+        hint: 'Move the text into a message key and pass `m.your_key()` (with params for the parts that vary), so it can be translated. Class names, ids, links and code samples are fine as they are.',
       })
     }
   }
@@ -119,7 +213,12 @@ export async function runVerify(
     extra: Partial<VerifyStep> = {}
   ) => steps.push({ id, ok, durationMs, ...extra })
 
-  const checks = await timed(async () => runStaticChecks(project))
+  const checks = await timed(async () =>
+    runStaticChecks(project, {
+      copyHelpers: options.copyHelpers,
+      strict: options.strict,
+    })
+  )
   findings.push(...checks.value)
   add(
     'checks',
@@ -213,6 +312,68 @@ export async function runVerify(
     )
   }
 
+  /**
+   * The DOM-types gate (`@pikku/react/i18n-jsx`): a frontend that has a `tsconfig.i18n.json` is also compiled
+   * with it, and each error becomes an `i18n-gate` finding. No config file, no step. Errors the plain
+   * type-check already reported are not repeated.
+   */
+  const known = new Set<string>()
+  const i18nGate = async (gateDir: string, target: string) => {
+    const gateTarget = `${target} (${I18N_GATE_TSCONFIG})`
+    const { value, durationMs } = await timed(() =>
+      runTypecheck(
+        join(gateDir, I18N_GATE_TSCONFIG),
+        gateDir,
+        project.workspaceRoot,
+        options.typecheckTimeoutMs ?? 180_000
+      )
+    )
+    // one finding per file:line:code, whichever program (or earlier step) reported it first
+    const key = (f: VerifyFinding) => `${f.file}:${f.line}:${f.code}`
+    for (const f of findings) if (f.line !== undefined) known.add(key(f))
+    const found = value.result.diagnostics
+      .filter((d) => d.category === 'error')
+      .map((d): VerifyFinding => ({
+        id: 'i18n-gate',
+        severity: 'error',
+        step: 'frontend-typecheck',
+        code: `TS${d.code}`,
+        message: d.message,
+        ...(d.line > 0
+          ? {
+              file: relativeTo(
+                project.rootDir,
+                join(project.workspaceRoot, d.file)
+              ),
+              line: d.line,
+            }
+          : {}),
+        hint: 'Text shown to a person must go through i18n: put it in a message key and render `m.your_key()`, or wrap a value that comes from outside with `asI18n(value)`. A third-party component that takes plain text is outside this check.',
+      }))
+      .filter((f) => {
+        if (f.line === undefined) return true
+        const k = key(f)
+        if (known.has(k)) return false
+        known.add(k)
+        return true
+      })
+    findings.push(...found)
+    const ok = value.run.status === 0
+    if (!ok && value.result.diagnostics.length === 0) {
+      findings.push({
+        id: value.run.timedOut ? 'typecheck-timeout' : 'i18n-gate',
+        severity: 'error',
+        step: 'frontend-typecheck',
+        message: value.run.timedOut
+          ? `The i18n gate of ${target} did not finish in time.`
+          : value.run.error?.message ||
+            tail(value.run) ||
+            `tsc exited ${value.run.status}`,
+      })
+    }
+    add('frontend-typecheck', ok, durationMs, { target: gateTarget })
+  }
+
   const frontendTarget = (app: VerifyFrontend) =>
     relativeTo(project.workspaceRoot, app.dir)
   for (const app of options.frontends === false ? [] : project.frontends) {
@@ -246,7 +407,31 @@ export async function runVerify(
         app.dir,
         target
       )
+      if (existsSync(join(app.dir, I18N_GATE_TSCONFIG))) {
+        await i18nGate(app.dir, target)
+      }
     }
+  }
+
+  /**
+   * Library packages (`packages/*`, `packages/addons/*`, ...) that carry their own `tsconfig.i18n.json` are
+   * gated too, so a block library is checked on its own and not only through the app that imports it.
+   * Three programs at a time. An error two programs both report is one finding (`known`).
+   */
+  if (options.frontends !== false && codegenOk) {
+    const declared = new Set(project.frontends.map((f) => f.dir))
+    const extra = workspacePackageDirs(project.workspaceRoot).filter(
+      (d) => !declared.has(d) && existsSync(join(d, I18N_GATE_TSCONFIG))
+    )
+    let next = 0
+    await Promise.all(
+      Array.from({ length: Math.min(3, extra.length) }, async () => {
+        while (next < extra.length) {
+          const dir = extra[next++]!
+          await i18nGate(dir, relativeTo(project.workspaceRoot, dir))
+        }
+      })
+    )
   }
 
   const result: VerifyResult = {

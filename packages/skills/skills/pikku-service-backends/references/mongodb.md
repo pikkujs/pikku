@@ -1,5 +1,12 @@
 # MongoDB (`@pikku/mongodb`)
 
+## Contents
+
+- [`PikkuMongoDB` — connection wrapper](#pikkumongodb-connection-wrapper)
+- [Available services](#available-services)
+- [`MongoDBSecretService`](#mongodbsecretservice)
+- [Full setup](#full-setup)
+
 ```bash
 yarn add @pikku/mongodb
 ```

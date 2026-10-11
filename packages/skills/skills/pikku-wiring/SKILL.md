@@ -3,14 +3,15 @@ name: pikku-wiring
 description: >-
   Use when exposing a Pikku function over a transport — HTTP routes and SSE, WebSocket channels,
   typed realtime pub/sub, internal and exposed RPC, queue workers, cron schedules, event triggers,
-  MCP tools/resources/prompts, CLI commands, or a Slack gateway. Covers choosing the wiring, the
-  model every wiring shares, and what differs: which function type each needs, where a session
-  comes from, and which calls throw instead of returning. TRIGGER when: code uses wireHTTP,
-  defineHTTPRoutes, wireChannel, wireQueueWorker, wireScheduler, wireTrigger, wireTriggerSource,
-  wireCLI, wireMCPResource, wireMCPPrompt, `mcp: true`, `sse: true`, `expose: true`, rpc.invoke,
-  SlackGatewayAdapter, or the user asks how to expose, route, schedule, queue, stream or publish a
-  function. DO NOT TRIGGER when: writing the function body itself (use pikku-concepts), declaring
-  authorization (use pikku-auth), or serving the app on a runtime (use pikku-deploy).
+  MCP tools/resources/prompts, CLI commands, or a Slack gateway. Covers choosing the wiring, what
+  every wiring shares, and what differs: function type, session source, and which calls throw
+  instead of returning. TRIGGER when: code uses wireHTTP, defineHTTPRoutes, wireChannel,
+  wireQueueWorker, wireScheduler, wireTrigger, wireTriggerSource, wireCLI, wireMCPResource,
+  wireMCPPrompt, `mcp: true`, `sse: true`, `expose: true`, rpc.invoke, SlackGatewayAdapter, or the
+  user asks how to expose, route, schedule, queue, stream or publish a function. DO NOT TRIGGER
+  when: writing the function body (use pikku-concepts), authorization (use pikku-permissions), serving on
+  a runtime (use pikku-deploy), building a live-updating view (use pikku-realtime), or sending
+  outgoing webhooks (use pikku-webhook).
 installGroups: [core]
 ---
 
@@ -53,7 +54,7 @@ Three consequences that hold for every wiring below:
   are merged into the function's `data` argument.
 - **Permissions are never declared on the wiring.** Wire-level permissions were
   removed in #972 — declare them on the function (`pikkuFunc({ permissions })`,
-  see `pikku-auth`) or app-wide via `addGlobalPermission`. Tags and
+  see `pikku-permissions`) or app-wide via `addGlobalPermission`. Tags and
   patterns now target *middleware* only.
 - **The wire is the third argument**, not a service. `channel`, `rpc`, `session`,
   `setSession`, `mcp`, `queue`, `scheduledTask` and `cli` all live there.
@@ -83,15 +84,15 @@ subpath it exempts — the service implementations bootstrap picks.
 
 | Reach for | When | Reference |
 | --- | --- | --- |
-| **HTTP** | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only) | `references/http.md` |
+| **HTTP** | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only) | `references/http.md`; every field in `references/http-options.md` |
 | **Channel** | A hand-designed WebSocket protocol with your own action routing | `references/channel.md` |
-| **Realtime** | Typed pub/sub push — the scaffolded `/events` channel and SSE topics | `references/realtime.md` |
+| **Realtime** | Typed pub/sub push — the scaffolded `/events` channel and SSE topics, plus subscribing to any other `sse: true` route or channel from the client | `references/realtime.md` |
 | **RPC** | One function calling another, or dispatching a name from outside | `references/rpc.md` |
 | **Queue** | Reliable background work that must survive a crash and retry | `references/queue.md` |
 | **Scheduler** | Recurring work on a cron expression | `references/scheduler.md` |
 | **Trigger** | Reacting in-process to an external event source (Redis pub/sub, PG LISTEN) | `references/trigger.md` |
 | **MCP** | Exposing functions to an AI assistant as tools, resources or prompts | `references/mcp.md` |
-| **CLI** | A terminal program with commands, subcommands and options | `references/cli.md` |
+| **CLI** | A terminal program with commands, subcommands and options | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
 | **Gateway** | An inbound integration from a third-party product — Slack is the shipped adapter | `references/gateway-slack.md` |
 
 Realtime and Channel are the pair most often confused. If the shape is "server

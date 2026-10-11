@@ -9,6 +9,7 @@ import {
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { INSERTED, insertOrIgnore, isMysql, upsert } from './kysely-upsert.js'
 import { scopeSchema } from './schema/scope.schema.js'
 
 /**
@@ -46,22 +47,18 @@ export class KyselyScopeService implements ScopeService {
   async syncScopes(scopes: FlatScope[]): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       if (scopes.length > 0) {
-        await trx
-          .insertInto('pikkuScopes')
-          .values(
+        await upsert(
+          trx,
+          trx.insertInto('pikkuScopes').values(
             scopes.map((scope) => ({
               name: scope.id,
               description: scope.description ?? null,
               declared: true,
             }))
-          )
-          .onConflict((oc) =>
-            oc.column('name').doUpdateSet((eb) => ({
-              description: eb.ref('excluded.description'),
-              declared: true,
-            }))
-          )
-          .execute()
+          ),
+          ['name'],
+          { description: INSERTED, declared: true }
+        ).execute()
       }
 
       const markStale = trx.updateTable('pikkuScopes').set({ declared: false })
@@ -124,22 +121,17 @@ export class KyselyScopeService implements ScopeService {
   async syncSystemRoles(roles: SystemRole[]): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       for (const role of roles) {
-        await trx
-          .insertInto('pikkuRoles')
-          .values({
+        await upsert(
+          trx,
+          trx.insertInto('pikkuRoles').values({
             name: role.name,
             description: role.description ?? null,
             system: true,
             declared: true,
-          })
-          .onConflict((oc) =>
-            oc.column('name').doUpdateSet((eb) => ({
-              description: eb.ref('excluded.description'),
-              system: true,
-              declared: true,
-            }))
-          )
-          .execute()
+          }),
+          ['name'],
+          { description: INSERTED, system: true, declared: true }
+        ).execute()
 
         await trx
           .deleteFrom('pikkuRoleScopes')
@@ -270,11 +262,13 @@ export class KyselyScopeService implements ScopeService {
     role: string,
     grantedBy?: string
   ): Promise<void> {
-    await this.db
-      .insertInto('pikkuUserRole')
-      .values({ userId, role, grantedBy: grantedBy ?? null })
-      .onConflict((oc) => oc.columns(['userId', 'role']).doNothing())
-      .execute()
+    await insertOrIgnore(
+      this.db,
+      this.db
+        .insertInto('pikkuUserRole')
+        .values({ userId, role, grantedBy: grantedBy ?? null }),
+      ['userId', 'role']
+    ).execute()
   }
 
   async removeUserFromRole(userId: string, role: string): Promise<void> {
@@ -336,11 +330,13 @@ export class KyselyScopeService implements ScopeService {
     scope: string,
     grantedBy?: string
   ): Promise<void> {
-    await this.db
-      .insertInto('pikkuUserScope')
-      .values({ userId, scope, grantedBy: grantedBy ?? null })
-      .onConflict((oc) => oc.columns(['userId', 'scope']).doNothing())
-      .execute()
+    await insertOrIgnore(
+      this.db,
+      this.db
+        .insertInto('pikkuUserScope')
+        .values({ userId, scope, grantedBy: grantedBy ?? null }),
+      ['userId', 'scope']
+    ).execute()
   }
 
   async removeScopeFromUser(userId: string, scope: string): Promise<void> {
@@ -396,14 +392,32 @@ export class KyselyScopeService implements ScopeService {
     }
 
     const names = stale.map((s) => s.scope)
-    const deleted = await this.db
-      .deleteFrom('pikkuScopes')
-      .where('name', 'in', names)
-      .where('declared', '=', false)
-      .returning('name')
-      .execute()
-
-    return deleted.map((r) => r.name)
+    // MySQL has no `returning`: read what the delete's predicate matches inside
+    // the same transaction, then delete it.
+    return this.db.transaction().execute(async (trx) => {
+      const matching = () =>
+        trx
+          .selectFrom('pikkuScopes')
+          .select('name')
+          .where('name', 'in', names)
+          .where('declared', '=', false)
+      if (isMysql(trx)) {
+        const rows = await matching().forUpdate().execute()
+        await trx
+          .deleteFrom('pikkuScopes')
+          .where('name', 'in', names)
+          .where('declared', '=', false)
+          .execute()
+        return rows.map((r) => r.name)
+      }
+      const deleted = await trx
+        .deleteFrom('pikkuScopes')
+        .where('name', 'in', names)
+        .where('declared', '=', false)
+        .returning('name')
+        .execute()
+      return deleted.map((r) => r.name)
+    })
   }
 
   /**
@@ -444,18 +458,33 @@ export class KyselyScopeService implements ScopeService {
       return []
     }
 
-    const deleted = await this.db
-      .deleteFrom('pikkuRoles')
-      .where(
-        'name',
-        'in',
-        stale.map((s) => s.role)
-      )
-      .where('system', '=', true)
-      .where('declared', '=', false)
-      .returning('name')
-      .execute()
-
-    return deleted.map((r) => r.name)
+    const names = stale.map((s) => s.role)
+    return this.db.transaction().execute(async (trx) => {
+      if (isMysql(trx)) {
+        const rows = await trx
+          .selectFrom('pikkuRoles')
+          .select('name')
+          .where('name', 'in', names)
+          .where('system', '=', true)
+          .where('declared', '=', false)
+          .forUpdate()
+          .execute()
+        await trx
+          .deleteFrom('pikkuRoles')
+          .where('name', 'in', names)
+          .where('system', '=', true)
+          .where('declared', '=', false)
+          .execute()
+        return rows.map((r) => r.name)
+      }
+      const deleted = await trx
+        .deleteFrom('pikkuRoles')
+        .where('name', 'in', names)
+        .where('system', '=', true)
+        .where('declared', '=', false)
+        .returning('name')
+        .execute()
+      return deleted.map((r) => r.name)
+    })
   }
 }

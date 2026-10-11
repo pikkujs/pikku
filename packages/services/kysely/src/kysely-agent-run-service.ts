@@ -12,7 +12,7 @@ import { parseJson } from './kysely-json.js'
 // Owner ids routinely contain `_` (e.g. `user_123`), which LIKE treats as a
 // single-character wildcard — so a raw prefix would match a foreign owner.
 const escapeLikePattern = (value: string) =>
-  value.replace(/[\\%_]/g, (char) => `\\${char}`)
+  value.replace(/[!%_]/g, (char) => `!${char}`)
 
 export class KyselyAgentRunService implements AgentRunService {
   constructor(private db: Kysely<KyselyPikkuDB>) {}
@@ -71,7 +71,7 @@ export class KyselyAgentRunService implements AgentRunService {
             eb(
               't.resourceId',
               'like',
-              sql<string>`${`${escapeLikePattern(owner)}:%`} escape '\\'`
+              sql<string>`${`${escapeLikePattern(owner)}:%`} escape '!'`
             ),
           ])
         )

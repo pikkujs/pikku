@@ -3,7 +3,7 @@ name: pikku-architect
 description: >-
   Use to turn one claimed changeset into the technical plan its build is measured against —
   the tables, functions, wires, roles, scopes, screens and scenarios it owes, split into passes and
-  written through `pikku knowledge plan set <changeset>`. The plan is the denominator
+  written through `pikku knowledge plan set`. The plan is the denominator
   `pikku knowledge plan progress` divides by, so it is written BEFORE any of the changeset's code
   exists and never edited afterwards to match what got built. TRIGGER when: `pikku changes
   claim` says a changeset needs a plan, `changes done` or `pikku changes next` refuses one for having no

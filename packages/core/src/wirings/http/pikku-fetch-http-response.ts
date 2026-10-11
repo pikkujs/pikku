@@ -12,6 +12,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #send: ((data: string) => void) | null = null
   #close: (() => void) | null = null
   #cancelStream: (() => void) | null = null
+  #onClose: Array<() => void> = []
 
   public setMode(mode: 'stream') {
     this.#responseMode = 'stream'
@@ -115,6 +116,16 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public onClose(callback: () => void): void {
+    this.#onClose.push(callback)
+  }
+
+  #closed() {
+    const callbacks = this.#onClose
+    this.#onClose = []
+    for (const callback of callbacks) callback()
+  }
+
   public toResponse(args?: Record<string, any>): Response {
     const cookieHeader = Array.from(this.#cookies.entries()).map(
       ([name, { value, flags }]) =>
@@ -143,10 +154,12 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
           if (closed) return
           closed = true
           controller.close()
+          this.#closed()
         }
 
         this.#cancelStream = () => {
           closed = true
+          this.#closed()
         }
 
         this.#send = send

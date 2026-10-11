@@ -1,5 +1,13 @@
 # Cloudflare Workers
 
+## Contents
+
+- Worker entry
+- Service setup — do not hand-roll this
+- HTTP
+- Scheduled tasks
+- WebSocket (Durable Objects)
+
 ```bash
 yarn add @pikku/cloudflare
 ```

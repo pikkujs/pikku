@@ -25,7 +25,7 @@ const runner = new VercelAgentRunner(
 
 - `stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>` — Stream AI responses with tool calls
 - `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming)
-- `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see `references/voice.md`
+- `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see the voice reference
 - `generateImage`, `embed`, `embedMany`, `rerank` — the remaining AI SDK surfaces
 - `withApiKey(apiKey)` — returns a **new** runner built from `providerFactory`; returns `this` unchanged when no factory was supplied or the key is blank. This is the per-user-credential path
 
@@ -85,7 +85,7 @@ export const assistant = pikkuAgent({
 ```
 
 There is no `wireAgent` — agents are declared with `pikkuAgent` from the
-generated agent types. See `references/agents.md` for the full config.
+generated agent types. The full config is in the agents reference.
 
 ### Testing without a real provider
 

@@ -1,5 +1,11 @@
 # Pikku CLI Wiring
 
+## Contents
+
+- API Reference
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 ### `wireCLI(config)`
@@ -212,4 +218,4 @@ session for local runs. Don't hand-write or edit the generated channel file.
 
 ## Complete Example
 
-For a full functions + renderers + nested-subcommand wiring walkthrough, see `cli-complete-example.md`.
+For a full functions + renderers + nested-subcommand wiring walkthrough, see the CLI complete example listed in `SKILL.md`.

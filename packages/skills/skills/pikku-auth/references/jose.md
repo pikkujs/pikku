@@ -1,5 +1,11 @@
 # Pikku Jose (JWT Service)
 
+## Contents
+
+- [Installation](#installation)
+- [API Reference](#api-reference)
+- [Usage Patterns](#usage-patterns)
+
 
 ## Installation
 

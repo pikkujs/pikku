@@ -50,6 +50,7 @@ import { TopicRef } from './events.schemas.gen.js'
  */
 
 export const realtimeSubscribe = pikkuChannelFunc({
+  tags: ['pikku'],
   input: TopicRef,
   func: async ({ eventHub }, { topic }, { channel }) => {
     await eventHub?.subscribe(topic, channel.channelId)
@@ -57,6 +58,7 @@ export const realtimeSubscribe = pikkuChannelFunc({
 })
 
 export const realtimeUnsubscribe = pikkuChannelFunc({
+  tags: ['pikku'],
   input: TopicRef,
   func: async ({ eventHub }, { topic }, { channel }) => {
     await eventHub?.unsubscribe(topic, channel.channelId)
@@ -86,6 +88,7 @@ wireChannel({
  * cleans up automatically when the channel closes (onChannelClosed).
  */
 export const realtimeEventStream = pikkuSessionlessFunc({
+  tags: ['pikku'],
   input: TopicRef,
   description: 'Auto-generated SSE stream for a single event-hub topic',
   func: async ({ eventHub }, { topic }, { channel }) => {

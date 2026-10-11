@@ -10,7 +10,7 @@ type Clause = { field: string; operator?: string; value: any }
  * Only the operators the function is allowed to use. Anything else throws
  * rather than guessing, which is what pins the query away from `ne` on a
  * nullable marker column — the shape that empties the directory on a host
- * whose migration left `actor` or `fabric` NULL.
+ * whose migration left `actor` NULL.
  */
 const matches = (row: Row, where: Clause[]) =>
   where.every((clause) => {
@@ -20,6 +20,8 @@ const matches = (row: Row, where: Clause[]) =>
         return value === clause.value
       case 'contains':
         return typeof value === 'string' && value.includes(clause.value)
+      case 'ends_with':
+        return typeof value === 'string' && value.endsWith(clause.value)
       case 'not_in':
         return !(clause.value as any[]).includes(value)
       default:
@@ -35,7 +37,7 @@ type FakeOptions = {
 
 const fakeAuth = (
   rows: Row[],
-  { declared = ['actor', 'fabric'], additionalFields = {} }: FakeOptions = {}
+  { declared = ['actor'], additionalFields = {} }: FakeOptions = {}
 ) =>
   (async () => ({
     $context: Promise.resolve({
@@ -83,11 +85,11 @@ const call = (
 ) => (listUsers as any).func(services, data, { session })
 
 describe('admin listUsers — who is in the directory', () => {
-  test('leaves out actors, fabric users and the platform principal', async () => {
+  test('leaves out actors, .internal service accounts and the platform principal', async () => {
     const auth = fakeAuth([
       person('alice', 3),
       person('bot', 2, { actor: true }),
-      person('operator', 1, { fabric: true }),
+      person('operator', 1, { email: 'operator-1@host.internal' }),
       person('pikku-platform', 0),
     ])
 

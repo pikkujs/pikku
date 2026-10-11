@@ -3,15 +3,14 @@ name: pikku-knowledge
 description: >-
   Use when writing, reading, reorganising or validating a project's knowledge/ directory — the
   notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
-  note (path-as-identity markdown, YAML frontmatter, only `type` required), the app-project
-  profile's sections (entities, decisions, questions, wishlist) and what each answers, how notes
-  become changes (`pikku knowledge gaps`), the changeset plan, the `resource:` URI scheme tying a
-  note to its code, what is NOT a knowledge base, and `pikku knowledge validate|index|gaps`. TRIGGER when: user asks to
-  write down a decision, requirement, entity or open question; asks what the app does or is; asks
-  about knowledge/, notes, an index.md, or a diagram, callout or decision block; or
-  hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes,
-  tables or permissions exist (that is `pikku meta` / `pikku info`, never a note), or to write a
-  scenario test (use pikku-scenario).
+  note (path-as-identity markdown, only `type` required), the sections (entities, decisions,
+  questions, wishlist), how notes become changes (`pikku knowledge
+  gaps`), the `resource:` URI scheme tying a note to its code, and `pikku knowledge validate|index|gaps`. TRIGGER when: user asks to write down a decision,
+  requirement, entity or open question; asks what the app does or is; asks about knowledge/
+  notes or a diagram, callout or decision block; or hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes, tables or permissions exist
+  (`pikku meta` / `pikku info`, never a note), wants a scenario test (use pikku-scenario), writes a
+  changeset plan (use pikku-architect), or extracts a `.knowledge/` blueprint from a legacy repo
+  (use pikku-software-archaeology).
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
@@ -31,7 +30,7 @@ The knowledge base is `knowledge/` at the repo root: markdown notes about **what
 
 Not to be confused with `.knowledge/` — the dot-prefixed JSON blueprint that `pikku-software-archaeology` extracts from a legacy repo. Different directory, different format, different purpose.
 
-## Agent Operating Procedure
+## Operating procedure
 
 1. **Read `knowledge/index.md` first**, then the section index for whatever you are about to touch. It is the cheapest way to learn what the app already claims about itself.
 2. Before writing a note, ask whether `pikku meta` already answers it. If it does, do not write the note — see _What never goes in a note_.

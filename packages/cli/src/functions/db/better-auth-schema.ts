@@ -223,7 +223,9 @@ async function loadAuthConfig(opts: {
  * host already has, so a real unhandled rejection anywhere else still behaves
  * exactly as it did.
  */
-async function withoutPluginInitCrashing<T>(build: () => T | Promise<T>): Promise<T> {
+async function withoutPluginInitCrashing<T>(
+  build: () => T | Promise<T>
+): Promise<T> {
   const existing = process.listeners('unhandledRejection')
   const swallow = (reason: unknown) => {
     const message = reason instanceof Error ? reason.message : String(reason)
@@ -281,9 +283,29 @@ export async function loadAuthOptions(opts: {
   return options ?? null
 }
 
+/**
+ * Better Auth's migration builder, for the database the schema is being derived
+ * against.
+ *
+ * `dialect` overrides `database.type`. An app's auth factory names its dialect
+ * once, often by a default (the starter template says `sqlite`), while the CLI
+ * knows which database it is actually deriving the schema for. Left to the
+ * factory, a MySQL project got SQLite's introspection queries (`pragma
+ * index_list`) sent to the server and SQLite column types in the SQL it
+ * generated. The override applies only to a Kysely-backed `database` (one that
+ * carries `db`); any other adapter has no dialect to correct.
+ */
 export async function getAuthMigrations(
-  authOptions: BetterAuthOptionsLike
+  authOptions: BetterAuthOptionsLike,
+  dialect?: 'sqlite' | 'postgres' | 'mysql'
 ): Promise<GetMigrationsResult> {
   const getMigrations = await loadGetMigrations()
+  const database = authOptions.database
+  if (dialect && database && 'db' in database && database.db) {
+    return getMigrations({
+      ...authOptions,
+      database: { ...database, type: dialect },
+    })
+  }
   return getMigrations(authOptions)
 }

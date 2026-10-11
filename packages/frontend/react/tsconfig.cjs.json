@@ -8,5 +8,5 @@
     "target": "es2015",
     "moduleResolution": "node"
   },
-  "exclude": ["**/*.test.ts", "node_modules", "dist"]
+  "exclude": ["**/*.test.ts", "**/*.test-d.ts", "**/*.test-d.tsx", "node_modules", "dist"]
 }

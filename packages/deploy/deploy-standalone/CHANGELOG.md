@@ -1,5 +1,13 @@
 # @pikku/deploy-standalone
 
+## 0.12.26
+
+### Patch Changes
+
+- e0846b5: A knowledge note can cite a stored file as `content:bucket/key`, checked against the project's local content directory. `StandaloneProviderAdapter` takes a `port` option that sets the default `PORT` of the generated entry and its `.env.example`.
+- Updated dependencies [51ec3ac]
+  - @pikku/migrator-sql@0.12.8
+
 ## 0.12.25
 
 ### Patch Changes

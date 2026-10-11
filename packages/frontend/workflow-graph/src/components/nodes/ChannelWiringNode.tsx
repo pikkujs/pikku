@@ -2,10 +2,10 @@ import React from 'react'
 import type { Node } from '@xyflow/react'
 import type { GraphNodeProps } from '../../types'
 import { Handle, Position } from '@xyflow/react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
+import { nodeColor } from '../../colors'
 import { useGraphActions } from '../../context/GraphHostContext'
 
 interface ChannelWiringNodeData {
@@ -15,6 +15,13 @@ interface ChannelWiringNodeData {
   onDisconnect?: string
   onMessage?: string
   onMessageRoute?: Record<string, string>
+}
+
+/** Handler names are code identifiers shown as written, not copy to translate. */
+const HANDLER_NAMES: Record<string, string> = {
+  onConnect: 'onConnect',
+  onMessage: 'onMessage',
+  onDisconnect: 'onDisconnect',
 }
 
 interface HandlerRowProps {
@@ -29,22 +36,10 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
   hasTarget,
 }) => {
   return (
-    <Box
-      px="xs"
-      pl="md"
-      py={4}
-      style={{
-        position: 'relative',
-        opacity: hasTarget ? 1 : 0.4,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}
+    <div
+      className={`relative flex items-center justify-between gap-2 py-1 pl-4 pr-2 ${hasTarget ? '' : 'opacity-40'}`}
     >
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
+      <span className="text-sm text-muted-foreground">{label}</span>
       {hasTarget && (
         <>
           <ArrowRight size={12} />
@@ -53,7 +48,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
             position={Position.Right}
             id={handleId}
             style={{
-              background: 'var(--mantine-color-teal-6)',
+              background: nodeColor('channel'),
               width: 8,
               height: 8,
               right: -4,
@@ -61,7 +56,7 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
           />
         </>
       )}
-    </Box>
+    </div>
   )
 }
 
@@ -69,7 +64,6 @@ export const ChannelWiringNode: React.FC<
   GraphNodeProps<ChannelWiringNodeData>
 > = ({ data, id }) => {
   const { openWorkflowStep } = useGraphActions()
-  const theme = useMantineTheme()
 
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'trigger')
@@ -80,56 +74,41 @@ export const ChannelWiringNode: React.FC<
     : []
 
   return (
-    <Paper
-      shadow="md"
-      radius="md"
-      w={180}
-      style={{
-        cursor: 'pointer',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
+    <div
+      className="relative w-[180px] cursor-pointer overflow-hidden rounded-md border bg-card text-card-foreground shadow-md"
       onClick={handleClick}
     >
-      <Box
-        pos="absolute"
-        left={0}
-        top={0}
-        bottom={0}
-        w={4}
-        style={{
-          backgroundColor: theme.colors.gray[5],
-          borderTopLeftRadius: theme.radius.md,
-          borderBottomLeftRadius: theme.radius.md,
-        }}
-      />
+      <div className="absolute bottom-0 left-0 top-0 w-1 rounded-l-md bg-muted-foreground" />
 
-      <Stack gap={0} py={4}>
+      <div className="flex flex-col py-1">
         <HandlerRow
-          label={asI18n('onConnect')}
+          label={asI18n(HANDLER_NAMES.onConnect)}
           handleId="onConnect"
           hasTarget={!!data.onConnect}
         />
         <HandlerRow
-          label={asI18n('onMessage')}
+          label={asI18n(HANDLER_NAMES.onMessage)}
           handleId="onMessage"
           hasTarget={!!data.onMessage}
         />
-        {routeEntries.map(([route, target]) => (
-          <HandlerRow
-            key={route}
-            label={asI18n(`→ ${route}`)}
-            handleId={`route-${route}`}
-            hasTarget={!!target}
-          />
-        ))}
+        {routeEntries.map(([route, target]) => {
+          const routeLabel: string = `→ ${route}`
+          return (
+            <HandlerRow
+              key={route}
+              label={asI18n(routeLabel)}
+              handleId={`route-${route}`}
+              hasTarget={!!target}
+            />
+          )
+        })}
         <HandlerRow
-          label={asI18n('onDisconnect')}
+          label={asI18n(HANDLER_NAMES.onDisconnect)}
           handleId="onDisconnect"
           hasTarget={!!data.onDisconnect}
         />
-      </Stack>
-    </Paper>
+      </div>
+    </div>
   )
 }
 
@@ -149,7 +128,7 @@ export const getChannelWiringNodeConfig = (
     type: 'channelWiringNode',
     position,
     data: {
-      colorKey: 'teal',
+      colorKey: 'channel',
       channelName: wire.name || 'Channel',
       onConnect: wire.onConnect,
       onDisconnect: wire.onDisconnect,

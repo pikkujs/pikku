@@ -1,5 +1,17 @@
 # Product Second Opinion
 
+## Contents
+
+- Overview
+- The cardinal rule: translate, don't dump
+- Report structure (layered — skim or dive)
+- Rewire vs rebuild (say which)
+- The frontend and the other ways your app is used
+- Technology choices — the honest tradeoffs (don't be cheap on the cons)
+- Delivery
+- Red flags — you're writing the wrong report
+- Relationship to the extraction phase
+
 ## Overview
 
 Turn an extracted product blueprint into a **report a non-technical owner can act on**. Two jobs, in one voice: (1) explain, in plain language, how the app they're stuck with actually works; (2) give an honest, opinionated second opinion — what's solid, what's holding them back, and how you'd build it better, argued in business outcomes, not architecture.
@@ -110,7 +122,7 @@ Worth naming when it applies: adopting one coherent system in place of hand-roll
 
 ### The stack a rebuild would land on
 
-Include this section **only if you are actually recommending a rebuild** onto it — and then give every part of it the same both-sides treatment you gave the app's own bets, per the "hold your own recommendation to the same bar" rule above. These are not choices the app made; they are choices you are proposing, which is exactly why their costs are the reader's to weigh. The Pikku target stack is Pikku + Better Auth + TanStack Start + Mantine; the framings below are reference material for the parts you actually recommend, not a script to recite.
+Include this section **only if you are actually recommending a rebuild** onto it — and then give every part of it the same both-sides treatment you gave the app's own bets, per the "hold your own recommendation to the same bar" rule above. These are not choices the app made; they are choices you are proposing, which is exactly why their costs are the reader's to weigh. The Pikku target stack is Pikku + Better Auth + TanStack Start + shadcn; the framings below are reference material for the parts you actually recommend, not a script to recite.
 
 **Better Auth (self-hosted sign-in) — instead of a paid service like Auth0/Clerk.**
 

@@ -108,7 +108,14 @@ export async function createMysqlKysely<DB>(
   options: CreateMysqlKyselyOptions
 ): Promise<Kysely<DB>> {
   const { createPool } = await import('mysql2')
-  const pool = createPool({ uri: options.url, connectionLimit: 10 })
+  // decimalNumbers: DECIMAL comes back a string by default, while the
+  // generated types say number. BIGINT stays a number (mysql2's default, exact
+  // to 2^53), which is what the types say too.
+  const pool = createPool({
+    uri: options.url,
+    connectionLimit: 10,
+    decimalNumbers: true,
+  })
   return new Kysely<DB>({
     dialect: new MysqlDialect({ pool }),
     plugins: [

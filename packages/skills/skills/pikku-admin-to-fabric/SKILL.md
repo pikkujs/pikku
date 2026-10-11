@@ -1,13 +1,13 @@
 ---
 name: pikku-admin-to-fabric
-description: 'Port a legacy back-office admin (ActiveAdmin, Django admin, Rails Admin, Laravel Nova, Filament) to Fabric admin screens, driven by a `.knowledge/` Product Blueprint. Covers the admin-DSL→Fabric mapping (resources→screens, index/column→tables, filter→query params, scope→query variants, member_action/collection_action→pikkuFuncs, permit_params→input schemas), the "the admin is half your app" audit, and admin-specific permissions. TRIGGER when: porting/rebuilding a legacy app that has a generated/DSL-driven admin, or the user says "port the admin screens" / "implement the admin". DO NOT TRIGGER when: no legacy admin exists (use pikku-fabric to build screens fresh), or the app is being extended rather than ported (use pikku-build).'
+description: 'Port a legacy back-office admin (ActiveAdmin, Django admin, Rails Admin, Laravel Nova, Filament) to Fabric admin screens, driven by a `.knowledge/` Product Blueprint. Covers the admin-DSL→Fabric mapping (resources→screens, index/column→tables, filter→query params, scope→query variants, member_action/collection_action→pikkuFuncs, permit_params→input schemas), the "the admin is half your app" audit, and admin-specific permissions. TRIGGER when: the legacy app being ported has a generated/DSL-driven admin, or the user says "port the admin screens" / "implement the admin"; used per resource alongside pikku-blueprint-to-fabric, which owns the rest of the port. DO NOT TRIGGER when: no legacy admin exists (use pikku-fabric to build screens fresh), no blueprint exists yet (use pikku-software-archaeology), or the app is being extended rather than ported (use pikku-build).'
 installGroups: [fabric]
 argument-hint: '<path to .knowledge/> [resource to port next]'
 ---
 
 # Legacy admin → Fabric admin screens
 
-## Agent Operating Procedure
+## Operating procedure
 
 1. **Count first.** How many commands cite the admin? That number decides whether this is a chore or a third of the project.
 2. **The blueprint already has the commands.** Do not re-derive them from the DSL. Map to them.
@@ -71,10 +71,10 @@ grep -rhoE "(member_action|collection_action) :[a-z_]+" app/admin/*.rb | sort -u
 | Legacy | Also called | Becomes in Fabric |
 |---|---|---|
 | `ActiveAdmin.register X` / `class XAdmin` | resource, ModelAdmin, Nova Resource | one TanStack route + one screen |
-| `index do … column :x` | `list_display`, `columns()` | a Mantine `Table`/`DataTable`, columns from the query's return type |
+| `index do … column :x` | `list_display`, `columns()` | a shadcn `Table`/data table, columns from the query's return type |
 | `filter :x` | `list_filter`, `searchable` | typed input fields on the list query |
 | `scope :active` | `get_queryset` variants, `Nova::Filters` | a named variant of the list query — NOT a new function per scope |
-| `form do f.input …` | `fields()`, `fieldsets` | a Mantine form; inputs from the command's zod input schema |
+| `form do f.input …` | `fields()`, `fieldsets` | a shadcn form; inputs from the command's zod input schema |
 | `permit_params` | `fields`, `$fillable` | you already have this: it is the command's input schema. Cross-check, don't re-derive. |
 | `member_action :foo` | custom action, `Nova::Actions` | **a `pikkuFunc`** — almost always already in `commands.json` |
 | `collection_action :foo` | bulk action | a `pikkuFunc` taking a set |
@@ -154,7 +154,7 @@ impersonation and editing an FAQ all guarded identically.
 - Columns come from the query's return type. If a column exists in the DSL but not
   in the type, the DSL was computing it in Ruby per row — that is an N+1 wearing a
   column, and it belongs in the query.
-- Reuse the app's Mantine theme. An admin styled differently from the product is
+- Reuse the app's theme. An admin styled differently from the product is
   how design systems fork.
 - **Server-computed charts** (chartkick/groupdate and friends) do not port. The
   aggregation becomes a real query; the plot becomes a chart component. This is the
@@ -190,23 +190,9 @@ Per resource, the parity report records:
 | "The admin action isn't in commands.json, I'll add it" | Stop. Either the archaeology missed it (fix the blueprint) or it is dead. Both are findings. |
 | "I'll restyle the admin, it's internal" | An admin off the product's theme is how a design system forks. |
 
-## Quick Reference
-
-```bash
-# 1. how much of the app is actually the admin?
-node -e "const c=require('./.knowledge/commands.json').commands;console.log(c.filter(x=>(x.evidence||[]).some(e=>(e.file||'').match(/admin/))).length+'/'+c.length)"
-
-# 2. inventory the capabilities (not the buttons)
-grep -rhoE "(member_action|collection_action) :[a-z_]+" app/admin/*.rb | sort -u
-
-# 3. per resource: map actions -> commands.json, then build the screen
-# 4. verify
-pikku all && pikku fabric validate --json
-```
-
 ## Related skills
 
 - **pikku-software-archaeology** — produces the `.knowledge/` blueprint this needs.
 - **pikku-blueprint-to-fabric** — the parent port; run this per-domain alongside it.
-- **pikku-auth** — roles, ban and impersonation, and the scopes that gate them.
-- **pikku-fabric** — screens, theme, Mantine conventions.
+- **pikku-auth** — roles, ban and impersonation; **pikku-permissions** — the scopes that gate them.
+- **pikku-fabric** — screens, theme, shadcn conventions.

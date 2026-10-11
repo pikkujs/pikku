@@ -43,7 +43,6 @@ import { registerScenarioInstrumentation } from '../wirings/scenarios/register-s
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
-import { resolveConsoleMount } from './serve-console.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import {
@@ -54,6 +53,8 @@ import {
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
+import { addGlobalMiddleware } from '@pikku/core/middleware'
+import { startRunTelemetry } from '../../utils/run-telemetry.js'
 import { servedFrontend } from '../../utils/frontend.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -86,6 +87,7 @@ export const dev = pikkuSessionlessFunc<
     )
     enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
+    const telemetry = startRunTelemetry({ rootDir: config.rootDir, command: 'dev' })
     if (test) {
       process.env.PIKKU_TEST_RUN = 'true'
     }
@@ -230,6 +232,7 @@ export const dev = pikkuSessionlessFunc<
     }
 
     await loadUserBootstrap(pikkuDir)
+    if (telemetry.middleware) addGlobalMiddleware([telemetry.middleware])
 
     // Scenario instrumentation exists only on a development server: the runner
     // calls it over RPC to reset and snapshot coverage and stub calls. It is
@@ -375,16 +378,7 @@ export const dev = pikkuSessionlessFunc<
       return m[serverLifecycleFactory.variable]
     }
 
-    const consoleMount = await resolveConsoleMount()
-
-    // Appended, not assigned: an app's own config may already declare mounts
-    // for its frontend, and dev is where that frontend is meant to be served.
-    // Replacing them meant the console being present silently unmounted the
-    // app, which is the one combination every project has.
-    const staticMounts = [
-      ...(userConfig.staticMounts ?? []),
-      ...(consoleMount ? [consoleMount] : []),
-    ]
+    const staticMounts = userConfig.staticMounts ?? []
 
     /**
      * Hand the server the generated MCP manifests so it actually serves MCP.
@@ -424,12 +418,6 @@ export const dev = pikkuSessionlessFunc<
     // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
     // announced from here has to name the one it actually handed out.
     const boundPort = pikkuServer.port
-
-    if (consoleMount) {
-      logger.info(
-        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
-      )
-    }
 
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own

@@ -2,7 +2,7 @@ import { BadRequestError, LocalEnvironmentOnlyError } from '#pikku/addon/error'
 import { pikkuFunc } from '#pikku/addon/function'
 
 export const deleteI18nLocale = pikkuFunc<
-  { app: string; locale: string },
+  { app: string; locale: string; catalog?: string },
   { ok: true }
 >({
   title: 'Delete Locale',
@@ -10,13 +10,13 @@ export const deleteI18nLocale = pikkuFunc<
     "Removes a locale's messages from a frontend; the base locale cannot be removed.",
   expose: true,
   scopes: ['pikku:console:i18n:write'],
-  func: async ({ i18nService }, { app, locale }) => {
+  func: async ({ i18nService }, { app, locale, catalog }) => {
     if (!i18nService)
       throw new LocalEnvironmentOnlyError(
         'Only available in local development mode'
       )
     try {
-      await i18nService.deleteLocale(app, locale)
+      await i18nService.deleteLocale(app, locale, catalog)
     } catch (error) {
       throw new BadRequestError(
         error instanceof Error ? error.message : String(error)

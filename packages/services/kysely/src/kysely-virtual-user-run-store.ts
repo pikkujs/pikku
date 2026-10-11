@@ -17,6 +17,7 @@ import type {
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
 import { virtualUserSchema } from './schema/virtual-user.schema.js'
+import { timestampParam } from './kysely-upsert.js'
 
 /**
  * Records virtual-user runs in a `virtualUserRun` table.
@@ -98,7 +99,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
         memory: JSON.stringify(outcome.memory),
         intents: JSON.stringify(outcome.intents),
         stoppedBy: outcome.stoppedBy,
-        finishedAt: new Date().toISOString(),
+        finishedAt: timestampParam(this.db) as unknown as string,
       })
       .where('runId', '=', runId)
       .executeTakeFirst()
@@ -115,7 +116,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
       .set({
         status: 'failed',
         error,
-        finishedAt: new Date().toISOString(),
+        finishedAt: timestampParam(this.db) as unknown as string,
       })
       .where('runId', '=', runId)
       .execute()

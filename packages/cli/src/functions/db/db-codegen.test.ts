@@ -549,9 +549,35 @@ describe('mysql typing', () => {
     assert.match(out, /seenAt: ColumnType<Private<Date>/)
   })
 
-  test('TINYINT(1) stays a number rather than being guessed a boolean', async () => {
-    const out = await generated([col({ name: 'active', type: 'tinyint(1)' })])
-    assert.match(out, /active: ColumnType<Private<number>/)
+  test('TINYINT(1) is a boolean, coerced at runtime because mysql2 hands back 0/1', async () => {
+    const result = await run(
+      [col({ name: 'active', type: 'tinyint(1)' })],
+      undefined,
+      'mysql'
+    )
+    assert.match(
+      readFileSync(result.outFile, 'utf8'),
+      /active: ColumnType<Private<boolean>, boolean \| number/
+    )
+    assert.match(readFileSync(result.coercionFile, 'utf8'), /"active": "bool"/)
+  })
+
+  test('a wider TINYINT and an explicit tsType stay numbers', async () => {
+    const result = await run(
+      [
+        col({ name: 'level', type: 'tinyint' }),
+        col({ name: 'flags', type: 'tinyint(1)' }),
+      ],
+      { widget: { flags: { tsType: 'number' } } },
+      'mysql'
+    )
+    const out = readFileSync(result.outFile, 'utf8')
+    assert.match(out, /level: ColumnType<Private<number>/)
+    assert.match(out, /flags: ColumnType<Private<number>/)
+    assert.doesNotMatch(
+      readFileSync(result.coercionFile, 'utf8'),
+      /"flags"|"level"/
+    )
   })
 
   test('a text column is a string, and never derives a kind from its type', async () => {

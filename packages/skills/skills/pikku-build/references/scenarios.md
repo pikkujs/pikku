@@ -1,5 +1,16 @@
 # Scenarios — writing journeys that stay proven
 
+## Contents
+
+- The shape of a scenario
+- Extraction: what survives, and what silently does not
+- What to assert
+- There is no state reset
+- Steps rot as the app grows
+- Browser scenarios
+- Running them
+- Coverage — which functions have actually been run
+
 A scenario is a user journey run as one of your personas, over the real transport, with that
 persona's session. It is the only kind of test worth writing here, because a passing one proves the
 app works the way a signed-in person experiences it.
@@ -59,7 +70,7 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 (server-side by default, plus a `browser` one that drives the page). Reaching for an RPC name in a
 `then` will not resolve.
 
-**`SCENARIO_ACTOR_SECRET` must be in `.env`** (app.md §6, before the first run). Without it
+**`SCENARIO_ACTOR_SECRET` must be in `.env`** (the app workflow's §6, before the first run). Without it
 `/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in, before its first step,
 for a reason that reads like an auth bug. `pikku scenario run` reads it from the environment, so
 source `.env` first (`set -a && . ./.env && set +a`) when you run outside `bun run dev`.

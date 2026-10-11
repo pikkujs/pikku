@@ -1,5 +1,11 @@
 # Pikku Machine Auth
 
+## Contents
+
+- [Human path — `pikku login`](#human-path-pikku-login)
+- [Machine path — API keys](#machine-path-api-keys)
+- [Gotchas](#gotchas)
+
 Unified authentication for humans **and** machines against a Pikku + better-auth
 server. Two paths, two headers, one resolver:
 

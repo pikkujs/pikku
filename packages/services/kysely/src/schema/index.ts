@@ -40,6 +40,59 @@ export {
 } from './pikku-schema.types.js'
 
 /**
+ * Re-point the schemas that reference Better Auth's `user` table at the table
+ * the project actually maps that model to.
+ *
+ * Better Auth's `user.modelName` decides the physical name: an app on a legacy
+ * `users` table has no `user` for the declaration to point at, so the scope
+ * schema read as unmet and was silently left out. The requirement, the column
+ * type lookup and every foreign key target are rewritten together, because they
+ * name the table three different ways.
+ */
+export const withUserTable = (
+  schemas: PikkuSchema[],
+  userTable: string
+): PikkuSchema[] => {
+  if (userTable === 'user') return schemas
+  const retarget = (target: string) =>
+    target.startsWith('user.') ? `${userTable}.${target.slice(5)}` : target
+  return schemas.map((schema) => ({
+    ...schema,
+    requires: schema.requires?.map((r) =>
+      r.table === 'user' ? { ...r, table: userTable } : r
+    ),
+    statements: schema.statements.map(
+      (statement) => (db, types, ctx) =>
+        statement(
+          db,
+          Object.fromEntries(
+            Object.entries(types).flatMap(([key, value]) =>
+              key.startsWith(`${userTable}.`)
+                ? [
+                    [key, value],
+                    [`user.${key.slice(userTable.length + 1)}`, value],
+                  ]
+                : [[key, value]]
+            )
+          ),
+          {
+            ...ctx,
+            references: (column, target) =>
+              ctx.references(column, retarget(target)),
+            foreignKeys: (table, keys) =>
+              ctx.foreignKeys(
+                table,
+                Object.fromEntries(
+                  Object.entries(keys).map(([k, v]) => [k, retarget(v)])
+                )
+              ),
+          }
+        )
+    ),
+  }))
+}
+
+/**
  * Every table any part of the pikku runtime can need, in dependency order.
  *
  * Order is load-bearing, not cosmetic: `scope` has foreign keys onto Better

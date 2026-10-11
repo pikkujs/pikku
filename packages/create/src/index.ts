@@ -38,7 +38,7 @@ import fs, { unlinkSync, writeFileSync } from 'fs'
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
-const DEFAULT_FABRIC_APP = 'react-vite-mantine'
+const DEFAULT_FABRIC_APP = 'app'
 
 const packageManagers = ['npm', 'yarn', 'pnpm', 'bun'] as const
 
@@ -401,11 +401,7 @@ async function cloneRepo(
   try {
     const tmpDirPrefix = tmpdir()
     const repoDirPath = `${tmpDirPrefix}/pikku/${repoName}`
-    await downloadWithRetry(
-      `${source}${versionRef}`,
-      repoDirPath,
-      spinner
-    )
+    await downloadWithRetry(`${source}${versionRef}`, repoDirPath, spinner)
     await lazymkdir(targetPath)
     mergeDirectories(repoDirPath, targetPath)
 
@@ -537,8 +533,7 @@ async function run() {
 // Pretty labels for apps the starter ships. Anything missing from this map
 // falls back to the directory name in the picker.
 const fabricAppLabels: Record<string, string> = {
-  'react-vite-mantine': 'React + Vite + Mantine (static export)',
-  'nextjs-tailwind': 'Next.js 15 + Tailwind (SSR)',
+  app: 'React + Vite + Tailwind + shadcn',
 }
 
 async function setupFabric(cliOptions: CliOptions) {

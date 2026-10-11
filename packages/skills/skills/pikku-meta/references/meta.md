@@ -1,5 +1,11 @@
 # Pikku Project Metadata
 
+## Contents
+
+- [Reading](#reading)
+- [Changing](#changing)
+- [Human-readable tables (`pikku info`)](#human-readable-tables-pikku-info)
+
 `pikku meta` is the machine-readable view of the project and the write path to it.
 `pikku info` is the same ground as human-readable tables. Prefer `meta` when you are
 going to act on the output; prefer `info` when a person is going to read it.

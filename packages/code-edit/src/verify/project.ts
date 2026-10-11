@@ -11,6 +11,8 @@ export type VerifyProject = {
   srcDirectories: string[]
   tsconfig: string
   frontends: VerifyFrontend[]
+  /** Workspace-relative path prefixes the i18n checks (jsx-literal-text, jsx-literal-prop, as-i18n-argument) skip. From `i18n.ignore` in pikku.config.json. */
+  i18nIgnore: string[]
 }
 
 type PikkuConfigFile = {
@@ -18,6 +20,7 @@ type PikkuConfigFile = {
   srcDirectories?: string[]
   tsconfig?: string
   frontends?: Record<string, { cwd?: string; deploy?: boolean }>
+  i18n?: { ignore?: string[] }
 }
 
 /** The nearest directory at or above `startDir` holding a pikku.config.json, else null. */
@@ -75,10 +78,68 @@ export function readVerifyProject(rootDir: string): VerifyProject {
     ),
     tsconfig: resolve(rootDir, config.tsconfig ?? 'tsconfig.json'),
     frontends,
+    i18nIgnore: (config.i18n?.ignore ?? [])
+      .filter((p): p is string => typeof p === 'string')
+      .map((p) => p.replace(/^\.\//, '').replace(/\/+$/, '')),
   }
 }
 
 export const relativeTo = (root: string, file: string): string => {
   const rel = relative(root, file)
   return rel.startsWith('..') ? file : rel
+}
+
+const WORKSPACE_SKIP = new Set(['node_modules', 'dist', 'build', 'src'])
+
+/**
+ * Every `apps/*` and `packages/*` directory, plus every deeper one (at most three levels down) that is a package
+ * or a TypeScript project root: it has a `package.json` or a `tsconfig*.json`. This is where the source checks look, so
+ * `packages/addons/spindle` is covered as well as `apps/app` and `packages/functions`. Nested roots are listed
+ * too; a file belongs to the deepest one that contains it (see `ownerDir`).
+ */
+export function workspacePackageDirs(workspaceRoot: string): string[] {
+  const found: string[] = []
+  const walk = (dir: string, depth: number) => {
+    let entries
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    if (
+      depth === 1 ||
+      (depth > 1 &&
+        entries.some(
+          (e) =>
+            e.isFile() &&
+            (e.name === 'package.json' || /^tsconfig.*\.json$/.test(e.name))
+        ))
+    )
+      found.push(dir)
+    if (depth >= 3) return
+    for (const e of entries) {
+      if (
+        e.isDirectory() &&
+        !e.name.startsWith('.') &&
+        !WORKSPACE_SKIP.has(e.name)
+      )
+        walk(join(dir, e.name), depth + 1)
+    }
+  }
+  for (const group of ['apps', 'packages']) {
+    const groupDir = join(workspaceRoot, group)
+    if (existsSync(groupDir)) walk(groupDir, 0)
+  }
+  return found
+}
+
+/** The deepest directory of `dirs` that contains `file`, or undefined. */
+export function ownerDir(
+  dirs: readonly string[],
+  file: string
+): string | undefined {
+  let best: string | undefined
+  for (const d of dirs)
+    if (file.startsWith(d + '/') && (!best || d.length > best.length)) best = d
+  return best
 }

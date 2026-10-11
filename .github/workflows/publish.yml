@@ -105,7 +105,7 @@ jobs:
       # download: it is uploaded by the `Build` job of the *Full Suite* run, and a
       # `workflow_run` job can only reach its own run's artifacts. `bun run release`
       # below rebuilds every package from source anyway (`build:packages` →
-      # `pikku` → `build:addons` → `build:console`), which is also where
+      # `pikku` → `build:addons`), which is also where
       # `packages/cli/release/binaries/` comes from — so nothing is lost. The
       # default left every publish dead on `Artifact not found for name:
       # build-output` before `changesets/action` ever ran.

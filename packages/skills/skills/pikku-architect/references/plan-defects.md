@@ -5,6 +5,8 @@ item. These are the ones it cannot, each carried back from a changeset that ship
 grouped by the question that finds them, and the fastest way to use this file is to read the six
 questions and only open the group that worries you.
 
+## Contents
+
 1. [Is this a plan for THIS note?](#is-this-a-plan-for-this-note)
 2. [Does pass 1 slice, and does the model fit inside it?](#does-pass-1-slice-and-does-the-model-fit-inside-it)
 3. [Can each scenario actually be performed?](#can-each-scenario-actually-be-performed)

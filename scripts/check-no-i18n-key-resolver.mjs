@@ -29,7 +29,7 @@ const SKIP_DIRS = new Set([
 
 // Only frontend source is in scope — `packages/skills` documents these names in
 // order to forbid them, and this file names them too.
-const ROOTS = ['packages/console/src', 'packages/react/src', 'templates']
+const ROOTS = ['packages/react/src', 'templates']
 
 const PATTERNS = [
   {

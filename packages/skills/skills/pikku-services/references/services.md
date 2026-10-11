@@ -1,5 +1,12 @@
 # Pikku Services (Dependency Injection)
 
+## Contents
+
+- [Before You Start](#before-you-start)
+- [API Reference](#api-reference)
+- [Usage Patterns](#usage-patterns)
+- [Complete Example](#complete-example)
+
 ## Before You Start
 
 ```bash

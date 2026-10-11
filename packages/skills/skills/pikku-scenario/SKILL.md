@@ -8,7 +8,7 @@ description: >-
   expectEventually / expectError / expectService / expectScore, declared steps via
   pikkuScenarioStep (browser steps driven by @pikku/playwright) written as intent rather than
   clicks, personas / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
-  `pikku scenario list|run` and `pikku persona run|list|sync|secret` commands, and live coverage
+  `pikku scenario` and `pikku persona` commands, and live coverage
   via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
   coverage, e2e flows, browser/UI e2e, health checks, personas, virtual users, or adversarial
   runs against a stage. DO NOT TRIGGER when: user asks about running an existing suite (use
@@ -20,19 +20,15 @@ installGroups: [core]
 
 ## Agent Operating Procedure
 
-Use this skill as an execution checklist, not reference material.
-
 1. Discover before editing: `pikku scenario list` for what exists, `pikku info functions --verbose` for what a scenario can call.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, or build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated.
-4. Validate with the narrowest relevant command first, then `pikku all --tsc` when functions, wirings or schemas may have changed.
-5. If validation fails, fix the source cause and rerun. Do not paper over generated errors by editing generated files.
+2. Edit source files only; never generated output or `.pikku`.
+3. Validate with the narrowest relevant command first, then `pikku all --tsc` when functions, wirings or schemas may have changed. If it fails, fix the source cause and rerun.
 
 **`pikku tests` does not exist.** It was removed in #865 — scenarios own coverage now. Any reference you find to it is stale.
 
 ## Pick the reference
 
-This skill covers writing and running scenarios end to end. Four topics are one level down, and
+This skill covers writing and running scenarios end to end. Five topics are one level down, and
 each says when to open it:
 
 | Read                        | For                                                                                                          |
@@ -186,12 +182,6 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 
 ### Grouping scenarios (`pikkuFeature`)
 
-A feature is also cited by a page of the user guide: `pikku scenario guide`
-fills each cited block with the feature's recordings and screenshots, and
-nothing else (see **pikku-guide**). A scenario's `title` captions its recording
-and a screenshot's `name` captions the still, so write both as copy a user would
-read. Mark plumbing features `document: false`.
-
 `pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
 
 ```typescript
@@ -228,6 +218,12 @@ export const credentialFeature = pikkuFeature({
 | Membership is resolved by **object identity** at runtime, which is why a loop works and why a scenario built inline in a feature is an error. |
 
 The **feature is the run unit**: `--flows` on a scenario whose every feature entry carries `data` errors and names the features containing it, because the feature is what supplies that data. Use `--features` for those. A scenario referenced bare anywhere, or in no feature at all, still runs standalone.
+
+A feature is also cited by a page of the user guide: `pikku scenario guide`
+fills each cited block with the feature's recordings and screenshots, and
+nothing else (see **pikku-guide**). A scenario's `title` captions its recording
+and a screenshot's `name` captions the still, so write both as copy a user would
+read. Mark plumbing features `document: false`.
 
 ## Steps
 
@@ -289,7 +285,7 @@ scenario actor per person, and seeds a user row each:
 - `scenarios.emailDomain` is the mail domain actor addresses are built on.
 - `scenarios.browserDriver` is the package driving `browser` bindings.
 - `scenarios.model` is the model a persona thinks with (`actor.converse`, `pikku virtual-user run`).
-- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required and `signInPath`/`rpcPath`/`sessionPath` have defaults.
+- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required; `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`, and `sessionPath` has a default too.
 
 **`references/personas.md`** covers the parts that bite: one entry is one
 person and one actor, emails are derived and never written, `runnable: false`
@@ -297,7 +293,6 @@ for someone only acted upon, `definePersonas` being read from source rather
 than evaluated, and the same actor list powering a human "Sign in as …"
 switcher.
 
-- `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
 
 ## Running
@@ -351,7 +346,6 @@ and where a plain unit test is still the right tool.
 
 | Smell                                               | Why it's wrong                                                                                                                                   |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pikku tests …`                                     | Removed in #865. Use `pikku scenario`.                                                                                                           |
 | `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                                       |
 | `scenario.do(...)` with no `{ actor }`              | Throws. Every step runs as somebody.                                                                                                             |
 | A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                                     |

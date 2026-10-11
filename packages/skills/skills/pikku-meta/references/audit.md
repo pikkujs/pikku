@@ -1,5 +1,14 @@
 # Pikku Dependency Audit
 
+## Contents
+
+- [Agent Operating Procedure](#agent-operating-procedure)
+- [The `pikku audit` command](#the-pikku-audit-command)
+- [The `pikku update` command](#the-pikku-update-command)
+- [Console integration (@pikku/addon-console)](#console-integration-pikkuaddon-console)
+- [Console UI (@pikku/console)](#console-ui-pikkuconsole)
+- [Report shape (SecurityAuditReport)](#report-shape-securityauditreport)
+
 ## Agent Operating Procedure
 
 1. The audit is a generated artifact, not live state. `pikku audit` writes the

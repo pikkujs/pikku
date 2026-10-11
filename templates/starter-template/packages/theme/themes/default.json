@@ -1,0 +1,8 @@
+{
+  "name": "Neutral",
+  "brand": {
+    "colors": { "primary": "#3b3f5c" },
+    "fonts": { "heading": "Inter", "body": "Inter" }
+  },
+  "structure": { "radius": "md", "density": "comfortable", "defaultColorScheme": "light" }
+}

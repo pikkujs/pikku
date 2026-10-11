@@ -4,6 +4,7 @@ import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
+import { upsert } from './kysely-upsert.js'
 import { sessionSchema } from './schema/session.schema.js'
 
 export class KyselySessionStore implements SessionStore {
@@ -32,20 +33,16 @@ export class KyselySessionStore implements SessionStore {
   }
 
   async set(pikkuUserId: string, session: CoreUserSession): Promise<void> {
-    await this.db
-      .insertInto('pikkuUserSessions')
-      .values({
+    await upsert(
+      this.db,
+      this.db.insertInto('pikkuUserSessions').values({
         pikkuUserId,
         session: JSON.stringify(session),
         updatedAt: new Date(),
-      })
-      .onConflict((oc) =>
-        oc.column('pikkuUserId').doUpdateSet({
-          session: JSON.stringify(session),
-          updatedAt: new Date(),
-        })
-      )
-      .execute()
+      }),
+      ['pikkuUserId'],
+      { session: JSON.stringify(session), updatedAt: new Date() }
+    ).execute()
   }
 
   async clear(pikkuUserId: string): Promise<void> {

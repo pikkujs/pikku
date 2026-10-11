@@ -1,5 +1,12 @@
 # Adding a second frontend
 
+## Contents
+
+- Deciding it is two apps, not one
+- The second app
+- Sessions across two origins
+- Building the second app's screens
+
 Read this when the split you recorded in Phase 2 is "separate apps" and you have
 reached the changeset that needs the second one. **Not before.** Cloning
 `apps/app` materialises a directory of copied screens; doing it during planning
@@ -121,8 +128,8 @@ supervisor, a dev runner, a deploy target — belongs to whatever is hosting it.
 On a plain checkout, `bun --filter @project/<slug> dev` is enough.
 
 Packaging it as a desktop or Android app is a separate step, on the same
-`frontends` entry: `pikku app native init <slug>`. See
-`references/native-app.md`.
+`frontends` entry: `pikku app native init <slug>`. The native-app reference
+(see SKILL.md) covers it.
 
 ### Scenarios across the two apps
 

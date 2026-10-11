@@ -380,3 +380,26 @@ describe('applyWebResponse', () => {
     assert.equal(state.body, '{"ok":true}')
   })
 })
+
+describe('applyWebResponse streaming', () => {
+  test('passes an event stream through without reading it', async () => {
+    const { PikkuFetchHTTPResponse } = await import('./pikku-fetch-http-response.js')
+    let pull = 0
+    const upstream = new ReadableStream<Uint8Array>({
+      pull: (controller) => {
+        pull++
+        controller.enqueue(new TextEncoder().encode('data: {"pikkuMeta":"changed"}\n\n'))
+      },
+    })
+    const res = new PikkuFetchHTTPResponse()
+    await applyWebResponse(
+      res,
+      new Response(upstream, { headers: { 'content-type': 'text/event-stream' } })
+    )
+    const reader = res.toResponse().body!.getReader()
+    const { value } = await reader.read()
+    assert.equal(new TextDecoder().decode(value), 'data: {"pikkuMeta":"changed"}\n\n')
+    assert.ok(pull < 5)
+    await reader.cancel()
+  })
+})

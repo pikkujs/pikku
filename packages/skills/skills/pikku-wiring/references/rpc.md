@@ -1,5 +1,11 @@
 # Pikku RPC Wiring
 
+## Contents
+
+- API Reference
+- Usage Patterns
+- Complete Example
+
 ## API Reference
 
 ### RPC Methods (on `wire.rpc`)

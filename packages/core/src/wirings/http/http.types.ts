@@ -289,6 +289,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
   send?(data: string | ArrayBuffer | ArrayBufferView): this
   redirect(location: string, status?: number): this
   close?: () => void
+  onClose?: (callback: () => void) => void
   setMode?: (mode: 'stream') => void
   flushHeaders?: () => void
 }
