@@ -289,6 +289,7 @@
       "name": "@pikku/addon-console",
       "version": "0.12.59",
       "dependencies": {
+        "@pikku/addon-fabric-cli": "^0.12.0",
         "@pikku/code-edit": "^0.12.4",
         "@pikku/knowledge": "^0.12.18",
         "json-schema": "^0.4.0",
@@ -309,6 +310,25 @@
       "optionalPeers": [
         "@pikku/better-auth",
       ],
+    },
+    "packages/addon/pikku-fabric-cli": {
+      "name": "@pikku/addon-fabric-cli",
+      "version": "0.12.0",
+      "dependencies": {
+        "@pikku/fetch": "^0.12.12",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "typescript": "^6.0.3",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/cli": "^0.12.184",
+        "@pikku/core": "^0.12.139",
+        "zod": "^4",
+      },
     },
     "packages/addon/pikku-graph": {
       "name": "@pikku/addon-graph",
@@ -362,6 +382,7 @@
         "@electric-sql/pglite-pgvector": "0.0.9",
         "@jridgewell/trace-mapping": "^0.3.31",
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
+        "@pikku/addon-fabric-cli": "^0.12.0",
         "@pikku/ai-vercel": "^0.12.15",
         "@pikku/better-auth": "^0.12.55",
         "@pikku/bun-server": "^0.12.13",
@@ -3117,6 +3138,8 @@
 
     "@pikku/addon-emails": ["@pikku/addon-emails@workspace:e2e/packages/emails"],
 
+    "@pikku/addon-fabric-cli": ["@pikku/addon-fabric-cli@workspace:packages/addon/pikku-fabric-cli"],
+
     "@pikku/addon-fake-crm": ["@pikku/addon-fake-crm@workspace:e2e/packages/fake-crm"],
 
     "@pikku/addon-gmail": ["@pikku/addon-gmail@0.1.2", "", { "peerDependencies": { "@pikku/core": "^0.12.36", "zod": "^4" } }, "sha512-EGveAY72GQrD/yqWSOpOzgmNvnNfi9UNmaqXUCSn1S2wHMdKhjo26LzQxyIJqKJbSlX2aUjW2rJT9MhC3pVCSQ=="],
@@ -5808,6 +5831,8 @@
     "@modelcontextprotocol/sdk/raw-body": ["raw-body@3.0.2", "", { "dependencies": { "bytes": "~3.1.2", "http-errors": "~2.0.1", "iconv-lite": "~0.7.0", "unpipe": "~1.0.0" } }, "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA=="],
 
     "@parcel/watcher/node-addon-api": ["node-addon-api@7.1.1", "", {}, "sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ=="],
+
+    "@pikku/addon-fabric-cli/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@pikku/addon-fake-crm/@types/node": ["@types/node@22.20.5", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA=="],
 
