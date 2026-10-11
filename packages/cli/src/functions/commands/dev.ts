@@ -15,7 +15,6 @@ import {
   InMemoryTriggerSourceStore,
   InMemoryWorkflowService,
   LocalEmailService,
-  LocalSecretService,
   spy,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
@@ -322,7 +321,7 @@ export const dev = pikkuSessionlessFunc<
 
     const vaultConnection = vaultConnectionFromEnv()
     const vaultSecrets = vaultConnection
-      ? new VaultSecretService(vaultConnection, new LocalSecretService(variables))
+      ? new VaultSecretService(vaultConnection)
       : undefined
 
     const createLocalServices = await loadCreateLocalServices(

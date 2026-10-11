@@ -18,10 +18,7 @@ export const vaultConnectionFromEnv = (
 }
 
 export class VaultSecretService implements SecretService {
-  constructor(
-    private connection: VaultConnection,
-    private fallback?: SecretService
-  ) {}
+  constructor(private connection: VaultConnection) {}
 
   private call(method: string, path: string): Promise<{ status: number; body: any }> {
     return new Promise((resolve, reject) => {
@@ -69,12 +66,7 @@ export class VaultSecretService implements SecretService {
 
   async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const response = await this.call('GET', this.path(key))
-    if (response.status === 404 || response.status === 403) {
-      if (this.fallback && (await this.fallback.hasSecret(key))) {
-        return this.fallback.getSecret<T>(key)
-      }
-      if (response.status === 404) throw new Error(`Requested secret not found: ${key}`)
-    }
+    if (response.status === 404) throw new Error(`Requested secret not found: ${key}`)
     if (response.status !== 200) {
       throw new Error(`Vault read of '${key}' failed (${response.status}): ${response.body?.error ?? 'unknown'}`)
     }
@@ -83,8 +75,7 @@ export class VaultSecretService implements SecretService {
 
   async hasSecret(key: string): Promise<boolean> {
     const response = await this.call('GET', this.path(key, '/exists'))
-    if (response.status === 200 && response.body.exists) return true
-    return this.fallback ? this.fallback.hasSecret(key) : false
+    return response.status === 200 && response.body.exists === true
   }
 
   async setSecret(): Promise<void> {

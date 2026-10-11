@@ -6,7 +6,6 @@ import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
   InMemoryTriggerSourceStore,
-  LocalSecretService,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -139,7 +138,7 @@ export const serve = pikkuSessionlessFunc<
 
     const vaultConnection = vaultConnectionFromEnv()
     const vaultSecrets = vaultConnection
-      ? new VaultSecretService(vaultConnection, new LocalSecretService(variables))
+      ? new VaultSecretService(vaultConnection)
       : undefined
 
     const createLocalServices = await loadCreateLocalServices(

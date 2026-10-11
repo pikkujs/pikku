@@ -4,7 +4,6 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import { VaultSecretService, vaultConnectionFromEnv } from './vault-secret-service.js'
 
 const withVault = async (run: (socketPath: string) => Promise<void>) => {
@@ -49,13 +48,12 @@ test('a rejected token is an error, not a missing secret', async () => {
   })
 })
 
-test('falls back to the local store for keys the vault lacks', async () => {
+test('a configured vault is the only source: the local store is never consulted', async () => {
   await withVault(async (socketPath) => {
     process.env.ONLY_LOCAL = '"local"'
-    const fallback = new LocalSecretService(new LocalVariablesService())
-    const service = new VaultSecretService({ socketPath, token: 't' }, fallback)
-    assert.equal(await service.hasSecret('ONLY_LOCAL'), true)
-    assert.equal((await service.getSecret('ONLY_LOCAL')).reveal(), 'local')
+    const service = new VaultSecretService({ socketPath, token: 't' })
+    assert.equal(await service.hasSecret('ONLY_LOCAL'), false)
+    await assert.rejects(() => service.getSecret('ONLY_LOCAL'), /Requested secret not found/)
     delete process.env.ONLY_LOCAL
   })
 })
