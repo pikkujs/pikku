@@ -7,7 +7,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 **3285 observable things**: 1099 exported names, plus
 2186 members on the classes and interfaces among them, reachable
-through 58 entry points.
+through 59 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -39,9 +39,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
-| `./utils` | 23 | 22 | 2 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
+| `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
@@ -71,6 +71,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./remote` | 1 | 1 | 0 |
+| `./lifecycle` | 3 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
 ## .
@@ -6463,7 +6464,6 @@ export type JSONValue =
     }
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
-onShutdownSignals: (run: (signal: NodeJS.Signals) => void | Promise<void>, signals?: NodeJS.Signals[]) => () => void
 parseDurationString: (duration: string) => number
 parseJson: <T = any>(input: string | Uint8Array<ArrayBufferLike>) => T
 parseVersionedId: (id: string) => { baseName: string; version: number | null; }
@@ -6477,6 +6477,14 @@ export interface RelativeTimeInput {
 export type RequireAtLeastOne<T> = {
   [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
 }[keyof T]
+stopSingletonServices: () => Promise<void>
+```
+
+## ./lifecycle
+
+```ts
+onShutdownSignals: (run: (signal: NodeJS.Signals) => void | Promise<void>, signals?: NodeJS.Signals[]) => () => void
+pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 stopSingletonServices: () => Promise<void>
 ```
 

@@ -3,7 +3,10 @@ import type { Server as BunServer, ServerWebSocket } from 'bun'
 import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { onShutdownSignals, stopSingletonServices } from '@pikku/core/utils'
+import {
+  onShutdownSignals,
+  stopSingletonServices,
+} from '@pikku/core/lifecycle'
 import type { JWTService, Logger } from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/state'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'

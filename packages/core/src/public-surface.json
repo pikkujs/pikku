@@ -615,10 +615,14 @@
     "getTagGroups",
     "isSerializable",
     "isVersionedId",
-    "onShutdownSignals",
     "parseDurationString",
     "parseJson",
     "parseVersionedId",
+    "pikkuServerLifecycle",
+    "stopSingletonServices"
+  ],
+  "./lifecycle": [
+    "onShutdownSignals",
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],

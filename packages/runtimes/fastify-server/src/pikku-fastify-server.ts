@@ -1,7 +1,10 @@
 import Fastify from 'fastify'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { onShutdownSignals, stopSingletonServices } from '@pikku/core/utils'
+import {
+  onShutdownSignals,
+  stopSingletonServices,
+} from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import type { Logger } from '@pikku/core/services'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
