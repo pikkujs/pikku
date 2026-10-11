@@ -55,6 +55,7 @@ import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
+import { startDesignServer } from './serve-design.js'
 import { servedFrontend } from '../../utils/frontend.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -419,6 +420,11 @@ export const dev = pikkuSessionlessFunc<
     // announced from here has to name the one it actually handed out.
     const boundPort = pikkuServer.port
 
+    const designServer = await startDesignServer(config.rootDir, logger)
+    if (designServer) {
+      logger.info(`Pikku Design available at ${designServer.url}`)
+    }
+
     // Serving the built frontend here would hand you whatever the last build
     // produced, with no HMR and no warning that it is stale. The frontend's own
     // dev server owns dev; it proxies its API calls back to this port.
@@ -454,6 +460,7 @@ export const dev = pikkuSessionlessFunc<
         await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
+        await designServer?.close()
         await pikkuServer.stop()
         await lifecycle?.afterStop?.(resolvedServices)
       } finally {
