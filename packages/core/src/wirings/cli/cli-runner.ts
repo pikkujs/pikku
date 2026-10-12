@@ -111,7 +111,7 @@ function unwrapFunc(command: any): {
   return command
 }
 
-export function registerCLICommands(
+function registerCLICommands(
   commands: Record<string, any>,
   path: string[] = [],
   inheritedOptions: Record<string, CLIOption> = {},
