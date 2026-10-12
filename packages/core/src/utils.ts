@@ -1,10 +1,5 @@
 import type { Logger } from './services/logger.js'
-import type {
-  CoreSingletonServices,
-  ServerLifecycle,
-  WireServices,
-} from './types/core.types.js'
-import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
+import type { WireServices } from './types/core.types.js'
 import { BadRequestError } from './errors/errors.js'
 
 export const closeWireServices = async (
@@ -98,54 +93,7 @@ export const freezeDedupe = <T>(
   return Object.freeze(out)
 }
 
-const stopService = async (
-  logger: Logger,
-  name: string,
-  service: any
-): Promise<void> => {
-  const stop = service?.stop
-  if (stop) {
-    logger.info(`Stopping singleton service: ${name}`)
-    try {
-      await stop.call(service)
-    } catch (e: any) {
-      logger.error(`Error stopping service ${name}:`, e)
-    }
-  }
-}
-
-/** Stops addon package services first, then the parent singleton services. */
-export const stopSingletonServices = async (): Promise<void> => {
-  const singletonServices = getSingletonServices()
-  const logger = singletonServices.logger
-
-  const stateMap = getAllPackageStates()
-  if (stateMap.size > 0) {
-    for (const [packageName, packageState] of stateMap) {
-      if (packageName === '__main__') continue
-
-      const packageServices = packageState.package?.singletonServices
-      if (packageServices) {
-        logger.info(`Stopping singleton services for package: ${packageName}`)
-        for (const [name, service] of Object.entries(packageServices)) {
-          await stopService(logger, `${packageName}/${name}`, service)
-        }
-        packageState.package.singletonServices = null
-      }
-    }
-  }
-
-  for (const [name, service] of Object.entries(singletonServices)) {
-    await stopService(logger, name, service)
-  }
-}
-
-/** Wrap server lifecycle hooks so the inspector can discover them. */
-export const pikkuServerLifecycle = <
-  SS extends CoreSingletonServices = CoreSingletonServices,
->(
-  lifecycle: ServerLifecycle<SS>
-): ServerLifecycle<SS> => lifecycle
+export { stopSingletonServices, pikkuServerLifecycle } from './lifecycle.js'
 
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>

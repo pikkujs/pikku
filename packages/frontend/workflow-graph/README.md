@@ -39,5 +39,12 @@ workflow definition and a live or historical run.
 
 ## Peer dependencies
 
-`react`, `react-dom`, `@mantine/core`, `@pikku/mantine`, `@pikku/react` and
-`@pikku/core`.
+`react`, `react-dom`, `@pikku/react` and `@pikku/core`.
+
+## Styling
+
+The components are styled with Tailwind classes that read the shadcn tokens
+(`--card`, `--border`, `--muted-foreground`, `--chart-1` to `--chart-5`). The
+host app needs Tailwind and must scan this package's source, for example
+`@source "../node_modules/@pikku/workflow-graph/src";`. Override a node accent
+with `--pikku-node-<colorKey>` and a run status with `--pikku-status-<status>`.

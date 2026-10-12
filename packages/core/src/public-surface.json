@@ -630,6 +630,11 @@
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
+  "./lifecycle": [
+    "onShutdownSignals",
+    "pikkuServerLifecycle",
+    "stopSingletonServices"
+  ],
   "./schema": [
     "addSchema",
     "applyDefaultsFromSchema",

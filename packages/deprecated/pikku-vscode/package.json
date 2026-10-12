@@ -1,6 +1,6 @@
 {
   "name": "pikku-vscode",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "DEPRECATED: use the pikku CLI (@pikku/cli)",
   "repository": {
     "type": "git",

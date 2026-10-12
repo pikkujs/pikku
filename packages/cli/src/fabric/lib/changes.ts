@@ -2,9 +2,10 @@ import { extname } from 'node:path'
 import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
 import { FabricPreconditionError } from './errors.js'
-import type { GetChangeInput } from '../sdk/rpc-map.gen.d.js'
+import type { CreateChangeInput, GetChangeInput } from '../sdk/rpc-map.gen.d.js'
+import { currentBranch } from '../../utils/git.js'
 import { readConfigProjectId } from './project-id.js'
-import type { ChangesRPC } from './changes-local.js'
+import { LOCAL_PROJECT_ID, type ChangesRPC } from './changes-local.js'
 import { changesContext, registerChangesBackend } from '../../changes/context.js'
 
 export type { ChangesRPC }
@@ -41,6 +42,8 @@ async function fabricBackend({
   const fabric = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
   const invoke = async (name: string, data: unknown) => {
     try {
+      if (name === 'createChange')
+        return await fileChange(fabric, projectId, data as any)
       return await fabric.invoke(name as any, data as any)
     } catch (error) {
       if (httpStatus(error) !== undefined) throw error
@@ -53,6 +56,51 @@ async function fabricBackend({
 }
 
 registerChangesBackend(fabricBackend)
+
+/**
+ * `createSandboxChange` is newer than the generated Fabric client, so the
+ * client's call map does not list it yet. This is its shape in Fabric:
+ * title, optional body and route in, the filed change out. Drop this when
+ * the client is regenerated.
+ */
+type SandboxFiling = {
+  invoke(
+    name: 'createSandboxChange',
+    data: { title: string; body?: string; route?: string }
+  ): Promise<{ change: { changeId: string; shortId: string; title: string } }>
+}
+
+/**
+ * Filing a change needs a stage, which a person at a terminal did not name:
+ * the one on the checked-out branch, else the project's only stage. A sandbox
+ * may not list stages, so it files through `createSandboxChange`, which
+ * places the change on its own branch.
+ */
+async function fileChange(
+  fabric: ReturnType<typeof getFabricRPC>,
+  projectId: string,
+  data: CreateChangeInput
+) {
+  if (data.stageId && data.stageId !== LOCAL_PROJECT_ID)
+    return fabric.invoke('createChange', data)
+  let stages: { stageId: string; branch: string }[]
+  try {
+    stages = (await fabric.invoke('listStages', { projectId })).stages
+  } catch (error) {
+    if (httpStatus(error) !== 403) throw error
+    const { title, body, route } = data
+    return (fabric as SandboxFiling).invoke('createSandboxChange', { title, body, route })
+  }
+  const branch = await currentBranch().catch(() => undefined)
+  const stage =
+    stages.find((s) => s.branch === branch) ??
+    (stages.length === 1 ? stages[0] : undefined)
+  if (!stage)
+    throw new FabricPreconditionError(
+      `No stage for ${branch ?? 'this checkout'} among ${stages.length} stages. Pass --stage-id.`
+    )
+  return fabric.invoke('createChange', { ...data, stageId: stage.stageId })
+}
 
 /** The Fabric project this checkout is marked as backed by, or null when it is a purely local one. */
 async function linkedProjectId(override?: string): Promise<string | null> {

@@ -130,8 +130,8 @@ the 6 API — only module resolution of `typescript` has to stay on 6. Emit was
 verified identical: zero `.js` differences, and `.d.ts` differences confined to
 quote style and declaration ordering.
 
-The one exception is the dual CommonJS emit. Seven packages —
-`assistant-ui`, `client-fetch`, `client-websocket`, `mantine`, `react`,
+The one exception is the dual CommonJS emit. Six packages —
+`assistant-ui`, `client-fetch`, `client-websocket`, `react`,
 `paraglide`, `voice-agents` — build a second output through a
 `tsconfig.cjs.json` that sets `moduleResolution: node`, which 7 removed.
 Dropping the option is not equivalent: `assistant-ui` then resolves two copies
