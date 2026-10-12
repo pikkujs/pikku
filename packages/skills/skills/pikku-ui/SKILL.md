@@ -32,7 +32,7 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
    original is a failure. If it is not clear what is wrong, ask the user before starting.
 4. Do not draw or restyle the screen in the main thread, even for a small screen.
 5. When the subagent reports, look at the screen before telling the user it is done (one render or DOM
-   check). Check that it did what it was told. If it only loaded `impeccable`
+   check; `pikku ui pages list` names the route and `pikku ui pages screenshot --base-url <url>` photographs it). Check that it did what it was told. If it only loaded `impeccable`
    and skipped its workflow, send it back. Tell the user what changed and what it decided.
 
 ## What stays in the main thread

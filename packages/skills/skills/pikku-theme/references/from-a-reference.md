@@ -1,35 +1,27 @@
 # Building from a reference
 
 These apply only when the user names something that already exists: a live site, a W3C design
-tokens file, a site to rebuild. With no reference, choose a preset from the domain instead.
+tokens file, a site to rebuild. With no reference, choose a preset from the domain instead. The CLI
+has no extractor: you read the design off the source and pass it to `pikku ui theme apply`.
 
 ## Match an existing design
 
-1. **Extract.** Read the design off the source rather than eyeballing it:
-
-   ```bash
-   pikku ui design extract --url https://acme.example        # needs Playwright's Chromium
-   pikku ui design extract --file design/tokens.json         # W3C DTCG tokens
-   ```
-
-   It prints a `profile` (`colors`: primary/secondary/accent/background/surface/text, `fonts`:
-   heading/body, `structure` hints: `radius`, `shadowStrength`, `density`, `borders`, and `notes`)
-   plus the `theme` input it implies. An empty colour means nothing confident was found; choose one.
-   The profile's background maps to `--page` and its text to `--ink`.
+1. **Read the design off the source.** Open the site (or the tokens file) and note the primary,
+   secondary and accent colours, the page background and text colour, and the heading and body
+   fonts. Note the structure hints: radius, shadow strength, density, borders.
 
 2. **Pick the structure the hints describe.** Soft shadow and large radius: `aurora` or `breeze`.
    Bold borders and hard shadows: `brutalist`. Compact density: `monopro`. Near-black background:
    a dark-first preset.
 
-3. **Apply**, either in one step or by hand when you want to reconcile noisy values:
+3. **Apply.** The page background maps to `--page` and the text to `--ink`:
 
    ```bash
-   pikku ui design extract --url https://acme.example --preset breeze --apply
    pikku ui theme apply --preset breeze --primary '#0B6E99' --font-heading 'Manrope' --font-body 'Manrope' --page '#F7F5F0' --ink '#1C2A33'
    ```
 
-   You are the art director: the profile is measured signal, not a finished theme. Check the
-   extracted page and ink against each other and against the primary for 4.5:1 before applying.
+   You are the art director: what you read is signal, not a finished theme. Check page and ink
+   against each other and against the primary for 4.5:1 before applying.
 
 4. **Build the layout craft the reference shows.** Colours, fonts, radius and shadow travel through
    the theme. What no token carries (an asymmetric grid, a bespoke type scale, a masked image edge,
@@ -40,35 +32,13 @@ tokens file, a site to rebuild. With no reference, choose a preset from the doma
 
 When the user wants their site rebuilt or improved, not just matched:
 
-1. **Crawl the content** on your own Cloudflare account (`CLOUDFLARE_ACCOUNT_ID`,
-   `CLOUDFLARE_API_TOKEN`):
+1. **Take the copy from the user.** Ask for the pages' text and images, or read the live pages
+   yourself. The CLI does not crawl or fetch stock photography; do not invent content or images.
 
-   ```bash
-   pikku ui design crawl https://acme.example --max-pages 20
-   ```
+2. **Match the brand** with the recipe above.
 
-   Each page comes back as `{ url, title, markdown, images }`. The markdown is the real copy to
-   rebuild from; the images are downloaded into the app's `public/crawled/` and referenced by local
-   path (`/crawled/03-hero.jpg`).
+3. **Build the pages** from the shadcn components in `src/components/ui/`, filling them with the real
+   copy and the images the user supplied. Keep the meaning, discard the dated layout.
 
-2. **Inventory the images before writing a page.** List `public/crawled/`. If it is empty (a
-   JavaScript-only site, failed downloads), fetch stock photography with your
-   `UNSPLASH_ACCESS_KEY`:
-
-   ```bash
-   pikku ui design images "harbour cafe interior" --count 8 --orientation landscape
-   ```
-
-   Photos land in `public/stock/`, served at `/stock/…`, with the photographer credit Unsplash
-   requires; show the credit.
-
-3. **Match the brand** with the recipe above on the same URL.
-
-4. **Make the home page image-led**: a full-bleed hero on the strongest photo, and a real image
-   anchoring each major section. A marketing rebuild with no photography is a failed rebuild.
-
-5. **Build the other pages** from the shadcn components in `src/components/ui/`, fill them with the crawled copy and swap in the matching
-   photos. Keep the meaning, discard the dated layout.
-
-If the crawl returns thin markdown and no images, say so and rebuild from the brief rather than
+If there is no copy and no imagery to work from, say so and rebuild from the brief rather than
 inventing content.

@@ -3,13 +3,12 @@ name: pikku-theme
 description: >-
   Use when giving a Pikku Tailwind + shadcn/ui app its look: picking and applying a theme with `pikku
   ui theme list|apply`, composing brand colours, fonts, page and ink over a preset's structure, matching
-  an existing site with `pikku ui design extract`, declaring component variants in the component's
-  `cva` definition, replacing template names and icons with `pikku ui design placeholders|favicon`,
-  and keeping emails/theme.json on-brand.
+  an existing look by hand, declaring component variants in the component's `cva` definition,
+  replacing template names (`pikku validate` flags them), and keeping emails/theme.json on-brand.
   Also the light/dark and WCAG contrast rules a theme must clear. TRIGGER when: the user asks to
   theme, restyle, rebrand or recolour an app; the project has packages/theme (themes/*.json,
   active.json); a screen needs a colour, font, radius or shadow; or the app still shows a template
-  name or default icon. DO NOT TRIGGER when: rendering data or RTL layout (use pikku-tailwind),
+  name. DO NOT TRIGGER when: rendering data or RTL layout (use pikku-tailwind),
   writing email templates (use pikku-emails), or accessibility beyond colour (use pikku-a11y).
 installGroups: [client]
 ---
@@ -159,30 +158,15 @@ const buttonVariants = cva('...', {
 `@shadcn/lint` then accepts `variant="brand"` and its error messages suggest it. Use theme tokens only inside a variant. Add it
 once and use it; do not restyle one button inline.
 
-## Names, icons and emails
+## Names and emails
 
 The starter templates ship with placeholder names. Replace them before anything else ships.
+`pikku validate` reports each place still using a template's name (the `placeholder-brand` checks):
+`app__name` in the app's `messages/en.json` (the wordmark in the shell and auth screens), the
+`title` / `og:title` / `og:site_name` meta in `src/app-meta.ts` or `__root.tsx`, and `appName` in
+`emails/theme.json`. Update other app-identity strings (tagline, description) at the same time.
 
-```bash
-pikku ui design placeholders
-```
-
-It reports each place still using a template's name and how to fix it: `app__name` in the app's
-`messages/en.json` (the wordmark in the shell and auth screens), the `title` / `og:title` /
-`og:site_name` meta in `src/app-meta.ts` or `__root.tsx`, and `appName` in `emails/theme.json`.
-Update other app-identity strings (tagline, description) at the same time.
-
-```bash
-pikku ui design favicon --source logo.svg
-pikku ui design favicon --letter AC --background '#2F5D62'
-pikku ui design favicon --emoji 🌙 --app apps/app
-```
-
-Renders the favicon, apple-touch and PWA manifest icons into the app's `public/` from a logo
-(SVG/PNG/JPG/WebP) or a glyph, and links them from the document head. Needs Playwright's Chromium.
-The glyph colour is chosen for contrast with `--background`; pass the theme's primary.
-
-**Emails.** `pikku ui theme apply` (and `pikku ui design extract --apply`) rewrites `emails/theme.json`
+**Emails.** `pikku ui theme apply` rewrites `emails/theme.json`
 from the applied theme: neutrals from the scheme (or the `darkSurface` ramp for a dark theme),
 `accent`, `button` from the primary, `buttonText` black or white by luminance, `fonts.body` from
 the brand. It merges, so `appName` and any project keys survive. It cannot know the app's name: set
@@ -192,13 +176,12 @@ template. `pikku emails catalog` lists ready-made emails (invitation, magic-link
 receipt, welcome) and `pikku emails add <name>` copies one in; they use the same theme keys. See
 pikku-emails.
 
-## Matching or rebuilding an existing design
+## Matching an existing design
 
-When the user names a live site, a design-tokens file or a site to rebuild, extract first instead
-of eyeballing: `pikku ui design extract`, `pikku ui design crawl` and `pikku ui design images`. The recipes
-are in `references/from-a-reference.md`.
+When the user names a live site or a design-tokens file, read its colours, fonts and depth yourself
+and pass them to `pikku ui theme apply`. The recipe is in `references/from-a-reference.md`.
 
 ## Hosted only
 
-Interactive theme pickers, AI-generated logos and agent-driven build flows exist only in hosted
-Pikku platforms and are not part of the CLI.
+Interactive theme pickers, design extraction, stock images, site crawling, favicon generation, AI-generated logos and
+agent-driven build flows exist only in Pikku Studio and are not part of the CLI.
