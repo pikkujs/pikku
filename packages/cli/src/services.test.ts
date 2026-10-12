@@ -1,9 +1,14 @@
 import assert from 'node:assert'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test, afterEach } from 'node:test'
-import { CONFIG_FREE_COMMANDS, createConfig } from './services.js'
+import { serializeInspectorState } from '@pikku/inspector'
+import {
+  CONFIG_FREE_COMMANDS,
+  createConfig,
+  createSingletonServices,
+} from './services.js'
 import { changesCommands } from './fabric/changes-commands.js'
 
 const created: string[] = []
@@ -65,5 +70,29 @@ describe('CONFIG_FREE_COMMANDS', () => {
 
   test('fabric login runs before there is a project to be inside', () => {
     assert.ok(CONFIG_FREE_COMMANDS.has('fabric.login'))
+  })
+})
+
+describe('loadInspectorStateFile', () => {
+  test('a state file written by a codegen child becomes the inspector state', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-state-'))
+    created.push(dir)
+    const { inspect } = await import('@pikku/inspector')
+    const state = await inspect(console as any, [], { rootDir: dir } as any)
+    const file = join(dir, 'state.json')
+    await writeFile(
+      file,
+      JSON.stringify(serializeInspectorState(state as any)),
+      'utf-8'
+    )
+    const services = await createSingletonServices({
+      rootDir: dir,
+      srcDirectories: [],
+      filters: {},
+    } as any)
+    await services.loadInspectorStateFile(file)
+    const loaded = await services.getInspectorState(false, false, false, true)
+    assert.ok('functions' in loaded)
+    assert.equal(loaded.rootDir, state.rootDir)
   })
 })

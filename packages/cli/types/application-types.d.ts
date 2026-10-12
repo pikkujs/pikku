@@ -39,6 +39,9 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    *  change) so the next getInspectorState(refresh) truly re-inspects —
    *  refreshes are otherwise skipped when no generated .ts file changed. */
   invalidateInspectorState: () => void
+  /** Replaces the cached inspector state with one a child process wrote via
+   *  `--stateOutput`, so a long-lived process never builds a ts.Program. */
+  loadInspectorStateFile: (file: string) => Promise<void>
   /** Runtime-specific deploy bundler (esbuild for node, Bun.build for bun). */
   bundler: Bundler
   /** Runtime-specific dev server runner (node http+ws, or bun-server). */
