@@ -45,6 +45,8 @@ test('a rejected token is an error, not a missing secret', async () => {
   await withVault(async (socketPath) => {
     const service = new VaultSecretService({ socketPath, token: 'wrong' })
     await assert.rejects(() => service.getSecret('api'), /401/)
+    await assert.rejects(() => service.hasSecret('api'), /401/)
+    await assert.rejects(() => service.getSecrets(['api']), /401/)
   })
 })
 

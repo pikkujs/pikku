@@ -75,7 +75,11 @@ export class VaultSecretService implements SecretService {
 
   async hasSecret(key: string): Promise<boolean> {
     const response = await this.call('GET', this.path(key, '/exists'))
-    return response.status === 200 && response.body.exists === true
+    if (response.status === 404) return false
+    if (response.status !== 200) {
+      throw new Error(`Vault check of '${key}' failed (${response.status}): ${response.body?.error ?? 'unknown'}`)
+    }
+    return response.body.exists === true
   }
 
   async setSecret(): Promise<void> {
