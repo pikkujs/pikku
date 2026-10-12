@@ -218,4 +218,85 @@ describe('addon contract metadata', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+  test('refCLI spread inside a subcommands group keeps nested groups, descriptions and render names', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-addon-refs-sub-'))
+    const addonDir = join(rootDir, 'node_modules', '@test', 'addon')
+    const appFile = join(rootDir, 'app.ts')
+
+    await mkdir(join(addonDir, '.pikku', 'function'), { recursive: true })
+    await mkdir(join(addonDir, '.pikku', 'cli'), { recursive: true })
+    await writeFile(
+      join(rootDir, 'package.json'),
+      JSON.stringify({ name: 'test-app', type: 'module' })
+    )
+    await writeFile(
+      join(addonDir, 'package.json'),
+      JSON.stringify({ name: '@test/addon', type: 'module' })
+    )
+    await writeFile(
+      join(addonDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+      JSON.stringify({
+        runSync: {
+          pikkuFuncId: 'runSync',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+        listJobs: {
+          pikkuFuncId: 'listJobs',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+    )
+    await writeFile(
+      join(addonDir, '.pikku', 'cli', 'pikku-cli-contracts-meta.gen.json'),
+      JSON.stringify({
+        cliCommands: {
+          sync: {
+            pikkuFuncId: 'runSync',
+            positionals: [],
+            options: {},
+            description: 'Sync everything',
+            renderName: 'renderSync',
+          },
+          jobs: {
+            pikkuFuncId: '',
+            positionals: [],
+            options: {},
+            description: 'Jobs',
+            subcommands: {
+              list: { pikkuFuncId: 'listJobs', positionals: [], options: {} },
+            },
+          },
+        },
+      })
+    )
+    await writeFile(
+      appFile,
+      [
+        "import { wireAddon } from '@pikku/core/addon'",
+        "import { wireCLI } from '@pikku/core/cli'",
+        'declare const refCLI: (name: string) => any',
+        "wireAddon({ name: 'addon', package: '@test/addon' })",
+        "wireCLI({ program: 'app', commands: { tools: { description: 'Tools', subcommands: { ...refCLI('addon:cliCommands') } } } })",
+      ].join('\n')
+    )
+
+    try {
+      const state = await inspect(logger, [appFile], { rootDir })
+      const tools = state.cli.meta.programs.app?.commands.tools
+      const sync = tools?.subcommands?.sync
+      assert.equal(sync?.pikkuFuncId, 'addon:runSync')
+      assert.equal(sync?.packageName, '@test/addon')
+      assert.equal(sync?.renderName, 'renderSync')
+      assert.equal(sync?.description, 'Sync everything')
+      const list = tools?.subcommands?.jobs?.subcommands?.list
+      assert.equal(list?.pikkuFuncId, 'addon:listJobs')
+      assert.equal(tools?.subcommands?.jobs?.pikkuFuncId, '')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })
