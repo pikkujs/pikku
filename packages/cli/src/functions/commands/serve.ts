@@ -3,11 +3,18 @@ import { join, resolve } from 'path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
-import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
+import {
+  ConsoleLogger,
+  InMemoryTriggerSourceStore,
+} from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
+import {
+  VaultSecretService,
+  vaultConnectionFromEnv,
+} from '../../utils/vault-secret-service.js'
 import {
   LocalContent,
   type LocalContentConfig,
@@ -129,6 +136,11 @@ export const serve = pikkuSessionlessFunc<
           })
         : undefined
 
+    const vaultConnection = vaultConnectionFromEnv()
+    const vaultSecrets = vaultConnection
+      ? new VaultSecretService(vaultConnection)
+      : undefined
+
     const createLocalServices = await loadCreateLocalServices(
       config.rootDir,
       config.localServicesFile
@@ -142,6 +154,7 @@ export const serve = pikkuSessionlessFunc<
       {
         kysely: kysely ?? null,
         logger: new ConsoleLogger(),
+        ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
         ...(agentRunner ? { agentRunner } : {}),
         metaService: new LocalMetaService(pikkuDir),
         schedulerService: new InMemorySchedulerService(),
