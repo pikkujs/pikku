@@ -87,6 +87,7 @@
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
+    "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js"

@@ -82,7 +82,7 @@ export const lifecycle = pikkuServerLifecycle<SingletonServices>({
 })
 ```
 
-Every hook is optional. Order is `beforeStart` → server starts → `afterStart`, then on SIGINT `beforeStop` → services stopped → server stopped → `afterStop`.
+Every hook is optional. Order is `beforeStart` → server starts → `afterStart`, then on SIGINT or SIGTERM `beforeStop` → services stopped → server stopped → `afterStop`. A repeat signal while this runs is ignored, so the sequence always finishes.
 
 **`afterStop` runs after the singleton services have been stopped.** It still receives the services object, but the services inside it are shut down — using one there is a use-after-close bug. Anything that needs a live service goes in `beforeStop`.
 

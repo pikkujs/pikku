@@ -1,21 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
 
-/**
- * Element registry — explicit `name → selector` maps, registered upfront and
- * grouped by element kind:
- *
- *   {
- *     "buttons": { "Buy": "[data-testid=action-buy-product]" },
- *     "fields":  { "Course name": "[data-testid=field-course-name]" },
- *     "tables":  { "Bookings": "[data-testid=table-bookings]" }
- *   }
- *
- * The registry is meant to be GENERATED from the app's data-testids (the
- * scaffold emits them deterministically), so feature files use a closed
- * vocabulary of element names and a dry run can reject unknown ones. Names
- * not in the registry fall back to the Mantine-aware heuristics in
- * locators.ts, so adoption is incremental.
- */
 export type ElementKind =
   'buttons' | 'fields' | 'links' | 'tabs' | 'tables' | 'menus'
 

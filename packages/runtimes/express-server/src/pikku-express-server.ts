@@ -10,7 +10,10 @@ import { mkdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
 import type { CoreConfig } from '@pikku/core/types'
-import { stopSingletonServices } from '@pikku/core/utils'
+import {
+  onShutdownSignals,
+  stopSingletonServices,
+} from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { JWTService, Logger } from '@pikku/core/services'
@@ -229,11 +232,13 @@ export class PikkuExpressServer {
       this.logger.info('Server stopped')
       process.exit(0)
     }
-    process.on('SIGINT', () => {
-      shutdown().catch((error: unknown) => {
-        this.logger.error(`Error while stopping server: ${error}`)
-        process.exit(1)
-      })
-    })
+    onShutdownSignals(
+      () =>
+        shutdown().catch((error: unknown) => {
+          this.logger.error(`Error while stopping server: ${error}`)
+          process.exit(1)
+        }),
+      ['SIGINT']
+    )
   }
 }
