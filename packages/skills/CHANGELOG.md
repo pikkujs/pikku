@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.53
+
+### Patch Changes
+
+- 39dc189: Breaking: `pikkuFabric` and its `FabricPluginOptions` type are removed from `@pikku/better-auth`, along with the deprecated `fabric` registry entry. An app whose `auth.ts` still imports `pikkuFabric` fails to build on this version; remove the plugin, `FABRIC_AUTH_PUBLIC_KEY` and `FABRIC_STAGE_ID` from it, since Fabric now serves the operator sign-in route itself. The default impersonation gate admits only callers holding `admin:impersonate`, and `pikkuDelegatedAuth` refuses only actor rows. Added: `provisionPersonas` and its option, result and services types are exported, and its services need only an auth getter resolving `$context`. `@pikku/addon-admin` treats any truthy `fabric` marker as a non-person. The auth skill drops the `pikkuFabric` documentation.
+- 11f06d2: New `pikku-tailwind` skill for Tailwind v4 and shadcn/ui apps. The starter template is now a Tailwind and shadcn app with a `packages/theme` built from presets in `packages/theme/themes`.
+
 ## 0.12.52
 
 ### Patch Changes

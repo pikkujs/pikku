@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.139",
+  "version": "0.12.140",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -88,6 +88,7 @@
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
+    "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js"

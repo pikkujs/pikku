@@ -38,7 +38,7 @@ export const Route = createFileRoute('/pricing')({
 })
 ```
 
-`head()` strings are plain strings (they do not go through the Mantine i18n
+`head()` strings are plain strings (they do not go through the component i18n
 gate) — write real copy for THIS app, in the app's voice.
 
 - **Title**: unique per page, 50–60 characters, the page's primary topic first,

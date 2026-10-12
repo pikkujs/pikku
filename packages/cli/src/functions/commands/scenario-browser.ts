@@ -154,14 +154,14 @@ export const resolveScenarioBrowserProvider = async ({
   importDriver = (specifier) =>
     import(specifier) as unknown as Promise<ScenarioBrowserDriver>,
 }: ResolveScenarioBrowserProviderOptions): Promise<ScenarioBrowserProvider> => {
-  const module = await importDriver(driver).catch(() => {
+  const module = await importDriver(driver).catch((cause: unknown) => {
     const install =
       driver === DEFAULT_BROWSER_DRIVER
-        ? `Run 'yarn add -D ${driver} @playwright/test'`
+        ? `Run 'bun add -D ${driver} @playwright/test'`
         : `Install '${driver}', or point scenarios.browserDriver at a package that is`
     throw new Error(
       `Scenarios ${browserScenarios.join(', ')} declare browser steps but '${driver}' could not be loaded. ` +
-        `${install}, or run with --no-browser to skip them.`
+        `${install}, or run with --no-browser to skip them. Underlying error: ${cause instanceof Error ? cause.message : String(cause)}`
     )
   })
   const overrides = { appUrl, apiUrl, ...(appUrls ? { appUrls } : {}) }

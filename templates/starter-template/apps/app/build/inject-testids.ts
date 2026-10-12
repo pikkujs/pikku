@@ -26,37 +26,27 @@ import type { PluginObj, NodePath, types as BabelTypes } from '@babel/core'
  * added to a component, and the ids are identical on every build.
  */
 
-/** Mantine's controls plus the native elements, by tag. */
+/** The shadcn controls, the router's link and the native elements, by tag. */
 const INTERACTIVE = new Set([
   'Button',
-  'ActionIcon',
-  'Anchor',
-  'NavLink',
-  'CloseButton',
-  'TextInput',
+  'Link',
+  'Input',
+  'InputOTP',
   'Textarea',
-  'PasswordInput',
-  'NumberInput',
-  'JsonInput',
-  'FileInput',
-  'PinInput',
-  'Select',
-  'NativeSelect',
-  'MultiSelect',
-  'Autocomplete',
-  'TagsInput',
   'Checkbox',
-  'Radio',
   'Switch',
-  'Chip',
-  'SegmentedControl',
   'Slider',
-  'Rating',
-  'ColorInput',
-  'DateInput',
-  'DatePickerInput',
-  'DateTimePicker',
-  'TimeInput',
+  'Toggle',
+  'ToggleGroupItem',
+  'RadioGroupItem',
+  'SelectTrigger',
+  'SelectItem',
+  'DropdownMenuItem',
+  'DropdownMenuCheckboxItem',
+  'DropdownMenuRadioItem',
+  'TabsTrigger',
+  'AccordionTrigger',
+  'CommandItem',
   'button',
   'a',
   'input',
@@ -64,13 +54,8 @@ const INTERACTIVE = new Set([
   'select',
 ])
 
-/** The compound controls, which arrive as `Menu.Item` rather than a bare identifier. */
-const INTERACTIVE_MEMBERS = new Set([
-  'Menu.Item',
-  'Tabs.Tab',
-  'Accordion.Control',
-  'Combobox.Option',
-])
+/** The elements whose text names the control beside them: `<Label htmlFor="email">`. */
+const LABELS = new Set(['Label', 'FieldLabel', 'FormLabel', 'label'])
 
 /**
  * Where a control's meaning is written, most specific first.
@@ -87,8 +72,7 @@ const kebab = (name: string) =>
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
     .toLowerCase()
 
-const isInteractive = (tag: string | null): boolean =>
-  !!tag && (INTERACTIVE.has(tag) || INTERACTIVE_MEMBERS.has(tag))
+const isInteractive = (tag: string | null): boolean => !!tag && INTERACTIVE.has(tag)
 
 const tagName = (node: BabelTypes.JSXOpeningElement['name']): string | null => {
   if (node.type === 'JSXIdentifier') return node.name
@@ -135,11 +119,41 @@ function messageKey(node: BabelTypes.Node | null | undefined): string | null {
 
 /** A literal `name`/`id` — the stable identity a control has when its label is dynamic. */
 function literalIdentity(attributes: BabelTypes.JSXOpeningElement['attributes']): string | null {
+  return literalAttribute(attributes, 'name') ?? literalAttribute(attributes, 'id')
+}
+
+function literalAttribute(
+  attributes: BabelTypes.JSXOpeningElement['attributes'],
+  wanted: string,
+): string | null {
   for (const attribute of attributes) {
     if (attribute.type !== 'JSXAttribute') continue
     const attributeName = attribute.name.type === 'JSXIdentifier' ? attribute.name.name : null
-    if (attributeName !== 'name' && attributeName !== 'id') continue
+    if (attributeName !== wanted) continue
     if (attribute.value?.type === 'StringLiteral') return attribute.value.value
+  }
+  return null
+}
+
+/**
+ * The message key of the label that names this control from beside it, as shadcn forms do:
+ * `<Label htmlFor="email">{m.common__email()}</Label>` next to `<Input id="email" />`, in the
+ * same parent. A label pointing at a different id belongs to a different control.
+ */
+function siblingLabelKey(element: NodePath<BabelTypes.JSXOpeningElement>): string | null {
+  const parent = element.parentPath.parentPath?.node
+  if (parent?.type !== 'JSXElement') return null
+  const id = literalAttribute(element.node.attributes, 'id')
+  for (const child of parent.children) {
+    if (child.type !== 'JSXElement') continue
+    const label = child.openingElement
+    if (!LABELS.has(tagName(label.name) ?? '')) continue
+    const target = literalAttribute(label.attributes, 'htmlFor')
+    if (target && id && target !== id) continue
+    for (const text of child.children) {
+      const key = messageKey(text)
+      if (key) return key
+    }
   }
   return null
 }
@@ -276,6 +290,7 @@ export default function injectTestIds(
           }
         }
 
+        key ??= siblingLabelKey(path)
         key ??= literalIdentity(path.node.attributes)
 
         // No key, no id — DELIBERATELY. The alternative is a positional fallback

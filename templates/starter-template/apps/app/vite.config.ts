@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { fileURLToPath, URL } from 'node:url'
@@ -19,6 +20,7 @@ export default defineConfig({
     // Compile messages/*.json → src/paraglide so `m` resolves, with HMR
     // on message edits. Must run first.
     paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    tailwindcss(),
     tanstackStart(),
     // Stamps the `data-testid`s browser scenarios address controls by, derived from each
     // control's i18n message key. A standalone pre-transform rather than a `babel` option

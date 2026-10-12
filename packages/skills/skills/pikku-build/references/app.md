@@ -754,9 +754,7 @@ spacing.
 
 ### 8a. Author the theme — the step nothing does for you
 
-The look lives in `packages/mantine-theme`, and it is data, not code:
-
-The look lives in `packages/mantine-theme`, and it is data, not code — one JSON
+The look lives in `packages/theme`, and it is data, not code — one JSON
 per theme, `active.json` naming the live one. **Read the theming reference (see SKILL.md)** for
 the file layout, what each field changes, and how to turn a direction in words
 into a theme.
@@ -786,19 +784,18 @@ database before judging anything. It prescribes no layouts on purpose: two apps
 built from this skill should not look like each other. What follows here is only
 the component inventory.
 
-**Compose with Mantine's rich components — not tables and text everywhere:**
+**Compose with rich components — not tables and text everywhere:**
 
-- **`@mantine/charts`** (Recharts underneath) for overviews — `AreaChart`,
-  `BarChart`, `LineChart`, `DonutChart`, `Sparkline`. A metric worth showing is
-  worth a chart, not a number in a `Text`.
-- **`@mantine/dates`** for anything time-based — `DatePicker`, `Calendar`,
-  `DateTimePicker`, range inputs. Never hand-roll a date field.
-- Composed layouts over flat lists — `Timeline` for history, `Stepper` for
-  multi-step progress, `Card` + `SimpleGrid` for a gallery, `RingProgress` for
-  completion, `Badge`/`ThemeIcon` for status.
+- **shadcn `chart`** (Recharts underneath, coloured by `--chart-1` to `--chart-5`) for overviews — area,
+  bar, line and pie charts. A metric worth showing is
+  worth a chart, not a number in a paragraph.
+- **shadcn `calendar` and `date-picker`** for anything time-based, including
+  range inputs. Never hand-roll a date field.
+- Composed layouts over flat lists — a timeline for history, steps for
+  multi-step progress, `Card` + a CSS grid for a gallery, `Progress` for
+  completion, `Badge` for status.
 
-Both ship in the template's app dependencies. Look each one up in the Mantine
-llms.txt and use the real component.
+Add each one with the shadcn CLI and use the real component.
 
 Then critique it. Free, and works across coding agents:
 
@@ -817,8 +814,8 @@ Judging your own UI from source code is guessing.
 **Screenshot at a phone width too (≈390px), not just desktop, and critique
 those.** A layout that is fine at 1440px routinely breaks at 390 — a table that
 overflows, a row of buttons that wraps into a pile, text jammed against the edge,
-a modal taller than the viewport. Mantine gives you the tools (responsive `Grid`,
-`visibleFrom` / `hiddenFrom`, `Stack` instead of `Group` at small sizes); use
+a modal taller than the viewport. Tailwind gives you the tools (responsive `grid-cols-*`,
+`md:hidden` / `hidden md:block`, `flex-col` instead of `flex-row` at small sizes); use
 them. The template already mounts a phone navigation per `AGENTS.md` — pick
 `MobileTabBar` or `MobileNavDrawer` deliberately per app, never both.
 

@@ -879,7 +879,7 @@
     "frontend.json": {
       "x-optional": true,
       "type": "object",
-      "description": "Web-UI app-level shape. Names the framework/router/styling/data/auth so the rebuild can weigh their tradeoffs (e.g. TanStack Start + better-auth + Mantine).",
+      "description": "Web-UI app-level shape. Names the framework/router/styling/data/auth so the rebuild can weigh their tradeoffs (e.g. TanStack Start + better-auth + Tailwind).",
       "required": [
         "framework",
         "styling",
@@ -903,12 +903,12 @@
         },
         "styling": {
           "type": "string",
-          "description": "the design system, e.g. Mantine, Tailwind, MUI, CSS modules"
+          "description": "the design system, e.g. shadcn, Tailwind, MUI, CSS modules"
         },
         "designSystemConsistency": {
           "type": "string",
           "enum": ["single-system", "mostly-consistent", "mixed", "ad-hoc"],
-          "description": "how uniformly ONE component/theme system is used — the rebuild target is 'everything Mantine', so divergence is porting work"
+          "description": "how uniformly ONE component/theme system is used — the rebuild target is 'everything shadcn', so divergence is porting work"
         },
         "designFindings": {
           "type": "array",
@@ -1036,7 +1036,7 @@
     "frontend-components.json": {
       "x-optional": true,
       "type": "object",
-      "description": "Component inventory. The load-bearing field is `rebuild`: it separates components that are trivially rebuildable in the target design system (Mantine) from those carrying bespoke logic that must be carefully PORTED (custom charts, complex tables, canvas, drag/drop). That split is the frontend's real migration cost.",
+      "description": "Component inventory. The load-bearing field is `rebuild`: it separates components that are trivially rebuildable in the target design system (shadcn) from those carrying bespoke logic that must be carefully PORTED (custom charts, complex tables, canvas, drag/drop). That split is the frontend's real migration cost.",
       "required": ["components"],
       "properties": {
         "components": {
@@ -1071,12 +1071,12 @@
               "rebuild": {
                 "type": "string",
                 "enum": [
-                  "mantine-standard",
-                  "mantine-composition",
+                  "library-standard",
+                  "library-composition",
                   "custom-style",
                   "custom-logic"
                 ],
-                "description": "mantine-standard = maps 1:1 to a Mantine component (trivial); mantine-composition = built from Mantine primitives (straightforward); custom-style = diverges visually from the design system (normalize to Mantine); custom-logic = bespoke behavior (chart/table/canvas/drag/editor) that must be PORTED, not re-skinned"
+                "description": "library-standard = maps 1:1 to a shadcn component (trivial); library-composition = built from shadcn primitives (straightforward); custom-style = diverges visually from the design system (normalize to shadcn); custom-logic = bespoke behavior (chart/table/canvas/drag/editor) that must be PORTED, not re-skinned"
               },
               "customLogic": {
                 "type": "string",

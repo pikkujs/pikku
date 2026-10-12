@@ -1,15 +1,18 @@
 import React from 'react'
-import { Badge, type BadgeProps } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
+import { nodeColor } from '../colors'
 
 type GraphBadgeProps = (
   | { type: 'dynamic'; badge: string; value: string | number }
   | { type: 'label'; children: I18nNode }
-) &
-  Omit<BadgeProps, 'children'> & {
-    onClick?: React.MouseEventHandler<HTMLDivElement>
-  }
+) & {
+  color?: string
+  size?: 'xs' | 'sm' | 'md'
+  className?: string
+  style?: React.CSSProperties
+  onClick?: React.MouseEventHandler<HTMLSpanElement>
+}
 
 const humanize = (str: string): string =>
   str.includes('/')
@@ -20,35 +23,28 @@ const humanize = (str: string): string =>
         .replace(/\b\w/g, (c) => c.toUpperCase())
 
 export const GraphBadge: React.FC<GraphBadgeProps> = (props) => {
-  const { type, size: propSize, ...rest } = props as any
-  const size = propSize || 'md'
+  const { color, size = 'md', className, style, onClick } = props
+  const accent = nodeColor(color ?? 'gray')
+  const sizeClass =
+    size === 'xs'
+      ? 'h-3 min-w-3 px-0.5 text-[9px]'
+      : size === 'sm'
+        ? 'h-4 px-1.5 text-[10px]'
+        : 'h-5 px-2 text-xs'
 
-  if (type === 'label') {
-    const { children, color, variant, ...badgeProps } = rest
-    return (
-      <Badge
-        size={size}
-        tt="none"
-        variant={(variant || 'light') as BadgeProps['variant']}
-        color={color || 'gray'}
-        {...badgeProps}
-      >
-        {children}
-      </Badge>
-    )
-  }
-
-  const { badge: _badge, value, color, variant, style, ...badgeProps } = rest
   return (
-    <Badge
-      size={size}
-      tt="none"
-      variant={(variant || 'light') as BadgeProps['variant']}
-      color={color || 'gray'}
-      {...badgeProps}
-      style={{ flexShrink: 0, ...style }}
+    <span
+      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full font-medium ${sizeClass} ${className ?? ''}`}
+      style={{
+        color: accent,
+        background: `color-mix(in oklab, ${accent} 15%, transparent)`,
+        ...style,
+      }}
+      onClick={onClick}
     >
-      {asI18n(humanize(String(value)))}
-    </Badge>
+      {props.type === 'label'
+        ? props.children
+        : asI18n(humanize(String(props.value)))}
+    </span>
   )
 }

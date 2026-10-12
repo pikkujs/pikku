@@ -122,7 +122,7 @@ Worth naming when it applies: adopting one coherent system in place of hand-roll
 
 ### The stack a rebuild would land on
 
-Include this section **only if you are actually recommending a rebuild** onto it — and then give every part of it the same both-sides treatment you gave the app's own bets, per the "hold your own recommendation to the same bar" rule above. These are not choices the app made; they are choices you are proposing, which is exactly why their costs are the reader's to weigh. The Pikku target stack is Pikku + Better Auth + TanStack Start + Mantine; the framings below are reference material for the parts you actually recommend, not a script to recite.
+Include this section **only if you are actually recommending a rebuild** onto it — and then give every part of it the same both-sides treatment you gave the app's own bets, per the "hold your own recommendation to the same bar" rule above. These are not choices the app made; they are choices you are proposing, which is exactly why their costs are the reader's to weigh. The Pikku target stack is Pikku + Better Auth + TanStack Start + shadcn; the framings below are reference material for the parts you actually recommend, not a script to recite.
 
 **Better Auth (self-hosted sign-in) — instead of a paid service like Auth0/Clerk.**
 

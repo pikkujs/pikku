@@ -27,6 +27,10 @@ export const RESOURCE_PREFIXES = [
   // A persona from `definePersonas()`. A note naming a persona nobody declared
   // is exactly the drift this check exists to catch.
   'persona',
+  // A file kept in the project's content service, as `bucket/key`. Checked
+  // against the local content directory, so it resolves wherever the files were
+  // written by the dev server.
+  'content',
 ] as const
 
 export type ResourcePrefix = (typeof RESOURCE_PREFIXES)[number]
@@ -214,6 +218,23 @@ const scopeIds = (functions: unknown, roles: unknown): string[] => {
   return ids
 }
 
+const walk = async (dir: string, base = ''): Promise<string[]> => {
+  let entries
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const nested = await Promise.all(
+    entries.map((entry) =>
+      entry.isDirectory()
+        ? walk(join(dir, entry.name), `${base}${entry.name}/`)
+        : [`${base}${entry.name}`]
+    )
+  )
+  return nested.flat()
+}
+
 /**
  * Every id this project's code currently offers, keyed by prefix — the
  * right-hand side of a `resource:` check.
@@ -266,6 +287,7 @@ export const collectKnownResources = async (
   put('channel', wireIds(await findWireMeta(outDir, 'channel')))
   put('table', await tableIds(outDir))
   put('addon', await addonIds(root))
+  put('content', await walk(join(root, '.pikku-runtime', 'content', 'private')))
 
   // Both come out of codegen rather than pikku.config.json: personas and roles
   // are declared in code, and the meta sidecars are what every other consumer

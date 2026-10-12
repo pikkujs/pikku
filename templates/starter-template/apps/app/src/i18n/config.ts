@@ -32,7 +32,7 @@ export const defaultLocale: Locale = (locales as readonly string[]).includes(act
 
 const RTL_LOCALES = new Set(['ar', 'he', 'fa', 'ur'])
 // Direction for a locale — RTL for Arabic/Hebrew/Farsi/Urdu, else LTR. Set this
-// on <html dir> at the root so the browser (and Mantine) mirror the layout.
+// on <html dir> at the root so the browser mirror the layout.
 export function localeDir(locale: string = defaultLocale): 'rtl' | 'ltr' {
   return RTL_LOCALES.has(locale.split('-')[0]) ? 'rtl' : 'ltr'
 }

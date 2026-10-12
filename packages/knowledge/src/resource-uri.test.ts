@@ -92,11 +92,23 @@ describe('collectKnownResources', () => {
       '.pikku/db/pikku-db-schema.gen.json': { tables: [{ name: 't' }] },
       'package.json': { dependencies: { '@pikku/addon-stripe': '1' } },
       '.pikku/scopes/pikku-personas-meta.gen.json': { owner: { id: 'owner' } },
+      '.pikku-runtime/content/private/attachments/menu.pdf': {},
     })
     assert.deepEqual(
       [...(await known(root)).keys()].sort(),
       [...RESOURCE_PREFIXES].sort()
     )
+  })
+
+  test('takes content ids as bucket/key from the private content directory', async (t) => {
+    const root = await project(t, {
+      '.pikku-runtime/content/private/attachments/menu.pdf': {},
+      '.pikku-runtime/content/private/attachments/photos/a.png': {},
+    })
+    assert.deepEqual([...(await known(root)).get('content')!].sort(), [
+      'attachments/menu.pdf',
+      'attachments/photos/a.png',
+    ])
   })
 
   test('takes func ids from the function meta keys', async (t) => {
