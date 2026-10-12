@@ -22,12 +22,16 @@ import type {
   ReplyToChangeOutput,
 } from '../sdk/rpc-map.gen.d.js'
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import { assertDependencies } from './change-order.js'
+import { inferSpecialist, isSpecialist, type Specialist } from './specialists.js'
 
 export const LOCAL_PROJECT_ID = 'local'
 const LOCAL_STAGE_ID = 'local'
 const STORE_FILE = 'pikku-changes.json'
 
-type Change = ListChangesOutput['changes'][number]
+export type Routing = { specialist?: Specialist; dependsOn?: string[] }
+
+type Change = ListChangesOutput['changes'][number] & Routing
 
 export type Declaration = {
   creates: string[]
@@ -49,7 +53,11 @@ type Store = {
 type LocalMap = {
   listChanges: [ListChangesInput, ListChangesOutput]
   getChange: [GetChangeInput, GetChangeOutput]
-  createChange: [CreateChangeInput, CreateChangeOutput]
+  createChange: [CreateChangeInput & Routing, CreateChangeOutput]
+  updateChange: [
+    { changeId: string } & Routing,
+    { change: Change },
+  ]
   claimChanges: [ClaimChangesInput, ClaimChangesOutput]
   completeChange: [CompleteChangeInput, CompleteChangeOutput]
   askChangeQuestion: [AskChangeQuestionInput, AskChangeQuestionOutput]
@@ -141,6 +149,32 @@ function find(store: Store, ref: string): Change {
   return change
 }
 
+function tag(
+  specialist: unknown,
+  title: string,
+  body?: string | null
+): Specialist {
+  if (specialist === undefined || specialist === null)
+    return inferSpecialist(title, body)
+  if (!isSpecialist(specialist))
+    throw new LocalChangesError(`${String(specialist)} is not a specialist`, 400)
+  return specialist
+}
+
+function dependencies(
+  store: Store,
+  changeId: string,
+  refs: string[] | undefined
+): string[] {
+  const ids = (refs ?? []).map((ref) => find(store, ref).changeId)
+  try {
+    assertDependencies(store.changes, changeId, ids)
+  } catch (error) {
+    throw new LocalChangesError((error as Error).message, 400)
+  }
+  return ids
+}
+
 function leaseLive(store: Store, change: Change, now: Date): boolean {
   if (!change.groupId) return false
   const group = store.groups.find((g) => g.groupId === change.groupId)
@@ -222,8 +256,12 @@ const handlers: {
   },
 
   createChange: (store, input) => {
+    const changeId = randomUUID()
+    const dependsOn = dependencies(store, changeId, input.dependsOn)
     const change: Change = {
-      changeId: randomUUID(),
+      changeId,
+      specialist: tag(input.specialist, input.title, input.body),
+      dependsOn,
       shortId: String(store.nextShortId++),
       projectId: LOCAL_PROJECT_ID,
       stageId: LOCAL_STAGE_ID,
@@ -252,6 +290,15 @@ const handlers: {
       screenshotUrl: null,
     }
     store.changes.push(change)
+    return { change }
+  },
+
+  updateChange: (store, input) => {
+    const change = find(store, input.changeId)
+    if (input.specialist !== undefined)
+      change.specialist = tag(input.specialist, change.title, change.body)
+    if (input.dependsOn !== undefined)
+      change.dependsOn = dependencies(store, change.changeId, input.dependsOn)
     return { change }
   },
 
