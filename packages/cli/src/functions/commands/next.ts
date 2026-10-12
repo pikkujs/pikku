@@ -12,6 +12,8 @@ import { openKnowledgeGaps } from '../../fabric/lib/knowledge-gaps.js'
 import { planOnBranch } from '../../fabric/lib/plan-gate.js'
 import { takeBump, type PikkuBump } from '../../fabric/lib/pikku-bump.js'
 import { localStorePath } from '../../fabric/lib/changes-local.js'
+import { runnable } from '../../fabric/lib/change-order.js'
+import { nextSpecialist, specialistOf } from '../../fabric/lib/specialists.js'
 import { predictSkills } from '../../fabric/lib/predict-skills.js'
 import { knowledgeLine } from '@pikku/knowledge'
 import {
@@ -28,6 +30,7 @@ type Harness = 'pi' | 'claude'
 
 const idle = (reason: string): Route => ({
   agent: null,
+  specialist: null,
   skill: null,
   refs: [],
   reason,
@@ -118,7 +121,22 @@ async function pick(
     return idle(
       `A changeset is running: ${running.map((g) => g.title).join(', ')}`
     )
-  const ready = claimable(list, now)
+  const open = claimable(list, now)
+  const blockers = open.some((c) => (c as { dependsOn?: string[] }).dependsOn?.length)
+    ? (
+        await rpc.invoke('listChanges', {
+          projectId,
+          includeDone: true,
+          pickupOnly: false,
+          limit: 500,
+        })
+      ).changes
+    : []
+  const unblocked = runnable(open as Array<(typeof open)[number] & { dependsOn?: string[] }>, blockers)
+  const specialist = nextSpecialist(unblocked)
+  const ready = unblocked.filter((c) => specialistOf(c) === specialist)
+  if (open.length && !unblocked.length)
+    return idle('Every open change is waiting on another change')
   if (!ready.length) {
     if (running.length) return idle('Nothing to do')
     const bump = await takeBump(root, await localStorePath())
@@ -129,6 +147,7 @@ async function pick(
   return {
     agent: 'changes',
     skill: 'pikku-changes',
+    specialist,
     refs: predictSkills(
       ready.flatMap((c) => [c.title, c.body]),
       list.groups as Array<{ creates?: string[]; alters?: string[]; needsPlan?: boolean }>
@@ -136,7 +155,9 @@ async function pick(
     reason: `${ready.length} open change(s)`,
     merged: [],
     context: [
-      '# Open changes',
+      `# Open changes for the ${specialist} specialist`,
+      '',
+      specialistScope(specialist!),
       '',
       ...ready.flatMap((c) => [
         `## #${c.shortId} ${c.title}`,
@@ -243,6 +264,9 @@ ${prompt}
 Read the knowledge base for what the app already is, then file the request as changes: \`pikku changes file --title "<one line>" --body "<what the person sees when it is done>"\`. Each change is one commit's worth, written in the app's own words. Where the request leaves something open that changes the schema or a screen, \`pikku changes ask\` on the change it affects. File them and stop; another agent builds them.
 `,
 })
+
+const specialistScope = (specialist: string): string =>
+  `You are the ${specialist} specialist and these changes are tagged for you. Stay inside your scope. When a change needs something that is another specialist's work, do not do it: file it for that specialist with \`pikku changes file --specialist <name> --depends-on <this change> --title "<one line>"\` and carry on with the rest.`
 
 const WORKING_THEM = `These are every open change. Group them into changesets as the pikku-changes skill's Changesets section says, then claim one, build it, mark its changes done and stop. pikku changes next merges it, and the next changeset gets a fresh agent.
 `
