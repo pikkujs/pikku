@@ -13,6 +13,8 @@ let active = false
 let token: string | null = null
 let linked: string | null = null
 let fabricDown: 'refused' | 'http' | null = null
+let stagesDenied = false
+let stages = [{ stageId: 'stage_main', branch: 'main' }]
 const fabricCalls: { name: string; data: any }[] = []
 
 void mock.module('@pikku/cli/addon-support', () => ({ ...cliSupport }))
@@ -43,7 +45,12 @@ void mock.module('./http.js', () => ({
               throw new Error('connect ECONNREFUSED')
             if (fabricDown === 'http')
               throw Object.assign(new Error('forbidden'), { status: 403 })
-            if (name === 'createChange')
+            if (name === 'listStages') {
+              if (stagesDenied)
+                throw Object.assign(new Error('denied'), { status: 403 })
+              return { stages }
+            }
+            if (name === 'createChange' || name === 'createSandboxChange')
               return {
                 change: { changeId: 'fab_1', shortId: '1', title: data.title },
               }
@@ -101,6 +108,8 @@ beforeEach(() => {
   token = null
   linked = null
   fabricDown = null
+  stagesDenied = false
+  stages = [{ stageId: 'stage_main', branch: 'main' }]
   delete process.env.FABRIC_PROJECT_ID
   delete process.env.PIKKU_CHANGES_DIR
   fabricCalls.length = 0
@@ -240,5 +249,50 @@ describe('changes on a project backed by fabric', () => {
       next.func({ config: { rootDir: repo } } as any, {} as any),
       /need a connection/
     )
+  })
+
+  test('filing picks the stage on the checked-out branch', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    stages = [
+      { stageId: 'stage_other', branch: 'other' },
+      { stageId: 'stage_main', branch: 'main' },
+    ]
+    await file('Which stage')
+    const created = fabricCalls.find((c) => c.name === 'createChange')!
+    assert.strictEqual(created.data.stageId, 'stage_main')
+  })
+
+  test('an explicit stage is used as it is, with no lookup', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    await ChangesFile.func(
+      {} as any,
+      { title: 'Explicit', stageId: 'stage_x' } as any
+    )
+    assert.ok(!fabricCalls.some((c) => c.name === 'listStages'))
+    const created = fabricCalls.find((c) => c.name === 'createChange')!
+    assert.strictEqual(created.data.stageId, 'stage_x')
+  })
+
+  test('filing with no stage on this branch and several stages refuses', async () => {
+    token = 'tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    stages = [
+      { stageId: 'a', branch: 'one' },
+      { stageId: 'b', branch: 'two' },
+    ]
+    await assert.rejects(file('Ambiguous'), /No stage for main among 2 stages/)
+  })
+
+  test('a sandbox, which may not list stages, files through createSandboxChange', async () => {
+    token = 'sandbox-tok'
+    process.env.FABRIC_PROJECT_ID = 'proj_1'
+    stagesDenied = true
+    await file('From a sandbox')
+    assert.ok(!fabricCalls.some((c) => c.name === 'createChange'))
+    const created = fabricCalls.find((c) => c.name === 'createSandboxChange')!
+    assert.strictEqual(created.data.title, 'From a sandbox')
+    assert.strictEqual(created.data.stageId, undefined)
   })
 })

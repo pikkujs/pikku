@@ -6,6 +6,7 @@ import { runCoreImportChecks } from "./core-import-checks.js";
 import { declaredBlockPackages, runBlockChecks } from "./block-checks.js";
 import { isShadcnApp, runComponentChecks } from "./component-checks.js";
 import { runMocksChecks, usesMocks } from "./mocks-checks.js";
+import { hasPlaceholderSurface, runPlaceholderBrandChecks } from "./placeholder-brand-checks.js";
 import { runOxlintRun, runOxlintSetupChecks } from "./oxlint-checks.js";
 import { runPikkuBarrelChecks } from "./pikku-barrel-checks.js";
 import { runScaffoldDuplicateChecks } from "./scaffold-duplicate-checks.js";
@@ -179,6 +180,15 @@ export const CHECKS: ValidateCheck[] = [
       !existsSync(join(dir, ADDON_MARKER)) &&
       usesMocks(dir),
     run: async ({ dir }) => runMocksChecks(dir),
+  },
+  {
+    id: "placeholder-brand",
+    subject: "template names left in the brand",
+    applies: async ({ dir }) =>
+      existsSync(join(dir, "pikku.config.json")) &&
+      !existsSync(join(dir, ADDON_MARKER)) &&
+      hasPlaceholderSurface(dir),
+    run: async ({ dir }) => runPlaceholderBrandChecks(dir),
   },
   {
     id: "pikku-barrel",

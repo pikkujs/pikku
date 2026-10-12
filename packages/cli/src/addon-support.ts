@@ -8,4 +8,5 @@ export {
 } from './changes/context.js'
 export { httpStatus } from './changes/http-status.js'
 export type { ChangeEvents } from './changes/change-events.js'
+export { LOCAL_PROJECT_ID } from './changes/changes-local.js'
 export type { Declaration } from './changes/changes-local.js'

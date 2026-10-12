@@ -159,6 +159,14 @@ export const changesCommands = defineCLICommands({
         description: 'The route it is about, e.g. /admin/rota',
       },
       locale: { description: 'Locale it was seen in, e.g. de' },
+      specialist: {
+        description:
+          'The one specialist that builds this: build, frontend, artifacts, knowledge or emails. Left out, it is inferred from the words, falling back to build',
+      },
+      dependsOn: {
+        description:
+          'Changes that must be done before this one runs, repeatable — 2, #2 or the uuid',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),

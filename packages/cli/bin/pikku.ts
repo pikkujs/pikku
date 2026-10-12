@@ -114,6 +114,12 @@ if (existsSync(pikkuCliPath)) {
       await import('../src/functions/db/sqlite/sqlite-library.js')
     await useSqliteLibrary()
     const { PikkuCLI } = await import(pathToFileURL(pikkuCliPath).href)
+    const { mountCLIExtensions, findOwnPackageDir } =
+      await import('../src/utils/cli-extensions.js')
+    const cliPackageDir = findOwnPackageDir(import.meta.url)
+    if (cliPackageDir) {
+      await mountCLIExtensions({ argv: process.argv.slice(2), cliPackageDir })
+    }
     const updateCheck = checkForUpdate()
     await PikkuCLI(process.argv.slice(2))
     await updateCheck

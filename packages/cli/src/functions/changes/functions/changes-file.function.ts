@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../../.pikku/function/index.js'
 import { PreconditionError } from '../../../utils/precondition-error.js'
-import { changesContext, nonBlank } from '../lib/changes.js'
+import { changesContext, idList, nonBlank } from '../lib/changes.js'
 import { dim, safe } from '../../../utils/output.js'
 import type { CreateChangeOutput } from '../../../changes/types.js'
+import { SPECIALISTS } from '../../../changes/specialists.js'
 
 export const ChangesFileInput = z.object({
   apiUrl: z.string().optional(),
@@ -15,6 +16,8 @@ export const ChangesFileInput = z.object({
   bodyFile: z.string().optional(),
   route: z.string().optional(),
   locale: z.string().optional(),
+  specialist: z.enum(SPECIALISTS).optional(),
+  dependsOn: z.array(z.string()).optional(),
 })
 
 export const ChangesFileOutput = z.object({
@@ -45,13 +48,16 @@ export const ChangesFile = pikkuSessionlessFunc({
       ? await readFile(input.bodyFile, 'utf8')
       : input.body
 
-    return await rpc.invoke('createChange', {
+    const filing = {
       stageId: input.stageId ?? 'local',
       title: nonBlank(input.title, 'Give the item a title.'),
       body: body?.trim() || undefined,
       route: input.route,
       locale: input.locale,
-    })
+      specialist: input.specialist,
+      dependsOn: idList(input.dependsOn),
+    }
+    return await rpc.invoke('createChange', filing)
   },
 })
 
