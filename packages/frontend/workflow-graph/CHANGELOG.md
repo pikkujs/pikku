@@ -1,5 +1,17 @@
 # @pikku/workflow-graph
 
+## 0.12.3
+
+### Patch Changes
+
+- 0fdd9b1: Nodes, edges and badges are styled with Tailwind classes over the shadcn tokens (`--card`, `--border`, `--muted-foreground`, `--chart-1` to `--chart-5`) instead of component-library primitives. Node accents take `--pikku-node-<colorKey>` and run statuses take `--pikku-status-<status>`. The host app now needs Tailwind scanning this package's source.
+- Updated dependencies [b04e444]
+- Updated dependencies [d3d8a98]
+- Updated dependencies [e71857d]
+- Updated dependencies [658da50]
+  - @pikku/core@0.12.141
+  - @pikku/react@0.12.15
+
 ## 0.12.2
 
 ### Patch Changes

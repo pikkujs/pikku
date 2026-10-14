@@ -1,5 +1,16 @@
 # @pikku/playwright
 
+## 0.12.87
+
+### Patch Changes
+
+- ddfd4e8: `pikku ui pages list|screenshot` lists a frontend's pages and photographs them. `@pikku/playwright` exports `openPageSession`, `screenshotPages` and `screenshotName`.
+- 5b04314: The element drivers resolve shadcn and Radix components (Select, Checkbox, Switch, Tabs, Dialog, sonner toasts, Calendar) instead of Mantine ones. The locator namespace is exported as `ui` rather than `mantine`.
+- Updated dependencies [b04e444]
+- Updated dependencies [d3d8a98]
+- Updated dependencies [658da50]
+  - @pikku/core@0.12.141
+
 ## 0.12.86
 
 ### Patch Changes
