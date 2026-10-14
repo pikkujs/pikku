@@ -5,7 +5,7 @@
  * browser. Locally, falls back to a dev server. Everything is overridable per
  * environment via env vars.
  *
- * Unlike the cucumber harness this replaces, there are no personas here:
+ * Unlike the cucumber harness this replaces, there are no virtual users here:
  * identity comes from the scenario's own actors, so a browser step and an HTTP
  * step run as the same user.
  */
@@ -22,8 +22,8 @@ export interface BrowserConfig {
    */
   appUrlSource?: 'override' | 'env' | 'default'
   /**
-   * Where each app is served, keyed by the `app` its personas declare. A
-   * session navigates against its own actor's app; `appUrl` covers a persona
+   * Where each app is served, keyed by the `app` its virtual users declare. A
+   * session navigates against its own actor's app; `appUrl` covers a virtual user
    * that names none.
    */
   appUrls?: Record<string, string>

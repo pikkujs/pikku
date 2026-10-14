@@ -46,9 +46,9 @@ describe('testIdSelector', () => {
     assert.equal(
       testIdSelector({
         testId: 'scenario-cast-member',
-        where: { 'data-persona-key': 'shopper', 'data-connected': 'false' },
+        where: { 'data-virtual-user-key': 'shopper', 'data-connected': 'false' },
       }),
-      '[data-testid="scenario-cast-member"][data-persona-key="shopper"][data-connected="false"]'
+      '[data-testid="scenario-cast-member"][data-virtual-user-key="shopper"][data-connected="false"]'
     )
   })
 })

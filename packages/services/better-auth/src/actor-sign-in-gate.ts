@@ -10,7 +10,7 @@ export const WEAK_ACTOR_ROOT_SECRET_MESSAGE =
   'Actor sign-in is not configured with a strong enough secret'
 
 export const ACTOR_NOT_PROVISIONED_MESSAGE =
-  'No actor account exists for that address — the deployment provisions its personas at startup, so check they were declared in this environment'
+  'No actor account exists for that address — the deployment provisions its virtual users at startup, so check they were declared in this environment'
 
 export type ActorSignInReason =
   'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
@@ -20,7 +20,7 @@ export interface ActorSignInGate {
   reason: ActorSignInReason
   /**
    * Whether an unknown address may be turned into an actor row. `pikku dev`
-   * alone: a stage that runs scenarios signs in as the personas the deployment
+   * alone: a stage that runs scenarios signs in as the virtual users the deployment
    * provisioned when it started, and never mints new identities.
    */
   mayProvision: boolean
@@ -77,7 +77,7 @@ export const resolveActorSignIn = (optIn?: string): ActorSignInGate => {
 export const actorSignInEnabledMessage = (reason: ActorSignInReason): string =>
   reason === 'pikku-dev'
     ? `actor: sign-in enabled because ${DEV_ACTOR_SIGN_IN_ENV} is set — this process is \`pikku dev\``
-    : `actor: sign-in enabled outside \`pikku dev\` by ${ACTOR_SIGN_IN_OPT_IN_ENV} — any provisioned persona can be signed in as without a password`
+    : `actor: sign-in enabled outside \`pikku dev\` by ${ACTOR_SIGN_IN_OPT_IN_ENV} — any provisioned virtual user can be signed in as without a password`
 
 export const actorSignInRefusedMessage = (): string =>
   `actor: an actor secret is configured but sign-in stays disabled — ${DEV_ACTOR_SIGN_IN_ENV} is unset (so this is not \`pikku dev\`). ` +
@@ -102,4 +102,4 @@ export const actorSignInNearMissMessage = (): string =>
  */
 export const weakActorRootSecretMessage = (): string =>
   `actor: refused a sign-in — the root actor secret is shorter than 32 characters. ` +
-  `Every persona's credential is derived from it, so it must be high-entropy key material, not a password.`
+  `Every virtual user's credential is derived from it, so it must be high-entropy key material, not a password.`

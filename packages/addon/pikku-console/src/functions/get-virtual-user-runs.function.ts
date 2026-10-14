@@ -15,12 +15,12 @@ import { pikkuFunc } from '#pikku/addon/function'
 const MAX_RUNS = 100
 
 export const getVirtualUserRuns = pikkuFunc<
-  { persona?: string; limit?: number; offset?: number },
+  { virtualUser?: string; limit?: number; offset?: number },
   any[]
 >({
   title: 'Get Virtual User Runs',
   description:
-    'Returns recorded virtual user runs, newest first. Accepts optional persona, limit and offset.',
+    'Returns recorded virtual user runs, newest first. Accepts optional virtualUser, limit and offset.',
   expose: true,
   scopes: ['pikku:console:virtualUsers:read'],
   func: async ({ virtualUserRunStore }, input) => {
@@ -28,7 +28,7 @@ export const getVirtualUserRuns = pikkuFunc<
       return []
     }
     const runs = await virtualUserRunStore.list({
-      persona: input?.persona,
+      virtualUser: input?.virtualUser,
       // The scaffolded read bounds this through zod; nothing types a console
       // function's input at runtime, so the ceiling is applied here instead of
       // letting a caller ask the store for every run an app has ever recorded.

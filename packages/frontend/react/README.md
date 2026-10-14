@@ -34,7 +34,7 @@ const Todos = () => {
 ## Dev actor sign-in
 
 `useDevActors()` powers the "Sign in as …" switcher: one click signs in as a
-declared scenario persona with no password, through Better Auth's persona
+declared scenario virtual user with no password, through Better Auth's virtual user
 endpoint. It is UI-free, so you can render it however you like — or use the
 starter template's `<DevActorSwitcher />`.
 
@@ -48,9 +48,9 @@ const { actors, signInAs, isPending } = useDevActors({
 })
 ```
 
-No credential reaches the bundle. The hook lists personas from
-`/auth/sign-in/personas`, and `signInAs(id)` posts only the persona id to
-`/auth/sign-in/persona`. The server decides both: pass `personaSignIn` to
+No credential reaches the bundle. The hook lists virtual users from
+`/auth/sign-in/virtual-users`, and `signInAs(id)` posts only the virtual user id to
+`/auth/sign-in/virtual-user`. The server decides both: pass `virtualUserSignIn` to
 `pikkuActor` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
 stage opts into actor sign-in and turns its `devSwitcher` flag on, and the
 endpoint only signs in users flagged `actor: true`, so it can never impersonate

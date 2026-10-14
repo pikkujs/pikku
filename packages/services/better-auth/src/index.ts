@@ -47,15 +47,15 @@ export type {
   ActorSignInReason,
 } from './actor-sign-in-gate.js'
 export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-actors.js'
-export type { DevActor, DevActorPersona } from './dev-actors.js'
+export type { DevActor, DevActorVirtualUser } from './dev-actors.js'
 
-export { provisionPersonas } from './provision-personas.js'
+export { provisionVirtualUsers } from './provision-virtual-users.js'
 export type {
-  PersonaOrphanPolicy,
-  ProvisionPersonasOptions,
-  ProvisionPersonasResult,
-  ProvisionPersonasServices,
-} from './provision-personas.js'
+  VirtualUserOrphanPolicy,
+  ProvisionVirtualUsersOptions,
+  ProvisionVirtualUsersResult,
+  ProvisionVirtualUsersServices,
+} from './provision-virtual-users.js'
 export {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,

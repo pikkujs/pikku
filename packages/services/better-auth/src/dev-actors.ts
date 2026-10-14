@@ -6,12 +6,12 @@ import { resolveActorSignIn } from './actor-sign-in-gate.js'
 export const DEV_SWITCHER_FLAG = 'devSwitcher'
 
 /**
- * Whether the "Sign in as …" switcher may list and sign in personas.
+ * Whether the "Sign in as …" switcher may list and sign in virtual users.
  *
  * Always on under `pikku dev`. A deployed stage needs actor sign-in opted in
  * AND its {@link DEV_SWITCHER_FLAG} flag on; production never has the opt-in.
  * Pass the same `optIn` to `pikkuActor({ allowSignIn })` and use this as
- * `personaSignIn.allowed`.
+ * `virtualUserSignIn.allowed`.
  */
 export const devSwitcherOn = async (
   featureFlags: FeatureFlagSource | undefined,
@@ -23,10 +23,10 @@ export const devSwitcherOn = async (
   return (await featureFlags?.snapshot())?.[DEV_SWITCHER_FLAG]?.enabled === true
 }
 
-/** One row of the switcher: what it draws, and the id `POST /sign-in/persona` takes. */
+/** One row of the switcher: what it draws, and the id `POST /sign-in/virtual-user` takes. */
 export type DevActor = { id: string; name: string; jobTitle: string | null }
 
-export type DevActorPersona = {
+export type DevActorVirtualUser = {
   id: string
   name?: string
   jobTitle?: string
@@ -35,26 +35,26 @@ export type DevActorPersona = {
   runnable?: boolean
 }
 
-/** Whether `/sign-in/persona` accepts this persona. */
+/** Whether `/sign-in/virtual-user` accepts this virtual user. */
 export const isSignInable = (
-  persona: DevActorPersona
-): persona is DevActorPersona & { email: string } =>
-  persona.runnable !== false && !!persona.email
+  virtualUser: DevActorVirtualUser
+): virtualUser is DevActorVirtualUser & { email: string } =>
+  virtualUser.runnable !== false && !!virtualUser.email
 
 /**
- * The personas the switcher offers: those `/sign-in/persona` accepts, narrowed
+ * The virtual users the switcher offers: those `/sign-in/virtual-user` accepts, narrowed
  * to `app` when any are declared for it. Hands back no credential — sign-in
- * names a persona by id and the server resolves the rest.
+ * names a virtual user by id and the server resolves the rest.
  */
 export const listDevActors = (
-  personas: ReadonlyArray<DevActorPersona>,
+  virtualUsers: ReadonlyArray<DevActorVirtualUser>,
   app?: string
 ): DevActor[] => {
-  const signInable = personas.filter(isSignInable)
-  const own = app ? signInable.filter((persona) => persona.app === app) : []
-  return (own.length > 0 ? own : signInable).map((persona) => ({
-    id: persona.id,
-    name: persona.name ?? persona.id,
-    jobTitle: persona.jobTitle ?? null,
+  const signInable = virtualUsers.filter(isSignInable)
+  const own = app ? signInable.filter((virtualUser) => virtualUser.app === app) : []
+  return (own.length > 0 ? own : signInable).map((virtualUser) => ({
+    id: virtualUser.id,
+    name: virtualUser.name ?? virtualUser.id,
+    jobTitle: virtualUser.jobTitle ?? null,
   }))
 }

@@ -1,7 +1,7 @@
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
-import type { ResolvedPersona } from '@pikku/core/services'
+import type { ResolvedVirtualUser } from '@pikku/core/services'
 import {
   authMount,
   deriveActorSecret,
@@ -9,7 +9,7 @@ import {
   IMPERSONATE_USER_ID_HEADER,
   type ActorSecretResolver,
   type OperatorSignInOptions,
-} from '@pikku/core/persona'
+} from '@pikku/core/virtual-user'
 import type {
   ScenarioArtifact,
   ScenarioBrowserFailure,
@@ -63,8 +63,8 @@ export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
   /**
    * The ROOT actor secret — the same SCENARIO_ACTOR_SECRET the HTTP actors
-   * use — from which each persona's own credential is derived and bound to
-   * their address. Pass an {@link ActorSecretResolver} to browse as personas
+   * use — from which each virtual user's own credential is derived and bound to
+   * their address. Pass an {@link ActorSecretResolver} to browse as virtual users
    * whose credentials were minted elsewhere, without holding the root.
    *
    * The local-development credential; a deployed stage passes
@@ -72,13 +72,13 @@ export interface PlaywrightScenarioBrowserProviderOptions {
    */
   secret?: string | ActorSecretResolver
   /**
-   * Fabric operator credentials, for browsing a DEPLOYED stage as a persona.
-   * Same handshake the HTTP personas use, so a browser step and an RPC step in
+   * Fabric operator credentials, for browsing a DEPLOYED stage as a virtual user.
+   * Same handshake the HTTP virtual users use, so a browser step and an RPC step in
    * one scenario still act as one user.
    */
   operator?: OperatorSignInOptions
-  /** Actor name → the persona filling it, resolved from `definePersonas()`. */
-  actors: Record<string, ResolvedPersona>
+  /** Actor name → the virtual user filling it, resolved from `defineVirtualUsers()`. */
+  actors: Record<string, ResolvedVirtualUser>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
   /**
@@ -96,7 +96,7 @@ export interface PlaywrightScenarioBrowserProviderOptions {
  * Hands scenario steps a browser, one isolated context per actor.
  *
  * The context signs in through the SAME actor path the HTTP actors use
- * (`signInPath` + the actor secret) rather than a persona email/password, so
+ * (`signInPath` + the actor secret) rather than a virtual user email/password, so
  * `wire.browser` and `wire.scenarioStep.actor` are the same identity — a
  * browser step and an RPC step in one scenario act as one user.
  */
@@ -250,7 +250,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const actorConfig = this.options.actors[actorName]
     if (!actorConfig) {
       throw new Error(
-        `[scenario] browser actor '${actorName}' has no persona — add it to a definePersonas({ ... }) call`
+        `[scenario] browser actor '${actorName}' has no virtual user — add it to a defineVirtualUsers({ ... }) call`
       )
     }
     // Cache the promise, not the resolved session, so two steps racing for the
@@ -464,7 +464,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   private async openSession(
     actorName: string,
-    actorConfig: ResolvedPersona
+    actorConfig: ResolvedVirtualUser
   ): Promise<ActorSession> {
     const { browser } = await this.browser()
     const config = this.configFor(actorConfig)
@@ -515,7 +515,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * `signIn`. The operator path wins when both credentials are present, for the
    * same reason it does on the HTTP side: it is the stronger of the two.
    */
-  private defaultSignIn(persona: ResolvedPersona): ActorSignIn {
+  private defaultSignIn(virtualUser: ResolvedVirtualUser): ActorSignIn {
     const operator = this.options.operator
     if (!operator) {
       return defaultActorSignIn
@@ -525,7 +525,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       const { setCookies, userId } = await establishOperatorSession(
         fetch,
         target.apiUrl,
-        persona,
+        virtualUser,
         {
           ...operator,
           signInPath:
@@ -544,7 +544,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   /**
    * The config this actor browses with — their own app's base url.
    *
-   * A person signs into one app, so the persona's `app` is the whole answer: it
+   * A person signs into one app, so the virtual user's `app` is the whole answer: it
    * decides what `/dashboard` means for them, and which origin their session
    * cookie is planted on. Everything downstream (`url()`, `gotoApp`, the
    * sign-in Origin header, `parseCookie`) reads it off the session's config, so
@@ -553,8 +553,8 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * An unnamed app, or one no url was given for, falls back to the single
    * `appUrl` — which is the whole story for the common one-app project.
    */
-  private configFor(persona: ResolvedPersona): BrowserConfig {
-    const appUrl = persona.app ? this.config.appUrls?.[persona.app] : undefined
+  private configFor(virtualUser: ResolvedVirtualUser): BrowserConfig {
+    const appUrl = virtualUser.app ? this.config.appUrls?.[virtualUser.app] : undefined
     return appUrl ? { ...this.config, appUrl } : this.config
   }
 

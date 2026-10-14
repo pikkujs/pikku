@@ -34,15 +34,15 @@ describe('KyselyVirtualUserScheduleStore', () => {
     store = new KyselyVirtualUserScheduleStore(db)
   })
 
-  test('a persona given a cadence is not running until someone says so', async () => {
-    const written = await store.set({ persona: 'guest' })
+  test('a virtual user given a cadence is not running until someone says so', async () => {
+    const written = await store.set({ virtualUser: 'guest' })
     assert.equal(written.enabled, false)
     assert.deepEqual(await store.due(new Date(Date.now() + 1000)), [])
     assert.equal((await store.get('guest'))?.enabled, false)
   })
 
   test('a schedule written without an interval gets one, sparse by default', async () => {
-    const written = await store.set({ persona: 'guest' })
+    const written = await store.set({ virtualUser: 'guest' })
     assert.ok(written.minIntervalMs >= HOUR)
     assert.ok(written.maxIntervalMs >= written.minIntervalMs)
     const stored = await store.get('guest')
@@ -52,7 +52,7 @@ describe('KyselyVirtualUserScheduleStore', () => {
 
   test('setting one field leaves the rest of the schedule alone', async () => {
     await store.set({
-      persona: 'guest',
+      virtualUser: 'guest',
       enabled: true,
       disposition: 'adversarial',
       goals: ['book a room'],
@@ -60,7 +60,7 @@ describe('KyselyVirtualUserScheduleStore', () => {
       minIntervalMs: HOUR,
       maxIntervalMs: 2 * HOUR,
     })
-    await store.set({ persona: 'guest', enabled: false })
+    await store.set({ virtualUser: 'guest', enabled: false })
 
     const stored = await store.get('guest')
     assert.equal(stored?.enabled, false)
@@ -70,34 +70,34 @@ describe('KyselyVirtualUserScheduleStore', () => {
     assert.equal(stored?.minIntervalMs, HOUR)
   })
 
-  test('only enabled personas whose time has come come back as due', async () => {
+  test('only enabled virtual users whose time has come come back as due', async () => {
     const now = new Date()
     await store.set({
-      persona: 'due',
+      virtualUser: 'due',
       enabled: true,
       nextRunAt: new Date(now.getTime() - HOUR),
     })
     await store.set({
-      persona: 'later',
+      virtualUser: 'later',
       enabled: true,
       nextRunAt: new Date(now.getTime() + HOUR),
     })
     await store.set({
-      persona: 'off',
+      virtualUser: 'off',
       enabled: false,
       nextRunAt: new Date(now.getTime() - HOUR),
     })
 
     assert.deepEqual(
-      (await store.due(now)).map((row) => row.persona),
+      (await store.due(now)).map((row) => row.virtualUser),
       ['due']
     )
   })
 
-  test('claiming pushes the persona out of the due list', async () => {
+  test('claiming pushes the virtual user out of the due list', async () => {
     const now = new Date()
     const due = new Date(now.getTime() - HOUR)
-    await store.set({ persona: 'guest', enabled: true, nextRunAt: due })
+    await store.set({ virtualUser: 'guest', enabled: true, nextRunAt: due })
     const acquired = await store.claim('guest', {
       from: due,
       nextRunAt: new Date(now.getTime() + HOUR),
@@ -115,7 +115,7 @@ describe('KyselyVirtualUserScheduleStore', () => {
 
   test('the claim written before a run starts does not blank the last run', async () => {
     const now = new Date()
-    const written = await store.set({ persona: 'guest', enabled: true })
+    const written = await store.set({ virtualUser: 'guest', enabled: true })
     await store.claim('guest', {
       from: written.nextRunAt,
       nextRunAt: now,
@@ -135,7 +135,7 @@ describe('KyselyVirtualUserScheduleStore', () => {
   test('only one of two ticks holding the same due row can claim it', async () => {
     const now = new Date()
     const due = new Date(now.getTime() - HOUR)
-    await store.set({ persona: 'guest', enabled: true, nextRunAt: due })
+    await store.set({ virtualUser: 'guest', enabled: true, nextRunAt: due })
 
     const [first] = await store.due(now)
     const [second] = await store.due(now)
@@ -163,7 +163,7 @@ describe('KyselyVirtualUserScheduleStore', () => {
     await applyPikkuSchemas(plainDb, [virtualUserScheduleSchema])
     const plain = new KyselyVirtualUserScheduleStore(plainDb)
     await plain.set({
-      persona: 'guest',
+      virtualUser: 'guest',
       enabled: true,
       goals: ['book a room'],
       budget: { steps: 40, duration: '30m' },
@@ -178,8 +178,8 @@ describe('KyselyVirtualUserScheduleStore', () => {
     assert.ok(stored?.nextRunAt instanceof Date)
   })
 
-  test('a persona can be taken off the clock entirely', async () => {
-    await store.set({ persona: 'guest', enabled: true })
+  test('a virtual user can be taken off the clock entirely', async () => {
+    await store.set({ virtualUser: 'guest', enabled: true })
     await store.remove('guest')
     assert.equal(await store.get('guest'), null)
     assert.deepEqual(await store.list(), [])

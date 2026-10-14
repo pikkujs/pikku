@@ -6,7 +6,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { deriveActorSecret } from '@pikku/core/persona'
+import { deriveActorSecret } from '@pikku/core/virtual-user'
 
 import { PlaywrightScenarioBrowserProvider } from './provider.js'
 import { hasFfmpeg } from './capture.js'
@@ -161,7 +161,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(contexts.length, 1)
   })
 
-  test('an actor browses the app their persona signs into', async () => {
+  test('an actor browses the app their virtual user signs into', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config({
@@ -190,7 +190,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     )
   })
 
-  test('a persona naming no app browses the single appUrl', async () => {
+  test('a virtual user naming no app browses the single appUrl', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config({
@@ -219,7 +219,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
     await assert.rejects(
       provider.sessionFor('ghost'),
-      /browser actor 'ghost' has no persona/
+      /browser actor 'ghost' has no virtual user/
     )
   })
 

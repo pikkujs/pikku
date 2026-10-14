@@ -61,7 +61,7 @@ describe('devSwitcherOn', () => {
 })
 
 describe('listDevActors', () => {
-  const personas = [
+  const virtualUsers = [
     {
       id: 'ana',
       name: 'Ana',
@@ -75,24 +75,24 @@ describe('listDevActors', () => {
     { id: 'off', name: 'Off', email: 'off@x', runnable: false },
   ]
 
-  test('offers only personas the persona endpoint accepts, with no address', () => {
-    assert.deepEqual(listDevActors(personas), [
+  test('offers only virtual users the virtual user endpoint accepts, with no address', () => {
+    assert.deepEqual(listDevActors(virtualUsers), [
       { id: 'ana', name: 'Ana', jobTitle: 'Dispatcher' },
       { id: 'bo', name: 'Bo', jobTitle: null },
       { id: 'cy', name: 'cy', jobTitle: null },
     ])
   })
 
-  test('narrows to the app when it declares its own personas', () => {
+  test('narrows to the app when it declares its own virtual users', () => {
     assert.deepEqual(
-      listDevActors(personas, 'admin').map((actor) => actor.id),
+      listDevActors(virtualUsers, 'admin').map((actor) => actor.id),
       ['bo']
     )
   })
 
-  test('falls back to every persona when the app declares none', () => {
+  test('falls back to every virtual user when the app declares none', () => {
     assert.deepEqual(
-      listDevActors(personas, 'mobile').map((actor) => actor.id),
+      listDevActors(virtualUsers, 'mobile').map((actor) => actor.id),
       ['ana', 'bo', 'cy']
     )
   })

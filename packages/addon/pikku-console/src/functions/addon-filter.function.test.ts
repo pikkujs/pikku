@@ -42,7 +42,7 @@ const allMeta = () => {
     secretsMeta: { SPINDLE_KEY: {} },
     variablesMeta: { SPINDLE_URL: {} },
     credentialsMeta: {},
-    personas: { owner: {} },
+    virtualUsers: { owner: {} },
     counts: { functions: 4, cliCommands: 2, emails: 1, secrets: 1 },
   }
 }
@@ -112,7 +112,7 @@ describe('getAllMeta', () => {
     assert.equal(result.counts.mcpTools, 1)
     assert.equal(result.counts.cliCommands, 2)
     assert.equal(result.counts.emails, 1)
-    assert.deepEqual(keysOf(result.personas), ['owner'])
+    assert.deepEqual(keysOf(result.virtualUsers), ['owner'])
   })
 
   test('an unknown addon returns empty collections', async () => {

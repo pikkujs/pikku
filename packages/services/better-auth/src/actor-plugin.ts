@@ -20,11 +20,11 @@ import {
   weakActorRootSecretMessage,
 } from './actor-sign-in-gate.js'
 import { devSwitcherOn, isSignInable, listDevActors } from './dev-actors.js'
-import type { DevActorPersona } from './dev-actors.js'
+import type { DevActorVirtualUser } from './dev-actors.js'
 
 export interface ActorPluginOptions {
   /**
-   * The ROOT actor secret, from which each persona's own credential is derived
+   * The ROOT actor secret, from which each virtual user's own credential is derived
    * — it is not itself a valid credential and is never presented to the
    * endpoint. Missing or empty refuses the endpoint, and only `actor: true`
    * rows can sign in.
@@ -46,15 +46,15 @@ export interface ActorPluginOptions {
    */
   allowSignIn?: string
   /**
-   * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/personas
-   * ?app=` lists the personas it may offer, and `POST /sign-in/persona { id }`
+   * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/virtual-users
+   * ?app=` lists the virtual users it may offer, and `POST /sign-in/virtual-user { id }`
    * signs in as one without the caller presenting a credential.
    *
    * Open under `pikku dev`; a deployed stage needs `allowSignIn` and the
    * `devSwitcher` flag in `featureFlags`. `allowed` replaces that check.
    */
-  personaSignIn?: {
-    personas: ReadonlyArray<DevActorPersona>
+  virtualUserSignIn?: {
+    virtualUsers: ReadonlyArray<DevActorVirtualUser>
     featureFlags?: FeatureFlagSource
     allowed?: () => boolean | Promise<boolean>
   }
@@ -63,7 +63,7 @@ export interface ActorPluginOptions {
   /**
    * Upstream credentials an actor carries into its session, e.g. the token an
    * addon calls a third-party API with. Read at every sign-in from
-   * `ACTOR_CREDENTIAL_<PERSONA>_<NAME>`, so a value never lives in code.
+   * `ACTOR_CREDENTIAL_<VIRTUAL_USER>_<NAME>`, so a value never lives in code.
    */
   credentials?: ActorCredentialsOptions
 }
@@ -153,10 +153,10 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
     refusalAnnounced = true
   }
 
-  const personaAllowed = async () =>
-    options.personaSignIn?.allowed
-      ? options.personaSignIn.allowed()
-      : devSwitcherOn(options.personaSignIn?.featureFlags, options.allowSignIn)
+  const virtualUserAllowed = async () =>
+    options.virtualUserSignIn?.allowed
+      ? options.virtualUserSignIn.allowed()
+      : devSwitcherOn(options.virtualUserSignIn?.featureFlags, options.allowSignIn)
 
   const signIn = async (ctx: any, email: string, name?: string) => {
     type ActorUser = { id: string; actor?: boolean } & Record<string, unknown>
@@ -279,44 +279,44 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
           return signIn(ctx, email, ctx.body.name)
         }
       ),
-      ...(options.personaSignIn
+      ...(options.virtualUserSignIn
         ? {
-            listPersonas: createAuthEndpoint(
-              '/sign-in/personas',
+            listVirtualUsers: createAuthEndpoint(
+              '/sign-in/virtual-users',
               {
                 method: 'GET',
                 query: z.object({ app: z.string().optional() }).optional(),
               },
               async (ctx) => {
-                const personaSignIn = options.personaSignIn!
-                const open = gate.enabled && (await personaAllowed())
+                const virtualUserSignIn = options.virtualUserSignIn!
+                const open = gate.enabled && (await virtualUserAllowed())
                 return ctx.json({
                   actors: open
-                    ? listDevActors(personaSignIn.personas, ctx.query?.app)
+                    ? listDevActors(virtualUserSignIn.virtualUsers, ctx.query?.app)
                     : [],
                 })
               }
             ),
-            signInPersona: createAuthEndpoint(
-              '/sign-in/persona',
+            signInVirtualUser: createAuthEndpoint(
+              '/sign-in/virtual-user',
               { method: 'POST', body: z.object({ id: z.string() }) },
               async (ctx) => {
-                const personaSignIn = options.personaSignIn!
-                if (!gate.enabled || !(await personaAllowed())) {
+                const virtualUserSignIn = options.virtualUserSignIn!
+                if (!gate.enabled || !(await virtualUserAllowed())) {
                   throw new APIError('UNAUTHORIZED', {
-                    message: 'Persona sign-in is disabled',
+                    message: 'Virtual user sign-in is disabled',
                   })
                 }
-                const persona = personaSignIn.personas.find(
+                const virtualUser = virtualUserSignIn.virtualUsers.find(
                   (candidate) =>
                     candidate.id === ctx.body.id && isSignInable(candidate)
                 )
-                if (!persona?.email) {
+                if (!virtualUser?.email) {
                   throw new APIError('NOT_FOUND', {
-                    message: `No persona '${ctx.body.id}'`,
+                    message: `No virtual user '${ctx.body.id}'`,
                   })
                 }
-                return signIn(ctx, persona.email.toLowerCase(), persona.name)
+                return signIn(ctx, virtualUser.email.toLowerCase(), virtualUser.name)
               }
             ),
           }

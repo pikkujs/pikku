@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 /**
- * One scenario persona the switcher offers for one-click sign-in, as
- * `GET /auth/sign-in/personas` lists it. No address and no credential: sign-in
- * names the persona by id and the server resolves the rest.
+ * One scenario virtual user the switcher offers for one-click sign-in, as
+ * `GET /auth/sign-in/virtual-users` lists it. No address and no credential: sign-in
+ * names the virtual user by id and the server resolves the rest.
  */
 export type DevActor = {
   id: string
@@ -11,25 +11,25 @@ export type DevActor = {
   jobTitle: string | null
 }
 
-export type SignInAsPersonaOptions = {
-  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/persona` is appended. */
+export type SignInAsVirtualUserOptions = {
+  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/virtual-user` is appended. */
   apiUrl: string
   id: string
 }
 
 /**
- * Sign in as a declared persona through Better Auth's persona endpoint — no
+ * Sign in as a declared virtual user through Better Auth's virtual user endpoint — no
  * password and no credential in the bundle.
  *
- * The server decides: `pikkuActor({ personaSignIn })` refuses unless its
+ * The server decides: `pikkuActor({ virtualUserSignIn })` refuses unless its
  * its gate is open, and only ever signs in rows flagged `actor: true`, so
  * this can never reach a real user's account.
  */
-export const signInAsPersona = async ({
+export const signInAsVirtualUser = async ({
   apiUrl,
   id,
-}: SignInAsPersonaOptions): Promise<void> => {
-  const response = await fetch(`${apiUrl}/auth/sign-in/persona`, {
+}: SignInAsVirtualUserOptions): Promise<void> => {
+  const response = await fetch(`${apiUrl}/auth/sign-in/virtual-user`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     credentials: 'include',
@@ -41,19 +41,19 @@ export const signInAsPersona = async ({
 }
 
 export type ListDevActorsOptions = {
-  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/personas` is appended. */
+  /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/virtual-users` is appended. */
   apiUrl: string
-  /** Narrows to this app's personas when it declares any. */
+  /** Narrows to this app's virtual users when it declares any. */
   app?: string
 }
 
-/** The personas `pikkuActor({ personaSignIn })` will sign in — none wherever the switcher is off. */
+/** The virtual users `pikkuActor({ virtualUserSignIn })` will sign in — none wherever the switcher is off. */
 export const listDevActors = async ({
   apiUrl,
   app,
 }: ListDevActorsOptions): Promise<DevActor[]> => {
   const query = app ? `?app=${encodeURIComponent(app)}` : ''
-  const response = await fetch(`${apiUrl}/auth/sign-in/personas${query}`, {
+  const response = await fetch(`${apiUrl}/auth/sign-in/virtual-users${query}`, {
     credentials: 'include',
   })
   if (!response.ok) return []
@@ -69,7 +69,7 @@ export type UseDevActorsResult = {
   /** Empty until loaded, and whenever the server offers none — render nothing. */
   actors: DevActor[]
   signInAs: (id: string) => void
-  /** The persona currently signing in, or null. */
+  /** The virtual user currently signing in, or null. */
   pendingId: string | null
   isPending: boolean
   error: Error | null
@@ -108,7 +108,7 @@ export const useDevActors = ({
     (id: string) => {
       setPendingId(id)
       setError(null)
-      signInAsPersona({ apiUrl, id })
+      signInAsVirtualUser({ apiUrl, id })
         .then(async () => {
           await onSignedIn?.()
         })

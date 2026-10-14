@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { provisionPersonas } from './provision-personas.js'
+import { provisionVirtualUsers } from './provision-virtual-users.js'
 
 const ENVIRONMENTS = {
   local: {},
   prod: { production: true },
 }
 
-const PERSONAS: Record<string, any> = {
+const VIRTUAL_USERS: Record<string, any> = {
   susan: {
     id: 'susan',
     name: 'Susan',
@@ -125,12 +125,12 @@ const harness = (
   }
 }
 
-describe('provisionPersonas', () => {
+describe('provisionVirtualUsers', () => {
   test('creates each account as an actor and grants the roles it declares', async () => {
     const h = harness()
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
@@ -143,11 +143,11 @@ describe('provisionPersonas', () => {
   })
 
 
-  test('grants the app a persona names as a scope', async () => {
+  test('grants the app a virtual user names as a scope', async () => {
     const h = harness()
 
-    const result = await provisionPersonas(h, {
-      personas: {
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: {
         staffer: {
           id: 'staffer',
           name: 'Staffer',
@@ -174,11 +174,11 @@ describe('provisionPersonas', () => {
 
   // The single-frontend case, which is most of them: nothing named, nothing
   // granted, and no empty `app:` grant to explain to whoever reads the console.
-  test('grants no app scope when no persona names one', async () => {
+  test('grants no app scope when no virtual user names one', async () => {
     const h = harness()
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
@@ -191,7 +191,7 @@ describe('provisionPersonas', () => {
   // than a second row.
   test('holds an app grant it has already applied', async () => {
     const h = harness()
-    const personas = {
+    const virtualUsers = {
       staffer: {
         id: 'staffer',
         name: 'Staffer',
@@ -201,13 +201,13 @@ describe('provisionPersonas', () => {
       },
     }
     const options = {
-      personas,
+      virtualUsers,
       environments: ENVIRONMENTS,
       environment: 'local',
     }
 
-    await provisionPersonas(h, options)
-    const result = await provisionPersonas(h, options)
+    await provisionVirtualUsers(h, options)
+    const result = await provisionVirtualUsers(h, options)
 
     assert.deepEqual(h.scopesOf('staffer@e2e.test'), ['app:staff'])
     assert.equal(result.appsGranted, 0)
@@ -216,25 +216,25 @@ describe('provisionPersonas', () => {
 
   // The rule that decides who may run decides who is provisioned. `mo` names
   // production and nothing else, so `local` is not theirs.
-  test('skips a persona that does not act in this environment', async () => {
+  test('skips a virtual user that does not act in this environment', async () => {
     const h = harness()
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
 
     assert.ok(!h.created.includes('mo@e2e.test'))
     assert.equal(result.skipped.length, 1)
-    assert.match(result.skipped[0]!, /persona 'mo'/)
+    assert.match(result.skipped[0]!, /virtual user 'mo'/)
   })
 
-  test('provisions only the accountable persona into production', async () => {
+  test('provisions only the accountable virtual user into production', async () => {
     const h = harness()
 
-    await provisionPersonas(h, {
-      personas: PERSONAS,
+    await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'prod',
     })
@@ -248,13 +248,13 @@ describe('provisionPersonas', () => {
   test('running twice creates nothing new and grants nothing new', async () => {
     const h = harness()
 
-    await provisionPersonas(h, {
-      personas: PERSONAS,
+    await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
-    const second = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const second = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
@@ -272,8 +272,8 @@ describe('provisionPersonas', () => {
 
     await assert.rejects(
       () =>
-        provisionPersonas(h, {
-          personas: { susan: PERSONAS.susan },
+        provisionVirtualUsers(h, {
+          virtualUsers: { susan: VIRTUAL_USERS.susan },
           environments: ENVIRONMENTS,
           environment: 'local',
         }),
@@ -287,8 +287,8 @@ describe('provisionPersonas', () => {
   test('provisions nobody when no environment is resolved', async () => {
     const h = harness()
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: undefined,
     })
@@ -297,15 +297,15 @@ describe('provisionPersonas', () => {
     assert.equal(result.skipped.length, 3)
   })
 
-  test('a project with no personas never asks for the auth context', async () => {
+  test('a project with no virtual users never asks for the auth context', async () => {
     const logs: string[] = []
-    const result = await provisionPersonas(
+    const result = await provisionVirtualUsers(
       {
         auth: undefined as any,
         scopeService: {} as any,
         logger: { info: (m: string) => logs.push(m), warn: () => {} } as any,
       },
-      { personas: {}, environments: ENVIRONMENTS, environment: 'local' }
+      { virtualUsers: {}, environments: ENVIRONMENTS, environment: 'local' }
     )
 
     assert.deepEqual(result, {
@@ -321,17 +321,17 @@ describe('provisionPersonas', () => {
     assert.deepEqual(logs, [])
   })
 
-  test('a project with personas and no better-auth says so', async () => {
+  test('a project with virtual users and no better-auth says so', async () => {
     await assert.rejects(
       () =>
-        provisionPersonas(
+        provisionVirtualUsers(
           {
             auth: undefined as any,
             scopeService: {} as any,
             logger: { info: () => {}, warn: () => {} } as any,
           },
           {
-            personas: PERSONAS,
+            virtualUsers: VIRTUAL_USERS,
             environments: ENVIRONMENTS,
             environment: 'local',
           }
@@ -341,22 +341,22 @@ describe('provisionPersonas', () => {
   })
 })
 
-describe('provisionPersonas orphans', () => {
+describe('provisionVirtualUsers orphans', () => {
   const provisioned = async () => {
     const h = harness()
-    await provisionPersonas(h, {
-      personas: PERSONAS,
+    await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
     })
     return h
   }
 
-  test('reports an account no declared persona claims, and changes nothing', async () => {
+  test('reports an account no declared virtual user claims, and changes nothing', async () => {
     const h = await provisioned()
 
-    const result = await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
     })
@@ -364,7 +364,7 @@ describe('provisionPersonas orphans', () => {
     assert.deepEqual(result.orphaned, ['target@e2e.test'])
     assert.equal(result.banned, 0)
     assert.ok(h.users.every((u) => !u.banned))
-    assert.match(h.logs.join('\n'), /no declared persona claims here/)
+    assert.match(h.logs.join('\n'), /no declared virtual user claims here/)
   })
 
   // Deployment logs are read by more people than the account list is, and they
@@ -373,8 +373,8 @@ describe('provisionPersonas orphans', () => {
   test('names the orphans to its caller, never to the log', async () => {
     const h = await provisioned()
 
-    const result = await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
     })
@@ -391,8 +391,8 @@ describe('provisionPersonas orphans', () => {
   test("orphans: 'ban' shuts the account and revokes its sessions", async () => {
     const h = await provisioned()
 
-    const result = await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -401,7 +401,7 @@ describe('provisionPersonas orphans', () => {
     assert.equal(result.banned, 1)
     const target = h.users.find((u) => u.email === 'target@e2e.test')!
     assert.equal(target.banned, true)
-    assert.match(target.banReason, /No declared persona claims/)
+    assert.match(target.banReason, /No declared virtual user claims/)
     assert.ok(h.sessionsRevoked.includes(target.id))
   })
 
@@ -410,8 +410,8 @@ describe('provisionPersonas orphans', () => {
   test('a ban keeps the account and its grants', async () => {
     const h = await provisioned()
 
-    await provisionPersonas(h, {
-      personas: {},
+    await provisionVirtualUsers(h, {
+      virtualUsers: {},
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -421,17 +421,17 @@ describe('provisionPersonas orphans', () => {
     assert.deepEqual(h.rolesOf('susan@e2e.test'), ['report-viewer'])
   })
 
-  test('a persona that came back has its ban lifted', async () => {
+  test('a virtual user that came back has its ban lifted', async () => {
     const h = await provisioned()
-    await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
     })
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -446,15 +446,15 @@ describe('provisionPersonas orphans', () => {
   // Banning is idempotent: a second boot must not re-ban and re-report.
   test('banning twice bans nothing new', async () => {
     const h = await provisioned()
-    await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
     })
 
-    const result = await provisionPersonas(h, {
-      personas: { susan: PERSONAS.susan },
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: { susan: VIRTUAL_USERS.susan },
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -464,15 +464,15 @@ describe('provisionPersonas orphans', () => {
     assert.deepEqual(result.orphaned, ['target@e2e.test'])
   })
 
-  // A persona pinned to production has no business holding a signable account
+  // A virtual user pinned to production has no business holding a signable account
   // on staging, and the endpoint would not stop it.
-  test('a persona that may not act here is an orphan here', async () => {
+  test('a virtual user that may not act here is an orphan here', async () => {
     const h = harness([
       { id: 'legacy', email: 'mo@e2e.test', actor: true, banned: false },
     ])
 
-    const result = await provisionPersonas(h, {
-      personas: PERSONAS,
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: VIRTUAL_USERS,
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -485,8 +485,8 @@ describe('provisionPersonas orphans', () => {
   test('a real user is never an orphan, because they are never an actor', async () => {
     const h = harness([{ id: 'a-real-person', email: 'someone@corp.test' }])
 
-    const result = await provisionPersonas(h, {
-      personas: { target: PERSONAS.target },
+    const result = await provisionVirtualUsers(h, {
+      virtualUsers: { target: VIRTUAL_USERS.target },
       environments: ENVIRONMENTS,
       environment: 'local',
       orphans: 'ban',
@@ -501,8 +501,8 @@ describe('provisionPersonas orphans', () => {
 
     await assert.rejects(
       () =>
-        provisionPersonas(h, {
-          personas: PERSONAS,
+        provisionVirtualUsers(h, {
+          virtualUsers: VIRTUAL_USERS,
           environments: ENVIRONMENTS,
           environment: 'local',
           orphans: 'ban',

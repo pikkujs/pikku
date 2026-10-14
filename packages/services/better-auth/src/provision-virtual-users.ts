@@ -1,10 +1,10 @@
 import type {
   Logger,
-  ResolvedPersona,
+  ResolvedVirtualUser,
   ScopeService,
 } from '@pikku/core/services'
-import type { PersonaEnvironment } from '@pikku/core/persona'
-import { appScopeId, personaEnvironmentRefusal } from '@pikku/core/persona'
+import type { VirtualUserEnvironment } from '@pikku/core/virtual-user'
+import { appScopeId, virtualUserEnvironmentRefusal } from '@pikku/core/virtual-user'
 
 import type { AuthGetter } from './admin-users.js'
 import type { BetterAuthInstance } from './define-auth.js'
@@ -18,7 +18,7 @@ import { BAN_PLUGIN_ID } from './ban-plugin.js'
  * called from a lifecycle hook, a scaffolded seed or a test without any of them
  * having to name the same type.
  */
-export interface ProvisionPersonasServices {
+export interface ProvisionVirtualUsersServices {
   auth: (() => Promise<Pick<BetterAuthInstance, '$context'>>) | undefined
   scopeService: Pick<
     ScopeService,
@@ -28,45 +28,45 @@ export interface ProvisionPersonasServices {
 }
 
 /**
- * What to do with an actor account no declared persona claims here.
+ * What to do with an actor account no declared virtual user claims here.
  *
  * `report` names them and changes nothing, which is the default because a
  * rolling deploy runs the new replica's provisioning while the old replica is
- * still serving: for the length of that overlap, "no persona claims this" is
+ * still serving: for the length of that overlap, "no virtual user claims this" is
  * a statement about the *newer* declaration only.
  *
  * `ban` shuts sign-in for them, through the same `banned` column the console's
  * ban RPC writes. The row, its grants and its history all survive, so it is
- * reversible — and provisioning lifts the ban again by itself if the persona
+ * reversible — and provisioning lifts the ban again by itself if the virtual user
  * comes back. Deleting the account is deliberately not offered: an actor row is
  * referenced by whatever those scenarios did while it existed.
  */
-export type PersonaOrphanPolicy = 'report' | 'ban'
+export type VirtualUserOrphanPolicy = 'report' | 'ban'
 
-export interface ProvisionPersonasOptions {
-  /** Persona id → the declaration with its address filled in — `personaConfigs`. */
-  personas: Record<string, ResolvedPersona>
-  /** `environments` from pikku.config.json, as generated beside the personas. */
-  environments: Readonly<Record<string, PersonaEnvironment>>
+export interface ProvisionVirtualUsersOptions {
+  /** Virtual user id → the declaration with its address filled in — `virtualUserConfigs`. */
+  virtualUsers: Record<string, ResolvedVirtualUser>
+  /** `environments` from pikku.config.json, as generated beside the virtual users. */
+  environments: Readonly<Record<string, VirtualUserEnvironment>>
   /** Which of them this process is. Defaults to `PIKKU_ENV`. */
   environment?: string
-  /** What to do with actor accounts no declared persona claims. Defaults to `report`. */
-  orphans?: PersonaOrphanPolicy
+  /** What to do with actor accounts no declared virtual user claims. Defaults to `report`. */
+  orphans?: VirtualUserOrphanPolicy
 }
 
-export interface ProvisionPersonasResult {
+export interface ProvisionVirtualUsersResult {
   created: number
   granted: number
-  /** How many `app:<name>` grants were applied for the app a persona signs into. */
+  /** How many `app:<name>` grants were applied for the app a virtual user signs into. */
   appsGranted: number
   held: number
-  /** One line per persona that may not act here, saying why. */
+  /** One line per virtual user that may not act here, saying why. */
   skipped: string[]
-  /** Addresses of actor accounts no declared persona claims here. */
+  /** Addresses of actor accounts no declared virtual user claims here. */
   orphaned: string[]
   /** How many of those were banned, which is none unless `orphans: 'ban'`. */
   banned: number
-  /** Accounts whose ban was lifted because their persona came back. */
+  /** Accounts whose ban was lifted because their virtual user came back. */
   unbanned: number
 }
 
@@ -78,10 +78,10 @@ type ActorUser = {
 } & Record<string, unknown>
 
 /**
- * Provision the declared personas into the environment this process is running
+ * Provision the declared virtual users into the environment this process is running
  * in: their accounts, and the roles they declare.
  *
- * Runs where the database is, which is the whole point. `pikku persona sync`
+ * Runs where the database is, which is the whole point. `pikku virtual-user sync`
  * reached for a Kysely connection built from the local project config, so it
  * only ever provisioned a deployment whose database the developer's machine
  * could open — true of a local stage and of nothing else. A running stage has
@@ -100,38 +100,38 @@ type ActorUser = {
  * business and not a thing to be reimplemented against its schema.
  *
  * Additive in the same way `syncSystemRoles` is: it creates and grants, never
- * deletes or revokes. Removing a persona from the code leaves the account and
+ * deletes or revokes. Removing a virtual user from the code leaves the account and
  * its grants standing until somebody decides otherwise — the alternative is a
- * rolling deploy quietly locking out a persona the older replica is still
+ * rolling deploy quietly locking out a virtual user the older replica is still
  * using.
  *
  * The reverse direction is `orphans`. Provisioning is otherwise additive in the
  * same way `syncSystemRoles` is, which leaves a real hole: an account for a
- * persona you deleted keeps its grants, and the actor endpoint authenticates on
+ * virtual user you deleted keeps its grants, and the actor endpoint authenticates on
  * the `actor` column alone without ever consulting the declaration — so an
- * `admin` persona nobody declares any more is still a live way in wherever that
- * endpoint is open. `orphans: 'ban'` closes it. See {@link PersonaOrphanPolicy}
+ * `admin` virtual user nobody declares any more is still a live way in wherever that
+ * endpoint is open. `orphans: 'ban'` closes it. See {@link VirtualUserOrphanPolicy}
  * for why that is opt-in rather than the default.
  *
- * A persona that may not act in this environment is skipped rather than
+ * A virtual user that may not act in this environment is skipped rather than
  * refused: the same rule that decides who may *run* here decides who is
- * provisioned here, so a production deploy creates the accountable personas and
+ * provisioned here, so a production deploy creates the accountable virtual users and
  * leaves the rest uncreated. An address already held by a real (non-actor) user
- * throws, because granting a persona's roles to somebody else's account is not
+ * throws, because granting a virtual user's roles to somebody else's account is not
  * a thing to do quietly.
  */
-export const provisionPersonas = async (
-  { auth: contextOnlyAuth, scopeService, logger }: ProvisionPersonasServices,
+export const provisionVirtualUsers = async (
+  { auth: contextOnlyAuth, scopeService, logger }: ProvisionVirtualUsersServices,
   {
-    personas,
+    virtualUsers,
     environments,
     environment = typeof process === 'undefined'
       ? undefined
       : process.env.PIKKU_ENV,
     orphans = 'report',
-  }: ProvisionPersonasOptions
-): Promise<ProvisionPersonasResult> => {
-  const result: ProvisionPersonasResult = {
+  }: ProvisionVirtualUsersOptions
+): Promise<ProvisionVirtualUsersResult> => {
+  const result: ProvisionVirtualUsersResult = {
     created: 0,
     granted: 0,
     appsGranted: 0,
@@ -143,9 +143,9 @@ export const provisionPersonas = async (
   }
 
   const auth = contextOnlyAuth as AuthGetter
-  const entries = Object.entries(personas)
+  const entries = Object.entries(virtualUsers)
 
-  // Removing the last persona is the one case where there is no work to do and
+  // Removing the last virtual user is the one case where there is no work to do and
   // an orphan sweep is exactly the work that was asked for, so only `report`
   // gets to return before the auth context is even resolved.
   if (entries.length === 0 && orphans === 'report') {
@@ -154,7 +154,7 @@ export const provisionPersonas = async (
 
   if (!auth) {
     throw new Error(
-      'Provisioning personas requires better-auth to be wired (services.auth is missing)'
+      'Provisioning virtual users requires better-auth to be wired (services.auth is missing)'
     )
   }
   const ctx = (await (await auth()).$context) as any
@@ -175,10 +175,10 @@ export const provisionPersonas = async (
 
   const claimed = new Set<string>()
 
-  for (const [id, persona] of entries) {
-    const refusal = personaEnvironmentRefusal(
+  for (const [id, virtualUser] of entries) {
+    const refusal = virtualUserEnvironmentRefusal(
       id,
-      persona,
+      virtualUser,
       environment,
       environments
     )
@@ -187,13 +187,13 @@ export const provisionPersonas = async (
       continue
     }
 
-    const email = persona.email.toLowerCase()
+    const email = virtualUser.email.toLowerCase()
     claimed.add(email)
     const existing = (await ctx.internalAdapter.findUserByEmail(email))
       ?.user as ActorUser | undefined
     if (existing && !existing.actor) {
       throw new Error(
-        `${email} is a real user here, not an actor. Refusing to grant persona '${id}' the roles of somebody else's account — give the persona an address of its own.`
+        `${email} is a real user here, not an actor. Refusing to grant virtual user '${id}' the roles of somebody else's account — give the virtual user an address of its own.`
       )
     }
 
@@ -201,26 +201,26 @@ export const provisionPersonas = async (
     if (!user) {
       user = (await ctx.internalAdapter.createUser({
         email,
-        name: persona.name,
+        name: virtualUser.name,
         emailVerified: true,
         actor: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       })) as ActorUser | undefined
       if (!user) {
-        throw new Error(`Failed to create an actor account for persona '${id}'`)
+        throw new Error(`Failed to create an actor account for virtual user '${id}'`)
       }
       result.created++
     } else if (banAvailable && user.banned) {
-      // The persona came back. Leaving the ban standing would make a
-      // re-declared persona permanently unusable, with nothing in the
+      // The virtual user came back. Leaving the ban standing would make a
+      // re-declared virtual user permanently unusable, with nothing in the
       // declaration to explain why.
       await setAuthUserBanned(auth, { userId: user.id, banned: false })
       result.unbanned++
     }
 
-    if (persona.app) {
-      const scope = appScopeId(persona.app)
+    if (virtualUser.app) {
+      const scope = appScopeId(virtualUser.app)
       const heldScopes = new Set(await scopeService.listUserScopes(user.id))
       if (heldScopes.has(scope)) {
         result.held++
@@ -230,7 +230,7 @@ export const provisionPersonas = async (
       }
     }
 
-    const roles = persona.roles ?? []
+    const roles = virtualUser.roles ?? []
     if (roles.length === 0) {
       continue
     }
@@ -246,8 +246,8 @@ export const provisionPersonas = async (
   }
 
   // Every actor row, not only the ones this run touched: what makes an account
-  // an orphan is that no *declared* persona claims it here, which includes the
-  // personas skipped above. Their accounts are a back door precisely because
+  // an orphan is that no *declared* virtual user claims it here, which includes the
+  // virtual users skipped above. Their accounts are a back door precisely because
   // the environment rule refuses them and the endpoint does not.
   const actors = (await ctx.adapter.findMany({
     model: 'user',
@@ -267,20 +267,20 @@ export const provisionPersonas = async (
       await setAuthUserBanned(auth, {
         userId: user.id,
         banned: true,
-        reason: `No declared persona claims this actor account in '${environment ?? 'an unresolved environment'}'`,
+        reason: `No declared virtual user claims this actor account in '${environment ?? 'an unresolved environment'}'`,
       })
       result.banned++
     }
   }
 
   logger.info(
-    `personas: ${result.created} account(s) created, ${result.granted} role grant(s) applied` +
+    `virtualUsers: ${result.created} account(s) created, ${result.granted} role grant(s) applied` +
       (result.appsGranted
         ? `, ${result.appsGranted} app grant(s) applied`
         : '') +
       `, ${result.held} already held` +
       (result.skipped.length
-        ? `, ${result.skipped.length} persona(s) skipped — they do not act in '${environment ?? 'an unresolved environment'}'`
+        ? `, ${result.skipped.length} virtual user(s) skipped — they do not act in '${environment ?? 'an unresolved environment'}'`
         : '') +
       (result.unbanned ? `, ${result.unbanned} ban(s) lifted` : '')
   )
@@ -291,7 +291,7 @@ export const provisionPersonas = async (
   if (result.orphaned.length) {
     const banned = orphans === 'ban'
     logger.warn(
-      `personas: ${result.orphaned.length} actor account(s) no declared persona claims here` +
+      `virtualUsers: ${result.orphaned.length} actor account(s) no declared virtual user claims here` +
         (banned
           ? `, ${result.banned} newly banned`
           : " — they keep every role they were granted, and the actor endpoint authenticates on the actor column alone. Pass orphans: 'ban' to shut them.")

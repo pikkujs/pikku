@@ -2,7 +2,7 @@ import type { MetaService } from '@pikku/core/services'
 import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type { FeaturesMeta } from '@pikku/core/scenario'
-import type { ResolvedPersona } from '@pikku/core/services'
+import type { ResolvedVirtualUser } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
 import type { ScopeDefinitionsMeta } from '@pikku/core/scope'
 import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
@@ -274,11 +274,11 @@ export interface PikkuMetaState {
   mcpMeta: McpItemMeta[]
   gatewayMeta: GatewayItemMeta[]
   workflows: WorkflowsMeta
-  personas: Record<string, ResolvedPersona>
+  virtualUsers: Record<string, ResolvedVirtualUser>
   /**
    * The roles declared with `defineSystemRole`, keyed by name.
    *
-   * Shipped alongside the personas because a persona only ever names roles, and
+   * Shipped alongside the virtual users because a virtual user only ever names roles, and
    * nothing about what they can reach is readable without the scopes each one
    * confers.
    */
@@ -401,7 +401,7 @@ export class WiringService {
       mcpMetaRaw,
       gatewayMetaRaw,
       workflows,
-      personas,
+      virtualUsers,
       systemRoles,
       scopes,
       featureFlags,
@@ -429,7 +429,7 @@ export class WiringService {
       this.metaService.getMcpMeta(),
       this.metaService.getGatewayMeta(),
       this.metaService.getWorkflowMeta(),
-      this.metaService.getPersonasMeta(),
+      this.metaService.getVirtualUsersMeta(),
       this.metaService.getSystemRolesMeta(),
       this.metaService.getScopesMeta(),
       this.metaService.getFeatureFlagsMeta(),
@@ -704,7 +704,7 @@ export class WiringService {
       mcpMeta,
       gatewayMeta,
       workflows,
-      personas,
+      virtualUsers,
       systemRoles,
       scopes,
       featureFlags,

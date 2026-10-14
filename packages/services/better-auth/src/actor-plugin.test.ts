@@ -18,7 +18,7 @@ import {
 import { stampActorFlag } from './stamp-actor-flag.js'
 
 /**
- * A root long enough to be key material — every persona's credential is derived
+ * A root long enough to be key material — every virtual user's credential is derived
  * from it, so the plugin refuses anything shorter than 32 characters.
  */
 const ROOT = 'flow-secret-flow-secret-flow-secret'
@@ -42,7 +42,7 @@ const makeAuth = (
   options: {
     logger?: any
     allowSignIn?: string
-    personaSignIn?: Parameters<typeof pikkuActor>[0]['personaSignIn']
+    virtualUserSignIn?: Parameters<typeof pikkuActor>[0]['virtualUserSignIn']
   } = {}
 ) =>
   betterAuth({
@@ -54,7 +54,7 @@ const makeAuth = (
       pikkuActor({
         secret,
         allowSignIn: options.allowSignIn,
-        personaSignIn: options.personaSignIn,
+        virtualUserSignIn: options.virtualUserSignIn,
         logger: options.logger ?? recordingLogger(),
       }),
     ],
@@ -142,7 +142,7 @@ describe('better-auth actor plugin', () => {
 
   // The whole point of deriving: a credential is a capability for one synthetic
   // account, so a leaked one is worth that account and not the population.
-  test("one persona's credential does not open another persona", async () => {
+  test("one virtual user's credential does not open another virtual user", async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const res = await signInActor(makeAuth(db, ROOT), {
       email: 'other@actors.local',
@@ -200,24 +200,24 @@ describe('better-auth actor plugin', () => {
   })
 })
 
-const signInPersona = (auth: ReturnType<typeof makeAuth>, id: string) =>
+const signInVirtualUser = (auth: ReturnType<typeof makeAuth>, id: string) =>
   auth.handler(
-    new Request('http://localhost:3000/api/auth/sign-in/persona', {
+    new Request('http://localhost:3000/api/auth/sign-in/virtual-user', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id }),
     })
   )
 
-const listPersonas = (auth: ReturnType<typeof makeAuth>, app?: string) =>
+const listVirtualUsers = (auth: ReturnType<typeof makeAuth>, app?: string) =>
   auth.handler(
     new Request(
-      `http://localhost:3000/api/auth/sign-in/personas${app ? `?app=${app}` : ''}`
+      `http://localhost:3000/api/auth/sign-in/virtual-users${app ? `?app=${app}` : ''}`
     )
   )
 
-describe('persona sign-in', () => {
-  const personas = [
+describe('virtual user sign-in', () => {
+  const virtualUsers = [
     {
       id: 'customer',
       email: 'customer@actors.local',
@@ -228,17 +228,17 @@ describe('persona sign-in', () => {
     { id: 'banned', email: 'banned@actors.local', runnable: false },
   ]
 
-  test('lists only the personas it will sign in, narrowed to the app', async () => {
+  test('lists only the virtual users it will sign in, narrowed to the app', async () => {
     const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
-      personaSignIn: { personas, allowed: () => true },
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
     })
 
-    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [
+    assert.deepEqual((await (await listVirtualUsers(auth)).json()).actors, [
       { id: 'customer', name: 'Customer', jobTitle: null },
       { id: 'admin', name: 'Admin', jobTitle: null },
     ])
     assert.deepEqual(
-      (await (await listPersonas(auth, 'admin')).json()).actors.map(
+      (await (await listVirtualUsers(auth, 'admin')).json()).actors.map(
         (actor: { id: string }) => actor.id
       ),
       ['admin']
@@ -250,8 +250,8 @@ describe('persona sign-in', () => {
     let enabled = false
     const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
       allowSignIn: ACTOR_SIGN_IN_OPT_IN_VALUE,
-      personaSignIn: {
-        personas,
+      virtualUserSignIn: {
+        virtualUsers,
         featureFlags: {
           snapshot: async () => ({
             devSwitcher: { enabled, rolloutPercent: null, overrides: {} },
@@ -260,24 +260,24 @@ describe('persona sign-in', () => {
       },
     })
 
-    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [])
-    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    assert.deepEqual((await (await listVirtualUsers(auth)).json()).actors, [])
+    assert.equal((await signInVirtualUser(auth, 'customer')).status, 401)
     enabled = true
-    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
+    assert.equal((await (await listVirtualUsers(auth)).json()).actors.length, 2)
   })
 
   test('without `allowed` or flags, `pikku dev` is open', async () => {
     const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
-      personaSignIn: { personas },
+      virtualUserSignIn: { virtualUsers },
     })
-    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
+    assert.equal((await (await listVirtualUsers(auth)).json()).actors.length, 2)
   })
 
   test('lists nobody when `allowed` refuses', async () => {
     const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
-      personaSignIn: { personas, allowed: () => false },
+      virtualUserSignIn: { virtualUsers, allowed: () => false },
     })
-    const res = await listPersonas(auth)
+    const res = await listVirtualUsers(auth)
     assert.equal(res.status, 200)
     assert.deepEqual((await res.json()).actors, [])
   })
@@ -287,13 +287,13 @@ describe('persona sign-in', () => {
   })
   afterEach(clearGateEnv)
 
-  test('signs in as a declared persona with no credential from the caller', async () => {
+  test('signs in as a declared virtual user with no credential from the caller', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = makeAuth(db, ROOT, {
-      personaSignIn: { personas, allowed: () => true },
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
     })
 
-    const res = await signInPersona(auth, 'customer')
+    const res = await signInVirtualUser(auth, 'customer')
 
     assert.equal(res.status, 200)
     assert.match(
@@ -307,38 +307,38 @@ describe('persona sign-in', () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     let allowed = false
     const auth = makeAuth(db, ROOT, {
-      personaSignIn: { personas, allowed: async () => allowed },
+      virtualUserSignIn: { virtualUsers, allowed: async () => allowed },
     })
 
-    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    assert.equal((await signInVirtualUser(auth, 'customer')).status, 401)
     allowed = true
-    assert.equal((await signInPersona(auth, 'customer')).status, 200)
+    assert.equal((await signInVirtualUser(auth, 'customer')).status, 200)
   })
 
   test('stays shut when the actor gate is shut, whatever `allowed` says', async () => {
     clearGateEnv()
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = makeAuth(db, ROOT, {
-      personaSignIn: { personas, allowed: () => true },
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
     })
 
-    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    assert.equal((await signInVirtualUser(auth, 'customer')).status, 401)
     assert.equal(db.user!.length, 0)
   })
 
-  test('refuses an undeclared or non-runnable persona', async () => {
+  test('refuses an undeclared or non-runnable virtual user', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = makeAuth(db, ROOT, {
-      personaSignIn: { personas, allowed: () => true },
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
     })
 
-    assert.equal((await signInPersona(auth, 'nobody')).status, 404)
-    assert.equal((await signInPersona(auth, 'banned')).status, 404)
+    assert.equal((await signInVirtualUser(auth, 'nobody')).status, 404)
+    assert.equal((await signInVirtualUser(auth, 'banned')).status, 404)
   })
 
   test('is not served unless configured', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const res = await signInPersona(makeAuth(db, ROOT), 'customer')
+    const res = await signInVirtualUser(makeAuth(db, ROOT), 'customer')
     assert.equal(res.status, 404)
     assert.equal(db.user!.length, 0)
   })
@@ -581,7 +581,7 @@ describe('actor upstream credentials', () => {
     return { res, stored, removed, db }
   }
 
-  test('derives the env key from the persona id and credential name', () => {
+  test('derives the env key from the virtual user id and credential name', () => {
     assert.equal(
       actorCredentialEnvKey('dan@actors.local', 'dolibarr'),
       'ACTOR_CREDENTIAL_DAN_DOLIBARR'

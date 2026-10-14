@@ -2,14 +2,14 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
  * The `virtualUserSchedule` table {@link KyselyVirtualUserScheduleStore} writes
- * to: one row per persona that keeps using the app on its own.
+ * to: one row per virtual user that keeps using the app on its own.
  *
  * Its own schema rather than a third table in {@link virtualUserSchema}, and
- * owned by its own store: recording what a persona did and deciding that it
+ * owned by its own store: recording what a virtual user did and deciding that it
  * keeps going on its own are separate opt-ins, and a project that only wants
  * the first should not be handed a cadence table it never writes to.
  *
- * `persona` is the primary key: a persona has one cadence, and a second row for
+ * `virtualUser` is the primary key: a virtual user has one cadence, and a second row for
  * the same one would mean two copies of the same user acting at once — not a
  * heavier test, a different and unreproducible one.
  */
@@ -20,7 +20,7 @@ export const virtualUserScheduleSchema: PikkuSchema = {
     (db, _types, ctx) =>
       db.schema
         .createTable('virtualUserSchedule')
-        .addColumn('persona', 'varchar(255)', (col) => col.primaryKey())
+        .addColumn('virtualUser', 'varchar(255)', (col) => col.primaryKey())
         // 0 or 1 rather than a boolean, matching the run tables: a bare sqlite
         // driver cannot bind one, and `SerializePlugin` is not installed
         // everywhere. Off by default, so creating the table spends nothing.
@@ -31,7 +31,7 @@ export const virtualUserScheduleSchema: PikkuSchema = {
         )
         .addColumn('budget', ctx.text)
         // The gap to the next run is drawn between these rather than fixed, so
-        // the persona does not keep an appointment.
+        // the virtual user does not keep an appointment.
         .addColumn('minIntervalMs', 'bigint', (col) => col.notNull())
         .addColumn('maxIntervalMs', 'bigint', (col) => col.notNull())
         // The entire schedule. Written before a run is dispatched, so a tick
