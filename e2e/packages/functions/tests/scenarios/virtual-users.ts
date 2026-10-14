@@ -1,8 +1,8 @@
 /**
  * The people who use the e2e app.
  *
- * One declaration serves both halves of the suite. A scenario borrows a persona
- * as an actor and drives it through a script somebody wrote; `pikku persona run`
+ * One declaration serves both halves of the suite. A scenario borrows a virtual user
+ * as an actor and drives it through a script somebody wrote; `pikku virtual-user run`
  * hands the same person the scenario prose for their own actor, the schema of
  * every rpc their roles let them see, and nothing else — no step graph, no rpc
  * names lifted out of a feature file. What they do with that is the model's
@@ -16,9 +16,9 @@
  * Their addresses are computed from these ids and `scenarios.emailDomain`, so
  * `shopper` reads mail at shopper@actors.local without anyone writing it down.
  */
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
-definePersonas({
+defineVirtualUsers({
   /**
    * The careless disposition is the closest thing to a real first-time buyer:
    * it abandons things halfway, picks them back up out of order, and repeats a
@@ -81,7 +81,7 @@ definePersonas({
   admin: {
     name: 'Admin',
     jobTitle: 'Console administrator',
-    // The one persona here carrying a picture, so the console's avatar has both
+    // The one virtual user here carrying a picture, so the console's avatar has both
     // branches covered by the same suite. Same-origin and always served, which
     // an external URL would not be on a machine with no network.
     avatarUrl: '/console/pikku-console-logo.png',

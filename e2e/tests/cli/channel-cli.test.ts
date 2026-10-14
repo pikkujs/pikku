@@ -15,7 +15,7 @@ import { deriveActorSecret } from '@pikku/core/services'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
-import { personaConfigs } from '../../.pikku/scenarios/pikku-personas.gen.js'
+import { virtualUserConfigs } from '../../.pikku/scenarios/pikku-virtual-users.gen.js'
 
 let server: Awaited<ReturnType<typeof startBackend>>
 let apiUrl: string
@@ -96,7 +96,7 @@ describe('CLI over a channel', () => {
     server = await startBackend()
     await server.waitUntilReady({ timeoutMs: 300_000 })
     apiUrl = server.apiUrl
-    token = await signIn(personaConfigs.admin.email, personaConfigs.admin.name)
+    token = await signIn(virtualUserConfigs.admin.email, virtualUserConfigs.admin.name)
   })
 
   after(async () => {

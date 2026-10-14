@@ -1,4 +1,4 @@
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
 /**
  * The two people `orderHealthScenario` casts.
@@ -8,7 +8,7 @@ import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
  * addresses from `scenarios.emailDomain`, and emits the typed registry the
  * scenario's `actors` slots are checked against.
  */
-definePersonas({
+defineVirtualUsers({
   customer: {
     name: 'Customer',
     jobTitle: 'Customer',

@@ -6,12 +6,12 @@
  * tested at all, so `maya` exists to be refused — every scenario that asserts a
  * boundary runs a step as her and expects a 404.
  *
- * Addresses are never written down: each is derived from the persona id and
+ * Addresses are never written down: each is derived from the virtual user id and
  * `scenarios.emailDomain`, so `theo` signs in as theo@actors.local.
  */
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
-definePersonas({
+defineVirtualUsers({
   dana: {
     name: 'Dana',
     jobTitle: 'Dispatcher at Northwind Heating',

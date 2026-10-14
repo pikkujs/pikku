@@ -11,7 +11,7 @@
  * The agent steps reach the server over plain HTTP and so need no actor, but
  * `expectScore` is an inline RPC — the runner refuses to serve one locally,
  * since the snapshot it grades lives in the server process. Hence the admin
- * actor: it is the persona whose session carries the call there.
+ * actor: it is the virtual user whose session carries the call there.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 

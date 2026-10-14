@@ -61,8 +61,8 @@ The runner opens one BrowserContext per actor and signs each in at
 - A scenario that _creates_ an identity clears the context first
   (`browser.context.clearCookies()`), because signing up while another user's
   cookie is attached is refused outright.
-- One actor exists per persona declared with `definePersonas` (see
-  `src/personas.ts`); pikku derives each address from the persona id. The secret
+- One actor exists per virtual user declared with `defineVirtualUsers` (see
+  `src/virtual-users.ts`); pikku derives each address from the virtual user id. The secret
   is **never** in that file: it is `SCENARIO_ACTOR_SECRET` in the environment,
   and its absence disables `/api/auth/sign-in/actor` entirely. That absence is
   what keeps the door shut in production.

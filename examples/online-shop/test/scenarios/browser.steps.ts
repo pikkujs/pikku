@@ -663,7 +663,7 @@ export const CallsMcpToolOutput = z.object({
  *
  * The caller's identity comes from the actor's browser cookies, forwarded as a
  * header. Nothing about MCP requires a browser — a deployed agent would send a
- * bearer token or an OAuth credential instead — but the personas' authority
+ * bearer token or an OAuth credential instead — but the virtual users' authority
  * lives in their session, and reusing it proves the property these templates
  * advertise: an agent gets exactly the scopes the person driving it has.
  */

@@ -1,9 +1,9 @@
 /**
- * An actor persona holding a real conversation with the todo agent.
+ * An actor virtual user holding a real conversation with the todo agent.
  *
  * Unlike every other agent scenario this drives no browser and asserts on no
  * transcript text. The actor is itself LLM-driven: it is given a task and a
- * standard to judge against, converses over HTTP in persona — approving the
+ * standard to judge against, converses over HTTP in virtual user — approving the
  * agent's tool requests as it goes — and returns a verdict.
  *
  * A verdict alone would be a model grading a model, so the store is checked too.
@@ -21,7 +21,7 @@ const TITLE = 'Book the venue'
 export const todoConverseScenario = pikkuScenario<void, { passed: true }>({
   title: 'A shopper gets a todo created, and the store confirms it',
   description:
-    'An actor persona converses with the todo agent and the store is checked independently',
+    'An actor virtual user converses with the todo agent and the store is checked independently',
   tags: ['scenario', 'todo-converse', 'ai-live'],
   func: async (_services, _data, { scenario, actors }) => {
     await scenario.do(
@@ -59,7 +59,7 @@ export const todoConverseScenario = pikkuScenario<void, { passed: true }>({
 
 export const todoConverseFeature = pikkuFeature({
   name: 'An actor converses with the todo agent',
-  description: 'A persona-driven conversation, judged by verdict and by store',
+  description: 'A virtual-user-driven conversation, judged by verdict and by store',
   tags: ['todo-converse', 'ai-live'],
   scenarios: [todoConverseScenario],
 })

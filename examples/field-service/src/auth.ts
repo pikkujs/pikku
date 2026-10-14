@@ -5,7 +5,7 @@ import {
   pikkuBan,
 } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
-import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
+import { personaList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -85,18 +85,18 @@ export const auth = pikkuBetterAuth(
       // and everything else it offered — list, create, ban, remove, revoke
       // sessions, set password — is scoped RPCs in @pikku/addon-admin.
       plugins: [
-        // @snippet start personaSignIn
+        // @snippet start virtualUserSignIn
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
-          // The "Sign in as …" switcher: GET /api/auth/sign-in/personas lists,
-          // POST /api/auth/sign-in/persona { id } signs in. No credential.
-          personaSignIn: {
-            personas: personaList,
+          // The "Sign in as …" switcher: GET /api/auth/sign-in/virtual-users lists,
+          // POST /api/auth/sign-in/virtual-user { id } signs in. No credential.
+          virtualUserSignIn: {
+            virtualUsers: personaList,
             featureFlags,
           },
         }),
-        // @snippet end personaSignIn
+        // @snippet end virtualUserSignIn
         pikkuBan(),
       ],
     })

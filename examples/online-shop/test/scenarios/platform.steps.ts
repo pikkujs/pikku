@@ -3,7 +3,7 @@
  *
  * "The shop ships the order" and "Stripe's webhook arrives" are both things
  * that happen to a scenario rather than things an actor does, and writing them
- * as persona steps with the actor left off would put somebody in a sentence
+ * as virtual user steps with the actor left off would put somebody in a sentence
  * that has none.
  */
 import {

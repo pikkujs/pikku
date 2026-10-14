@@ -281,10 +281,10 @@ export const doesNotSeeTableRow = pikkuScenarioStep<
 })
 
 /**
- * Reads the personas a scenario shows it is cast with.
+ * Reads the virtual users a scenario shows it is cast with.
  *
  * The cast renders as avatars with no accessible name, so each member carries
- * the persona key as a data attribute — reading that is what keeps this
+ * the virtual user key as a data attribute — reading that is what keeps this
  * assertion about who is in the cast rather than about how an avatar happens to
  * look.
  */
@@ -293,7 +293,7 @@ export const readsFlowCast = pikkuScenarioStep<
   { cast: string[] }
 >({
   name: 'readsFlowCast',
-  description: 'reads the personas cast in a scenario',
+  description: 'reads the virtual users cast in a scenario',
   template: 'reads the cast of {flow}',
   browser: async (_services, { flow }, { browser }) => {
     const card = browser.page.locator(
@@ -306,7 +306,7 @@ export const readsFlowCast = pikkuScenarioStep<
         .locator('[data-testid="ladder-actor"]')
         .evaluateAll((nodes) => [
           ...new Set(
-            nodes.map((node) => node.getAttribute('data-persona-key') ?? '')
+            nodes.map((node) => node.getAttribute('data-virtual-user-key') ?? '')
           ),
         ]),
     }
@@ -314,17 +314,17 @@ export const readsFlowCast = pikkuScenarioStep<
 })
 
 export const expectsFlowCast = pikkuScenarioStep<
-  { read: { cast: string[] }; personas: string[] },
+  { read: { cast: string[] }; virtualUsers: string[] },
   { cast: number }
 >({
   name: 'expectsFlowCast',
-  description: 'expects a scenario to be cast with the given personas',
-  template: 'expects the cast to be {personas}',
-  default: async (_services, { read, personas }) => {
-    for (const persona of personas) {
-      if (!read.cast.includes(persona)) {
+  description: 'expects a scenario to be cast with the given virtual users',
+  template: 'expects the cast to be {virtual users}',
+  default: async (_services, { read, virtualUsers }) => {
+    for (const virtualUser of virtualUsers) {
+      if (!read.cast.includes(virtualUser)) {
         throw new Error(
-          `Expected ${persona} in the cast, got ${read.cast.join(', ') || 'nobody'}`
+          `Expected ${virtualUser} in the cast, got ${read.cast.join(', ') || 'nobody'}`
         )
       }
     }

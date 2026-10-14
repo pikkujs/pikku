@@ -29,7 +29,7 @@ const findFreePort = (): Promise<number> =>
 
 /**
  * The defaults every e2e entry point runs under. `SCENARIO_ACTOR_SECRET` is
- * the root this app's actor sign-in route derives each persona's credential
+ * the root this app's actor sign-in route derives each virtual user's credential
  * from — long enough to be key material, or every sign-in is refused before it
  * is compared. `PIKKU_MOCK_LLM`
  * scripts the model instead of calling OpenAI, and `FABRIC_API_URL` points the

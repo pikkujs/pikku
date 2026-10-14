@@ -3,7 +3,7 @@ import { magicLink } from 'better-auth/plugins'
 import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor, pikkuBan } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 import { sessionCookieCacheMaxAge } from './lib/session-cookie.js'
-import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
+import { personaList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -143,8 +143,8 @@ export const auth = pikkuBetterAuth(
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
-          personaSignIn: {
-            personas: personaList,
+          virtualUserSignIn: {
+            virtualUsers: personaList,
             featureFlags,
           },
         }),

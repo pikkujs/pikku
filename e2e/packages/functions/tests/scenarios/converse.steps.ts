@@ -1,8 +1,8 @@
 /**
- * Conversing with an agent in an actor's persona.
+ * Conversing with an agent in an actor's virtual user.
  *
  * `converse` is the actor's own capability: it holds a multi-turn conversation
- * with a Pikku agent over the real transport, in persona, and returns a verdict
+ * with a Pikku agent over the real transport, in virtual user, and returns a verdict
  * judging the task against the standard it was given. The steps here are thin
  * because the interesting machinery lives on the actor, not in the test.
  */
@@ -27,11 +27,11 @@ export const conversesWithAgent = pikkuScenarioStep<
 >({
   name: 'conversesWithAgent',
   actor: true,
-  description: 'converses with an agent in persona and returns a verdict',
+  description: 'converses with an agent in virtual user and returns a verdict',
   template: 'converses with {agent}',
   default: async (_services, { agent, task, evaluate }, { actor }) => {
     // `always` because the agent's tools are approval-gated and there is nobody
-    // at a keyboard: the persona is standing in for the user who would say yes.
+    // at a keyboard: the virtual user is standing in for the user who would say yes.
     const verdict = await actor.converse({
       agent: agent as never,
       task,

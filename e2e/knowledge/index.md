@@ -11,7 +11,7 @@ notes record what it is _for_ — the handful of things `pikku meta` cannot say,
 because they are decisions rather than declarations.
 
 Everything else about this project is generated: the routes, the schemas, the
-scopes, the personas. Look there first; a note that repeats them is a copy that
+scopes, the virtual users. Look there first; a note that repeats them is a copy that
 will drift.
 
 <!-- pikku:knowledge-index -->

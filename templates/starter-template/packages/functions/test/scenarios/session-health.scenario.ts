@@ -1,8 +1,8 @@
 import { pikkuScenario } from '#pikku/scenarios'
 
 /**
- * A scenario is a story of RPC calls told through a synthetic persona (an
- * "actor" — one exists per persona declared with definePersonas). Every step runs over
+ * A scenario is a story of RPC calls told through a synthetic virtual user (an
+ * "actor" — one exists per virtual user declared with defineVirtualUsers). Every step runs over
  * the REAL transport with the actor's session cookie, so a passing scenario
  * proves the deployed API works exactly as a signed-in user would experience it.
  *

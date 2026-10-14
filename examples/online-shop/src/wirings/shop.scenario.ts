@@ -106,7 +106,7 @@ const emptiesTheBasket = pikkuScenarioHook(
 
 // @snippet start scenarioConverse
 // Actors can also hold a free-form conversation with one of your AI agents,
-// in persona. The actor drives the agent over the real transport, answers its
+// in virtual user. The actor drives the agent over the real transport, answers its
 // tool-approval requests, and returns a verdict on whether the task was met.
 export const shopperAsksTheAssistant = pikkuScenario({
   before: emptiesTheBasket,
@@ -137,7 +137,7 @@ export const shopperAsksTheAssistant = pikkuScenario({
       throw new Error(`Assistant flow failed: ${verdict.reasoning}`)
     }
 
-    // The verdict is the persona's judgement — follow up with a deterministic
+    // The verdict is the virtual user's judgement — follow up with a deterministic
     // check through the same actor.
     const basket = await scenario.do(
       'Basket really has the mug',

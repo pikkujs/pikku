@@ -11,7 +11,7 @@
  * build. Behaviour scenarios that create, edit or delete belong in their own
  * feature, untagged `smoke`, so the fast gate stays fast and deterministic.
  *
- * `actors.visitor` below is the template's PLACEHOLDER persona. When you replace it
+ * `actors.visitor` below is the template's PLACEHOLDER virtual user. When you replace it
  * with this app's real roles (see AGENTS.md), swap both references here for your
  * primary role — this scenario must name one literally, because PKU677 requires a
  * browser step's actor to be a literal `actors.<name>`.

@@ -14,7 +14,7 @@
  * it as an API scenario against `/api/auth/sign-in/email`, which is where a
  * wrong password is actually refused.
  *
- * `actors.visitor` below is the template's PLACEHOLDER persona. When you replace it
+ * `actors.visitor` below is the template's PLACEHOLDER virtual user. When you replace it
  * with this app's real roles (see AGENTS.md), swap all four references here for your
  * primary role — this scenario must name one literally, because PKU677 requires a
  * browser step's actor to be a literal `actors.<name>`.

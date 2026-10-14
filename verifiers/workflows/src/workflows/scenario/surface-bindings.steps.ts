@@ -37,7 +37,7 @@ export const submitsTheOrder = pikkuScenarioStep<
  */
 export const greetsAsItsActor = pikkuScenarioStep<void, { actor: string }>({
   name: 'greetsAsItsActor',
-  description: 'reports which persona it is running as',
+  description: 'reports which virtual user it is running as',
   actor: true,
   default: async (_services, _data, { actor }) => {
     surfaceLog.push(`greetsAsItsActor:${actor.name}`)

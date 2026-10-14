@@ -75,7 +75,7 @@
       "kind": "ssr",
       "dev": { "command": ["bun", "run", "dev"], "port": 7104, "healthPath": "/" },
       "serves": "visitor",
-      "personas": ["visitor"]
+      "virtualUsers": ["visitor"]
     }
   }
 }

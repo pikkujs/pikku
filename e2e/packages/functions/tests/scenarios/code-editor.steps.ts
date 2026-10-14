@@ -8,12 +8,12 @@
 import {
   pikkuScenarioStep,
   type TestIdSelector,
-  type TypedPersonas,
+  type TypedVirtualUsers,
 } from '#pikku/scenario'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 
-type Actor = TypedPersonas[keyof TypedPersonas]
+type Actor = TypedVirtualUsers[keyof TypedVirtualUsers]
 
 interface FunctionMeta {
   name?: string

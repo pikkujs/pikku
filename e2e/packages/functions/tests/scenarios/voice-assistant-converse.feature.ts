@@ -92,7 +92,7 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
 export const voiceAssistantConverseFeature = pikkuFeature({
   name: 'The voice assistant is judged by the store, not by its own sentence',
   description:
-    'A persona-driven conversation with the voice agent, checked against the records it claims to have changed',
+    'A virtual-user-driven conversation with the voice agent, checked against the records it claims to have changed',
   tags: ['voice-assistant-converse', 'ai-live'],
   scenarios: [voiceAssistantCompletesTodoScenario],
 })

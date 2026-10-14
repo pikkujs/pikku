@@ -38,14 +38,14 @@ render `<Outlet />`; put a list in `app.orders.index.tsx`.
 `useNavItems()` in `src/components/layout/nav.tsx` is the one place navigation is defined; add a screen there and it
 shows in the desktop sidebar (`NavList`) and in the phone's bottom bar (`MobileTabBar`), both mounted by `AppShell`.
 
-## Personas
+## Virtual users
 
-`packages/functions/src/personas.ts` declares the people. Replace the shipped `visitor` placeholder in four edits:
-the `definePersonas` call, `pikku.config.json` (`scenarios` personas), and the two shipped scenarios
+`packages/functions/src/virtual-users.ts` declares the people. Replace the shipped `visitor` placeholder in four edits:
+the `defineVirtualUsers` call, `pikku.config.json` (`scenarios` virtual users), and the two shipped scenarios
 (`test/scenarios/every-page-loads`, `signed-in-actor-reaches-the-app`), which name `actors.visitor` literally
 (`sed -i '' 's/actors.visitor/actors.<id>/g' packages/functions/test/scenarios/*.ts`).
 
 ## Scenarios
 
-Inline zod schemas on functions must be exported consts (PKU489). Local actor sign-in grants no persona roles; a
+Inline zod schemas on functions must be exported consts (PKU489). Local actor sign-in grants no virtual user roles; a
 scoped RPC 403s until the role row exists (see the pikku-scenario skill).
