@@ -262,7 +262,7 @@ describe('startVirtualUserRun', () => {
     assert.equal(started[0].disposition, 'realistic')
   })
 
-  test('refuses every disposition but the accountable one in production', async () => {
+  test('refuses every disposition in production', async () => {
     const { store, started } = runStore()
     await assert.rejects(
       startVirtualUserRun({
@@ -272,23 +272,24 @@ describe('startVirtualUserRun', () => {
         persona: 'susan',
         disposition: 'adversarial',
       }),
-      /Only the 'accountable' disposition may run against production/
+      /Virtual users do not run against production/
     )
     assert.equal(started.length, 0)
   })
 
-  // Checked against the effective disposition, so an override cannot smuggle
-  // one past a persona that declares the safe one.
-  test('the accountable disposition is allowed through in production', async () => {
+  test('the accountable disposition is refused in production too', async () => {
     const { store, started } = runStore()
-    await startVirtualUserRun({
-      store,
-      personas,
-      config: { nodeEnv: 'production' },
-      persona: 'susan',
-      disposition: 'accountable',
-    })
-    assert.equal(started[0].disposition, 'accountable')
+    await assert.rejects(
+      startVirtualUserRun({
+        store,
+        personas,
+        config: { nodeEnv: 'production' },
+        persona: 'susan',
+        disposition: 'accountable',
+      }),
+      /Virtual users do not run against production/
+    )
+    assert.equal(started.length, 0)
   })
 
   // The case NODE_ENV cannot answer: a staging environment that is a production
@@ -320,7 +321,7 @@ describe('startVirtualUserRun', () => {
         persona: 'susan',
         disposition: 'adversarial',
       }),
-      /Only the 'accountable' disposition may run against production/
+      /Virtual users do not run against production/
     )
     assert.equal(started.length, 0)
   })
@@ -342,7 +343,7 @@ describe('startVirtualUserRun', () => {
           persona: 'susan',
           disposition: 'adversarial',
         }),
-        /Only the 'accountable' disposition may run against production/
+        /Virtual users do not run against production/
       )
     } finally {
       if (pikkuEnv !== undefined) process.env.PIKKU_ENV = pikkuEnv
@@ -580,7 +581,7 @@ describe('writeVirtualUserSchedule', () => {
     environment: 'production',
   }
 
-  test('refuses enabling a probing disposition in production', async () => {
+  test('refuses enabling a cadence in production', async () => {
     const { store, writes } = scheduleStore()
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -592,14 +593,14 @@ describe('writeVirtualUserSchedule', () => {
       }),
       (e) =>
         getErrorResponse(e)?.status === 403 &&
-        /Only the 'accountable' disposition/.test((e as Error).message)
+        /Virtual users do not run against production/.test((e as Error).message)
     )
     assert.equal(writes.length, 0)
   })
 
   // Fields left out keep what the row had, so the disposition checked is the
   // one it will hold after the write.
-  test('refuses enabling a row saved earlier with a probing disposition', async () => {
+  test('refuses enabling a row saved earlier in production', async () => {
     const { store, writes } = scheduleStore({ ...schedule(), enabled: false })
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -609,12 +610,12 @@ describe('writeVirtualUserSchedule', () => {
         enabled: true,
         ...production,
       }),
-      /"susan" is adversarial/
+      /Virtual users do not run against production/
     )
     assert.equal(writes.length, 0)
   })
 
-  test('refuses a probing disposition on a row that is already enabled', async () => {
+  test('refuses editing a row that is already enabled in production', async () => {
     const { store, writes } = scheduleStore(schedule())
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -624,22 +625,25 @@ describe('writeVirtualUserSchedule', () => {
         disposition: 'careless',
         ...production,
       }),
-      /"susan" is careless/
+      /Virtual users do not run against production/
     )
     assert.equal(writes.length, 0)
   })
 
-  test('an accountable cadence may be enabled in production', async () => {
+  test('an accountable cadence is refused in production too', async () => {
     const { store, writes } = scheduleStore()
-    await writeVirtualUserSchedule({
-      store,
-      personas,
-      persona: 'susan',
-      enabled: true,
-      disposition: 'accountable',
-      ...production,
-    })
-    assert.equal(writes.length, 1)
+    await assert.rejects(
+      writeVirtualUserSchedule({
+        store,
+        personas,
+        persona: 'susan',
+        enabled: true,
+        disposition: 'accountable',
+        ...production,
+      }),
+      /Virtual users do not run against production/
+    )
+    assert.equal(writes.length, 0)
   })
 
   // A new row takes the persona's declared disposition, so the one checked is
@@ -653,7 +657,6 @@ describe('writeVirtualUserSchedule', () => {
       } as unknown as ScaffoldPersonas,
       persona: 'susan',
       enabled: true,
-      ...production,
     })
     assert.equal(writes[0].disposition, 'accountable')
   })

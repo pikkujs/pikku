@@ -15,7 +15,6 @@ import { runVirtualUser as runVirtualUserEngine } from './run-virtual-user.js'
 import { personaVirtualUserTarget } from './virtual-user-target.js'
 import type { SchemaMap } from './virtual-user-derive.js'
 import type { PersonaEnvironment } from '../persona/persona-environments.js'
-import { PRODUCTION_DISPOSITION } from './virtual-user.types.js'
 import type {
   StepRecord,
   VirtualUserDisposition,
@@ -216,21 +215,17 @@ const isProductionRun = (
   return environment ? Boolean(environments[environment]?.production) : true
 }
 
-// Every disposition other than this one exists to find out what the product
-// does wrong, which is not a thing to do to real customers' data.
+// A virtual user is a probe, and probing is not a thing to do to real
+// customers' data, whatever the disposition.
 const refuseInProduction = (
   personaId: string,
-  disposition: string,
   config: { nodeEnv?: string } | undefined,
   environments: Readonly<Record<string, PersonaEnvironment>> | undefined,
   environment: string | undefined
 ) => {
-  if (
-    disposition !== PRODUCTION_DISPOSITION &&
-    isProductionRun(config, environments, environment)
-  ) {
+  if (isProductionRun(config, environments, environment)) {
     throw new ForbiddenError(
-      `Only the '${PRODUCTION_DISPOSITION}' disposition may run against production; "${personaId}" is ${disposition}`
+      `Virtual users do not run against production; "${personaId}" cannot run here`
     )
   }
 }
@@ -262,9 +257,7 @@ export const startVirtualUserRun = async ({
     persona.disposition ??
     'realistic') as VirtualUserDisposition
 
-  // Checked against the effective disposition, so an override cannot smuggle
-  // one in.
-  refuseInProduction(personaId, disposition, config, environments, environment)
+  refuseInProduction(personaId, config, environments, environment)
 
   // Seeded here rather than inside the engine so the record carries the seed
   // even if the run dies before returning — an unreproducible crash costs the
@@ -411,12 +404,12 @@ export interface WriteVirtualUserScheduleParams {
  *
  * Applies the same rules `startVirtualUserRun` enforces, at the point the row is
  * written rather than every hour afterwards: an acted-upon persona has no
- * session, and an enabled cadence whose disposition production refuses, so
- * either is a tick that can only ever fail to start, with nobody watching.
+ * session, and production refuses every run, so either is a tick that can only
+ * ever fail to start, with nobody watching.
  *
- * The disposition checked is the one the row will hold, since a field left out
- * keeps what it had: enabling a row saved earlier as adversarial is refused
- * just as saving one would be.
+ * Whether the row is enabled is the one thing checked, since a field left out
+ * keeps what it had: enabling a row saved earlier is refused just as saving a
+ * new one would be.
  */
 export const writeVirtualUserSchedule = async ({
   store,
@@ -442,13 +435,7 @@ export const writeVirtualUserSchedule = async ({
   const created =
     disposition === undefined && !current ? declared.disposition : undefined
   if (enabled ?? current?.enabled) {
-    refuseInProduction(
-      persona,
-      disposition ?? current?.disposition ?? created ?? 'realistic',
-      config,
-      environments,
-      environment
-    )
+    refuseInProduction(persona, config, environments, environment)
   }
   return scheduleStore.set({
     persona,
