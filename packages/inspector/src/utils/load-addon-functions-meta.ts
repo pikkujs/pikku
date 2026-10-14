@@ -92,6 +92,7 @@ const applyPackageToCLICommands = (
       if (
         namespace &&
         typeof command.pikkuFuncId === 'string' &&
+        command.pikkuFuncId !== '' &&
         !command.pikkuFuncId.includes(':')
       ) {
         command.pikkuFuncId = `${namespace}:${command.pikkuFuncId}`

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SPECIALISTS } from '../../fabric/lib/specialists.js'
 
 export const NextInput = z.object({
   prompt: z.string().optional(),
@@ -13,6 +14,7 @@ export const NextOutput = z.object({
   agent: z.enum(['changes', 'intake', 'knowledge', 'upgrade']).nullable(),
   skill: z.string().nullable(),
   refs: z.array(z.string()),
+  specialist: z.enum(SPECIALISTS).nullable().optional(),
   reason: z.string(),
   context: z.string().nullable(),
   merged: z.array(z.string()),

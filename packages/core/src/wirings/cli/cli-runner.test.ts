@@ -969,4 +969,129 @@ describe('CLI Runner', () => {
       assert.deepEqual(lines, [])
     })
   })
+
+  describe('package commands', () => {
+    const packageName = '@test/cli-package'
+    let out: unknown[]
+    const realLog = console.log
+
+    const setup = (commandConfig: Record<string, any>) => {
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          app: {
+            program: 'app',
+            commands: {
+              pkg: {
+                pikkuFuncId: '',
+                positionals: [],
+                options: {},
+                subcommands: {
+                  echo: {
+                    pikkuFuncId: 'pkgEcho',
+                    packageName,
+                    positionals: [],
+                    options: {},
+                  },
+                },
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+      pikkuState(packageName, 'function', 'meta', {
+        pkgEcho: {
+          pikkuFuncId: 'pkgEcho',
+          inputSchemaName: 'PkgEchoInput',
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+      const original = {
+        func: async (_services: any, data: any) => ({
+          ...data,
+          ran: 'package',
+        }),
+      }
+      pikkuState(packageName, 'function', 'functions').set(
+        'pkgEcho',
+        original as any
+      )
+      pikkuState(packageName, 'misc', 'schemas').set('PkgEchoInput', {
+        type: 'object',
+        properties: { tags: { type: 'array', items: { type: 'string' } } },
+      })
+      wireCLI({
+        program: 'app',
+        commands: {
+          pkg: {
+            subcommands: {
+              echo: { func: async () => ({}), ...commandConfig },
+            },
+          },
+        },
+        render: (_s: any, data: any) => console.log(JSON.stringify(data)),
+      } as any)
+      return original
+    }
+
+    beforeEach(() => {
+      out = []
+      console.log = (...args: unknown[]) => void out.push(args.join(' '))
+    })
+
+    afterEach(() => {
+      console.log = realLog
+    })
+
+    test('command-level auth keeps the package function and is enforced', async () => {
+      const original = setup({ auth: true })
+      const registered = pikkuState(
+        packageName,
+        'function',
+        'functions'
+      ).get('pkgEcho') as any
+      assert.strictEqual(registered.func, original.func)
+      assert.strictEqual(registered.auth, true)
+      assert.strictEqual(
+        pikkuState(null, 'function', 'functions').has('pkgEcho'),
+        false
+      )
+      await assert.rejects(
+        runCLICommand({
+          program: 'app',
+          commandPath: ['pkg', 'echo'],
+          data: {},
+          singletonServices,
+        }),
+        (error: any) => error.constructor.name === 'MissingSessionError'
+      )
+    })
+
+    test('command-level permissions keep the package function', () => {
+      const original = setup({ auth: false, permissions: { admin: [] } })
+      const registered = pikkuState(
+        packageName,
+        'function',
+        'functions'
+      ).get('pkgEcho') as any
+      assert.strictEqual(registered.func, original.func)
+      assert.deepStrictEqual(registered.permissions, { admin: [] })
+    })
+
+    test('input is shaped by the schema of the command package', async () => {
+      setup({ auth: false })
+      await runCLICommand({
+        program: 'app',
+        commandPath: ['pkg', 'echo'],
+        data: { tags: 'a,b', extra: 'dropped' },
+        singletonServices,
+      })
+      assert.deepStrictEqual(
+        out.at(-1),
+        JSON.stringify({ tags: ['a', 'b'], ran: 'package' })
+      )
+    })
+  })
 })
