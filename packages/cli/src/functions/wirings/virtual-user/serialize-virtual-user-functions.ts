@@ -555,7 +555,7 @@ export const virtualUserPlatformSession = pikkuMiddleware(
  * \`runVirtualUser\`, the same gated entry point a person calls, so without a
  * session carrying \`virtualUser:run\` every dispatch is refused. Going through
  * that front door rather than a shared helper is the point — the persona
- * checks, the production-disposition rule and the record all live in one place,
+ * checks, the production refusal and the record all live in one place,
  * and a second copy of them would eventually disagree with the first.
  *
  * An hourly tick is plenty for intervals measured in hours: the tick decides

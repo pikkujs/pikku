@@ -15,6 +15,11 @@ import {
   STALE_RUN_AFTER_MS,
   tickVirtualUserSchedules,
 } from './virtual-user-schedule.js'
+import {
+  startVirtualUserRun,
+  virtualUserScheduleRunInput,
+  type ScaffoldPersonas,
+} from './virtual-user-scaffold.js'
 
 const HOUR = 60 * 60 * 1000
 const NOW = new Date('2026-01-01T12:00:00.000Z')
@@ -276,5 +281,88 @@ describe('virtual user schedule', () => {
     assert.deepEqual(result.skipped, [
       { persona: 'guest', reason: 'dispatch-failed' },
     ])
+  })
+})
+
+// The tick's own logic is covered above with a dispatch the test supplies. These
+// run the real start a scheduled tick reaches, so the two halves are checked
+// together: a due persona becomes a run record, and production refuses it
+// without the tick spinning on it.
+describe('a scheduled tick that starts real runs', () => {
+  const personas = {
+    guest: {
+      id: 'guest',
+      name: 'Guest',
+      email: 'guest@actors.local',
+      roles: [],
+      goals: [],
+      tags: [],
+      runnable: true,
+      disposition: 'realistic',
+    },
+  } as unknown as ScaffoldPersonas
+
+  const startingStore = () => {
+    const started: any[] = []
+    const store = {
+      start: async (start: any) => {
+        started.push(start)
+        return `run-${started.length}`
+      },
+      list: async () => [],
+      fail: async () => {},
+    } as unknown as VirtualUserRunStore
+    return { store, started }
+  }
+
+  const tickWith = async (environment: Record<string, unknown>) => {
+    const { scheduleStore, claims } = stores([schedule()], [])
+    const { store, started } = startingStore()
+    const result = await tickVirtualUserSchedules({
+      schedules: scheduleStore,
+      runs: store,
+      now: NOW,
+      random: () => 0.5,
+      dispatch: async (row) =>
+        (
+          await startVirtualUserRun({
+            store,
+            personas,
+            config: undefined,
+            ...environment,
+            ...virtualUserScheduleRunInput(row),
+            startedBy: 'pikku-platform',
+          })
+        ).runId,
+    })
+    return { result, claims, started }
+  }
+
+  test('a due persona outside production becomes a recorded run', async () => {
+    const { result, claims, started } = await tickWith({
+      environments: { staging: { production: false } },
+      environment: 'staging',
+    })
+
+    assert.deepEqual(result.dispatched, [{ persona: 'guest', runId: 'run-1' }])
+    assert.equal(started.length, 1)
+    assert.equal(started[0].persona, 'guest')
+    assert.equal(started[0].startedBy, 'pikku-platform')
+    assert.equal(claims.at(-1)!.runId, 'run-1')
+  })
+
+  test('in production no run is recorded and the persona waits its interval', async () => {
+    const { result, claims, started } = await tickWith({
+      environments: { production: { production: true } },
+      environment: 'production',
+    })
+
+    assert.deepEqual(result.dispatched, [])
+    assert.deepEqual(result.skipped, [
+      { persona: 'guest', reason: 'dispatch-failed' },
+    ])
+    assert.equal(started.length, 0)
+    assert.equal(claims.length, 1)
+    assert.ok(claims[0]!.nextRunAt.getTime() >= NOW.getTime() + HOUR)
   })
 })
