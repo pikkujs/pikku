@@ -106,10 +106,10 @@ async function makeValidProject(root: string) {
     'utf8'
   )
   await writeFile(
-    join(root, 'packages', 'functions', 'src', 'personas.virtual-user.ts'),
+    join(root, 'packages', 'functions', 'src', 'virtual-users.virtual-user.ts'),
     [
-      "import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'",
-      "definePersonas({ founder: { name: 'Anna Müller' } })",
+      "import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'",
+      "defineVirtualUsers({ founder: { name: 'Anna Müller' } })",
       '',
     ].join('\n'),
     'utf8'
@@ -222,16 +222,16 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  test('no personas → warn, and the project still passes', async () => {
+  test('no virtual users → warn, and the project still passes', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
       await rm(
-        join(tmp, 'packages', 'functions', 'src', 'personas.virtual-user.ts')
+        join(tmp, 'packages', 'functions', 'src', 'virtual-users.virtual-user.ts')
       )
       const result = await runValidate(tmp)
-      const finding = result.findings.find((f) => f.id === 'no-personas')
-      assert.ok(finding, 'expected a no-personas finding')
+      const finding = result.findings.find((f) => f.id === 'no-virtual-users')
+      assert.ok(finding, 'expected a no-virtual-users finding')
       assert.strictEqual(finding!.severity, 'warn')
       assert.strictEqual(result.ok, true)
     } finally {
@@ -239,16 +239,16 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  test('personas without actor sign-in → warn', async () => {
+  test('virtual users without actor sign-in → warn', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
       await rm(join(tmp, 'packages', 'functions', 'src', 'auth.wiring.ts'))
       const result = await runValidate(tmp)
       const finding = result.findings.find(
-        (f) => f.id === 'personas-no-actor-sign-in'
+        (f) => f.id === 'virtual-users-no-actor-sign-in'
       )
-      assert.ok(finding, 'expected a personas-no-actor-sign-in finding')
+      assert.ok(finding, 'expected a virtual-users-no-actor-sign-in finding')
       assert.strictEqual(finding!.severity, 'warn')
       assert.strictEqual(result.ok, true)
     } finally {
@@ -256,7 +256,7 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  test('personas with no configured environments → warn', async () => {
+  test('virtual users with no configured environments → warn', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
@@ -267,9 +267,9 @@ describe('pikku fabric validate', () => {
       await writeJson(join(tmp, 'pikku.config.json'), config)
       const result = await runValidate(tmp)
       const finding = result.findings.find(
-        (f) => f.id === 'personas-no-environments'
+        (f) => f.id === 'virtual-users-no-environments'
       )
-      assert.ok(finding, 'expected a personas-no-environments finding')
+      assert.ok(finding, 'expected a virtual-users-no-environments finding')
       assert.strictEqual(finding!.severity, 'warn')
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -1633,7 +1633,7 @@ describe('pikku fabric validate', () => {
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
         assert.match(finding!.fixHint, /featureFlags/)
-        assert.match(finding!.fixHint, /personaSignIn/)
+        assert.match(finding!.fixHint, /virtualUserSignIn/)
         assert.doesNotMatch(finding!.fixHint, /VITE_DEV_ACTOR/)
         assert.strictEqual(result.ok, false)
       } finally {
@@ -1687,22 +1687,22 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('a login screen calling signInAsPersona() → no finding', async () => {
+    test('a login screen calling signInAsVirtualUser() → no finding', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await makeFrontend(tmp, {
           'src/pages/LoginPage.tsx':
-            "import { signInAsPersona } from '@pikku/react'\n" +
+            "import { signInAsVirtualUser } from '@pikku/react'\n" +
             'export const LoginPage = () =>\n' +
-            '  <button onClick={() => signInAsPersona({ apiUrl: "/api", id: "admin" })} />\n',
+            '  <button onClick={() => signInAsVirtualUser({ apiUrl: "/api", id: "admin" })} />\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
             (f) => f.id === 'app-missing-actor-quick-login-web'
           ),
-          'signInAsPersona() is a valid quick-login fingerprint'
+          'signInAsVirtualUser() is a valid quick-login fingerprint'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })

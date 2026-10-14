@@ -22,29 +22,28 @@ export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
 
     const state = await getInspectorState()
 
-    // A virtual user IS a persona — the generated functions sign in as one and
-    // run as them. With none declared the scaffold would emit RPCs whose only
-    // possible answer is "unknown persona". Fail the codegen instead of
+    // The generated functions sign in as a declared virtual user and run as them. With none declared the scaffold would emit RPCs whose only
+    // possible answer is "unknown virtual user". Fail the codegen instead of
     // shipping that.
-    if (Object.keys(state.personas?.definitions ?? {}).length === 0) {
+    if (Object.keys(state.virtualUsers?.definitions ?? {}).length === 0) {
       throw new Error(
-        `"scaffold.virtualUser" is enabled but no personas are declared.\n` +
-          `A virtual user runs AS a persona, so there is nobody to run.\n` +
-          `Fix: declare one with definePersonas({ ... }), or remove ` +
+        `"scaffold.virtualUser" is enabled but no virtual users are declared.\n` +
+          `A run needs a declared virtual user to sign in as, so there is nobody to run.\n` +
+          `Fix: declare one with defineVirtualUsers({ ... }), or remove ` +
           `"scaffold.virtualUser" from pikku.config.json.`
       )
     }
 
     const leaf = (name: string) =>
       getLeafImportPath(config.virtualUserFunctionsFile!, name, config)
-    const pathToPersonas = getFileImportRelativePath(
+    const pathToVirtualUsers = getFileImportRelativePath(
       config.virtualUserFunctionsFile,
-      config.personasWiringFile,
+      config.virtualUsersWiringFile,
       config.packageMappings
     )
     const { schemas, functions } = serializeVirtualUserFunctions(
       leaf,
-      pathToPersonas
+      pathToVirtualUsers
     )
     await writeFileInDir(logger, config.virtualUserSchemasFile, schemas)
     await writeFileInDir(logger, config.virtualUserFunctionsFile, functions)

@@ -73,7 +73,7 @@ describe('the scoped admin surfaces emit no auth field', () => {
   const surfaces: Array<[string, string]> = [
     [
       'virtual user',
-      serializeVirtualUserFunctions(leaf, '#personas').functions,
+      serializeVirtualUserFunctions(leaf, '#virtualUsers').functions,
     ],
   ]
 

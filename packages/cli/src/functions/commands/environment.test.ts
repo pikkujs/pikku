@@ -151,7 +151,7 @@ describe('resolveEnvironment', () => {
     assert.equal(
       env.appUrl,
       'http://localhost:5001',
-      'the configured fallback stands for a persona naming no app'
+      'the configured fallback stands for a virtual user naming no app'
     )
   })
 

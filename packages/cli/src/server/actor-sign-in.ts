@@ -11,9 +11,9 @@ export const ACTOR_SECRET_ENV = 'SCENARIO_ACTOR_SECRET'
 
 /**
  * Read as an alias for the root when a project set only this one, and then
- * cleared: the root derives every persona's credential, so a bundle holding it
+ * cleared: the root derives every virtual user's credential, so a bundle holding it
  * holds all of them. The browser switcher needs no credential at all: it signs
- * in by persona id through `/auth/sign-in/persona`.
+ * in by virtual user id through `/auth/sign-in/virtual-user`.
  */
 export const VITE_ACTOR_SECRET_ENV = 'VITE_SCENARIO_ACTOR_SECRET'
 
@@ -51,7 +51,7 @@ export const enableDevActorSignIn = (logger: Logger): void => {
 
   if (secret.length < ACTOR_ROOT_SECRET_MIN_LENGTH) {
     logger.warn(
-      `${ACTOR_SECRET_ENV} is shorter than ${ACTOR_ROOT_SECRET_MIN_LENGTH} characters, so no persona credential can be derived from it and every actor sign-in will be refused. ` +
+      `${ACTOR_SECRET_ENV} is shorter than ${ACTOR_ROOT_SECRET_MIN_LENGTH} characters, so no virtual user credential can be derived from it and every actor sign-in will be refused. ` +
         `Generate one with \`openssl rand -base64 32\`, or unset it and let this run mint its own.`
     )
   }

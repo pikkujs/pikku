@@ -4,10 +4,10 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  assignPersonaApp,
+  assignVirtualUserApp,
   nextPort,
-  personaAppsInSource,
-  personasNamedInSource,
+  virtualUserAppsInSource,
+  virtualUsersNamedInSource,
   refuseNewApp,
   retargetApp,
   validateSlug,
@@ -74,7 +74,7 @@ describe('refuseNewApp', () => {
     assert.match(r ?? '', /IS your customer/)
   })
 
-  test('a persona who already signs in elsewhere is not moved silently', () => {
+  test('a virtual user who already signs in elsewhere is not moved silently', () => {
     const r = refuseNewApp('supplier', 'supplier', ['rep'], { app: app({ serves: 'staff' }) }, new Map([['rep', 'app']]))
     assert.match(r ?? '', /rep already belong to the "app" app/)
   })
@@ -87,8 +87,8 @@ describe('refuseNewApp', () => {
   })
 })
 
-describe('personas in source', () => {
-  const SOURCE = `export const personas = definePersonas({
+describe('virtual users in source', () => {
+  const SOURCE = `export const virtual users = defineVirtualUsers({
   owner: {
     name: 'Owner',
     app: 'app',
@@ -102,24 +102,24 @@ describe('personas in source', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-app-'))
     try {
       await mkdir(join(dir, 'packages', 'functions', 'src'), { recursive: true })
-      await writeFile(join(dir, 'packages', 'functions', 'src', 'personas.ts'), body)
+      await writeFile(join(dir, 'packages', 'functions', 'src', 'virtual-users.ts'), body)
       await fn(dir)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
   }
 
-  test('every declared persona is found, with or without an app', async () => {
+  test('every declared virtual user is found, with or without an app', async () => {
     await withSource(SOURCE, async (dir) => {
-      assert.deepEqual([...personasNamedInSource(dir)].sort(), ['owner', 'supplierRep'])
-      assert.deepEqual([...personaAppsInSource(dir)], [['owner', 'app']])
+      assert.deepEqual([...virtualUsersNamedInSource(dir)].sort(), ['owner', 'supplierRep'])
+      assert.deepEqual([...virtualUserAppsInSource(dir)], [['owner', 'app']])
     })
   })
 
   test('assigning an app adds it where absent and replaces it where present', async () => {
     await withSource(SOURCE, async (dir) => {
-      assert.equal(assignPersonaApp(dir, ['owner', 'supplierRep'], 'supplier'), true)
-      const after = await readFile(join(dir, 'packages', 'functions', 'src', 'personas.ts'), 'utf8')
+      assert.equal(assignVirtualUserApp(dir, ['owner', 'supplierRep'], 'supplier'), true)
+      const after = await readFile(join(dir, 'packages', 'functions', 'src', 'virtual-users.ts'), 'utf8')
       assert.equal(after.match(/app: 'supplier'/g)?.length, 2)
       assert.equal(after.includes("app: 'app'"), false)
     })
@@ -127,7 +127,7 @@ describe('personas in source', () => {
 
   test('naming nobody who exists changes nothing', async () => {
     await withSource(SOURCE, async (dir) => {
-      assert.equal(assignPersonaApp(dir, ['nobody'], 'supplier'), false)
+      assert.equal(assignVirtualUserApp(dir, ['nobody'], 'supplier'), false)
     })
   })
 })

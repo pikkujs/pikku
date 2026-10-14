@@ -6,7 +6,7 @@ import { glob } from 'tinyglobby'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
-import { createHttpPersonas } from '@pikku/core/persona'
+import { createHttpVirtualUsers } from '@pikku/core/virtual-user'
 import {
   PikkuScenarioService,
   resolveFeatureScenarios,
@@ -36,8 +36,8 @@ import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
-import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
+import { resolveVirtualUserCredentials } from '../../utils/virtual-user-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import {
   checkGuideCoverage,
@@ -293,21 +293,21 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
-    const credentials = await resolvePersonaCredentials(
+    const credentials = await resolveVirtualUserCredentials(
       variables,
       'scenario actors'
     )
-    // Every declared persona, with its address filled in. Resolved once: the
-    // HTTP personas and the Playwright provider below must see the same
-    // registry, and codegen resolved the same way to type `PersonaName`.
-    const scenarioActors = resolvePersonas(
-      state.personas?.definitions ?? [],
+    // Every declared virtual user, with its address filled in. Resolved once: the
+    // HTTP virtual users and the Playwright provider below must see the same
+    // registry, and codegen resolved the same way to type `VirtualUserName`.
+    const scenarioActors = resolveVirtualUsers(
+      state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
       ...credentials,
-      personas: scenarioActors,
+      virtualUsers: scenarioActors,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
@@ -387,7 +387,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // Scenario steps run here, not on the target — everything they touch of the
     // app goes over HTTP through an actor, which is what `guardRpc` below
     // enforces. `actor.converse` is the exception, and the reason this is not
-    // just the three services above: the persona's own turns are LLM calls made
+    // just the three services above: the virtual user's own turns are LLM calls made
     // in this process, and without a runner every conversing scenario fails
     // before it says anything. Built the same way `pikku dev` builds its own,
     // and only when the project declares agents, so a project with no agents
@@ -579,7 +579,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         const prose = collectScenarioStepProse(
           state.workflows?.meta?.[flowName],
           functionsMeta,
-          state.personas?.definitions ?? []
+          state.virtualUsers?.definitions ?? []
         )
         const steps = (await service.getRunSteps(runId)).map((step) => ({
           stepName: step.stepName,

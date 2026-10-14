@@ -3,14 +3,14 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
-  createHttpPersonas,
+  createHttpVirtualUsers,
   deriveActorSecret,
-  personaEnvironmentRefusal,
+  virtualUserEnvironmentRefusal,
   roleMismatchMessage,
-  verifyPersonaRoles,
-} from '@pikku/core/persona'
+  verifyVirtualUserRoles,
+} from '@pikku/core/virtual-user'
 import {
-  personaVirtualUserTarget,
+  virtualUserTarget,
   runVirtualUser,
   type VirtualUserDisposition,
   catalogueClassification,
@@ -20,12 +20,12 @@ import {
 import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
 import { PikkuError } from '@pikku/core/errors'
 
-import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
   ACTOR_SECRET_VARIABLE,
-  PERSONA_SECRETS_VARIABLE,
-  resolvePersonaCredentials,
-} from '../../utils/persona-credentials.js'
+  VIRTUAL_USER_SECRETS_VARIABLE,
+  resolveVirtualUserCredentials,
+} from '../../utils/virtual-user-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
@@ -51,10 +51,10 @@ const describeTuning = (tuning: object): string =>
     .join(', ')
 
 /**
- * Run one declared persona against a real stage as a virtual user.
+ * Run one declared virtual user against a real stage, in character.
  *
  * Everything it needs is already in the project: the catalogue is the function
- * meta, the intents are the scenarios' own prose, the identity is the persona
+ * meta, the intents are the scenarios' own prose, the identity is the virtual user
  * signing in over the app's real auth, and the scopes come from the roles they
  * declared. The only new input is which person to be — everything else is a
  * flag for narrowing or replaying a run.
@@ -63,10 +63,10 @@ const describeTuning = (tuning: object): string =>
  * proves nothing — what it produces is findings, and the absence of them is
  * only ever "not this time, not with this seed".
  */
-export const personaRun = pikkuSessionlessFunc<
+export const virtualUserRun = pikkuSessionlessFunc<
   {
     environment: string
-    persona: string
+    virtualUser: string
     disposition?: string
     goals?: string
     steps?: string
@@ -85,7 +85,7 @@ export const personaRun = pikkuSessionlessFunc<
     { logger, config, getInspectorState, variables },
     {
       environment,
-      persona: personaId,
+      virtualUser: virtualUserId,
       disposition: dispositionFlag,
       goals,
       steps,
@@ -100,36 +100,36 @@ export const personaRun = pikkuSessionlessFunc<
     }
   ) => {
     const state = await getInspectorState(true, false, false, true)
-    const personas = resolvePersonas(
-      state.personas?.definitions ?? [],
+    const virtualUsers = resolveVirtualUsers(
+      state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const known = Object.keys(personas)
+    const known = Object.keys(virtualUsers)
 
-    const persona = personas[personaId]
-    if (!persona) {
+    const virtualUser = virtualUsers[virtualUserId]
+    if (!virtualUser) {
       throw new Error(
-        `No persona '${personaId}'.${
+        `No virtual user '${virtualUserId}'.${
           known.length
             ? ` Declared: ${known.join(', ')}`
-            : ' None are declared — add a definePersonas({ … }) call.'
+            : ' None are declared — add a defineVirtualUsers({ … }) call.'
         }`
       )
     }
     // A provider login needs a human at a consent screen, and someone declared
     // `runnable: false` exists to be acted upon. Refused here rather than
     // failing partway through a sign-in that was never going to work.
-    if (!persona.runnable) {
+    if (!virtualUser.runnable) {
       throw new Error(
-        `Persona '${personaId}' is not runnable — ${
-          persona.account?.provider
-            ? `their login is a '${persona.account.provider}' account, and driving its consent screen needs a person`
+        `VirtualUser '${virtualUserId}' is not runnable — ${
+          virtualUser.account?.provider
+            ? `their login is a '${virtualUser.account.provider}' account, and driving its consent screen needs a person`
             : 'they are declared `runnable: false`, to be acted upon rather than to act'
         }.`
       )
     }
 
-    const declared = dispositionFlag ?? persona.disposition ?? 'realistic'
+    const declared = dispositionFlag ?? virtualUser.disposition ?? 'realistic'
     if (!dispositionNames.includes(declared)) {
       throw new Error(
         `Unknown disposition '${declared}'. One of: ${dispositionNames.join(', ')}`
@@ -147,12 +147,12 @@ export const personaRun = pikkuSessionlessFunc<
     })
 
     // Checked against the *effective* disposition, so `--disposition` cannot
-    // turn an accountable persona adversarial and point it at production. The
+    // turn an accountable virtual user adversarial and point it at production. The
     // build check already looked at the declaration; this one exists because
     // the declaration is not what is running — the deployed artifact is.
-    const refusal = personaEnvironmentRefusal(
-      personaId,
-      { ...persona, disposition },
+    const refusal = virtualUserEnvironmentRefusal(
+      virtualUserId,
+      { ...virtualUser, disposition },
       environment,
       environments
     )
@@ -160,7 +160,7 @@ export const personaRun = pikkuSessionlessFunc<
       throw new Error(refusal)
     }
 
-    const credentials = await resolvePersonaCredentials(
+    const credentials = await resolveVirtualUserCredentials(
       variables,
       'a virtual user'
     )
@@ -182,17 +182,17 @@ export const personaRun = pikkuSessionlessFunc<
       )
     }
     // `talkTo` reaches the runner through the singleton registry rather than
-    // through the `llm` handed to the engine, so a persona offered an agent
-    // dies on its first word without this — and only for a persona whose
+    // through the `llm` handed to the engine, so a virtual user offered an agent
+    // dies on its first word without this — and only for a virtual user whose
     // scopes reach one, which is why it survives a run as anybody else.
     setSingletonServices({ ...getSingletonServices(), agentRunner })
 
     // Shared with the scaffolded `runVirtualUser` RPC, which does the same
     // derivation from `metaService` at runtime — the two have to agree, or the
-    // same persona and seed explore a different API depending on how it was
+    // same virtual user and seed explore a different API depending on how it was
     // started.
     const { catalogue, intents, scopes, agents } = prepareVirtualUserRun({
-      persona,
+      virtualUser,
       functionsMeta: state.functions?.meta ?? {},
       schemas: (state.schemas ?? {}) as Record<string, Record<string, unknown>>,
       workflowsMeta: state.workflows?.meta ?? {},
@@ -205,30 +205,30 @@ export const personaRun = pikkuSessionlessFunc<
       )
     }
 
-    const signedIn = createHttpPersonas({
+    const signedIn = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
       ...credentials,
-      personas,
+      virtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
       model: resolvedModel,
     })
 
-    // Before the first step, not after: findings from a persona whose roles
+    // Before the first step, not after: findings from a virtual user whose roles
     // drifted are about the seed, and reading them as product bugs is how a
     // whole run gets thrown away. `--skip-role-check` exists for a stage whose
     // auth reports roles somewhere this cannot read.
     if (!skipRoleCheck) {
-      const actual = await signedIn[personaId]!.sessionRoles()
+      const actual = await signedIn[virtualUserId]!.sessionRoles()
       if (actual === null) {
         logger.warn(
-          `Could not read '${personaId}' roles back from ${env.apiUrl} — running unverified. ` +
+          `Could not read '${virtualUserId}' roles back from ${env.apiUrl} — running unverified. ` +
             `A stage that does not report roles cannot tell a permissions finding from seed drift.`
         )
       } else {
         const message = roleMismatchMessage(
-          verifyPersonaRoles(personaId, persona.roles, actual)
+          verifyVirtualUserRoles(virtualUserId, virtualUser.roles, actual)
         )
         if (message) {
           // A refusal, not a crash: `PikkuError` is what tells the CLI to print
@@ -241,22 +241,22 @@ export const personaRun = pikkuSessionlessFunc<
 
     const flagGoals = goals?.split(',').map((goal) => goal.trim())
     const result = await runVirtualUser({
-      persona,
-      personaId,
+      virtualUser,
+      virtualUserId,
       disposition,
       // Tuning belongs to the declared person, so `--disposition` drops it: you
       // asked to run them differently, not to bend their dials to another shape.
-      ...(dispositionFlag ? {} : { tuning: persona.tuning }),
+      ...(dispositionFlag ? {} : { tuning: virtualUser.tuning }),
       catalogue,
       intents,
-      goals: [...persona.goals, ...(flagGoals ?? [])],
+      goals: [...virtualUser.goals, ...(flagGoals ?? [])],
       scopes,
-      fixtures: persona.fixtures,
+      fixtures: virtualUser.fixtures,
       // Both halves, or `talkTo` is wired up and never advertised: the target
       // decides whether a name is callable, the instructions are what tell the
-      // persona the assistant exists at all.
+      // virtual user the assistant exists at all.
       agents,
-      target: personaVirtualUserTarget(signedIn[personaId]!, {
+      target: virtualUserTarget(signedIn[virtualUserId]!, {
         model: resolvedModel,
         agents: agents.map((agent) => agent.name),
       }),
@@ -272,7 +272,7 @@ export const personaRun = pikkuSessionlessFunc<
     })
 
     for (const { level, text } of formatVirtualUserReport(result, {
-      persona: `${persona.name} (${personaId})`,
+      virtualUser: `${virtualUser.name} (${virtualUserId})`,
       disposition,
       environment,
       apiUrl: env.apiUrl,
@@ -300,18 +300,18 @@ export const personaRun = pikkuSessionlessFunc<
 
 /** Who this app is for, and what each of them wants, without running anything. */
 /**
- * Mint the actor credential for one persona, or for every declared persona.
+ * Mint the actor credential for one virtual user, or for every declared virtual user.
  *
  * The root secret is entitled to all of them, so nothing that only needs to be
- * one person should ever hold it. What comes out is bound to that persona's
+ * one person should ever hold it. What comes out is bound to that virtual user's
  * address by the target — presenting it for anyone else is refused — so a CI
  * job, a container or a virtual user can be handed exactly the people it is
  * meant to be and no more.
  *
- * Printed as `id=secret` lines, which is the shape PIKKU_PERSONA_SECRETS reads.
+ * Printed as `id=secret` lines, which is the shape PIKKU_VIRTUAL_USER_SECRETS reads.
  */
-export const personaSecret = pikkuSessionlessFunc<
-  { personas?: string[] },
+export const virtualUserSecret = pikkuSessionlessFunc<
+  { virtualUsers?: string[] },
   void
 >({
   func: async ({ logger, config, variables, getInspectorState }, input) => {
@@ -324,17 +324,17 @@ export const personaSecret = pikkuSessionlessFunc<
     }
 
     const state = await getInspectorState(true, false, false, true)
-    const declared = resolvePersonas(
-      state.personas?.definitions ?? [],
+    const declared = resolveVirtualUsers(
+      state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const wanted = input.personas?.length
-      ? input.personas
+    const wanted = input.virtualUsers?.length
+      ? input.virtualUsers
       : Object.keys(declared)
     const unknown = wanted.filter((id) => !declared[id])
     if (unknown.length > 0) {
       throw new Error(
-        `No persona ${unknown.map((id) => `'${id}'`).join(', ')} is declared. ` +
+        `No virtual user ${unknown.map((id) => `'${id}'`).join(', ')} is declared. ` +
           `Declared: ${Object.keys(declared).sort().join(', ') || 'none'}.`
       )
     }
@@ -350,7 +350,7 @@ export const personaSecret = pikkuSessionlessFunc<
     }
     logger.info('')
     logger.info(
-      `Hand these to a run as ${PERSONA_SECRETS_VARIABLE}='${minted.join(',')}'`
+      `Hand these to a run as ${VIRTUAL_USER_SECRETS_VARIABLE}='${minted.join(',')}'`
     )
   },
 })
@@ -358,42 +358,42 @@ export const personaSecret = pikkuSessionlessFunc<
 export const personaList = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState(true, false, false, true)
-    const personas = Object.values(
-      resolvePersonas(
-        state.personas?.definitions ?? [],
+    const virtualUsers = Object.values(
+      resolveVirtualUsers(
+        state.virtualUsers?.definitions ?? [],
         config.scenarios?.emailDomain
       )
     )
 
-    if (personas.length === 0) {
+    if (virtualUsers.length === 0) {
       logger.info(
-        'No personas declared. Add a definePersonas({ susan: { name, roles, goals } }) call.'
+        'No virtual users declared. Add a defineVirtualUsers({ susan: { name, roles, goals } }) call.'
       )
       return
     }
 
-    for (const persona of personas) {
+    for (const virtualUser of virtualUsers) {
       logger.info(
-        `${persona.id} — ${persona.name}${persona.jobTitle ? `, ${persona.jobTitle}` : ''}`
+        `${virtualUser.id} — ${virtualUser.name}${virtualUser.jobTitle ? `, ${virtualUser.jobTitle}` : ''}`
       )
       logger.info(
-        `  ${persona.email}${
-          persona.roles.length
-            ? `, roles: ${persona.roles.join(', ')}`
+        `  ${virtualUser.email}${
+          virtualUser.roles.length
+            ? `, roles: ${virtualUser.roles.join(', ')}`
             : ', no roles'
-        }${persona.runnable ? '' : ' (not runnable)'}`
+        }${virtualUser.runnable ? '' : ' (not runnable)'}`
       )
-      if (persona.disposition || persona.tuning) {
+      if (virtualUser.disposition || virtualUser.tuning) {
         logger.info(
-          `  ${persona.disposition ?? 'realistic'}${
-            persona.tuning ? ` (tuned: ${describeTuning(persona.tuning)})` : ''
+          `  ${virtualUser.disposition ?? 'realistic'}${
+            virtualUser.tuning ? ` (tuned: ${describeTuning(virtualUser.tuning)})` : ''
           }`
         )
       }
-      if (persona.description) {
-        logger.info(`  ${persona.description}`)
+      if (virtualUser.description) {
+        logger.info(`  ${virtualUser.description}`)
       }
-      for (const goal of persona.goals) {
+      for (const goal of virtualUser.goals) {
         logger.info(`  · ${goal}`)
       }
     }

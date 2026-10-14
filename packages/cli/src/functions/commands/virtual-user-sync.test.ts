@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test, beforeEach } from 'node:test'
-import { personaSync } from './persona-sync.js'
+import { virtualUserSync } from './virtual-user-sync.js'
 
 /**
  * The command reports; the deployment provisions. So what is under test is the
@@ -21,7 +21,7 @@ const logger = {
  * Three people: one who works everywhere, one pinned to production as the only
  * disposition allowed there, and one who exists to be acted upon.
  */
-const PERSONAS = [
+const VIRTUAL_USERS = [
   {
     id: 'susan',
     name: 'Susan',
@@ -53,17 +53,17 @@ const PERSONAS = [
 const config = {
   scenarios: { emailDomain: 'e2e.test' },
   environments: {
-    local: { apiUrl: 'http://persona-sync.invalid' },
-    prod: { apiUrl: 'http://persona-sync.invalid', production: true },
+    local: { apiUrl: 'http://virtual-user-sync.invalid' },
+    prod: { apiUrl: 'http://virtual-user-sync.invalid', production: true },
   },
 }
 
-const run = async (data: any, personas: unknown[] = PERSONAS) =>
-  personaSync.func(
+const run = async (data: any, virtualUsers: unknown[] = VIRTUAL_USERS) =>
+  virtualUserSync.func(
     {
       logger,
       config,
-      getInspectorState: async () => ({ personas: { definitions: personas } }),
+      getInspectorState: async () => ({ virtualUsers: { definitions: virtualUsers } }),
     } as any,
     data,
     {} as any
@@ -73,19 +73,19 @@ beforeEach(() => {
   logs = []
 })
 
-describe('pikku persona sync', () => {
-  test('reports each persona with the roles it declares', async () => {
+describe('pikku virtual-user sync', () => {
+  test('reports each virtual user with the roles it declares', async () => {
     await run({ environment: 'local' })
 
     const output = logs.join('\n')
     assert.match(output, /susan\s+susan@e2e\.test -> report-viewer/)
-    assert.match(output, /2 persona\(s\) will be provisioned/)
+    assert.match(output, /2 virtual user\(s\) will be provisioned/)
   })
 
   // Their account is the whole reason they were declared: other people ban,
   // unban and reset it. Leaving them out would break the scenarios that act
   // on them.
-  test('includes a persona that is declared runnable: false', async () => {
+  test('includes a virtual user that is declared runnable: false', async () => {
     await run({ environment: 'local' })
 
     assert.match(logs.join('\n'), /target\s+target@e2e\.test/)
@@ -93,22 +93,22 @@ describe('pikku persona sync', () => {
 
   // The rule that decides who may run decides who is provisioned. `mo` names
   // production and nothing else, so `local` is not theirs.
-  test('skips a persona that does not act in this environment', async () => {
+  test('skips a virtual user that does not act in this environment', async () => {
     await run({ environment: 'local' })
 
     const output = logs.join('\n')
     assert.ok(!/mo\s+mo@e2e\.test/.test(output))
-    assert.match(output, /skipped: Refusing to sign in persona 'mo'/)
+    assert.match(output, /skipped: Refusing to sign in virtual user 'mo'/)
   })
 
-  // The other direction: production takes the accountable persona that named
+  // The other direction: production takes the accountable virtual user that named
   // it, and nobody else — the two who left `environments` off default to
   // everywhere *but* production.
-  test('reports only the accountable persona for production', async () => {
+  test('reports only the accountable virtual user for production', async () => {
     await run({ environment: 'prod' })
 
     const output = logs.join('\n')
-    assert.match(output, /1 persona\(s\) will be provisioned/)
+    assert.match(output, /1 virtual user\(s\) will be provisioned/)
     assert.match(output, /mo\s+mo@e2e\.test -> platform-admin/)
   })
 
@@ -125,17 +125,17 @@ describe('pikku persona sync', () => {
     )
   })
 
-  test('a project with no personas is a no-op, not an error', async () => {
+  test('a project with no virtual users is a no-op, not an error', async () => {
     await run({ environment: 'local' }, [])
 
-    assert.match(logs.join('\n'), /no personas are declared/)
+    assert.match(logs.join('\n'), /no virtual users are declared/)
   })
 
   test('an environment nobody may act in says so, and why', async () => {
-    await run({ environment: 'prod' }, [PERSONAS[0]])
+    await run({ environment: 'prod' }, [VIRTUAL_USERS[0]])
 
     const output = logs.join('\n')
-    assert.match(output, /no persona may act in 'prod'/)
-    assert.match(output, /Refusing to sign in persona 'susan'/)
+    assert.match(output, /no virtual user may act in 'prod'/)
+    assert.match(output, /Refusing to sign in virtual user 'susan'/)
   })
 })

@@ -1,12 +1,12 @@
 //~ name: scenario-permissions
 //~ title: Scenario — the permission-DENIED path (a member forbidden from an admin action)
 //~ entity: deal
-//~ when: PHASE 7.5/7.6, when the app has ROLES (admin vs member, owner vs viewer). A user being correctly BLOCKED is a real, must-test journey — it proves the `permissions` gate actually fires. Needs a second seeded actor (`member`); add that persona to definePersonas in packages/functions/src/personas.ts. Pull `--name scenario` first.
+//~ when: PHASE 7.5/7.6, when the app has ROLES (admin vs member, owner vs viewer). A user being correctly BLOCKED is a real, must-test journey — it proves the `permissions` gate actually fires. Needs a second seeded actor (`member`); add that virtual user to defineVirtualUsers in packages/functions/src/virtual-users.ts. Pull `--name scenario` first.
 // ===== FILE: packages/functions/test/scenarios/member-cannot-delete.scenario.ts =====
 import { pikkuScenario } from '#pikku/scenarios'
 
 //~ scenario.expectError SUCCEEDS only when the RPC THROWS — never treat the throw
-//~ as a failure; it returns the thrown message. The member persona is a data-only
+//~ as a failure; it returns the thrown message. The member virtual user is a data-only
 //~ seeded user (see PHASE 2.5). 3rd arg is `{ scenario, actors }` (NOT `workflow`).
 export const memberCannotDeleteScenario = pikkuScenario<void, { denied: boolean }>({
   title: 'Member cannot delete (scenario)',

@@ -1,19 +1,19 @@
-//~ name: scenario-per-persona-view
-//~ title: Scenario — each colleague sees THEIR OWN app (browser, one scenario per persona)
+//~ name: scenario-per-virtual-user-view
+//~ title: Scenario — each colleague sees THEIR OWN app (browser, one scenario per virtual user)
 //~ entity: job
-//~ when: PHASE 7.5/7.6, whenever TWO OR MORE personas share ONE app — a mechanic and a counter clerk, an accountant and HR and procurement. Colleagues share an app and differ by nav, landing screen and permitted actions, and NOTHING else proves they actually do: an app that renders one identical shell for all of them passes every other gate green. This runs in a REAL BROWSER as each person in turn, so it is the feature that speaks for "logging in as the mechanic is not the same as logging in as the desk". Needs each persona declared in definePersonas. Pull `--name scenario` first for the RPC-level shape.
+//~ when: PHASE 7.5/7.6, whenever TWO OR MORE virtual users share ONE app — a mechanic and a counter clerk, an accountant and HR and procurement. Colleagues share an app and differ by nav, landing screen and permitted actions, and NOTHING else proves they actually do: an app that renders one identical shell for all of them passes every other gate green. This runs in a REAL BROWSER as each person in turn, so it is the feature that speaks for "logging in as the mechanic is not the same as logging in as the desk". Needs each virtual user declared in defineVirtualUsers. Pull `--name scenario` first for the RPC-level shape.
 // ===== FILE: packages/functions/test/scenarios/mechanic-sees-their-work.scenario.ts =====
 import { pikkuScenario } from '#pikku/scenarios'
 
 //~ THE NAMES BELOW ARE A WORKSHOP'S, AND THEY ARE NOT YOURS. `mechanic`, `desk`,
-//~ "work queue", "front of house" — every one is an EXAMPLE. Rename each to a persona
-//~ your `definePersonas` actually declares, in the export name, the title, the
+//~ "work queue", "front of house" — every one is an EXAMPLE. Rename each to a virtual user
+//~ your `defineVirtualUsers` actually declares, in the export name, the title, the
 //~ description, the `actors.<name>` lookups and the thrown message. A merch build
 //~ pasted this verbatim and shipped `mechanicSeesTheirWorkScenario` and
 //~ `deskSeesTheFrontOfHouseScenario` into a t-shirt shop: both reference actors that
 //~ do not exist, so both fail on every run and neither failure means anything.
 //~
-//~ ONE SCENARIO PER PERSONA — never one scenario looping over actors. A failure has to
+//~ ONE SCENARIO PER VIRTUAL_USER — never one scenario looping over actors. A failure has to
 //~ name WHO was let down ("the mechanic never got a work queue"), and a loop collapses
 //~ every person into one red line that says nothing about which of them is broken.
 //~
@@ -54,7 +54,7 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
     )
 
     //~ THE ASSERTION THAT DOES THE WORK: text only THIS person's screen offers. You do not
-    //~ need a "does not see" step to prove differentiation — if both personas land on the
+    //~ need a "does not see" step to prove differentiation — if both virtual users land on the
     //~ same undifferentiated shell, one of these two scenarios cannot find its text and goes
     //~ red. That is exactly the failure worth catching, and it names the person it failed.
     //~ Assert something ROLE-SHAPED (a heading, a nav item, an action only they get), never
@@ -74,7 +74,7 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
 import { pikkuScenario } from '#pikku/scenarios'
 
 //~ The SAME shape for the other colleague. Side by side these two are the whole point: same
-//~ app, same sign-in, two different screens. Copy this per persona sharing the app.
+//~ app, same sign-in, two different screens. Copy this per virtual user sharing the app.
 export const deskSeesTheFrontOfHouseScenario = pikkuScenario<void, { pathname: string }>({
   title: 'The counter clerk lands on the front desk',
   description: 'A clerk signs in and gets bookings and customers, not the repair queue',
@@ -119,8 +119,8 @@ import { deskSeesTheFrontOfHouseScenario } from '../scenarios/desk-sees-the-fron
 //~ ONE FEATURE for "the people who share this app", and its description is the promise in
 //~ the owner's own words — not the test runner's. Green here means the shop owner can put
 //~ two different colleagues in front of this app and each gets their own job, which is the
-//~ thing they actually bought. Add a scenario here for EVERY persona in this app's
-//~ app — every persona whose `app` names this slug: a persona no scenario names is a person
+//~ thing they actually bought. Add a scenario here for EVERY virtual user in this app's
+//~ app — every virtual user whose `app` names this slug: a virtual user no scenario names is a person
 //~ whose experience is unproven, and the usual way that shows up in production is all of
 //~ them staring at the same screen.
 export const colleaguesFeature = pikkuFeature({

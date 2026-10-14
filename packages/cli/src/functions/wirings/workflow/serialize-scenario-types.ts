@@ -33,7 +33,7 @@ export const serializeScenarioTypes = (
   middlewareTypesImportPath: string,
   workflowTypesImportPath: string,
   scenarioStepMapImportPath: string,
-  personasImportPath: string
+  virtualUsersImportPath: string
 ) => {
   return `import type {
   PikkuScenarioWire,
@@ -46,9 +46,9 @@ import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices, Infe
 import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { TypedWorkflow } from '${workflowTypesImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
-import type { TypedPersonas } from '${personasImportPath}'
+import type { TypedVirtualUsers } from '${virtualUsersImportPath}'
 
-export type { TypedPersonas }
+export type { TypedVirtualUsers }
 
 /**
  * The scenario test surface, re-exported so a step file has one specifier to
@@ -67,7 +67,7 @@ export type {
   ScenarioSurface,
   TestIdSelector,
 } from '@pikku/core/scenario'
-export { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/persona'
+export { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/virtual-user'
 export type { ScenarioHttpResponse } from '@pikku/core/scenario'
 
 /**
@@ -306,13 +306,13 @@ type PikkuScenarioStepConfigWithSchema<
   /** Registered name — this is the string \`scenario.given()\` references. */
   name: string
   /**
-   * This step is driven by a persona, so \`wire.actor\` is injected and
+   * This step is driven by a virtual user, so \`wire.actor\` is injected and
    * non-optional inside every binding, and the runner refuses to dispatch it
    * without one.
    *
    * A \`browser\` binding implies it — a window is opened as somebody. Declare it
    * for a server-side step that calls RPCs as its actor. Leave it off for a step
-   * that has no persona to be: an assertion over a value an earlier step
+   * that has no virtual user to be: an assertion over a value an earlier step
    * returned, or one that posts credentials precisely because it must not reuse
    * an actor's session.
    */
@@ -482,8 +482,8 @@ type PikkuSubjectScenarioStepConfig<In, Out> =
  * trial".
  *
  * The grammatical subject of that sentence is not a user of your app; it **is**
- * your app, which is why it is its own declaration rather than a persona with an
- * asterisk. A persona is a person.
+ * your app, which is why it is its own declaration rather than a virtual user with an
+ * asterisk. A virtual user is a person.
  *
  * Local-test-only, and never in a virtual user's catalogue: a virtual user that
  * could expire its own trial is manufacturing the outcome it exists to discover.

@@ -62,14 +62,14 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
- * This project's persona cast, in declaration order.
+ * This project's virtual user cast, in declaration order.
  *
- * Read from the `definePersonas` call rather than from generated meta because a cast
+ * Read from the `defineVirtualUsers` call rather than from generated meta because a cast
  * rewritten a moment ago has not been through codegen yet, and a recipe that substitutes
  * an example's actor has to substitute the CURRENT one or it writes a scenario naming
  * somebody who no longer exists.
  */
-export function personaCast(srcDirectories: string[]): string[] {
+export function virtualUserCast(srcDirectories: string[]): string[] {
   for (const dir of srcDirectories) {
     for (const file of sourceFiles(dir)) {
       let body: string
@@ -78,7 +78,7 @@ export function personaCast(srcDirectories: string[]): string[] {
       } catch {
         continue
       }
-      const call = /definePersonas\(\s*\{/.exec(body)
+      const call = /defineVirtualUsers\(\s*\{/.exec(body)
       if (!call) continue
       const open = call.index + call[0].length - 1
       const block = balancedBlock(body, open)

@@ -39,9 +39,9 @@ node scripts/embed-examples.mjs
 # release path down with it: Publish failed at `error TS` on `@pikku/core/ai-agent`
 # (a subpath core never had), `CoreAIAgent` / `PikkuAIMiddlewareHooks` (renamed to
 # `CoreAgent` / `PikkuAgentMiddlewareHooks`), `WireAddonConfig` from `/rpc`,
-# `HttpPersonasConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
+# `HttpVirtualUsersConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
 # then died at exit 127 because dist/bin/pikku.js was never written. 0.12.145
-# emits `@pikku/core/agent`, `/addon`, `/persona` and `/scenario` directly, so the
+# emits `@pikku/core/agent`, `/addon`, `/virtual-user` and `/scenario` directly, so the
 # whole class goes away rather than growing another patch-loop rule. The rest of
 # the set moves with it, to exactly what cli 0.12.145 declares.
 echo "Bootstrapping with published @pikku/cli..."
@@ -178,6 +178,9 @@ JSON
 # `all` regenerates those same files with the old names again on its way out;
 # the patch loop below is what leaves the tree consistent for tsc.
 #
+# The pinned CLI also emits `@pikku/core/persona`, `Persona*` and `Personas*`
+# names, which core now calls `@pikku/core/virtual-user` and `VirtualUser*`.
+#
 # Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
 # the rename.
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
@@ -190,6 +193,10 @@ while IFS= read -r -d '' f; do
       -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
       -e "s|@pikku/core/internal|@pikku/core/state|g" \
+      -e "s|@pikku/core/persona|@pikku/core/virtual-user|g" \
+      -e 's|personas: personaConfigs|virtualUsers: personaConfigs|g' \
+      -e 's|Personas|VirtualUsers|g' \
+      -e 's|Persona|VirtualUser|g' \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 # Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
@@ -253,6 +260,10 @@ while IFS= read -r -d '' f; do
       -e "/^} catch.*{.*}$/d" \
       -e "/fileURLToPath.*__fileURLToPath/d" \
       -e "/dirname.*__dirname/d" \
+      -e "s|@pikku/core/persona|@pikku/core/virtual-user|g" \
+      -e 's|personas: personaConfigs|virtualUsers: personaConfigs|g' \
+      -e 's|Personas|VirtualUsers|g' \
+      -e 's|Persona|VirtualUser|g' \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 

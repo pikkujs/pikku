@@ -241,8 +241,8 @@ export function renameEntityInPath(
  * Point an example's `actors.<id>` at somebody this project actually declares.
  *
  * A browser step's actor has to be a literal `actors.<name>`, so every scenario recipe
- * names one — and a persona that does not exist fails codegen, which stops everything
- * written afterwards from registering. Distinct unknown ids map to distinct personas in
+ * names one — and a virtual user that does not exist fails codegen, which stops everything
+ * written afterwards from registering. Distinct unknown ids map to distinct virtual users in
  * declaration order, so a two-colleague example keeps its two colleagues, and saturate
  * on the last one when the cast is smaller.
  */

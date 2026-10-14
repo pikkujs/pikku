@@ -245,7 +245,7 @@ describe('scenarioSurfaceCoverage', () => {
   })
 })
 
-const personas = (overrides: Record<string, unknown> = {}) =>
+const virtualUsers = (overrides: Record<string, unknown> = {}) =>
   [
     {
       id: 'shopper',
@@ -274,7 +274,7 @@ describe('an actor introduces themselves once', () => {
     )
 
   test('only the first step carries the role', () => {
-    const [first, second, third] = rows(personas({ jobTitle: 'founder' }))
+    const [first, second, third] = rows(virtualUsers({ jobTitle: 'founder' }))
     assert.equal(
       first!.sentenceWithRole?.trim(),
       'Given shopper (the founder) buys an apple'
@@ -284,28 +284,28 @@ describe('an actor introduces themselves once', () => {
   })
 
   test('the plain sentence never carries the role, so a reader can drop it', () => {
-    const [first] = rows(personas({ jobTitle: 'founder' }))
+    const [first] = rows(virtualUsers({ jobTitle: 'founder' }))
     assert.equal(first!.sentence.trim(), 'Given shopper buys an apple')
   })
 
   test('a job title beats the authorisation roles', () => {
-    const [first] = rows(personas({ jobTitle: 'founder', roles: ['admin'] }))
+    const [first] = rows(virtualUsers({ jobTitle: 'founder', roles: ['admin'] }))
     assert.ok(first!.sentenceWithRole?.includes('(the founder)'))
   })
 
   test('a role is not a job title, so it introduces nobody', () => {
-    const [first] = rows(personas({ roles: ['reviewer'] }))
+    const [first] = rows(virtualUsers({ roles: ['reviewer'] }))
     assert.equal(first!.sentenceWithRole, undefined)
   })
 
-  test('no personas at all leaves every row as it was', () => {
+  test('no virtual users at all leaves every row as it was', () => {
     for (const row of rows([])) {
       assert.equal(row.sentenceWithRole, undefined)
     }
   })
 
   test('the ladder shows the introduction and pads to it', () => {
-    const lines = buildStepLadder(rows(personas({ jobTitle: 'founder' })))
+    const lines = buildStepLadder(rows(virtualUsers({ jobTitle: 'founder' })))
     assert.ok(
       lines[0]!.includes('shopper (the founder) buys an apple'),
       lines[0]

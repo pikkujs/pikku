@@ -91,7 +91,7 @@ describe('core import checks', () => {
     await write(
       root,
       'tests/a.ts',
-      `import { PERSONAS } from '@pikku/core/persona'\n`
+      `import { VIRTUAL_USERS } from '@pikku/core/virtual-user'\n`
     )
 
     const findings = await runCoreImportChecks(root)

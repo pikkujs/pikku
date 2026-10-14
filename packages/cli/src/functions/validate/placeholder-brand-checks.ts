@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, join, relative, sep } from 'node:path'
 import { findFrontends } from '@pikku/code-edit/brand'
-import type { ValidateFinding, ValidateSeverity } from './persona-checks.js'
+import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
 
 const PLACEHOLDER_SEVERITY: ValidateSeverity = 'warn'
 

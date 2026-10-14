@@ -1,11 +1,11 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
-import { serializePersonasTypes } from './serialize-personas-types.js'
+import { serializeVirtualUsersTypes } from './serialize-virtual-users-types.js'
 
 const parseErrors = (source: string) => {
   const file = ts.createSourceFile(
-    'pikku-personas.gen.ts',
+    'pikku-virtual-users.gen.ts',
     source,
     ts.ScriptTarget.Latest,
     true
@@ -15,13 +15,13 @@ const parseErrors = (source: string) => {
 }
 
 const serialize = (environmentNames: string[]) =>
-  serializePersonasTypes({
+  serializeVirtualUsersTypes({
     definitions: {},
     rolesImportPath: '../roles/pikku-roles.gen.js',
     environmentNames,
   })
 
-describe('serializePersonasTypes', () => {
+describe('serializeVirtualUsersTypes', () => {
   test('emits a union of the configured environments', () => {
     const output = serialize(['local'])
 
@@ -49,7 +49,7 @@ describe('serializePersonasTypes', () => {
     )
   })
 
-  test('types persona roles against the generated role union', () => {
+  test('types virtual user roles against the generated role union', () => {
     const output = serialize(['local'])
 
     assert.match(output, /roles\?: SystemRoleName\[\]/)

@@ -2,13 +2,13 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  resolvePersonaCredentials,
+  resolveVirtualUserCredentials,
   ACTOR_SECRET_VARIABLE,
   OPERATOR_TOKEN_VARIABLE,
-  PERSONA_SECRETS_VARIABLE,
-  parsePersonaSecrets,
-  personaSecretResolver,
-} from './persona-credentials.js'
+  VIRTUAL_USER_SECRETS_VARIABLE,
+  parseVirtualUserSecrets,
+  virtualUserSecretResolver,
+} from './virtual-user-credentials.js'
 import { LocalVariablesService } from '@pikku/core/services'
 
 // The real service, not a fake that hands back what it was given: `get`
@@ -18,9 +18,9 @@ import { LocalVariablesService } from '@pikku/core/services'
 const variablesFrom = (values: Record<string, string>) =>
   new LocalVariablesService(values)
 
-describe('resolvePersonaCredentials', () => {
+describe('resolveVirtualUserCredentials', () => {
   test('uses the actor secret when that is all the environment holds', async () => {
-    const credentials = await resolvePersonaCredentials(
+    const credentials = await resolveVirtualUserCredentials(
       variablesFrom({ [ACTOR_SECRET_VARIABLE]: 'dev-secret' }),
       'scenario actors'
     )
@@ -28,7 +28,7 @@ describe('resolvePersonaCredentials', () => {
   })
 
   test('prefers the operator token over the actor secret', async () => {
-    const credentials = await resolvePersonaCredentials(
+    const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
         [ACTOR_SECRET_VARIABLE]: 'dev-secret',
         [OPERATOR_TOKEN_VARIABLE]: 'operator-token',
@@ -39,11 +39,11 @@ describe('resolvePersonaCredentials', () => {
     assert.equal(credentials.operator?.token, 'operator-token')
   })
 
-  test('prefers per-persona credentials over the root secret', async () => {
-    const credentials = await resolvePersonaCredentials(
+  test('prefers per-virtual-user credentials over the root secret', async () => {
+    const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
-        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-persona',
-        [PERSONA_SECRETS_VARIABLE]: 'admin=admin-credential',
+        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-virtual-user',
+        [VIRTUAL_USER_SECRETS_VARIABLE]: 'admin=admin-credential',
       }),
       'scenario actors'
     )
@@ -54,23 +54,23 @@ describe('resolvePersonaCredentials', () => {
     )
   })
 
-  test('a run given only some personas cannot reach the rest', async () => {
-    const credentials = await resolvePersonaCredentials(
+  test('a run given only some virtual users cannot reach the rest', async () => {
+    const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
-        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-persona',
-        [PERSONA_SECRETS_VARIABLE]: 'admin=admin-credential',
+        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-virtual-user',
+        [VIRTUAL_USER_SECRETS_VARIABLE]: 'admin=admin-credential',
       }),
       'scenario actors'
     )
     assert.throws(
       () => (credentials.secret as any)({ id: 'client' }),
-      /No credential for persona 'client'/
+      /No credential for virtual user 'client'/
     )
   })
 
   test('names both credentials, and the command, when neither is set', async () => {
     await assert.rejects(
-      () => resolvePersonaCredentials(variablesFrom({}), 'a virtual user'),
+      () => resolveVirtualUserCredentials(variablesFrom({}), 'a virtual user'),
       (error: Error) => {
         assert.match(error.message, /a virtual user cannot sign in/)
         assert.match(error.message, new RegExp(OPERATOR_TOKEN_VARIABLE))
@@ -81,56 +81,56 @@ describe('resolvePersonaCredentials', () => {
   })
 })
 
-describe('parsePersonaSecrets', () => {
+describe('parseVirtualUserSecrets', () => {
   test('reads the list a mint produced', () => {
     assert.deepEqual(
-      parsePersonaSecrets('admin=admin-credential,client=client-credential'),
+      parseVirtualUserSecrets('admin=admin-credential,client=client-credential'),
       { admin: 'admin-credential', client: 'client-credential' }
     )
   })
 
   test('keeps a credential that itself contains an =', () => {
-    assert.deepEqual(parsePersonaSecrets('admin=a=b=c'), { admin: 'a=b=c' })
+    assert.deepEqual(parseVirtualUserSecrets('admin=a=b=c'), { admin: 'a=b=c' })
   })
 
   test('tolerates whitespace and empty entries', () => {
-    assert.deepEqual(parsePersonaSecrets(' admin = a-credential , '), {
+    assert.deepEqual(parseVirtualUserSecrets(' admin = a-credential , '), {
       admin: 'a-credential',
     })
   })
 
-  test('refuses an entry that is not personaId=secret', () => {
+  test('refuses an entry that is not virtualUserId=secret', () => {
     assert.throws(
-      () => parsePersonaSecrets('admin'),
-      /is not 'personaId=secret'/
+      () => parseVirtualUserSecrets('admin'),
+      /is not 'virtualUserId=secret'/
     )
     assert.throws(
-      () => parsePersonaSecrets('=orphan'),
-      /is not 'personaId=secret'/
+      () => parseVirtualUserSecrets('=orphan'),
+      /is not 'virtualUserId=secret'/
     )
   })
 
   test('refuses a list that names nobody', () => {
-    assert.throws(() => parsePersonaSecrets(' , '), /lists no personas/)
+    assert.throws(() => parseVirtualUserSecrets(' , '), /lists no virtual users/)
   })
 })
 
-describe('personaSecretResolver', () => {
-  test('hands each persona their own credential', () => {
-    const resolve = personaSecretResolver({
+describe('virtualUserSecretResolver', () => {
+  test('hands each virtual user their own credential', () => {
+    const resolve = virtualUserSecretResolver({
       admin: 'admin-credential',
       client: 'client-credential',
     })
     assert.equal(resolve({ id: 'client' } as any), 'client-credential')
   })
 
-  test('says which persona is missing and how to mint it', () => {
-    const resolve = personaSecretResolver({ admin: 'admin-credential' })
+  test('says which virtual user is missing and how to mint it', () => {
+    const resolve = virtualUserSecretResolver({ admin: 'admin-credential' })
     assert.throws(
       () => resolve({ id: 'client' } as any),
       (error: Error) => {
-        assert.match(error.message, /persona 'client'/)
-        assert.match(error.message, /pikku persona secret client/)
+        assert.match(error.message, /virtual user 'client'/)
+        assert.match(error.message, /pikku virtual-user secret client/)
         return true
       }
     )

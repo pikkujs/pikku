@@ -12,7 +12,7 @@ import { composeStepProse } from '@pikku/core/scenario'
 import type { ScenarioSurface, ScenarioStepPhase } from '@pikku/core/scenario'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { FunctionsMeta } from '@pikku/core/services'
-import type { PersonaDefinitions } from '@pikku/core/persona'
+import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
@@ -64,9 +64,9 @@ export interface ScenarioProse {
    */
   byStepFunc: Map<string, ScenarioStepProse>
   /**
-   * What each actor is, keyed by the persona key a step records. A persona's
+   * What each actor is, keyed by the virtual user key a step records. A virtual user's
    * job title is what a reader wants — "the founder" — and its first role is
-   * the fallback for a persona that declares no title.
+   * the fallback for a virtual user that declares no title.
    */
   roleByActor: Map<string, string>
 }
@@ -107,7 +107,7 @@ function* walkScenarioSteps(steps: unknown): Generator<any> {
 export const collectScenarioStepProse = (
   workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
   functionsMeta: FunctionsMeta,
-  personas: PersonaDefinitions = []
+  virtualUsers: VirtualUserDefinitions = []
 ): ScenarioProse => {
   const byStepName = new Map<string, ScenarioStepProse>()
   const byStepFunc = new Map<string, ScenarioStepProse>()
@@ -137,19 +137,19 @@ export const collectScenarioStepProse = (
   for (const stepFunc of ambiguous) {
     byStepFunc.delete(stepFunc)
   }
-  return { byStepName, byStepFunc, roleByActor: rolesByActor(personas) }
+  return { byStepName, byStepFunc, roleByActor: rolesByActor(virtualUsers) }
 }
 
 /**
  * Only a job title introduces an actor. `roles` is authorisation — "reviewer"
- * is a grant, not a description of who someone is — so a persona that declares
+ * is a grant, not a description of who someone is — so a virtual user that declares
  * no title gets no introduction rather than one assembled out of its grants.
  */
-const rolesByActor = (personas: PersonaDefinitions): Map<string, string> => {
+const rolesByActor = (virtualUsers: VirtualUserDefinitions): Map<string, string> => {
   const roles = new Map<string, string>()
-  for (const persona of personas) {
-    if (persona.jobTitle) {
-      roles.set(persona.id, persona.jobTitle)
+  for (const virtualUser of virtualUsers) {
+    if (virtualUser.jobTitle) {
+      roles.set(virtualUser.id, virtualUser.jobTitle)
     }
   }
   return roles

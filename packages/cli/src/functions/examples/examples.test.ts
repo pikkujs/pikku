@@ -23,7 +23,7 @@ import {
   splitExampleFiles,
   stripTeaching,
 } from './corpus.js'
-import { entityWriteCoverage, personaCast, resolveAppBase } from './project.js'
+import { entityWriteCoverage, virtualUserCast, resolveAppBase } from './project.js'
 import { runExamplesAdd, runExamplesList, runExamplesShow } from './run.js'
 
 const project = (files: Record<string, string>) => {
@@ -242,16 +242,16 @@ describe('what has to be written first', () => {
 })
 
 describe('reading the project', () => {
-  test('the persona cast comes from definePersonas, in declaration order', () => {
+  test('the virtual user cast comes from defineVirtualUsers, in declaration order', () => {
     const { srcDirectories } = project({
-      'src/personas.virtual-user.ts': [
-        'definePersonas({',
+      'src/virtual-users.virtual-user.ts': [
+        'defineVirtualUsers({',
         '  dispatcher: { name: "Dispatcher", roles: ["staff"] },',
         '  technician: { name: "Technician", roles: ["staff"] },',
         '})',
       ].join('\n'),
     })
-    assert.deepEqual(personaCast(srcDirectories), ['dispatcher', 'technician'])
+    assert.deepEqual(virtualUserCast(srcDirectories), ['dispatcher', 'technician'])
   })
 
   test('a framework-declared table is not something a person has to be able to edit', () => {

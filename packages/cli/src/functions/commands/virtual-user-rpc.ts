@@ -1,9 +1,9 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { createHttpPersonas } from '@pikku/core/persona'
+import { createHttpVirtualUsers } from '@pikku/core/virtual-user'
 import { PikkuError } from '@pikku/core/errors'
 
-import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
+import { resolveVirtualUserCredentials } from '../../utils/virtual-user-credentials.js'
 import { resolveEnvironment } from './environment.js'
 
 const unreachable = (error: unknown): boolean => {
@@ -17,7 +17,7 @@ const unreachable = (error: unknown): boolean => {
 const notFound = (status: number, serialized: string): boolean =>
   status === 404 || serialized.includes('RPC function not found')
 
-export const personaRpc = pikkuSessionlessFunc<
+export const virtualUserRpc = pikkuSessionlessFunc<
   {
     rpc: string
     as: string
@@ -29,18 +29,18 @@ export const personaRpc = pikkuSessionlessFunc<
 >({
   func: async (
     { config, getInspectorState, variables },
-    { rpc, as: personaId, data, environment = 'local', apiUrl }
+    { rpc, as: virtualUserId, data, environment = 'local', apiUrl }
   ) => {
     const state = await getInspectorState(true, false, false, true)
-    const personas = resolvePersonas(
-      state.personas?.definitions ?? [],
+    const virtualUsers = resolveVirtualUsers(
+      state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const persona = personas[personaId]
-    if (!persona) {
-      const known = Object.keys(personas)
+    const virtualUser = virtualUsers[virtualUserId]
+    if (!virtualUser) {
+      const known = Object.keys(virtualUsers)
       throw new PikkuError(
-        `No persona '${personaId}'.${known.length ? ` Declared: ${known.join(', ')}` : ' None are declared — add a definePersonas({ … }) call.'}`
+        `No virtual user '${virtualUserId}'.${known.length ? ` Declared: ${known.join(', ')}` : ' None are declared — add a defineVirtualUsers({ … }) call.'}`
       )
     }
 
@@ -71,10 +71,10 @@ export const personaRpc = pikkuSessionlessFunc<
       environments: config.environments ?? {},
       apiUrl,
     })
-    const signedIn = createHttpPersonas({
+    const signedIn = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
-      ...(await resolvePersonaCredentials(variables, 'an RPC call')),
-      personas,
+      ...(await resolveVirtualUserCredentials(variables, 'an RPC call')),
+      virtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
@@ -82,7 +82,7 @@ export const personaRpc = pikkuSessionlessFunc<
 
     let res
     try {
-      res = await signedIn[personaId]!.invokeRaw(rpc, input)
+      res = await signedIn[virtualUserId]!.invokeRaw(rpc, input)
     } catch (error) {
       if (unreachable(error)) {
         throw new PikkuError(
@@ -90,7 +90,7 @@ export const personaRpc = pikkuSessionlessFunc<
         )
       }
       throw new PikkuError(
-        `Could not sign in as '${personaId}', so this says nothing about '${rpc}': ${(error as Error).message}`
+        `Could not sign in as '${virtualUserId}', so this says nothing about '${rpc}': ${(error as Error).message}`
       )
     }
 
@@ -102,7 +102,7 @@ export const personaRpc = pikkuSessionlessFunc<
     if (res.status === 401 || res.status === 403) {
       process.exitCode = 1
       process.stdout.write(
-        `'${personaId}' (${persona.roles.join(', ') || 'no roles'}) is not permitted to call '${rpc}': ${res.status}\n${res.serialized}\n`
+        `'${virtualUserId}' (${virtualUser.roles.join(', ') || 'no roles'}) is not permitted to call '${rpc}': ${res.status}\n${res.serialized}\n`
       )
       return
     }

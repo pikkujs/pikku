@@ -19,7 +19,7 @@ import {
   entityWriteCoverage,
   generatedTables,
   nearestTable,
-  personaCast,
+  virtualUserCast,
   registeredRpcs,
   resolveAppBase,
 } from './project.js'
@@ -81,7 +81,7 @@ export function runExamplesShow(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = personaCast(project.srcDirectories)
+  const cast = virtualUserCast(project.srcDirectories)
   const applyRename = (body: string) =>
     renameActorsInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
@@ -219,7 +219,7 @@ export function runExamplesAdd(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = personaCast(project.srcDirectories)
+  const cast = virtualUserCast(project.srcDirectories)
   const renameCode = (body: string) =>
     renameActorsInCode(
       from && to ? renameEntityInCode(body, from, to) : body,

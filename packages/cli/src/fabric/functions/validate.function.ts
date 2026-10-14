@@ -166,22 +166,22 @@ const LOGIN_FILE_PATTERN =
   /(?:^|\/)[\w[\]-]*(?:login|sign-?in)[\w[\]-]*(?:\/|\.)/i
 
 // Fingerprints of the dev-only "Sign in as …" quick login (the actor switcher):
-// one click signs in as a declared scenario persona, no password. Any one of
+// one click signs in as a declared scenario virtual user, no password. Any one of
 // these means the app actually wires actor sign-in — the component's own
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
 //
 // Canonical implementation is the starter template's `<DevActorSwitcher>`
 // (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
-// it lists and signs in personas by id through `pikkuActor({ personaSignIn })`. A local component calling `signInAsPersona()`, and
+// it lists and signs in virtual users by id through `pikkuActor({ virtualUserSignIn })`. A local component calling `signInAsVirtualUser()`, and
 // the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
 // pass, so apps that predate the package keep working.
 const ACTOR_QUICK_LOGIN_PATTERNS = [
   /<\s*DevActorSwitcher\b/,
   /(?<!function\s)\bsignInAsActor\s*\(/,
-  /(?<!function\s)\bsignInAsPersona\s*\(/,
+  /(?<!function\s)\bsignInAsVirtualUser\s*\(/,
   /(?<!function\s)\buseDevActors\s*\(/,
-  /\/auth\/sign-in\/(?:actor|persona)/,
+  /\/auth\/sign-in\/(?:actor|virtual-user)/,
 ]
 
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
@@ -1855,7 +1855,7 @@ export async function runValidate(
 
         // ── one-click actor sign-in (the "Sign in as …" quick login) ────────
         // Any frontend that ships a login screen must also ship the dev-only
-        // actor switcher, so the app can be reviewed as each scenario persona
+        // actor switcher, so the app can be reviewed as each scenario virtual user
         // without knowing a password. Without it the reviewer is locked out of
         // their own sandbox. Only fires when a login surface exists — an app
         // with no auth has nothing to attach the control to.
@@ -1884,7 +1884,7 @@ export async function runValidate(
         if (loginFiles.length > 0 && !hasQuickLogin) {
           e(
             `app-missing-actor-quick-login-${name}`,
-            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
+            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario virtual user without a password`,
             join(appPath, loginFiles[0]!),
             lines(
               'Render the "Sign in as …" switcher from the login screen (copy DevActorSwitcher from templates/starter-template/apps/app/src/components/dev).',
@@ -1898,8 +1898,8 @@ export async function runValidate(
               'On the server, pikkuActor from @pikku/better-auth serves the list and',
               'the sign-in:',
               '  pikkuActor({ allowSignIn: optIn,',
-              '    personaSignIn: { personas: personaList, featureFlags } })',
-              'No credential reaches the bundle: the switcher signs in by persona id.',
+              '    virtualUserSignIn: { virtualUsers: virtualUserList, featureFlags } })',
+              'No credential reaches the bundle: the switcher signs in by virtual user id.',
               'It shows under `pikku dev`; a deployed stage shows it only when actor',
               'sign-in is opted in and its devSwitcher flag is on.',
               'For custom UI, build on useDevActors() from @pikku/react instead.'

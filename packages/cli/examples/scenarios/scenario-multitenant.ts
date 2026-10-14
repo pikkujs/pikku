@@ -8,8 +8,8 @@ import { pikkuScenario } from '#pikku/scenarios'
 //~ TWO ACTORS, TWO ORGS. With the organization() plugin's sign-up bootstrap, every
 //~ signed-up user gets their OWN org made active — so the owner and `outsider` are
 //~ each alone in a separate org automatically (no id passed anywhere; the SESSION
-//~ carries activeOrganizationId). Declare `outsider` as a second persona in
-//~ definePersonas (its own id → its own derived email → distinct user → distinct
+//~ carries activeOrganizationId). Declare `outsider` as a second virtual user in
+//~ defineVirtualUsers (its own id → its own derived email → distinct user → distinct
 //~ org). 3rd arg is `{ scenario, actors }` (NOT `workflow`).
 //~
 //~ The assertion has TWO halves and you need BOTH:

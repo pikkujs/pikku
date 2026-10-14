@@ -56,7 +56,7 @@
 //~ typing the URL; without a route guard the page renders and its RPCs 403, which
 //~ looks broken rather than absent — the last commented line below is that guard.
 //~
-//~ STEP 4 — PROVE IT WITH A SCENARIO. Each persona should see its OWN feature set;
+//~ STEP 4 — PROVE IT WITH A SCENARIO. Each virtual user should see its OWN feature set;
 //~ that is the regression test for this whole file, and it is what catches a feature
 //~ that silently went all-false because a scope was renamed. Drive it per-actor with
 //~ the `scenario-permissions` scaffold: assert the counter sees `takeInBike` and the

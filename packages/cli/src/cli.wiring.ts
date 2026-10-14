@@ -117,11 +117,11 @@ import {
 } from './functions/commands/scenario.js'
 import {
   personaList,
-  personaRun,
-  personaSecret,
-} from './functions/commands/persona.js'
-import { personaSync } from './functions/commands/persona-sync.js'
-import { personaRpc } from './functions/commands/persona-rpc.js'
+  virtualUserRun,
+  virtualUserSecret,
+} from './functions/commands/virtual-user.js'
+import { virtualUserSync } from './functions/commands/virtual-user-sync.js'
+import { virtualUserRpc } from './functions/commands/virtual-user-rpc.js'
 import {
   renderScenarioCoverage,
   scenarioCoverage,
@@ -1326,7 +1326,7 @@ wireCLI({
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose personas sign into different apps — comma-separated, and a bare url is the fallback",
+                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
             },
           },
         }),
@@ -1432,7 +1432,7 @@ wireCLI({
             func: pagesScreenshot,
             render: renderPagesScreenshot,
             description:
-              "Photograph one frontend's pages on a running server, signed out or as a persona",
+              "Photograph one frontend's pages on a running server, signed out or as a virtual user",
             options: {
               baseUrl: {
                 description:
@@ -1455,7 +1455,7 @@ wireCLI({
               },
               as: {
                 description:
-                  'Sign in as this persona first, the way scenario actors do',
+                  'Sign in as this virtual user first, the way scenario actors do',
                 type: 'string',
               },
               environment: {
@@ -1528,15 +1528,15 @@ wireCLI({
         }),
       },
     },
-    persona: {
+    'virtual-user': {
       description:
         'The people this app is for, and running one against a real stage',
       subcommands: {
         run: pikkuCLICommand({
-          func: personaRun,
+          func: virtualUserRun,
           description:
-            'Sign in as a declared persona and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_ACTOR_SECRET.',
-          parameters: '<environment> <persona>',
+            'Sign in as a declared virtual user and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_ACTOR_SECRET.',
+          parameters: '<environment> <virtualUser>',
           options: {
             disposition: {
               description:
@@ -1545,7 +1545,7 @@ wireCLI({
             },
             goals: {
               description:
-                "Comma-separated goals in your own words, run alongside the persona's own and the ones derived from scenarios",
+                "Comma-separated goals in your own words, run alongside the virtual user's own and the ones derived from scenarios",
             },
             steps: {
               description: 'Model turns before it stops (default 40)',
@@ -1583,30 +1583,30 @@ wireCLI({
           },
         }),
         sync: pikkuCLICommand({
-          func: personaSync,
+          func: virtualUserSync,
           description:
-            "Report which personas an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated personas to pikkuFabric from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuFabric from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({
           func: personaList,
           description:
-            'List the declared personas — who each one is, what they may do, and what they are trying to get done',
+            'List the declared virtual users — who each one is, what they may do, and what they are trying to get done',
         }),
         secret: pikkuCLICommand({
-          func: personaSecret,
+          func: virtualUserSecret,
           description:
-            'Mint the actor credential for a persona from SCENARIO_ACTOR_SECRET, bound to their address. Hand these to a run as PIKKU_PERSONA_SECRETS instead of the root, which is entitled to every persona. Names none, mints all.',
-          parameters: '[personas...]',
+            'Mint the actor credential for a virtual user from SCENARIO_ACTOR_SECRET, bound to their address. Hand these to a run as PIKKU_VIRTUAL_USER_SECRETS instead of the root, which is entitled to every virtual user. Names none, mints all.',
+          parameters: '[virtualUsers...]',
         }),
         rpc: pikkuCLICommand({
-          func: personaRpc,
+          func: virtualUserRpc,
           description:
-            'Call one RPC on a running server signed in as a persona, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a persona that is not permitted',
+            'Call one RPC on a running server signed in as a virtual user, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a virtual user that is not permitted',
           parameters: '<rpc>',
           options: {
             as: {
-              description: 'The persona to sign in as',
+              description: 'The virtual user to sign in as',
               type: 'string',
             },
             data: {
@@ -1741,9 +1741,9 @@ wireCLI({
               description:
                 'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
             },
-            personas: {
+            virtualUsers: {
               description:
-                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+                'Comma-separated virtual user ids that sign into it; each must be in defineVirtualUsers({…})',
             },
             template: {
               description:

@@ -49,7 +49,7 @@ describe('pikku dev enabling actor sign-in', () => {
     assert.equal(
       process.env[VITE_ACTOR_SECRET_ENV],
       undefined,
-      'the root derives every persona, so it never reaches the bundle'
+      'the root derives every virtual user, so it never reaches the bundle'
     )
     assert.equal(resolveActorSignIn().enabled, true)
     assert.match(logger.lines.info.join('\n'), /minted for this run/)
@@ -104,7 +104,7 @@ describe('pikku dev enabling actor sign-in', () => {
     assert.match(logger.lines.warn.join('\n'), /different values/)
   })
 
-  test('puts no persona credential in the frontend env', async () => {
+  test('puts no virtual user credential in the frontend env', async () => {
     await enableDevActorSignIn(recordingLogger() as any)
 
     assert.equal(process.env.VITE_DEV_ACTOR_SECRETS, undefined)

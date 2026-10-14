@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import { personaRpc } from './persona-rpc.js'
+import { virtualUserRpc } from './virtual-user-rpc.js'
 
-const PERSONAS = [
+const VIRTUAL_USERS = [
   {
     id: 'susan',
     name: 'Susan',
@@ -22,11 +22,11 @@ let rpcReply: { status: number; body: unknown } = { status: 200, body: {} }
 let output = ''
 
 const run = (data: Record<string, unknown>, url = apiUrl) =>
-  personaRpc.func(
+  virtualUserRpc.func(
     {
       config: { environments: { local: { apiUrl: url } } },
       getInspectorState: async () => ({
-        personas: { definitions: PERSONAS },
+        virtualUsers: { definitions: VIRTUAL_USERS },
         rpc: {
           exposedMeta: { getTodo: 'getTodo', deleteTodo: 'deleteTodo' },
           internalMeta: { hiddenThing: 'hiddenThing' },
@@ -77,7 +77,7 @@ const restore = () => {
   return code
 }
 
-describe('pikku persona rpc', () => {
+describe('pikku virtual-user rpc', () => {
   test('prints the status and the body of a call that worked', async () => {
     rpcReply = { status: 200, body: { id: '1', title: 'Milk' } }
     await run({ rpc: 'getTodo', as: 'susan', data: '{"id":"1"}' })
@@ -98,10 +98,10 @@ describe('pikku persona rpc', () => {
     restore()
   })
 
-  test('refuses an unknown persona', async () => {
+  test('refuses an unknown virtual user', async () => {
     await assert.rejects(
       run({ rpc: 'getTodo', as: 'bob' }),
-      /No persona 'bob'.*susan/
+      /No virtual user 'bob'.*susan/
     )
     restore()
   })
@@ -127,7 +127,7 @@ describe('pikku persona rpc', () => {
     restore()
   })
 
-  test('a 403 names the persona and its roles as not permitted', async () => {
+  test('a 403 names the virtual user and its roles as not permitted', async () => {
     rpcReply = { status: 403, body: { message: 'Forbidden' } }
     await run({ rpc: 'deleteTodo', as: 'susan' })
     assert.equal(restore(), 1)

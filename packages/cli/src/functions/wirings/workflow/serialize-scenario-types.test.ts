@@ -9,7 +9,7 @@ describe('serializeScenarioTypes', () => {
       '../middleware/pikku-middleware-types.gen.js',
       '../workflow/pikku-workflow-types.gen.js',
       '../workflow/pikku-scenario-step-map.gen.js',
-      './pikku-personas.gen.js'
+      './pikku-virtual-users.gen.js'
     )
 
   test('extends the workflow wire rather than redeclaring it', () => {
@@ -72,7 +72,7 @@ describe('serializeScenarioTypes', () => {
     test('neither takes surface bindings — one `func`, no witnesses to disagree', () => {
       const result = emit()
       // `actor` goes with them: nobody is behind "the platform expired the
-      // trial", so there is no persona to declare.
+      // trial", so there is no virtual user to declare.
       assert.match(
         result,
         /PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,\n  'browser' \| 'cli' \| 'default' \| 'actor'\n> & \{\n  func:/
@@ -90,7 +90,7 @@ describe('serializeScenarioTypes', () => {
       )
     })
 
-    // Deleted with the collapse into personas — a virtual user is a persona run,
+    // Deleted with the collapse into virtual users — a virtual user is a virtual user run,
     // not its own declaration.
     test('pikkuVirtualUser is gone', () => {
       const result = emit()

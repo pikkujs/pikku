@@ -207,7 +207,7 @@ export function wireAuth(
   const actorAt = next.search(/pikkuActor\(\{/)
   if (actorAt === -1) {
     notes.push(
-      'auth.ts has no pikkuActor — scenario personas will not carry upstream credentials'
+      'auth.ts has no pikkuActor — scenario virtual users will not carry upstream credentials'
     )
   } else {
     const actorCall = next.slice(actorAt, next.indexOf('})', actorAt) + 2)

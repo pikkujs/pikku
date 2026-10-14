@@ -4,12 +4,12 @@ import ts from 'typescript'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { serializePersonas } from './serialize-personas.js'
+import { serializeVirtualUsers } from './serialize-virtual-users.js'
 
 /**
  * A scenario actor invokes exposed RPCs over the real transport, so the surface
  * it can reach is exactly the generated exposed RPC map. This pins that the
- * emitted `TypedPersonas` narrows `invoke` over that map — an unknown RPC
+ * emitted `TypedVirtualUsers` narrows `invoke` over that map — an unknown RPC
  * name or a wrong payload has to be a compile error, not a 400 at run time.
  *
  * The fixture runs the real serializer and swaps its two type imports for local
@@ -33,7 +33,7 @@ const FIXTURE_ROOT = join(
 )
 
 const generated = () =>
-  serializePersonas(
+  serializeVirtualUsers(
     {
       admin: {
         id: 'admin',
@@ -77,10 +77,10 @@ const typeErrors = (source: string): string[] => {
   }
 }
 
-describe('TypedPersonas narrows invoke over the exposed RPC map', () => {
+describe('TypedVirtualUsers narrows invoke over the exposed RPC map', () => {
   test('a known RPC with the right payload compiles, and its output is narrowed', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => {
   const listed = await actors.admin.invoke('todos:listTodos', { limit: 5 })
   const todos: string[] = listed.todos
@@ -92,7 +92,7 @@ export const run = async () => {
 
   test('an unknown RPC name is rejected', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => actors.admin.invoke('todos:notAnRpc', { limit: 5 })
 `)
     assert.ok(
@@ -103,7 +103,7 @@ export const run = async () => actors.admin.invoke('todos:notAnRpc', { limit: 5 
 
   test('a payload of the wrong shape is rejected', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => actors.admin.invoke('todos:listTodos', { nope: 1 })
 `)
     assert.ok(
@@ -114,7 +114,7 @@ export const run = async () => actors.admin.invoke('todos:listTodos', { nope: 1 
 
   test('the narrowed output is not any', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => {
   const listed = await actors.admin.invoke('todos:listTodos', { limit: 5 })
   const wrong: number = listed.todos
@@ -129,7 +129,7 @@ export const run = async () => {
 
   test('invokeRaw is narrowed the same way and still reports the status', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => {
   const res = await actors.admin.invokeRaw('console:ping', null, {
     headers: { 'x-user-id': 'someone' },
@@ -143,7 +143,7 @@ export const run = async () => {
 
   test('an undeclared actor is rejected', () => {
     const errors = typeErrors(`${HEADER}${generated()}
-declare const actors: TypedPersonas
+declare const actors: TypedVirtualUsers
 export const run = async () => actors.nobody.invoke('console:ping', null)
 `)
     assert.ok(
@@ -155,10 +155,10 @@ export const run = async () => actors.nobody.invoke('console:ping', null)
   test('the narrowed registry still satisfies the wire constraint', () => {
     const errors = typeErrors(`${HEADER}${generated()}
 import type { PikkuWire } from '@pikku/core/types'
-import type { ScenarioPersonas } from '@pikku/core/services'
+import type { ScenarioVirtualUsers } from '@pikku/core/services'
 
-declare const actors: TypedPersonas
-export const open: ScenarioPersonas = actors
+declare const actors: TypedVirtualUsers
+export const open: ScenarioVirtualUsers = actors
 export type Wire = PikkuWire<
   unknown,
   unknown,
@@ -170,20 +170,20 @@ export type Wire = PikkuWire<
   any,
   unknown,
   any,
-  TypedPersonas
+  TypedVirtualUsers
 >
 export const stepActor = (wire: Wire) => wire.actor
 `)
     assert.deepEqual(errors, [])
   })
 
-  test('HttpPersona still satisfies the default generic', () => {
+  test('HttpVirtualUser still satisfies the default generic', () => {
     const errors = typeErrors(`
-import type { HttpPersona } from '@pikku/core/persona'
-import type { ScenarioPersona } from '@pikku/core/services'
+import type { HttpVirtualUser } from '@pikku/core/virtual-user'
+import type { ScenarioVirtualUser } from '@pikku/core/services'
 
-declare const actor: HttpPersona
-export const untyped: ScenarioPersona = actor
+declare const actor: HttpVirtualUser
+export const untyped: ScenarioVirtualUser = actor
 export const run = async () => actor.invoke('anything', { whatever: true })
 `)
     assert.deepEqual(errors, [])

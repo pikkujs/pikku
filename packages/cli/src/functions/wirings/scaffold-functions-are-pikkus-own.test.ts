@@ -66,7 +66,7 @@ describe("every function a scaffold generates is tagged as pikku's own", () => {
     ['console', serializeConsoleFunctions(leaf, '#agentTypes').functions],
     [
       'virtual user',
-      serializeVirtualUserFunctions(leaf, '#personas').functions,
+      serializeVirtualUserFunctions(leaf, '#virtualUsers').functions,
     ],
     ['events', serializeEventsScaffold(leaf).functions],
     [

@@ -5,7 +5,7 @@
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
-import type { ScenarioHttpResponse } from '@pikku/core/dist/services/personas-service'
+import type { ScenarioHttpResponse } from '@pikku/core/dist/services/virtual-users-service'
 import type {
   AgentMessage,
   AgentRunRow,
@@ -1487,7 +1487,7 @@ export type ConsoleAssistantStaysInScopeScenarioInput = {
 }
 export type ConsoleAssistantStaysInScopeScenarioOutput = { passed: boolean }
 export type ConsoleFlagsScenarioOutput = { readyTestId: string }
-export type ConsolePersonasScenarioOutput = { readyTestId: string }
+export type ConsoleVirtualUsersScenarioOutput = { readyTestId: string }
 export type ConsoleReviewScenarioOutput = { readyTestId: string }
 export type ConsoleRuntimeScenarioOutput = { readyTestId: string }
 export type ConsoleScopesScenarioOutput = { readyTestId: string }
@@ -2352,7 +2352,7 @@ export type EvaluateSecurityGateOutput = {
 }
 export type ExecuteVirtualUserRunInput = {
   runId: string
-  persona: string
+  virtualUser: string
   disposition:
     | 'realistic'
     | 'careless'
@@ -4383,7 +4383,7 @@ export type GetStageAllMetaOutput = {
   }
   mcpMeta: unknown[]
   workflows: unknown
-  personas: unknown
+  virtualUsers: unknown
   systemRoles: unknown
   features: unknown
   triggerMeta: {
@@ -4974,7 +4974,7 @@ export type GetVirtualUserRunInput = {
 }
 export type GetVirtualUserRunOutput = {
   runId: string
-  persona: string
+  virtualUser: string
   disposition:
     | 'realistic'
     | 'careless'
@@ -6620,9 +6620,9 @@ export type ListStageWorkflowRunsInput = {
   offset?: number | undefined
 }
 export type ListStageWorkflowRunsOutput = WorkflowRun[]
-export type ListVirtualUserPersonasInput = {}
-export type ListVirtualUserPersonasOutput = {
-  personas: {
+export type ListVirtualUsersInput = {}
+export type ListVirtualUsersOutput = {
+  virtualUsers: {
     id: string
     name: string
     jobTitle: string | null
@@ -6642,14 +6642,14 @@ export type ListVirtualUserRunCostsOutput = {
   }[]
 }
 export type ListVirtualUserRunsInput = {
-  persona?: string | undefined
+  virtualUser?: string | undefined
   limit?: number | undefined
   offset?: number | undefined
 }
 export type ListVirtualUserRunsOutput = {
   runs: {
     runId: string
-    persona: string
+    virtualUser: string
     disposition:
       | 'realistic'
       | 'careless'
@@ -6692,7 +6692,7 @@ export type ListVirtualUserRunsOutput = {
 }
 export type ListVirtualUserSchedulesOutput = {
   schedules: {
-    persona: string
+    virtualUser: string
     enabled: boolean
     disposition:
       | 'realistic'
@@ -9010,7 +9010,7 @@ export type RuntimeRolloutWorkflowOutput = {
   killedOld: number
 }
 export type RunVirtualUserInput = {
-  persona: string
+  virtualUser: string
   goals?: string[] | undefined
   memory?:
     | {
@@ -9501,7 +9501,7 @@ export type SetStageVisibilityOutput = {
 }
 export type SettingsScreenOpensScenarioOutput = { readyTestId: string }
 export type SetVirtualUserScheduleInput = {
-  persona: string
+  virtualUser: string
   enabled?: boolean | undefined
   disposition?:
     | (
@@ -9527,7 +9527,7 @@ export type SetVirtualUserScheduleInput = {
   nextRunAt?: string | undefined
 }
 export type SetVirtualUserScheduleOutput = {
-  persona: string
+  virtualUser: string
   enabled: boolean
   disposition:
     | 'realistic'
@@ -11446,9 +11446,9 @@ export type RPCMap = {
     SetProjectFavoriteInput,
     SetProjectFavoriteOutput
   >
-  readonly listVirtualUserPersonas: RPCHandler<
-    ListVirtualUserPersonasInput,
-    ListVirtualUserPersonasOutput
+  readonly listVirtualUsers: RPCHandler<
+    ListVirtualUsersInput,
+    ListVirtualUsersOutput
   >
   readonly listVirtualUserRunCosts: RPCHandler<
     ListVirtualUserRunCostsInput,

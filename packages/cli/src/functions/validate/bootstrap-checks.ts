@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 type PackageManifest = {
   scripts?: Record<string, string>

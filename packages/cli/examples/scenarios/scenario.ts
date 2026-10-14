@@ -1,12 +1,12 @@
 //~ name: scenario
 //~ title: Scenario — prove the app's CORE journey works end-to-end over real RPCs
 //~ entity: todo
-//~ when: PHASE 7.5, and EVERY app needs one. The single core-journey STARTER — a signed-in actor drives the app's ONE main happy path over the real transport. Start here, then pull the SPECIFIC extra patterns you need by name — `--name scenario-crud` (full round-trip), `scenario-relational` (parent→child link), `scenario-transition` (status move), `scenario-permissions` (denied path), `scenario-multitenant` (tenant isolation), `scenario-scheduled` (cron/eventual). Every step must ASSERT its outcome — read a write back and THROW if the effect is not there; a step that only proves "the RPC didn't throw" is a fake gate. NEVER put a userId/organizationId/tenantId in {data}: identity comes from the actor's SESSION, and supplying your own scope makes write+read agree by construction and hides the exact bug this proves. Point each step at YOUR RPC names and rename `visitor` to one of the personas you declared.
+//~ when: PHASE 7.5, and EVERY app needs one. The single core-journey STARTER — a signed-in actor drives the app's ONE main happy path over the real transport. Start here, then pull the SPECIFIC extra patterns you need by name — `--name scenario-crud` (full round-trip), `scenario-relational` (parent→child link), `scenario-transition` (status move), `scenario-permissions` (denied path), `scenario-multitenant` (tenant isolation), `scenario-scheduled` (cron/eventual). Every step must ASSERT its outcome — read a write back and THROW if the effect is not there; a step that only proves "the RPC didn't throw" is a fake gate. NEVER put a userId/organizationId/tenantId in {data}: identity comes from the actor's SESSION, and supplying your own scope makes write+read agree by construction and hides the exact bug this proves. Point each step at YOUR RPC names and rename `visitor` to one of the virtual users you declared.
 //~ steps:
-//~ A scenario tells ONE happy-path story as a synthetic persona (an "actor" — pikku
-//~ materialises one actor per persona you declared with definePersonas, so there is
+//~ A scenario tells ONE happy-path story as a synthetic virtual user (an "actor" — pikku
+//~ materialises one actor per virtual user you declared with defineVirtualUsers, so there is
 //~ no actor list to maintain and nothing ships by default — `visitor` in the written
-//~ file is a placeholder, rename it to one of YOUR declared persona ids). Each
+//~ file is a placeholder, rename it to one of YOUR declared virtual user ids). Each
 //~ scenario.do step calls a REAL exposed RPC BY NAME with the actor's session
 //~ cookie; the {data} must satisfy that RPC's input. Rename the written file to YOUR
 //~ core journey calling YOUR RPCs. Types are GENERICS <Input, Output> — a scenario is
@@ -71,12 +71,12 @@
 //~ to do; a feature is the acceptance criteria in the DOMAIN's words — name and
 //~ description written for the person who asked for the app, not for the test runner.
 //~ Green feature = that promise genuinely holds, not merely compiles.
-//~ EVERY PERSONA GETS DRIVEN AS ITSELF: the personas you declared with definePersonas
-//~ (the definePersonas call lists them) materialise one actor each, so the cafe
+//~ EVERY VIRTUAL_USER GETS DRIVEN AS ITSELF: the virtual users you declared with defineVirtualUsers
+//~ (the defineVirtualUsers call lists them) materialise one actor each, so the cafe
 //~ owner's journey runs `{ actor: actors.cafeOwner }` and the reviewer's runs as the
 //~ reviewer. Driving every journey as ONE actor makes write-then-read agree by
 //~ construction and hides the scoping/permission bugs this gate exists to catch; a
-//~ persona no scenario names is a person whose experience is UNPROVEN.
+//~ virtual user no scenario names is a person whose experience is UNPROVEN.
 
 // ===== FILE: packages/functions/test/scenarios/core-journey.scenario.ts =====
 import { pikkuScenario } from '#pikku/scenarios'

@@ -9,7 +9,7 @@ import {
   resolve,
 } from 'node:path'
 import { blankComments } from '../../fabric/lib/blank-comments.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
 
 /**
