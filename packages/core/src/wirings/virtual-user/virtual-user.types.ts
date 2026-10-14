@@ -1,5 +1,5 @@
 import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
-import type { ConversationVerdict } from '../virtual-user-conversation/virtual-user-conversation.types.js'
+import type { ConversationVerdict } from './conversation/conversation.types.js'
 
 /**
  * How a virtual user behaves, mechanically. A disposition changes the loop, the

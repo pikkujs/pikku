@@ -34,7 +34,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
-| `./virtual-user-conversation` | 6 | 6 | 22 |
+| `./virtual-user/conversation` | 6 | 6 | 22 |
 | `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
@@ -2296,7 +2296,7 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
 ) => Promise<TOutput>
 ```
 
-## ./virtual-user-conversation
+## ./virtual-user/conversation
 
 ```ts
 export interface ConversationVerdict {

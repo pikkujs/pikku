@@ -8,7 +8,7 @@ tags: virtual-user-conversation
 # A virtual user's missing approval decision defaults to denied
 
 `decideApprovals` in
-`packages/core/src/wirings/virtual-user-conversation/run-conversation.ts` maps over the
+`packages/core/src/wirings/virtual-user/conversation/run-conversation.ts` maps over the
 target agent's `pendingApprovals`, not over the decisions the virtual user LLM
 returned. Any `toolCallId` the model omitted, hallucinated, or renamed resolves
 to `approved: false`.

@@ -1,7 +1,7 @@
 import type {
   ConverseOptions,
   ConversationVerdict,
-} from '../wirings/virtual-user-conversation/virtual-user-conversation.types.js'
+} from '../wirings/virtual-user/conversation/conversation.types.js'
 import type { VirtualUserMeta } from '../wirings/virtual-user/virtual-user-declaration.types.js'
 
 /**

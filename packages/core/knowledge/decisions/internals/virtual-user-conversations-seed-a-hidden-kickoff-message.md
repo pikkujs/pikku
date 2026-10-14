@@ -8,7 +8,7 @@ tags: virtual-user-conversation
 # A virtual user conversation starts from a seeded kickoff message
 
 `runConversation` in
-`packages/core/src/wirings/virtual-user-conversation/run-conversation.ts` primes
+`packages/core/src/wirings/virtual-user/conversation/run-conversation.ts` primes
 `virtualUserMessages` with a single user message telling the virtual user to begin, before
 the first turn is generated.
 

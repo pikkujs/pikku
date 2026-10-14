@@ -1,6 +1,6 @@
 import type { ResolvedVirtualUser } from '../../services/virtual-users-service.js'
 import type { AgentMessage } from '../agent/agent.types.js'
-import type { VirtualUserLLM } from '../virtual-user-conversation/run-conversation.js'
+import type { VirtualUserLLM } from './conversation/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   catalogueIndex,

@@ -146,7 +146,7 @@ export type {
  * Signing in as a virtual user and talking to a stage over HTTP.
  *
  * Deliberately reached through this entry point rather than `@pikku/core/services`.
- * `HttpVirtualUser` pulls in the virtual-user-conversation conversation runner and, through it, the
+ * `HttpVirtualUser` pulls in the conversation runner and, through it, the
  * agent runner — none of which a production server has any use for. Exporting it
  * from the services barrel put that chain in the module graph of every app that
  * imports services, which only a bundler could remove and an unbundled Node or

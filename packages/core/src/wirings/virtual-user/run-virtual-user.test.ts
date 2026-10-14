@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { rememberIds, runVirtualUser } from './run-virtual-user.js'
-import type { VirtualUserLLM } from '../virtual-user-conversation/run-conversation.js'
+import type { VirtualUserLLM } from './conversation/run-conversation.js'
 import type { AgentStepResult } from '../../services/agent-runner-service.js'
 import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
 import type {

@@ -11,8 +11,8 @@ import type {
   ConversationVerdict,
   TargetAgentReply,
   TargetPendingApproval,
-} from '../wirings/virtual-user-conversation/virtual-user-conversation.types.js'
-import { runConversation } from '../wirings/virtual-user-conversation/run-conversation.js'
+} from '../wirings/virtual-user/conversation/conversation.types.js'
+import { runConversation } from '../wirings/virtual-user/conversation/run-conversation.js'
 import {
   createCookieJar,
   type ScenarioCookieJar,

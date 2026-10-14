@@ -3,13 +3,13 @@ import type {
   ConversationVerdict,
   TargetAgentDriver,
   TargetPendingApproval,
-} from './virtual-user-conversation.types.js'
-import type { ResolvedVirtualUser } from '../../services/virtual-users-service.js'
-import type { AgentMessage } from '../agent/agent.types.js'
+} from './conversation.types.js'
+import type { ResolvedVirtualUser } from '../../../services/virtual-users-service.js'
+import type { AgentMessage } from '../../agent/agent.types.js'
 import type {
   AgentRunnerParams,
   AgentStepResult,
-} from '../../services/agent-runner-service.js'
+} from '../../../services/agent-runner-service.js'
 
 /** One turn the virtual user takes: the message to send and whether it's finished. */
 const VIRTUAL_USER_TURN_SCHEMA = {

@@ -111,7 +111,7 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./virtual-user-conversation": [
+  "./virtual-user/conversation": [
     "runConversation"
   ],
   "./virtual-user": [

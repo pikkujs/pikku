@@ -10,7 +10,7 @@ tags: virtual-user-conversation
 `runConversation` ends by asking the virtual user LLM whether the `evaluate`
 criterion was met and returns that as `ConversationVerdict` — `passed`, `reasoning`
 and the full `transcript`
-(`packages/core/src/wirings/virtual-user-conversation/`). Nothing in the engine inspects the
+(`packages/core/src/wirings/virtual-user/conversation/`). Nothing in the engine inspects the
 system the agent acted on.
 
 The verdict is deliberately soft because the thing it judges is soft: whether a

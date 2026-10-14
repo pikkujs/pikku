@@ -6,8 +6,8 @@ import type {
   TargetAgentDriver,
   TargetAgentReply,
   ConversationApprovalPolicy,
-} from './virtual-user-conversation.types.js'
-import type { AgentStepResult } from '../../services/agent-runner-service.js'
+} from './conversation.types.js'
+import type { AgentStepResult } from '../../../services/agent-runner-service.js'
 
 const stepResult = (object: unknown): AgentStepResult => ({
   text: '',

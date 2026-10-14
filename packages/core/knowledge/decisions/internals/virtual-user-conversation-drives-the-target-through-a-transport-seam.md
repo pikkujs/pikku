@@ -1,15 +1,15 @@
 ---
 type: decision
-title: The virtual-user-conversation conversation engine only sees a transport-agnostic target driver
+title: The conversation engine only sees a transport-agnostic target driver
 description: The engine never imports the agent runner; the target is injected as run/approve, so scenarios exercise the real wire path
 tags: virtual-user-conversation
 ---
 
-# The virtual-user-conversation conversation engine only sees a transport-agnostic target driver
+# The conversation engine only sees a transport-agnostic target driver
 
 `runConversation` reaches the target agent exclusively through the injected
 `TargetAgentDriver` — `run(message)` and `approve(runId, decisions)` — declared
-in `packages/core/src/wirings/virtual-user-conversation/virtual-user-conversation.types.ts`. In production that
+in `packages/core/src/wirings/virtual-user/conversation/conversation.types.ts`. In production that
 driver is HTTP-backed, issuing the virtual user's `agentRun` and `agentApprove` calls as
 the signed-in virtual user.
 
