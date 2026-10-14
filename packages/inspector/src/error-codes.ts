@@ -72,7 +72,7 @@ export enum ErrorCode {
   // scopes and roles held this rule until the generated `admin` tree made it
   // unsatisfiable, and get it back once `admin` is a default scope nobody
   // declares. Do not reuse those two numbers for anything else.
-  DUPLICATE_PERSONAS_DEFINITION = 'PKU585',
+  DUPLICATE_VIRTUAL_USERS_DEFINITION = 'PKU585',
 
   // HTTP Route errors
   ROUTE_PARAM_MISMATCH = 'PKU571',

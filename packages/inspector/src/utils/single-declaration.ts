@@ -4,18 +4,18 @@ import type { InspectorLogger } from '../types.js'
 /**
  * Claims the one call site a single-declaration construct is allowed.
  *
- * `definePersonas` takes a keyed object, so one call already declares as many
+ * `defineVirtualUsers` takes a keyed object, so one call already declares as many
  * entries as you like. Letting the call itself repeat buys nothing and costs
  * the thing that matters: a single place to read the declared set from, and a
  * single place to add to it. The same rule `pikkuBetterAuth` has had all along.
  *
  * A second call in the SAME file is refused too — "the file" is not an answer
- * to "where do I add a persona?" when the file holds two calls, so allowing it
+ * to "where do I add a virtual user?" when the file holds two calls, so allowing it
  * would keep the ambiguity the rule exists to remove.
  *
  * A generated file is exempt, and never claims the slot either. The rule exists
  * to name the one place a person adds to, and nobody adds to a file the CLI
- * rewrites on the next run — `pikku-personas.gen.ts` would otherwise make every
+ * rewrites on the next run — `pikku-virtual-users.gen.ts` would otherwise make every
  * project that scaffolds one unbuildable, and take the app's own declaration
  * down with it.
  *

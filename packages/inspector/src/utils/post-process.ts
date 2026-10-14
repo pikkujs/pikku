@@ -1055,7 +1055,7 @@ export function validateScenarioServices(
  *
  * `composeStepProse` renders the actor as the sentence's subject, so a step
  * authored as `'sam' creates the client` reads "Given sam 'sam' creates the
- * client". Only the subject position counts: a persona keyed after a role noun
+ * client". Only the subject position counts: a virtual user keyed after a role noun
  * ("admin") must still be able to say "creates the admin client", and naming
  * someone mid-sentence — "sends sam an invite" — is ordinary prose.
  */
@@ -1074,7 +1074,7 @@ export const proseOpensWithActor = (prose: string, actor: string): boolean => {
  *
  * Every candidate is returned rather than only the winner, because a template
  * is authored where the actor is not yet known — so it is wrong at every call
- * site that runs it as the persona it names, not just the winning one.
+ * site that runs it as the virtual user it names, not just the winning one.
  */
 const renderableProse = (
   step: ScenarioStepMeta,
@@ -1096,7 +1096,7 @@ const renderableProse = (
  * the client` run as `actors.sam` reads "Given sam 'sam' creates the client" —
  * and the hardcoded copy silently desyncs the moment the call site changes
  * actor. Only the subject position is refused; naming someone mid-sentence is
- * ordinary prose, and a persona keyed after a role noun can still say "creates
+ * ordinary prose, and a virtual user keyed after a role noun can still say "creates
  * the admin client".
  */
 const validateStepProse = (
@@ -1133,9 +1133,9 @@ const capitaliseFirst = (value: string): string => value.charAt(0).toUpperCase()
  *
  * - the step target must be a static string literal (PKU678) — otherwise it
  *   can't be bundled, typed or drawn;
- * - a step that runs as a persona must be given one (PKU677) — declared by
+ * - a step that runs as a virtual user must be given one (PKU677) — declared by
  *   `actor: true`, or implied by a `browser` binding, since the browser context
- *   signs in as that persona. It is checked statically even though a browser
+ *   signs in as that virtual user. It is checked statically even though a browser
  *   binding only runs on a browser run: a step that can never be driven by a
  *   human is a latent failure, not a passing default run.
  * - a scenario written as a step ladder must assert something (PKU680).
@@ -1168,11 +1168,11 @@ export function validateScenarioSteps(
         if (stepMeta?.scenarioStepRequiresActor && !step.actor) {
           const why = stepMeta.scenarioStepSurfaces?.includes("browser")
             ? "declares a browser binding"
-            : "is driven by a persona";
+            : "is driven by a virtual user";
           logger.critical(
             ErrorCode.SCENARIO_STEP_NEEDS_ACTOR,
             `Scenario '${workflowName}' calls step '${step.stepFunc}', which ${why}, without an actor. ` +
-              `Pass { actor: actors.<name> } so it runs as that persona.`,
+              `Pass { actor: actors.<name> } so it runs as that virtual user.`,
           );
         }
         continue;
@@ -1737,7 +1737,7 @@ export function validateAgentScorerReferences(
  * The same rule functions get, for a sharper reason: a role granting an
  * undeclared scope is not merely useless, it is *invisibly* useless. No
  * function checks the scope, so the role appears to work — every call a
- * persona holding it makes succeeds or fails for unrelated reasons, and the
+ * virtual user holding it makes succeeds or fails for unrelated reasons, and the
  * authorization boundary it was written to describe is never exercised.
  *
  * A `*` suffix grants a subtree; the node it hangs off must exist.
@@ -1775,34 +1775,34 @@ export function validateSystemRoleScopes(
 }
 
 /**
- * Validates that every role a persona names is declared with
+ * Validates that every role a virtual user names is declared with
  * `defineSystemRole`. Runs after all visitors, so declaration order does not
  * matter.
  *
  * Custom roles are refused rather than tolerated. A role composed in the
  * console does not exist at build time and can be deleted after it, so a
- * persona pinned to one silently stops testing what it claims to — and the
+ * virtual user pinned to one silently stops testing what it claims to — and the
  * symptom is a scatter of 403s that read like authorization findings rather
  * than like a deleted role.
  */
-export function validatePersonaRoles(
+export function validateVirtualUserRoles(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, "typesLookup">,
 ): void {
-  if (!state.personas.definitions.length) {
+  if (!state.virtualUsers.definitions.length) {
     return;
   }
 
   const declared = new Set(state.systemRoles.definitions.map((r) => r.name));
 
-  for (const persona of state.personas.definitions) {
-    for (const role of persona.roles) {
+  for (const virtualUser of state.virtualUsers.definitions) {
+    for (const role of virtualUser.roles) {
       if (!declared.has(role)) {
         const available = Array.from(declared).sort();
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Persona '${persona.id}' holds role '${role}', which is not declared with defineSystemRole. ` +
-            `A persona may only name a system role — a role composed in the console can be deleted, and the persona would go on claiming to test it. ` +
+          `VirtualUser '${virtualUser.id}' holds role '${role}', which is not declared with defineSystemRole. ` +
+            `A virtual user may only name a system role — a role composed in the console can be deleted, and the virtual user would go on claiming to test it. ` +
             `Declared roles: ${available.join(", ") || "none"}`,
         );
       }

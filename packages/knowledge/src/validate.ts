@@ -74,7 +74,7 @@ export const KNOWLEDGE_SECTIONS: Record<string, string> = {
  * always a copy that will drift. The value is where the truth actually lives.
  */
 const FORBIDDEN_SECTIONS: Record<string, string> = {
-  personas: "`definePersonas()` in the project's own code",
+  'virtual-users': "`defineVirtualUsers()` in the project's own code",
   scenarios: '`pikkuScenario` exports, named in the plan of the changeset that builds them',
   permissions: 'a decision note under decisions/security/',
   schemas: '`pikku meta` — the generated schema is the schema',
@@ -159,7 +159,7 @@ export const runKnowledgeValidate = async (
   }
 
   // A forbidden directory is one thing to delete however deep it goes, so it is
-  // reported against its top level only — `personas/` and `personas/admin/` are
+  // reported against its top level only — `virtual-users/` and `virtual-users/admin/` are
   // the same finding, and emitting it per sub-section would put the same id in
   // the list twice with nothing to distinguish the copies.
   const reportedForbidden = new Set<string>()

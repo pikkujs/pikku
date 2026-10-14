@@ -31,7 +31,7 @@ const SCENARIO_SURFACE_KEYS: readonly ScenarioSurface[] = [
  * copied into an addon package by a consumer, a called identifier cannot.
  */
 const SCENARIO_STEP_KINDS = new Map<string, ScenarioStepKind>([
-  ['pikkuScenarioStep', 'persona'],
+  ['pikkuScenarioStep', 'virtualUser'],
   ['pikkuPlatformScenarioStep', 'platform'],
   ['pikkuAddonScenarioStep', 'addon'],
 ])
@@ -1468,10 +1468,10 @@ export const addFunctions: AddWiring = (
     compensate: compensateInitializer ? true : undefined,
     scenarioStepSurfaces,
     scenarioStepRequiresActor,
-    // `persona` is the default reading of an unmarked step, so it is left off
+    // `virtualUser` is the default reading of an unmarked step, so it is left off
     // rather than written into every step meta a project already has.
     scenarioStepKind:
-      scenarioStepKind && scenarioStepKind !== 'persona'
+      scenarioStepKind && scenarioStepKind !== 'virtualUser'
         ? scenarioStepKind
         : undefined,
     scenarioStepAddon,

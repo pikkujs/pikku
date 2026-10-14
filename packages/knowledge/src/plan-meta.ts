@@ -79,7 +79,7 @@ export function shallowScenarioProblems(plan: Plan, meta: PikkuMeta): string[] {
  * source tree.
  *
  * Codegen already inventories eight of the nine things a plan declares — functions,
- * wires, scopes, roles, workflows, agents, personas and features — keyed by the same
+ * wires, scopes, roles, workflows, agents, virtual users and features — keyed by the same
  * ids the plan uses. So "did the engineer build `updateEntry`" is a set membership
  * test against a JSON file the drive already regenerates every turn, not a glob over
  * the tree and not a scenario run. Scenario PASS/FAIL still needs a run; existence

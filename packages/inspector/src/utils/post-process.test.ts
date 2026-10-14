@@ -1318,9 +1318,9 @@ describe('proseOpensWithActor', () => {
     assert.equal(proseOpensWithActor('sends sam an invite', 'sam'), false)
   })
 
-  // A persona keyed after a role noun must keep the word as a word: refusing
+  // A virtual user keyed after a role noun must keep the word as a word: refusing
   // "creates the admin client" for an actor called `admin` would make the
-  // check the reason to rename the persona.
+  // check the reason to rename the virtual user.
   test('an actor key that is also a common noun is only refused as the subject', () => {
     assert.equal(
       proseOpensWithActor('creates the admin client', 'admin'),

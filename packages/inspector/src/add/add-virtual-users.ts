@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { DISPOSITIONS } from '@pikku/core/virtual-user'
-import { isRunnablePersona } from '@pikku/core/persona'
-import type { PersonaMeta, PersonaAccountMeta } from '@pikku/core/persona'
+import { isRunnableVirtualUser } from '@pikku/core/virtual-user'
+import type { VirtualUserMeta, VirtualUserAccountMeta } from '@pikku/core/virtual-user'
 import { ErrorCode } from '../error-codes.js'
 import { claimSingleDeclaration } from '../utils/single-declaration.js'
 import type { AddWiring, InspectorLogger } from '../types.js'
@@ -14,7 +14,7 @@ import {
   unwrapAs,
 } from '../utils/literal-properties.js'
 
-type Tuning = NonNullable<PersonaMeta['tuning']>
+type Tuning = NonNullable<VirtualUserMeta['tuning']>
 
 /** A dial and the range outside which it is a mistake rather than a choice. */
 const RATES: [keyof Tuning, number, number][] = [
@@ -28,7 +28,7 @@ const RATES: [keyof Tuning, number, number][] = [
  *
  * The ranges are checked here rather than at run time because these are the
  * kind of typo that does not throw: `repeatRate: 18` meaning 18% would silently
- * double every call the persona makes, and you would read the run as a product
+ * double every call the virtual user makes, and you would read the run as a product
  * bug.
  */
 const tuningProperty = (
@@ -90,7 +90,7 @@ const tuningProperty = (
 
 const accountProperty = (
   value: ts.Expression | undefined
-): PersonaAccountMeta | undefined => {
+): VirtualUserAccountMeta | undefined => {
   if (!value || !ts.isObjectLiteralExpression(value)) {
     return undefined
   }
@@ -100,15 +100,15 @@ const accountProperty = (
 
 const linkedAccountsProperty = (
   config: ts.ObjectLiteralExpression,
-  personaId: string,
+  virtualUserId: string,
   logger: InspectorLogger
-): Record<string, PersonaAccountMeta> | undefined => {
+): Record<string, VirtualUserAccountMeta> | undefined => {
   const value = getProperty(config, 'linkedAccounts')
   if (!value || !ts.isObjectLiteralExpression(value)) {
     return undefined
   }
 
-  const accounts: Record<string, PersonaAccountMeta> = {}
+  const accounts: Record<string, VirtualUserAccountMeta> = {}
   for (const prop of value.properties) {
     if (!ts.isPropertyAssignment(prop)) {
       continue
@@ -116,7 +116,7 @@ const linkedAccountsProperty = (
     if (!ts.isIdentifier(prop.name) && !ts.isStringLiteral(prop.name)) {
       logger.critical(
         ErrorCode.NON_LITERAL_WIRE_NAME,
-        `Persona '${personaId}' has a linked account whose key is not a literal.`
+        `VirtualUser '${virtualUserId}' has a linked account whose key is not a literal.`
       )
       continue
     }
@@ -124,7 +124,7 @@ const linkedAccountsProperty = (
     if (!account) {
       logger.critical(
         ErrorCode.INVALID_VALUE,
-        `Persona '${personaId}' linked account '${prop.name.text}' must be an object literal.`
+        `VirtualUser '${virtualUserId}' linked account '${prop.name.text}' must be an object literal.`
       )
       continue
     }
@@ -135,23 +135,23 @@ const linkedAccountsProperty = (
 }
 
 /**
- * Inspector for `definePersonas()` calls.
+ * Inspector for `defineVirtualUsers()` calls.
  *
- * A persona is entirely declaration — a person, their roles, what they want —
+ * A virtual user is entirely declaration — a person, their roles, what they want —
  * so there is no code body and nothing to resolve at runtime. What is read here
- * is the whole thing, and it is generated straight to `personas.gen.json` for
+ * is the whole thing, and it is generated straight to `virtual-users.gen.json` for
  * the CLI and the console to read without loading the app.
  *
- * `name` is the one field that cannot be defaulted. A persona without one is
+ * `name` is the one field that cannot be defaulted. A virtual user without one is
  * not a person, and the console has nothing to show.
  */
-export const addPersonas: AddWiring = (logger, node, _checker, state) => {
+export const addVirtualUsers: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isCallExpression(node)) {
     return
   }
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'definePersonas') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'defineVirtualUsers') {
     return
   }
 
@@ -164,7 +164,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isObjectLiteralExpression(unwrapped)) {
     logger.critical(
       ErrorCode.INVALID_VALUE,
-      'definePersonas() needs an inline object — personas are read statically, never evaluated.'
+      'defineVirtualUsers() needs an inline object — virtual users are read statically, never evaluated.'
     )
     return
   }
@@ -174,9 +174,9 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
   if (
     !claimSingleDeclaration(
       logger,
-      state.personas.files,
-      ErrorCode.DUPLICATE_PERSONAS_DEFINITION,
-      'definePersonas',
+      state.virtualUsers.files,
+      ErrorCode.DUPLICATE_VIRTUAL_USERS_DEFINITION,
+      'defineVirtualUsers',
       sourceFile
     )
   ) {
@@ -193,7 +193,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     if (!ts.isIdentifier(prop.name) && !ts.isStringLiteral(prop.name)) {
       logger.critical(
         ErrorCode.NON_LITERAL_WIRE_NAME,
-        'A persona is declared with a key that is not a literal.'
+        'A virtual user is declared with a key that is not a literal.'
       )
       continue
     }
@@ -202,7 +202,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     if (!ts.isObjectLiteralExpression(prop.initializer)) {
       logger.critical(
         ErrorCode.INVALID_VALUE,
-        `Persona '${id}' must be an object literal.`
+        `VirtualUser '${id}' must be an object literal.`
       )
       continue
     }
@@ -212,12 +212,12 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     if (!name) {
       logger.critical(
         ErrorCode.INVALID_VALUE,
-        `Persona '${id}' needs a literal 'name' — a persona is a person, and the console has nothing to show without one.`
+        `VirtualUser '${id}' needs a literal 'name' — a virtual user is a person, and the console has nothing to show without one.`
       )
       continue
     }
 
-    // The generated `definePersonas` types this as a union, so a bad value only
+    // The generated `defineVirtualUsers` types this as a union, so a bad value only
     // reaches here in source that does not compile. Caught anyway: a
     // disposition is the entire behaviour, and defaulting a typo to `realistic`
     // would run a different person than the one that was written.
@@ -225,7 +225,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     if (disposition !== undefined && !known.includes(disposition)) {
       logger.critical(
         ErrorCode.INVALID_VALUE,
-        `Persona '${id}' has an unknown disposition '${disposition}'. One of: ${known.join(', ')}`
+        `VirtualUser '${id}' has an unknown disposition '${disposition}'. One of: ${known.join(', ')}`
       )
       continue
     }
@@ -233,7 +233,7 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     let tuningFailed = false
     const tuning = tuningProperty(config, (message) => {
       tuningFailed = true
-      logger.critical(ErrorCode.INVALID_VALUE, `Persona '${id}': ${message}`)
+      logger.critical(ErrorCode.INVALID_VALUE, `VirtualUser '${id}': ${message}`)
     })
     if (tuningFailed) {
       continue
@@ -242,13 +242,13 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     const account = accountProperty(getProperty(config, 'account'))
     const declaredRunnable = booleanProperty(config, 'runnable')
 
-    const persona: PersonaMeta = {
+    const virtualUser: VirtualUserMeta = {
       id,
       name,
       roles: stringArrayProperty(config, 'roles') ?? [],
       goals: stringArrayProperty(config, 'goals') ?? [],
       tags: stringArrayProperty(config, 'tags') ?? [],
-      runnable: isRunnablePersona({
+      runnable: isRunnableVirtualUser({
         ...(declaredRunnable !== undefined
           ? { runnable: declaredRunnable }
           : {}),
@@ -258,30 +258,30 @@ export const addPersonas: AddWiring = (logger, node, _checker, state) => {
     }
 
     const jobTitle = stringProperty(config, 'jobTitle')
-    if (jobTitle !== undefined) persona.jobTitle = jobTitle
+    if (jobTitle !== undefined) virtualUser.jobTitle = jobTitle
     const description = stringProperty(config, 'description')
-    if (description !== undefined) persona.description = description
+    if (description !== undefined) virtualUser.description = description
     const avatarUrl = stringProperty(config, 'avatarUrl')
-    if (avatarUrl !== undefined) persona.avatarUrl = avatarUrl
+    if (avatarUrl !== undefined) virtualUser.avatarUrl = avatarUrl
     const personality = stringProperty(config, 'personality')
-    if (personality !== undefined) persona.personality = personality
+    if (personality !== undefined) virtualUser.personality = personality
     const app = stringProperty(config, 'app')
-    if (app !== undefined) persona.app = app
+    if (app !== undefined) virtualUser.app = app
     if (disposition !== undefined) {
-      persona.disposition = disposition as PersonaMeta['disposition']
+      virtualUser.disposition = disposition as VirtualUserMeta['disposition']
     }
-    if (tuning !== undefined) persona.tuning = tuning
+    if (tuning !== undefined) virtualUser.tuning = tuning
     const fixtures = stringArrayProperty(config, 'fixtures')
-    if (fixtures !== undefined) persona.fixtures = fixtures
+    if (fixtures !== undefined) virtualUser.fixtures = fixtures
     // Left absent rather than resolved here: "everywhere but production" is a
     // fact about the config, and the inspector has no business baking today's
     // environment list into a meta file that outlives it.
     const environments = stringArrayProperty(config, 'environments')
-    if (environments !== undefined) persona.environments = environments
-    if (account !== undefined) persona.account = account
+    if (environments !== undefined) virtualUser.environments = environments
+    if (account !== undefined) virtualUser.account = account
     const linkedAccounts = linkedAccountsProperty(config, id, logger)
-    if (linkedAccounts !== undefined) persona.linkedAccounts = linkedAccounts
+    if (linkedAccounts !== undefined) virtualUser.linkedAccounts = linkedAccounts
 
-    state.personas.definitions.push(persona)
+    state.virtualUsers.definitions.push(virtualUser)
   }
 }

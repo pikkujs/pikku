@@ -47,7 +47,7 @@ export function funcIdToTypeName(id: string): string {
 
 /**
  * The step wrappers, whichever kind of subject acts in them. A scenario calls a
- * platform or addon step by name exactly as it calls a persona one.
+ * platform or addon step by name exactly as it calls a virtual user one.
  */
 const SCENARIO_STEP_WRAPPERS = new Set([
   'pikkuScenarioStep',

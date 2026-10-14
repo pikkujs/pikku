@@ -444,7 +444,7 @@ export const addWorkflow: AddWiring = (
   }
 
   // Actor names the flow's steps run as (scenarios) — powers the console
-  // personas view and the Scenario graph badges.
+  // virtual users view and the Scenario graph badges.
   const actorNames = [
     ...new Set(
       steps
