@@ -1,0 +1,28 @@
+{
+  "name": "@pikku/verifiers-virtual-users",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "kysely": "^0.29.5"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "pikku": "pikku",
+    "test": "pikku && tsc -b && npx tsx --test src/tests/schedule.assert.ts"
+  }
+}
