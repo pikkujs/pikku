@@ -1,3 +1,11 @@
+## 0.12.141
+
+### Patch Changes
+
+- b04e444: Fix CLI commands that come from an addon package. Auth and permissions set on such a command are now merged into the addon's own function instead of replacing it, and the command's input is shaped by the addon's own schema (for example a comma list becomes an array). The inspector now also resolves `...refCLI('addon:contract')`, spreads and `defineCLICommands` identifiers inside a command's `subcommands`.
+- d3d8a98: Graceful shutdown ignores repeat signals. A second SIGTERM or SIGINT arriving while `beforeStop` and the service teardown are still running no longer falls through to the default handler and kills the process mid-cleanup. `@pikku/core/lifecycle` is a new entry point holding `onShutdownSignals`, `stopSingletonServices` and `pikkuServerLifecycle` (the latter two stay re-exported from `utils`), which the server runtimes now share.
+- 658da50: `SecretService` gains an optional `setEncryptedSecret(key, sealed)` for stores that hold a sealing key, so a browser can seal a secret and the caller's process never sees the plaintext.
+
 ## 0.12.140
 
 ### Patch Changes
