@@ -1,22 +1,22 @@
-# Personas and actors
+# Virtual users and actors
 
 ## Contents
 
-- [Declaring personas in TypeScript](#declaring-personas-in-typescript)
+- [Declaring virtual users in TypeScript](#declaring-virtual-users-in-typescript)
 - [Actors that call a third-party API](#actors-that-call-a-third-party-api)
 - [The same actors sign a human in](#the-same-actors-sign-a-human-in)
 
-A **persona** is a person your product is for; an **actor** is one body that signs in as them. Every entry materialises exactly one actor, so `actors.<id>` exists for each declared persona and there is no second way to declare a login.
+A **virtual user** is a person your product is for; an **actor** is one body that signs in as them. Every entry materialises exactly one actor, so `actors.<id>` exists for each declared virtual user and there is no second way to declare a login.
 
-- Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.
-- Never write an email address: each is derived from the persona id and `scenarios.emailDomain`, and a hand-written one signs in as somebody who was never created.
+- Two people of the same kind are two entries, not one virtual user with two logins — "you see yours, not theirs" is only testable with two customers.
+- Never write an email address: each is derived from the virtual user id and `scenarios.emailDomain`, and a hand-written one signs in as somebody who was never created.
 - `roles` is typechecked against `defineSystemRole`; an undeclared role is a build error.
 - A person who is only ever acted _upon_ — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
-- A persona holds only what is true of that kind of person for the app's whole lifetime (`name`, `jobTitle`, `description`, `personality`, `roles`, `goals`, `disposition`). What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
+- A virtual user holds only what is true of that kind of person for the app's whole lifetime (`name`, `jobTitle`, `description`, `personality`, `roles`, `goals`, `disposition`). What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
 
-## Declaring personas in TypeScript
+## Declaring virtual users in TypeScript
 
-There may be **one `definePersonas` call in the whole codebase** — one place to
+There may be **one `defineVirtualUsers` call in the whole codebase** — one place to
 read the set from, one place to add to it. A second anywhere, including in the
 same file, is a critical. Generated files are exempt and never claim the slot.
 
@@ -25,7 +25,7 @@ same file, is a critical. Generated files are exempt and never claim the slot.
 > to JSON that a deployed stage carries without the app. So every value has to
 > be statically knowable, and a value that is not comes out as `undefined`
 > rather than as an error. Only `name` is checked, so a computed `personality`,
-> `jobTitle` or `description` is dropped in silence and the persona runs with a
+> `jobTitle` or `description` is dropped in silence and the virtual user runs with a
 > blank temperament.
 
 What that admits and what it does not:
@@ -44,14 +44,14 @@ not a concatenation, and not a `prettier-ignore`d single line. Its newlines and
 leading indentation are kept verbatim and reach the model that way, which is
 harmless but worth knowing before you align it to the surrounding code.
 
-One more thing worth knowing before writing a rich persona: **`actor.converse`
+One more thing worth knowing before writing a rich virtual user: **`actor.converse`
 builds its prompt from `name`, `jobTitle`, `personality` and the scenario's
 `task` only.** Fields like `disposition`, `goals` and `roles` are read and
 stored, and the console shows them, but they do not reach the conversing
-persona's instructions. Anything that must shape how someone talks belongs in
+virtual user's instructions. Anything that must shape how someone talks belongs in
 `personality` or in the task.
 
-A project that never declares a persona keeps working: a scenario that names no actor needs none.
+A project that never declares a virtual user keeps working: a scenario that names no actor needs none.
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
@@ -68,15 +68,15 @@ credential into every session:
 - `store: (name, value, userId) => credentialService.set(name, value, userId)`
 - `remove: (name, userId) => credentialService.delete(name, userId)`
 
-At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` —
+At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<VIRTUAL_USER>_<NAME>` —
 `dan` + `dolibarr` is `ACTOR_CREDENTIAL_DAN_DOLIBARR` — and stores it with
 `credentialService.set` for that actor. A bare value is stored as `{ token }`
 (what a delegated or bearer credential holds); a JSON object is stored as-is,
 e.g. `{"apiKey":"…"}` for an API-key credential. Unset means the actor has no
 upstream credential: `remove` drops one stored at an earlier sign-in.
 
-- **Values live in `.env` (or CI secrets), never in `personas.ts` or code.**
-  Use a dedicated upstream test account per persona, not a real person's.
+- **Values live in `.env` (or CI secrets), never in `virtual-users.ts` or code.**
+  Use a dedicated upstream test account per virtual user, not a real person's.
 - `read` defaults to `process.env`; a Worker passes `(key) => variables.get(key)`.
 - A malformed JSON value refuses the sign-in with a 500 that names the variable.
 - A delegated token expires upstream like any other; re-signing the actor
@@ -89,17 +89,17 @@ Declared actors are not only for automated runs. `signInPath` is Better Auth's
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The switcher holds no credential. It lists personas from
-`/auth/sign-in/personas` and signs in by posting only a persona id to
-`/auth/sign-in/persona`; the server resolves the address. One server piece
+The switcher holds no credential. It lists virtual users from
+`/auth/sign-in/virtual-users` and signs in by posting only a virtual user id to
+`/auth/sign-in/virtual-user`; the server resolves the address. One server piece
 serves both, in the auth config:
 
-```ts snippet:personaSignIn
+```ts snippet:virtualUserSignIn
 ```
 
 It is always open under `pikku dev`. A deployed stage needs actor
 sign-in opted in **and** its `devSwitcher` feature flag on; production never
-has the opt-in, so it lists nobody and refuses every persona sign-in.
+has the opt-in, so it lists nobody and refuses every virtual user sign-in.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
 the starter template's `<DevActorSwitcher />` is a ready rendering of it.
@@ -110,14 +110,14 @@ errors:
 
 - **The list is empty.** On a deployed stage that is the gate
   doing its job — check the opt-in and the `devSwitcher` flag. Locally, check
-  the personas declare an `email` (via `scenarios.emailDomain`) and are not
+  the virtual users declare an `email` (via `scenarios.emailDomain`) and are not
   `runnable: false`.
-- **`personaSignIn` is missing, or the frontend calls another API.** A dev
+- **`virtualUserSignIn` is missing, or the frontend calls another API.** A dev
   proxy (`VITE_API_PROXY`, default `http://localhost:3000`) that points at
-  another project's API lists that project's personas, or none.
+  another project's API lists that project's virtual users, or none.
 - **It is not mounted on the page you are looking at.** The template mounts it
   on the login screen. A public homepage that replaces the `/` → `/app`
   redirect needs its own `<DevActorSwitcher />` in the public layout.
 
-When the switcher lists personas but a click 404s, that persona has no `email`
+When the switcher lists virtual users but a click 404s, that virtual user has no `email`
 or is `runnable: false`.

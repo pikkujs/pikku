@@ -243,7 +243,7 @@ becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 ### Dev actor sign-in (`useDevActors`)
 
 The dev-only "Sign in as …" control: one click signs in as a declared scenario
-persona with no password, so the app can be reviewed as each kind of user.
+virtual user with no password, so the app can be reviewed as each kind of user.
 `pikku fabric validate` **requires** any frontend with a login screen to ship one
 (`app-missing-actor-quick-login-<app>`) — without it a reviewer is locked out of
 their own sandbox.
@@ -260,13 +260,13 @@ const { actors, signInAs, pendingId, isPending, error } = useDevActors({
 
 - **It is UI-free**, so render it however you like. For the default rendering use
   the starter template's `<DevActorSwitcher />` (`components/dev/DevActorSwitcher.tsx`).
-- **No credential reaches the bundle.** It lists from `/auth/sign-in/personas`
-  and `signInAs(id)` posts only the persona id to `/auth/sign-in/persona`. The
+- **No credential reaches the bundle.** It lists from `/auth/sign-in/virtual-users`
+  and `signInAs(id)` posts only the virtual user id to `/auth/sign-in/virtual-user`. The
   server decides who is offered and who may sign in, and offers nobody in
-  production — see **pikku-scenario** for `personaSignIn`.
+  production — see **pikku-scenario** for `virtualUserSignIn`.
 - **It takes `onSignedIn` rather than a router**, since every app lands
   somewhere different.
-- `listDevActors()` and `signInAsPersona()` are exported too, for a non-React
+- `listDevActors()` and `signInAsVirtualUser()` are exported too, for a non-React
   caller. The endpoint only
   signs in rows flagged `actor: true`, so it can never impersonate a real user —
   see **pikku-auth**.

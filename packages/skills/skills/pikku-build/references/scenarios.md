@@ -11,8 +11,8 @@
 - Running them
 - Coverage — which functions have actually been run
 
-A scenario is a user journey run as one of your personas, over the real transport, with that
-persona's session. It is the only kind of test worth writing here, because a passing one proves the
+A scenario is a user journey run as one of your virtual users, over the real transport, with that
+virtual user's session. It is the only kind of test worth writing here, because a passing one proves the
 app works the way a signed-in person experiences it.
 
 The traps below all cost a real changeset a red run, and most of them are invisible on the run that
@@ -109,7 +109,7 @@ did what.
 
 ## What to assert
 
-**Write the refusals, and assert WHY.** One persona reaching for another's row has to be rejected,
+**Write the refusals, and assert WHY.** One virtual user reaching for another's row has to be rejected,
 and that rejection is a scenario — it is how you prove access control instead of asserting it. But
 only if the step reads the reason: "not ok" is also what a malformed request returns, so a refusal
 step that stops at the status code passes on a call the function never even ran. One here posted
@@ -251,7 +251,7 @@ bunx --bun pikku scenario run local --spawn                  # server-side, the 
 bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
 
-In a multi-app project that one run covers both frontends: each persona carries
+In a multi-app project that one run covers both frontends: each virtual user carries
 its own `app` and `@pikku/playwright` resolves the base url from the
 environment's `appUrls` map, so there is no second environment to run.
 

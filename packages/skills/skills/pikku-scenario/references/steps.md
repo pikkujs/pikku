@@ -54,7 +54,7 @@ Rules that bite:
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
 - **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
-- **A step that runs as somebody declares `actor: true`**, and the runner injects `wire.actor` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no persona to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse an actor's session. Dispatching a step that declared it without `{ actor: actors.x }` fails before the body runs (`ScenarioActorRequired`); a step that did not declare it has no `actor` on its wire at all.
+- **A step that runs as somebody declares `actor: true`**, and the runner injects `wire.actor` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no virtual user to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse an actor's session. Dispatching a step that declared it without `{ actor: actors.x }` fails before the body runs (`ScenarioActorRequired`); a step that did not declare it has no `actor` on its wire at all.
 - **`env` is optional on the wire**, because most steps need nothing from it. Narrow it with `requireScenarioEnv(scenarioStep)` from `#pikku/scenario` rather than a local guard — it names the step and says what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
@@ -109,7 +109,7 @@ Two consequences follow, and both shape how steps get written:
   agents, and `createDevAgentRunner` needs a base URL _and_ a key together
   (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or the LiteLLM pair). With a key alone
   it returns nothing and `agentRunner` is `undefined`, so `actor.converse`
-  fails before the persona says anything. A suite that would rather own its own
+  fails before the virtual user says anything. A suite that would rather own its own
   model can pass an `llm` to `runConversation` instead of relying on this one.
 ---
 
@@ -282,7 +282,7 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
   { status: string }
 >({
   name: 'seesTheOrderConfirmed',
-  // Both bindings run as the persona, so the step declares one and the runner
+  // Both bindings run as the virtualUser, so the step declares one and the runner
   // injects `wire.actor` — non-optional in every binding.
   actor: true,
   template: 'sees order {orderId} confirmed',

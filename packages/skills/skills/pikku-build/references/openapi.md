@@ -118,9 +118,9 @@ in the `pikku-auth` skill's `references/better-auth.md`.
 
 ## Scenarios
 
-A persona that signs in through the upstream needs an upstream credential to
+A virtual user that signs in through the upstream needs an upstream credential to
 act with. The install adds `credentials` to `pikkuActor` in `src/auth.ts`, and
-at sign-in each actor stores `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` from the
+at sign-in each actor stores `ACTOR_CREDENTIAL_<VIRTUAL_USER>_<NAME>` from the
 environment (e.g. `ACTOR_CREDENTIAL_SALES_REP_DOLIBARR`). Without it every
 scenario step that reaches the upstream fails with `missing_credential`. The
-`pikku-scenario` skill's `references/personas.md` has the details.
+`pikku-scenario` skill's `references/virtual-users.md` has the details.

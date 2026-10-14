@@ -105,7 +105,7 @@ without it in production?"** If yes, it is configuration and belongs in a
 migration, however much it looks like sample data. A venue and its rooms, a
 product catalogue, a tenant, a country list, the organization the whole
 deployment hangs off — all configuration. Accounts and role grants are
-provisioning: the fabric plugin's `personas`, or a migration. What is left
+provisioning: the fabric plugin's `virtualUsers`, or a migration. What is left
 over is the seed's job — the bookings, orders and messages a demo needs and a real
 environment starts without.
 

@@ -39,8 +39,8 @@ a second changeset — say so in `covers`.
 
 ## Can each scenario actually be performed?
 
-**Ask which persona performs it. If the answer is "nobody", it belongs one level up or to no pass
-at all.** The runner drives the app as the personas the project declares; there is no anonymous
+**Ask which virtual user performs it. If the answer is "nobody", it belongs one level up or to no pass
+at all.** The runner drives the app as the virtual users the project declares; there is no anonymous
 RPC caller, so "a caller with no session is refused" is a sentence a backend or permission
 scenario cannot perform. Signed-out is a BROWSER fact.
 

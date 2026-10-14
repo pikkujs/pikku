@@ -205,7 +205,7 @@ It is a **summary, not the note** — the argument continues in prose underneath
 | `table:`    | a table name                                       | the generated db schema                                                                    |
 | `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                                  |
 | `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
-| `persona:`  | a persona name                                     | `definePersonas()`                                                                         |
+| `virtualUser:`  | a virtual user name                                     | `defineVirtualUsers()`                                                                         |
 
 Ids are case-sensitive: `createEntry` is not `createentry`.
 
@@ -219,7 +219,7 @@ These are all things that exist somewhere better, so a note is always the copy t
 
 | Do not write                        | Because it lives in                                        |
 | ----------------------------------- | ---------------------------------------------------------- |
-| a `personas/` section               | `definePersonas()` in the project's own code               |
+| a `virtual users/` section               | `defineVirtualUsers()` in the project's own code               |
 | a `scenarios/` section              | the `scenarios` of the plan for the changeset that builds it |
 | a `permissions/` section            | a decision note under `decisions/security/`                |
 | a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |

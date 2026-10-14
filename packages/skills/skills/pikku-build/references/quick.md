@@ -4,7 +4,7 @@
 
 - Agent Operating Procedure
 - 1. One question, then build
-- 2. Personas — 60 seconds, not optional
+- 2. Virtual users — 60 seconds, not optional
 - 3. Build
 - 4. Look at it — actually
 - 5. One smoke scenario
@@ -55,9 +55,9 @@ message catalogue only: add the locale and set `defaultLocale`, and leave
 `baseLocale` at `en`. the app workflow's §1a has the three axes in full; getting
 them confused is how a project ends up unable to add a second language.
 
-## 2. Personas — 60 seconds, not optional
+## 2. Virtual users — 60 seconds, not optional
 
-`packages/functions/src/personas.ts` ships with a `visitor`. Add one persona per
+`packages/functions/src/virtual-users.ts` ships with a `visitor`. Add one virtual user per
 kind of person, plus **a second one of the primary kind** — that is what makes
 "you see yours, not theirs" observable when you click around.
 
@@ -65,9 +65,9 @@ kind of person, plus **a second one of the primary kind** — that is what makes
 rule, and it lives in each function's `permissions`, not in a role:
 
 ```typescript
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
-definePersonas({
+defineVirtualUsers({
   visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
   amina: { name: 'Amina', jobTitle: 'Gardener', account: {} },
   bilal: { name: 'Bilal', jobTitle: 'Gardener', account: {} },
@@ -78,7 +78,7 @@ definePersonas({
 named:
 
 ```typescript
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 import { defineSystemRole } from '#pikku/scopes'
 
 defineSystemRole({
@@ -86,7 +86,7 @@ defineSystemRole({
   tenant: { displayName: 'Tenant', description: 'Sees only their own tenancy', scopes: [] },
 })
 
-definePersonas({
+defineVirtualUsers({
   visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
   amina: { name: 'Amina', jobTitle: 'Owner', roles: ['owner'], account: {} },
   bilal: { name: 'Bilal', jobTitle: 'Owner', roles: ['owner'], account: {} },
@@ -99,8 +99,8 @@ owners are separated from each other.
 
 - **Keep `visitor`.** The shipped scenarios name `actors.visitor`; removing it
   fails `pikku all` and nothing you write after that registers.
-- **One `definePersonas` call for the whole project.**
-- **Never write an email address** — each is derived from the persona id and
+- **One `defineVirtualUsers` call for the whole project.**
+- **Never write an email address** — each is derived from the virtual user id and
   `scenarios.emailDomain` in `pikku.config.json`.
 - `roles` is typechecked against `defineSystemRole`; an undeclared role is a
   build error.
@@ -122,7 +122,7 @@ Then, in this order — it is the order codegen depends on:
    the file is plain `INSERT`s — no `ON CONFLICT DO NOTHING`. It is local only:
    no deploy applies it, so anything the app cannot run without belongs in a
    migration instead. **Be generous, and
-   seed rows for both personas.** An empty app demos badly, and you cannot see a
+   seed rows for both virtual users.** An empty app demos badly, and you cannot see a
    layout break against zero rows.
 3. **Functions** — one `pikkuFunc` per `*.function.ts`, `expose: true`. Pikku
    generates the typed RPC client and React Query hooks; you do NOT write HTTP
@@ -169,7 +169,7 @@ grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRE
 ```
 
 Never commit `.env`. Then run it — through `bun run dev`, never `vite` on its
-own, because the dev script is what hands the frontend the persona list for the
+own, because the dev script is what hands the frontend the virtual user list for the
 "Sign in as …" switcher; without it the switcher silently renders nothing:
 
 ```sh
@@ -200,7 +200,7 @@ app a look — that is the app workflow's §8a.
 
 ## 5. One smoke scenario
 
-Not the full ladder — one journey, end to end, as a real persona, so the app has
+Not the full ladder — one journey, end to end, as a real virtual user, so the app has
 at least one thing that stays true.
 
 ```typescript
@@ -247,7 +247,7 @@ to the app workflow (the app reference, see SKILL.md) and do this, in order:
    at. Then `pikku knowledge index && pikku knowledge validate`.
 2. Backfill an entity note for each thing the app holds, so `pikku knowledge
    gaps` has something to measure against.
-3. Write the refusal scenarios — the ones proving one persona cannot reach
+3. Write the refusal scenarios — the ones proving one virtual user cannot reach
    another's rows. This is the gap that matters most.
 4. Then pick up the app workflow at its §4 (apps) or §5 (changes) for
    anything new.

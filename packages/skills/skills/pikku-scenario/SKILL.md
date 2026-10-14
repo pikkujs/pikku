@@ -1,16 +1,16 @@
 ---
 name: pikku-scenario
 description: >-
-  Use when writing or running Pikku scenarios, running a persona as a virtual user, or when
+  Use when writing or running Pikku scenarios, running a virtual user against a stage, or when
   asked to test Pikku functions or improve coverage. A scenario (pikkuScenario) drives the app
   the way users do — steps run as actors over the real transport against a running server — so a
   flow doubles as an e2e test and a staged/production health check. Covers scenario.do /
   expectEventually / expectError / expectService / expectScore, declared steps via
   pikkuScenarioStep (browser steps driven by @pikku/playwright) written as intent rather than
-  clicks, personas / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
-  `pikku scenario` and `pikku persona` commands, and live coverage
+  clicks, virtual users / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
+  `pikku scenario` and `pikku virtual-user` commands, and live coverage
   via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
-  coverage, e2e flows, browser/UI e2e, health checks, personas, virtual users, or adversarial
+  coverage, e2e flows, browser/UI e2e, health checks, virtual users, virtual users, or adversarial
   runs against a stage. DO NOT TRIGGER when: user asks about running an existing suite (use
   Bash) or CI config.
 installGroups: [core]
@@ -35,9 +35,9 @@ each says when to open it:
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `references/steps.md`       | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                    |
 | `references/browser.md`     | Browser bindings, and locating by message key in a translated app                                            |
-| `references/personas.md`    | Personas vs actors, `definePersonas`, upstream credentials for actors, and the human "Sign in as …" switcher |
+| `references/virtual-users.md`    | Virtual users vs actors, `defineVirtualUsers`, upstream credentials for actors, and the human "Sign in as …" switcher |
 | `references/coverage.md`    | Live coverage, filling it, and unit tests for pure logic                                                     |
-| `references/persona-run.md` | Running a persona as a model-driven virtual user against a stage                                             |
+| `references/virtual-user-run.md` | Running a virtual user as a model-driven virtual user against a stage                                             |
 
 ## What a scenario is
 
@@ -256,11 +256,11 @@ score a perfect run while checking nothing.
 
 ## Configuration
 
-Personas are declared in TypeScript. One `definePersonas({ … })` call for the
-whole project — codegen builds the `PersonaId` union from it, materialises one
+Virtual users are declared in TypeScript. One `defineVirtualUsers({ … })` call for the
+whole project — codegen builds the `VirtualUserId` union from it, materialises one
 scenario actor per person, and seeds a user row each:
 
-```ts snippet:definePersonas
+```ts snippet:defineVirtualUsers
 
 ```
 
@@ -284,12 +284,12 @@ scenario actor per person, and seeds a user row each:
 
 - `scenarios.emailDomain` is the mail domain actor addresses are built on.
 - `scenarios.browserDriver` is the package driving `browser` bindings.
-- `scenarios.model` is the model a persona thinks with (`actor.converse`, `pikku virtual-user run`).
+- `scenarios.model` is the model a virtual user thinks with (`actor.converse`, `pikku virtual-user run`).
 - `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required; `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`, and `sessionPath` has a default too.
 
-**`references/personas.md`** covers the parts that bite: one entry is one
+**`references/virtual-users.md`** covers the parts that bite: one entry is one
 person and one actor, emails are derived and never written, `runnable: false`
-for someone only acted upon, `definePersonas` being read from source rather
+for someone only acted upon, `defineVirtualUsers` being read from source rather
 than evaluated, and the same actor list powering a human "Sign in as …"
 switcher.
 
@@ -360,6 +360,6 @@ and where a plain unit test is still the right tool.
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                                        |
 | Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured.                      |
 
-`@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `PersonaData`, `DbUtils`) — out of scope here.
+`@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `VirtualUserData`, `DbUtils`) — out of scope here.
 
 See `pikku-concepts` for the core mental model.

@@ -194,11 +194,11 @@ the section describes. Add the capture step once:
 
 ### The camera sees your seed data
 
-Every figure shows whatever the scenario's personas and seed rows contain, so
+Every figure shows whatever the scenario's virtual users and seed rows contain, so
 they are part of the documentation:
 
-- A persona's display name is in the header of every shot. "Scenario Admin" or
-  "test-user-3" is on every page of the guide; give personas plausible names
+- A virtual user's display name is in the header of every shot. "Scenario Admin" or
+  "test-user-3" is on every page of the guide; give virtual users plausible names
   and roles.
 - Seed rows are the example data a reader sees: in the app's language, the
   shape real data takes — no lorem ipsum, no English description inside a
@@ -285,7 +285,7 @@ the second is clean. Commit the lock; never hand-edit or hand-merge it.
       what you see, what goes wrong.
 - [ ] Captions (screenshot names, scenario titles) are reader copy — no routes,
       sizes, test ids or actor names.
-- [ ] Personas and seed data on camera look like real use, in the app's
+- [ ] Virtual users and seed data on camera look like real use, in the app's
       language.
 - [ ] Every feature is cited or `document: false`; no `--allow-undocumented`.
 - [ ] Built from a full, passing `--run browser --screenshots` run; no "block

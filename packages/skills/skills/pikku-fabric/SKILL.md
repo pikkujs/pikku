@@ -273,19 +273,19 @@ reviewer has no seed password, so without the control they are locked out of the
 app they were asked to look at.
 
 Satisfy it with the starter template's `<DevActorSwitcher />`, or with your
-own UI built on `useDevActors()` or `signInAsPersona()` from `@pikku/react` —
+own UI built on `useDevActors()` or `signInAsVirtualUser()` from `@pikku/react` —
 validate accepts any of those call sites as evidence, so custom rendering
-passes. Either way the server needs `personaSignIn` on `pikkuActor`; see
+passes. Either way the server needs `virtualUserSignIn` on `pikkuActor`; see
 **pikku-scenario** for it and **pikku-react** for the props.
 
 The validator also accepts the shapes that predate the package — a hand-rolled
 `signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
 not fail the build. **Treat that as a grace period, not the target: migrate those
-to `<DevActorSwitcher />`.** They put a per-persona credential in the frontend
-bundle, which the persona endpoint exists to avoid.
+to `<DevActorSwitcher />`.** They put a per-virtual-user credential in the frontend
+bundle, which the virtual user endpoint exists to avoid.
 
 Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
-endpoint with a different purpose — one fixed admin, not the declared personas —
+endpoint with a different purpose — one fixed admin, not the declared virtual users —
 and it does not clear this rule.
 
 ## Hard rules
