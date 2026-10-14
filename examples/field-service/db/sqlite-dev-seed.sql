@@ -10,7 +10,7 @@ INSERT INTO company (company_id, name, slug) VALUES
 ON CONFLICT DO NOTHING;
 
 -- The invitation list. `scenarios.emailDomain` in pikku.config.json is what
--- turns the persona id `dana` into dana@actors.local, so these addresses are
+-- turns the virtual user id `dana` into dana@actors.local, so these addresses are
 -- the same ones the actors sign in with.
 INSERT INTO membership (membership_id, company_id, email) VALUES
   ('mem_dana',  'co_northwind', 'dana@actors.local'),

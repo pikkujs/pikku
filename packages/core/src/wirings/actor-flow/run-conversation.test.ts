@@ -107,7 +107,7 @@ const alwaysSuspendingTarget = (): {
 const base = {
   virtualUser: {
     id: 'priya',
-    email: 'priya@personas.local',
+    email: 'priya@virtualuser.invalid',
     name: 'Priya',
     personality: 'concise',
     roles: [],

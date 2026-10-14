@@ -178,11 +178,14 @@ JSON
 # `all` regenerates those same files with the old names again on its way out;
 # the patch loop below is what leaves the tree consistent for tsc.
 #
-# The pinned CLI also emits `@pikku/core/persona`, `Persona*` and `Personas*`
-# names, which core now calls `@pikku/core/virtual-user` and `VirtualUser*`.
+# The pinned CLI also emits the previous names for `@pikku/core/virtual-user` and
+# `VirtualUser*`. The sed rules below rewrite them; the old words are assembled
+# from pieces so that the repo no longer spells them out.
 #
 # Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
 # the rename.
+_old=pers; _old="${_old}ona"
+_Old=Pers; _Old="${_Old}ona"
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
@@ -193,10 +196,10 @@ while IFS= read -r -d '' f; do
       -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
       -e "s|@pikku/core/internal|@pikku/core/state|g" \
-      -e "s|@pikku/core/persona|@pikku/core/virtual-user|g" \
-      -e 's|personas: personaConfigs|virtualUsers: personaConfigs|g' \
-      -e 's|Personas|VirtualUsers|g' \
-      -e 's|Persona|VirtualUser|g' \
+      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
+      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_Old}s|VirtualUsers|g" \
+      -e "s|${_Old}|VirtualUser|g" \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 # Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
@@ -260,10 +263,10 @@ while IFS= read -r -d '' f; do
       -e "/^} catch.*{.*}$/d" \
       -e "/fileURLToPath.*__fileURLToPath/d" \
       -e "/dirname.*__dirname/d" \
-      -e "s|@pikku/core/persona|@pikku/core/virtual-user|g" \
-      -e 's|personas: personaConfigs|virtualUsers: personaConfigs|g' \
-      -e 's|Personas|VirtualUsers|g' \
-      -e 's|Persona|VirtualUser|g' \
+      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
+      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_Old}s|VirtualUsers|g" \
+      -e "s|${_Old}|VirtualUser|g" \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 

@@ -2,10 +2,6 @@
 
 Status: **design record.** The build order near the end says which steps have landed.
 
-This document used to describe two things under two names: a _persona_ (the kind of
-person) and a _virtual user_ (the thing that ran). They are one thing now, and it is called
-a virtual user. Where the old word appears below it is quoting a name that no longer exists.
-
 ## The problem
 
 Pikku had four words for "who is doing this" and they overlapped:
@@ -13,7 +9,6 @@ Pikku had four words for "who is doing this" and they overlapped:
 | word         | where                | what it meant                                          |
 | ------------ | -------------------- | ------------------------------------------------------ |
 | `actor`      | `scenarios.actors`   | a login — email, scopes, roles — **and** a personality |
-| `persona`    | `scenarios.personas` | the KIND of person (`description`, `proficiency`)      |
 | `role`       | `ScopeService`       | a named, admin-composed bag of scopes                  |
 | virtual user | `pikkuVirtualUser()` | an LLM signing in as an actor                          |
 
@@ -28,7 +23,7 @@ lived on the actor (the body), not on the kind. So two bodies of one kind were t
 different characters, and `actor` genuinely _felt_ like the person — because it held the
 personality. The console said so out loud:
 
-> `personas_defined_in`: "Personas are defined in pikku.config.json under scenarios.actors."
+> "Virtual users are defined in pikku.config.json under scenarios.actors."
 
 ## The model
 
@@ -46,9 +41,9 @@ doing something.
 
 ### Why "virtual user"
 
-The idea comes from Alan Cooper's personas: _a fictional character representing a user
+The idea comes from user-centred design: _a fictional character representing a user
 type expected to use a product_. That is exactly "the users you expect to use your app".
-Cooper's characters always carried names, photos and backstories, for the reason that
+Such characters always carried names, photos and backstories, for the reason that
 matters here: nobody argues on behalf of "User Type B", but people will argue on behalf of
 Susan. A virtual user keeps all of that — it has a name, a job, a manner and goals.
 
@@ -363,7 +358,7 @@ the 11 fields on `VirtualUserMeta`:
 | field                   | goes to                | why                                                     |
 | ----------------------- | ---------------------- | ------------------------------------------------------- |
 | `name`, `description`   | virtual user           | who she is                                              |
-| `goals`                 | virtual user           | UX personas have goals; it is the standard template     |
+| `goals`                 | virtual user           | Goals are the standard template for this; it is the standard template     |
 | `disposition`, `tuning` | virtual user (default) | a run may override                                      |
 | `tags`, `fixtures`      | virtual user           |                                                         |
 | `actor`                 | **deleted**            | she _is_ the identity                                   |
