@@ -2,7 +2,7 @@ import { deriveActorSecret } from './persona-actor-secret.js'
 import { PikkuError } from '../errors/error-handler.js'
 import type { VariablesService } from './variables-service.js'
 import type { ResolvedPersona } from './personas-service.js'
-import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
+import type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 
 /**
  * The header `resolveImpersonatedSession` reads the target user id from.

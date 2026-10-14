@@ -66,7 +66,7 @@ export {
 export {
   createCookieJar,
   type ScenarioCookieJar,
-} from '../workflow/scenario-cookie-jar.js'
+} from '../../services/scenario-cookie-jar.js'
 export {
   wirePersonaSignIn,
   getWiredPersonaSignIn,

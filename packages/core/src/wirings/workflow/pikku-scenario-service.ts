@@ -31,7 +31,6 @@ import type {
   PikkuWorkflowWire,
   WorkflowQueueOptions,
 } from './workflow.types.js'
-import { getWiredPersonaSignIn } from '../persona/wire-persona-sign-in.js'
 import type { PikkuScenarioWire } from './scenario.types.js'
 import type {
   WorkflowExpectEventuallyOptions,
@@ -99,8 +98,8 @@ export { SCENARIO_SURFACES } from './scenario-step.types.js'
 export { resolveScenarioSurfaces } from './scenario-surface.js'
 
 export { pollUntil, type PollOptions } from './scenario-poll.js'
-export { createCookieJar } from './scenario-cookie-jar.js'
-export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
+export { createCookieJar } from '../../services/scenario-cookie-jar.js'
+export type { ScenarioCookieJar } from '../../services/scenario-cookie-jar.js'
 export { composeStepProse, renderStepTemplate } from './scenario-prose.js'
 
 export { requireScenarioEnv } from './scenario-step-guards.js'
@@ -675,7 +674,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     if (!variables || !metaService) {
       return undefined
     }
-    const wired = getWiredPersonaSignIn() !== null
+    const wired = pikkuState(null, 'persona', 'signIn') !== null
     const secret = wired
       ? undefined
       : await variables.get('SCENARIO_ACTOR_SECRET')

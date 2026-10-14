@@ -16,7 +16,7 @@ import { runConversation } from '../wirings/actor-flow/run-conversation.js'
 import {
   createCookieJar,
   type ScenarioCookieJar,
-} from '../wirings/workflow/scenario-cookie-jar.js'
+} from './scenario-cookie-jar.js'
 import {
   ActorSignIn,
   type ActorSecretResolver,

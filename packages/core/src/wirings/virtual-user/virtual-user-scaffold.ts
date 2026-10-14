@@ -1,8 +1,8 @@
+import { pikkuState } from '../../pikku-state.js'
 import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import { getWiredPersonaSignIn } from '../persona/wire-persona-sign-in.js'
 import type { HttpPersonasConfig } from '../../services/http-personas.js'
 import type {
   ResolvedPersona,
@@ -574,7 +574,7 @@ export const executeVirtualUserRun = async ({
     // it does not need the target to hold a shared secret at all. The actor
     // secret is the local-only fallback, because only `pikku dev` serves the
     // endpoint that accepts it.
-    const wired = getWiredPersonaSignIn() !== null
+    const wired = pikkuState(null, 'persona', 'signIn') !== null
     const token = wired
       ? undefined
       : (operatorToken ??
