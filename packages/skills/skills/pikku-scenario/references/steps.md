@@ -282,7 +282,7 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
   { status: string }
 >({
   name: 'seesTheOrderConfirmed',
-  // Both bindings run as the virtualUser, so the step declares one and the runner
+  // Both bindings run as the virtual user, so the step declares one and the runner
   // injects `wire.actor` — non-optional in every binding.
   actor: true,
   template: 'sees order {orderId} confirmed',

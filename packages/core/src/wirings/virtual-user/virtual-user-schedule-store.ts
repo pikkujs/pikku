@@ -18,7 +18,7 @@ import type {
  * written down.
  */
 export interface VirtualUserScheduleRecord {
-  virtualUser: string
+  virtualUserId: string
   /**
    * Off by default. A schedule that ran the moment it was written would start
    * spending an app's model budget as a side effect of a migration.
@@ -42,7 +42,7 @@ export interface VirtualUserScheduleRecord {
 
 /** A partial write — anything left out keeps whatever the row already had. */
 export interface VirtualUserScheduleInput {
-  virtualUser: string
+  virtualUserId: string
   enabled?: boolean
   disposition?: VirtualUserDisposition
   goals?: readonly string[]
@@ -65,7 +65,7 @@ export interface VirtualUserScheduleInput {
 export interface VirtualUserScheduleStore {
   /** Creates or updates one virtual user's cadence. Returns the row as it now stands. */
   set(schedule: VirtualUserScheduleInput): Promise<VirtualUserScheduleRecord>
-  get(virtualUser: string): Promise<VirtualUserScheduleRecord | null>
+  get(virtualUserId: string): Promise<VirtualUserScheduleRecord | null>
   list(): Promise<VirtualUserScheduleRecord[]>
   /** Enabled rows whose `nextRunAt` has passed. */
   due(now: Date): Promise<VirtualUserScheduleRecord[]>
@@ -86,8 +86,8 @@ export interface VirtualUserScheduleStore {
    * loser is told `false` and leaves the virtual user to whoever got there first.
    */
   claim(
-    virtualUser: string,
+    virtualUserId: string,
     claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }
   ): Promise<boolean>
-  remove(virtualUser: string): Promise<void>
+  remove(virtualUserId: string): Promise<void>
 }

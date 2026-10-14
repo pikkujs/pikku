@@ -2410,7 +2410,7 @@ export interface DispositionProfile {
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
 establishOperatorSession: (fetchImpl: (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, virtualUser: ResolvedVirtualUser, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
-executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, virtualUsers, createVirtualUsers, runId, virtualUser: virtualUserId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, virtualUsers, createVirtualUsers, runId, virtualUserId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined
@@ -2420,7 +2420,7 @@ export interface ExecuteVirtualUserRunParams {
   virtualUsers: ScaffoldVirtualUsers
   createVirtualUsers: (options: Omit<HttpVirtualUsersConfig, 'virtualUsers'>) => ScenarioVirtualUsers
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: string
   goals: string[]
   memory: Record<string, string>
@@ -2517,7 +2517,7 @@ requireVirtualUserRunStore: (store: VirtualUserRunStore | undefined, reading?: b
 requireVirtualUserScheduleStore: (store: VirtualUserScheduleStore | undefined) => VirtualUserScheduleStore
 roleMismatchMessage: (verification: RoleVerification) => string | null
 export interface RoleVerification {
-  virtualUser: string
+  virtualUserId: string
   expected: string[]
   actual: string[]
   missing: string[]
@@ -2552,27 +2552,27 @@ export interface RunVirtualUserParams {
 }
 export type ScaffoldVirtualUsers = Record<string, ResolvedVirtualUser>
 export type SchemaMap = Record<string, Record<string, unknown> | undefined>
-serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; virtualUser: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
-serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, virtualUsers: ScaffoldVirtualUsers) => { virtualUser: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
+serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; virtualUserId: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
+serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, virtualUsers: ScaffoldVirtualUsers) => { virtualUserId: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
 serializeVirtualUserSteps: (steps: readonly StepRecord[]) => { index: number; intentId: string | undefined; action: Record<string, unknown>; status: number | undefined; ok: boolean | undefined; response: string | undefined; findingKinds: string[] | undefined; tokensIn: number; tokensOut: number; }[]
 signInPathFor: (configured: string | undefined, plugin: "actor" | "fabric") => string | undefined
 STALE_RUN_AFTER_MS: number
 export interface StartedVirtualUserRun {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   goals: string[]
   memory: Record<string, string>
 }
-startVirtualUserRun: ({ store, virtualUsers, config, environments, environment, virtualUser: virtualUserId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
+startVirtualUserRun: ({ store, virtualUsers, config, environments, environment, virtualUserId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
 export interface StartVirtualUserRunParams {
   store: VirtualUserRunStore | undefined
   virtualUsers: ScaffoldVirtualUsers
   config: { nodeEnv?: string } | undefined
   environments?: Readonly<Record<string, VirtualUserEnvironment>>
   environment?: string
-  virtualUser: string
+  virtualUserId: string
   disposition?: string
   seed?: number
   goals?: string[]
@@ -2594,7 +2594,7 @@ tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterM
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
 validateAndBuildVirtualUsersMeta: (definitions: VirtualUserDefinitions) => VirtualUsersMeta
 verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
-verifyVirtualUserRoles: (virtualUser: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
+verifyVirtualUserRoles: (virtualUserId: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
 VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
 export type VirtualUserAccountMeta = {
   provider?: string
@@ -2673,7 +2673,7 @@ export interface VirtualUserRunOutcome {
 }
 export interface VirtualUserRunRecord {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   status: 'running' | 'completed' | 'failed'
@@ -2698,7 +2698,7 @@ export interface VirtualUserRunResult {
   stoppedBy: | 'no-intents' | 'budget-steps' | 'budget-mutations' | 'budget-duration' | 'stop-hook' | 'exhausted'
 }
 export interface VirtualUserRunStart {
-  virtualUser: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   goals?: readonly string[]
@@ -2710,11 +2710,11 @@ export interface VirtualUserRunStore {
   complete(runId: string, outcome: VirtualUserRunOutcome): Promise<void>
   fail(runId: string, error: string): Promise<void>
   get(runId: string): Promise<VirtualUserRunRecord | null>
-  list(options?: { virtualUser?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
+  list(options?: { virtualUserId?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
   steps(runId: string, options?: { limit?: number; offset?: number }): Promise<StepRecord[]>
 }
 export interface VirtualUserScheduleInput {
-  virtualUser: string
+  virtualUserId: string
   enabled?: boolean
   disposition?: VirtualUserDisposition
   goals?: readonly string[]
@@ -2724,7 +2724,7 @@ export interface VirtualUserScheduleInput {
   nextRunAt?: Date
 }
 export interface VirtualUserScheduleRecord {
-  virtualUser: string
+  virtualUserId: string
   enabled: boolean
   disposition: VirtualUserDisposition
   goals: string[]
@@ -2735,14 +2735,14 @@ export interface VirtualUserScheduleRecord {
   lastRunId: string | null
   lastRunAt: Date | null
 }
-virtualUserScheduleRunInput: (schedule: VirtualUserScheduleRecord) => { virtualUser: string; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | undefined; }
+virtualUserScheduleRunInput: (schedule: VirtualUserScheduleRecord) => { virtualUserId: string; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | undefined; }
 export interface VirtualUserScheduleStore {
   set(schedule: VirtualUserScheduleInput): Promise<VirtualUserScheduleRecord>
-  get(virtualUser: string): Promise<VirtualUserScheduleRecord | null>
+  get(virtualUserId: string): Promise<VirtualUserScheduleRecord | null>
   list(): Promise<VirtualUserScheduleRecord[]>
   due(now: Date): Promise<VirtualUserScheduleRecord[]>
-  claim(virtualUser: string, claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }): Promise<boolean>
-  remove(virtualUser: string): Promise<void>
+  claim(virtualUserId: string, claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }): Promise<boolean>
+  remove(virtualUserId: string): Promise<void>
 }
 virtualUserScopes: (virtualUser: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
 export interface VirtualUserSignIn {
@@ -2769,8 +2769,8 @@ export interface VirtualUserTickParams {
   staleAfterMs?: number
 }
 export interface VirtualUserTickResult {
-  dispatched: { virtualUser: string; runId: string }[]
-  skipped: { virtualUser: string; reason: VirtualUserSkipReason }[]
+  dispatched: { virtualUserId: string; runId: string }[]
+  skipped: { virtualUserId: string; reason: VirtualUserSkipReason }[]
   reaped: string[]
 }
 export interface VirtualUserTuning {
@@ -2783,11 +2783,11 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-writeVirtualUserSchedule: ({ store, virtualUsers, virtualUser, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+writeVirtualUserSchedule: ({ store, virtualUsers, virtualUserId, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   virtualUsers: ScaffoldVirtualUsers
-  virtualUser: string
+  virtualUserId: string
   enabled?: boolean
   disposition?: string
   goals?: string[]

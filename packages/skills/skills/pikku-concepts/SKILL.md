@@ -102,8 +102,8 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 | `serve`                      | Bundled bun/node runner — no watch, no codegen                                 | `pikku-deploy`                          |
 | `watch`                      | Regenerate on file change, without a server                                    | —                                       |
 | `scenario list\|run`         | Scenarios as e2e tests and health checks                                       | `pikku-scenario`                        |
-| `virtualUser run`                | A declared virtual user as a model-driven virtual user against a stage              | `pikku-scenario`, virtual-user-run reference |
-| `virtualUser list\|sync\|secret` | Who is declared; what an environment will provision; minting their credentials | `pikku-scenario`, virtual-user-run reference |
+| `virtual-user run`               | A declared virtual user, model-driven, against a stage                              | `pikku-scenario`, virtual-user-run reference |
+| `virtual-user list\|sync\|secret` | Who is declared; what an environment will provision; minting their credentials | `pikku-scenario`, virtual-user-run reference |
 | `db`                         | Local development database                                                     | `pikku-kysely`                          |
 
 **Inspecting and evolving**

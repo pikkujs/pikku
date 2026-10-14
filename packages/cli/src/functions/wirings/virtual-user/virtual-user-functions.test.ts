@@ -32,7 +32,7 @@ describe('serializeVirtualUserFunctions', () => {
 
   test('offers a way to ask what the virtual users have been doing', () => {
     assert.match(out, /export const listVirtualUserRuns = pikkuFunc\(/)
-    assert.match(out, /\)\.list\(\{ virtualUser, limit, offset \}\)/)
+    assert.match(out, /\)\.list\(\{ virtualUserId, limit, offset \}\)/)
   })
 
   // The steps are the bulk of a run, so a list that carried them would make

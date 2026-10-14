@@ -181,7 +181,7 @@ describe('refusals reach the caller', () => {
           config: { nodeEnv: 'development' },
           environments: { production: { production: true } },
           environment: 'production',
-          virtualUser: 'susan',
+          virtualUserId: 'susan',
           disposition: 'newcomer',
         })
       ),
@@ -213,12 +213,12 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: undefined,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       startedBy: 'user-1',
     })
     assert.equal(run.runId, 'run-1')
     assert.equal(started.length, 1)
-    assert.equal(started[0].virtualUser, 'susan')
+    assert.equal(started[0].virtualUserId, 'susan')
     assert.equal(started[0].startedBy, 'user-1')
   })
 
@@ -230,7 +230,7 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: undefined,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
     })
     assert.equal(typeof started[0].seed, 'number')
     assert.equal(started[0].seed, run.seed)
@@ -242,7 +242,7 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: undefined,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       seed: 42,
     })
     assert.equal(started[0].seed, 42)
@@ -254,7 +254,7 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: undefined,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
     })
     assert.equal(started[0].disposition, 'realistic')
   })
@@ -266,7 +266,7 @@ describe('startVirtualUserRun', () => {
         store,
         virtualUsers,
         config: { nodeEnv: 'production' },
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
       /Only the 'accountable' disposition may run against production/
@@ -282,7 +282,7 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: { nodeEnv: 'production' },
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'accountable',
     })
     assert.equal(started[0].disposition, 'accountable')
@@ -299,7 +299,7 @@ describe('startVirtualUserRun', () => {
       config: { nodeEnv: 'production' },
       environments: { staging: {}, production: { production: true } },
       environment: 'staging',
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'adversarial',
     })
     assert.equal(started[0].disposition, 'adversarial')
@@ -314,7 +314,7 @@ describe('startVirtualUserRun', () => {
         config: { nodeEnv: 'development' },
         environments: { staging: {}, production: { production: true } },
         environment: 'production',
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
       /Only the 'accountable' disposition may run against production/
@@ -336,7 +336,7 @@ describe('startVirtualUserRun', () => {
           virtualUsers,
           config: { nodeEnv: 'development' },
           environments: { staging: {}, production: { production: true } },
-          virtualUser: 'susan',
+          virtualUserId: 'susan',
           disposition: 'adversarial',
         }),
         /Only the 'accountable' disposition may run against production/
@@ -354,7 +354,7 @@ describe('startVirtualUserRun', () => {
         store,
         virtualUsers,
         config: undefined,
-        virtualUser: 'observed',
+        virtualUserId: 'observed',
       }),
       /declared as acted upon, never run/
     )
@@ -370,7 +370,7 @@ describe('startVirtualUserRun', () => {
       store,
       virtualUsers,
       config: undefined,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
     })
     assert.deepEqual(Object.keys(started[0]).sort(), [
       'disposition',
@@ -378,7 +378,7 @@ describe('startVirtualUserRun', () => {
       'memory',
       'seed',
       'startedBy',
-      'virtualUser',
+      'virtualUserId',
     ])
   })
 })
@@ -386,7 +386,7 @@ describe('startVirtualUserRun', () => {
 const record = (): VirtualUserRunRecord =>
   ({
     runId: 'run-1',
-    virtualUser: 'susan',
+    virtualUserId: 'susan',
     disposition: 'realistic',
     seed: 7,
     status: 'complete',
@@ -471,7 +471,7 @@ describe('serializeVirtualUserSteps', () => {
 
 const schedule = (): VirtualUserScheduleRecord =>
   ({
-    virtualUser: 'susan',
+    virtualUserId: 'susan',
     enabled: true,
     disposition: 'adversarial',
     goals: ['Break checkout'],
@@ -520,7 +520,7 @@ describe('serializeVirtualUserSchedule', () => {
 
   test('a virtual user nobody declares any more still renders', () => {
     const wire = serializeVirtualUserSchedule(
-      { ...schedule(), virtualUser: 'gone' } as VirtualUserScheduleRecord,
+      { ...schedule(), virtualUserId: 'gone' } as VirtualUserScheduleRecord,
       virtualUsers
     )
     assert.equal(wire.declared.disposition, 'realistic')
@@ -552,7 +552,7 @@ describe('writeVirtualUserSchedule', () => {
       writeVirtualUserSchedule({
         store: undefined,
         virtualUsers,
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
       }),
       /KyselyVirtualUserScheduleStore/
     )
@@ -563,7 +563,7 @@ describe('writeVirtualUserSchedule', () => {
   test('refuses a cadence for a virtual user that is only ever acted upon', async () => {
     const { store, writes } = scheduleStore()
     await assert.rejects(
-      writeVirtualUserSchedule({ store, virtualUsers, virtualUser: 'observed' }),
+      writeVirtualUserSchedule({ store, virtualUsers, virtualUserId: 'observed' }),
       /declared as acted upon, never run/
     )
     assert.equal(writes.length, 0)
@@ -583,7 +583,7 @@ describe('writeVirtualUserSchedule', () => {
       writeVirtualUserSchedule({
         store,
         virtualUsers,
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         enabled: true,
         ...production,
       }),
@@ -602,7 +602,7 @@ describe('writeVirtualUserSchedule', () => {
       writeVirtualUserSchedule({
         store,
         virtualUsers,
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         enabled: true,
         ...production,
       }),
@@ -617,7 +617,7 @@ describe('writeVirtualUserSchedule', () => {
       writeVirtualUserSchedule({
         store,
         virtualUsers,
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         disposition: 'careless',
         ...production,
       }),
@@ -631,7 +631,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       enabled: true,
       disposition: 'accountable',
       ...production,
@@ -648,7 +648,7 @@ describe('writeVirtualUserSchedule', () => {
       virtualUsers: {
         susan: { ...virtualUsers.susan, disposition: 'accountable' },
       } as unknown as ScaffoldVirtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       enabled: true,
       ...production,
     })
@@ -662,7 +662,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       enabled: false,
       ...production,
     })
@@ -670,7 +670,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store: off.store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'careless',
       ...production,
     })
@@ -683,7 +683,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       enabled: true,
       disposition: 'adversarial',
       environments: { staging: {}, production: { production: true } },
@@ -697,7 +697,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       budget: { steps: 3, durationMs: 1_000 },
     })
     assert.deepEqual(writes[0].budget, {
@@ -711,12 +711,12 @@ describe('writeVirtualUserSchedule', () => {
   // to survive the mapping.
   test('an absent budget is left alone and a null one is cleared', async () => {
     const { store, writes } = scheduleStore()
-    await writeVirtualUserSchedule({ store, virtualUsers, virtualUser: 'susan' })
+    await writeVirtualUserSchedule({ store, virtualUsers, virtualUserId: 'susan' })
     assert.equal(writes[0].budget, undefined)
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       budget: null,
     })
     assert.equal(writes[1].budget, null)
@@ -727,7 +727,7 @@ describe('writeVirtualUserSchedule', () => {
     await writeVirtualUserSchedule({
       store,
       virtualUsers,
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       nextRunAt: '2026-03-01T00:00:00.000Z',
     })
     assert.ok(writes[0].nextRunAt instanceof Date)
@@ -741,7 +741,7 @@ describe('virtualUserScheduleRunInput', () => {
   test('a due schedule becomes the input runVirtualUser accepts', () => {
     const input = virtualUserScheduleRunInput(schedule())
     assert.deepEqual(input, {
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'adversarial',
       goals: ['Break checkout'],
       budget: { steps: 20, mutations: 5, durationMs: 600_000 },
@@ -763,9 +763,9 @@ describe('logVirtualUserTick', () => {
   test('everything a tick did is written down, since nobody is watching', () => {
     const { logger, lines } = silentLogger()
     logVirtualUserTick(logger, {
-      dispatched: [{ virtualUser: 'susan', runId: 'run-9' }],
+      dispatched: [{ virtualUserId: 'susan', runId: 'run-9' }],
       reaped: ['run-8'],
-      skipped: [{ virtualUser: 'observed', reason: 'not due' }],
+      skipped: [{ virtualUserId: 'observed', reason: 'not due' }],
     } as any)
     assert.equal(lines.length, 3)
     assert.match(lines[0]!, /^info Virtual user susan started run run-9/)
@@ -791,7 +791,7 @@ describe('executeVirtualUserRun', () => {
         virtualUsers,
         createVirtualUsers: () => ({}) as any,
         runId: 'run-1',
-        virtualUser: 'susan',
+        virtualUserId: 'susan',
         disposition: 'realistic',
         goals: [],
         memory: {},
@@ -901,7 +901,7 @@ describe('executeVirtualUserRun', () => {
   test('a virtual user nobody declares any more is refused before signing in', async () => {
     let called = false
     const { params: p } = params({
-      virtualUser: 'gone',
+      virtualUserId: 'gone',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
         SCENARIO_ACTOR_SECRET: 'shh',

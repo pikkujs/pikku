@@ -59,8 +59,8 @@ export type VirtualUserSkipReason =
   'in-flight' | 'dispatch-failed' | 'claimed-elsewhere'
 
 export interface VirtualUserTickResult {
-  dispatched: { virtualUser: string; runId: string }[]
-  skipped: { virtualUser: string; reason: VirtualUserSkipReason }[]
+  dispatched: { virtualUserId: string; runId: string }[]
+  skipped: { virtualUserId: string; reason: VirtualUserSkipReason }[]
   /** Runs found stranded at `running` and marked failed. */
   reaped: string[]
 }
@@ -104,10 +104,10 @@ export const tickVirtualUserSchedules = async ({
   }
 
   for (const schedule of await schedules.due(now)) {
-    const [latest] = await runs.list({ virtualUser: schedule.virtualUser, limit: 1 })
+    const [latest] = await runs.list({ virtualUserId: schedule.virtualUserId, limit: 1 })
     if (latest?.status === 'running') {
       if (now.getTime() - latest.createdAt.getTime() < staleAfterMs) {
-        result.skipped.push({ virtualUser: schedule.virtualUser, reason: 'in-flight' })
+        result.skipped.push({ virtualUserId: schedule.virtualUserId, reason: 'in-flight' })
         continue
       }
       await runs.fail(
@@ -118,7 +118,7 @@ export const tickVirtualUserSchedules = async ({
     }
 
     const due = nextRunAt(schedule, now, random)
-    const acquired = await schedules.claim(schedule.virtualUser, {
+    const acquired = await schedules.claim(schedule.virtualUserId, {
       from: schedule.nextRunAt,
       nextRunAt: due,
       runId: null,
@@ -126,7 +126,7 @@ export const tickVirtualUserSchedules = async ({
     })
     if (!acquired) {
       result.skipped.push({
-        virtualUser: schedule.virtualUser,
+        virtualUserId: schedule.virtualUserId,
         reason: 'claimed-elsewhere',
       })
       continue
@@ -137,19 +137,19 @@ export const tickVirtualUserSchedules = async ({
       runId = await dispatch(schedule)
     } catch {
       result.skipped.push({
-        virtualUser: schedule.virtualUser,
+        virtualUserId: schedule.virtualUserId,
         reason: 'dispatch-failed',
       })
       continue
     }
 
-    await schedules.claim(schedule.virtualUser, {
+    await schedules.claim(schedule.virtualUserId, {
       from: due,
       nextRunAt: due,
       runId,
       at: now,
     })
-    result.dispatched.push({ virtualUser: schedule.virtualUser, runId })
+    result.dispatched.push({ virtualUserId: schedule.virtualUserId, runId })
   }
 
   return result

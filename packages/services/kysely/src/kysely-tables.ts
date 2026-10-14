@@ -368,7 +368,7 @@ export interface WebhookReceiptTable {
  */
 export interface VirtualUserRunTable {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: string
   /**
    * Read back as a string by some drivers — a BIGINT does not always fit a JS
@@ -471,7 +471,7 @@ export interface VirtualUserRunStepTable {
  * reasons as {@link VirtualUserRunTable}.
  */
 export interface VirtualUserScheduleTable {
-  virtualUser: string
+  virtualUserId: string
   /** 0 or 1: not every driver in this package can bind a boolean. */
   enabled: Generated<number>
   disposition: string

@@ -14,7 +14,7 @@ import { pikkuFunc } from '#pikku/addon/function'
  * against the real API, and an adversarial one is trying to break things.
  */
 export const startVirtualUserRun = pikkuFunc<
-  { virtualUser: string; disposition?: string; goals?: string[] },
+  { virtualUserId: string; disposition?: string; goals?: string[] },
   { runId: string }
 >({
   title: 'Start a Virtual User Run',

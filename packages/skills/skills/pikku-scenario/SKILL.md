@@ -10,7 +10,7 @@ description: >-
   clicks, virtual users / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
   `pikku scenario` and `pikku virtual-user` commands, and live coverage
   via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
-  coverage, e2e flows, browser/UI e2e, health checks, virtual users, virtual users, or adversarial
+  coverage, e2e flows, browser/UI e2e, health checks, virtual users, or adversarial
   runs against a stage. DO NOT TRIGGER when: user asks about running an existing suite (use
   Bash) or CI config.
 installGroups: [core]
@@ -37,7 +37,7 @@ each says when to open it:
 | `references/browser.md`     | Browser bindings, and locating by message key in a translated app                                            |
 | `references/virtual-users.md`    | Virtual users vs actors, `defineVirtualUsers`, upstream credentials for actors, and the human "Sign in as …" switcher |
 | `references/coverage.md`    | Live coverage, filling it, and unit tests for pure logic                                                     |
-| `references/virtual-user-run.md` | Running a virtual user as a model-driven virtual user against a stage                                             |
+| `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                         |
 
 ## What a scenario is
 

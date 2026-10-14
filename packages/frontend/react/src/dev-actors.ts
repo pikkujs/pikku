@@ -18,7 +18,7 @@ export type SignInAsVirtualUserOptions = {
 }
 
 /**
- * Sign in as a declared virtual user through Better Auth's virtual user endpoint — no
+ * Sign in as a declared virtual user through Better Auth's actor endpoint — no
  * password and no credential in the bundle.
  *
  * The server decides: `pikkuActor({ virtualUserSignIn })` refuses unless its

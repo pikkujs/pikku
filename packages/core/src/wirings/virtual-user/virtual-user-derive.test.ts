@@ -328,7 +328,7 @@ describe('driving a virtual user through a signed-in actor', () => {
   ): ScenarioVirtualUser =>
     ({
       name: 'orgAdmin',
-      email: 'admin@personas.invalid',
+      email: 'admin@virtualuser.invalid',
       invoke: async () => ({}),
       invokeRaw: async () => response,
       converse: async () => ({ passed: true, reasoning: 'ok', transcript: [] }),

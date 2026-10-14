@@ -62,7 +62,7 @@ export const Budget = z.object({
 
 export const RunVirtualUserInput = z.object({
   /** A virtual user id from \`defineVirtualUsers()\`. */
-  virtualUser: z.string().min(1),
+  virtualUserId: z.string().min(1),
   /**
    * Situational goals in the caller's own words, run alongside the intents
    * derived from the app's scenarios. Appended to what the virtual user durably
@@ -154,7 +154,7 @@ export const Step = z.object({
  */
 const virtualUserRunFields = {
   runId: z.string(),
-  virtualUser: z.string(),
+  virtualUserId: z.string(),
   disposition: Disposition,
   seed: z.number(),
   status: z.enum(['running', 'completed', 'failed']),
@@ -174,7 +174,7 @@ export const GetVirtualUserRunOutput = z.object(virtualUserRunFields)
 
 export const ListVirtualUserRunsInput = z.object({
   /** Narrows to one virtual user's history. */
-  virtualUser: z.string().min(1).optional(),
+  virtualUserId: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
 })
@@ -202,7 +202,7 @@ export const GetVirtualUserRunStepsOutput = z.object({
  * real one does not keep an appointment.
  */
 export const SetVirtualUserScheduleInput = z.object({
-  virtualUser: z.string().min(1),
+  virtualUserId: z.string().min(1),
   /** Off until something says otherwise — a schedule costs money on every tick. */
   enabled: z.boolean().optional(),
   disposition: Disposition.optional(),
@@ -216,7 +216,7 @@ export const SetVirtualUserScheduleInput = z.object({
 
 /** Not exported for the same reason the run fields are not. */
 const virtualUserScheduleFields = {
-  virtualUser: z.string(),
+  virtualUserId: z.string(),
   enabled: z.boolean(),
   disposition: Disposition,
   goals: z.array(z.string()),
@@ -250,7 +250,7 @@ export const ListVirtualUserSchedulesOutput = z.object({
 /** The internal dispatch payload — everything the run was resolved down to. */
 export const ExecuteVirtualUserRunInput = z.object({
   runId: z.string(),
-  virtualUser: z.string(),
+  virtualUserId: z.string(),
   disposition: Disposition,
   goals: z.array(z.string()),
   memory: z.record(z.string(), z.string()),
@@ -344,7 +344,7 @@ export const runVirtualUser = pikkuFunc({
     input,
     { session, rpc }
   ) => {
-    const { runId, virtualUser, disposition, goals, memory, seed } =
+    const { runId, virtualUserId, disposition, goals, memory, seed } =
       await startVirtualUserRun({
         store: virtualUserRunStore,
         virtualUsers: virtualUserConfigs,
@@ -354,7 +354,7 @@ export const runVirtualUser = pikkuFunc({
         // Config is its own interface and need not declare nodeEnv at all.
         environments: virtualUserEnvironments,
         config: config as { nodeEnv?: string } | undefined,
-        virtualUser: input.virtualUser,
+        virtualUserId: input.virtualUserId,
         disposition: input.disposition,
         seed: input.seed,
         goals: input.goals,
@@ -364,7 +364,7 @@ export const runVirtualUser = pikkuFunc({
 
     const job = {
       runId,
-      virtualUser,
+      virtualUserId,
       disposition,
       goals,
       memory,
@@ -424,16 +424,16 @@ export const listVirtualUserRuns = pikkuFunc({
   tags: ['pikku'],
   title: 'List Virtual User Runs',
   description:
-    "Reads back what the virtual users have been doing, newest first. Narrow with \`virtualUser\` for one user's history.",
+    "Reads back what the virtual users have been doing, newest first. Narrow with \`virtualUserId\` for one user's history.",
   expose: true,
   scopes: ['virtualUser:read'],
   input: ListVirtualUserRunsInput,
   output: ListVirtualUserRunsOutput,
-  func: async ({ virtualUserRunStore }, { virtualUser, limit, offset }) => {
+  func: async ({ virtualUserRunStore }, { virtualUserId, limit, offset }) => {
     const runs = await requireVirtualUserRunStore(
       virtualUserRunStore,
       true
-    ).list({ virtualUser, limit, offset })
+    ).list({ virtualUserId, limit, offset })
     return { runs: runs.map(serializeVirtualUserRun) }
   },
 })

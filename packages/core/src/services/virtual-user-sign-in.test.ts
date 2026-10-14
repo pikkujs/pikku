@@ -90,14 +90,14 @@ describe('operator virtual user sign-in', () => {
 
   test('acts as an existing account rather than signing in as it', async () => {
     const stage = await startStage([
-      { id: 'user-7', email: 'customer@personas.invalid' },
+      { id: 'user-7', email: 'customer@virtualuser.invalid' },
     ])
     servers.push(stage.server)
 
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@virtualuser.invalid') },
     })
 
     const result = (await virtualUsers.customer!.invoke('whoami', {})) as {
@@ -112,7 +112,7 @@ describe('operator virtual user sign-in', () => {
   // paths together, and `SCENARIO_SIGN_IN_PATH` is the only place it can say so.
   test('honours a moved sign-in path the same way the actor path does', async () => {
     const stage = await startStage([
-      { id: 'user-7', email: 'customer@personas.invalid' },
+      { id: 'user-7', email: 'customer@virtualuser.invalid' },
     ])
     servers.push(stage.server)
 
@@ -121,7 +121,7 @@ describe('operator virtual user sign-in', () => {
       operator: { token: OPERATOR_TOKEN },
       signInPath: '/api/auth/sign-in/fabric',
       rpcPath: '/api/rpc',
-      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@virtualuser.invalid') },
     })
 
     const result = (await virtualUsers.customer!.invoke('whoami', {})) as {
@@ -137,7 +137,7 @@ describe('operator virtual user sign-in', () => {
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      virtualUsers: { customer: virtualUser('ghost@personas.invalid') },
+      virtualUsers: { customer: virtualUser('ghost@virtualuser.invalid') },
     })
 
     await assert.rejects(
@@ -151,23 +151,23 @@ describe('operator virtual user sign-in', () => {
   // deciding what the stage holds, which is the arrangement this replaced.
   test('asks only to act as an address', async () => {
     const stage = await startStage([
-      { id: 'user-3', email: 'customer@personas.invalid' },
+      { id: 'user-3', email: 'customer@virtualuser.invalid' },
     ])
     servers.push(stage.server)
 
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@virtualuser.invalid') },
     })
 
     await virtualUsers.customer!.invoke('whoami', {})
-    assert.deepEqual(stage.sentBodies, [{ email: 'customer@personas.invalid' }])
+    assert.deepEqual(stage.sentBodies, [{ email: 'customer@virtualuser.invalid' }])
   })
 
   test('mints the operator session from a token factory', async () => {
     const stage = await startStage([
-      { id: 'user-9', email: 'lazy@personas.invalid' },
+      { id: 'user-9', email: 'lazy@virtualuser.invalid' },
     ])
     servers.push(stage.server)
 
@@ -180,7 +180,7 @@ describe('operator virtual user sign-in', () => {
           return OPERATOR_TOKEN
         },
       },
-      virtualUsers: { customer: virtualUser('lazy@personas.invalid') },
+      virtualUsers: { customer: virtualUser('lazy@virtualuser.invalid') },
     })
 
     await virtualUsers.customer!.invoke('whoami', {})
@@ -211,7 +211,7 @@ describe('operator virtual user sign-in', () => {
       () =>
         createHttpVirtualUsers({
           apiUrl: stage.apiUrl,
-          virtualUsers: { customer: virtualUser('nobody@personas.invalid') },
+          virtualUsers: { customer: virtualUser('nobody@virtualuser.invalid') },
         }),
       /has no way to sign in/
     )

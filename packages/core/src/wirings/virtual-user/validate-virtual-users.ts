@@ -70,7 +70,7 @@ export function validateAndBuildVirtualUsersMeta(
 
 /** What a run compares against the store before its first step. */
 export interface RoleVerification {
-  virtualUser: string
+  virtualUserId: string
   expected: string[]
   actual: string[]
   missing: string[]
@@ -92,7 +92,7 @@ export interface RoleVerification {
  * the findings just quietly stop being about anything.
  */
 export const verifyVirtualUserRoles = (
-  virtualUser: string,
+  virtualUserId: string,
   expected: readonly string[],
   actual: readonly string[]
 ): RoleVerification => {
@@ -101,7 +101,7 @@ export const verifyVirtualUserRoles = (
   const missing = [...expectedSet].filter((r) => !actualSet.has(r)).sort()
   const extra = [...actualSet].filter((r) => !expectedSet.has(r)).sort()
   return {
-    virtualUser,
+    virtualUserId,
     expected: [...expectedSet].sort(),
     actual: [...actualSet].sort(),
     missing,
@@ -125,7 +125,7 @@ export const roleMismatchMessage = (
     parts.push(`unexpectedly holds ${verification.extra.join(', ')}`)
   }
   return (
-    `VirtualUser '${verification.virtualUser}' ${parts.join(' and ')}. ` +
+    `VirtualUser '${verification.virtualUserId}' ${parts.join(' and ')}. ` +
     `Declared: ${verification.expected.join(', ') || 'none'}. ` +
     `On the stage: ${verification.actual.join(', ') || 'none'}. ` +
     `Refusing to run — findings from a virtual user whose roles have drifted are about the seed, not the product.`

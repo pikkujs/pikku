@@ -169,7 +169,7 @@ export interface StartVirtualUserRunParams {
   environments?: Readonly<Record<string, VirtualUserEnvironment>>
   /** Which of them this process is. Defaults to `PIKKU_ENV`. */
   environment?: string
-  virtualUser: string
+  virtualUserId: string
   disposition?: string
   seed?: number
   goals?: string[]
@@ -181,7 +181,7 @@ export interface StartVirtualUserRunParams {
 /** The recorded run, and the values the dispatch has to carry unchanged. */
 export interface StartedVirtualUserRun {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   goals: string[]
@@ -247,7 +247,7 @@ export const startVirtualUserRun = async ({
   config,
   environments,
   environment = readEnvVariable('PIKKU_ENV'),
-  virtualUser: virtualUserId,
+  virtualUserId,
   disposition: requested,
   seed: requestedSeed,
   goals,
@@ -273,7 +273,7 @@ export const startVirtualUserRun = async ({
   const resolvedMemory = memory ?? {}
 
   const runId = await runStore.start({
-    virtualUser: virtualUser.id,
+    virtualUserId: virtualUser.id,
     disposition,
     seed,
     goals: resolvedGoals,
@@ -283,7 +283,7 @@ export const startVirtualUserRun = async ({
 
   return {
     runId,
-    virtualUser: virtualUser.id,
+    virtualUserId: virtualUser.id,
     disposition,
     seed,
     goals: resolvedGoals,
@@ -300,7 +300,7 @@ export const startVirtualUserRun = async ({
  */
 export const serializeVirtualUserRun = (run: VirtualUserRunRecord) => ({
   runId: run.runId,
-  virtualUser: run.virtualUser,
+  virtualUserId: run.virtualUserId,
   disposition: run.disposition,
   seed: run.seed,
   status: run.status,
@@ -355,9 +355,9 @@ export const serializeVirtualUserSchedule = (
   schedule: VirtualUserScheduleRecord,
   virtualUsers: ScaffoldVirtualUsers
 ) => {
-  const virtualUser = virtualUsers[schedule.virtualUser]
+  const virtualUser = virtualUsers[schedule.virtualUserId]
   return {
-    virtualUser: schedule.virtualUser,
+    virtualUserId: schedule.virtualUserId,
     enabled: schedule.enabled,
     disposition: schedule.disposition,
     goals: schedule.goals,
@@ -387,7 +387,7 @@ export const serializeVirtualUserSchedule = (
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   virtualUsers: ScaffoldVirtualUsers
-  virtualUser: string
+  virtualUserId: string
   enabled?: boolean
   disposition?: string
   goals?: string[]
@@ -420,7 +420,7 @@ export interface WriteVirtualUserScheduleParams {
 export const writeVirtualUserSchedule = async ({
   store,
   virtualUsers,
-  virtualUser,
+  virtualUserId,
   enabled,
   disposition,
   goals,
@@ -433,16 +433,16 @@ export const writeVirtualUserSchedule = async ({
   environment = readEnvVariable('PIKKU_ENV'),
 }: WriteVirtualUserScheduleParams): Promise<VirtualUserScheduleRecord> => {
   const scheduleStore = requireVirtualUserScheduleStore(store)
-  const declared = runnableVirtualUser(virtualUsers, virtualUser)
+  const declared = runnableVirtualUser(virtualUsers, virtualUserId)
   const current =
     enabled === undefined || disposition === undefined
-      ? await scheduleStore.get(virtualUser)
+      ? await scheduleStore.get(virtualUserId)
       : null
   const created =
     disposition === undefined && !current ? declared.disposition : undefined
   if (enabled ?? current?.enabled) {
     refuseInProduction(
-      virtualUser,
+      virtualUserId,
       disposition ?? current?.disposition ?? created ?? 'realistic',
       config,
       environments,
@@ -450,7 +450,7 @@ export const writeVirtualUserSchedule = async ({
     )
   }
   return scheduleStore.set({
-    virtualUser,
+    virtualUserId,
     enabled,
     disposition: (disposition ?? created) as VirtualUserDisposition | undefined,
     goals,
@@ -474,7 +474,7 @@ export const writeVirtualUserSchedule = async ({
 export const virtualUserScheduleRunInput = (
   schedule: VirtualUserScheduleRecord
 ) => ({
-  virtualUser: schedule.virtualUser,
+  virtualUserId: schedule.virtualUserId,
   disposition: schedule.disposition as VirtualUserDisposition,
   goals: schedule.goals,
   budget: schedule.budget
@@ -499,16 +499,16 @@ export const logVirtualUserTick = (
   logger: Logger,
   result: VirtualUserTickResult
 ): void => {
-  for (const { virtualUser, runId } of result.dispatched) {
-    logger.info(`Virtual user ${virtualUser} started run ${runId} on schedule`)
+  for (const { virtualUserId, runId } of result.dispatched) {
+    logger.info(`Virtual user ${virtualUserId} started run ${runId} on schedule`)
   }
   for (const runId of result.reaped) {
     logger.warn(
       `Virtual user run ${runId} was abandoned — marked failed so its virtual user can run again`
     )
   }
-  for (const { virtualUser, reason } of result.skipped) {
-    logger.info(`Virtual user ${virtualUser} skipped this tick: ${reason}`)
+  for (const { virtualUserId, reason } of result.skipped) {
+    logger.info(`Virtual user ${virtualUserId} skipped this tick: ${reason}`)
   }
 }
 
@@ -524,7 +524,7 @@ export interface ExecuteVirtualUserRunParams {
     options: Omit<HttpVirtualUsersConfig, 'virtualUsers'>
   ) => ScenarioVirtualUsers
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition: string
   goals: string[]
   memory: Record<string, string>
@@ -554,7 +554,7 @@ export const executeVirtualUserRun = async ({
   virtualUsers,
   createVirtualUsers,
   runId,
-  virtualUser: virtualUserId,
+  virtualUserId,
   disposition,
   goals,
   memory,

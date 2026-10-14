@@ -34,7 +34,7 @@ const Todos = () => {
 ## Dev actor sign-in
 
 `useDevActors()` powers the "Sign in as …" switcher: one click signs in as a
-declared scenario virtual user with no password, through Better Auth's virtual user
+declared virtual user with no password, through Better Auth's actor
 endpoint. It is UI-free, so you can render it however you like — or use the
 starter template's `<DevActorSwitcher />`.
 

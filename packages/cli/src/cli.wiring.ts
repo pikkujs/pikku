@@ -1536,7 +1536,7 @@ wireCLI({
           func: virtualUserRun,
           description:
             'Sign in as a declared virtual user and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_ACTOR_SECRET.',
-          parameters: '<environment> <virtualUser>',
+          parameters: '<environment> <virtualUserId>',
           options: {
             disposition: {
               description:

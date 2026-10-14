@@ -90,7 +90,7 @@ describe('serializeScenarioTypes', () => {
       )
     })
 
-    // Deleted with the collapse into virtual users — a virtual user is a virtual user run,
+    // Deleted with the collapse into virtual users — a virtual user run is what remains,
     // not its own declaration.
     test('pikkuVirtualUser is gone', () => {
       const result = emit()

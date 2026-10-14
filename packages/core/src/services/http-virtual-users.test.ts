@@ -136,7 +136,7 @@ describe('HttpVirtualUser', async () => {
         customer: {
           id: 'customer',
           name: 'Customer',
-          email: 'customer@personas.invalid',
+          email: 'customer@virtualuser.invalid',
           jobTitle: 'Buyer',
           roles: [],
           goals: [],
@@ -146,7 +146,7 @@ describe('HttpVirtualUser', async () => {
         manager: {
           id: 'manager',
           name: 'Manager',
-          email: 'manager@personas.invalid',
+          email: 'manager@virtualuser.invalid',
           roles: [],
           goals: [],
           tags: [],
@@ -290,7 +290,7 @@ describe('HttpVirtualUser', async () => {
         manager: {
           id: 'manager',
           name: 'Manager',
-          email: 'manager@personas.invalid',
+          email: 'manager@virtualuser.invalid',
           roles: ['admin'],
           goals: [],
           tags: [],
@@ -317,7 +317,7 @@ describe('HttpVirtualUser', async () => {
         manager: {
           id: 'manager',
           name: 'Manager',
-          email: 'manager@personas.invalid',
+          email: 'manager@virtualuser.invalid',
           roles: ['guest'],
           goals: [],
           tags: [],
@@ -342,7 +342,7 @@ describe('HttpVirtualUser', async () => {
         manager: {
           id: 'manager',
           name: 'Manager',
-          email: 'manager@personas.invalid',
+          email: 'manager@virtualuser.invalid',
           roles: ['admin'],
           goals: [],
           tags: [],
@@ -368,7 +368,7 @@ describe('HttpVirtualUser', async () => {
         manager: {
           id: 'manager',
           name: 'Manager',
-          email: 'manager@personas.invalid',
+          email: 'manager@virtualuser.invalid',
           roles: ['admin'],
           goals: [],
           tags: [],
@@ -379,6 +379,6 @@ describe('HttpVirtualUser', async () => {
 
     const result = (await actors.manager!.invoke('ping', {})) as any
     assert.equal(result.rpcName, 'ping')
-    assert.equal(result.impersonated, 'u-manager@personas.invalid')
+    assert.equal(result.impersonated, 'u-manager@virtualuser.invalid')
   })
 })

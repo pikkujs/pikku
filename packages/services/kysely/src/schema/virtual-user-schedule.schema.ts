@@ -9,7 +9,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  * keeps going on its own are separate opt-ins, and a project that only wants
  * the first should not be handed a cadence table it never writes to.
  *
- * `virtualUser` is the primary key: a virtual user has one cadence, and a second row for
+ * `virtualUserId` is the primary key: a virtual user has one cadence, and a second row for
  * the same one would mean two copies of the same user acting at once — not a
  * heavier test, a different and unreproducible one.
  */
@@ -20,7 +20,7 @@ export const virtualUserScheduleSchema: PikkuSchema = {
     (db, _types, ctx) =>
       db.schema
         .createTable('virtualUserSchedule')
-        .addColumn('virtualUser', 'varchar(255)', (col) => col.primaryKey())
+        .addColumn('virtualUserId', 'varchar(255)', (col) => col.primaryKey())
         // 0 or 1 rather than a boolean, matching the run tables: a bare sqlite
         // driver cannot bind one, and `SerializePlugin` is not installed
         // everywhere. Off by default, so creating the table spends nothing.

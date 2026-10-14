@@ -10,7 +10,7 @@
 - [The other subcommands](#the-other-subcommands)
 - [What NOT to do](#what-not-to-do)
 
-`pikku virtual-user run <environment> <virtualUser>` signs a declared virtual user in over the
+`pikku virtual-user run <environment> <virtualUserId>` signs a declared virtual user in over the
 app's real auth and works the API in character, driven by a model. A virtual user
 while running **is** the virtual user — there is no second declaration for it.
 

@@ -76,14 +76,14 @@ describe('KyselyVirtualUserRunStore', () => {
   test('refuses to start against a database that never migrated it', async () => {
     const store = new KyselyVirtualUserRunStore(newDb())
     await assert.rejects(
-      store.start({ virtualUser: 'susan', disposition: 'realistic', seed: 42 }),
+      store.start({ virtualUserId: 'susan', disposition: 'realistic', seed: 42 }),
       /pikku db generate/
     )
   })
 
   test('writes against a migrated table', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 42,
     })
@@ -92,7 +92,7 @@ describe('KyselyVirtualUserRunStore', () => {
 
   test('a run starts as running, with no findings and no finish time', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'careless',
       seed: 7,
       goals: ['find the export button'],
@@ -115,7 +115,7 @@ describe('KyselyVirtualUserRunStore', () => {
   // number.
   test('the seed round-trips as a number', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 2_147_483_646,
     })
@@ -125,7 +125,7 @@ describe('KyselyVirtualUserRunStore', () => {
 
   test('completing a run stores what it found', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'auditor',
       seed: 1,
       memory: { docId: 'doc_1' },
@@ -156,7 +156,7 @@ describe('KyselyVirtualUserRunStore', () => {
   // record is the only place that distinction survives.
   test('a failed run is failed, not an empty success', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 1,
     })
@@ -177,12 +177,12 @@ describe('KyselyVirtualUserRunStore', () => {
 
   test('lists newest first', async () => {
     const first = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 1,
     })
     const second = await store.start({
-      virtualUser: 'raj',
+      virtualUserId: 'raj',
       disposition: 'realistic',
       seed: 2,
     })
@@ -198,12 +198,12 @@ describe('KyselyVirtualUserRunStore', () => {
   // Comparing what a virtual user finds this week against last week is the whole
   // reason runs are kept.
   test('narrows to one virtual user s history', async () => {
-    await store.start({ virtualUser: 'susan', disposition: 'realistic', seed: 1 })
-    await store.start({ virtualUser: 'raj', disposition: 'realistic', seed: 2 })
+    await store.start({ virtualUserId: 'susan', disposition: 'realistic', seed: 1 })
+    await store.start({ virtualUserId: 'raj', disposition: 'realistic', seed: 2 })
 
-    const runs = await store.list({ virtualUser: 'susan' })
+    const runs = await store.list({ virtualUserId: 'susan' })
     assert.equal(runs.length, 1)
-    assert.equal(runs[0]?.virtualUser, 'susan')
+    assert.equal(runs[0]?.virtualUserId, 'susan')
   })
 
   test('completing an unknown run does not throw, and leaves no steps behind', async () => {
@@ -230,7 +230,7 @@ describe('KyselyVirtualUserRunStore', () => {
     const bareStore = new KyselyVirtualUserRunStore(bare)
 
     const runId = await bareStore.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 99,
       goals: ['export a doc'],
@@ -258,7 +258,7 @@ describe('KyselyVirtualUserRunStore', () => {
 
   test('the transcript comes back in the order it happened', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 1,
     })
@@ -284,7 +284,7 @@ describe('KyselyVirtualUserRunStore', () => {
   // of the fields a successful call does.
   test('a turn with no response and no status survives the round trip', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'careless',
       seed: 1,
     })
@@ -322,7 +322,7 @@ describe('KyselyVirtualUserRunStore', () => {
   // not be lost.
   test('a run longer than one insert can hold is stored whole', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'adversarial',
       seed: 1,
     })
@@ -348,7 +348,7 @@ describe('KyselyVirtualUserRunStore', () => {
 
   test('intents ride on the run, not on the transcript', async () => {
     const runId = await store.start({
-      virtualUser: 'susan',
+      virtualUserId: 'susan',
       disposition: 'realistic',
       seed: 1,
     })
@@ -362,7 +362,7 @@ describe('KyselyVirtualUserRunStore', () => {
       steps: [],
     })
 
-    const [listed] = await store.list({ virtualUser: 'susan' })
+    const [listed] = await store.list({ virtualUserId: 'susan' })
     assert.deepEqual(listed?.intents, [INTENT])
     assert.deepEqual(await store.steps(runId), [])
   })

@@ -2352,7 +2352,7 @@ export type EvaluateSecurityGateOutput = {
 }
 export type ExecuteVirtualUserRunInput = {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition:
     | 'realistic'
     | 'careless'
@@ -4974,7 +4974,7 @@ export type GetVirtualUserRunInput = {
 }
 export type GetVirtualUserRunOutput = {
   runId: string
-  virtualUser: string
+  virtualUserId: string
   disposition:
     | 'realistic'
     | 'careless'
@@ -6642,14 +6642,14 @@ export type ListVirtualUserRunCostsOutput = {
   }[]
 }
 export type ListVirtualUserRunsInput = {
-  virtualUser?: string | undefined
+  virtualUserId?: string | undefined
   limit?: number | undefined
   offset?: number | undefined
 }
 export type ListVirtualUserRunsOutput = {
   runs: {
     runId: string
-    virtualUser: string
+    virtualUserId: string
     disposition:
       | 'realistic'
       | 'careless'
@@ -6692,7 +6692,7 @@ export type ListVirtualUserRunsOutput = {
 }
 export type ListVirtualUserSchedulesOutput = {
   schedules: {
-    virtualUser: string
+    virtualUserId: string
     enabled: boolean
     disposition:
       | 'realistic'
@@ -9010,7 +9010,7 @@ export type RuntimeRolloutWorkflowOutput = {
   killedOld: number
 }
 export type RunVirtualUserInput = {
-  virtualUser: string
+  virtualUserId: string
   goals?: string[] | undefined
   memory?:
     | {
@@ -9501,7 +9501,7 @@ export type SetStageVisibilityOutput = {
 }
 export type SettingsScreenOpensScenarioOutput = { readyTestId: string }
 export type SetVirtualUserScheduleInput = {
-  virtualUser: string
+  virtualUserId: string
   enabled?: boolean | undefined
   disposition?:
     | (
@@ -9527,7 +9527,7 @@ export type SetVirtualUserScheduleInput = {
   nextRunAt?: string | undefined
 }
 export type SetVirtualUserScheduleOutput = {
-  virtualUser: string
+  virtualUserId: string
   enabled: boolean
   disposition:
     | 'realistic'

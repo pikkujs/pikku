@@ -16,7 +16,7 @@ import { pikkuFunc } from '#pikku/addon/function'
  */
 export const setVirtualUserSchedule = pikkuFunc<
   {
-    virtualUser: string
+    virtualUserId: string
     enabled?: boolean
     disposition?: string
     goals?: string[]

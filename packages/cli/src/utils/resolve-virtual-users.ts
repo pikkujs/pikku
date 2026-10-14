@@ -15,11 +15,8 @@ import type { ResolvedVirtualUser } from '@pikku/core/services'
  * Deliberately a domain nobody can own rather than something plausible: an app
  * that never sends mail runs fine against it, and one that does fails loudly at
  * the first send instead of quietly delivering a magic link to a stranger.
- *
- * Still `personas.invalid`: addresses are stored on provisioned accounts, and a
- * new domain would orphan every one of them.
  */
-export const DEFAULT_VIRTUAL_USER_EMAIL_DOMAIN = 'personas.invalid'
+export const DEFAULT_VIRTUAL_USER_EMAIL_DOMAIN = 'virtualuser.invalid'
 
 /**
  * The virtual users a run actually sees: every declaration, with its address filled

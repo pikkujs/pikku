@@ -66,7 +66,7 @@ const describeTuning = (tuning: object): string =>
 export const virtualUserRun = pikkuSessionlessFunc<
   {
     environment: string
-    virtualUser: string
+    virtualUserId: string
     disposition?: string
     goals?: string
     steps?: string
@@ -85,7 +85,7 @@ export const virtualUserRun = pikkuSessionlessFunc<
     { logger, config, getInspectorState, variables },
     {
       environment,
-      virtualUser: virtualUserId,
+      virtualUserId,
       disposition: dispositionFlag,
       goals,
       steps,

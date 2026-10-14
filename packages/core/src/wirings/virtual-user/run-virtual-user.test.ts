@@ -50,7 +50,7 @@ const INTENTS: IntentSource[] = [
 
 const VIRTUAL_USER = {
   id: 'member',
-  email: 'ada@personas.invalid',
+  email: 'ada@virtualuser.invalid',
   name: 'Ada',
   jobTitle: 'Engineer',
   roles: [],

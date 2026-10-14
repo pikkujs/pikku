@@ -176,7 +176,7 @@ describe('HttpVirtualUser.converse', async () => {
         pm: {
           id: 'pm',
           name: 'Priya',
-          email: 'pm@personas.invalid',
+          email: 'pm@virtualuser.invalid',
           personality: 'concise',
           roles: [],
           goals: [],
@@ -219,7 +219,7 @@ describe('HttpVirtualUser.converse', async () => {
         pm: {
           id: 'pm',
           name: 'Priya',
-          email: 'pm@personas.invalid',
+          email: 'pm@virtualuser.invalid',
           roles: [],
           goals: [],
           tags: [],
@@ -258,7 +258,7 @@ describe('HttpVirtualUser.converse', async () => {
         pm: {
           id: 'pm',
           name: 'Priya',
-          email: 'pm@personas.invalid',
+          email: 'pm@virtualuser.invalid',
           roles: [],
           goals: [],
           tags: [],
