@@ -14,13 +14,13 @@ the real API. This reference is the decision that shapes the app around it:
 
 ## Pick the auth mode
 
-| The upstream…                                                            | Mode              | Command                       | Who signs in, and how                                   |
-| ------------------------------------------------------------------------ | ----------------- | ----------------------------- | ------------------------------------------------------- |
-| Is where the users already have accounts, and has a login endpoint      | Delegated         | `--auth-config <file>`        | Users sign in with their upstream login; no new account |
-| Takes a per-user API key, bearer token or basic auth                     | Per-user key      | (the default)                 | App account, then a Connect screen for the key          |
-| Uses OAuth2                                                              | Per-user OAuth    | (the default)                 | App account, then Connect via the OAuth consent         |
-| Is used on everyone's behalf with one key the business owns              | Shared secret     | `--auth shared`               | App account only; the key is a secret                   |
-| Takes no auth                                                            | None              | `--auth none`                 | App account only                                        |
+| The upstream…                                                      | Mode           | Command                | Who signs in, and how                                   |
+| ------------------------------------------------------------------ | -------------- | ---------------------- | ------------------------------------------------------- |
+| Is where the users already have accounts, and has a login endpoint | Delegated      | `--auth-config <file>` | Users sign in with their upstream login; no new account |
+| Takes a per-user API key, bearer token or basic auth               | Per-user key   | (the default)          | App account, then a Connect screen for the key          |
+| Uses OAuth2                                                        | Per-user OAuth | (the default)          | App account, then Connect via the OAuth consent         |
+| Is used on everyone's behalf with one key the business owns        | Shared secret  | `--auth shared`        | App account only; the key is a secret                   |
+| Takes no auth                                                      | None           | `--auth none`          | App account only                                        |
 
 Per-user is the default because the upstream then enforces each person's own
 permissions. A shared secret acts with one identity for everyone, so the
@@ -69,30 +69,30 @@ JSON, passed with `--auth-config`. Every field is optional except where noted.
 
 Top level — how every call authenticates:
 
-| Field          | Meaning                                                                                              |
-| -------------- | ---------------------------------------------------------------------------------------------------- |
-| `headerName`   | The header the API reads the token or key from. Setting it alone means a per-user API key            |
+| Field          | Meaning                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `headerName`   | The header the API reads the token or key from. Setting it alone means a per-user API key              |
 | `headerFormat` | `raw` sends the bare value, `bearer` prefixes `Bearer `. Default: bearer for `Authorization`, else raw |
-| `extraHeaders` | Static headers on every request, login included — for upstreams that route on a header               |
-| `delegated`    | Present when users sign in with their upstream login                                                 |
+| `extraHeaders` | Static headers on every request, login included — for upstreams that route on a header                 |
+| `delegated`    | Present when users sign in with their upstream login                                                   |
 
 `delegated`:
 
-| Field            | Meaning                                                                                                   |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `loginPath`      | Required. The spec-relative login operation                                                               |
-| `loginMethod`    | Default `post`                                                                                            |
-| `credentials`    | What the sign-in form collects: `login` (a username or email), `email`, `password`, `apiKey`. Default `["email","password"]` |
-| `fields`         | The upstream's name for each credential, e.g. `{ "login": "username" }`                                  |
-| `encoding`       | `json`, `form` or `query` — how the login fields travel. Default `json`                                   |
-| `apiKeyHeader`   | The header an `apiKey` credential is sent in. Default `x-api-key`                                         |
-| `tokenPath`      | Required. Dot-path to the token in the login response                                                     |
-| `expiresAtPath`  | Dot-path to an epoch-seconds expiry. Defaults to the JWT's `exp` when claims come from the JWT            |
-| `identity`       | An operation that returns the signed-in user, called with the new token — for logins that return only a token |
-| `claims.source`  | `jwt`, `response` or `identity`. Default `identity` when `identity` is set, else `response`               |
-| `claims.*`       | Dot-paths to `externalId`, `email`, `name` (one path or several joined with a space), `role`, `tenantId`  |
-| `emailTemplate`  | Builds an email for an upstream user who has none: `{login}`, `{externalId}`, `{host}`. Such an address never claims an existing user |
-| `roles`          | Maps the raw `claims.role` value onto an app role; an unmapped value gets no role                          |
+| Field           | Meaning                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `loginPath`     | Required. The spec-relative login operation                                                                                           |
+| `loginMethod`   | Default `post`                                                                                                                        |
+| `credentials`   | What the sign-in form collects: `login` (a username or email), `email`, `password`, `apiKey`. Default `["email","password"]`          |
+| `fields`        | The upstream's name for each credential, e.g. `{ "login": "username" }`                                                               |
+| `encoding`      | `json`, `form` or `query` — how the login fields travel. Default `json`                                                               |
+| `apiKeyHeader`  | The header an `apiKey` credential is sent in. Default `x-api-key`                                                                     |
+| `tokenPath`     | Required. Dot-path to the token in the login response                                                                                 |
+| `expiresAtPath` | Dot-path to an epoch-seconds expiry. Defaults to the JWT's `exp` when claims come from the JWT                                        |
+| `identity`      | An operation that returns the signed-in user, called with the new token — for logins that return only a token                         |
+| `claims.source` | `jwt`, `response` or `identity`. Default `identity` when `identity` is set, else `response`                                           |
+| `claims.*`      | Dot-paths to `externalId`, `email`, `name` (one path or several joined with a space), `role`, `tenantId`                              |
+| `emailTemplate` | Builds an email for an upstream user who has none: `{login}`, `{externalId}`, `{host}`. Such an address never claims an existing user |
+| `roles`         | Maps the raw `claims.role` value onto an app role; an unmapped value gets no role                                                     |
 
 Check it before building on it: start `pikku dev`, sign in once with
 `POST /api/auth/sign-in/delegated` as a real upstream user, and call an exposed
@@ -100,7 +100,7 @@ operation with the session. A wrong password must be refused. Keep real
 credentials in the environment, never in the config or a test.
 
 What the install wires for delegated mode — `pikkuDelegatedAuth` in
-`src/auth.ts`, the token stored per user, actors carrying it into scenarios — is
+`src/auth.ts`, the token stored per user, virtual users carrying it into scenarios — is
 in the `pikku-auth` skill's `references/better-auth.md`.
 
 ## The screens
@@ -114,13 +114,13 @@ in the `pikku-auth` skill's `references/better-auth.md`.
   call fails with `missing_credential`.
 - A `credential_rejected` error (`CredentialRejectedError`, 403) means the
   upstream refused the stored token: show the sign-in again (`reauth:
-  'sign-in'`) or the Connect screen (`reauth: 'connect'`), not a generic error.
+'sign-in'`) or the Connect screen (`reauth: 'connect'`), not a generic error.
 
 ## Scenarios
 
 A virtual user that signs in through the upstream needs an upstream credential to
-act with. The install adds `credentials` to `pikkuActor` in `src/auth.ts`, and
-at sign-in each actor stores `ACTOR_CREDENTIAL_<VIRTUAL_USER>_<NAME>` from the
-environment (e.g. `ACTOR_CREDENTIAL_SALES_REP_DOLIBARR`). Without it every
+act with. The install adds `credentials` to `pikkuVirtualUser` in `src/auth.ts`, and
+at sign-in each virtual user stores `VIRTUAL_USER_CREDENTIAL_<VIRTUAL_USER>_<NAME>` from the
+environment (e.g. `VIRTUAL_USER_CREDENTIAL_SALES_REP_DOLIBARR`). Without it every
 scenario step that reaches the upstream fails with `missing_credential`. The
 `pikku-scenario` skill's `references/virtual-users.md` has the details.

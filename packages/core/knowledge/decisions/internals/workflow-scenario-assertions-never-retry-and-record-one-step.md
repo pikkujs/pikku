@@ -33,10 +33,10 @@ defaults are shorter than the assertion wrappers': `within` 15s, `interval`
 `requireScenarioEnv` (`scenario-step-guards.ts`) exists for the mirror-image
 reason: `env` is optional on the step wire because most steps need nothing from
 it, so the narrowing happens in one place with a message that says what to do,
-instead of every step file writing its own guard. The actor is not narrowed at
-all — a step that runs as somebody declares `actor: true` (or a `browser`
+instead of every step file writing its own guard. The virtual user is not narrowed at
+all — a step that runs as somebody declares `virtualUser: true` (or a `browser`
 binding, which cannot be provisioned without a window to open), and the runner
-injects `wire.actor` non-optionally into every binding and refuses to dispatch
+injects `wire.virtualUser` non-optionally into every binding and refuses to dispatch
 the step without one. A wire member can be required per binding; a property of
 one cannot, which is why it is not on `scenarioStep`. `scenarioStep`'s `verifyStepName` call doubles as the guard for `then`
 being a wire member — an accidental `await scenario` calls it with a resolve
@@ -50,5 +50,5 @@ the first argument only; `times` means at-least-once unless a count is given;
 
 **What this rules out:** giving scenario steps the workflow retry default,
 recording each poll iteration as its own step, treating a falsy `pollUntil`
-result as "not yet", making `pollUntil` throw on timeout, or narrowing `actor`
+result as "not yet", making `pollUntil` throw on timeout, or narrowing `virtualUser`
 by hand inside individual step files.

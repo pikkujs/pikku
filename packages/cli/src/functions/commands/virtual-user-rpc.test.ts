@@ -34,7 +34,7 @@ const run = (data: Record<string, unknown>, url = apiUrl) =>
       }),
       variables: {
         get: async (name: string) =>
-          name === 'SCENARIO_ACTOR_SECRET' ? 'x'.repeat(48) : undefined,
+          name === 'SCENARIO_VIRTUAL_USER_SECRET' ? 'x'.repeat(48) : undefined,
       },
     } as any,
     data as any,

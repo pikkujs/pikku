@@ -86,7 +86,7 @@ once it merges.
 
 There is no `virtual users/`: the people are declared in the app's own source with pikku's
 `defineVirtualUsers`, by the build session, because they are the same virtual users pikku
-materialises scenario actors from. `fabric virtual user` only reads back what the code declared.
+materialises scenario virtual users from. `fabric virtual user` only reads back what the code declared.
 There is no `scenarios/` or `permissions/` either — a changeset's plan names its scenarios,
 and the rules live in the code.
 

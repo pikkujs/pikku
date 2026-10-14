@@ -4,9 +4,9 @@ description: >-
   Use when a React frontend talks to a Pikku backend — PikkuProvider and createPikku at the app
   root, the generated React Query hooks (usePikkuQuery, usePikkuMutation, usePikkuInfiniteQuery),
   direct usePikkuRPC / usePikkuFetch calls, realtime subscriptions, agent and workflow hooks, and
-  the dev actor switcher. TRIGGER when: writing a React component that fetches or mutates backend
+  the dev virtual user switcher. TRIGGER when: writing a React component that fetches or mutates backend
   data, wiring PikkuProvider, paginating, running or tracking a workflow from the client, or
-  asking about useDevActors / DevActorSwitcher / quick login. DO NOT TRIGGER when: working on the
+  asking about useDevVirtualUsers / DevVirtualUserSwitcher / quick login. DO NOT TRIGGER when: working on the
   backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), rendering fetched values such as
   dates (use pikku-tailwind), or writing user-facing copy (use pikku-i18n).
 installGroups: [client]
@@ -21,25 +21,25 @@ stops.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Wiring the app root, resolving the server URL, authenticating, or subscribing to realtime | `references/client.md` |
-| Fetching, mutating or paginating data | `references/react-query.md` |
-| Starting a workflow and showing its progress | `references/workflows.md` |
+| You are…                                                                                  | Read                        |
+| ----------------------------------------------------------------------------------------- | --------------------------- |
+| Wiring the app root, resolving the server URL, authenticating, or subscribing to realtime | `references/client.md`      |
+| Fetching, mutating or paginating data                                                     | `references/react-query.md` |
+| Starting a workflow and showing its progress                                              | `references/workflows.md`   |
 
 ## Reach for what
 
-| Need | Use |
-| --- | --- |
-| Render data, dedupe and cache | `usePikkuQuery` |
-| Trigger a write and wait for the result | `usePikkuMutation` |
-| Paginate | `usePikkuInfiniteQuery` |
-| One-off call from an event handler | `usePikkuRPC()` |
-| Hit a REST endpoint rather than an RPC | `usePikkuFetch()` |
-| Talk to one named AI agent | `usePikkuAgent(name)` → `.run` / `.stream` / `.approve` |
-| Run one named workflow | `usePikkuWorkflow(name)` → `.start` / `.run` / `.status` |
-| A workflow long enough to need progress UI | `references/workflows.md` |
-| Subscribe to events, SSE or a channel | `usePikkuRealtime()` |
+| Need                                       | Use                                                      |
+| ------------------------------------------ | -------------------------------------------------------- |
+| Render data, dedupe and cache              | `usePikkuQuery`                                          |
+| Trigger a write and wait for the result    | `usePikkuMutation`                                       |
+| Paginate                                   | `usePikkuInfiniteQuery`                                  |
+| One-off call from an event handler         | `usePikkuRPC()`                                          |
+| Hit a REST endpoint rather than an RPC     | `usePikkuFetch()`                                        |
+| Talk to one named AI agent                 | `usePikkuAgent(name)` → `.run` / `.stream` / `.approve`  |
+| Run one named workflow                     | `usePikkuWorkflow(name)` → `.start` / `.run` / `.status` |
+| A workflow long enough to need progress UI | `references/workflows.md`                                |
+| Subscribe to events, SSE or a channel      | `usePikkuRealtime()`                                     |
 
 A workflow that finishes in a moment can be awaited; one that does not needs
 start-plus-observe, or the component holds a pending state with nothing to show.

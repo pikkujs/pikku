@@ -121,11 +121,11 @@ A brief saying "the entire UI is German" is about **one** of these. Getting this
 wrong has already shipped a project that can never add a second language, so
 settle all three explicitly before you write code.
 
-| Axis            | What it covers                                                                                                                 | Where it goes                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                              | Nowhere — **always English**, no setting, not negotiable                             |
+| Axis            | What it covers                                                                                                                      | Where it goes                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                                   | Nowhere — **always English**, no setting, not negotiable                             |
 | **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and virtual user descriptions | `metaLocale` in `pikku.config.json`, default `en`                                    |
-| **Product UI**  | Every string the app shows a user                                                                                              | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
+| **Product UI**  | Every string the app shows a user                                                                                                   | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
 
 **Identifiers are English.** The product's market does not change this and
 neither does `metaLocale`. Identifiers are the surface the generated `#pikku/*`
@@ -282,18 +282,18 @@ defineVirtualUsers({
 })
 ```
 
-- **Keep `visitor`.** The shipped scenarios name `actors.visitor`, and PKU677
-  requires a browser step's actor to be a literal `actors.<name>`. Removing it
-  stops `actors.visitor` type-checking, which fails `pikku all`, and nothing you
+- **Keep `visitor`.** The shipped scenarios name `virtualUsers.visitor`, and PKU677
+  requires a browser step's virtual user to be a literal `virtualUsers.<name>`. Removing it
+  stops `virtualUsers.visitor` type-checking, which fails `pikku all`, and nothing you
   write after that registers.
 - **One `defineVirtualUsers` call for the whole project.** Codegen builds the
-  `VirtualUserId` union from it, materialises one scenario actor per person, and
+  `VirtualUserId` union from it, materialises one scenario virtual user per person, and
   seeds a user row each. A second call site is a second answer to "who uses this
   app".
 - **`roles` is typechecked against `defineSystemRole`.** An undeclared role is a
   build error rather than a runtime surprise.
 - **Never write an email address.** Each is derived from the virtual user id and
-  `scenarios.emailDomain` in `pikku.config.json` — `visitor@actors.local`.
+  `scenarios.emailDomain` in `pikku.config.json` — `visitor@virtualuser.local`.
   Hand-writing one is how a run signs in as somebody who was never created.
 - **Declare a second person of the same kind** whenever the rule is ownership
   (`bilal` above). "You see yours, not theirs" is not testable with one owner,
@@ -539,7 +539,7 @@ Rules that are not optional:
   (`evening`, `class_meeting`) and keep the word in the UI copy.
 - The template's `/` redirects to `/app`, so the login screen — and its "Sign in
   as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
-  public homepage and that stops being true: mount `<DevActorSwitcher />` in the
+  public homepage and that stops being true: mount `<DevVirtualUserSwitcher />` in the
   public layout as well, or a reviewer lands on a site with no way in.
 
 Before the first run, make sure `.env` at the project root holds the two
@@ -548,13 +548,13 @@ check anyway — a project scaffolded from an older template, or a `.env` copied
 in from elsewhere, can lack one, and neither failure names the variable:
 
 - `BETTER_AUTH_SECRET` — without it the first sign-up is a 500.
-- `SCENARIO_ACTOR_SECRET` — without it `/api/auth/sign-in/actor` is disabled:
+- `SCENARIO_VIRTUAL_USER_SECRET` — without it `/api/auth/sign-in/virtual-user` is disabled:
   every scenario fails at sign-in before its first step, and the "Sign in as …"
   switcher renders nothing.
 
 ```sh
 grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
+grep -q '^SCENARIO_VIRTUAL_USER_SECRET=' .env 2>/dev/null || echo "SCENARIO_VIRTUAL_USER_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 `.env` is gitignored and local only — never commit it. A deployed stage gets its
@@ -674,7 +674,7 @@ proves nothing:
 
 - the shape of a scenario, and `do` vs `given`/`when`/`then`
 - what survives DSL extraction — a `then` in `return` position asserts nothing,
-  and a shared setup helper credits its steps to the wrong actor
+  and a shared setup helper credits its steps to the wrong virtual user
 - what to assert — refusals must read the REASON, totals must be deltas, and the
   assertion nobody writes is the row count
 - living without a state reset: the suite must be green on its SECOND run

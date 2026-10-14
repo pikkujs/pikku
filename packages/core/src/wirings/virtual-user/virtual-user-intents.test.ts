@@ -181,7 +181,7 @@ describe('intent stack', () => {
   })
 })
 
-describe('intents for an actor', () => {
+describe('intents for a virtual user', () => {
   const catalogue: IntentSource[] = [
     { id: 'a', title: 'invite a teammate', virtualUsers: ['orgAdmin'] },
     { id: 'b', title: 'read the dashboard' },
@@ -192,21 +192,21 @@ describe('intents for an actor', () => {
     },
   ]
 
-  test('an actor gets what names it, plus anything that names nobody', () => {
+  test('a virtual user gets what names it, plus anything that names nobody', () => {
     assert.deepEqual(
       intentsForVirtualUser(catalogue, 'orgAdmin').map((i) => i.id),
       ['a', 'b', 'c']
     )
   })
 
-  test('an actor is not given other people’s work', () => {
+  test('a virtual user is not given other people’s work', () => {
     assert.deepEqual(
       intentsForVirtualUser(catalogue, 'member').map((i) => i.id),
       ['b']
     )
   })
 
-  test('an empty actor list means everyone', () => {
+  test('an empty virtual user list means everyone', () => {
     assert.deepEqual(
       intentsForVirtualUser(
         [{ id: 'x', title: 'anything', virtualUsers: [] }],

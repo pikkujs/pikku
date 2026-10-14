@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   createHttpVirtualUsers,
-  deriveActorSecret,
+  deriveVirtualUserSecret,
   virtualUserEnvironmentRefusal,
   roleMismatchMessage,
   verifyVirtualUserRoles,
@@ -22,7 +22,7 @@ import { PikkuError } from '@pikku/core/errors'
 
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  ACTOR_SECRET_VARIABLE,
+  VIRTUAL_USER_SECRET_VARIABLE,
   VIRTUAL_USER_SECRETS_VARIABLE,
   resolveVirtualUserCredentials,
 } from '../../utils/virtual-user-credentials.js'
@@ -300,7 +300,7 @@ export const virtualUserRun = pikkuSessionlessFunc<
 
 /** Who this app is for, and what each of them wants, without running anything. */
 /**
- * Mint the actor credential for one virtual user, or for every declared virtual user.
+ * Mint the virtual user credential for one virtual user, or for every declared virtual user.
  *
  * The root secret is entitled to all of them, so nothing that only needs to be
  * one person should ever hold it. What comes out is bound to that virtual user's
@@ -315,10 +315,10 @@ export const virtualUserSecret = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config, variables, getInspectorState }, input) => {
-    const root = await variables.get(ACTOR_SECRET_VARIABLE)
+    const root = await variables.get(VIRTUAL_USER_SECRET_VARIABLE)
     if (!root) {
       throw new Error(
-        `${ACTOR_SECRET_VARIABLE} is not set — there is no root to derive from. ` +
+        `${VIRTUAL_USER_SECRET_VARIABLE} is not set — there is no root to derive from. ` +
           `It lives in the environment of whoever mints credentials, and never in pikku.config.json.`
       )
     }
@@ -342,7 +342,7 @@ export const virtualUserSecret = pikkuSessionlessFunc<
     const minted: string[] = []
     for (const id of wanted) {
       minted.push(
-        `${id}=${await deriveActorSecret(String(root), declared[id]!.email)}`
+        `${id}=${await deriveVirtualUserSecret(String(root), declared[id]!.email)}`
       )
     }
     for (const line of minted) {
@@ -355,7 +355,7 @@ export const virtualUserSecret = pikkuSessionlessFunc<
   },
 })
 
-export const personaList = pikkuSessionlessFunc<void, void>({
+export const virtualUserList = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState(true, false, false, true)
     const virtualUsers = Object.values(
@@ -386,7 +386,9 @@ export const personaList = pikkuSessionlessFunc<void, void>({
       if (virtualUser.disposition || virtualUser.tuning) {
         logger.info(
           `  ${virtualUser.disposition ?? 'realistic'}${
-            virtualUser.tuning ? ` (tuned: ${describeTuning(virtualUser.tuning)})` : ''
+            virtualUser.tuning
+              ? ` (tuned: ${describeTuning(virtualUser.tuning)})`
+              : ''
           }`
         )
       }

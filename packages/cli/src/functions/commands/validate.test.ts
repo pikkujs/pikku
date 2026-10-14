@@ -147,8 +147,8 @@ async function makeValidWorkspace(root: string) {
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
     [
-      "import { pikkuActor } from '@pikku/better-auth'",
-      'export const auth = () => ({ plugins: [pikkuActor({ secret: undefined })] })',
+      "import { pikkuVirtualUser } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [pikkuVirtualUser({ secret: undefined })] })',
       '',
     ].join('\n'),
     'utf8'
@@ -234,7 +234,13 @@ describe('pikku validate', () => {
     try {
       await makeValidWorkspace(tmp)
       await rm(
-        join(tmp, 'packages', 'functions', 'src', 'virtual-users.virtual-user.ts')
+        join(
+          tmp,
+          'packages',
+          'functions',
+          'src',
+          'virtual-users.virtual-user.ts'
+        )
       )
       const result = await runProjectValidate(tmp)
       const finding = result.findings.find((f) => f.id === 'no-virtual-users')
@@ -246,7 +252,7 @@ describe('pikku validate', () => {
     }
   })
 
-  test('virtual users without actor sign-in → warn', async () => {
+  test('virtual users without virtual user sign-in → warn', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidWorkspace(tmp)
@@ -255,9 +261,12 @@ describe('pikku validate', () => {
       )
       const result = await runProjectValidate(tmp)
       const finding = result.findings.find(
-        (f) => f.id === 'virtual-users-no-actor-sign-in'
+        (f) => f.id === 'virtual-users-no-virtual-user-sign-in'
       )
-      assert.ok(finding, 'expected a virtual-users-no-actor-sign-in finding')
+      assert.ok(
+        finding,
+        'expected a virtual-users-no-virtual-user-sign-in finding'
+      )
       assert.strictEqual(finding!.severity, 'warn')
       assert.strictEqual(result.ok, true)
     } finally {

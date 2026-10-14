@@ -117,8 +117,8 @@ async function makeValidProject(root: string) {
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'auth.wiring.ts'),
     [
-      "import { pikkuActor } from '@pikku/better-auth'",
-      'export const auth = () => ({ plugins: [pikkuActor({ secret: undefined })] })',
+      "import { pikkuVirtualUser } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [pikkuVirtualUser({ secret: undefined })] })',
       '',
     ].join('\n'),
     'utf8'
@@ -227,7 +227,13 @@ describe('pikku fabric validate', () => {
     try {
       await makeValidProject(tmp)
       await rm(
-        join(tmp, 'packages', 'functions', 'src', 'virtual-users.virtual-user.ts')
+        join(
+          tmp,
+          'packages',
+          'functions',
+          'src',
+          'virtual-users.virtual-user.ts'
+        )
       )
       const result = await runValidate(tmp)
       const finding = result.findings.find((f) => f.id === 'no-virtual-users')
@@ -239,16 +245,19 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  test('virtual users without actor sign-in → warn', async () => {
+  test('virtual users without virtual user sign-in → warn', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
       await rm(join(tmp, 'packages', 'functions', 'src', 'auth.wiring.ts'))
       const result = await runValidate(tmp)
       const finding = result.findings.find(
-        (f) => f.id === 'virtual-users-no-actor-sign-in'
+        (f) => f.id === 'virtual-users-no-virtual-user-sign-in'
       )
-      assert.ok(finding, 'expected a virtual-users-no-actor-sign-in finding')
+      assert.ok(
+        finding,
+        'expected a virtual-users-no-virtual-user-sign-in finding'
+      )
       assert.strictEqual(finding!.severity, 'warn')
       assert.strictEqual(result.ok, true)
     } finally {
@@ -1588,7 +1597,7 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('actor quick login', () => {
+  describe('virtual user quick login', () => {
     // Writes a React frontend at apps/web. `files` is a map of app-relative
     // path → contents, so each test only spells out the UI it cares about.
     async function makeFrontend(
@@ -1617,7 +1626,7 @@ describe('pikku fabric validate', () => {
       return app
     }
 
-    test('login screen without the actor switcher → error', async () => {
+    test('login screen without the virtual user switcher → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1627,42 +1636,45 @@ describe('pikku fabric validate', () => {
         })
         const result = await runValidate(tmp)
         const finding = result.findings.find(
-          (f) => f.id === 'app-missing-actor-quick-login-web'
+          (f) => f.id === 'app-missing-virtual-user-quick-login-web'
         )
-        assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
+        assert.ok(
+          finding,
+          'expected app-missing-virtual-user-quick-login-web finding'
+        )
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
         assert.match(finding!.fixHint, /featureFlags/)
         assert.match(finding!.fixHint, /virtualUserSignIn/)
-        assert.doesNotMatch(finding!.fixHint, /VITE_DEV_ACTOR/)
+        assert.doesNotMatch(finding!.fixHint, /VITE_DEV_VIRTUAL_USER/)
         assert.strictEqual(result.ok, false)
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
     })
 
-    test('login screen rendering <DevActorSwitcher /> → no finding', async () => {
+    test('login screen rendering <DevVirtualUserSwitcher /> → no finding', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await makeFrontend(tmp, {
           'src/pages/LoginPage.tsx':
-            "import { DevActorSwitcher } from '@/components/DevActorSwitcher'\n" +
-            'export const LoginPage = () => <><form /><DevActorSwitcher /></>\n',
+            "import { DevVirtualUserSwitcher } from '@/components/DevVirtualUserSwitcher'\n" +
+            'export const LoginPage = () => <><form /><DevVirtualUserSwitcher /></>\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
-          'expected no actor quick-login finding'
+          'expected no virtual user quick-login finding'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
     })
 
-    test('custom UI built on useDevActors() → no finding', async () => {
+    test('custom UI built on useDevVirtualUsers() → no finding', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1670,17 +1682,17 @@ describe('pikku fabric validate', () => {
           // An app that wants its own control rather than the template's
           // still satisfies the rule, as long as it drives the shared hook.
           'src/pages/LoginPage.tsx':
-            "import { useDevActors } from '@pikku/react'\n" +
+            "import { useDevVirtualUsers } from '@pikku/react'\n" +
             'export const LoginPage = () => {\n' +
-            '  const { actors, signInAs } = useDevActors({ apiUrl: "/api" })\n' +
-            '  return <>{actors.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
+            '  const { virtualUsers, signInAs } = useDevVirtualUsers({ apiUrl: "/api" })\n' +
+            '  return <>{virtualUsers.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
-          'useDevActors() is a valid quick-login fingerprint'
+          'useDevVirtualUsers() is a valid quick-login fingerprint'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -1700,7 +1712,7 @@ describe('pikku fabric validate', () => {
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
           'signInAsVirtualUser() is a valid quick-login fingerprint'
         )
@@ -1709,7 +1721,7 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('a DevActorSwitcher that is defined but never rendered still errors', async () => {
+    test('a DevVirtualUserSwitcher that is defined but never rendered still errors', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1717,15 +1729,15 @@ describe('pikku fabric validate', () => {
           'src/pages/LoginPage.tsx':
             'export const LoginPage = () => <form>email + password</form>\n',
           // Definition only — nothing renders it, so the reviewer is still
-          // locked out. `signInAsActor(` here is the declaration, not a call.
+          // locked out. `signInAsVirtualUser(` here is the declaration, not a call.
           'src/lib/auth.ts':
-            'export async function signInAsActor(email: string) {\n' +
+            'export async function signInAsVirtualUser(email: string) {\n' +
             '  return email\n}\n',
         })
         const result = await runValidate(tmp)
         assert.ok(
           result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
           'expected the finding to survive a definition-only auth helper'
         )
@@ -1744,7 +1756,7 @@ describe('pikku fabric validate', () => {
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
           'an app with no auth has nothing to attach the control to'
         )
@@ -1767,7 +1779,7 @@ describe('pikku fabric validate', () => {
         )
         const result = await runValidate(tmp)
         const finding = result.findings.find(
-          (f) => f.id === 'app-missing-actor-quick-login-web'
+          (f) => f.id === 'app-missing-virtual-user-quick-login-web'
         )
         assert.ok(finding, 'expected the Next.js route to be scanned')
         assert.match(finding!.message, /app\/login\/page\.tsx/)
@@ -1776,7 +1788,7 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('Next.js login route wired to the actor endpoint → no finding', async () => {
+    test('Next.js login route wired to the virtual user endpoint → no finding', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1784,7 +1796,7 @@ describe('pikku fabric validate', () => {
           tmp,
           {
             'app/login/page.tsx':
-              "const signIn = (email: string) => fetch('/auth/sign-in/actor', {\n" +
+              "const signIn = (email: string) => fetch('/auth/sign-in/virtual-user', {\n" +
               "  method: 'POST', body: JSON.stringify({ email }) })\n" +
               'export default function Page() { return <button onClick={() => signIn("a@b.c")} /> }\n',
           },
@@ -1793,9 +1805,9 @@ describe('pikku fabric validate', () => {
         const result = await runValidate(tmp)
         assert.ok(
           !result.findings.some(
-            (f) => f.id === 'app-missing-actor-quick-login-web'
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
           ),
-          'the /auth/sign-in/actor endpoint is a valid quick-login fingerprint'
+          'the /auth/sign-in/virtual-user endpoint is a valid quick-login fingerprint'
         )
       } finally {
         await rm(tmp, { recursive: true, force: true })

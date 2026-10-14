@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { resolveAuditUsers } from './resolve-audit-users.js'
 
-type User = { name?: string; email?: string; actor?: boolean }
+type User = { name?: string; email?: string; virtualUser?: boolean }
 
 /**
  * A stand-in for better-auth exposing only what the resolver reaches for, plus
@@ -40,8 +40,12 @@ describe('resolveAuditUsers', () => {
       ['usr_1', 'usr_2']
     )
     assert.deepEqual(directory, {
-      usr_1: { name: 'Ada', email: 'ada@example.com', actor: undefined },
-      usr_2: { name: undefined, email: 'bob@example.com', actor: undefined },
+      usr_1: { name: 'Ada', email: 'ada@example.com', virtualUser: undefined },
+      usr_2: {
+        name: undefined,
+        email: 'bob@example.com',
+        virtualUser: undefined,
+      },
     })
   })
 
@@ -56,20 +60,20 @@ describe('resolveAuditUsers', () => {
     assert.deepEqual(asked, ['usr_1'])
   })
 
-  test('flags a scenario actor so synthetic traffic is not read as real', async () => {
+  test('flags a scenario virtual user so synthetic traffic is not read as real', async () => {
     const directory = await resolveAuditUsers(
-      fakeAuth({ usr_1: { name: 'Admin', actor: true } }),
+      fakeAuth({ usr_1: { name: 'Admin', virtualUser: true } }),
       ['usr_1']
     )
-    assert.equal(directory.usr_1?.actor, true)
+    assert.equal(directory.usr_1?.virtualUser, true)
   })
 
   test('leaves an ordinary user unflagged rather than false', async () => {
     const directory = await resolveAuditUsers(
-      fakeAuth({ usr_1: { name: 'Ada', actor: false } }),
+      fakeAuth({ usr_1: { name: 'Ada', virtualUser: false } }),
       ['usr_1']
     )
-    assert.equal(directory.usr_1?.actor, undefined)
+    assert.equal(directory.usr_1?.virtualUser, undefined)
   })
 
   test('omits an account deleted since the event, leaving the id to show', async () => {

@@ -5,7 +5,7 @@ import {
   entityNames,
   extractExampleApi,
   extractTeaching,
-  renameActorsInCode,
+  renameVirtualUsersInCode,
   renameEntityInCode,
   renameEntityInPath,
   requiredChain,
@@ -83,7 +83,7 @@ export function runExamplesShow(
   const to = entity ? entityNames(entity) : null
   const cast = virtualUserCast(project.srcDirectories)
   const applyRename = (body: string) =>
-    renameActorsInCode(
+    renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
       cast
     )
@@ -221,7 +221,7 @@ export function runExamplesAdd(
   const to = entity ? entityNames(entity) : null
   const cast = virtualUserCast(project.srcDirectories)
   const renameCode = (body: string) =>
-    renameActorsInCode(
+    renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
       cast
     )

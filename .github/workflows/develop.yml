@@ -82,6 +82,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check every changeset is a patch
         run: node scripts/check-changesets-are-patch.mjs
+      - name: Check the old virtual user names are gone
+        run: node scripts/check-no-legacy-names.mjs
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'

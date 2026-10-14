@@ -93,7 +93,7 @@ describe('pikkuPlatformScenarioStep', () => {
     }
   })
 
-  test('declares one surface, so a browser run never demands an actor for it', async () => {
+  test('declares one surface, so a browser run never demands a virtual user for it', async () => {
     const { state, cleanup } = await run(
       [
         IMPORTS,

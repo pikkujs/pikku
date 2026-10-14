@@ -19,7 +19,7 @@ import {
 import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
 import {
   getSourceText,
-  extractActorFromOptions,
+  extractVirtualUserFromOptions,
 } from '../utils/workflow/dsl/patterns.js'
 
 /**
@@ -161,7 +161,7 @@ function getWorkflowInvocations(
               type: 'rpc',
               stepName,
               rpcName,
-              actor: extractActorFromOptions(optionsArg),
+              virtualUser: extractVirtualUserFromOptions(optionsArg),
             })
             state.rpc.invokedFunctions.add(rpcName)
           } else if (isFunctionLike(secondArg)) {
@@ -182,7 +182,7 @@ function getWorkflowInvocations(
               stepName,
               rpcName,
               expectEventually: true,
-              actor: extractActorFromOptions(
+              virtualUser: extractVirtualUserFromOptions(
                 args.length >= 5 ? args[4] : undefined
               ),
             })
@@ -261,7 +261,7 @@ export const addWorkflow: AddWiring = (
     }
     wrapperType = 'complex'
   } else if (expression.text === 'pikkuScenario') {
-    // A scenario is a complex workflow whose steps run as actors over the
+    // A scenario is a complex workflow whose steps run as virtual users over the
     // real transport — same extraction rules as complex, distinct meta.
     wrapperType = 'scenario'
   } else {
@@ -443,12 +443,12 @@ export const addWorkflow: AddWiring = (
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, sink)
   }
 
-  // Actor names the flow's steps run as (scenarios) — powers the console
+  // Virtual user names the flow's steps run as (scenarios) — powers the console
   // virtual users view and the Scenario graph badges.
-  const actorNames = [
+  const virtualUserNames = [
     ...new Set(
       steps
-        .map((s) => ('actor' in s ? s.actor : undefined))
+        .map((s) => ('virtualUser' in s ? s.virtualUser : undefined))
         .filter((a): a is string => typeof a === 'string')
     ),
   ]
@@ -468,7 +468,7 @@ export const addWorkflow: AddWiring = (
     skip,
     scenario: wrapperType === 'scenario' ? true : undefined,
     asserts,
-    actors: actorNames.length > 0 ? actorNames : undefined,
+    virtualUsers: virtualUserNames.length > 0 ? virtualUserNames : undefined,
   }
 
   // The scenario "logger/config only" rule (PKU673) and the implicit

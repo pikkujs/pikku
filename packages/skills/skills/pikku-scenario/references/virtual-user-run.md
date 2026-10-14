@@ -24,16 +24,16 @@ meta, the intents are the scenarios' own prose, the identity is the virtual user
 signing in, the scopes come from their declared roles. The only new input is
 which person to be.
 
-Declaring virtual users — virtual user versus actor, `defineVirtualUsers`, materialised
-actors — is in the skill itself, under **Virtual users and actors**. This is the
+Declaring virtual users — virtual user versus virtual user, `defineVirtualUsers`, materialised
+virtual users — is in the skill itself, under **Virtual users and virtual users**. This is the
 running half.
 
 ## The shape of a run
 
 ```bash
-SCENARIO_ACTOR_SECRET=… pikku virtual-user run local shopper
-SCENARIO_ACTOR_SECRET=… pikku virtual-user run local shopper -d careless --seed 42
-SCENARIO_ACTOR_SECRET=… pikku virtual-user run staging auditor \
+SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run local shopper
+SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run local shopper -d careless --seed 42
+SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run staging auditor \
   --goals "reconcile the order totals" --steps 80 --out runs/auditor.json
 ```
 
@@ -45,8 +45,8 @@ environment (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or `LITELLM_PROXY_URL` +
 
 | Flag                   | Effect                                                                                                                                                |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--disposition` / `-d` | How they behave. Overrides the virtual user's own                                                                                                          |
-| `--goals`              | Comma-separated, in your words — run _alongside_ the virtual user's own and the ones derived from scenarios                                                |
+| `--disposition` / `-d` | How they behave. Overrides the virtual user's own                                                                                                     |
+| `--goals`              | Comma-separated, in your words — run _alongside_ the virtual user's own and the ones derived from scenarios                                           |
 | `--steps`              | Model turns before it stops (default 40)                                                                                                              |
 | `--mutations`          | Non-read calls before it stops                                                                                                                        |
 | `--duration`           | Wall clock before it stops, e.g. `30m`                                                                                                                |
@@ -89,7 +89,7 @@ Three variables, checked in this order. None of them belongs in
    be; asking for one outside the list is refused by name rather than falling
    through to the root. Mint them with `pikku virtual-user secret [virtual users...]` —
    naming none mints all.
-3. **`SCENARIO_ACTOR_SECRET`** — the root secret, which derives every virtual user's
+3. **`SCENARIO_VIRTUAL_USER_SECRET`** — the root secret, which derives every virtual user's
    credential and is therefore entitled to all of them. Only `pikku dev` serves
    the endpoint it opens.
 
@@ -127,10 +127,10 @@ drift.
 
 ## The other subcommands
 
-| Command                              | What it answers                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `pikku virtual-user list`                 | Who is declared — who each one is, what they may do, what they want                        |
-| `pikku virtual-user sync <environment>`   | Which virtual users that environment will provision, with which roles, and why any were skipped |
+| Command                                        | What it answers                                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `pikku virtual-user list`                      | Who is declared — who each one is, what they may do, what they want                             |
+| `pikku virtual-user sync <environment>`        | Which virtual users that environment will provision, with which roles, and why any were skipped |
 | `pikku virtual-user secret [virtual users...]` | Mint per-virtual-user credentials from the root secret                                          |
 
 `sync` **reports**; it does not provision. The CLI has no connection to a

@@ -4,7 +4,10 @@ import type {
   ScopeService,
 } from '@pikku/core/services'
 import type { VirtualUserEnvironment } from '@pikku/core/virtual-user'
-import { appScopeId, virtualUserEnvironmentRefusal } from '@pikku/core/virtual-user'
+import {
+  appScopeId,
+  virtualUserEnvironmentRefusal,
+} from '@pikku/core/virtual-user'
 
 import type { AuthGetter } from './admin-users.js'
 import type { BetterAuthInstance } from './define-auth.js'
@@ -28,7 +31,7 @@ export interface ProvisionVirtualUsersServices {
 }
 
 /**
- * What to do with an actor account no declared virtual user claims here.
+ * What to do with a virtual user account no declared virtual user claims here.
  *
  * `report` names them and changes nothing, which is the default because a
  * rolling deploy runs the new replica's provisioning while the old replica is
@@ -38,7 +41,7 @@ export interface ProvisionVirtualUsersServices {
  * `ban` shuts sign-in for them, through the same `banned` column the console's
  * ban RPC writes. The row, its grants and its history all survive, so it is
  * reversible — and provisioning lifts the ban again by itself if the virtual user
- * comes back. Deleting the account is deliberately not offered: an actor row is
+ * comes back. Deleting the account is deliberately not offered: a virtual user row is
  * referenced by whatever those scenarios did while it existed.
  */
 export type VirtualUserOrphanPolicy = 'report' | 'ban'
@@ -50,7 +53,7 @@ export interface ProvisionVirtualUsersOptions {
   environments: Readonly<Record<string, VirtualUserEnvironment>>
   /** Which of them this process is. Defaults to `PIKKU_ENV`. */
   environment?: string
-  /** What to do with actor accounts no declared virtual user claims. Defaults to `report`. */
+  /** What to do with virtual user accounts no declared virtual user claims. Defaults to `report`. */
   orphans?: VirtualUserOrphanPolicy
 }
 
@@ -62,7 +65,7 @@ export interface ProvisionVirtualUsersResult {
   held: number
   /** One line per virtual user that may not act here, saying why. */
   skipped: string[]
-  /** Addresses of actor accounts no declared virtual user claims here. */
+  /** Addresses of virtual user accounts no declared virtual user claims here. */
   orphaned: string[]
   /** How many of those were banned, which is none unless `orphans: 'ban'`. */
   banned: number
@@ -70,10 +73,10 @@ export interface ProvisionVirtualUsersResult {
   unbanned: number
 }
 
-type ActorUser = {
+type VirtualUserRow = {
   id: string
   email?: string
-  actor?: boolean
+  virtualUser?: boolean
   banned?: boolean
 } & Record<string, unknown>
 
@@ -95,7 +98,7 @@ type ActorUser = {
  * deployed to Workers or a serverless target provisioned nothing at all.
  *
  * Accounts are created through better-auth's internal adapter — the same call
- * the actor endpoint makes — rather than by inserting a `user` row directly, so
+ * the virtual user endpoint makes — rather than by inserting a `user` row directly, so
  * the id shape, the column set and any adapter-level hooks are better-auth's
  * business and not a thing to be reimplemented against its schema.
  *
@@ -107,8 +110,8 @@ type ActorUser = {
  *
  * The reverse direction is `orphans`. Provisioning is otherwise additive in the
  * same way `syncSystemRoles` is, which leaves a real hole: an account for a
- * virtual user you deleted keeps its grants, and the actor endpoint authenticates on
- * the `actor` column alone without ever consulting the declaration — so an
+ * virtual user you deleted keeps its grants, and the virtual user endpoint authenticates on
+ * the `virtualUser` column alone without ever consulting the declaration — so an
  * `admin` virtual user nobody declares any more is still a live way in wherever that
  * endpoint is open. `orphans: 'ban'` closes it. See {@link VirtualUserOrphanPolicy}
  * for why that is opt-in rather than the default.
@@ -116,12 +119,16 @@ type ActorUser = {
  * A virtual user that may not act in this environment is skipped rather than
  * refused: the same rule that decides who may *run* here decides who is
  * provisioned here, so a production deploy creates the accountable virtual users and
- * leaves the rest uncreated. An address already held by a real (non-actor) user
+ * leaves the rest uncreated. An address already held by a real (non-virtual-user) user
  * throws, because granting a virtual user's roles to somebody else's account is not
  * a thing to do quietly.
  */
 export const provisionVirtualUsers = async (
-  { auth: contextOnlyAuth, scopeService, logger }: ProvisionVirtualUsersServices,
+  {
+    auth: contextOnlyAuth,
+    scopeService,
+    logger,
+  }: ProvisionVirtualUsersServices,
   {
     virtualUsers,
     environments,
@@ -190,10 +197,10 @@ export const provisionVirtualUsers = async (
     const email = virtualUser.email.toLowerCase()
     claimed.add(email)
     const existing = (await ctx.internalAdapter.findUserByEmail(email))
-      ?.user as ActorUser | undefined
-    if (existing && !existing.actor) {
+      ?.user as VirtualUserRow | undefined
+    if (existing && !existing.virtualUser) {
       throw new Error(
-        `${email} is a real user here, not an actor. Refusing to grant virtual user '${id}' the roles of somebody else's account — give the virtual user an address of its own.`
+        `${email} is a real user here, not a virtual user. Refusing to grant virtual user '${id}' the roles of somebody else's account — give the virtual user an address of its own.`
       )
     }
 
@@ -203,12 +210,14 @@ export const provisionVirtualUsers = async (
         email,
         name: virtualUser.name,
         emailVerified: true,
-        actor: true,
+        virtualUser: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-      })) as ActorUser | undefined
+      })) as VirtualUserRow | undefined
       if (!user) {
-        throw new Error(`Failed to create an actor account for virtual user '${id}'`)
+        throw new Error(
+          `Failed to create a virtual user account for virtual user '${id}'`
+        )
       }
       result.created++
     } else if (banAvailable && user.banned) {
@@ -245,15 +254,15 @@ export const provisionVirtualUsers = async (
     }
   }
 
-  // Every actor row, not only the ones this run touched: what makes an account
+  // Every virtual user row, not only the ones this run touched: what makes an account
   // an orphan is that no *declared* virtual user claims it here, which includes the
   // virtual users skipped above. Their accounts are a back door precisely because
   // the environment rule refuses them and the endpoint does not.
-  const actors = (await ctx.adapter.findMany({
+  const flaggedUsers = (await ctx.adapter.findMany({
     model: 'user',
-    where: [{ field: 'actor', value: true }],
-  })) as ActorUser[]
-  const unclaimed = actors.filter((user) => {
+    where: [{ field: 'virtualUser', value: true }],
+  })) as VirtualUserRow[]
+  const unclaimed = flaggedUsers.filter((user) => {
     const email = typeof user.email === 'string' ? user.email.toLowerCase() : ''
     return email !== '' && !claimed.has(email)
   })
@@ -267,7 +276,7 @@ export const provisionVirtualUsers = async (
       await setAuthUserBanned(auth, {
         userId: user.id,
         banned: true,
-        reason: `No declared virtual user claims this actor account in '${environment ?? 'an unresolved environment'}'`,
+        reason: `No declared virtual user claims this virtual user account in '${environment ?? 'an unresolved environment'}'`,
       })
       result.banned++
     }
@@ -280,7 +289,7 @@ export const provisionVirtualUsers = async (
         : '') +
       `, ${result.held} already held` +
       (result.skipped.length
-        ? `, ${result.skipped.length} virtual user(s) skipped — they do not act in '${environment ?? 'an unresolved environment'}'`
+        ? `, ${result.skipped.length} virtualUser(s) skipped — they do not act in '${environment ?? 'an unresolved environment'}'`
         : '') +
       (result.unbanned ? `, ${result.unbanned} ban(s) lifted` : '')
   )
@@ -291,10 +300,10 @@ export const provisionVirtualUsers = async (
   if (result.orphaned.length) {
     const banned = orphans === 'ban'
     logger.warn(
-      `virtualUsers: ${result.orphaned.length} actor account(s) no declared virtual user claims here` +
+      `virtualUsers: ${result.orphaned.length} virtual user account(s) no declared virtual user claims here` +
         (banned
           ? `, ${result.banned} newly banned`
-          : " — they keep every role they were granted, and the actor endpoint authenticates on the actor column alone. Pass orphans: 'ban' to shut them.")
+          : " — they keep every role they were granted, and the virtual user endpoint authenticates on the virtual user column alone. Pass orphans: 'ban' to shut them.")
     )
   }
 

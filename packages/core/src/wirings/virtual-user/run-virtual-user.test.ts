@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { rememberIds, runVirtualUser } from './run-virtual-user.js'
-import type { ActorLLM } from '../actor-flow/run-conversation.js'
+import type { VirtualUserLLM } from '../virtual-user-conversation/run-conversation.js'
 import type { AgentStepResult } from '../../services/agent-runner-service.js'
 import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
 import type {
@@ -68,9 +68,9 @@ const IDLE: VirtualUserAction = { kind: 'describe', rpcName: 'listProjects' }
 const scripted = (
   actions: VirtualUserAction[],
   onCall?: (instructions: string, messages: string[]) => void
-): { llm: ActorLLM; turns: () => number } => {
+): { llm: VirtualUserLLM; turns: () => number } => {
   let turn = 0
-  const llm: ActorLLM = async ({ instructions, messages }) => {
+  const llm: VirtualUserLLM = async ({ instructions, messages }) => {
     onCall?.(
       instructions,
       messages.map((m) => (typeof m.content === 'string' ? m.content : ''))
@@ -225,7 +225,7 @@ describe('running a virtual user', () => {
 
   test('an unparseable turn is survivable', async () => {
     const target = recordingTarget(() => respond(200, {}))
-    const llm: ActorLLM = async () => ({
+    const llm: VirtualUserLLM = async () => ({
       text: 'I think I will look at the projects',
       toolCalls: [],
       toolResults: [],

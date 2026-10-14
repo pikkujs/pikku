@@ -357,7 +357,7 @@ export const createSingletonServices: CreateSingletonServices<
         config.authFile
           ? path.join(path.dirname(config.authFile), 'auth-middleware.gen.ts')
           : undefined,
-        // The virtual users scaffold's sibling secrets file (SCENARIO_ACTOR_SECRET),
+        // The virtual users scaffold's sibling secrets file (SCENARIO_VIRTUAL_USER_SECRET),
         // generated into outDir where nothing imports it — same reasoning as the
         // auth files above.
         config.virtualUsersFile

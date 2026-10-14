@@ -6,7 +6,7 @@ export const AuditEventInput = z.object({
   entityType: z.string(),
   entityId: z.string(),
   action: z.string(),
-  actorId: z.string().optional(),
+  performedById: z.string().optional(),
   payload: z.record(z.string(), z.unknown()).optional(),
 })
 
@@ -17,7 +17,7 @@ export const writeAuditEvent = pikkuSessionlessFunc({
   input: AuditEventInput,
   func: async (
     { kysely },
-    { entityType, entityId, action, actorId, payload }
+    { entityType, entityId, action, performedById, payload }
   ) => {
     await kysely
       .insertInto('auditLog')
@@ -26,7 +26,7 @@ export const writeAuditEvent = pikkuSessionlessFunc({
         entityType,
         entityId,
         action,
-        actorId: actorId ?? null,
+        performedById: performedById ?? null,
         payload: payload ? JSON.stringify(payload) : null,
         createdAt: new Date().toISOString(),
       })

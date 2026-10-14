@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   resolveVirtualUserCredentials,
-  ACTOR_SECRET_VARIABLE,
+  VIRTUAL_USER_SECRET_VARIABLE,
   OPERATOR_TOKEN_VARIABLE,
   VIRTUAL_USER_SECRETS_VARIABLE,
   parseVirtualUserSecrets,
@@ -19,21 +19,21 @@ const variablesFrom = (values: Record<string, string>) =>
   new LocalVariablesService(values)
 
 describe('resolveVirtualUserCredentials', () => {
-  test('uses the actor secret when that is all the environment holds', async () => {
+  test('uses the virtual user secret when that is all the environment holds', async () => {
     const credentials = await resolveVirtualUserCredentials(
-      variablesFrom({ [ACTOR_SECRET_VARIABLE]: 'dev-secret' }),
-      'scenario actors'
+      variablesFrom({ [VIRTUAL_USER_SECRET_VARIABLE]: 'dev-secret' }),
+      'scenario virtual users'
     )
     assert.deepEqual(credentials, { secret: 'dev-secret' })
   })
 
-  test('prefers the operator token over the actor secret', async () => {
+  test('prefers the operator token over the virtual user secret', async () => {
     const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
-        [ACTOR_SECRET_VARIABLE]: 'dev-secret',
+        [VIRTUAL_USER_SECRET_VARIABLE]: 'dev-secret',
         [OPERATOR_TOKEN_VARIABLE]: 'operator-token',
       }),
-      'scenario actors'
+      'scenario virtual users'
     )
     assert.equal(credentials.secret, undefined)
     assert.equal(credentials.operator?.token, 'operator-token')
@@ -42,10 +42,11 @@ describe('resolveVirtualUserCredentials', () => {
   test('prefers per-virtual-user credentials over the root secret', async () => {
     const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
-        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-virtual-user',
+        [VIRTUAL_USER_SECRET_VARIABLE]:
+          'the-root-that-derives-every-virtual-user',
         [VIRTUAL_USER_SECRETS_VARIABLE]: 'admin=admin-credential',
       }),
-      'scenario actors'
+      'scenario virtual users'
     )
     assert.equal(typeof credentials.secret, 'function')
     assert.equal(
@@ -57,10 +58,11 @@ describe('resolveVirtualUserCredentials', () => {
   test('a run given only some virtual users cannot reach the rest', async () => {
     const credentials = await resolveVirtualUserCredentials(
       variablesFrom({
-        [ACTOR_SECRET_VARIABLE]: 'the-root-that-derives-every-virtual-user',
+        [VIRTUAL_USER_SECRET_VARIABLE]:
+          'the-root-that-derives-every-virtual-user',
         [VIRTUAL_USER_SECRETS_VARIABLE]: 'admin=admin-credential',
       }),
-      'scenario actors'
+      'scenario virtual users'
     )
     assert.throws(
       () => (credentials.secret as any)({ id: 'client' }),
@@ -74,7 +76,7 @@ describe('resolveVirtualUserCredentials', () => {
       (error: Error) => {
         assert.match(error.message, /a virtual user cannot sign in/)
         assert.match(error.message, new RegExp(OPERATOR_TOKEN_VARIABLE))
-        assert.match(error.message, new RegExp(ACTOR_SECRET_VARIABLE))
+        assert.match(error.message, new RegExp(VIRTUAL_USER_SECRET_VARIABLE))
         return true
       }
     )
@@ -84,7 +86,9 @@ describe('resolveVirtualUserCredentials', () => {
 describe('parseVirtualUserSecrets', () => {
   test('reads the list a mint produced', () => {
     assert.deepEqual(
-      parseVirtualUserSecrets('admin=admin-credential,client=client-credential'),
+      parseVirtualUserSecrets(
+        'admin=admin-credential,client=client-credential'
+      ),
       { admin: 'admin-credential', client: 'client-credential' }
     )
   })
@@ -111,7 +115,10 @@ describe('parseVirtualUserSecrets', () => {
   })
 
   test('refuses a list that names nobody', () => {
-    assert.throws(() => parseVirtualUserSecrets(' , '), /lists no virtual users/)
+    assert.throws(
+      () => parseVirtualUserSecrets(' , '),
+      /lists no virtual users/
+    )
   })
 })
 

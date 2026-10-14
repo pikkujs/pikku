@@ -14,7 +14,7 @@ export const OpensPageOutput = z.object({
 })
 
 /**
- * Open one app page as the step's actor and report where it landed.
+ * Open one app page as the step's virtual user and report where it landed.
  *
  * Returns rather than asserts: a scenario that expects a redirect and one that
  * forbids it both read the same value, and the landed path appears in the run
@@ -22,13 +22,13 @@ export const OpensPageOutput = z.object({
  */
 export const opensPage = pikkuScenarioStep({
   name: 'opensPage',
-  description: 'opens an app page as the signed-in actor',
+  description: 'opens an app page as the signed-in virtual user',
   template: 'opens {path}',
   input: OpensPageInput,
   output: OpensPageOutput,
   browser: async (_services, { path }, { browser }) => {
-    const actor = session(browser)
-    const status = await actor.gotoApp(path)
-    return { pathname: currentPath(actor, path), status }
+    const virtualUser = session(browser)
+    const status = await virtualUser.gotoApp(path)
+    return { pathname: currentPath(virtualUser, path), status }
   },
 })

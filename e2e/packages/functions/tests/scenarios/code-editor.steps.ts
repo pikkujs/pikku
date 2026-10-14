@@ -2,7 +2,7 @@
  * Scenario steps for the console code editor.
  *
  * These replace the cucumber glue in tests/steps/code-editor.steps.ts. Every
- * effect goes through the step's actor, so the RPC calls and the browser
+ * effect goes through the step's virtual user, so the RPC calls and the browser
  * session are the same signed-in identity.
  */
 import {
@@ -13,7 +13,7 @@ import {
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 
-type Actor = TypedVirtualUsers[keyof TypedVirtualUsers]
+type VirtualUser = TypedVirtualUsers[keyof TypedVirtualUsers]
 
 interface FunctionMeta {
   name?: string
@@ -28,10 +28,10 @@ interface SourceLocation {
 }
 
 const functionLocation = async (
-  actor: Actor,
+  virtualUser: VirtualUser,
   functionName: string
 ): Promise<SourceLocation> => {
-  const meta = (await actor.invoke(
+  const meta = (await virtualUser.invoke(
     'console:getFunctionsMeta',
     null
   )) as FunctionMeta[]
@@ -45,10 +45,10 @@ const functionLocation = async (
 }
 
 const agentLocation = async (
-  actor: Actor,
+  virtualUser: VirtualUser,
   agentKey: string
 ): Promise<SourceLocation> => {
-  const allMeta = (await actor.invoke('console:getAllMeta', null)) as {
+  const allMeta = (await virtualUser.invoke('console:getAllMeta', null)) as {
     agentsMeta?: Record<string, SourceLocation>
   }
   const found = allMeta.agentsMeta?.[agentKey]
@@ -63,11 +63,14 @@ export const readsFunctionSource = pikkuScenarioStep<
   { wrapperName: string; config: Record<string, unknown>; body: string }
 >({
   name: 'readsFunctionSource',
-  actor: true,
+  virtualUser: true,
   description: 'reads a function definition in the console',
-  default: async (_services, { functionName }, { actor }) => {
-    const location = await functionLocation(actor, functionName)
-    return (await actor.invoke('console:readFunctionSource', location)) as {
+  default: async (_services, { functionName }, { virtualUser }) => {
+    const location = await functionLocation(virtualUser, functionName)
+    return (await virtualUser.invoke(
+      'console:readFunctionSource',
+      location
+    )) as {
       wrapperName: string
       config: Record<string, unknown>
       body: string
@@ -80,11 +83,11 @@ export const readsFunctionBody = pikkuScenarioStep<
   { body: string }
 >({
   name: 'readsFunctionBody',
-  actor: true,
+  virtualUser: true,
   description: 'reads a function body in the console',
-  default: async (_services, { functionName }, { actor }) => {
-    const location = await functionLocation(actor, functionName)
-    return (await actor.invoke('console:readFunctionBody', location)) as {
+  default: async (_services, { functionName }, { virtualUser }) => {
+    const location = await functionLocation(virtualUser, functionName)
+    return (await virtualUser.invoke('console:readFunctionBody', location)) as {
       body: string
     }
   },
@@ -95,11 +98,11 @@ export const updatesFunctionConfig = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesFunctionConfig',
-  actor: true,
+  virtualUser: true,
   description: 'edits a function config in the console',
-  default: async (_services, { functionName, changes }, { actor }) => {
-    const location = await functionLocation(actor, functionName)
-    const result = (await actor.invoke('console:updateFunctionConfig', {
+  default: async (_services, { functionName, changes }, { virtualUser }) => {
+    const location = await functionLocation(virtualUser, functionName)
+    const result = (await virtualUser.invoke('console:updateFunctionConfig', {
       ...location,
       changes,
     })) as { success: boolean }
@@ -115,11 +118,11 @@ export const updatesFunctionBody = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesFunctionBody',
-  actor: true,
+  virtualUser: true,
   description: 'rewrites a function body in the console',
-  default: async (_services, { functionName, body }, { actor }) => {
-    const location = await functionLocation(actor, functionName)
-    const result = (await actor.invoke('console:updateFunctionBody', {
+  default: async (_services, { functionName, body }, { virtualUser }) => {
+    const location = await functionLocation(virtualUser, functionName)
+    const result = (await virtualUser.invoke('console:updateFunctionBody', {
       ...location,
       body,
     })) as { success: boolean }
@@ -135,11 +138,11 @@ export const readsAgentSource = pikkuScenarioStep<
   { config: Record<string, unknown> }
 >({
   name: 'readsAgentSource',
-  actor: true,
+  virtualUser: true,
   description: 'reads an agent definition in the console',
-  default: async (_services, { agentKey }, { actor }) => {
-    const location = await agentLocation(actor, agentKey)
-    return (await actor.invoke('console:readAgentSource', location)) as {
+  default: async (_services, { agentKey }, { virtualUser }) => {
+    const location = await agentLocation(virtualUser, agentKey)
+    return (await virtualUser.invoke('console:readAgentSource', location)) as {
       config: Record<string, unknown>
     }
   },
@@ -150,11 +153,11 @@ export const updatesAgentConfig = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesAgentConfig',
-  actor: true,
+  virtualUser: true,
   description: 'edits an agent config in the console',
-  default: async (_services, { agentKey, changes }, { actor }) => {
-    const location = await agentLocation(actor, agentKey)
-    const result = (await actor.invoke('console:updateAgentConfig', {
+  default: async (_services, { agentKey, changes }, { virtualUser }) => {
+    const location = await agentLocation(virtualUser, agentKey)
+    const result = (await virtualUser.invoke('console:updateAgentConfig', {
       ...location,
       changes,
     })) as { success: boolean }

@@ -23,14 +23,14 @@ const workflowMeta = () => ({
       stepName: 'buys an apple',
       stepFunc: 'buysAnApple',
       phase: 'given',
-      actor: 'shopper',
+      virtualUser: 'shopper',
     },
     {
       type: 'scenarioStep',
       stepName: 'checks out',
       stepFunc: 'checksOut',
       phase: 'when',
-      actor: 'shopper',
+      virtualUser: 'shopper',
       options: { description: 'completes the checkout' },
     },
     {
@@ -41,7 +41,7 @@ const workflowMeta = () => ({
           stepName: 'sees a receipt',
           stepFunc: 'seesAReceipt',
           phase: 'then',
-          actor: 'shopper',
+          virtualUser: 'shopper',
         },
       ],
     },
@@ -76,7 +76,7 @@ describe('collectScenarioStepProse', () => {
       'buys an apple'
     )
     assert.equal(prose.byStepName.get('buys an apple')?.phase, 'given')
-    assert.equal(prose.byStepName.get('buys an apple')?.actor, 'shopper')
+    assert.equal(prose.byStepName.get('buys an apple')?.virtualUser, 'shopper')
     assert.equal(
       prose.byStepName.get('checks out')?.description,
       'completes the checkout',
@@ -193,7 +193,7 @@ describe('scenarioSurfaceCoverage', () => {
     assert.deepEqual(
       coverage.unwitnessed,
       ['seesAReceipt'],
-      'only a `then` claims the actor observed something, so only a `then` can be a false sentence'
+      'only a `then` claims the virtual user observed something, so only a `then` can be a false sentence'
     )
   })
 
@@ -258,8 +258,8 @@ const virtualUsers = (overrides: Record<string, unknown> = {}) =>
     },
   ] as any
 
-describe('an actor introduces themselves once', () => {
-  const rows = (personaList: any) =>
+describe('a virtual user introduces themselves once', () => {
+  const rows = (virtualUserList: any) =>
     scenarioStepRows(
       [
         { stepName: 'buys an apple', status: 'succeeded' },
@@ -269,7 +269,7 @@ describe('an actor introduces themselves once', () => {
       collectScenarioStepProse(
         workflowMeta() as any,
         functionsMeta() as any,
-        personaList
+        virtualUserList
       )
     )
 
@@ -289,7 +289,9 @@ describe('an actor introduces themselves once', () => {
   })
 
   test('a job title beats the authorisation roles', () => {
-    const [first] = rows(virtualUsers({ jobTitle: 'founder', roles: ['admin'] }))
+    const [first] = rows(
+      virtualUsers({ jobTitle: 'founder', roles: ['admin'] })
+    )
     assert.ok(first!.sentenceWithRole?.includes('(the founder)'))
   })
 
@@ -325,28 +327,28 @@ describe('a run reads as one paragraph', () => {
         stepName: 'signs in',
         stepFunc: 'a',
         phase: 'given',
-        actor: 'yasser',
+        virtualUser: 'yasser',
       },
       {
         type: 'scenarioStep',
         stepName: 'opens the dashboard',
         stepFunc: 'b',
         phase: 'when',
-        actor: 'yasser',
+        virtualUser: 'yasser',
       },
       {
         type: 'scenarioStep',
         stepName: 'sees the audit log',
         stepFunc: 'c',
         phase: 'when',
-        actor: 'yasser',
+        virtualUser: 'yasser',
       },
       {
         type: 'scenarioStep',
         stepName: 'reviews the invite',
         stepFunc: 'd',
         phase: 'when',
-        actor: 'nadia',
+        virtualUser: 'nadia',
       },
     ],
   }
@@ -391,7 +393,7 @@ describe('a run reads as one paragraph', () => {
       )
     ).map((line) => line.replace(/\s+✓.*$/, '').trim())
 
-  test('the actor is introduced, then carried, then dropped', () => {
+  test('the virtual user is introduced, then carried, then dropped', () => {
     assert.deepEqual(lines(), [
       'Given yasser (the founder) signs in',
       'When  yasser opens the dashboard',
@@ -558,7 +560,7 @@ describe('step templates', () => {
           stepName: 'sees ${item}',
           stepFunc: 'seesAReceipt',
           phase: 'then',
-          actor: 'shopper',
+          virtualUser: 'shopper',
         },
       ],
     }
@@ -614,14 +616,14 @@ describe('step templates', () => {
           stepName: 'sees ${item}',
           stepFunc: 'seesAReceipt',
           phase: 'then',
-          actor: 'shopper',
+          virtualUser: 'shopper',
         },
         {
           type: 'scenarioStep',
           stepName: 'the clerk sees ${item}',
           stepFunc: 'seesAReceipt',
           phase: 'then',
-          actor: 'clerk',
+          virtualUser: 'clerk',
         },
       ],
     }
@@ -639,7 +641,7 @@ describe('step templates', () => {
     assert.match(
       lines[0]!,
       /^ {8}sees an apple {2,}✓/,
-      'two actors for one function means the ladder cannot know which ran'
+      'two virtual users for one function means the ladder cannot know which ran'
     )
   })
 

@@ -8,10 +8,10 @@
  * for the same reason; a judge grading a fixture would be one model asserting
  * against another's script.
  *
- * The agent steps reach the server over plain HTTP and so need no actor, but
+ * The agent steps reach the server over plain HTTP and so need no virtual user, but
  * `expectScore` is an inline RPC — the runner refuses to serve one locally,
  * since the snapshot it grades lives in the server process. Hence the admin
- * actor: it is the virtual user whose session carries the call there.
+ * virtual user: it is the virtual user whose session carries the call there.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
@@ -23,7 +23,7 @@ export const scoresAShortAnswerScenario = pikkuScenario<void, { score: 1 }>({
   title: 'A short answer is graded well by the brevity scorer',
   description: 'The scorer sees the run the scenario just triggered',
   tags: ['scenario', 'agent-scoring'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const thread = await scenario.given('opens a thread', 'startsAgentThread')
     const run = await scenario.when('runs the agent', 'runsAgent', {
       agent: AGENT,
@@ -35,7 +35,7 @@ export const scoresAShortAnswerScenario = pikkuScenario<void, { score: 1 }>({
 
     await scenario.expectScore('answered briefly', run.runId!, 'brevity', {
       atLeast: 1,
-      actor: actors.admin,
+      virtualUser: virtualUsers.admin,
     })
 
     return { score: 1 }
@@ -51,7 +51,7 @@ export const scoresToolUseScenario = pikkuScenario<void, { restrained: false }>(
     title: 'A run that reached for a tool grades lower on restraint',
     description: 'The grade moves with the run, so it is not a constant',
     tags: ['scenario', 'agent-scoring'],
-    func: async (_services, _data, { scenario, actors }) => {
+    func: async (_services, _data, { scenario, virtualUsers }) => {
       const thread = await scenario.given('opens a thread', 'startsAgentThread')
       const run = await scenario.when('runs the agent', 'runsAgent', {
         agent: AGENT,
@@ -64,7 +64,7 @@ export const scoresToolUseScenario = pikkuScenario<void, { restrained: false }>(
       await scenario.expectScore('used a tool', run.runId!, 'restraint', {
         atLeast: 0,
         atMost: 0.5,
-        actor: actors.admin,
+        virtualUser: virtualUsers.admin,
       })
 
       return { restrained: false }
@@ -83,7 +83,7 @@ export const gradesAgainstAnAnswerKeyScenario = pikkuScenario<
   title: 'A reference-based scorer grades against the answer key',
   description: 'The scenario supplies what live traffic cannot',
   tags: ['scenario', 'agent-scoring'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const thread = await scenario.given('opens a thread', 'startsAgentThread')
     const run = await scenario.when('runs the agent', 'runsAgent', {
       agent: AGENT,
@@ -97,7 +97,11 @@ export const gradesAgainstAnAnswerKeyScenario = pikkuScenario<
       'matched the answer key',
       run.runId!,
       'matchesAnswerKey',
-      { atLeast: 1, reference: PLAIN_TEXT_REPLY, actor: actors.admin }
+      {
+        atLeast: 1,
+        reference: PLAIN_TEXT_REPLY,
+        virtualUser: virtualUsers.admin,
+      }
     )
 
     return { matched: true }

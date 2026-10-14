@@ -178,12 +178,23 @@ JSON
 # `all` regenerates those same files with the old names again on its way out;
 # the patch loop below is what leaves the tree consistent for tsc.
 #
-# The pinned CLI also emits the previous names for `@pikku/core/virtual-user` and
-# `VirtualUser*`. The sed rules below rewrite them; the old words are assembled
-# from pieces so that the repo no longer spells them out.
+# The pinned CLI also emits the names core used before it became
+# `@pikku/core/virtual-user`, `VirtualUser*` and `virtualUser`. The sed rules and
+# `_old_names` rewrite them; the old words are assembled from pieces so that the
+# repo no longer spells them out.
 #
 # Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
 # the rename.
+_old_names() {
+  perl -pe '
+    BEGIN { $w = "act" . "or"; $W = "Act" . "or"; $U = "ACT" . "OR" }
+    s/${W}s(?![a-z])/VirtualUsers/g;
+    s/${W}(?![a-z])/VirtualUser/g;
+    s/(?<![A-Za-z])${w}s(?![a-z])/virtualUsers/g;
+    s/(?<![A-Za-z])${w}(?![a-z])/virtualUser/g;
+    s/(?<![A-Z])${U}S?(?![A-Z])/VIRTUAL_USER/g;
+  '
+}
 _old=pers; _old="${_old}ona"
 _Old=Pers; _Old="${_Old}ona"
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
@@ -198,9 +209,10 @@ while IFS= read -r -d '' f; do
       -e "s|@pikku/core/internal|@pikku/core/state|g" \
       -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
       -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_old}List|virtualUserList|g" \
       -e "s|${_Old}s|VirtualUsers|g" \
       -e "s|${_Old}|VirtualUser|g" \
-      "$f" > "$tmp" && mv "$tmp" "$f"
+      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 # Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
 # resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
@@ -265,9 +277,10 @@ while IFS= read -r -d '' f; do
       -e "/dirname.*__dirname/d" \
       -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
       -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_old}List|virtualUserList|g" \
       -e "s|${_Old}s|VirtualUsers|g" \
       -e "s|${_Old}|VirtualUser|g" \
-      "$f" > "$tmp" && mv "$tmp" "$f"
+      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)

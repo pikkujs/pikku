@@ -82,7 +82,7 @@ export const renderCatalogue = (
 /**
  * The entries a given user may reach: approval-gated calls dropped unless the
  * run opted in, mutations dropped for a read-only disposition, and anything the
- * actor's tier cannot satisfy dropped when the caller supplied one.
+ * virtual user's tier cannot satisfy dropped when the caller supplied one.
  *
  * This narrows *what is offered*, never what is enforced — the server is the
  * only thing that decides who may call what, and a call this filter would have

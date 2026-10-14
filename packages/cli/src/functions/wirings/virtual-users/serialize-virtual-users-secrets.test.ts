@@ -3,12 +3,12 @@ import assert from 'node:assert/strict'
 import { serializeVirtualUsersSecrets } from './serialize-virtual-users-secrets.js'
 
 describe('serializeVirtualUsersSecrets', () => {
-  test('declares SCENARIO_ACTOR_SECRET so the platform collects it', () => {
+  test('declares SCENARIO_VIRTUAL_USER_SECRET so the platform collects it', () => {
     const content = serializeVirtualUsersSecrets()
 
     assert.match(content, /defineSecret\(\{/)
-    assert.match(content, /secretId: 'SCENARIO_ACTOR_SECRET'/)
-    assert.match(content, /name: 'scenarioActorSecret'/)
+    assert.match(content, /secretId: 'SCENARIO_VIRTUAL_USER_SECRET'/)
+    assert.match(content, /name: 'scenarioVirtualUserSecret'/)
     assert.match(content, /displayName: '[^']+'/)
   })
 
@@ -23,9 +23,9 @@ describe('serializeVirtualUsersSecrets', () => {
 
     assert.match(
       content,
-      /export const ScenarioActorSecretSchema = z\.string\(\)/
+      /export const ScenarioVirtualUserSecretSchema = z\.string\(\)/
     )
-    assert.match(content, /schema: ScenarioActorSecretSchema,/)
+    assert.match(content, /schema: ScenarioVirtualUserSecretSchema,/)
     assert.doesNotMatch(content, /schema: z\./)
   })
 

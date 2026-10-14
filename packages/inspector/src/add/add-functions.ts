@@ -603,7 +603,7 @@ export const addFunctions: AddWiring = (
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
   let scenarioStepSurfaces: ScenarioSurface[] | undefined
-  let scenarioStepRequiresActor: boolean | undefined
+  let scenarioStepRequiresVirtualUser: boolean | undefined
   let scenarioStepAddon: string | undefined
   let scenarioStepTemplate: string | undefined
   let scopes: string[] | undefined
@@ -784,9 +784,9 @@ export const addFunctions: AddWiring = (
         ? declaredSurfaces
         : undefined
       // A browser binding cannot be provisioned without a window to open, so it
-      // requires an actor whether or not the step said so.
-      scenarioStepRequiresActor =
-        getPropertyValue(firstArg, 'actor') === true ||
+      // requires a virtual user whether or not the step said so.
+      scenarioStepRequiresVirtualUser =
+        getPropertyValue(firstArg, 'virtualUser') === true ||
         declaredSurfaces.includes('browser')
           ? true
           : undefined
@@ -1467,7 +1467,7 @@ export const addFunctions: AddWiring = (
     workflowTimeout: workflowTimeout ?? undefined,
     compensate: compensateInitializer ? true : undefined,
     scenarioStepSurfaces,
-    scenarioStepRequiresActor,
+    scenarioStepRequiresVirtualUser,
     // `virtualUser` is the default reading of an unmarked step, so it is left off
     // rather than written into every step meta a project already has.
     scenarioStepKind:

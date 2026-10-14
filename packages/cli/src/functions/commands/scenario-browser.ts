@@ -14,7 +14,7 @@ import type {
 } from '@pikku/core/scenario'
 import type { ResolvedVirtualUser } from '@pikku/core/services'
 import type {
-  ActorSecretResolver,
+  VirtualUserSecretResolver,
   OperatorSignInOptions,
 } from '@pikku/core/virtual-user'
 
@@ -23,14 +23,14 @@ export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
 
 export interface ScenarioBrowserDriverOptions {
   /**
-   * The root actor secret, for a local `pikku dev` target — each virtual user's
+   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
    * credential is derived from it. A resolver instead when this run was handed
    * credentials for only some virtual users.
    */
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
-  actors: Record<string, ResolvedVirtualUser>
+  virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   capture?: ScenarioCaptureOptions
   config: unknown
@@ -93,14 +93,14 @@ export interface ResolveScenarioBrowserProviderOptions {
   /** Base url per app, for a product whose virtual users sign into more than one. */
   appUrls?: Record<string, string>
   /**
-   * The root actor secret, for a local `pikku dev` target — each virtual user's
+   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
    * credential is derived from it. A resolver instead when this run was handed
    * credentials for only some virtual users.
    */
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
-  actors: Record<string, ResolvedVirtualUser>
+  virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   /**
    * Artifacts for this run — named screenshots, failure screenshots, and a
@@ -146,7 +146,7 @@ export const resolveScenarioBrowserProvider = async ({
   appUrls,
   secret,
   operator,
-  actors,
+  virtualUsers,
   signInPath,
   capture,
   browserScenarios,
@@ -174,12 +174,12 @@ export const resolveScenarioBrowserProvider = async ({
     )
   }
 
-  // An actor whose app has no url would browse the fallback: the wrong app's
+  // A virtual user whose app has no url would browse the fallback: the wrong app's
   // pages, loading fine, asserting nothing about the app the scenario meant.
   // Cheaper to refuse now than to read a green run that proved one app twice.
   const unmapped = [
     ...new Set(
-      Object.values(actors)
+      Object.values(virtualUsers)
         .map((virtualUser) => virtualUser.app)
         .filter((app): app is string => !!app && !config.appUrls?.[app])
     ),
@@ -193,7 +193,7 @@ export const resolveScenarioBrowserProvider = async ({
   const options: ScenarioBrowserDriverOptions = {
     secret,
     operator,
-    actors,
+    virtualUsers,
     signInPath,
     capture,
     config,

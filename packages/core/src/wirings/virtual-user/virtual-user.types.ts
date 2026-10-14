@@ -1,5 +1,5 @@
 import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
-import type { ActorFlowVerdict } from '../actor-flow/actor-flow.types.js'
+import type { ConversationVerdict } from '../virtual-user-conversation/virtual-user-conversation.types.js'
 
 /**
  * How a virtual user behaves, mechanically. A disposition changes the loop, the
@@ -150,7 +150,7 @@ export interface VirtualUserTarget {
   /** Invoke an RPC as this user, reporting the status as data rather than throwing. */
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
   /** Converse with an AI agent in virtual user. Omitted by apps that have no agents. */
-  talkTo?(agent: string, task: string): Promise<ActorFlowVerdict>
+  talkTo?(agent: string, task: string): Promise<ConversationVerdict>
   /** Send a fixture file. Omitted by apps with no upload surface. */
   upload?(file: string): Promise<ScenarioHttpResponse>
 }

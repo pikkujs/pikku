@@ -16,7 +16,7 @@ import {
   validateAgentToolReferences,
   validateAgentModels,
   validateSchemaReferences,
-  proseOpensWithActor,
+  proseOpensWithVirtualUser,
 } from './post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
@@ -468,39 +468,82 @@ describe('override validation resolves the override target (value), not the logi
 
   test('validateAddonUses accepts a wired addon from the declared package', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
-    state.rpc.wireAddonDeclarations.set('mail', { package: '@a/mail', uses: { '@a/stripe': 'stripe' } } as never)
-    state.rpc.wireAddonDeclarations.set('stripe', { package: '@a/stripe' } as never)
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('mail', {
+      package: '@a/mail',
+      uses: { '@a/stripe': 'stripe' },
+    } as never)
+    state.rpc.wireAddonDeclarations.set('stripe', {
+      package: '@a/stripe',
+    } as never)
     validateAddonUses(logger, state)
     assert.deepEqual(criticals, [])
   })
 
   test('validateAddonUses flags an addon that is not wired or wired from another package', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
-    state.rpc.wireAddonDeclarations.set('mail', { package: '@a/mail', uses: { '@a/stripe': 'stripe', '@a/crm': 'other' } } as never)
-    state.rpc.wireAddonDeclarations.set('other', { package: '@a/other' } as never)
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('mail', {
+      package: '@a/mail',
+      uses: { '@a/stripe': 'stripe', '@a/crm': 'other' },
+    } as never)
+    state.rpc.wireAddonDeclarations.set('other', {
+      package: '@a/other',
+    } as never)
     validateAddonUses(logger, state)
     assert.equal(criticals.length, 2)
   })
 
   test('validateAddonContentGrants accepts a grant under a wired addon bucket, by name or contentBucket', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
-    state.rpc.wireAddonDeclarations.set('reports', { package: '@a/reports', contentGrants: { spindle: 'read', 'media/library': 'write' } } as never)
-    state.rpc.wireAddonDeclarations.set('spindle', { package: '@a/spindle' } as never)
-    state.rpc.wireAddonDeclarations.set('other', { package: '@a/other', contentBucket: 'media' } as never)
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('reports', {
+      package: '@a/reports',
+      contentGrants: { spindle: 'read', 'media/library': 'write' },
+    } as never)
+    state.rpc.wireAddonDeclarations.set('spindle', {
+      package: '@a/spindle',
+    } as never)
+    state.rpc.wireAddonDeclarations.set('other', {
+      package: '@a/other',
+      contentBucket: 'media',
+    } as never)
     validateAddonContentGrants(logger, state)
     assert.deepEqual(criticals, [])
   })
 
   test('validateAddonContentGrants flags a bucket nobody wired, a bad mode and an empty prefix', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const state = makeOverrideState('credentials', [], {}, 'credentialOverrides')
-    state.rpc.wireAddonDeclarations.set('reports', { package: '@a/reports', contentGrants: { ghost: 'read', reports: 'admin', '/': 'read' } } as never)
+    const state = makeOverrideState(
+      'credentials',
+      [],
+      {},
+      'credentialOverrides'
+    )
+    state.rpc.wireAddonDeclarations.set('reports', {
+      package: '@a/reports',
+      contentGrants: { ghost: 'read', reports: 'admin', '/': 'read' },
+    } as never)
     validateAddonContentGrants(logger, state)
     assert.equal(criticals.length, 3)
-    assert.ok(criticals.every((c) => c.code === ErrorCode.ADDON_CONTENT_GRANT_INVALID))
+    assert.ok(
+      criticals.every((c) => c.code === ErrorCode.ADDON_CONTENT_GRANT_INVALID)
+    )
   })
 
   test('validateVariableOverrides accepts an override whose value is a declared variable', () => {
@@ -1296,42 +1339,60 @@ describe('validateSchemaReferences', () => {
   })
 })
 
-describe('proseOpensWithActor', () => {
-  test('a quoted actor opening the prose doubles the subject', () => {
+describe('proseOpensWithVirtualUser', () => {
+  test('a quoted virtual user opening the prose doubles the subject', () => {
     assert.equal(
-      proseOpensWithActor(`'sam' creates the browser-journey client`, 'sam'),
+      proseOpensWithVirtualUser(
+        `'sam' creates the browser-journey client`,
+        'sam'
+      ),
       true
     )
   })
 
   test('quotes and case are decoration, not the point', () => {
-    assert.equal(proseOpensWithActor('Sam creates the client', 'sam'), true)
-    assert.equal(proseOpensWithActor('sam creates the client', 'sam'), true)
-    assert.equal(proseOpensWithActor(`"sam" creates the client`, 'sam'), true)
+    assert.equal(
+      proseOpensWithVirtualUser('Sam creates the client', 'sam'),
+      true
+    )
+    assert.equal(
+      proseOpensWithVirtualUser('sam creates the client', 'sam'),
+      true
+    )
+    assert.equal(
+      proseOpensWithVirtualUser(`"sam" creates the client`, 'sam'),
+      true
+    )
   })
 
-  test("an actor's own possessive is still the doubled subject", () => {
-    assert.equal(proseOpensWithActor("sam's client is created", 'sam'), true)
+  test("a virtual user's own possessive is still the doubled subject", () => {
+    assert.equal(
+      proseOpensWithVirtualUser("sam's client is created", 'sam'),
+      true
+    )
   })
 
   test('naming someone mid-sentence is ordinary prose', () => {
-    assert.equal(proseOpensWithActor('sends sam an invite', 'sam'), false)
+    assert.equal(proseOpensWithVirtualUser('sends sam an invite', 'sam'), false)
   })
 
   // A virtual user keyed after a role noun must keep the word as a word: refusing
-  // "creates the admin client" for an actor called `admin` would make the
+  // "creates the admin client" for a virtual user called `admin` would make the
   // check the reason to rename the virtual user.
-  test('an actor key that is also a common noun is only refused as the subject', () => {
+  test('a virtual user key that is also a common noun is only refused as the subject', () => {
     assert.equal(
-      proseOpensWithActor('creates the admin client', 'admin'),
+      proseOpensWithVirtualUser('creates the admin client', 'admin'),
       false
     )
-    assert.equal(proseOpensWithActor('admin creates the client', 'admin'), true)
+    assert.equal(
+      proseOpensWithVirtualUser('admin creates the client', 'admin'),
+      true
+    )
   })
 
-  test('a longer name starting with the actor key is a different person', () => {
+  test('a longer name starting with the virtual user key is a different person', () => {
     assert.equal(
-      proseOpensWithActor('samantha creates the client', 'sam'),
+      proseOpensWithVirtualUser('samantha creates the client', 'sam'),
       false
     )
   })

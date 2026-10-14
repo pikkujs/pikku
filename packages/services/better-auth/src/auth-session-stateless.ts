@@ -11,7 +11,7 @@ import {
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { defaultSession } from './default-session.js'
-import { stampActorFlag } from './stamp-actor-flag.js'
+import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
@@ -168,7 +168,7 @@ export const betterAuthStatelessSession = (
           : defaultSession(cached)
         await setSession(
           await withResolvedScopes(
-            stampActorFlag(mapped, cached.user),
+            stampVirtualUserFlag(mapped, cached.user),
             services as CoreServices
           )
         )

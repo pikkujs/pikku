@@ -12,14 +12,16 @@ import { requireScenarioEnv } from './scenario-step-guards.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-const fakeActor = (
+const fakeVirtualUser = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
-): ScenarioVirtualUser & { calls: Array<{ rpcName: string; data: unknown }> } => {
+): ScenarioVirtualUser & {
+  calls: Array<{ rpcName: string; data: unknown }>
+} => {
   const calls: Array<{ rpcName: string; data: unknown }> = []
   return {
     name,
-    email: `${name}@actors.local`,
+    email: `${name}@virtualuser.local`,
     calls,
     invoke: async (rpcName: string, data: unknown) => {
       calls.push({ rpcName, data })
@@ -47,12 +49,12 @@ const setup = async (
   return runId
 }
 
-describe('scenario actor steps (workflow.do with `actor`)', () => {
+describe('scenario virtual user steps (workflow.do with `virtualUser`)', () => {
   beforeEach(() => resetPikkuState())
 
-  test('routes through the actor over the real transport, never internal rpc', async () => {
+  test('routes through the virtual user over the real transport, never internal rpc', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
-    const customer = fakeActor('customer', async () => ({ todoId: 't1' }))
+    const customer = fakeVirtualUser('customer', async () => ({ todoId: 't1' }))
     let internalCalls = 0
 
     const runId = await setup(ws)
@@ -68,24 +70,28 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
       'customer creates todo',
       'createTodo',
       { title: 'x' },
-      { actor: customer }
+      { virtualUser: customer }
     )
 
     assert.deepEqual(result, { todoId: 't1' })
     assert.deepEqual(customer.calls, [
       { rpcName: 'createTodo', data: { title: 'x' } },
     ])
-    assert.equal(internalCalls, 0, 'actor steps must NOT dispatch internally')
+    assert.equal(
+      internalCalls,
+      0,
+      'virtual user steps must NOT dispatch internally'
+    )
   })
 
   test('step is recorded durably and replay returns the cached result without re-invoking', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let invocations = 0
-    const yasser = fakeActor('yasser', async () => ({ n: ++invocations }))
+    const yasser = fakeVirtualUser('yasser', async () => ({ n: ++invocations }))
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
-    const first = await wire.do('step', 'someRpc', {}, { actor: yasser })
+    const first = await wire.do('step', 'someRpc', {}, { virtualUser: yasser })
     assert.deepEqual(first, { n: 1 })
 
     await (ws as any).beginReplay(runId)
@@ -94,17 +100,21 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
       'step',
       'someRpc',
       {},
-      { actor: yasser }
+      { virtualUser: yasser }
     )
 
     assert.deepEqual(replayed, { n: 1 }, 'replay must return the cached result')
-    assert.equal(invocations, 1, 'the actor must not be re-invoked on replay')
+    assert.equal(
+      invocations,
+      1,
+      'the virtual user must not be re-invoked on replay'
+    )
   })
 
-  test('actor steps never queue, even when the function is queue-eligible', async () => {
+  test('virtual user steps never queue, even when the function is queue-eligible', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let queued = 0
-    const customer = fakeActor('customer', async () => ({}))
+    const customer = fakeVirtualUser('customer', async () => ({}))
     const runId = await setup(ws, {
       queueService: {
         add: async () => {
@@ -118,22 +128,26 @@ describe('scenario actor steps (workflow.do with `actor`)', () => {
     } as any
 
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    await wire.do('step', 'queuedRpc', {}, { actor: customer })
+    await wire.do('step', 'queuedRpc', {}, { virtualUser: customer })
 
-    assert.equal(queued, 0, 'actor steps are outbound HTTP — never queued')
+    assert.equal(
+      queued,
+      0,
+      'virtual user steps are outbound HTTP — never queued'
+    )
     assert.equal(customer.calls.length, 1)
   })
 
-  test('actor step failure surfaces the actor error and fails after retries', async () => {
+  test('virtual user step failure surfaces the virtual user error and fails after retries', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
-    const broken = fakeActor('broken', async () => {
+    const broken = fakeVirtualUser('broken', async () => {
       throw new Error("[scenario] 'createTodo' as 'broken' returned 403: nope")
     })
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     await assert.rejects(
-      wire.do('step', 'createTodo', {}, { actor: broken, retries: 2 }),
+      wire.do('step', 'createTodo', {}, { virtualUser: broken, retries: 2 }),
       /returned 403/
     )
     assert.equal(broken.calls.length, 2, 'retries bounds total attempts')
@@ -145,7 +159,7 @@ const registerStep = (
   config: {
     description?: string
     surfaces?: ScenarioSurface[]
-    requiresActor?: boolean
+    requiresVirtualUser?: boolean
     func: (services: any, data: any, wire: PikkuWire) => Promise<unknown>
   }
 ) => {
@@ -210,13 +224,13 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     assert.deepEqual(phases, ['given', 'when', 'then'])
   })
 
-  test('the actor is handed to the step rather than used to dispatch it', async () => {
+  test('the virtual user is handed to the step rather than used to dispatch it', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
-    const shopper = fakeActor('shopper', async () => ({ ok: true }))
+    const shopper = fakeVirtualUser('shopper', async () => ({ ok: true }))
     let received: unknown
     registerStep('checksOut', {
       func: async (_services, _data, wire) => {
-        received = wire.actor
+        received = wire.virtualUser
         return null
       },
     })
@@ -224,14 +238,14 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.when('shopper checks out', 'checksOut', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.equal(received, shopper)
     assert.equal(
       shopper.calls.length,
       0,
-      'a step runs locally — the actor is context, not the transport'
+      'a step runs locally — the virtual user is context, not the transport'
     )
   })
 
@@ -303,7 +317,7 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
   test('a browser step fails loudly when no provider is registered', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     registerStep('visitsCheckout', {
       surfaces: ['browser'],
       func: async () => null,
@@ -314,21 +328,21 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
 
     await assert.rejects(
       wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-        actor: shopper,
+        virtualUser: shopper,
       }),
       /no browser provider is registered/
     )
   })
 
-  test('a registered provider hands the step a session keyed by the actor', async () => {
+  test('a registered provider hands the step a session keyed by the virtual user', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     const requested: string[] = []
-    const session = { actor: 'shopper' } as any
+    const session = { virtualUser: 'shopper' } as any
     scenarioService.setScenarioBrowserProvider({
-      sessionFor: async (actorName: string) => {
-        requested.push(actorName)
+      sessionFor: async (virtualUserName: string) => {
+        requested.push(virtualUserName)
         return session
       },
     } as any)
@@ -345,7 +359,7 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.deepEqual(requested, ['shopper'])
@@ -392,9 +406,9 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
     scenarioService.setScenarioBrowserProvider({
-      sessionFor: async () => ({ actor: 'shopper' }) as any,
+      sessionFor: async () => ({ virtualUser: 'shopper' }) as any,
     } as any)
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     const ran: ScenarioSurface[] = []
     registerStep('seesTheOrderConfirmed', {
       surfaces: ['browser', 'default'],
@@ -410,7 +424,7 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
       'shopper sees the order confirmed',
       'seesTheOrderConfirmed',
       undefined,
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     assert.deepEqual(ran, ['browser', 'default'])
@@ -420,9 +434,9 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
     scenarioService.setScenarioBrowserProvider({
-      sessionFor: async () => ({ actor: 'shopper' }) as any,
+      sessionFor: async () => ({ virtualUser: 'shopper' }) as any,
     } as any)
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     registerStep('seesTheOrderConfirmed', {
       surfaces: ['browser', 'default'],
       func: async (_services, _data, wire) =>
@@ -439,7 +453,7 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
         'shopper sees the order confirmed',
         'seesTheOrderConfirmed',
         undefined,
-        { actor: shopper }
+        { virtualUser: shopper }
       ),
       /observed different things on different surfaces/
     )
@@ -518,7 +532,9 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
 describe('a strict run refuses every route off the run surface', () => {
   beforeEach(() => resetPikkuState())
 
-  const browserProvider = { sessionFor: async () => ({ actor: 'shopper' }) }
+  const browserProvider = {
+    sessionFor: async () => ({ virtualUser: 'shopper' }),
+  }
 
   test('an action that would fall back fails, even declaring default', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
@@ -606,7 +622,7 @@ describe('a strict run refuses every route off the run surface', () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser', true)
     scenarioService.setScenarioBrowserProvider(browserProvider as any)
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     const ran: ScenarioSurface[] = []
     registerStep('clicksBuy', {
       surfaces: ['browser'],
@@ -626,13 +642,13 @@ describe('a strict run refuses every route off the run surface', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.when('shopper buys it', 'clicksBuy', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
     const observed = await wire.then(
       'shopper sees the order confirmed',
       'seesTheOrderConfirmed',
       undefined,
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     assert.deepEqual(ran, ['browser', 'browser', 'default'])
@@ -662,10 +678,10 @@ describe('a strict run refuses every route off the run surface', () => {
 describe('workflow.expectEventually', () => {
   beforeEach(() => resetPikkuState())
 
-  test('polls as the actor until the predicate passes', async () => {
+  test('polls as the virtual user until the predicate passes', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let polls = 0
-    const sarah = fakeActor('sarah', async () => ({
+    const sarah = fakeVirtualUser('sarah', async () => ({
       notifications: ++polls >= 3 ? ['ping'] : [],
     }))
     const runId = await setup(ws)
@@ -676,7 +692,7 @@ describe('workflow.expectEventually', () => {
       'getNotifications',
       {},
       (out: any) => out.notifications.length > 0,
-      { actor: sarah, within: 2_000, interval: 5 }
+      { virtualUser: sarah, within: 2_000, interval: 5 }
     )
 
     assert.deepEqual(result, { notifications: ['ping'] })
@@ -685,7 +701,7 @@ describe('workflow.expectEventually', () => {
 
   test('fails with the last result when the deadline passes', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
-    const sarah = fakeActor('sarah', async () => ({ notifications: [] }))
+    const sarah = fakeVirtualUser('sarah', async () => ({ notifications: [] }))
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
@@ -695,13 +711,13 @@ describe('workflow.expectEventually', () => {
         'getNotifications',
         {},
         (out: any) => out.notifications.length > 0,
-        { actor: sarah, within: 30, interval: 5, retries: 0 }
+        { virtualUser: sarah, within: 30, interval: 5, retries: 0 }
       ),
       /did not pass within 30ms.*notifications/
     )
   })
 
-  test('polls internally (rpcWithWire) when no actor is given', async () => {
+  test('polls internally (rpcWithWire) when no virtual user is given', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let polls = 0
     const runId = await setup(ws)
@@ -857,35 +873,35 @@ describe('the scenario environment reaches the step wire', () => {
   })
 })
 
-describe('a step driven by a virtual user is given its actor', () => {
+describe('a step driven by a virtual user is given its virtual user', () => {
   beforeEach(() => resetPikkuState())
 
-  test('the actor is on the wire, not something the body unwraps', async () => {
+  test('the virtual user is on the wire, not something the body unwraps', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
-    const shopper = fakeActor('shopper', async () => null)
+    const shopper = fakeVirtualUser('shopper', async () => null)
     let resolved: unknown
-    registerStep('needsAnActor', {
-      requiresActor: true,
+    registerStep('needsAVirtualUser', {
+      requiresVirtualUser: true,
       func: async (_services, _data, wire) => {
-        resolved = wire.actor
+        resolved = wire.virtualUser
         return null
       },
     })
 
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    await wire.when('shopper acts', 'needsAnActor', undefined, {
-      actor: shopper,
+    await wire.when('shopper acts', 'needsAVirtualUser', undefined, {
+      virtualUser: shopper,
     })
 
     assert.equal(resolved, shopper)
   })
 
-  test('one dispatched without an actor is refused before its body runs', async () => {
+  test('one dispatched without a virtual user is refused before its body runs', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let bodyRan = false
-    registerStep('needsAnActor', {
-      requiresActor: true,
+    registerStep('needsAVirtualUser', {
+      requiresVirtualUser: true,
       func: async () => {
         bodyRan = true
         return null
@@ -895,8 +911,8 @@ describe('a step driven by a virtual user is given its actor', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await assert.rejects(
-      wire.when('nobody acts', 'needsAnActor'),
-      /needsAnActor.*actor/s
+      wire.when('nobody acts', 'needsAVirtualUser'),
+      /needsAVirtualUser.*virtualUser/s
     )
     assert.equal(bodyRan, false)
   })
@@ -906,7 +922,7 @@ describe('a step driven by a virtual user is given its actor', () => {
     let seen: unknown = 'unset'
     registerStep('assertsSomething', {
       func: async (_services, _data, wire) => {
-        seen = wire.actor
+        seen = wire.virtualUser
         return null
       },
     })
@@ -947,19 +963,20 @@ describe('a browser step records where it falls in the video', () => {
   beforeEach(() => resetPikkuState())
 
   /**
-   * A provider recording every actor from `startedAt`, so a step's offset is a
+   * A provider recording every virtual user from `startedAt`, so a step's offset is a
    * known quantity rather than a race against the clock.
    */
   const recordingProvider = (startedAt: number | undefined) => ({
-    sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
+    sessionFor: async (virtualUserName: string) =>
+      ({ virtualUser: virtualUserName }) as any,
     videoStartedAt: () => startedAt,
     close: async () => {},
   })
 
-  test('the offset is measured from the actor own recording, not the scenario', async () => {
+  test('the offset is measured from the virtual user own recording, not the scenario', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     scenarioService.setScenarioBrowserProvider(
       recordingProvider(Date.now() - 4_000) as any
     )
@@ -971,13 +988,13 @@ describe('a browser step records where it falls in the video', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     const offsets = scenarioService.takeStepVideoOffsets(runId)
     const step = offsets.get('shopper visits checkout')
     assert.equal(step?.length, 1)
-    assert.equal(step![0]!.actor, 'shopper')
+    assert.equal(step![0]!.virtualUser, 'shopper')
     assert.ok(
       step![0]!.offsetMs >= 4_000,
       'four seconds of recording preceded the step'
@@ -987,12 +1004,12 @@ describe('a browser step records where it falls in the video', () => {
   test('a driver that edits its footage answers the offset itself', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     const marked: string[] = []
     scenarioService.setScenarioBrowserProvider({
       ...recordingProvider(Date.now()),
-      markVideoStep: (actorName: string) => {
-        marked.push(actorName)
+      markVideoStep: (virtualUserName: string) => {
+        marked.push(virtualUserName)
         return 7_000
       },
     } as any)
@@ -1004,7 +1021,7 @@ describe('a browser step records where it falls in the video', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.deepEqual(marked, ['shopper'])
@@ -1012,7 +1029,7 @@ describe('a browser step records where it falls in the video', () => {
       scenarioService
         .takeStepVideoOffsets(runId)
         .get('shopper visits checkout'),
-      [{ actor: 'shopper', offsetMs: 7_000 }]
+      [{ virtualUser: 'shopper', offsetMs: 7_000 }]
     )
   })
 
@@ -1036,7 +1053,7 @@ describe('a browser step records where it falls in the video', () => {
   test('a run with no video records nothing, and the step still runs', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     let ran = false
     scenarioService.setScenarioBrowserProvider(
       recordingProvider(undefined) as any
@@ -1052,7 +1069,7 @@ describe('a browser step records where it falls in the video', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.equal(ran, true)
@@ -1062,9 +1079,10 @@ describe('a browser step records where it falls in the video', () => {
   test('a driver predating the field is one the runner still drives', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     scenarioService.setScenarioBrowserProvider({
-      sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
+      sessionFor: async (virtualUserName: string) =>
+        ({ virtualUser: virtualUserName }) as any,
       close: async () => {},
     } as any)
     registerStep('visitsCheckout', {
@@ -1075,7 +1093,7 @@ describe('a browser step records where it falls in the video', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 0)
@@ -1084,7 +1102,7 @@ describe('a browser step records where it falls in the video', () => {
   test('the offsets are handed over once, so nothing holds them after the run', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
+    const shopper = fakeVirtualUser('shopper', async () => ({}))
     scenarioService.setScenarioBrowserProvider(
       recordingProvider(Date.now()) as any
     )
@@ -1096,7 +1114,7 @@ describe('a browser step records where it falls in the video', () => {
     const runId = await setup(ws)
     const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
+      virtualUser: shopper,
     })
 
     assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 1)

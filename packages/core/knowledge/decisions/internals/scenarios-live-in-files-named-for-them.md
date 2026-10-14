@@ -18,7 +18,7 @@ So `validate` requires the declaration to be in a file named for what it is:
 | --------------------------------------------------- | --------------------------------- |
 | `pikkuScenario`, `pikkuFeature`                     | `*.scenario.ts`, `*.scenarios.ts` |
 | `pikkuScenarioStep` and its platform/addon variants | `*.steps.ts` (or the above)       |
-| `defineVirtualUsers`, `runVirtualUser`                  | `*.virtual-user.ts`, `*.vu.ts`    |
+| `defineVirtualUsers`, `runVirtualUser`              | `*.virtual-user.ts`, `*.vu.ts`    |
 
 Three suffixes for scenarios rather than one, because the split that matters is
 scenarios apart from application code, not a particular spelling — `.steps.ts`
@@ -29,7 +29,7 @@ project that already made that split does not have to rename anything.
 expensive once it is thirty, and a warning is exactly the signal a project
 learns to scroll past. This is the one place where the scenario checks are
 strict: everything else `validate` says about scenarios (no virtual users declared,
-no actor sign-in, no environments) is a warning, because those describe an
+no virtual user sign-in, no environments) is a warning, because those describe an
 under-tested project rather than an unreadable one.
 
 **Virtual users are the virtual-user file** because there is no `defineVirtualUsers`

@@ -31,17 +31,17 @@ const Todos = () => {
 }
 ```
 
-## Dev actor sign-in
+## Dev virtual user sign-in
 
-`useDevActors()` powers the "Sign in as …" switcher: one click signs in as a
-declared virtual user with no password, through Better Auth's actor
+`useDevVirtualUsers()` powers the "Sign in as …" switcher: one click signs in as a
+declared virtual user with no password, through Better Auth's virtual user
 endpoint. It is UI-free, so you can render it however you like — or use the
-starter template's `<DevActorSwitcher />`.
+starter template's `<DevVirtualUserSwitcher />`.
 
 ```typescript
-import { useDevActors } from '@pikku/react'
+import { useDevVirtualUsers } from '@pikku/react'
 
-const { actors, signInAs, isPending } = useDevActors({
+const { virtualUsers, signInAs, isPending } = useDevVirtualUsers({
   apiUrl: apiUrl(),
   app: appSlug,
   onSignedIn: () => navigate({ to: '/' }),
@@ -50,10 +50,10 @@ const { actors, signInAs, isPending } = useDevActors({
 
 No credential reaches the bundle. The hook lists virtual users from
 `/auth/sign-in/virtual-users`, and `signInAs(id)` posts only the virtual user id to
-`/auth/sign-in/virtual-user`. The server decides both: pass `virtualUserSignIn` to
-`pikkuActor` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
-stage opts into actor sign-in and turns its `devSwitcher` flag on, and the
-endpoint only signs in users flagged `actor: true`, so it can never impersonate
+`/auth/sign-in/switch-virtual-user`. The server decides both: pass `virtualUserSignIn` to
+`pikkuVirtualUser` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
+stage opts into virtual user sign-in and turns its `devSwitcher` flag on, and the
+endpoint only signs in users flagged `virtualUser: true`, so it can never impersonate
 a real user.
 
 ## Locale store
@@ -116,8 +116,8 @@ its own check:
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@pikku/react/i18n-jsx"
-  }
+    "jsxImportSource": "@pikku/react/i18n-jsx",
+  },
 }
 ```
 
@@ -162,7 +162,11 @@ are not worth a catalogue key. Wrap them in `sep`:
 ```tsx
 import { sep } from '@pikku/react'
 
-<p>{m.owner()}{sep(' · ')}{m.updated()}</p>
+;<p>
+  {m.owner()}
+  {sep(' · ')}
+  {m.updated()}
+</p>
 ```
 
 `sep` takes a literal made only of whitespace, punctuation and symbols (space, no-break and

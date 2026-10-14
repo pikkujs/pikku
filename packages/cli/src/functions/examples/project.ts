@@ -66,7 +66,7 @@ function sourceFiles(dir: string): string[] {
  *
  * Read from the `defineVirtualUsers` call rather than from generated meta because a cast
  * rewritten a moment ago has not been through codegen yet, and a recipe that substitutes
- * an example's actor has to substitute the CURRENT one or it writes a scenario naming
+ * an example's virtual user has to substitute the CURRENT one or it writes a scenario naming
  * somebody who no longer exists.
  */
 export function virtualUserCast(srcDirectories: string[]): string[] {

@@ -61,7 +61,7 @@ describe('composeStepProse', () => {
         description: 'sees an addon in the gallery',
         template: 'sees {packageName}',
         input: { packageName: '@pikku/addon-todos' },
-        actor: 'admin',
+        virtualUser: 'admin',
       }),
       'Then admin sees @pikku/addon-todos'
     )
@@ -73,21 +73,21 @@ describe('composeStepProse', () => {
         phase: 'then',
         description: 'sees an addon in the gallery',
         input: { packageName: '@pikku/addon-todos' },
-        actor: 'admin',
+        virtualUser: 'admin',
       }),
       'Then admin sees an addon in the gallery'
     )
   })
 })
 
-describe('composeStepProse with an actor role', () => {
-  test('the role renders as an apposition after the actor', () => {
+describe('composeStepProse with a virtual user role', () => {
+  test('the role renders as an apposition after the virtual user', () => {
     assert.equal(
       composeStepProse({
         phase: 'given',
         description: 'signs in',
-        actor: 'yasser',
-        actorRole: 'founder',
+        virtualUser: 'yasser',
+        virtualUserRole: 'founder',
       }),
       'Given yasser (the founder) signs in'
     )
@@ -98,18 +98,18 @@ describe('composeStepProse with an actor role', () => {
       composeStepProse({
         phase: 'given',
         description: 'signs in',
-        actor: 'yasser',
+        virtualUser: 'yasser',
       }),
       'Given yasser signs in'
     )
   })
 
-  test('a role without an actor has nothing to qualify, so it is dropped', () => {
+  test('a role without a virtual user has nothing to qualify, so it is dropped', () => {
     assert.equal(
       composeStepProse({
         phase: 'then',
         description: 'the receipt totals 4.50',
-        actorRole: 'founder',
+        virtualUserRole: 'founder',
       }),
       'Then the receipt totals 4.50'
     )
@@ -120,8 +120,8 @@ describe('composeStepProse with an actor role', () => {
       composeStepProse({
         phase: 'when',
         description: 'opens /app',
-        actor: 'nadia',
-        actorRole: 'head of ops',
+        virtualUser: 'nadia',
+        virtualUserRole: 'head of ops',
         keywordWidth: 5,
       }),
       'When  nadia (the head of ops) opens /app'
@@ -135,46 +135,46 @@ describe('composeStepProse continuations', () => {
       composeStepProse({
         phase: 'given',
         description: 'is invited',
-        actor: 'nadia',
+        virtualUser: 'nadia',
         continuesPhase: true,
       }),
       'And nadia is invited'
     )
   })
 
-  test('the same actor continuing drops the repeated subject', () => {
+  test('the same virtual user continuing drops the repeated subject', () => {
     assert.equal(
       composeStepProse({
         phase: 'when',
         description: 'sees the audit log',
-        actor: 'yasser',
+        virtualUser: 'yasser',
         continuesPhase: true,
-        continuesActor: true,
+        continuesVirtualUser: true,
       }),
       'And sees the audit log'
     )
   })
 
-  test('a new actor keeps their name even under And', () => {
+  test('a new virtual user keeps their name even under And', () => {
     assert.equal(
       composeStepProse({
         phase: 'given',
         description: 'is invited',
-        actor: 'nadia',
+        virtualUser: 'nadia',
         continuesPhase: true,
-        continuesActor: false,
+        continuesVirtualUser: false,
       }),
       'And nadia is invited'
     )
   })
 
-  test('the same actor across a phase change keeps the subject', () => {
+  test('the same virtual user across a phase change keeps the subject', () => {
     assert.equal(
       composeStepProse({
         phase: 'when',
         description: 'opens the dashboard',
-        actor: 'yasser',
-        continuesActor: true,
+        virtualUser: 'yasser',
+        continuesVirtualUser: true,
       }),
       'When yasser opens the dashboard'
     )
@@ -185,8 +185,8 @@ describe('composeStepProse continuations', () => {
       composeStepProse({
         phase: 'given',
         description: 'is invited',
-        actor: 'nadia',
-        actorRole: 'reviewer',
+        virtualUser: 'nadia',
+        virtualUserRole: 'reviewer',
         continuesPhase: true,
       }),
       'And nadia (the reviewer) is invited'
@@ -195,12 +195,12 @@ describe('composeStepProse continuations', () => {
 })
 
 describe('composeStepProse basics', () => {
-  test('renders the gherkin keyword, the actor and the description', () => {
+  test('renders the gherkin keyword, the virtual user and the description', () => {
     assert.equal(
       composeStepProse({
         phase: 'given',
         description: 'buys an apple',
-        actor: 'shopper',
+        virtualUser: 'shopper',
       }),
       'Given shopper buys an apple'
     )
@@ -208,7 +208,7 @@ describe('composeStepProse basics', () => {
       composeStepProse({
         phase: 'then',
         description: 'sees a receipt',
-        actor: 'shopper',
+        virtualUser: 'shopper',
       }),
       'Then shopper sees a receipt'
     )
@@ -219,13 +219,13 @@ describe('composeStepProse basics', () => {
       composeStepProse({
         phase: 'when',
         description: 'opens /app',
-        actor: 'nadia',
+        virtualUser: 'nadia',
       }),
       'When nadia opens /app'
     )
   })
 
-  test('an actorless step reads as a plain sentence', () => {
+  test('an anonymous step reads as a plain sentence', () => {
     assert.equal(
       composeStepProse({
         phase: 'given',
@@ -240,7 +240,7 @@ describe('composeStepProse basics', () => {
       composeStepProse({
         phase: 'when',
         description: 'refreshes the dashboard',
-        actor: 'admin',
+        virtualUser: 'admin',
       }),
       'When admin refreshes the dashboard'
     )
@@ -254,7 +254,7 @@ describe('composeStepProse basics', () => {
         { phase: 'then', description: 'sees a receipt' },
       ] as const
     ).map((step) =>
-      composeStepProse({ ...step, actor: 'shopper', keywordWidth: 5 })
+      composeStepProse({ ...step, virtualUser: 'shopper', keywordWidth: 5 })
     )
 
     assert.deepEqual(rendered, [

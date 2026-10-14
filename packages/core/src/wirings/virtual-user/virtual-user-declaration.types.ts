@@ -6,7 +6,7 @@ import type { VirtualUserTuning } from '../virtual-user/virtual-user-disposition
  *
  * Deliberately near-empty in the common case: the address is computed from the
  * virtual user's name and the run id, and the password derives from
- * `SCENARIO_ACTOR_SECRET`, so there is nothing left to write down. It fills up
+ * `SCENARIO_VIRTUAL_USER_SECRET`, so there is nothing left to write down. It fills up
  * only for a provider login.
  *
  * Shaped after better-auth's `account` table, which is what most pikku apps are
@@ -112,9 +112,9 @@ export type CoreVirtualUser = {
    *
    * A person uses one of them — staff their app, customers theirs — and that is
    * what decides where a browser step navigates: `/dashboard` is a different
-   * page in each, so the actor settles which one without the scenario saying.
+   * page in each, so the virtual user settles which one without the scenario saying.
    * The runner takes the base url per app (`--app-url <app>=<url>`, or
-   * `appUrls` on the environment) and each actor browses against its own.
+   * `appUrls` on the environment) and each virtual user browses against its own.
    *
    * Omitted is the normal case: one app, one url, nothing to say.
    */

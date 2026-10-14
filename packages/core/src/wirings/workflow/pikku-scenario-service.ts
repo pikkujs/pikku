@@ -184,7 +184,7 @@ addError(ScenarioHookError, {
  * Two witnesses of the same `then` disagreed.
  *
  * This is the failure the whole additive-witness design exists to produce: the
- * system of record is right and the surface the actor was looking at is not, or
+ * system of record is right and the surface the virtual user was looking at is not, or
  * the other way round. Both observations go in the message, because either one
  * alone reads as a passing assertion.
  */
@@ -226,21 +226,21 @@ addError(ScenarioBrowserUnavailable, {
  * A step that is driven by a virtual user was dispatched without one.
  *
  * Raised before the body runs rather than partway through it: the step declared
- * that it needs an actor — by having a `browser` binding, which cannot be
- * provisioned without a window to open, or by `actor: true` — so a call site
+ * that it needs a virtual user — by having a `browser` binding, which cannot be
+ * provisioned without a window to open, or by `virtualUser: true` — so a call site
  * that omits one is a mistake at the call site.
  */
-export class ScenarioActorRequired extends PikkuError {
+export class ScenarioVirtualUserRequired extends PikkuError {
   constructor(public readonly stepFunc: string) {
     super(
-      `[scenario] step '${stepFunc}' is driven by a virtual user but was called without an actor. ` +
-        `Pass { actor: actors.<name> } so it runs as that virtual user.`
+      `[scenario] step '${stepFunc}' is driven by a virtual user but was called without a virtual user. ` +
+        `Pass { virtualUser: virtualUsers.<name> } so it runs as that virtual user.`
     )
   }
 }
-addError(ScenarioActorRequired, {
+addError(ScenarioVirtualUserRequired, {
   status: 500,
-  message: 'This step needs an actor.',
+  message: 'This step needs a virtual user.',
 })
 
 /**
@@ -307,7 +307,7 @@ addError(ScenarioNoWitness, {
  * An assertion ran, but not on the surface the run targets.
  *
  * The sibling of {@link ScenarioNoWitness}: that one checked nothing anywhere,
- * this one checked the system of record while the prose claims the actor saw it
+ * this one checked the system of record while the prose claims the virtual user saw it
  * on the page. Ordinary runs count it as a coverage gap; a strict run refuses
  * it, because a flow that cannot be observed end to end on the run surface is
  * not a flow that surface can be documented from.
@@ -321,7 +321,7 @@ export class ScenarioUnwitnessedAssertion extends PikkuError {
   ) {
     super(
       `[scenario] assertion '${stepFunc}' was checked on ${witnessedOn.join(', ')}, not on '${runSurface}'. ` +
-        `It held there — but nothing looked at '${runSurface}', which is what the step's prose claims the actor saw. ` +
+        `It held there — but nothing looked at '${runSurface}', which is what the step's prose claims the virtual user saw. ` +
         `Add a '${runSurface}' witness (declares: ${declared.join(', ') || 'nothing'}), or drop --strict.`
     )
   }
@@ -335,7 +335,7 @@ addError(ScenarioUnwitnessedAssertion, {
  * The scenario capability, layered onto a workflow service rather than being
  * one.
  *
- * Every scenario affordance — steps, actors, lifecycle hooks, the browser
+ * Every scenario affordance — steps, virtual users, lifecycle hooks, the browser
  * provider, the assertion wire members — lives here rather than on
  * `PikkuWorkflowService`, because a bundler drops an unused *module* but never
  * an unused class member: anything declared on the workflow service ships in
@@ -356,14 +356,14 @@ addError(ScenarioUnwitnessedAssertion, {
  * ```
  */
 export class PikkuScenarioService implements WorkflowRunExtension {
-  // Scenario actors per run: live authenticated clients (cookie jars) are
+  // Scenario virtual users per run: live authenticated clients (cookie jars) are
   // process-local by nature, so they ride this map, never the persisted wire.
-  private runActors = new Map<string, ScenarioVirtualUsers>()
-  // What each run has accumulated so far — process-local like the actors above,
+  private runVirtualUsers = new Map<string, ScenarioVirtualUsers>()
+  // What each run has accumulated so far — process-local like the virtual users above,
   // so the body and its hooks share one object rather than reading it back off
   // the persisted wire.
   private runContexts = new Map<string, Record<string, unknown>>()
-  // Where each browser step landed in its actor's recording, per run. Held
+  // Where each browser step landed in its virtual user's recording, per run. Held
   // apart from the run context because the runner reads it once the run has
   // ended, which is exactly when `detachRunContext` has cleared that.
   private runVideoOffsets = new Map<
@@ -378,7 +378,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   constructor(private readonly engine: WorkflowRunEngine) {}
 
   /**
-   * The surface every actor drives the system through for this run, set once by
+   * The surface every virtual user drives the system through for this run, set once by
    * the runner from `--run`. `default` is the server-side path — the fast suite.
    *
    * `strict` removes both routes off that surface: an action may not fall back
@@ -429,7 +429,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   /**
-   * Where each of a run's browser steps fell in its actor's video, keyed by the
+   * Where each of a run's browser steps fell in its virtual user's video, keyed by the
    * durable step name, handed over and forgotten in one call.
    *
    * Taken rather than read because the runner joins these onto the step rows
@@ -444,29 +444,29 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     return offsets ?? new Map()
   }
 
-  /** Where a step starting now falls in this actor's recording, if anywhere. */
-  private videoOffsetFor(actor: string): number | undefined {
+  /** Where a step starting now falls in this virtual user's recording, if anywhere. */
+  private videoOffsetFor(virtualUser: string): number | undefined {
     const provider = this.scenarioBrowserProvider
     if (provider?.markVideoStep) {
-      return provider.markVideoStep(actor)
+      return provider.markVideoStep(virtualUser)
     }
-    const startedAt = provider?.videoStartedAt?.(actor)
+    const startedAt = provider?.videoStartedAt?.(virtualUser)
     return startedAt === undefined
       ? undefined
       : Math.max(0, Date.now() - startedAt)
   }
 
   /**
-   * Stamp where a step began inside one actor's recording.
+   * Stamp where a step began inside one virtual user's recording.
    *
-   * First write per actor wins: a `then` step runs once per witness, and the
+   * First write per virtual user wins: a `then` step runs once per witness, and the
    * moment the reader wants is when the sentence started, not when its last
    * witness got around to the browser.
    */
   private recordVideoOffset(
     runId: string,
     stepName: string,
-    actor: string,
+    virtualUser: string,
     offsetMs: number
   ): void {
     let byStep = this.runVideoOffsets.get(runId)
@@ -475,25 +475,25 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       this.runVideoOffsets.set(runId, byStep)
     }
     const offsets = byStep.get(stepName) ?? []
-    if (offsets.some((offset) => offset.actor === actor)) {
+    if (offsets.some((offset) => offset.virtualUser === virtualUser)) {
       return
     }
-    offsets.push({ actor, offsetMs })
+    offsets.push({ virtualUser, offsetMs })
     byStep.set(stepName, offsets)
   }
 
   public async attachRunContext(
     runId: string,
     workflowMeta: any,
-    options?: { actors?: ScenarioVirtualUsers }
+    options?: { virtualUsers?: ScenarioVirtualUsers }
   ): Promise<void> {
-    const actors =
-      options?.actors ??
+    const virtualUsers =
+      options?.virtualUsers ??
       (workflowMeta.source === 'scenario'
         ? await this.resolveVirtualUsers()
         : undefined)
-    if (actors) {
-      this.runActors.set(runId, actors)
+    if (virtualUsers) {
+      this.runVirtualUsers.set(runId, virtualUsers)
     }
     if (workflowMeta.source === 'scenario') {
       this.runContexts.set(runId, {})
@@ -501,7 +501,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   public detachRunContext(runId: string): void {
-    this.runActors.delete(runId)
+    this.runVirtualUsers.delete(runId)
     this.runContexts.delete(runId)
   }
 
@@ -541,7 +541,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       context.workflowMeta?.source === 'scenario'
         ? (context.workflowWire as PikkuScenarioWire)
         : undefined
-    wire.actors = this.runActors.get(context.runId)
+    wire.virtualUsers = this.runVirtualUsers.get(context.runId)
   }
 
   public async onBeforeRunFunc(context: RunLifecycleContext): Promise<void> {
@@ -620,7 +620,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
    *
    * A hook is not a pikku function: it has no id, no meta and no schema, so it
    * cannot go through `runPikkuFunc` and the runner records nothing for it. It
-   * gets exactly what the scenario body gets — the same wire (so `actors` is
+   * gets exactly what the scenario body gets — the same wire (so `virtualUsers` is
    * how it reaches the app), and singleton services composed with this
    * invocation's wire services — and nothing else.
    */
@@ -660,25 +660,27 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   /**
-   * Build HTTP scenario actors for a run started without them; undefined when
-   * SCENARIO_ACTOR_SECRET or the API URL is missing.
+   * Build HTTP scenario virtual users for a run started without them; undefined when
+   * SCENARIO_VIRTUAL_USER_SECRET or the API URL is missing.
    *
-   * The actor client is imported lazily so that even a runner bundle only pays
+   * The virtual user client is imported lazily so that even a runner bundle only pays
    * for the AI virtual user conversation loop it pulls in when a scenario actually
-   * signs an actor in.
+   * signs a virtual user in.
    */
-  public async resolveVirtualUsers(): Promise<ScenarioVirtualUsers | undefined> {
+  public async resolveVirtualUsers(): Promise<
+    ScenarioVirtualUsers | undefined
+  > {
     const services = getSingletonServices()
     const variables = services?.variables
     const metaService = services?.metaService
     if (!variables || !metaService) {
       return undefined
     }
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
+    const secret = await variables.get('SCENARIO_VIRTUAL_USER_SECRET')
     const apiUrl = await variables.get('API_URL')
     if (!secret || !apiUrl) {
       services?.logger?.warn(
-        'A scenario was started without virtual users but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without them.'
+        'A scenario was started without virtual users but SCENARIO_VIRTUAL_USER_SECRET / API_URL is not configured — running without them.'
       )
       return undefined
     }
@@ -688,7 +690,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     }
     const signInPath =
       (await variables.get('SCENARIO_SIGN_IN_PATH')) ??
-      '/api/auth/sign-in/actor'
+      '/api/auth/sign-in/virtual-user'
     const rpcPath = (await variables.get('SCENARIO_RPC_PATH')) ?? '/rpc'
     // A run started outside the CLI still targets an environment — its own.
     this.scenarioEnvironment ??= {
@@ -727,7 +729,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     Object.assign(workflowWire, {
       context: this.contextForRun(runId),
 
-      // Durable polling step: invoke an RPC (as an actor when options.as is
+      // Durable polling step: invoke an RPC (as a virtual user when options.as is
       // set) until the predicate passes or `within` elapses. The whole poll is
       // ONE recorded step, so replay returns the cached outcome.
       expectEventually: async (
@@ -751,14 +753,14 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             const deadline = Date.now() + within
             let last: any
             while (true) {
-              last = options?.actor
-                ? await options.actor.invoke(resolvedRpcName, data)
+              last = options?.virtualUser
+                ? await options.virtualUser.invoke(resolvedRpcName, data)
                 : await rpcService.rpcWithWire(resolvedRpcName, data, {})
               if (predicate(last)) return last
               if (Date.now() + interval > deadline) {
                 throw new Error(
                   `[workflow] expectEventually '${stepName}' ('${resolvedRpcName}'` +
-                    `${options?.actor ? ` as '${options.actor.name}'` : ''}) did not pass within ${within}ms; ` +
+                    `${options?.virtualUser ? ` as '${options.virtualUser.name}'` : ''}) did not pass within ${within}ms; ` +
                     `last result: ${JSON.stringify(last)?.slice(0, 300)}`
                 )
               }
@@ -786,8 +788,8 @@ export class PikkuScenarioService implements WorkflowRunExtension {
           async () => {
             let result: any
             try {
-              result = options?.actor
-                ? await options.actor.invoke(resolvedRpcName, data)
+              result = options?.virtualUser
+                ? await options.virtualUser.invoke(resolvedRpcName, data)
                 : await rpcService.rpcWithWire(resolvedRpcName, data, {})
             } catch (e: any) {
               const message = e?.message ?? String(e)
@@ -833,8 +835,8 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               service: string
               method: string
               args: unknown[]
-            }> = options?.actor
-              ? await options.actor.invoke(rpcName, { service })
+            }> = options?.virtualUser
+              ? await options.virtualUser.invoke(rpcName, { service })
               : await rpcService.rpcWithWire(rpcName, { service }, {})
             const matching = (calls ?? []).filter(
               (c) =>
@@ -886,9 +888,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
                 ? { reference: options.reference }
                 : {}),
             }
-            const grade: { score: number; reason?: string } = options?.actor
-              ? await options.actor.invoke(rpcName, data)
-              : await rpcService.rpcWithWire(rpcName, data, {})
+            const grade: { score: number; reason?: string } =
+              options?.virtualUser
+                ? await options.virtualUser.invoke(rpcName, data)
+                : await rpcService.rpcWithWire(rpcName, data, {})
 
             // A scorer that graded is a scorer that answered, so an unstated
             // bound still fails a zero rather than passing anything at all.
@@ -971,14 +974,18 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         ? `${addonNamespace}:${stepFunc}`
         : stepFunc
 
-    const actor = options?.actor as ScenarioVirtualUsers[string] | undefined
+    const virtualUser = options?.virtualUser as
+      ScenarioVirtualUsers[string] | undefined
     const description =
       options?.description ??
       this.scenarioStepDescription(packageName, resolvedStepFunc) ??
       stepName
 
-    if (!actor && this.requiresActor(packageName, resolvedStepFunc)) {
-      throw new ScenarioActorRequired(resolvedStepFunc)
+    if (
+      !virtualUser &&
+      this.requiresVirtualUser(packageName, resolvedStepFunc)
+    ) {
+      throw new ScenarioVirtualUserRequired(resolvedStepFunc)
     }
 
     const declared = this.declaredSurfaces(packageName, resolvedStepFunc)
@@ -994,8 +1001,8 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             workflow: workflowWire,
             scenario: workflowWire,
             pikkuUserId: workflowWire.pikkuUserId,
-            actors: this.runActors.get(runId),
-            ...(actor ? { actor } : {}),
+            virtualUsers: this.runVirtualUsers.get(runId),
+            ...(virtualUser ? { virtualUser } : {}),
             scenarioStep: {
               name: resolvedStepFunc,
               stepName,
@@ -1009,14 +1016,19 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             if (!this.scenarioBrowserProvider) {
               throw new ScenarioBrowserUnavailable(resolvedStepFunc)
             }
-            // The dispatch guard above already refused an actor-less call, and a
+            // The dispatch guard above already refused an anonymous call, and a
             // browser binding always requires one.
             wire.browser = await this.scenarioBrowserProvider.sessionFor(
-              actor!.name
+              virtualUser!.name
             )
-            const offsetMs = this.videoOffsetFor(actor!.name)
+            const offsetMs = this.videoOffsetFor(virtualUser!.name)
             if (offsetMs !== undefined) {
-              this.recordVideoOffset(runId, stepName, actor!.name, offsetMs)
+              this.recordVideoOffset(
+                runId,
+                stepName,
+                virtualUser!.name,
+                offsetMs
+              )
             }
           }
           const result = await runPikkuFunc(
@@ -1133,11 +1145,15 @@ export class PikkuScenarioService implements WorkflowRunExtension {
 
   /**
    * Whether a step is driven by a virtual user, and so must be given one. Stamped by
-   * the definer from a `browser` binding or an explicit `actor: true`.
+   * the definer from a `browser` binding or an explicit `virtualUser: true`.
    */
-  private requiresActor(packageName: string | null, stepFunc: string): boolean {
+  private requiresVirtualUser(
+    packageName: string | null,
+    stepFunc: string
+  ): boolean {
     return (
-      this.scenarioStepConfig(packageName, stepFunc)?.requiresActor === true
+      this.scenarioStepConfig(packageName, stepFunc)?.requiresVirtualUser ===
+      true
     )
   }
 }

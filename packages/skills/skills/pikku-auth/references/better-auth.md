@@ -244,13 +244,13 @@ like any other. None is automatic — an app wires the ones it needs.
 | Plugin                   | Plugin `id`        | Adds                                                                    | Use it when                                                   |
 | ------------------------ | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `pikkuBan()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
-| `pikkuActor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a virtual user              |
+| `pikkuVirtualUser()`     | `virtualUser`      | `POST /sign-in/virtual-user`, `user.virtualUser`                        | Scenarios or a dev switcher sign in as a virtual user         |
 | `pikkuCredentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
 | `pikkuDelegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
 
 Every one carries a `pikku` prefix, because a `plugins: [...]` array mixes these
-with better-auth's own and a bare `actor()` next to `organization()` says
-nothing about where it came from. The unprefixed names — `ban`, `actor`,
+with better-auth's own and a bare `virtualUser()` next to `organization()` says
+nothing about where it came from. The unprefixed names — `ban`, `virtualUser`,
 `credentialOAuth`, `delegatedAuth` — are still exported as deprecated
 aliases, so existing apps keep working.
 
@@ -342,7 +342,7 @@ an existing user row, so it cannot take over someone else's account.
 For an addon generated from an OpenAPI spec, none of this is written by hand:
 `pikku new addon --openapi … --auth-config <file>` generates
 `authenticate<Name>Upstream` in the addon and wires this plugin, the stored
-credential and the actor credentials into `src/auth.ts`. The config format is
+credential and the virtual user credentials into `src/auth.ts`. The config format is
 in the `pikku-build` skill's `references/openapi.md`. When the upstream later
 refuses the stored token, the addon throws `CredentialRejectedError` (403,
 `reauth: 'sign-in'`): the UI shows the sign-in again.
@@ -455,30 +455,33 @@ hostname check — because a one-request path to an admin session is exactly the
 thing that must not survive a deploy. An app that has not declared the `admin`
 scope still gets a session, with a warning, since a scopeless dev user is useful.
 
-### Actor sign-in (`actor` plugin)
+### Virtual user sign-in (`virtualUser` plugin)
 
 A different thing from dev quick login, and the one to reach for when "sign in as
 someone" means **a particular kind of user** rather than one fixed admin.
 Register it explicitly — it is not automatic:
 
 ```typescript
-import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor } from '@pikku/better-auth'
+import {
+  VIRTUAL_USER_SIGN_IN_OPT_IN_ENV,
+  pikkuVirtualUser,
+} from '@pikku/better-auth'
 
 plugins: [
-  pikkuActor({
-    secret: SCENARIO_ACTOR_SECRET,
-    allowSignIn: await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV),
+  pikkuVirtualUser({
+    secret: SCENARIO_VIRTUAL_USER_SECRET,
+    allowSignIn: await variables.get(VIRTUAL_USER_SIGN_IN_OPT_IN_ENV),
   }),
 ]
 ```
 
-`POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
+`POST ${basePath}/sign-in/virtual-user` `{ email, secret, name? }` → 200 + the normal
 session cookie. The plugin's `secret` is the **root**, and it may be a (possibly
 async) function so it can come off the secrets service instead of a captured
 value.
 
 **What a caller presents is not the root.** It is
-`deriveActorSecret(root, email)` from `@pikku/core/services` — HKDF-expanded
+`deriveVirtualUserSecret(root, email)` from `@pikku/core/services` — HKDF-expanded
 HMAC-SHA256 over the lowercased address. The endpoint re-derives the expected
 value for the address being signed in as and compares, so a credential minted
 for one virtual user is refused for every other, and the root itself is never a valid
@@ -486,18 +489,18 @@ credential. A root under 32 characters refuses the endpoint outright rather than
 deriving weak credentials from it (the server log names the problem; the client
 is not told which). Callers rarely derive by hand — `pikku virtual-user secret <id>`
 mints them for a run, and the two `VirtualUserSignIn` implementations derive on the
-fly. The browser switcher holds none: it signs in through `/sign-in/virtual-user`.
+fly. The browser switcher holds none: it signs in through `/sign-in/switch-virtual-user`.
 
 **Which command is running decides whether it works, not whether a secret is
-set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
-`SCENARIO_ACTOR_SECRET` for the run, so local development needs no configuration
-at all. Everywhere else the endpoint refuses (`Actor sign-in is disabled outside
+set.** `pikku dev` sets `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` and mints an ephemeral
+`SCENARIO_VIRTUAL_USER_SECRET` for the run, so local development needs no configuration
+at all. Everywhere else the endpoint refuses (`VirtualUser sign-in is disabled outside
 \`pikku dev\``) — `pikku serve` clears the marker outright, so a secret that
 leaked into a production environment enables nothing and gets a warning naming
 itself instead.
 
 A stage that genuinely must run scenarios opts in on purpose, with
-`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. Any other value is
+`PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in`. Any other value is
 ignored and warned about, so the hatch cannot be opened by copying a `true` from
 the line above.
 
@@ -506,7 +509,7 @@ the environment by default, which is enough for Node but not for a Worker: there
 the opt-in arrives as a binding and reaches user code through the variables
 service, so a gate left to `process.env` stays shut on exactly the stages a
 deployment targets. `allowSignIn` takes the value the caller already read —
-`await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)` — and is checked against the same
+`await variables.get(VIRTUAL_USER_SIGN_IN_OPT_IN_ENV)` — and is checked against the same
 literal, near-miss warning included. It is deliberately a value and not a flag:
 what opens the gate is still something the deployment set and an operator can
 read back out of it, never something compiled into the bundle. A value passed
@@ -514,39 +517,39 @@ here is the one consulted, so the environment cannot quietly override what the
 stage was configured with.
 
 **Signing in and provisioning are separate powers.** An unknown address becomes
-an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
+an `virtualUser: true` row only under `pikku dev`. With the opt-in set, a stage signs
 in as the virtual users the deployment provisioned when it started and refuses
-everything else (`No actor account exists for that address`), so holding the
+everything else (`No virtual user account exists for that address`), so holding the
 secret on such a stage does not let anyone invent identities. Those rows are
 written by `provisionVirtualUsers` when an operator sign-in route is asked to act
-as an address the stage has no account for, so provisioning needs no actor
+as an address the stage has no account for, so provisioning needs no virtual user
 secret and works on a stage whose endpoint is shut.
 
-**`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
-virtual user.** Provisioning grants declared roles to actor accounts, so an
-`admin` virtual user is an actor holding real admin — anyone with the secret _and_ the
-opt-in can take a session as one. Do not treat "actors only" as a licence to open
+**`SCENARIO_VIRTUAL_USER_SECRET` is a credential as powerful as the most privileged
+virtual user.** Provisioning grants declared roles to virtual user accounts, so an
+`admin` virtual user is a virtual user holding real admin — anyone with the secret _and_ the
+opt-in can take a session as one. Do not treat "virtual users only" as a licence to open
 the hatch in production.
 
 Within that boundary, three properties bound the damage:
 
-- **It only ever signs in actors.** The plugin adds a `user.actor` boolean
+- **It only ever signs in virtual users.** The plugin adds a `user.virtualUser` boolean
   column; an email matching a row without it is refused with `User is not an
-actor`. So the secret cannot take over a **real user's** account — the blast
-  radius is the actor accounts and whatever roles they were granted.
-- **Unknown emails are created only under `pikku dev`**, flagged `actor: true`,
+virtual user`. So the secret cannot take over a **real user's** account — the blast
+  radius is the virtual user accounts and whatever roles they were granted.
+- **Unknown emails are created only under `pikku dev`**, flagged `virtualUser: true`,
   so a local scenario declaring a new virtual user needs no seed step. Anywhere else
   the account has to have been provisioned at boot first.
 - **A credential is bound to one address**, so a leaked one is one synthetic
-  account rather than the whole actor population; only the root is worth the
+  account rather than the whole virtual user population; only the root is worth the
   paragraph above. The comparison is constant-time and length-hiding, so a wrong
   credential leaks neither the length nor a prefix of the right one.
 
-This is the endpoint `pikku scenario` signs its actors in through. The frontend
+This is the endpoint `pikku scenario` signs its virtual users in through. The frontend
 switcher does not use it: it lists from `/sign-in/virtual-users` and posts a virtual user
-id to `/sign-in/virtual-user`, both served by
-`pikkuActor({ virtualUserSignIn: { virtual users, featureFlags } })` with no credential — see
-`pikku-scenario` for the setup and `pikku-react` for `useDevActors()`.
+id to `/sign-in/switch-virtual-user`, both served by
+`pikkuVirtualUser({ virtualUserSignIn: { virtualUsers, featureFlags } })` with no credential — see
+`pikku-scenario` for the setup and `pikku-react` for `useDevVirtualUsers()`.
 
 ### Provisioning virtual users
 
@@ -584,15 +587,15 @@ write them to whatever database the checkout happened to point at. `pikku virtua
 sync <environment>` still exists, and reports who that environment will provision
 and why anyone was skipped, which is what you run _before_ the deploy.
 
-It creates missing accounts as `actor: true`, applies the roles each virtual user
+It creates missing accounts as `virtualUser: true`, applies the roles each virtual user
 declares, and is additive — it never revokes. `PIKKU_ENV` (or an explicit
 `environment`) selects who is eligible, through the same rule that decides who
-may run there; an address already held by a real, non-actor user throws rather
+may run there; an address already held by a real, non-virtual-user user throws rather
 than being granted the virtual user's roles.
 
 **Deleting a virtual user does not delete its account.** Being additive leaves a hole:
-the account keeps every role it was granted, and the actor endpoint authenticates
-on the `actor` column alone without consulting the declaration — so an `admin`
+the account keeps every role it was granted, and the virtual user endpoint authenticates
+on the `virtualUser` column alone without consulting the declaration — so an `admin`
 virtual user nobody declares any more is still a live way in wherever that endpoint is
 open. By default provisioning warns about those accounts and changes nothing.
 `orphans: 'ban'` shuts them:
@@ -612,7 +615,7 @@ It writes the same `banned` column the console's ban RPC writes (so it needs the
 `pikkuBan()` plugin wired, and says so if it isn't), revokes the account's sessions,
 and leaves the row, its grants and its history intact — provisioning lifts the
 ban again by itself if the virtual user comes back. Deleting is deliberately not
-offered: an actor row is referenced by whatever those scenarios did while it
+offered: a virtual user row is referenced by whatever those scenarios did while it
 existed.
 
 `report` is the default because a rolling deploy runs the new replica's

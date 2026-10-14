@@ -80,7 +80,7 @@ decision that nothing records.
 in this plan, or one already in the meta. Write "when the distributor is removed its companies
 fall back to the direct catalog" with no function that removes a distributor and `plan set`
 accepts it, `plan progress` passes, and the changeset ships a sentence nothing proves. Read each
-description back asking *which function does this*, and cut the half you cannot name.
+description back asking _which function does this_, and cut the half you cannot name.
 
 **Where a scenario calls the same function twice, check it for a per-period guard first.** A
 one-per-day, one-per-order or one-per-person rule makes the second call a refusal, so the journey
@@ -101,14 +101,14 @@ mark a product's countries, cannot be proven without amending the plan mid-build
 **Every state a scenario waits in needs the function that leaves the world like that — checked
 against the code ALREADY built.** Three failure shapes, in rising order of cost:
 
-- *Stale*: a staff queue of "paid orders with no invoice yet", where an earlier changeset had
+- _Stale_: a staff queue of "paid orders with no invoice yet", where an earlier changeset had
   moved invoicing to checkout. No order a customer could place was ever in that state; three
   scenarios passed once against old rows, then failed.
-- *Unreachable*: staff asked to "capture the payment on an authorised order" when no function in
+- _Unreachable_: staff asked to "capture the payment on an authorised order" when no function in
   the app or its addons could put an order in `authorized` — the addon only holds money when
   checkout was started with a flag the plan's own checkout input did not carry.
-- *Wrong person*: a distributor salon owner planned to buy from a catalogue that is scoped by
-  distributor and does not show her the product. Actors are not interchangeable.
+- _Wrong person_: a distributor salon owner planned to buy from a catalogue that is scoped by
+  distributor and does not show her the product. Virtual users are not interchangeable.
 
 **A `model` slot saying "this changeset adds no table" has to be true of the DATA the scenarios
 read, not only of the entities they name.** One promised a checkout priced by delivery country — a

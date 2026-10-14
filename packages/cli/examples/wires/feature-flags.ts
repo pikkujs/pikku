@@ -58,7 +58,7 @@
 //~
 //~ STEP 4 — PROVE IT WITH A SCENARIO. Each virtual user should see its OWN feature set;
 //~ that is the regression test for this whole file, and it is what catches a feature
-//~ that silently went all-false because a scope was renamed. Drive it per-actor with
+//~ that silently went all-false because a scope was renamed. Drive it per-virtual-user with
 //~ the `scenario-permissions` scaffold: assert the counter sees `takeInBike` and the
 //~ mechanic does not, then assert the DENIED path (`scenario.expectError`) on the
 //~ function itself — which is what proves the `scopes:` gate is really there and you

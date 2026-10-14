@@ -61,7 +61,7 @@ import {
   writeDevAddress,
 } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
-import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
+import { enableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
@@ -94,7 +94,7 @@ export const dev = pikkuSessionlessFunc<
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )
-    enableDevActorSignIn(logger)
+    enableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({
       rootDir: config.rootDir,

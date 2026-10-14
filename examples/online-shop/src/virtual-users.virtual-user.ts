@@ -2,13 +2,13 @@
  * The people this app is for, and the people its scenarios run as.
  *
  * One `defineVirtualUsers` call for the whole project — codegen builds the
- * `VirtualUserId` union from it, materialises one scenario actor per person, and
+ * `VirtualUserId` union from it, materialises one scenario virtual user per person, and
  * seeds a user row each, so a second call site would be a second answer to
  * "who uses this app". Add yours here.
  *
  * Addresses are never written down: each is derived from the virtual user id and
  * `scenarios.emailDomain` in pikku.config.json, so `visitor` signs in as
- * visitor@actors.local. Writing one by hand is how a run signs in as somebody
+ * visitor@virtualuser.local. Writing one by hand is how a run signs in as somebody
  * who was never created.
  */
 import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'

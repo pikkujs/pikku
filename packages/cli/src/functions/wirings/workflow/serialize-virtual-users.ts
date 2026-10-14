@@ -43,7 +43,7 @@ export type VirtualUserName = keyof typeof virtualUserConfigs
  * optional field a virtual user did not declare does not exist — so a seed reading
  * \`roles\` off every virtual user needs this instead.
  */
-export const personaList: ResolvedVirtualUser[] = Object.values(virtualUserConfigs)
+export const virtualUserList: ResolvedVirtualUser[] = Object.values(virtualUserConfigs)
 
 /**
  * The \`environments\` block of pikku.config.json, carried into the runtime.
@@ -59,7 +59,7 @@ export const virtualUserEnvironments = ${JSON.stringify(projected, null, 2)} as 
 
 export type AgentName = keyof AgentMap & string
 /**
- * The virtual users this project declares, keyed by name — the \`actors\` a scenario
+ * The virtual users this project declares, keyed by name — the \`virtual users\` a scenario
  * step runs as.
  */
 export type TypedVirtualUsers = Record<

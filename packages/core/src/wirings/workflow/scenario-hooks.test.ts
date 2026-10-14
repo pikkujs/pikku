@@ -13,10 +13,10 @@ const noopLogger = {
   debug() {},
 }
 
-const actors = {
+const virtualUsers = {
   admin: {
     name: 'admin',
-    email: 'admin@actors.local',
+    email: 'admin@virtualuser.local',
     invoke: async () => ({}),
     invokeRaw: async () => ({ status: 200, ok: true, body: {} }),
   },
@@ -58,7 +58,7 @@ const runScenario = async (
 
   let error: any
   try {
-    await ws.startWorkflow(name, input, {} as any, {}, { actors })
+    await ws.startWorkflow(name, input, {} as any, {}, { virtualUsers })
   } catch (e: any) {
     error = e
   }
@@ -155,7 +155,7 @@ describe('scenario before/after hooks', () => {
     )
   })
 
-  test('hooks receive the services, the input and the run actors', async () => {
+  test('hooks receive the services, the input and the run virtual users', async () => {
     const seen: any[] = []
     await runScenario(
       'hooksArgs',
@@ -164,14 +164,14 @@ describe('scenario before/after hooks', () => {
           seen.push({
             marker: services.marker,
             data,
-            actor: wire?.actors?.admin?.name,
+            virtualUser: wire?.virtualUsers?.admin?.name,
           })
         },
         after: async (services, data, wire) => {
           seen.push({
             marker: services.marker,
             data,
-            actor: wire?.actors?.admin?.name,
+            virtualUser: wire?.virtualUsers?.admin?.name,
           })
         },
         func: async () => ({ ok: true }),
@@ -179,8 +179,8 @@ describe('scenario before/after hooks', () => {
       { input: { seed: 7 } }
     )
     assert.deepEqual(seen, [
-      { marker: 'singleton', data: { seed: 7 }, actor: 'admin' },
-      { marker: 'singleton', data: { seed: 7 }, actor: 'admin' },
+      { marker: 'singleton', data: { seed: 7 }, virtualUser: 'admin' },
+      { marker: 'singleton', data: { seed: 7 }, virtualUser: 'admin' },
     ])
   })
 

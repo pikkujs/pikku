@@ -30,7 +30,7 @@ const stringArray = (value: unknown): string[] =>
  * Source files under one directory, flat list, generated files included.
  *
  * A virtual user declaration is `defineVirtualUsers({ … })` written by hand, but the
- * actor plugin is routinely wired in a file the auth scaffold generated, so
+ * virtual user plugin is routinely wired in a file the auth scaffold generated, so
  * `.gen.ts` cannot be skipped the way the undeclared-import walk skips it.
  */
 const listSourceFiles = async (dir: string): Promise<string[]> => {
@@ -63,7 +63,10 @@ const readTextSafe = async (path: string): Promise<string | null> => {
  * the default `pikku-cli-config` resolves — validate reads the raw config file
  * rather than the resolved one, so the default has to be repeated here.
  */
-const virtualUserMetaPath = (root: string, config: VirtualUserCheckConfig): string => {
+const virtualUserMetaPath = (
+  root: string,
+  config: VirtualUserCheckConfig
+): string => {
   if (typeof config.virtualUsersMetaJsonFile === 'string') {
     return join(root, config.virtualUsersMetaJsonFile)
   }
@@ -106,21 +109,23 @@ const countVirtualUsers = async (
 /**
  * Whether a virtual user can actually sign in.
  *
- * Two shapes count. `pikkuActor()` from `@pikku/better-auth` is the one the
- * scaffold wires, and a hand-rolled `/sign-in/actor` route is the one a project
+ * Two shapes count. `pikkuVirtualUser()` from `@pikku/better-auth` is the one the
+ * scaffold wires, and a hand-rolled `/sign-in/virtual-user` route is the one a project
  * that does not use better-auth ends up with. Both terminate at the same
- * endpoint, so either satisfies the check. The deprecated `actor()` alias is
+ * endpoint, so either satisfies the check. The deprecated `virtualUser()` alias is
  * matched too — an app on an older version wires the same plugin under that
  * name, which was removed from the library.
  */
-const hasActorSignIn = async (sourceFiles: string[]): Promise<boolean> => {
+const hasVirtualUserSignIn = async (
+  sourceFiles: string[]
+): Promise<boolean> => {
   for (const file of sourceFiles) {
     const text = await readTextSafe(file)
     if (!text) continue
     const wiresPlugin =
       /@pikku\/better-auth/.test(text) &&
-      /(^|[^\w$.])(pikkuActor|actor)\s*\(/.test(text)
-    if (wiresPlugin || /sign-in\/actor/.test(text)) return true
+      /(^|[^\w$.])(pikkuVirtualUser|virtualUser)\s*\(/.test(text)
+    if (wiresPlugin || /sign-in\/virtual-user/.test(text)) return true
   }
   return false
 }
@@ -177,19 +182,19 @@ export const runVirtualUserChecks = async (
     return findings
   }
 
-  if (!(await hasActorSignIn(sourceFiles))) {
+  if (!(await hasVirtualUserSignIn(sourceFiles))) {
     w(
-      'virtual-users-no-actor-sign-in',
-      `${virtualUsers} virtualUser${virtualUsers === 1 ? ' is' : 's are'} declared, but nothing wires actor sign-in — a scenario run signs in over POST /auth/sign-in/actor, so every virtual user fails to acquire a session`,
+      'virtual-users-no-virtual-user-sign-in',
+      `${virtualUsers} virtual user${virtualUsers === 1 ? ' is' : 's are'} declared, but nothing wires virtual user sign-in — a scenario run signs in over POST /auth/sign-in/virtual-user, so every virtual user fails to acquire a session`,
       pikkuConfigPath,
       lines(
-        'Wire the actor plugin where better-auth is configured:',
-        "  import { pikkuActor } from '@pikku/better-auth'",
-        '  plugins: [pikkuActor({ secret: SCENARIO_ACTOR_SECRET })]',
+        'Wire the virtual user plugin where better-auth is configured:',
+        "  import { pikkuVirtualUser } from '@pikku/better-auth'",
+        '  plugins: [pikkuVirtualUser({ secret: SCENARIO_VIRTUAL_USER_SECRET })]',
         '`pikku dev` turns the endpoint on and mints the secret itself, so there',
         'is nothing to configure locally. A deployed stage that must run',
         'scenarios opts in with',
-        'PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in; everywhere else',
+        'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in; everywhere else',
         'the endpoint stays off whatever the environment happens to contain.'
       )
     )
@@ -203,7 +208,7 @@ export const runVirtualUserChecks = async (
   if (!hasEnvironment) {
     w(
       'virtual-users-no-environments',
-      `${virtualUsers} virtualUser${virtualUsers === 1 ? ' is' : 's are'} declared, but pikku.config.json configures no environments — \`pikku scenario run <environment>\` has no target to resolve and refuses every name`,
+      `${virtualUsers} virtual user${virtualUsers === 1 ? ' is' : 's are'} declared, but pikku.config.json configures no environments — \`pikku scenario run <environment>\` has no target to resolve and refuses every name`,
       pikkuConfigPath,
       lines(
         'Add the targets a run may point at:',

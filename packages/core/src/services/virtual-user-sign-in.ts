@@ -1,4 +1,4 @@
-import { deriveActorSecret } from './virtual-user-actor-secret.js'
+import { deriveVirtualUserSecret } from './virtual-user-secret.js'
 import { PikkuError } from '../errors/error-handler.js'
 import type { ResolvedVirtualUser } from './virtual-users-service.js'
 import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
@@ -17,7 +17,7 @@ export const IMPERSONATE_USER_ID_HEADER = 'x-pikku-impersonate-user-id'
  * needs to carry to keep acting as them.
  *
  * Two answers exist because the two environments have opposite trust models,
- * not because one is a fallback for the other. See {@link ActorSignIn} and
+ * not because one is a fallback for the other. See {@link VirtualUserSecretSignIn} and
  * {@link OperatorSignIn}.
  */
 export interface VirtualUserSignIn {
@@ -52,15 +52,15 @@ const failed = async (
  * Yields the credential for one virtual user, for a caller that holds that virtual user's
  * derived secret and not the root it came from.
  */
-export type ActorSecretResolver = (
+export type VirtualUserSecretResolver = (
   virtualUser: ResolvedVirtualUser
 ) => string | Promise<string>
 
 /**
- * Sign a virtual user in through the Better Auth actor plugin — the local-development
+ * Sign a virtual user in through the Better Auth virtual user plugin — the local-development
  * path.
  *
- * `POST /auth/sign-in/actor` upserts an `actor: true` row and mints a session
+ * `POST /auth/sign-in/virtual-user` upserts an `virtualUser: true` row and mints a session
  * for it. Passwordless by design and refused for any row not carrying that flag,
  * so the secret can never reach a real user's account; the plugin still declines
  * to serve the endpoint at all outside `pikku dev`.
@@ -70,18 +70,21 @@ export type ActorSecretResolver = (
  * derives as it goes; a run entitled to one virtual user is handed that one value
  * through a resolver and can sign in as nobody else.
  */
-export class ActorSignIn implements VirtualUserSignIn {
+export class VirtualUserSecretSignIn implements VirtualUserSignIn {
   constructor(
     private readonly apiUrl: string,
-    private readonly secret: string | ActorSecretResolver,
+    private readonly secret: string | VirtualUserSecretResolver,
     private readonly signInPath: string
   ) {}
 
-  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void> {
+  async login(
+    jar: ScenarioCookieJar,
+    virtualUser: ResolvedVirtualUser
+  ): Promise<void> {
     const secret =
       typeof this.secret === 'function'
         ? await this.secret(virtualUser)
-        : await deriveActorSecret(this.secret, virtualUser.email)
+        : await deriveVirtualUserSecret(this.secret, virtualUser.email)
     const res = await jar.fetch(`${this.apiUrl}${this.signInPath}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -206,7 +209,7 @@ export const establishOperatorSession = async (
  *
  * Asymmetric throughout: the stage can verify an operator token and never mint
  * one, so nothing in a deployed environment is worth stealing. That is the
- * property the actor secret cannot have, and the reason these are two classes
+ * property the virtual user secret cannot have, and the reason these are two classes
  * instead of one with a flag.
  */
 export class OperatorSignIn implements VirtualUserSignIn {
@@ -217,7 +220,10 @@ export class OperatorSignIn implements VirtualUserSignIn {
     private readonly options: OperatorSignInOptions
   ) {}
 
-  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void> {
+  async login(
+    jar: ScenarioCookieJar,
+    virtualUser: ResolvedVirtualUser
+  ): Promise<void> {
     const { userId } = await establishOperatorSession(
       jar.fetch,
       this.apiUrl,

@@ -35,7 +35,7 @@ const virtualUsers = {
   susan: {
     id: 'susan',
     name: 'Susan',
-    email: 'susan@actors.local',
+    email: 'susan@virtualuser.local',
     roles: [],
     goals: ['Get the weekly order in'],
     tags: [],
@@ -45,7 +45,7 @@ const virtualUsers = {
   observed: {
     id: 'observed',
     name: 'Observed',
-    email: 'observed@actors.local',
+    email: 'observed@virtualuser.local',
     roles: [],
     goals: [],
     tags: [],
@@ -111,21 +111,24 @@ describe('signInPathFor', () => {
   // `/api/auth` should not have to name each door separately.
   test('an app that moved its auth mount moves both sign-in paths', () => {
     assert.equal(
-      signInPathFor('/api/auth/sign-in/actor', 'fabric'),
+      signInPathFor('/api/auth/sign-in/virtual-user', 'fabric'),
       '/api/auth/sign-in/fabric'
     )
     assert.equal(
-      signInPathFor('/api/auth/sign-in/fabric', 'actor'),
-      '/api/auth/sign-in/actor'
+      signInPathFor('/api/auth/sign-in/fabric', 'virtual-user'),
+      '/api/auth/sign-in/virtual-user'
     )
   })
 
   test('a path naming neither plugin was configured deliberately', () => {
-    assert.equal(signInPathFor('/custom/login', 'actor'), '/custom/login')
+    assert.equal(
+      signInPathFor('/custom/login', 'virtual-user'),
+      '/custom/login'
+    )
   })
 
   test('nothing configured stays nothing, so the default applies', () => {
-    assert.equal(signInPathFor(undefined, 'actor'), undefined)
+    assert.equal(signInPathFor(undefined, 'virtual-user'), undefined)
   })
 })
 
@@ -161,7 +164,10 @@ describe('refusals reach the caller', () => {
   }
 
   test('an undeclared virtual user is a 400', async () => {
-    assert.equal(await statusOf(() => runnableVirtualUser(virtualUsers, 'nobody')), 400)
+    assert.equal(
+      await statusOf(() => runnableVirtualUser(virtualUsers, 'nobody')),
+      400
+    )
   })
 
   test('an acted-upon virtual user is a 400', async () => {
@@ -563,7 +569,11 @@ describe('writeVirtualUserSchedule', () => {
   test('refuses a cadence for a virtual user that is only ever acted upon', async () => {
     const { store, writes } = scheduleStore()
     await assert.rejects(
-      writeVirtualUserSchedule({ store, virtualUsers, virtualUserId: 'observed' }),
+      writeVirtualUserSchedule({
+        store,
+        virtualUsers,
+        virtualUserId: 'observed',
+      }),
       /declared as acted upon, never run/
     )
     assert.equal(writes.length, 0)
@@ -711,7 +721,11 @@ describe('writeVirtualUserSchedule', () => {
   // to survive the mapping.
   test('an absent budget is left alone and a null one is cleared', async () => {
     const { store, writes } = scheduleStore()
-    await writeVirtualUserSchedule({ store, virtualUsers, virtualUserId: 'susan' })
+    await writeVirtualUserSchedule({
+      store,
+      virtualUsers,
+      virtualUserId: 'susan',
+    })
     assert.equal(writes[0].budget, undefined)
     await writeVirtualUserSchedule({
       store,
@@ -821,7 +835,7 @@ describe('executeVirtualUserRun', () => {
     })
     await assert.rejects(
       executeVirtualUserRun(p),
-      /Neither an operator token nor SCENARIO_ACTOR_SECRET is available/
+      /Neither an operator token nor SCENARIO_VIRTUAL_USER_SECRET is available/
     )
   })
 
@@ -829,7 +843,7 @@ describe('executeVirtualUserRun', () => {
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
       }),
     })
     await assert.rejects(
@@ -838,17 +852,17 @@ describe('executeVirtualUserRun', () => {
     )
   })
 
-  // Asymmetric, so the stage can verify one and can never mint one. The actor
+  // Asymmetric, so the stage can verify one and can never mint one. The virtual user
   // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
-  test('an operator token wins over the actor secret wherever both exist', async () => {
+  test('an operator token wins over the virtual user secret wherever both exist', async () => {
     let options: any
     const { params: p } = params({
       operatorToken: 'handed-in',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
-        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/actor',
+        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/virtual-user',
       }),
       createVirtualUsers: (given: any) => {
         options = given
@@ -859,8 +873,8 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.secret, undefined)
     assert.equal(options.operator.token, 'handed-in')
     assert.equal(options.operator.signInPath, '/api/auth/sign-in/fabric')
-    // The actor door moves with the mount too, for the run that has no token.
-    assert.equal(options.signInPath, '/api/auth/sign-in/actor')
+    // The virtual user door moves with the mount too, for the run that has no token.
+    assert.equal(options.signInPath, '/api/auth/sign-in/virtual-user')
   })
 
   test('a run nobody handed a token to falls back to the environment', async () => {
@@ -880,12 +894,12 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.operator.token, 'from-the-environment')
   })
 
-  test('with no token at all the actor secret is what signs in', async () => {
+  test('with no token at all the virtual user secret is what signs in', async () => {
     let options: any
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: (given: any) => {
@@ -904,7 +918,7 @@ describe('executeVirtualUserRun', () => {
       virtualUserId: 'gone',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => {
@@ -951,7 +965,7 @@ describe('executeVirtualUserRun', () => {
       },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
     })
@@ -976,13 +990,13 @@ describe('executeVirtualUserRun', () => {
       budget: { steps: 0 },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => ({
         susan: {
           name: 'susan',
-          email: 'susan@actors.local',
+          email: 'susan@virtualuser.local',
           invokeRaw: async () => ({ status: 200, body: {} }),
           converse: async () => ({
             passed: true,

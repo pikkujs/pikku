@@ -76,7 +76,11 @@ describe('KyselyVirtualUserRunStore', () => {
   test('refuses to start against a database that never migrated it', async () => {
     const store = new KyselyVirtualUserRunStore(newDb())
     await assert.rejects(
-      store.start({ virtualUserId: 'susan', disposition: 'realistic', seed: 42 }),
+      store.start({
+        virtualUserId: 'susan',
+        disposition: 'realistic',
+        seed: 42,
+      }),
       /pikku db generate/
     )
   })
@@ -161,11 +165,11 @@ describe('KyselyVirtualUserRunStore', () => {
       seed: 1,
     })
 
-    await store.fail(runId, 'SCENARIO_ACTOR_SECRET is not set')
+    await store.fail(runId, 'SCENARIO_VIRTUAL_USER_SECRET is not set')
 
     const run = await store.get(runId)
     assert.equal(run?.status, 'failed')
-    assert.equal(run?.error, 'SCENARIO_ACTOR_SECRET is not set')
+    assert.equal(run?.error, 'SCENARIO_VIRTUAL_USER_SECRET is not set')
     assert.deepEqual(run?.findings, [])
     assert.ok(run?.finishedAt instanceof Date)
   })
@@ -198,8 +202,16 @@ describe('KyselyVirtualUserRunStore', () => {
   // Comparing what a virtual user finds this week against last week is the whole
   // reason runs are kept.
   test('narrows to one virtual user s history', async () => {
-    await store.start({ virtualUserId: 'susan', disposition: 'realistic', seed: 1 })
-    await store.start({ virtualUserId: 'raj', disposition: 'realistic', seed: 2 })
+    await store.start({
+      virtualUserId: 'susan',
+      disposition: 'realistic',
+      seed: 1,
+    })
+    await store.start({
+      virtualUserId: 'raj',
+      disposition: 'realistic',
+      seed: 2,
+    })
 
     const runs = await store.list({ virtualUserId: 'susan' })
     assert.equal(runs.length, 1)

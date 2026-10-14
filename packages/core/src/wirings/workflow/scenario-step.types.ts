@@ -4,7 +4,7 @@ import type { ScenarioArtifact } from './scenario-run.types.js'
  * Scenario steps: named, typed units of scenario behaviour.
  *
  * A step's body is an ordinary pikku function, so it may drive a browser, call
- * an RPC as its actor, or run a workflow. `given` and `when` differ only in the
+ * an RPC as its virtual user, or run a workflow. `given` and `when` differ only in the
  * prose the reporter renders; `then` also changes what runs, because its
  * bindings are witnesses — every declared surface is observed and the
  * observations must agree. See {@link ScenarioSurfaceResolution}.
@@ -37,7 +37,7 @@ export type ScenarioStepPhase = 'given' | 'when' | 'then'
 export type ScenarioStepKind = 'virtualUser' | 'platform' | 'addon'
 
 /**
- * How an actor drives the system for one step.
+ * How a virtual user drives the system for one step.
  *
  * A step declares one implementation per surface it supports, and the runner
  * picks between them — so the same ladder can run through a real browser, over
@@ -100,10 +100,10 @@ export type ScenarioSurfaceResolution =
  */
 export interface ScenarioStepOptions {
   /**
-   * The actor this step runs as. Required for a step that declares `actor: true`
+   * The virtual user this step runs as. Required for a step that declares `virtualUser: true`
    * or a `browser` binding; the runner refuses to dispatch one without it.
    */
-  actor?: unknown
+  virtualUser?: unknown
   /** Overrides the step's own `description` for this call site only. */
   description?: string
   /** Defaults to 0 for steps — a failed assertion must not be retried. */
@@ -125,7 +125,7 @@ export interface ScenarioEnvironment {
 /**
  * The `scenarioStep` wire, present on every scenario step invocation.
  *
- * The virtual user a step runs as is not here: it arrives as `wire.actor`, injected
+ * The virtual user a step runs as is not here: it arrives as `wire.virtualUser`, injected
  * by the runner and typed as present exactly on the bindings that declared they
  * need one. Keeping it off this interface is what makes that possible — a wire
  * member can be required per binding, a property of one cannot.
@@ -196,10 +196,10 @@ export interface ScenarioScreenshotOptions {
 }
 
 /**
- * One actor's browser session, handed to a step as `wire.browser`.
+ * One virtual user's browser session, handed to a step as `wire.browser`.
  *
- * Every actor gets their own, so a two-actor scenario drives two sessions and
- * `screenshot` files each shot under the actor it belongs to.
+ * Every virtual user gets their own, so a two-virtual-user scenario drives two sessions and
+ * `screenshot` files each shot under the virtual user it belongs to.
  *
  * Only what every driver can honour is declared here. A driver package adds
  * the rest by declaration-merging onto this interface — `@pikku/playwright`
@@ -207,8 +207,8 @@ export interface ScenarioScreenshotOptions {
  * structural surface keeps working whichever driver runs it.
  */
 export interface PikkuBrowserWire {
-  /** The actor whose browser context this is */
-  readonly actor: string
+  /** The virtual user whose browser context this is */
+  readonly virtualUser: string
   goto(url: string): Promise<void>
   screenshot(
     name?: string,
@@ -217,15 +217,15 @@ export interface PikkuBrowserWire {
 }
 
 /**
- * What one actor's window looked like at the moment a scenario failed.
+ * What one virtual user's window looked like at the moment a scenario failed.
  *
  * A browser step fails with a selector timeout that says nothing about *why*
  * the page never rendered. The answer is almost always in the page's own
  * errors, which the driver has been collecting all along.
  */
 export interface ScenarioBrowserFailure {
-  /** The actor whose window this is. */
-  actor: string
+  /** The virtual user whose window this is. */
+  virtualUser: string
   /** Where the window was pointed, when the driver can still report it. */
   url?: string
   /** Path the screenshot was written to; absent when none could be taken. */
@@ -245,10 +245,10 @@ export interface ScenarioBrowserFailure {
  * one that simply offers no isolation and no diagnostics.
  */
 export interface ScenarioBrowserProvider {
-  /** Resolve — creating on first use — the browser session for an actor. */
-  sessionFor(actorName: string): Promise<PikkuBrowserWire>
+  /** Resolve — creating on first use — the browser session for a virtual user. */
+  sessionFor(virtualUserName: string): Promise<PikkuBrowserWire>
   /**
-   * Discard every actor's per-scenario state — cookies, storage, open pages —
+   * Discard every virtual user's per-scenario state — cookies, storage, open pages —
    * while keeping the browser itself. Called between scenarios, so one
    * scenario cannot leave the next signed in as somebody else.
    */
@@ -270,23 +270,23 @@ export interface ScenarioBrowserProvider {
    */
   endScenario?(outcome: 'passed' | 'failed'): void
   /**
-   * When this actor's recording started, as epoch milliseconds.
+   * When this virtual user's recording started, as epoch milliseconds.
    *
    * The seam that keeps the video clock out of `@pikku/core`: a driver knows
    * when it opened the context it passed `recordVideo` to, and the runner turns
-   * that into a per-step offset. Absent for an actor with no window open, and
+   * that into a per-step offset. Absent for a virtual user with no window open, and
    * for a run recording nothing — both of which leave the step's offset off.
    */
-  videoStartedAt?(actorName: string): number | undefined
+  videoStartedAt?(virtualUserName: string): number | undefined
   /**
-   * Mark a browser step starting in this actor's recording, answering where it
+   * Mark a browser step starting in this virtual user's recording, answering where it
    * falls in the finished video (ms).
    *
    * Preferred over `videoStartedAt` when present: a driver that edits its
    * footage afterwards — holding each step's screen still, say — is the only
    * one that knows how far that moves the step. Undefined when nothing records.
    */
-  markVideoStep?(actorName: string): number | undefined
+  markVideoStep?(virtualUserName: string): number | undefined
   /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must

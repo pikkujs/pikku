@@ -16,13 +16,13 @@ const TYPE_ONLY = /^\s*(?:import|export)\s+type\b/
  * The modules a production server must never load by importing a barrel.
  *
  * Each is scenario or virtual-user runtime: `http-virtual-users` signs virtual users in
- * and reaches the actor-flow conversation runner, which reaches the agent
+ * and reaches the virtual-user-conversation conversation runner, which reaches the agent
  * runner. None of it runs in production, and an unbundled Node or Lambda deploy
  * does no tree-shaking — it loads whatever the graph names.
  */
 const FORBIDDEN = [
   'services/http-virtual-users.ts',
-  'wirings/actor-flow/run-conversation.ts',
+  'wirings/virtual-user-conversation/run-conversation.ts',
   'wirings/workflow/pikku-scenario-service.ts',
 ]
 

@@ -14,7 +14,7 @@ const SYNTHETIC_CEILING = 1000
 /**
  * The ids that are not people, so the query itself can exclude them.
  *
- * They are gathered by id rather than excluded with `actor != true`, because
+ * They are gathered by id rather than excluded with `virtualUser != true`, because
  * both marker columns are declared `required: false`: a host whose migration
  * left them nullable stores NULL for every ordinary user, and `column != true`
  * is NULL for a NULL column — not true, so SQL drops the row and the directory
@@ -45,7 +45,9 @@ const syntheticIds = async (ctx: any): Promise<string[]> => {
 
   const internal = (await ctx.adapter.findMany({
     model: 'user',
-    where: [{ field: 'email', operator: 'ends_with', value: SYNTHETIC_EMAIL_SUFFIX }],
+    where: [
+      { field: 'email', operator: 'ends_with', value: SYNTHETIC_EMAIL_SUFFIX },
+    ],
     select: ['id'],
     limit: SYNTHETIC_CEILING,
   })) as Array<{ id: string }>

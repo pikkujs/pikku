@@ -11,12 +11,12 @@ A virtual user is **a person**: a name, what they are like, what they are trying
 do, the roles they hold, and one account they sign in with. There is no second
 identity behind it.
 
-There used to be two. An _actor_ was one body that signs in and a _virtual_user_ was
+There used to be two. An _virtual_user_ was one body that signs in and a _virtual_user_ was
 the kind of person it was, on the theory that a scenario needing two people of
 the same kind — one banning, one banned — needs two of the first and one of the
 second. In practice every body here was its own kind, so the second set was a
 layer that carried no information and one more place for a name to drift.
-`defineVirtualUsers()` is now the only declaration, and `actor` survives only as the
+`defineVirtualUsers()` is now the only declaration, and `virtualUser` survives only as the
 name of a _slot in a scenario step_ — the role a virtual user is cast in for that
 step, not a thing that exists on its own.
 

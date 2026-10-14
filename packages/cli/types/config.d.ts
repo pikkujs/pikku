@@ -153,7 +153,7 @@ export interface PikkuCLICoreOutputFiles {
   // Scenarios — kept out of the app bootstrap so a deployed server never
   // imports a step body (and whatever a step imports).
   scenarioTypesFile: string
-  /** The actors a scenario drives — distinct from `scopes/pikku-virtual-users.gen.ts`, which declares them. */
+  /** The virtual users a scenario drives — distinct from `scopes/pikku-virtual-users.gen.ts`, which declares them. */
   virtualUsersWiringFile: string
   scenarioStepsFile: string
   scenarioStepsMetaFile: string
@@ -725,13 +725,13 @@ export type PikkuCLIInput = {
    * suite is one thing that runs against an environment, and a virtual user is
    * another, so an environment belongs to neither of them.
    *
-   * The actor secret comes from SCENARIO_ACTOR_SECRET, never from here.
+   * The virtual user secret comes from SCENARIO_VIRTUAL_USER_SECRET, never from here.
    */
   environments?: Record<
     string,
     {
       apiUrl: string
-      /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
+      /** Virtual user sign-in path under apiUrl. Default: /auth/sign-in/virtual-user */
       signInPath?: string
       /**
        * Where the session and its roles are read back. Default: `get-session`
@@ -771,7 +771,7 @@ export type PikkuCLIInput = {
      */
     browserDriver?: string
     /**
-     * The model a virtual user thinks with — for `actor.converse(...)` and for
+     * The model a virtual user thinks with — for `virtualUser.converse(...)` and for
      * `pikku virtual-user run`. Its own turns, its approval decisions and its
      * closing verdict. Not the model under test: that one belongs to the agent
      * being conversed with, and the whole point of the exercise is that the two
@@ -800,9 +800,9 @@ export type PikkuCLIInput = {
       /**
        * Tables the rollback leaves alone.
        *
-       * Session and account tables belong here: an actor signs in once for the
+       * Session and account tables belong here: a virtual user signs in once for the
        * whole suite, and rolling its session back to a copy taken before that
-       * sign-in logs every actor out mid-run.
+       * sign-in logs every virtual user out mid-run.
        */
       keep?: string[]
     }

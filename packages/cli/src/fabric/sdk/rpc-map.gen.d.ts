@@ -167,19 +167,19 @@ export type AcknowledgeStageSealingKeyInput = {
 export type AcknowledgeStageSealingKeyOutput = {
   keyId: string
 }
-export type ActorBootsSandboxInput = {
+export type VirtualUserBootsSandboxInput = {
   projectId: string
   sizeSlug?: string | undefined
   branch?: string | undefined
   timeoutMs?: number | undefined
   reuse?: boolean | undefined
 }
-export type ActorBootsSandboxOutput = {
+export type VirtualUserBootsSandboxOutput = {
   sandboxId: string
   sandboxSlug: string
   hostname: string
 }
-export type ActorEnsuresDeployedProjectInput = {
+export type VirtualUserEnsuresDeployedProjectInput = {
   name: string
   tier?: ('free' | 'pro' | 'team') | undefined
   templateSlug?: string | undefined
@@ -187,7 +187,7 @@ export type ActorEnsuresDeployedProjectInput = {
   branch?: string | undefined
   timeoutMs?: number | undefined
 }
-export type ActorEnsuresDeployedProjectOutput = {
+export type VirtualUserEnsuresDeployedProjectOutput = {
   organizationId: string
   orgSlug: string
   projectId: string
@@ -196,23 +196,23 @@ export type ActorEnsuresDeployedProjectOutput = {
   deploymentId: string
   redeployed: boolean
 }
-export type ActorProvisionsProjectInput = {
+export type VirtualUserProvisionsProjectInput = {
   name: string
   tier?: ('free' | 'pro' | 'team') | undefined
   templateSlug?: string | undefined
   reuse?: boolean | undefined
 }
-export type ActorProvisionsProjectOutput = {
+export type VirtualUserProvisionsProjectOutput = {
   organizationId: string
   orgSlug: string
   projectId: string
   projectSlug: string
 }
-export type ActorTearsDownInput = {
+export type VirtualUserTearsDownInput = {
   projectId: string
   sandboxId?: string | undefined
 }
-export type ActorTearsDownOutput = {
+export type VirtualUserTearsDownOutput = {
   sandboxDeleted: boolean
   projectDeleted: boolean
 }
@@ -4278,7 +4278,7 @@ export type GetScenarioRunOutput = {
           error?: string | undefined
           video?:
             | {
-                actor: string
+                virtualUser: string
                 offsetMs: number
               }[]
             | undefined
@@ -4292,7 +4292,7 @@ export type GetScenarioRunOutput = {
           expected?: boolean | undefined
           browser?:
             | {
-                actor: string
+                virtualUser: string
                 url?: string | undefined
                 screenshot?: string | undefined
                 consoleErrors: string[]
@@ -4308,14 +4308,14 @@ export type GetScenarioRunOutput = {
     featureId?: string | undefined
     title?: string | undefined
     description?: string | undefined
-    actors?: string[] | undefined
+    virtualUsers?: string[] | undefined
     tags?: string[] | undefined
     artifacts?:
       | {
           scenario: string
           kind: 'screenshot' | 'failure' | 'video'
           path: string
-          actor?: string | undefined
+          virtualUser?: string | undefined
           name?: string | undefined
           id?: string | undefined
           showcase?: boolean | undefined
@@ -4413,7 +4413,7 @@ export type GetStageAuditFiltersOutput = {
     userId: string
     name?: string | undefined
     email?: string | undefined
-    actor?: boolean | undefined
+    virtualUser?: boolean | undefined
   }[]
   types: string[]
 }
@@ -4453,7 +4453,7 @@ export type GetStageAuditsOutput = {
     [key: string]: {
       name?: string | undefined
       email?: string | undefined
-      actor?: boolean | undefined
+      virtualUser?: boolean | undefined
     }
   }
   nextCursor: number | null
@@ -6373,7 +6373,7 @@ export type ListShowcaseAppsOutput = {
       url: string
       caption: string
       scenario: string | null
-      actor: string | null
+      virtualUser: string | null
     }[]
   }[]
 }
@@ -7337,7 +7337,7 @@ export type PublishDeployScenarioRunInput = {
             error?: string | undefined
             video?:
               | {
-                  actor: string
+                  virtualUser: string
                   offsetMs: number
                 }[]
               | undefined
@@ -7351,7 +7351,7 @@ export type PublishDeployScenarioRunInput = {
             expected?: boolean | undefined
             browser?:
               | {
-                  actor: string
+                  virtualUser: string
                   url?: string | undefined
                   screenshot?: string | undefined
                   consoleErrors: string[]
@@ -7367,14 +7367,14 @@ export type PublishDeployScenarioRunInput = {
       featureId?: string | undefined
       title?: string | undefined
       description?: string | undefined
-      actors?: string[] | undefined
+      virtualUsers?: string[] | undefined
       tags?: string[] | undefined
       artifacts?:
         | {
             scenario: string
             kind: 'screenshot' | 'failure' | 'video'
             path: string
-            actor?: string | undefined
+            virtualUser?: string | undefined
             name?: string | undefined
             id?: string | undefined
             showcase?: boolean | undefined
@@ -7453,7 +7453,7 @@ export type PublishScenarioRunInput = {
             error?: string | undefined
             video?:
               | {
-                  actor: string
+                  virtualUser: string
                   offsetMs: number
                 }[]
               | undefined
@@ -7467,7 +7467,7 @@ export type PublishScenarioRunInput = {
             expected?: boolean | undefined
             browser?:
               | {
-                  actor: string
+                  virtualUser: string
                   url?: string | undefined
                   screenshot?: string | undefined
                   consoleErrors: string[]
@@ -7483,14 +7483,14 @@ export type PublishScenarioRunInput = {
       featureId?: string | undefined
       title?: string | undefined
       description?: string | undefined
-      actors?: string[] | undefined
+      virtualUsers?: string[] | undefined
       tags?: string[] | undefined
       artifacts?:
         | {
             scenario: string
             kind: 'screenshot' | 'failure' | 'video'
             path: string
-            actor?: string | undefined
+            virtualUser?: string | undefined
             name?: string | undefined
             id?: string | undefined
             showcase?: boolean | undefined
@@ -7710,7 +7710,7 @@ export type RecordAIUsageEventInput =
           stageId?: string | undefined
           sandboxId?: string | undefined
           userId?: string | undefined
-          actorType?: ('user' | 'agent' | 'system') | undefined
+          performedByType?: ('user' | 'agent' | 'system') | undefined
           featureSurface?: string | undefined
           agentId?: string | undefined
           workflowId?: string | undefined
@@ -7794,7 +7794,7 @@ export type RecordAIUsageEventInput =
             stageId?: string | undefined
             sandboxId?: string | undefined
             userId?: string | undefined
-            actorType?: ('user' | 'agent' | 'system') | undefined
+            performedByType?: ('user' | 'agent' | 'system') | undefined
             featureSurface?: string | undefined
             agentId?: string | undefined
             workflowId?: string | undefined
@@ -7880,7 +7880,7 @@ export type RecordAIUsageEventInput =
                 stageId?: string | undefined
                 sandboxId?: string | undefined
                 userId?: string | undefined
-                actorType?: ('user' | 'agent' | 'system') | undefined
+                performedByType?: ('user' | 'agent' | 'system') | undefined
                 featureSurface?: string | undefined
                 agentId?: string | undefined
                 workflowId?: string | undefined
@@ -7963,7 +7963,7 @@ export type RecordAIUsageEventInput =
                 stageId?: string | undefined
                 sandboxId?: string | undefined
                 userId?: string | undefined
-                actorType?: ('user' | 'agent' | 'system') | undefined
+                performedByType?: ('user' | 'agent' | 'system') | undefined
                 featureSurface?: string | undefined
                 agentId?: string | undefined
                 workflowId?: string | undefined
@@ -8047,7 +8047,7 @@ export type RecordAIUsageEventInput =
           stageId?: string | undefined
           sandboxId?: string | undefined
           userId?: string | undefined
-          actorType?: ('user' | 'agent' | 'system') | undefined
+          performedByType?: ('user' | 'agent' | 'system') | undefined
           featureSurface?: string | undefined
           agentId?: string | undefined
           workflowId?: string | undefined
@@ -9184,7 +9184,7 @@ export type SecretSchema_neonApiKey = string
 export type SecretSchema_oauthProxyMasterKey = string
 export type SecretSchema_openAiApiKey = string
 export type SecretSchema_resendApiKey = string
-export type SecretSchema_scenarioActorSecret = string
+export type SecretSchema_scenarioVirtualUserSecret = string
 export type SecretSchema_stripeSandboxFactoryKey = string
 export type SecretSchema_stripeSandboxStandInKey = string
 export type SecretSchema_stripeSecretKey = string

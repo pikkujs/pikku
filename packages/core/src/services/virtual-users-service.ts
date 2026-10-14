@@ -1,7 +1,7 @@
 import type {
   ConverseOptions,
-  ActorFlowVerdict,
-} from '../wirings/actor-flow/actor-flow.types.js'
+  ConversationVerdict,
+} from '../wirings/virtual-user-conversation/virtual-user-conversation.types.js'
 import type { VirtualUserMeta } from '../wirings/virtual-user/virtual-user-declaration.types.js'
 
 /**
@@ -124,11 +124,13 @@ export interface ScenarioInvokeOptions {
 export type ScenarioRpcMap = Record<string, { input: any; output: any }>
 
 /**
- * The virtual user a step's `actor` slot carries, for a project whose virtual users are
+ * The virtual user a step's `virtualUser` slot carries, for a project whose virtual users are
  * known. No declared virtual users keeps the open type rather than collapsing to
  * `never` — a project may still build one itself.
  */
-export type ScenarioVirtualUserOf<TVirtualUsers> = [keyof TVirtualUsers] extends [never]
+export type ScenarioVirtualUserOf<TVirtualUsers> = [
+  keyof TVirtualUsers,
+] extends [never]
   ? ScenarioVirtualUser
   : TVirtualUsers[keyof TVirtualUsers]
 
@@ -136,14 +138,14 @@ export type ScenarioVirtualUserOf<TVirtualUsers> = [keyof TVirtualUsers] extends
  * A declared person, signed in and acting over the real transport.
  *
  * The runtime half of `defineVirtualUsers()`: sign-in materialises a user row
- * flagged `actor: true`, and everything a step or a virtual user does goes
+ * flagged `virtualUser: true`, and everything a step or a virtual user does goes
  * through here.
  */
 export interface ScenarioVirtualUser<
   TAgentName extends string = string,
   TRpcMap extends ScenarioRpcMap = ScenarioRpcMap,
 > {
-  /** The id it was declared under — what a step's `actor` slot names. */
+  /** The id it was declared under — what a step's `virtualUser` slot names. */
   readonly name: string
   /** Their address, computed from the id. Flows use it for invites/lookups. */
   readonly email: string
@@ -163,7 +165,7 @@ export interface ScenarioVirtualUser<
     options?: ScenarioInvokeOptions
   ): Promise<ScenarioHttpResponse>
   /** Converse with a Pikku AI agent in character and return its verdict. */
-  converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
+  converse(options: ConverseOptions<TAgentName>): Promise<ConversationVerdict>
   /**
    * The roles this person actually holds on the stage, read back after signing
    * in — what a run compares against the declaration before its first step.

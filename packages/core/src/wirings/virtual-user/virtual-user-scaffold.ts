@@ -61,7 +61,7 @@ export const VIRTUAL_USER_VARIABLES = {
    * somewhere it only assumed was itself.
    */
   apiUrl: 'VIRTUAL_USER_API_URL',
-  secret: 'SCENARIO_ACTOR_SECRET',
+  secret: 'SCENARIO_VIRTUAL_USER_SECRET',
   model: 'VIRTUAL_USER_MODEL',
   /**
    * The same two variables a scenario run reads, because a virtual user signs
@@ -74,7 +74,7 @@ export const VIRTUAL_USER_VARIABLES = {
   rpcPath: 'SCENARIO_RPC_PATH',
   /**
    * The deployed way in. A Fabric operator token is asymmetric — a stage can
-   * verify one and can never mint one — so unlike the actor secret it is safe
+   * verify one and can never mint one — so unlike the virtual user secret it is safe
    * for a run against a real environment. Read from the environment only as the
    * fallback for a run nobody handed a token to, which is what a schedule is.
    */
@@ -91,12 +91,12 @@ export const VIRTUAL_USER_VARIABLES = {
  */
 export const signInPathFor = (
   configured: string | undefined,
-  plugin: 'actor' | 'fabric'
+  plugin: 'virtual-user' | 'fabric'
 ): string | undefined => {
   if (!configured) {
     return undefined
   }
-  const mount = configured.replace(/\/sign-in\/(actor|fabric)$/, '')
+  const mount = configured.replace(/\/sign-in\/(virtual-user|fabric)$/, '')
   return mount === configured ? configured : `${mount}/sign-in/${plugin}`
 }
 
@@ -263,7 +263,13 @@ export const startVirtualUserRun = async ({
 
   // Checked against the effective disposition, so an override cannot smuggle
   // one in.
-  refuseInProduction(virtualUserId, disposition, config, environments, environment)
+  refuseInProduction(
+    virtualUserId,
+    disposition,
+    config,
+    environments,
+    environment
+  )
 
   // Seeded here rather than inside the engine so the record carries the seed
   // even if the run dies before returning — an unreproducible crash costs the
@@ -500,7 +506,9 @@ export const logVirtualUserTick = (
   result: VirtualUserTickResult
 ): void => {
   for (const { virtualUserId, runId } of result.dispatched) {
-    logger.info(`Virtual user ${virtualUserId} started run ${runId} on schedule`)
+    logger.info(
+      `Virtual user ${virtualUserId} started run ${runId} on schedule`
+    )
   }
   for (const runId of result.reaped) {
     logger.warn(
@@ -583,7 +591,7 @@ export const executeVirtualUserRun = async ({
     }
 
     // An operator token wins wherever one is available: it is asymmetric, and
-    // it does not need the target to hold a shared secret at all. The actor
+    // it does not need the target to hold a shared secret at all. The virtual user
     // secret is the local-only fallback, because only `pikku dev` serves the
     // endpoint that accepts it.
     const token =
@@ -647,7 +655,7 @@ export const executeVirtualUserRun = async ({
           }
         : { secret }),
       model,
-      signInPath: signInPathFor(configuredSignInPath, 'actor'),
+      signInPath: signInPathFor(configuredSignInPath, 'virtual-user'),
       rpcPath:
         (await variables.get(VIRTUAL_USER_VARIABLES.rpcPath)) ?? undefined,
     })
@@ -670,7 +678,7 @@ export const executeVirtualUserRun = async ({
         model,
         agents: agents.map((agent) => agent.name),
       }),
-      // `AgentRunnerService.run` IS the engine's `ActorLLM` — same params, same
+      // `AgentRunnerService.run` IS the engine's `VirtualUserLLM` — same params, same
       // result — so a virtual user thinks through the same runner every agent in
       // the app does, provider quirks and all.
       llm: (params) => agentRunner.run(params),
@@ -697,7 +705,9 @@ export const executeVirtualUserRun = async ({
     // record is the only place that distinction survives — leaving it at
     // 'running' forever is what `fail` exists to prevent.
     const message = error instanceof Error ? error.message : String(error)
-    logger.error(`Virtual user run ${runId} (${virtualUserId}) failed: ${message}`)
+    logger.error(
+      `Virtual user run ${runId} (${virtualUserId}) failed: ${message}`
+    )
     await store.fail(runId, message)
     throw error
   }

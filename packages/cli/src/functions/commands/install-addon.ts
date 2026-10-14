@@ -143,7 +143,7 @@ function insertAfterImports(source: string, line: string): string {
 
 /**
  * Wires the addon's auth into the app's Better Auth config: delegated sign-in
- * against the upstream, and upstream credentials carried by scenario actors.
+ * against the upstream, and upstream credentials carried by scenario virtual users.
  * Text edits, so each one is skipped (and reported) when its anchor is gone.
  */
 export function wireAuth(
@@ -204,15 +204,18 @@ export function wireAuth(
     }
   }
 
-  const actorAt = next.search(/pikkuActor\(\{/)
-  if (actorAt === -1) {
+  const virtualUserAt = next.search(/pikkuVirtualUser\(\{/)
+  if (virtualUserAt === -1) {
     notes.push(
-      'auth.ts has no pikkuActor — scenario virtual users will not carry upstream credentials'
+      'auth.ts has no pikkuVirtualUser — scenario virtual users will not carry upstream credentials'
     )
   } else {
-    const actorCall = next.slice(actorAt, next.indexOf('})', actorAt) + 2)
-    if (!actorCall.includes('credentials:')) {
-      const credentials = `pikkuActor({
+    const virtualUserCall = next.slice(
+      virtualUserAt,
+      next.indexOf('})', virtualUserAt) + 2
+    )
+    if (!virtualUserCall.includes('credentials:')) {
+      const credentials = `pikkuVirtualUser({
           credentials: {
             names: ['${camelName}'],
             store: async (name, value, userId) => {
@@ -223,7 +226,7 @@ export function wireAuth(
               await credentialService?.delete(name, userId)
             },
           },`
-      next = next.replace(/pikkuActor\(\{/, credentials)
+      next = next.replace(/pikkuVirtualUser\(\{/, credentials)
     }
   }
   return { source: next, notes }

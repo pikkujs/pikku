@@ -238,20 +238,23 @@ export function renameEntityInPath(
 }
 
 /**
- * Point an example's `actors.<id>` at somebody this project actually declares.
+ * Point an example's `virtualUsers.<id>` at somebody this project actually declares.
  *
- * A browser step's actor has to be a literal `actors.<name>`, so every scenario recipe
+ * A browser step's virtual user has to be a literal `virtualUsers.<name>`, so every scenario recipe
  * names one — and a virtual user that does not exist fails codegen, which stops everything
  * written afterwards from registering. Distinct unknown ids map to distinct virtual users in
  * declaration order, so a two-colleague example keeps its two colleagues, and saturate
  * on the last one when the cast is smaller.
  */
-export function renameActorsInCode(content: string, cast: string[]): string {
+export function renameVirtualUsersInCode(
+  content: string,
+  cast: string[]
+): string {
   if (cast.length === 0) return content
   const declared = new Set(cast)
   const chosen = new Map<string, string>()
   return content.replace(
-    /\bactors(\??\.)([A-Za-z_$][\w$]*)/g,
+    /\bvirtualUsers(\??\.)([A-Za-z_$][\w$]*)/g,
     (all, dot: string, id: string) => {
       if (declared.has(id)) return all
       let to = chosen.get(id)
@@ -259,7 +262,7 @@ export function renameActorsInCode(content: string, cast: string[]): string {
         to = cast[Math.min(chosen.size, cast.length - 1)]!
         chosen.set(id, to)
       }
-      return `actors${dot}${to}`
+      return `virtualUsers${dot}${to}`
     }
   )
 }

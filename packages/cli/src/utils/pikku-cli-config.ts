@@ -917,12 +917,15 @@ const _getPikkuCLIConfig = async (
         'pikku-scenario-types.gen.ts'
       )
     }
-    // The actors a scenario drives. Sat under `workflow/` beside a different
+    // The virtual users a scenario drives. Sat under `workflow/` beside a different
     // file of the same name — `scopes/pikku-virtual-users.gen.ts` declares virtual users,
     // this one types them at runtime — which made the pair impossible to tell
     // apart by import path.
     if (!result.virtualUsersWiringFile) {
-      result.virtualUsersWiringFile = join(scenarioDir, 'pikku-virtual-users.gen.ts')
+      result.virtualUsersWiringFile = join(
+        scenarioDir,
+        'pikku-virtual-users.gen.ts'
+      )
     }
     if (!result.scenarioStepsFile) {
       result.scenarioStepsFile = join(
@@ -1236,10 +1239,7 @@ const _getPikkuCLIConfig = async (
       )
     }
     if (!result.screensFile) {
-      result.screensFile = join(
-        screensDir,
-        'pikku-screens.gen.ts'
-      )
+      result.screensFile = join(screensDir, 'pikku-screens.gen.ts')
     }
     if (!result.installedAddonsFile) {
       result.installedAddonsFile = join(

@@ -7,7 +7,7 @@ import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import type { AgentStepResult } from './agent-runner-service.js'
 
 /**
- * Minimal target app exposing the agent HTTP surface: actor sign-in, the agent
+ * Minimal target app exposing the agent HTTP surface: virtual user sign-in, the agent
  * run route (suspends once for approval, then completes), and the batch approve
  * route (records the decisions). `authRequired` toggles whether the agent
  * routes reject unauthenticated calls with 401 (to exercise lazy sign-in).
@@ -30,7 +30,7 @@ const startAgentTarget = async () => {
           .writeHead(200, { 'content-type': 'application/json' })
           .end(JSON.stringify(obj))
 
-      if (req.url === '/api/auth/sign-in/actor') {
+      if (req.url === '/api/auth/sign-in/virtual-user') {
         logins++
         res.setHeader('set-cookie', ['session=s1; Path=/; HttpOnly'])
         json({ ok: true })
@@ -168,7 +168,7 @@ describe('HttpVirtualUser.converse', async () => {
     wireRunner()
     target.reset()
 
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
@@ -186,7 +186,7 @@ describe('HttpVirtualUser.converse', async () => {
       },
     })
 
-    const verdict = await actors.pm!.converse({
+    const verdict = await virtualUsers.pm!.converse({
       agent: 'todoBot',
       task: 'Get a todo created for the launch',
       evaluate: 'A todo about the launch now exists',
@@ -211,7 +211,7 @@ describe('HttpVirtualUser.converse', async () => {
     wireRunner()
     target.reset({ authRequired: true })
 
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
@@ -228,7 +228,7 @@ describe('HttpVirtualUser.converse', async () => {
       },
     })
 
-    const verdict = await actors.pm!.converse({
+    const verdict = await virtualUsers.pm!.converse({
       agent: 'todoBot',
       task: 'make a todo',
       evaluate: 'a todo exists',
@@ -250,7 +250,7 @@ describe('HttpVirtualUser.converse', async () => {
       },
     } as any)
 
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
@@ -268,7 +268,7 @@ describe('HttpVirtualUser.converse', async () => {
     })
 
     await assert.rejects(
-      actors.pm!.converse({ agent: 'todoBot', task: 't', evaluate: 'e' })
+      virtualUsers.pm!.converse({ agent: 'todoBot', task: 't', evaluate: 'e' })
     )
   })
 })

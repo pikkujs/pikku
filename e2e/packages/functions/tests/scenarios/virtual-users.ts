@@ -2,8 +2,8 @@
  * The people who use the e2e app.
  *
  * One declaration serves both halves of the suite. A scenario borrows a virtual user
- * as an actor and drives it through a script somebody wrote; `pikku virtual-user run`
- * hands the same person the scenario prose for their own actor, the schema of
+ * as a virtual user and drives it through a script somebody wrote; `pikku virtual-user run`
+ * hands the same person the scenario prose for their own virtual user, the schema of
  * every rpc their roles let them see, and nothing else — no step graph, no rpc
  * names lifted out of a feature file. What they do with that is the model's
  * business, which is the point: the bugs worth finding are the ones nobody
@@ -14,7 +14,7 @@
  * the caller's roles say it should not have.
  *
  * Their addresses are computed from these ids and `scenarios.emailDomain`, so
- * `shopper` reads mail at shopper@actors.local without anyone writing it down.
+ * `shopper` reads mail at shopper@virtualuser.local without anyone writing it down.
  */
 import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
@@ -90,12 +90,7 @@ defineVirtualUsers({
     personality:
       'Careful operator who edits code through the console and always restores it',
     account: {},
-    roles: [
-      'platform-admin',
-      'console-admin',
-      'audit-reader',
-      'flag-operator',
-    ],
+    roles: ['platform-admin', 'console-admin', 'audit-reader', 'flag-operator'],
     goals: [
       'Keep the console doing what it says it does, and change nothing I cannot undo',
     ],

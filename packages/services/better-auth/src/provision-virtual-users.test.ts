@@ -126,7 +126,7 @@ const harness = (
 }
 
 describe('provisionVirtualUsers', () => {
-  test('creates each account as an actor and grants the roles it declares', async () => {
+  test('creates each account as a virtual user and grants the roles it declares', async () => {
     const h = harness()
 
     const result = await provisionVirtualUsers(h, {
@@ -137,11 +137,10 @@ describe('provisionVirtualUsers', () => {
 
     assert.deepEqual(h.created.sort(), ['susan@e2e.test', 'target@e2e.test'])
     assert.deepEqual(h.rolesOf('susan@e2e.test'), ['report-viewer'])
-    assert.ok(h.users.every((u) => u.actor === true))
+    assert.ok(h.users.every((u) => u.virtualUser === true))
     assert.equal(result.created, 2)
     assert.equal(result.granted, 1)
   })
-
 
   test('grants the app a virtual user names as a scope', async () => {
     const h = harness()
@@ -277,7 +276,7 @@ describe('provisionVirtualUsers', () => {
           environments: ENVIRONMENTS,
           environment: 'local',
         }),
-      /is a real user here, not an actor/
+      /is a real user here, not a virtual user/
     )
     assert.deepEqual(h.rolesOf('susan@e2e.test'), [])
   })
@@ -468,7 +467,7 @@ describe('provisionVirtualUsers orphans', () => {
   // on staging, and the endpoint would not stop it.
   test('a virtual user that may not act here is an orphan here', async () => {
     const h = harness([
-      { id: 'legacy', email: 'mo@e2e.test', actor: true, banned: false },
+      { id: 'legacy', email: 'mo@e2e.test', virtualUser: true, banned: false },
     ])
 
     const result = await provisionVirtualUsers(h, {
@@ -482,7 +481,7 @@ describe('provisionVirtualUsers orphans', () => {
     assert.equal(h.users.find((u) => u.email === 'mo@e2e.test')!.banned, true)
   })
 
-  test('a real user is never an orphan, because they are never an actor', async () => {
+  test('a real user is never an orphan, because they are never a virtual user', async () => {
     const h = harness([{ id: 'a-real-person', email: 'someone@corp.test' }])
 
     const result = await provisionVirtualUsers(h, {
@@ -493,7 +492,10 @@ describe('provisionVirtualUsers orphans', () => {
     })
 
     assert.deepEqual(result.orphaned, [])
-    assert.equal(h.users.find((u) => u.id === 'a-real-person')!.banned, undefined)
+    assert.equal(
+      h.users.find((u) => u.id === 'a-real-person')!.banned,
+      undefined
+    )
   })
 
   test("orphans: 'ban' without the ban plugin says so rather than writing a column that does not exist", async () => {

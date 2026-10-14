@@ -110,7 +110,7 @@ describe('operator virtual user sign-in', () => {
 
   // An app that mounts auth somewhere other than the root moves both sign-in
   // paths together, and `SCENARIO_SIGN_IN_PATH` is the only place it can say so.
-  test('honours a moved sign-in path the same way the actor path does', async () => {
+  test('honours a moved sign-in path the same way the virtual user path does', async () => {
     const stage = await startStage([
       { id: 'user-7', email: 'customer@virtualuser.invalid' },
     ])
@@ -162,7 +162,9 @@ describe('operator virtual user sign-in', () => {
     })
 
     await virtualUsers.customer!.invoke('whoami', {})
-    assert.deepEqual(stage.sentBodies, [{ email: 'customer@virtualuser.invalid' }])
+    assert.deepEqual(stage.sentBodies, [
+      { email: 'customer@virtualuser.invalid' },
+    ])
   })
 
   test('mints the operator session from a token factory', async () => {

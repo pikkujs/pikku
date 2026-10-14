@@ -1,16 +1,16 @@
 //~ name: scenario-multitenant
 //~ title: Scenario — TENANT ISOLATION (org A's data is invisible to org B)
 //~ entity: company
-//~ when: PHASE 7.5/7.6, for any app with the organization() plugin or an org/tenant scope. This is the scenario that PROVES multi-tenancy actually works: one org's user creates data, a DIFFERENT org's user lists it and must see NOTHING. A missing `where organizationId = session.activeOrganizationId` leaks every tenant's rows to every other — green CRUD hides it, this catches it. Needs two actors in DIFFERENT orgs (see below). Pull `--name scenario` first, and see `@pikku/better-auth`'s organization() plugin for the org setup + sign-up bootstrap.
+//~ when: PHASE 7.5/7.6, for any app with the organization() plugin or an org/tenant scope. This is the scenario that PROVES multi-tenancy actually works: one org's user creates data, a DIFFERENT org's user lists it and must see NOTHING. A missing `where organizationId = session.activeOrganizationId` leaks every tenant's rows to every other — green CRUD hides it, this catches it. Needs two virtual users in DIFFERENT orgs (see below). Pull `--name scenario` first, and see `@pikku/better-auth`'s organization() plugin for the org setup + sign-up bootstrap.
 // ===== FILE: packages/functions/test/scenarios/tenant-isolation.scenario.ts =====
 import { pikkuScenario } from '#pikku/scenarios'
 
-//~ TWO ACTORS, TWO ORGS. With the organization() plugin's sign-up bootstrap, every
+//~ TWO VIRTUAL_USERS, TWO ORGS. With the organization() plugin's sign-up bootstrap, every
 //~ signed-up user gets their OWN org made active — so the owner and `outsider` are
 //~ each alone in a separate org automatically (no id passed anywhere; the SESSION
 //~ carries activeOrganizationId). Declare `outsider` as a second virtual user in
 //~ defineVirtualUsers (its own id → its own derived email → distinct user → distinct
-//~ org). 3rd arg is `{ scenario, actors }` (NOT `workflow`).
+//~ org). 3rd arg is `{ scenario, virtualUsers }` (NOT `workflow`).
 //~
 //~ The assertion has TWO halves and you need BOTH:
 //~  1. the OWNER sees their own row (scope isn't SO tight it hides your own data), and
@@ -18,11 +18,11 @@ import { pikkuScenario } from '#pikku/scenarios'
 export const tenantIsolationScenario = pikkuScenario<void, { companyId: string }>({
   title: 'Tenant isolation (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    const outsider = actors?.outsider ?? actors?.member
-    if (!actors?.visitor || !outsider) {
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    const outsider = virtualUsers?.outsider ?? virtualUsers?.member
+    if (!virtualUsers?.visitor || !outsider) {
       throw new Error(
-        'needs run actors (visitor + a second-org actor `outsider`/`member`) — run via `pikku scenario run <env>`',
+        'needs run virtual users (visitor + a second-org virtual user `outsider`/`member`) — run via `pikku scenario run <env>`',
       )
     }
     logger.debug('tenant isolation starting')
@@ -31,14 +31,14 @@ export const tenantIsolationScenario = pikkuScenario<void, { companyId: string }
       'org A creates a company',
       'createCompany',
       { name: 'Acme Inc' },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     //~ HALF 1 — the OWNER must see their own row.
     const own = await scenario.do(
       'org A sees its own company',
       'listCompanies',
       {},
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     if (!own.companies.some((c) => c.id === created.company.id)) {
       throw new Error(
@@ -50,7 +50,7 @@ export const tenantIsolationScenario = pikkuScenario<void, { companyId: string }
       "org B cannot see org A's company",
       'listCompanies',
       {},
-      { actor: outsider },
+      { virtualUser: outsider },
     )
     if (foreign.companies.some((c) => c.id === created.company.id)) {
       throw new Error(

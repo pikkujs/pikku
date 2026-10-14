@@ -165,28 +165,28 @@ describe('deriving intents from scenarios', () => {
       title: 'Invite a teammate',
       description: 'An admin brings someone new into the org',
       tags: ['org'],
-      actors: ['orgAdmin'],
+      virtualUsers: ['orgAdmin'],
       steps: [
         {
           type: 'scenarioStep',
           stepName: 'a',
           stepFunc: 'aSignedInAdmin',
           phase: 'given',
-          actor: 'orgAdmin',
+          virtualUser: 'orgAdmin',
         },
         {
           type: 'scenarioStep',
           stepName: 'b',
           stepFunc: 'invitesATeammate',
           phase: 'when',
-          actor: 'orgAdmin',
+          virtualUser: 'orgAdmin',
         },
         {
           type: 'scenarioStep',
           stepName: 'c',
           stepFunc: 'seesTheMemberList',
           phase: 'then',
-          actor: 'orgAdmin',
+          virtualUser: 'orgAdmin',
         },
         {
           type: 'scenarioStep',
@@ -276,20 +276,20 @@ describe('deriving intents from scenarios', () => {
           name: 'inviteFlow',
           source: 'scenario',
           title: 'Invite a teammate',
-          actors: ['orgAdmin'],
+          virtualUsers: ['orgAdmin'],
           nodes: {
             step_0: { nodeId: 'step_0', flow: 'branch', branches: [] },
             a: {
               nodeId: 'a',
               rpcName: 'aSignedInAdmin',
               scenarioStepPhase: 'given',
-              actor: 'orgAdmin',
+              virtualUser: 'orgAdmin',
             },
             b: {
               nodeId: 'b',
               rpcName: 'invitesATeammate',
               scenarioStepPhase: 'when',
-              actor: 'orgAdmin',
+              virtualUser: 'orgAdmin',
             },
           },
         },
@@ -315,7 +315,7 @@ describe('deriving intents from scenarios', () => {
   })
 })
 
-describe('driving a virtual user through a signed-in actor', () => {
+describe('driving a virtual user through a signed-in virtual user', () => {
   const response: ScenarioHttpResponse = {
     status: 200,
     ok: true,

@@ -72,7 +72,7 @@ export const deriveCatalogue = (
 type IntentStep = {
   stepFunc: string
   phase: ScenarioStepPhase
-  actor?: string
+  virtualUser?: string
 }
 
 /**
@@ -93,20 +93,26 @@ const scenarioSteps = (meta: {
   if (meta.steps?.length) {
     return meta.steps.flatMap((step) =>
       step.type === 'scenarioStep'
-        ? [{ stepFunc: step.stepFunc, phase: step.phase, actor: step.actor }]
+        ? [
+            {
+              stepFunc: step.stepFunc,
+              phase: step.phase,
+              virtualUser: step.virtualUser,
+            },
+          ]
         : []
     )
   }
 
   // knowledge: decisions/internals/virtual-user-step-order-comes-from-insertion-order.md
   return Object.values(meta.nodes ?? {}).flatMap((node) => {
-    const { rpcName, scenarioStepPhase, actor } = (node ?? {}) as {
+    const { rpcName, scenarioStepPhase, virtualUser } = (node ?? {}) as {
       rpcName?: string
       scenarioStepPhase?: ScenarioStepPhase
-      actor?: string
+      virtualUser?: string
     }
     if (!rpcName || !scenarioStepPhase) return []
-    return [{ stepFunc: rpcName, phase: scenarioStepPhase, actor }]
+    return [{ stepFunc: rpcName, phase: scenarioStepPhase, virtualUser }]
   })
 }
 
@@ -143,7 +149,7 @@ export const deriveIntents = (
           phase: step.phase,
           // knowledge: decisions/internals/a-scenario-step-template-is-offered-unfilled.md
           description: template ?? description ?? '',
-          actor: step.actor,
+          virtualUser: step.virtualUser,
         })
       )
     }
@@ -154,7 +160,7 @@ export const deriveIntents = (
       description: meta.description,
       steps: steps.length ? steps : undefined,
       tags: meta.tags?.length ? meta.tags : undefined,
-      virtualUsers: meta.actors?.length ? meta.actors : undefined,
+      virtualUsers: meta.virtualUsers?.length ? meta.virtualUsers : undefined,
     })
   }
   return intents

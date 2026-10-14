@@ -24,7 +24,7 @@ export interface PikkuEnvironment {
    *
    * A product can be more than one frontend — staff in one, customers in
    * another — and the two are usually different paths on one host. A browser
-   * step navigates as its actor, so the actor's app decides which of these it
+   * step navigates as its virtual user, so the virtual user's app decides which of these it
    * navigates against, and `appUrl` is the fallback for a virtual user that names
    * no app. Without this a run has one base for everybody: whichever app owns
    * it is proved twice and the other never, silently, because both sets of
@@ -92,7 +92,7 @@ const assertAbsoluteUrl = (flag: string, value: string): URL => {
 }
 
 /**
- * Applied once, so actors, step env, the browser driver and the spawned server
+ * Applied once, so virtual users, step env, the browser driver and the spawned server
  * all see the same target. The environment is still looked up by name: the
  * flags override fields on a configured environment, they do not invent one.
  */

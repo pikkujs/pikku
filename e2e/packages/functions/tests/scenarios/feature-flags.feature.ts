@@ -25,7 +25,7 @@ export const flagsAvailableFeatureIsReachableScenario = pikkuScenario<
   title: 'A caller who is capable reaches a feature that is available',
   description: 'Both halves true is the only combination that admits anyone',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     // The seed leaves the flag on and unrestricted, but the console suite puts
     // a rollout bucket on it to fill the board's rolling lane. A bucket left
     // behind by a scenario that failed part-way would admit this guest only by
@@ -37,19 +37,19 @@ export const flagsAvailableFeatureIsReachableScenario = pikkuScenario<
         rpcName: 'admin:flagSetRollout',
         data: { name: 'quarterlyReports', percent: null },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest opens the quarterly report',
       'invokesRpcRaw',
       { rpcName: REPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees the report',
       'expectsRpcResponse',
       { call, status: 200, contains: ['quarterly numbers'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 200 }
   },
@@ -62,18 +62,18 @@ export const flagsDarkFeatureIsUnavailableScenario = pikkuScenario<
   title: 'A feature nobody has switched on answers 503',
   description: 'A synced flag starts off, so a feature ships dark',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(
       'the guest opens the dark launch',
       'invokesRpcRaw',
       { rpcName: DARK },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'is told the feature is not on, not that they may not have it',
       'expectsRpcResponse',
       { call, status: 503 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 503 }
   },
@@ -91,12 +91,12 @@ export const flagsScopeRefusalComesFirstScenario = pikkuScenario<
   title: 'A caller without the scope is refused before the flag is read',
   description: 'A refusal never reports the state of a feature',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(
       'the admin opens the quarterly report unscoped',
       'invokesRpcRaw',
       { rpcName: REPORT },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees a 403 naming the scope, and nothing about the feature',
@@ -107,7 +107,7 @@ export const flagsScopeRefusalComesFirstScenario = pikkuScenario<
         contains: ['reports:read'],
         doesNotContain: ['quarterlyReports'],
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { status: 403 }
   },
@@ -125,56 +125,56 @@ export const flagsKillSwitchClosesASessionlessPathScenario = pikkuScenario<
   title: 'Switching a flag off closes a path with no session behind it',
   description: 'And switching it back on opens it again, with no deploy',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const before = await scenario.when(
       'the guest runs the export',
       'invokesRpcRaw',
       { rpcName: EXPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'it runs',
       'expectsRpcResponse',
       { call: before, status: 200 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator kills the feature',
       'admin:flagSetEnabled',
       { name: 'bulkExport', enabled: false, note: 'e2e kill switch' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const killed = await scenario.when(
       'the guest runs the export again',
       'invokesRpcRaw',
       { rpcName: EXPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'it is refused with a 503',
       'expectsRpcResponse',
       { call: killed, status: 503 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator switches it back on',
       'admin:flagSetEnabled',
       { name: 'bulkExport', enabled: true },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const restored = await scenario.when(
       'the guest runs the export once more',
       'invokesRpcRaw',
       { rpcName: EXPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'it runs again',
       'expectsRpcResponse',
       { call: restored, status: 200 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { restored: true }
   },
@@ -192,31 +192,31 @@ export const flagsOverrideBeatsTheSwitchScenario = pikkuScenario<
   title: 'An override opens a flag for one subject that is off for everyone',
   description: 'And clearing it puts them back with everybody else',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator kills the report for everyone',
       'admin:flagSetEnabled',
       { name: 'quarterlyReports', enabled: false },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const killed = await scenario.when(
       'the guest opens the report',
       'invokesRpcRaw',
       { rpcName: REPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'it is off for them too',
       'expectsRpcResponse',
       { call: killed, status: 503 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
@@ -227,45 +227,45 @@ export const flagsOverrideBeatsTheSwitchScenario = pikkuScenario<
         subject: { userId: guest.userId },
         enabled: true,
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const overridden = await scenario.when(
       'the guest opens the report again',
       'invokesRpcRaw',
       { rpcName: REPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'they see it while it stays off for everyone else',
       'expectsRpcResponse',
       { call: overridden, status: 200, contains: ['quarterly numbers'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator clears the override',
       'admin:flagClearOverride',
       { name: 'quarterlyReports', subject: { userId: guest.userId } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const cleared = await scenario.when(
       'the guest opens the report once more',
       'invokesRpcRaw',
       { rpcName: REPORT },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'they are back with everybody else',
       'expectsRpcResponse',
       { call: cleared, status: 503 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator restores the feature',
       'admin:flagSetEnabled',
       { name: 'quarterlyReports', enabled: true },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { restored: true }
   },
@@ -283,7 +283,7 @@ export const flagsOperatorScopeIsTheGateScenario = pikkuScenario<
   title: 'Administering flags takes its own scope',
   description: 'Reaching the console is not the same as holding the switch',
   tags: ['scenario', 'feature-flags'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(
       'the staff administrator kills a feature',
       'invokesRpcRaw',
@@ -291,13 +291,13 @@ export const flagsOperatorScopeIsTheGateScenario = pikkuScenario<
         rpcName: 'admin:flagSetEnabled',
         data: { name: 'bulkExport', enabled: false },
       },
-      { actor: actors.staff }
+      { virtualUser: virtualUsers.staff }
     )
     await scenario.then(
       'they are refused, and told which scope they are missing',
       'expectsRpcResponse',
       { call, status: 403, contains: ['admin:flags:manage'] },
-      { actor: actors.staff }
+      { virtualUser: virtualUsers.staff }
     )
     return { status: 403 }
   },

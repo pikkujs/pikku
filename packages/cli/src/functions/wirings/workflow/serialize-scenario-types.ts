@@ -113,7 +113,7 @@ export type PikkuFunctionScenario<
   In = unknown,
   Out = never,
   Ctx = Out
-> = PikkuFunctionSessionless<In, Out, 'scenario' | 'actors', WiredServices, Ctx>
+> = PikkuFunctionSessionless<In, Out, 'scenario' | 'virtualUsers', WiredServices, Ctx>
 
 type PikkuScenarioConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -177,8 +177,8 @@ export function pikkuScenarioHook<In = unknown, Ctx = unknown>(
 
 /**
  * A scenario: a complex workflow that drives the app the way users do.
- * Steps run as actors over the REAL transport — \`scenario.do(step, rpc,
- * data, { actor: actors.yasser })\` — so flows double as e2e tests and
+ * Steps run as virtual users over the REAL transport — \`scenario.do(step, rpc,
+ * data, { virtualUser: virtualUsers.yasser })\` — so flows double as e2e tests and
  * staged/production health checks (no state reset; scope what you create).
  *
  * @example snippet: scenarioBasics
@@ -188,12 +188,12 @@ export function pikkuScenario<
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuScenarioConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenario' | 'actors', PikkuFunctionScenario<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenario' | 'virtualUsers', PikkuFunctionScenario<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
 export function pikkuScenario<In, Out = unknown>(
   func:
     | PikkuFunctionScenario<In, Out>
-    | PikkuFunctionConfig<In, Out, 'scenario' | 'actors', PikkuFunctionScenario<In, Out>>
-): PikkuFunctionConfig<In, Out, 'scenario' | 'actors'>
+    | PikkuFunctionConfig<In, Out, 'scenario' | 'virtualUsers', PikkuFunctionScenario<In, Out>>
+): PikkuFunctionConfig<In, Out, 'scenario' | 'virtualUsers'>
 export function pikkuScenario(func: any) {
   return typeof func === 'function' ? { func } : func
 }
@@ -206,7 +206,7 @@ export function pikkuScenario(func: any) {
 export type PikkuScenarioRef<In = any, Out = any> = PikkuFunctionConfig<
   In,
   Out,
-  'scenario' | 'actors',
+  'scenario' | 'virtualUsers',
   PikkuFunctionScenario<In, Out>,
   any,
   any
@@ -289,34 +289,34 @@ export type PikkuFunctionScenarioStep<
   In = unknown,
   Out = never,
   Surface extends 'browser' | 'cli' | 'default' = 'default',
-  HasActor extends boolean = false
+  HasVirtualUser extends boolean = false
 > = PikkuFunctionSessionless<
   In,
   Out,
   | 'scenarioStep'
   | (Surface extends 'default' ? never : Surface)
-  | (HasActor extends true ? 'actor' : never)
+  | (HasVirtualUser extends true ? 'virtualUser' : never)
 >
 
 type PikkuScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
-  HasActor extends boolean = false
+  HasVirtualUser extends boolean = false
 > = {
   /** Registered name — this is the string \`scenario.given()\` references. */
   name: string
   /**
-   * This step is driven by a virtual user, so \`wire.actor\` is injected and
+   * This step is driven by a virtual user, so \`wire.virtualUser\` is injected and
    * non-optional inside every binding, and the runner refuses to dispatch it
    * without one.
    *
    * A \`browser\` binding implies it — a window is opened as somebody. Declare it
-   * for a server-side step that calls RPCs as its actor. Leave it off for a step
+   * for a server-side step that calls RPCs as its virtual user. Leave it off for a step
    * that has no virtual user to be: an assertion over a value an earlier step
    * returned, or one that posts credentials precisely because it must not reuse
-   * an actor's session.
+   * a virtual user's session.
    */
-  actor?: HasActor
+  virtualUser?: HasVirtualUser
   /**
    * What this step does, for the console and for whoever reads the source. It
    * is also the fallback prose when no \`template\` is declared, in which case a
@@ -339,17 +339,17 @@ type PikkuScenarioStepConfigWithSchema<
   errors?: Array<typeof PikkuError>
   /**
    * Drive this step through a real browser, as a human would. The runner
-   * provisions a window for the step's actor first — which makes an actor
+   * provisions a window for the step's virtual user first — which makes a virtual user
    * mandatory — and \`wire.browser\` is non-optional inside it.
    *
    * Compose shared utilities here rather than writing raw clicks: the step says
-   * what the actor is doing, the utilities say how.
+   * what the virtual user is doing, the utilities say how.
    */
   browser?: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     'browser',
-    // A window is opened as somebody, so a browser binding has an actor whether
+    // A window is opened as somebody, so a browser binding has a virtual user whether
     // or not the step declared one.
     true
   >
@@ -358,7 +358,7 @@ type PikkuScenarioStepConfigWithSchema<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     'cli',
-    HasActor
+    HasVirtualUser
   >
   /**
    * The server-side path — the fast suite, and the floor every other surface
@@ -373,22 +373,22 @@ type PikkuScenarioStepConfigWithSchema<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     'default',
-    HasActor
+    HasVirtualUser
   >
 }
 
-type PikkuScenarioStepConfig<In, Out, HasActor extends boolean = false> =
-  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined, HasActor>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
+type PikkuScenarioStepConfig<In, Out, HasVirtualUser extends boolean = false> =
+  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined, HasVirtualUser>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
     browser?: PikkuFunctionScenarioStep<In, Out, 'browser', true>
-    cli?: PikkuFunctionScenarioStep<In, Out, 'cli', HasActor>
-    default?: PikkuFunctionScenarioStep<In, Out, 'default', HasActor>
+    cli?: PikkuFunctionScenarioStep<In, Out, 'cli', HasVirtualUser>
+    default?: PikkuFunctionScenarioStep<In, Out, 'default', HasVirtualUser>
   }
 
 /**
  * A named, reusable scenario step, declaring one implementation per surface an
- * actor can drive it through.
+ * virtual user can drive it through.
  *
- * The step's identity is what the actor is trying to do; which surface carries
+ * The step's identity is what the virtual user is trying to do; which surface carries
  * it out is a binding. That is what lets one ladder run through a real browser,
  * over the websocket, or entirely server-side — and what makes "how much of this
  * flow can a human actually reach" a number rather than a guess.
@@ -402,10 +402,10 @@ export function pikkuScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
-  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, true> & { actor: true }
+  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, true> & { virtualUser: true }
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep' | 'browser' | 'cli', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'browser' | 'cli' | 'default'>, InputSchema, OutputSchema>
 export function pikkuScenarioStep<In, Out = unknown>(
-  config: PikkuScenarioStepConfig<In, Out, true> & { actor: true }
+  config: PikkuScenarioStepConfig<In, Out, true> & { virtualUser: true }
 ): PikkuFunctionConfig<In, Out, 'scenarioStep' | 'browser' | 'cli'>
 export function pikkuScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -437,7 +437,7 @@ export function pikkuScenarioStep(config: any) {
   return {
     ...config,
     surfaces,
-    requiresActor: config.actor === true || surfaces.includes('browser'),
+    requiresVirtualUser: config.virtualUser === true || surfaces.includes('browser'),
     // The runner sets the surface on the wire and calls this once per binding it
     // resolved — every witness of a \`then\`, exactly one for an action step.
     func: (services: any, data: any, wire: any) => {
@@ -463,7 +463,7 @@ type PikkuSubjectScenarioStepConfigWithSchema<
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = Omit<
   PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,
-  'browser' | 'cli' | 'default' | 'actor'
+  'browser' | 'cli' | 'default' | 'virtualUser'
 > & {
   func: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
@@ -473,7 +473,7 @@ type PikkuSubjectScenarioStepConfigWithSchema<
 }
 
 type PikkuSubjectScenarioStepConfig<In, Out> =
-  Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default' | 'actor'> & {
+  Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default' | 'virtualUser'> & {
     func: PikkuFunctionScenarioStep<In, Out, 'default'>
   }
 

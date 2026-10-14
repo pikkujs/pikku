@@ -1,8 +1,8 @@
 /**
- * An actor virtual user holding a real conversation with the todo agent.
+ * A virtual user virtual user holding a real conversation with the todo agent.
  *
  * Unlike every other agent scenario this drives no browser and asserts on no
- * transcript text. The actor is itself LLM-driven: it is given a task and a
+ * transcript text. The virtual user is itself LLM-driven: it is given a task and a
  * standard to judge against, converses over HTTP in virtual user — approving the
  * agent's tool requests as it goes — and returns a verdict.
  *
@@ -21,14 +21,14 @@ const TITLE = 'Book the venue'
 export const todoConverseScenario = pikkuScenario<void, { passed: true }>({
   title: 'A shopper gets a todo created, and the store confirms it',
   description:
-    'An actor virtual user converses with the todo agent and the store is checked independently',
+    'A virtual user virtual user converses with the todo agent and the store is checked independently',
   tags: ['scenario', 'todo-converse', 'ai-live'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do(
       'the todo list is reset',
       'todos:resetTodos',
       {},
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
     const verdict = await scenario.when(
       'the shopper asks the todo agent to add a todo',
@@ -38,19 +38,19 @@ export const todoConverseScenario = pikkuScenario<void, { passed: true }>({
         task: `Ask the assistant to add a single todo titled exactly "${TITLE}". When it asks permission to run a tool, allow it.`,
         evaluate: `A todo titled "${TITLE}" was successfully added.`,
       },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
     await scenario.then(
-      'the actor concludes the task succeeded',
-      'expectsActorVerdict',
+      'the virtual user concludes the task succeeded',
+      'expectsVirtualUserVerdict',
       { verdict, passed: true },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
     await scenario.then(
       'the store holds the todo',
       'expectsTodoTitled',
       { title: TITLE },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     return { passed: true }
@@ -58,8 +58,9 @@ export const todoConverseScenario = pikkuScenario<void, { passed: true }>({
 })
 
 export const todoConverseFeature = pikkuFeature({
-  name: 'An actor converses with the todo agent',
-  description: 'A virtual-user-driven conversation, judged by verdict and by store',
+  name: 'A virtual user converses with the todo agent',
+  description:
+    'A virtual-user-driven conversation, judged by verdict and by store',
   tags: ['todo-converse', 'ai-live'],
   scenarios: [todoConverseScenario],
 })

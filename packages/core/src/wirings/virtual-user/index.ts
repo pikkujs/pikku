@@ -146,7 +146,7 @@ export type {
  * Signing in as a virtual user and talking to a stage over HTTP.
  *
  * Deliberately reached through this entry point rather than `@pikku/core/services`.
- * `HttpVirtualUser` pulls in the actor-flow conversation runner and, through it, the
+ * `HttpVirtualUser` pulls in the virtual-user-conversation conversation runner and, through it, the
  * agent runner — none of which a production server has any use for. Exporting it
  * from the services barrel put that chain in the module graph of every app that
  * imports services, which only a bundler could remove and an unbundled Node or
@@ -158,24 +158,24 @@ export {
   type HttpVirtualUsersConfig,
 } from '../../services/http-virtual-users.js'
 export {
-  ActorSignIn,
+  VirtualUserSecretSignIn,
   OperatorSignIn,
   establishOperatorSession,
   IMPERSONATE_USER_ID_HEADER,
-  type ActorSecretResolver,
+  type VirtualUserSecretResolver,
   type VirtualUserSignIn,
   type OperatorSignInOptions,
   type OperatorSessionResult,
   authMount,
 } from '../../services/virtual-user-sign-in.js'
 export {
-  ACTOR_ROOT_SECRET_MIN_LENGTH,
-  ACTOR_SECRET_INFO,
-  ACTOR_SECRET_NAME,
-  actorSecretSubject,
-  deriveActorSecret,
-  verifyActorSecret,
-} from '../../services/virtual-user-actor-secret.js'
+  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
+  VIRTUAL_USER_SECRET_INFO,
+  VIRTUAL_USER_SECRET_NAME,
+  virtualUserSecretSubject,
+  deriveVirtualUserSecret,
+  verifyVirtualUserSecret,
+} from '../../services/virtual-user-secret.js'
 export {
   postScenarioJson,
   readScenarioHttpResponse,

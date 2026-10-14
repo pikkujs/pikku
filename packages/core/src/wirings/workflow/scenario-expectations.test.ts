@@ -8,12 +8,12 @@ import type { ScenarioVirtualUser } from '../../services/virtual-users-service.j
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
-const fakeActor = (
+const fakeVirtualUser = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
 ): ScenarioVirtualUser => ({
   name,
-  email: `${name}@actors.local`,
+  email: `${name}@virtualuser.local`,
   invoke: async (rpcName: string, data: unknown) => handler(rpcName, data),
   invokeRaw: async (rpcName: string, data: unknown) => ({
     status: 200,
@@ -44,7 +44,7 @@ describe('workflow.expectError', () => {
   beforeEach(() => resetPikkuState())
 
   test('returns the message when the call throws as expected', async () => {
-    const intruder = fakeActor('intruder', async () => {
+    const intruder = fakeVirtualUser('intruder', async () => {
       throw new Error('Forbidden: not your todo')
     })
     const { wire } = await scenarioWire()
@@ -53,7 +53,7 @@ describe('workflow.expectError', () => {
       'intruder cannot delete',
       'deleteTodo',
       { todoId: 't1' },
-      { actor: intruder }
+      { virtualUser: intruder }
     )
 
     assert.equal(message, 'Forbidden: not your todo')

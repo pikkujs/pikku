@@ -7,11 +7,11 @@
       "outputSchemaName": "GetSessionOutput",
       "version": 1
     },
-    "listDevActors": {
+    "listDevVirtualUsers": {
       "contractHash": "a8acd35472528111",
-      "inputSchemaName": "ListDevActorsInput",
-      "key": "listDevActors",
-      "outputSchemaName": "ListDevActorsOutput",
+      "inputSchemaName": "ListDevVirtualUsersInput",
+      "key": "listDevVirtualUsers",
+      "outputSchemaName": "ListDevVirtualUsersOutput",
       "version": 1
     }
   },
@@ -34,23 +34,16 @@
           "type": "string"
         },
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "userId": {
           "type": "string"
         }
       },
-      "required": [
-        "userId",
-        "email",
-        "name"
-      ],
+      "required": ["userId", "email", "name"],
       "type": "object"
     },
-    "ListDevActorsInput": {
+    "ListDevVirtualUsersInput": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
@@ -60,11 +53,11 @@
       },
       "type": "object"
     },
-    "ListDevActorsOutput": {
+    "ListDevVirtualUsersOutput": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
-        "actors": {
+        "virtualUsers": {
           "items": {
             "additionalProperties": false,
             "properties": {
@@ -72,28 +65,19 @@
                 "type": "string"
               },
               "jobTitle": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "name": {
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "name",
-              "jobTitle"
-            ],
+            "required": ["id", "name", "jobTitle"],
             "type": "object"
           },
           "type": "array"
         }
       },
-      "required": [
-        "actors"
-      ],
+      "required": ["virtualUsers"],
       "type": "object"
     }
   },
@@ -111,11 +95,7 @@
             "textHash": "690089ff3b2b68da3dfef2fbed8c35c9c59f50c06804f1f9cad6bb7435e9f374"
           }
         },
-        "variables": [
-          "appName",
-          "confirmUrl",
-          "email"
-        ]
+        "variables": ["appName", "confirmUrl", "email"]
       },
       "magic-link": {
         "hasHtml": true,
@@ -129,11 +109,7 @@
             "textHash": "f0365a3bad74a27b8e0180ac4661cf9f2ad9e1f37ff5dc55c137f62fb5a9722f"
           }
         },
-        "variables": [
-          "appName",
-          "email",
-          "signInUrl"
-        ]
+        "variables": ["appName", "email", "signInUrl"]
       },
       "reset-password": {
         "hasHtml": true,
@@ -147,11 +123,7 @@
             "textHash": "2f22261e1fbaf94c83e7e9e4f631f88a342d99a4deaa21708dea0e56e8ba0e95"
           }
         },
-        "variables": [
-          "appName",
-          "email",
-          "resetUrl"
-        ]
+        "variables": ["appName", "email", "resetUrl"]
       }
     },
     "queue": {

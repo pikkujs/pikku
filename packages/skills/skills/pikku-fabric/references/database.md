@@ -116,7 +116,7 @@ read throws `no result` or a foreign-key violation on a row the seed was
 silently supplying.
 
 A Better Auth app has a second constraint: the plugins you enable (`pikkuBan()`,
-`pikkuActor()`, …) each declare columns, and `pikku db migrate` refuses to run while
+`pikkuVirtualUser()`, …) each declare columns, and `pikku db migrate` refuses to run while
 the applied schema is missing any of them. `pikku db generate` writes the
 migration that closes the gap.
 

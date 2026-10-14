@@ -92,7 +92,7 @@ const coreImports = (file: string) => {
 }
 
 /**
- * The scenario and virtual user surfaces are test-only names — actors, cookie jars,
+ * The scenario and virtual user surfaces are test-only names — virtual users, cookie jars,
  * polling helpers, the typed virtual users an app declares. They are app code, but a
  * distinct surface from wiring, so they reach the app through their own
  * sub-entry rather than crowding the main hub.

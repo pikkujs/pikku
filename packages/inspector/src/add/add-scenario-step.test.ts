@@ -42,7 +42,7 @@ const STEPS = [
   'export const asksForTheReceipt = pikkuScenarioStep({',
   "  name: 'asksForTheReceipt',",
   "  description: 'asks for the receipt',",
-  '  actor: true,',
+  '  virtualUser: true,',
   '  default: async ({ logger }) => ({ ok: true }),',
   '})',
 ].join('\n')
@@ -50,7 +50,7 @@ const STEPS = [
 const scenarioSource = (body: string[], preamble: string[] = []) =>
   [
     "import { pikkuScenario } from '@pikku/core/workflow'",
-    'declare const actors: Record<string, any>',
+    'declare const virtualUsers: Record<string, any>',
     ...preamble,
     'export const shopFlow = pikkuScenario(async (_services, _input, { scenario }: any) => {',
     ...body.map((line) => `  ${line}`),
@@ -95,7 +95,7 @@ const scenarioSteps = (state: any): ScenarioStepMeta[] =>
 describe('pikkuScenarioStep', () => {
   test('a step is registered under its declared name, not its export name', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -109,7 +109,7 @@ describe('pikkuScenarioStep', () => {
 
   test('a step is never registered as an RPC — a browser step must not be network-callable', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(
@@ -127,10 +127,10 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('given/when/then record phase, target and actor', async () => {
+  test('given/when/then record phase, target and virtual user', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       const steps = scenarioSteps(state)
@@ -141,7 +141,7 @@ describe('pikkuScenarioStep', () => {
       )
       assert.equal(steps[0]!.phase, 'given')
       assert.equal(steps[0]!.stepFunc, 'buysAnApple')
-      assert.equal(steps[0]!.actor, 'shopper')
+      assert.equal(steps[0]!.virtualUser, 'shopper')
       assert.equal(steps[1]!.phase, 'then')
       assert.equal(steps[1]!.stepFunc, 'seesAReceipt')
     } finally {
@@ -151,7 +151,7 @@ describe('pikkuScenarioStep', () => {
 
   test('the step target is bundled, so the step function is wired', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -167,7 +167,7 @@ describe('pikkuScenarioStep', () => {
     const { state, cleanup } = await run([
       'const quantities = [1, 2]',
       'for (const qty of quantities) {',
-      "  await scenario.when('buys an apple', 'buysAnApple', { qty }, { actor: actors.shopper })",
+      "  await scenario.when('buys an apple', 'buysAnApple', { qty }, { virtualUser: virtualUsers.shopper })",
       '}',
     ])
     try {
@@ -190,7 +190,7 @@ describe('pikkuScenarioStep', () => {
   test('a non-literal step target is a PKU678 critical', async () => {
     const { criticals, cleanup } = await run([
       'const target = Math.random() > 0.5 ? "buysAnApple" : "seesAReceipt"',
-      "await scenario.when('buys something', target as any, {}, { actor: actors.shopper })",
+      "await scenario.when('buys something', target as any, {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -202,21 +202,21 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('a browser step called without an actor is a PKU677 critical', async () => {
+  test('a browser step called without a virtual user is a PKU677 critical', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 })",
     ])
     try {
       assert.ok(
         criticals.find((c) => c.code === 'PKU677'),
-        `expected a PKU677 critical for a browser step without an actor, got: ${JSON.stringify(criticals)}`
+        `expected a PKU677 critical for a browser step without a virtual user, got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()
     }
   })
 
-  test('a step declaring `actor: true` called without one is a PKU677 critical', async () => {
+  test('a step declaring `virtualUser: true` called without one is a PKU677 critical', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.then('asks for the receipt', 'asksForTheReceipt', {})",
     ])
@@ -230,7 +230,7 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('a step that declares no actor is not flagged for running without one', async () => {
+  test('a step that declares no virtual user is not flagged for running without one', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.then('sees a receipt', 'seesAReceipt', {})",
     ])
@@ -245,25 +245,25 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('a step whose prose opens with its own actor is a PKU681 critical', async () => {
+  test('a step whose prose opens with its own virtual user is a PKU681 critical', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given(`'shopper' buys an apple`, 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given(`'shopper' buys an apple`, 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
         criticals.find((c) => c.code === 'PKU681'),
-        `the reporter already renders the actor as the subject, so this reads "Given shopper 'shopper' buys an apple", got: ${JSON.stringify(criticals)}`
+        `the reporter already renders the virtual user as the subject, so this reads "Given shopper 'shopper' buys an apple", got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()
     }
   })
 
-  test('an unquoted, capitalised actor opening the prose is caught too', async () => {
+  test('an unquoted, capitalised virtual user opening the prose is caught too', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given('Shopper buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given('Shopper buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -275,10 +275,10 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('a call-site description naming the actor is caught as well as the step name', async () => {
+  test('a call-site description naming the virtual user is caught as well as the step name', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper, description: `shopper buys an apple` })",
-      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper, description: `shopper buys an apple` })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -290,10 +290,10 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('an actor named mid-sentence is left alone', async () => {
+  test('a virtual user named mid-sentence is left alone', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.then('sends shopper a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.then('sends shopper a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(
@@ -308,8 +308,8 @@ describe('pikkuScenarioStep', () => {
 
   test('a scenario that never asserts is a PKU680 critical', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.when('buys an apple', 'buysAnApple', { qty: 2 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.when('buys an apple', 'buysAnApple', { qty: 2 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -326,8 +326,8 @@ describe('pikkuScenarioStep', () => {
     // PKU680 as nothing at all — but a recorded service call is a witness, and
     // a flow that has one is not the assertion-free flow the rule is for.
     const { criticals, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.expectService('the receipt was emailed', 'emailService.send', { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.expectService('the receipt was emailed', 'emailService.send', { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(
@@ -345,7 +345,7 @@ describe('pikkuScenarioStep', () => {
     // that grades one is asserting — even though `expectScore`, like the other
     // helpers, is an inline step that reaches PKU680 as nothing at all.
     const { criticals, cleanup } = await run([
-      "const answer = await scenario.when('asks for a summary', 'runAssistant', { prompt: 'hi' }, { actor: actors.shopper })",
+      "const answer = await scenario.when('asks for a summary', 'runAssistant', { prompt: 'hi' }, { virtualUser: virtualUsers.shopper })",
       "await scenario.expectScore('answered briefly', answer.runId, 'brevity', { atLeast: 0.8 })",
     ])
     try {
@@ -364,7 +364,7 @@ describe('pikkuScenarioStep', () => {
       'const neverCalled = async () => {',
       "  await scenario.expectService('the receipt was emailed', 'emailService.send')",
       '}',
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.ok(
@@ -378,8 +378,8 @@ describe('pikkuScenarioStep', () => {
 
   test('a scenario with an assertion is not flagged', async () => {
     const { criticals, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
-      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(
@@ -407,7 +407,7 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
-  test('a non-browser step without an actor is allowed', async () => {
+  test('a non-browser step without a virtual user is allowed', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.given('sees a receipt', 'seesAReceipt', {})",
     ])
@@ -415,7 +415,7 @@ describe('pikkuScenarioStep', () => {
       assert.equal(
         criticals.filter((c) => c.code === 'PKU677').length,
         0,
-        `setup steps need no actor, got: ${JSON.stringify(criticals)}`
+        `setup steps need no virtual user, got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()
@@ -424,7 +424,7 @@ describe('pikkuScenarioStep', () => {
 
   test('a step is marked as a step RPC in its function meta', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       // The fourth RPC kind, alongside public/private/remote: a name that is
@@ -438,7 +438,7 @@ describe('pikkuScenarioStep', () => {
 
   test('an ordinary function is not a step RPC', async () => {
     const { state, cleanup } = await run([
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(state.functions.meta['shopFlow']?.scenarioStep, undefined)
@@ -451,7 +451,7 @@ describe('pikkuScenarioStep', () => {
     const { state, cleanup } = await run([
       'const safely = async (fn: any) => { try { return await fn() } catch { return null } }',
       'void safely',
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       const steps = scenarioSteps(state)
@@ -490,7 +490,7 @@ describe('pikkuScenarioStep', () => {
   test('a module-level constant used as step input is inlined, not read off the trigger', async () => {
     const { state, cleanup } = await run(
       [
-        "await scenario.given('buys an apple', 'buysAnApple', { qty: QTY }, { actor: actors.shopper })",
+        "await scenario.given('buys an apple', 'buysAnApple', { qty: QTY }, { virtualUser: virtualUsers.shopper })",
       ],
       ['const QTY = 3']
     )

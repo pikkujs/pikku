@@ -295,7 +295,7 @@ describe('emit', () => {
   test('a recording is a figure, so the page stays free of HTML', () => {
     const feature = deployments()
     feature.scenarios[0]!.videos = [
-      { id: 'deploy-film', actor: 'yasser', path: 'shipping/run.webm' },
+      { id: 'deploy-film', virtualUser: 'yasser', path: 'shipping/run.webm' },
     ]
     const markdown = renderGuidePage(
       page(),
@@ -306,11 +306,11 @@ describe('emit', () => {
     assert.doesNotMatch(markdown, /<video|<details/)
   })
 
-  test('a recording is captioned with its actor only when there are several', () => {
+  test('a recording is captioned with its virtual user only when there are several', () => {
     const feature = deployments()
     feature.scenarios[0]!.videos = [
-      { id: 'a', actor: 'yasser', path: 'shipping/yasser.webm' },
-      { id: 'b', actor: 'reviewer', path: 'shipping/reviewer.webm' },
+      { id: 'a', virtualUser: 'yasser', path: 'shipping/yasser.webm' },
+      { id: 'b', virtualUser: 'reviewer', path: 'shipping/reviewer.webm' },
     ]
     const markdown = renderGuidePage(
       page(),
@@ -695,7 +695,9 @@ describe('data-driven rows keep the scenario figure order', () => {
         title: 'A tour',
         description: '',
         steps: [],
-        screenshots: [{ id: 'r1-still', name: 'Row one still', path: 'r1.png' }],
+        screenshots: [
+          { id: 'r1-still', name: 'Row one still', path: 'r1.png' },
+        ],
       },
       {
         name: 'tourScenario',
@@ -703,7 +705,12 @@ describe('data-driven rows keep the scenario figure order', () => {
         description: '',
         steps: [],
         screenshots: [
-          { id: 'r2-show', name: 'Row two showcase', path: 'r2.png', showcase: true },
+          {
+            id: 'r2-show',
+            name: 'Row two showcase',
+            path: 'r2.png',
+            showcase: true,
+          },
         ],
       },
     ],
@@ -714,11 +721,7 @@ describe('data-driven rows keep the scenario figure order', () => {
       'product/tours.md',
       `---\ntitle: Tours\n---\n${cite('tours')}\n`
     )
-    const rendered = renderGuidePage(
-      p,
-      new Map([['tours', dataDriven()]]),
-      ''
-    )
+    const rendered = renderGuidePage(p, new Map([['tours', dataDriven()]]), '')
     const showcase = rendered.indexOf('r2.png')
     const still = rendered.indexOf('r1.png')
     assert.ok(

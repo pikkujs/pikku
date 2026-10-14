@@ -4,7 +4,7 @@ import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
 import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
 import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
-import { personaList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
+import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
 export const CONSOLE_ADMIN_ROLE = 'console-admin'
@@ -62,7 +62,7 @@ const userIdByEmail = async (
  * - The virtual users carry their own `roles`, and this applies whatever they
  *   declare. Pikku never applies them itself: which scope store exists is the
  *   app's business, which is why the loop runs after the sync above. Their user
- *   rows are created by `seedScenarioActors`, which must therefore run before
+ *   rows are created by `seedScenarioVirtualUsers`, which must therefore run before
  *   this.
  * - Those declarations mirror the fixture users of the same name, so a scenario
  *   expresses "an admin without a scope role", "a caller holding reports:read"
@@ -104,7 +104,7 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addUserToRole(staffId, PLATFORM_ADMIN_ROLE)
 
   const granted: string[] = []
-  for (const virtualUser of personaList) {
+  for (const virtualUser of virtualUserList) {
     if (virtualUser.roles.length === 0) {
       continue
     }

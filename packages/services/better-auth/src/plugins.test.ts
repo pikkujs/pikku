@@ -13,7 +13,7 @@ import { PLUGIN_REGISTRY, pluginDisplayName } from './plugin-registry.js'
  * them (`pikkuBan` is `pikku-ban`, `pikkuDelegatedAuth` is `delegated-auth`).
  */
 const PIKKU_PLUGINS = [
-  'pikkuActor',
+  'pikkuVirtualUser',
   'pikkuBan',
   'pikkuCredentialOAuth',
   'pikkuDelegatedAuth',
@@ -26,7 +26,7 @@ const PIKKU_PLUGINS = [
  * @pikku/better-auth still writes the bare spelling.
  */
 const FORMER_NAMES = [
-  'actor',
+  'virtualUser',
   'ban',
   'credentialOAuth',
   'delegatedAuth',

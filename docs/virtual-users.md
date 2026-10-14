@@ -4,26 +4,13 @@ Status: **design record.** The build order near the end says which steps have la
 
 ## The problem
 
-Pikku had four words for "who is doing this" and they overlapped:
-
-| word         | where                | what it meant                                          |
-| ------------ | -------------------- | ------------------------------------------------------ |
-| `actor`      | `scenarios.actors`   | a login — email, scopes, roles — **and** a personality |
-| `role`       | `ScopeService`       | a named, admin-composed bag of scopes                  |
-| virtual user | `pikkuVirtualUser()` | an LLM signing in as an actor                          |
-
-Two things were broken.
-
-**`actor` ran the metaphor backwards.** An actor _plays_ a part, so you expect one actor
-to play many parts. Pikku had one kind of person to many actors. No amount of
-documentation fixes a backwards metaphor.
+Pikku used to split "who is doing this" across a login declared in config and a separate
+kind of person that signed in with it. The split had a cost:
 
 **The individuating detail was on the wrong layer.** `name`, `jobTitle` and `personality`
-lived on the actor (the body), not on the kind. So two bodies of one kind were two
-different characters, and `actor` genuinely _felt_ like the person — because it held the
-personality. The console said so out loud:
-
-> "Virtual users are defined in pikku.config.json under scenarios.actors."
+lived on the login (the body), not on the person. So two bodies of one kind were two
+different characters, and the login genuinely _felt_ like the person — because it held the
+personality. One declaration with one name puts the detail where it belongs.
 
 ## The model
 
@@ -32,12 +19,10 @@ personality. The console said so out loud:
 | what you may do         | **role**         | a named bag of scopes                                                | `defineSystemRole()` — code, additive |
 | who you are             | **virtual user** | a person: name, backstory, goals, roles                              | `defineVirtualUsers()` — code         |
 | how you sign in         | **account**      | one login of that person                                             | inside the virtual user               |
-| who is acting           | **actor**        | whoever performs this step                                           | a step parameter                      |
 | a virtual user, running | **run**          | the thing hitting your stage at 3pm — or doing the job in production | `pikku virtual-user run <name>`       |
 
-`actor` stops being a noun you declare and becomes the part something plays in a step —
-which is its honest use. A virtual user is the declared person; a run is that person
-doing something.
+A step names the virtual user that performs it with its `virtualUser` option. A virtual user
+is the declared person; a run is that person doing something.
 
 ### Why "virtual user"
 
@@ -189,7 +174,7 @@ ship _with the product_, and that is exactly the set virtual users should be bui
 
 Nothing is removed from admins. Virtual users get something real to typecheck against, and the
 app is pushed to think in roles rather than describing permissions in prose. (The old
-`guest` actor's `personality` was _"Read-only user who can see reports and nothing else"_ —
+`guest` virtual user's `personality` was _"Read-only user who can see reports and nothing else"_ —
 that is a permission wearing a personality.)
 
 ### The declaration grants the role; the run verifies it
@@ -221,7 +206,7 @@ rather than quietly using it.
 
 An account is a login — nothing more. Not roles, not scopes, not an identity: those belong
 to the person. Accounts are nested inside their virtual user, which makes a dangling reference
-unrepresentable and deletes the check in `resolve-scenario-actors.ts:46-51` that exists
+unrepresentable and deletes the dangling-reference check that exists
 only to catch one.
 
 **One account by default.** Multiple logins for one human is the rare case, so it does not
@@ -232,8 +217,8 @@ susan:  { /* … */ account: {} },                        // email + password
 yasser: { /* … */ account: {}, linkedAccounts: { google: {} } },
 ```
 
-`account: {}` is genuinely empty in the normal case: the address is computed and the actor
-credential derives from `SCENARIO_ACTOR_SECRET` and that address, so there is nothing left
+`account: {}` is genuinely empty in the normal case: the address is computed and the virtual user
+credential derives from `SCENARIO_VIRTUAL_USER_SECRET` and that address, so there is nothing left
 to write down. It
 fills up only for a provider login — `account: { provider: 'google' }`.
 
@@ -307,7 +292,7 @@ deliverable, not synthetic dead ends:
 
 The `runId` suffix is not decoration. Without it two concurrent runs share an inbox _and_
 a user row, and run B reads run A's magic link — the collision `assertDistinctEmails`
-already guards for declared actors, reintroduced by computing addresses. Sub-addressing
+already guards for declared virtual users, reintroduced by computing addresses. Sub-addressing
 also buys isolation for free, since a different address is a different account in the app.
 The bare form stays for seeded fixtures that must be stable.
 
@@ -358,10 +343,9 @@ the 11 fields on `VirtualUserMeta`:
 | field                   | goes to                | why                                                     |
 | ----------------------- | ---------------------- | ------------------------------------------------------- |
 | `name`, `description`   | virtual user           | who she is                                              |
-| `goals`                 | virtual user           | Goals are the standard template for this; it is the standard template     |
+| `goals`                 | virtual user           | it is the standard template                             |
 | `disposition`, `tuning` | virtual user (default) | a run may override                                      |
 | `tags`, `fixtures`      | virtual user           |                                                         |
-| `actor`                 | **deleted**            | she _is_ the identity                                   |
 | `grants`                | **deleted**            | `roles: ['buyer']` already says this                    |
 | `budget`                | **run**                | how much you will spend today is not a fact about Susan |
 | `allowApprovalRequired` | **run**                | see below                                               |
@@ -383,7 +367,7 @@ out of the file where they do not belong.
 
 ### `grants` dies
 
-`grants` narrows the catalogue to what the actor can satisfy. With `roles` on the virtual user
+`grants` narrows the catalogue to what the virtual user can satisfy. With `roles` on the virtual user
 resolving to scopes, that is derivable. The worst field in the API — one name meaning two
 different things depending on disposition — stops existing rather than getting fixed.
 
@@ -571,7 +555,6 @@ that only wants the runs it starts by hand wires nothing.
 `kind: 'system'` on a virtual user has exactly one consumer in the repo:
 
 ```ts
-// resolve-scenario-actors.ts:62
 if (config.kind === 'system') continue
 ```
 
@@ -583,7 +566,7 @@ registry.
 It also fails the definition. The system is not a user of your app — it **is** your app.
 
 What it was reaching for is a grammatical subject in scenario prose: _"Given the system
-has expired the trial"_. That is already representable as a step with no actor. Deleting
+has expired the trial"_. That is already representable as a step with no virtual user. Deleting
 `kind` buys a definition with no asterisk: **a virtual user is a person.**
 
 ### Addons are the third-party systems
@@ -617,7 +600,7 @@ Separate functions beat `type: 'virtualUser' | 'addon' | 'platform'` because:
 
 ### Platform and addon steps take one `func`, not bindings
 
-`pikkuScenarioStep` declares one implementation **per surface** — the way an actor drives
+`pikkuScenarioStep` declares one implementation **per surface** — the way a virtual user drives
 the system. `browser` drives a real browser as a human; `cli` goes over the websocket;
 `default` runs server-side.
 
@@ -726,18 +709,17 @@ rather than a pikku concern, but it belongs here so nobody meets it in productio
 
 ## Migration
 
-|         |                                                                                     |
-| ------- | ----------------------------------------------------------------------------------- |
-| new     | `defineSystemRole()` + additive sync, refusal-to-delete, shadow check               |
-| renamed | `wireScope`/`wireSecret`/`wireVariable`/`wireCredential` -> `define*`               |
-| new     | `defineVirtualUsers()` + inspector support                                          |
-| new     | `pikkuPlatformScenarioStep`, `pikkuAddonScenarioStep`                               |
-| deleted | `scenarioActorConfigs` in `pikku.config.json` — virtual users are code only         |
-| renamed | injected `actors` service -> `virtualUsers`                                         |
-| renamed | `accounts: {…}` -> `account: {}` + `linkedAccounts: {…}`                            |
-| moved   | `budget`, `allowApprovalRequired` → run flags                                       |
-| deleted | `kind`, `grants`, `actor`, the dangling-reference check, the knowledge special case |
-| touched | `personality` / `jobTitle` — ~28 files, ~20 of them console display                 |
+|         |                                                                            |
+| ------- | -------------------------------------------------------------------------- |
+| new     | `defineSystemRole()` + additive sync, refusal-to-delete, shadow check      |
+| renamed | `wireScope`/`wireSecret`/`wireVariable`/`wireCredential` -> `define*`      |
+| new     | `defineVirtualUsers()` + inspector support                                 |
+| new     | `pikkuPlatformScenarioStep`, `pikkuAddonScenarioStep`                      |
+| deleted | the per-user entries in `pikku.config.json` — virtual users are code only  |
+| renamed | `accounts: {…}` -> `account: {}` + `linkedAccounts: {…}`                   |
+| moved   | `budget`, `allowApprovalRequired` → run flags                              |
+| deleted | `kind`, `grants`, the dangling-reference check, the knowledge special case |
+| touched | `personality` / `jobTitle` — ~28 files, ~20 of them console display        |
 
 No config version machinery exists, so this is a clean rename rather than a migration.
 Virtual users leave `pikku.config.json` outright rather than being read from both places for a
@@ -750,7 +732,7 @@ it is verifying against, and JSON cannot typecheck a role name.
    run-start check has nothing to compare against. Read better-auth's `createAccessControl`
    first.
 2. **`defineVirtualUsers()`** + inspector support, with `roles` typechecked against 1.
-3. **Fold `pikkuVirtualUser`** into the declared virtual user; delete `kind`, `grants`, `actor`.
+3. **Fold `pikkuVirtualUser`** into the declared virtual user; delete `kind` and `grants`.
 4. **`pikkuPlatformScenarioStep` / `pikkuAddonScenarioStep`**, and exclude both from the
    virtual-user catalogue.
 
@@ -769,7 +751,7 @@ reach production before the check that stops it exists:
 8. **`pikku virtual-user sync`** — the row and the grants, additively, outside the dev seed.
 
 Steps 5–8 are done. `sync` needs both halves of an environment — its API to sign the
-person in, its database to write the grants — because the account is created by the actor
+person in, its database to write the grants — because the account is created by the virtual user
 plugin's own sign-in and nothing else creates it, while the grants are keyed by a user id
 that only the database knows. The same `virtualUserEnvironmentRefusal` that decides who may
 _run_ decides who may be provisioned, so production still takes only the accountable
@@ -791,15 +773,12 @@ work that this one does not block.
    declaration. The seed grants exactly what is declared, and every run verifies the roles
    at sign-in and stops on a mismatch. See
    [The declaration grants the role; the run verifies it](#the-declaration-grants-the-role-the-run-verifies-it).
-3. ~~**Does the injected `actors` service keep its name?**~~ **Settled** — it becomes
-   `virtualUsers`. With one account per virtual user, `signIn('susan')` names a person, so calling
+3. ~~**What is the injected service called?**~~ **Settled** — `virtualUsers`. With one account per virtual user, `signIn('susan')` names a person, so calling
    the service `accounts` would misdescribe its argument:
    ```ts
    services.virtualUsers.signIn('susan') // picks her account
    services.virtualUsers.signIn('yasser', 'google') // only when there is more than one
    ```
-   `actor` survives as the word for whoever fills a step's slot — which is a virtual user — and
-   is no longer the name of any type or service.
 4. ~~**Do virtual users get default roles that accounts override?**~~ **Settled** — roles live
    on the virtual user, full stop. An account is a login and holds no authority of its own.
    Better-auth puts `role` on the `user` for the same reason.

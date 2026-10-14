@@ -21,10 +21,10 @@ the moment it exists — nothing lists them.
 Run them:
 
 ```sh
-SCENARIO_ACTOR_SECRET=... bunx pikku scenario run local
-SCENARIO_ACTOR_SECRET=... bunx pikku scenario run local --features pagesFeature
-SCENARIO_ACTOR_SECRET=... bunx pikku scenario run local --tags smoke
-SCENARIO_ACTOR_SECRET=... bunx pikku scenario run local --no-browser   # API scenarios only
+SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local
+SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --features pagesFeature
+SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --tags smoke
+SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --no-browser   # API scenarios only
 ```
 
 `--features` takes the **export name** (`pagesFeature`), not the display name.
@@ -50,21 +50,21 @@ give them their own data, uniquely named per run (`Date.now().toString(36)` and
 some randomness), since nothing resets between scenarios. Do **not** tag them
 `smoke`.
 
-## Actors, and what they change
+## Virtual users, and what they change
 
-The runner opens one BrowserContext per actor and signs each in at
+The runner opens one BrowserContext per virtual user and signs each in at
 `signInPath` **before** the first step. So:
 
 - There is no signed-out state. A gherkin-style "logs in through the form"
   scenario has nothing to drive — assert the outcome (admitted to the gated
-  area) instead, as `signed-in-actor-reaches-the-app.scenario.ts` does.
+  area) instead, as `signed-in-virtual-user-reaches-the-app.scenario.ts` does.
 - A scenario that _creates_ an identity clears the context first
   (`browser.context.clearCookies()`), because signing up while another user's
   cookie is attached is refused outright.
-- One actor exists per virtual user declared with `defineVirtualUsers` (see
+- One virtual user exists per virtual user declared with `defineVirtualUsers` (see
   `src/virtual-users.ts`); pikku derives each address from the virtual user id. The secret
-  is **never** in that file: it is `SCENARIO_ACTOR_SECRET` in the environment,
-  and its absence disables `/api/auth/sign-in/actor` entirely. That absence is
+  is **never** in that file: it is `SCENARIO_VIRTUAL_USER_SECRET` in the environment,
+  and its absence disables `/api/auth/sign-in/virtual-user` entirely. That absence is
   what keeps the door shut in production.
 
 ## Writing a scenario
@@ -74,7 +74,7 @@ of TypeScript:
 
 - The data parameter must be a plain named identifier — no destructuring.
 - `for...of` may only walk an array that arrived in `data`.
-- The actor must be written literally as `actors.<name>`; you cannot
+- The virtual user must be written literally as `virtualUsers.<name>`; you cannot
   parameterise a scenario by role. One scenario per role instead.
 - No `try`/`catch`.
 

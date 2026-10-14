@@ -15,12 +15,12 @@ signed-in screens in as few steps as possible.
 
 **What this mode deliberately skips**, and what that costs:
 
-| Skipped | Cost |
-|---|---|
-| `knowledge/` | Another agent — or you next week — cannot resume this. Nothing records *why*. |
-| Changesets and plans | No build order, no per-piece proof. Fine at this size, painful past it. |
-| Design direction | It will look like the template. |
-| Refusal scenarios | Access control is asserted, not proven. |
+| Skipped              | Cost                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `knowledge/`         | Another agent — or you next week — cannot resume this. Nothing records _why_. |
+| Changesets and plans | No build order, no per-piece proof. Fine at this size, painful past it.       |
+| Design direction     | It will look like the template.                                               |
+| Refusal scenarios    | Access control is asserted, not proven.                                       |
 
 **Say this out loud to the user, once, when you finish.** A quick build that gets
 mistaken for a real one is the only way this mode does damage. §6 is the way out.
@@ -68,7 +68,11 @@ rule, and it lives in each function's `permissions`, not in a role:
 import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 
 defineVirtualUsers({
-  visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
+  visitor: {
+    name: 'Visitor',
+    jobTitle: 'Synthetic health-check user',
+    account: {},
+  },
   amina: { name: 'Amina', jobTitle: 'Gardener', account: {} },
   bilal: { name: 'Bilal', jobTitle: 'Gardener', account: {} },
 })
@@ -82,12 +86,24 @@ import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 import { defineSystemRole } from '#pikku/scopes'
 
 defineSystemRole({
-  owner: { displayName: 'Owner', description: 'Sees only their own rows', scopes: [] },
-  tenant: { displayName: 'Tenant', description: 'Sees only their own tenancy', scopes: [] },
+  owner: {
+    displayName: 'Owner',
+    description: 'Sees only their own rows',
+    scopes: [],
+  },
+  tenant: {
+    displayName: 'Tenant',
+    description: 'Sees only their own tenancy',
+    scopes: [],
+  },
 })
 
 defineVirtualUsers({
-  visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
+  visitor: {
+    name: 'Visitor',
+    jobTitle: 'Synthetic health-check user',
+    account: {},
+  },
   amina: { name: 'Amina', jobTitle: 'Owner', roles: ['owner'], account: {} },
   bilal: { name: 'Bilal', jobTitle: 'Owner', roles: ['owner'], account: {} },
   chidi: { name: 'Chidi', jobTitle: 'Tenant', roles: ['tenant'], account: {} },
@@ -97,7 +113,7 @@ defineVirtualUsers({
 Two owners in both examples, deliberately: one owner cannot demonstrate that
 owners are separated from each other.
 
-- **Keep `visitor`.** The shipped scenarios name `actors.visitor`; removing it
+- **Keep `visitor`.** The shipped scenarios name `virtualUsers.visitor`; removing it
   fails `pikku all` and nothing you write after that registers.
 - **One `defineVirtualUsers` call for the whole project.**
 - **Never write an email address** — each is derived from the virtual user id and
@@ -165,7 +181,7 @@ appends missing ones, but an older scaffold or a copied `.env` may not have them
 
 ```sh
 grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
+grep -q '^SCENARIO_VIRTUAL_USER_SECRET=' .env 2>/dev/null || echo "SCENARIO_VIRTUAL_USER_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 Never commit `.env`. Then run it — through `bun run dev`, never `vite` on its
@@ -206,12 +222,25 @@ at least one thing that stays true.
 ```typescript
 import { pikkuScenario } from '#pikku/scenarios'
 
-export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>({
+export const ownerCreatesAndSeesItScenario = pikkuScenario<
+  void,
+  { id: string }
+>({
   title: 'An owner creates a thing and sees it',
   tags: ['scenario', 'smoke'],
-  func: async (_services, _data, { scenario, actors }) => {
-    const row = await scenario.do('creates', 'createThing', { name: 'first' }, { actor: actors.amina })
-    await scenario.then('sees it listed', 'thingShowsInList', { id: row.id }, { actor: actors.amina })
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    const row = await scenario.do(
+      'creates',
+      'createThing',
+      { name: 'first' },
+      { virtualUser: virtualUsers.amina }
+    )
+    await scenario.then(
+      'sees it listed',
+      'thingShowsInList',
+      { id: row.id },
+      { virtualUser: virtualUsers.amina }
+    )
     return { id: row.id }
   },
 })
@@ -221,8 +250,8 @@ export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>
   `pikkuScenarioStep`.** An RPC name in a `then` will not resolve.
 - **Every scenario must assert.** A ladder with no `then` is a PKU680 critical —
   it fails `pikku all`, stopping codegen rather than a test.
-- **`SCENARIO_ACTOR_SECRET` must be in `.env`** (above). Without it
-  `/api/auth/sign-in/actor` is disabled and every scenario fails at sign-in, for
+- **`SCENARIO_VIRTUAL_USER_SECRET` must be in `.env`** (above). Without it
+  `/api/auth/sign-in/virtual-user` is disabled and every scenario fails at sign-in, for
   a reason that reads like an auth bug.
 - **There is no state reset** — scope what you create to unique ids.
 
@@ -246,7 +275,7 @@ to the app workflow (the app reference, see SKILL.md) and do this, in order:
    `decisions/` for what you chose silently, `questions/` for what you guessed
    at. Then `pikku knowledge index && pikku knowledge validate`.
 2. Backfill an entity note for each thing the app holds, so `pikku knowledge
-   gaps` has something to measure against.
+gaps` has something to measure against.
 3. Write the refusal scenarios — the ones proving one virtual user cannot reach
    another's rows. This is the gap that matters most.
 4. Then pick up the app workflow at its §4 (apps) or §5 (changes) for

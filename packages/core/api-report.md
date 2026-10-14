@@ -34,7 +34,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
-| `./actor-flow` | 6 | 6 | 22 |
+| `./virtual-user-conversation` | 6 | 6 | 22 |
 | `./middleware` | 29 | 27 | 0 |
 | `./scenario/coverage` | 7 | 7 | 19 |
 | `./gateway` | 11 | 11 | 14 |
@@ -110,7 +110,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
+  TScenarioVirtualUsers extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
@@ -134,8 +134,8 @@ export type PikkuWire<
   cli: PikkuCLI<TypedRPC['remote']>
   workflow: TypedWorkflow
   scenario: TypedScenario
-  actors: TypedActors
-  actor: ScenarioVirtualUserOf<TypedActors>
+  virtualUsers: TScenarioVirtualUsers
+  virtualUser: ScenarioVirtualUserOf<TScenarioVirtualUsers>
   scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
@@ -239,7 +239,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 export interface CoreUserSession {
   userId?: string
   orgId?: string
-  actor?: boolean
+  virtualUser?: boolean
   scopes?: string[]
   readonly?: boolean
 }
@@ -305,7 +305,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
+  TScenarioVirtualUsers extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
@@ -329,8 +329,8 @@ export type PikkuWire<
   cli: PikkuCLI<TypedRPC['remote']>
   workflow: TypedWorkflow
   scenario: TypedScenario
-  actors: TypedActors
-  actor: ScenarioVirtualUserOf<TypedActors>
+  virtualUsers: TScenarioVirtualUsers
+  virtualUser: ScenarioVirtualUserOf<TScenarioVirtualUsers>
   scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
@@ -590,7 +590,7 @@ export type CorePikkuFunctionConfig<
   workflowRetries?: number
   workflowTimeout?: string
   surfaces?: ScenarioSurface[]
-  requiresActor?: boolean
+  requiresVirtualUser?: boolean
   audit?:
     | boolean
     | {
@@ -720,7 +720,7 @@ export type FunctionRuntimeMeta = {
   workflowRetries?: number
   workflowTimeout?: string
   scenarioStepSurfaces?: ScenarioSurface[]
-  scenarioStepRequiresActor?: boolean
+  scenarioStepRequiresVirtualUser?: boolean
   scenarioStepKind?: ScenarioStepKind
   scenarioStepAddon?: string
   scenarioStepTemplate?: string
@@ -1213,7 +1213,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async scheduleSleep(runId: string, stepId: string, duration: number | string): Promise<boolean>
   public setRunExtension<T extends WorkflowRunExtension>(create: (engine: WorkflowRunEngine) => T): T
   public getRunExtension(): WorkflowRunExtension | undefined
-  public async startWorkflow<I>(name: string, input: I, wire: WorkflowRunWire, rpcService: PikkuRPC, options?: { inline?: boolean; startNode?: string; actors?: ScenarioVirtualUsers; onRunCreated?: (runId: string) => void }): Promise<{ runId: string }>
+  public async startWorkflow<I>(name: string, input: I, wire: WorkflowRunWire, rpcService: PikkuRPC, options?: { inline?: boolean; startNode?: string; virtualUsers?: ScenarioVirtualUsers; onRunCreated?: (runId: string) => void }): Promise<{ runId: string }>
   public async runToCompletion<I>(name: string, input: I, rpcService: PikkuRPC, options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }): Promise<any>
   protected async awaitRunEnd(runId: string, maxIntervalMs: number): Promise<WorkflowRun>
   protected async waitBeforeNextRead(ms: number): Promise<void>
@@ -1278,7 +1278,7 @@ export interface RpcStepMeta {
   outputVar?: string
   inputs?: Record<string, InputSource> | 'passthrough'
   options?: WorkflowStepOptions
-  actor?: string
+  virtualUser?: string
   expectEventually?: boolean
 }
 export type RunTimeline = RunTimelineEvent[]
@@ -1506,7 +1506,7 @@ export type WorkflowsMeta = Record<
     scenario?: boolean
     asserts?: boolean
     skip?: string
-    actors?: string[]
+    virtualUsers?: string[]
   }
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
@@ -1555,7 +1555,7 @@ export interface WorkflowStepOptions {
   retries?: number
   retryDelay?: string | number
   compensate?: false
-  actor?: ScenarioVirtualUser
+  virtualUser?: ScenarioVirtualUser
 }
 export interface WorkflowStepInput {
   runId: string
@@ -1590,7 +1590,7 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
 
 ```ts
 addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
-composeStepProse: ({ phase, description, template, input, actor, actorRole, continuesPhase, continuesActor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; actorRole?: string | undefined; continuesPhase?: boolean | undefined; continuesActor?: boolean | undefined; keywordWidth?: number | undefined; }) => string
+composeStepProse: ({ phase, description, template, input, virtualUser, virtualUserRole, continuesPhase, continuesVirtualUser, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; virtualUser?: string | undefined; virtualUserRole?: string | undefined; continuesPhase?: boolean | undefined; continuesVirtualUser?: boolean | undefined; keywordWidth?: number | undefined; }) => string
 export type CoreFeature = {
   name: string
   description?: string
@@ -1618,7 +1618,7 @@ export type FeatureMeta = {
 }
 export type FeaturesMeta = Record<string, FeatureMeta>
 export interface PikkuBrowserWire {
-  readonly actor: string
+  readonly virtualUser: string
   goto(url: string): Promise<void>
   screenshot(name?: string, options?: ScenarioScreenshotOptions): Promise<Uint8Array>
 }
@@ -1632,13 +1632,13 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
   public getScenarioEnvironment(): ScenarioEnvironment | undefined
   public takeStepVideoOffsets(runId: string): Map<string, ScenarioStepVideoOffset[]>
-  public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioVirtualUsers }): Promise<void>
+  public async attachRunContext(runId: string, workflowMeta: any, options?: { virtualUsers?: ScenarioVirtualUsers }): Promise<void>
   public detachRunContext(runId: string): void
   public getRunContext(runId: string): Record<string, unknown> | undefined
   public decorateRunWire(wire: PikkuRawWire, context: { runId: string; workflowMeta: any; workflowWire: PikkuWorkflowWire }): void
   public async onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
   public async onAfterRunFunc(context: RunLifecycleContext, outcome: 'completed' | 'failed' | 'interrupted', failure: unknown): Promise<void>
-  public async resolveVirtualUsers(): Promise<ScenarioVirtualUsers | undefined>
+  public async resolveVirtualUsers(): Promise< ScenarioVirtualUsers | undefined >
   public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
 }
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
@@ -1662,20 +1662,17 @@ requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire | undefined) => Scenari
 resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
 resolveScenarioSurfaces: (phase: ScenarioStepPhase, declared: readonly ScenarioSurface[], runSurface: ScenarioSurface) => ScenarioSurfaceResolution
 SCENARIO_SURFACES: readonly ScenarioSurface[]
-export class ScenarioActorRequired extends PikkuError {
-  constructor(public readonly stepFunc: string)
-}
 export interface ScenarioArtifact {
   scenario: string
   kind: ScenarioArtifactKind
   path: string
-  actor?: string
+  virtualUser?: string
   name?: string
   id?: string
   showcase?: boolean
 }
 export interface ScenarioBrowserFailure {
-  actor: string
+  virtualUser: string
   url?: string
   screenshot?: string
   consoleErrors: string[]
@@ -1684,12 +1681,12 @@ export interface ScenarioBrowserFailure {
   apiErrors: string[]
 }
 export interface ScenarioBrowserProvider {
-  sessionFor(actorName: string): Promise<PikkuBrowserWire>
+  sessionFor(virtualUserName: string): Promise<PikkuBrowserWire>
   reset?(): Promise<void>
   beginScenario?(scenario: string): void
   endScenario?(outcome: 'passed' | 'failed'): void
-  videoStartedAt?(actorName: string): number | undefined
-  markVideoStep?(actorName: string): number | undefined
+  videoStartedAt?(virtualUserName: string): number | undefined
+  markVideoStep?(virtualUserName: string): number | undefined
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
   artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
@@ -1747,7 +1744,7 @@ export interface ScenarioResult {
   featureId?: string
   title?: string
   description?: string
-  actors?: string[]
+  virtualUsers?: string[]
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1815,11 +1812,11 @@ export interface ScenarioStepMeta {
   outputVar?: string
   inputs?: Record<string, InputSource> | 'passthrough'
   options?: WorkflowStepOptions
-  actor?: string
+  virtualUser?: string
   surfaces?: ScenarioSurface[]
 }
 export interface ScenarioStepOptions {
-  actor?: unknown
+  virtualUser?: unknown
   description?: string
   retries?: number
   retryDelay?: number | string
@@ -1834,12 +1831,15 @@ export interface ScenarioStepRow {
   video?: ScenarioStepVideoOffset[]
 }
 export interface ScenarioStepVideoOffset {
-  actor: string
+  virtualUser: string
   offsetMs: number
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
 export class ScenarioUnwitnessedAssertion extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly declared: ScenarioSurface[], public readonly runSurface: ScenarioSurface, public readonly witnessedOn: ScenarioSurface[])
+}
+export class ScenarioVirtualUserRequired extends PikkuError {
+  constructor(public readonly stepFunc: string)
 }
 export class ScenarioWitnessDisagreement extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly expected: { surface: ScenarioSurface; observed: unknown }, public readonly actual: { surface: ScenarioSurface; observed: unknown })
@@ -2053,7 +2053,7 @@ export interface RpcStepMeta {
   outputVar?: string
   inputs?: Record<string, InputSource> | 'passthrough'
   options?: WorkflowStepOptions
-  actor?: string
+  virtualUser?: string
   expectEventually?: boolean
 }
 export interface SetStepMeta {
@@ -2177,7 +2177,7 @@ export interface WorkflowRuntimeMeta {
   source: 'dsl' | 'complex' | 'graph' | 'scenario'
   description?: string
   tags?: string[]
-  actors?: string[]
+  virtualUsers?: string[]
   nodes?: Record<string, any>
   entryNodeIds?: string[]
   graphHash?: string
@@ -2243,7 +2243,7 @@ export type WorkflowsMeta = Record<
     scenario?: boolean
     asserts?: boolean
     skip?: string
-    actors?: string[]
+    virtualUsers?: string[]
   }
 >
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
@@ -2278,7 +2278,7 @@ export interface WorkflowStepOptions {
   retries?: number
   retryDelay?: string | number
   compensate?: false
-  actor?: ScenarioVirtualUser
+  virtualUser?: ScenarioVirtualUser
 }
 export interface WorkflowStepWire {
   runId: string
@@ -2296,58 +2296,48 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
 ) => Promise<TOutput>
 ```
 
-## ./actor-flow
+## ./virtual-user-conversation
 
 ```ts
-export interface ActorFlowVerdict {
+export interface ConversationVerdict {
   passed: boolean
   reasoning: string
   transcript: string[]
 }
-export type ActorLLM = (params: AgentRunnerParams) => Promise<AgentStepResult>
 export interface ConverseOptions<TAgentName extends string = string> {
   agent: TAgentName
   task: string
   evaluate: string
-  approvals?: ActorFlowApprovalPolicy
+  approvals?: ConversationApprovalPolicy
   model?: string
   maxTurns?: number
 }
-runConversation: (params: RunConversationParams) => Promise<ActorFlowVerdict>
+runConversation: (params: RunConversationParams) => Promise<ConversationVerdict>
 export interface RunConversationParams {
   virtualUser: ResolvedVirtualUser
   virtualUserId: string
   task: string
   evaluate: string
-  approvals?: ActorFlowApprovalPolicy
+  approvals?: ConversationApprovalPolicy
   model: string
   maxTurns?: number
   maxApprovalRounds?: number
   target: TargetAgentDriver
-  llm: ActorLLM
+  llm: VirtualUserLLM
   agentName: string
 }
 export interface TargetAgentDriver {
   run(message: string): Promise<TargetAgentReply>
   approve(runId: string, decisions: { toolCallId: string; approved: boolean }[]): Promise<TargetAgentReply>
 }
+export type VirtualUserLLM = (
+  params: AgentRunnerParams
+) => Promise<AgentStepResult>
 ```
 
 ## ./virtual-user
 
 ```ts
-ACTOR_ROOT_SECRET_MIN_LENGTH: 32
-ACTOR_SECRET_INFO: "pikku:actor-sign-in"
-ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
-export type ActorSecretResolver = (
-  virtualUser: ResolvedVirtualUser
-) => string | Promise<string>
-actorSecretSubject: (email: string) => string
-export class ActorSignIn implements VirtualUserSignIn {
-  constructor(private readonly apiUrl: string, private readonly secret: string | ActorSecretResolver, private readonly signInPath: string)
-  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
-  headers(): Record<string, string>
-}
 export interface AgentReachability {
   description?: string
   scopes?: readonly string[]
@@ -2394,9 +2384,9 @@ createHttpVirtualUsers: (config: HttpVirtualUsersConfig) => ScenarioVirtualUsers
 DEFAULT_MAX_INTERVAL_MS: number
 DEFAULT_MIN_INTERVAL_MS: number
 defineVirtualUsers: (_config: CoreVirtualUsers) => void
-deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
 deriveCatalogue: (functions: FunctionsMeta, schemas?: SchemaMap) => ApiCatalogueEntry[]
 deriveIntents: (workflows: WorkflowsMeta, functions?: FunctionsMeta) => IntentSource[]
+deriveVirtualUserSecret: (rootSecret: string, email: string) => Promise<string>
 dispositionProfile: (disposition?: VirtualUserDisposition, tuning?: VirtualUserTuning | undefined) => DispositionProfile
 export interface DispositionProfile {
   instructions: string
@@ -2433,12 +2423,12 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
   get email(): string
   async invoke(rpcName: string, data: unknown): Promise<unknown>
   async invokeRaw(rpcName: string, data: unknown, options?: ScenarioInvokeOptions): Promise<ScenarioHttpResponse>
-  async converse(options: ConverseOptions): Promise<ActorFlowVerdict>
+  async converse(options: ConverseOptions): Promise<ConversationVerdict>
   async sessionRoles(): Promise<string[] | null>
 }
 export interface HttpVirtualUsersConfig {
   apiUrl: string
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   operator?: OperatorSignInOptions
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
@@ -2536,7 +2526,7 @@ export interface RunVirtualUserParams {
   intents: readonly IntentSource[]
   goals?: readonly string[]
   target: VirtualUserTarget
-  llm: ActorLLM
+  llm: VirtualUserLLM
   model: string
   budget?: VirtualUserBudget
   stop?: (tally: VirtualUserTally) => boolean | Promise<boolean>
@@ -2555,7 +2545,7 @@ export type SchemaMap = Record<string, Record<string, unknown> | undefined>
 serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; virtualUserId: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
 serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, virtualUsers: ScaffoldVirtualUsers) => { virtualUserId: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
 serializeVirtualUserSteps: (steps: readonly StepRecord[]) => { index: number; intentId: string | undefined; action: Record<string, unknown>; status: number | undefined; ok: boolean | undefined; response: string | undefined; findingKinds: string[] | undefined; tokensIn: number; tokensOut: number; }[]
-signInPathFor: (configured: string | undefined, plugin: "actor" | "fabric") => string | undefined
+signInPathFor: (configured: string | undefined, plugin: "virtual-user" | "fabric") => string | undefined
 STALE_RUN_AFTER_MS: number
 export interface StartedVirtualUserRun {
   runId: string
@@ -2593,9 +2583,12 @@ export interface StepRecord {
 tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterMs, }: VirtualUserTickParams) => Promise<VirtualUserTickResult>
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
 validateAndBuildVirtualUsersMeta: (definitions: VirtualUserDefinitions) => VirtualUsersMeta
-verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
 verifyVirtualUserRoles: (virtualUserId: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
-VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
+verifyVirtualUserSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
+VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH: 32
+VIRTUAL_USER_SECRET_INFO: "pikku:virtual-user-sign-in"
+VIRTUAL_USER_SECRET_NAME: "SCENARIO_VIRTUAL_USER_SECRET"
+VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_VIRTUAL_USER_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
 export type VirtualUserAccountMeta = {
   provider?: string
 }
@@ -2745,6 +2738,15 @@ export interface VirtualUserScheduleStore {
   remove(virtualUserId: string): Promise<void>
 }
 virtualUserScopes: (virtualUser: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
+export type VirtualUserSecretResolver = (
+  virtualUser: ResolvedVirtualUser
+) => string | Promise<string>
+export class VirtualUserSecretSignIn implements VirtualUserSignIn {
+  constructor(private readonly apiUrl: string, private readonly secret: string | VirtualUserSecretResolver, private readonly signInPath: string)
+  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
+  headers(): Record<string, string>
+}
+virtualUserSecretSubject: (email: string) => string
 export interface VirtualUserSignIn {
   login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
   headers(): Record<string, string>
@@ -2753,7 +2755,7 @@ export type VirtualUsersMeta = Record<string, VirtualUserMeta>
 virtualUserTarget: (virtualUser: ScenarioVirtualUser<string, ScenarioRpcMap>, { model, agents }?: VirtualUserTargetOptions) => VirtualUserTarget
 export interface VirtualUserTarget {
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
-  talkTo?(agent: string, task: string): Promise<ActorFlowVerdict>
+  talkTo?(agent: string, task: string): Promise<ConversationVerdict>
   upload?(file: string): Promise<ScenarioHttpResponse>
 }
 export interface VirtualUserTargetOptions {
@@ -4727,10 +4729,6 @@ export class WeakKeyMaterialError extends PikkuError {
 ## ./services
 
 ```ts
-ACTOR_ROOT_SECRET_MIN_LENGTH: 32
-ACTOR_SECRET_INFO: "pikku:actor-sign-in"
-ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
-actorSecretSubject: (email: string) => string
 export type AgentMeta = AgentsMeta[string]
 export type AgentRunnerParams = {
   model: string
@@ -4991,7 +4989,7 @@ export interface DeploymentServiceConfig {
   heartbeatInterval?: number
   heartbeatTtl?: number
 }
-deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
+deriveVirtualUserSecret: (rootSecret: string, email: string) => Promise<string>
 export interface EmailAssets {
   theme: Record<string, unknown>
   locales: Record<string, Record<string, unknown>>
@@ -5041,9 +5039,9 @@ export interface FeatureFlagStore extends FeatureFlagSource {
   syncFlags(flags: DeclaredFlag[]): Promise<void>
   listFlags(): Promise<FlagRow[]>
   listOverrides(key: string): Promise<FlagOverrideRow[]>
-  setEnabled(key: string, enabled: boolean, actor?: string, note?: string): Promise<void>
-  setRollout(key: string, percent: number | null, actor?: string): Promise<void>
-  setOverride(key: string, subject: FlagSubject, enabled: boolean, actor?: string): Promise<void>
+  setEnabled(key: string, enabled: boolean, virtualUser?: string, note?: string): Promise<void>
+  setRollout(key: string, percent: number | null, virtualUser?: string): Promise<void>
+  setOverride(key: string, subject: FlagSubject, enabled: boolean, virtualUser?: string): Promise<void>
   clearOverride(key: string, subject: FlagSubject): Promise<void>
   findStaleFlags(): Promise<string[]>
   pruneFlags(): Promise<string[]>
@@ -5482,7 +5480,7 @@ export interface ScenarioVirtualUser< TAgentName extends string = string, TRpcMa
   readonly email: string
   invoke<TName extends keyof TRpcMap & string>(rpcName: TName, data: TRpcMap[TName]['input']): Promise<TRpcMap[TName]['output']>
   invokeRaw<TName extends keyof TRpcMap & string>(rpcName: TName, data: TRpcMap[TName]['input'], options?: ScenarioInvokeOptions): Promise<ScenarioHttpResponse>
-  converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
+  converse(options: ConverseOptions<TAgentName>): Promise<ConversationVerdict>
   sessionRoles(): Promise<string[] | null>
 }
 export type ScenarioVirtualUsers = Record<string, ScenarioVirtualUser>
@@ -5759,7 +5757,11 @@ export interface VariablesService {
   has: (name: string) => Promise<boolean> | boolean
   delete: (name: string) => Promise<void> | void
 }
-verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
+verifyVirtualUserSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
+VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH: 32
+VIRTUAL_USER_SECRET_INFO: "pikku:virtual-user-sign-in"
+VIRTUAL_USER_SECRET_NAME: "SCENARIO_VIRTUAL_USER_SECRET"
+virtualUserSecretSubject: (email: string) => string
 export interface WebhookAttemptResult {
   statusCode?: number
   responseBody?: string

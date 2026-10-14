@@ -3,10 +3,10 @@ import { pikkuScenario } from '#pikku/scenario'
 export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
   title: 'Notification stubs (scenario)',
   tags: ['scenario', 'stubs'],
-  func: async ({ logger }, _data, { scenario, actors }) => {
-    if (!actors?.shopper || !actors?.support) {
+  func: async ({ logger }, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.shopper || !virtualUsers?.support) {
       throw new Error(
-        'notificationScenario needs run actors (shopper + support) — run via `pikku scenario run <environment>`'
+        'notificationScenario needs run virtual users (shopper + support) — run via `pikku scenario run <environment>`'
       )
     }
     logger.debug('notification scenario starting')
@@ -15,16 +15,16 @@ export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
       'shopper triggers a shipping notification',
       'notifyShopper',
       { orderId: 'A-1' },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     await scenario.expectService(
       'the email stub recorded the send',
       'emailService.send',
       {
-        actor: actors.shopper,
+        virtualUser: virtualUsers.shopper,
         calledWith: {
-          to: 'shopper@actors.local',
+          to: 'shopper@virtualuser.local',
           subject: 'Order A-1 update',
           text: 'Your order has shipped.',
         },
@@ -34,8 +34,8 @@ export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
     await scenario.expectError(
       "the support recipient's relay is fault-injected",
       'notifyShopper',
-      { orderId: 'A-2', recipient: 'support@actors.local' },
-      { actor: actors.support }
+      { orderId: 'A-2', recipient: 'support@virtualuser.local' },
+      { virtualUser: virtualUsers.support }
     )
 
     return { notified: true }

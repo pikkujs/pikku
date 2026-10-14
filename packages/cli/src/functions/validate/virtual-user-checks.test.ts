@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { runVirtualUserChecks } from './virtual-user-checks.js'
 
-const makeTmp = async () => mkdtemp(join(tmpdir(), 'pikku-virtual-user-checks-'))
+const makeTmp = async () =>
+  mkdtemp(join(tmpdir(), 'pikku-virtual-user-checks-'))
 
 const config = {
   srcDirectories: ['packages/functions/src'],
@@ -37,17 +38,17 @@ const writeVirtualUserMeta = async (
   )
 }
 
-const actorWiring = [
-  "import { pikkuActor } from '@pikku/better-auth'",
-  'export const auth = () => ({ plugins: [pikkuActor({ secret: undefined })] })',
+const virtualUserWiring = [
+  "import { pikkuVirtualUser } from '@pikku/better-auth'",
+  'export const auth = () => ({ plugins: [pikkuVirtualUser({ secret: undefined })] })',
   '',
 ].join('\n')
 
-// The name pikkuActor() shipped under before the plugins took a pikku prefix.
-// The alias is still exported, so wiring it still counts as actor sign-in.
-const deprecatedActorAliasWiring = [
-  "import { actor } from '@pikku/better-auth'",
-  'export const auth = () => ({ plugins: [actor({ secret: undefined })] })',
+// The name pikkuVirtualUser() shipped under before the plugins took a pikku prefix.
+// The alias is still exported, so wiring it still counts as virtual user sign-in.
+const deprecatedVirtualUserAliasWiring = [
+  "import { virtualUser } from '@pikku/better-auth'",
+  'export const auth = () => ({ plugins: [virtualUser({ secret: undefined })] })',
   '',
 ].join('\n')
 
@@ -74,11 +75,11 @@ describe('virtual user checks', () => {
     }
   })
 
-  test('virtual users in generated meta + actor sign-in → no findings', async () => {
+  test('virtual users in generated meta + virtual user sign-in → no findings', async () => {
     const tmp = await makeTmp()
     try {
       await writeVirtualUserMeta(tmp, { founder: { id: 'founder' } })
-      await writeSource(tmp, 'auth.wiring.ts', actorWiring)
+      await writeSource(tmp, 'auth.wiring.ts', virtualUserWiring)
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {
@@ -90,7 +91,7 @@ describe('virtual user checks', () => {
     const tmp = await makeTmp()
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
-      await writeSource(tmp, 'auth.wiring.ts', actorWiring)
+      await writeSource(tmp, 'auth.wiring.ts', virtualUserWiring)
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {
@@ -98,11 +99,11 @@ describe('virtual user checks', () => {
     }
   })
 
-  test('the deprecated actor() alias still counts as actor sign-in', async () => {
+  test('the deprecated virtualUser() alias still counts as virtual user sign-in', async () => {
     const tmp = await makeTmp()
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
-      await writeSource(tmp, 'auth.wiring.ts', deprecatedActorAliasWiring)
+      await writeSource(tmp, 'auth.wiring.ts', deprecatedVirtualUserAliasWiring)
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {
@@ -115,7 +116,7 @@ describe('virtual user checks', () => {
     try {
       await writeVirtualUserMeta(tmp, {})
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
-      await writeSource(tmp, 'auth.wiring.ts', actorWiring)
+      await writeSource(tmp, 'auth.wiring.ts', virtualUserWiring)
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {
@@ -123,26 +124,28 @@ describe('virtual user checks', () => {
     }
   })
 
-  test('virtual users without actor sign-in → warns', async () => {
+  test('virtual users without virtual user sign-in → warns', async () => {
     const tmp = await makeTmp()
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
       const findings = await runVirtualUserChecks(tmp, config)
-      assert.deepStrictEqual(ids(findings), ['virtual-users-no-actor-sign-in'])
+      assert.deepStrictEqual(ids(findings), [
+        'virtual-users-no-virtual-user-sign-in',
+      ])
       assert.strictEqual(findings[0]!.severity, 'warn')
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
   })
 
-  test('a hand-rolled /sign-in/actor route satisfies the check', async () => {
+  test('a hand-rolled /sign-in/virtual-user route satisfies the check', async () => {
     const tmp = await makeTmp()
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
       await writeSource(
         tmp,
-        'actor.http.ts',
-        "wireHTTP({ method: 'post', route: '/auth/sign-in/actor' })\n"
+        'virtualUser.http.ts',
+        "wireHTTP({ method: 'post', route: '/auth/sign-in/virtual-user' })\n"
       )
       const findings = await runVirtualUserChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
@@ -155,7 +158,7 @@ describe('virtual user checks', () => {
     const tmp = await makeTmp()
     try {
       await writeSource(tmp, 'virtual-users.ts', virtualUserDeclaration)
-      await writeSource(tmp, 'auth.wiring.ts', actorWiring)
+      await writeSource(tmp, 'auth.wiring.ts', virtualUserWiring)
       const findings = await runVirtualUserChecks(tmp, {
         ...config,
         environments: {},

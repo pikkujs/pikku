@@ -107,7 +107,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
       )
     })) as PlaywrightDriver
 
-    let session: InstanceType<PlaywrightDriver['ActorSession']>
+    let session: InstanceType<PlaywrightDriver['VirtualUserSession']>
     let close: () => Promise<void>
     if (as) {
       const state = await getInspectorState(true, false, false, true)
@@ -121,7 +121,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
         apiUrl: env.apiUrl,
         appUrl: baseUrl,
         ...(await resolveVirtualUserCredentials(variables, 'page screenshots')),
-        actors: resolveVirtualUsers(
+        virtualUsers: resolveVirtualUsers(
           state.virtualUsers?.definitions ?? [],
           config.scenarios?.emailDomain
         ),

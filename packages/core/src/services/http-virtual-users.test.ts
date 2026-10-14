@@ -3,12 +3,12 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpVirtualUsers } from './http-virtual-users.js'
-import { verifyActorSecret } from './virtual-user-actor-secret.js'
+import { verifyVirtualUserSecret } from './virtual-user-secret.js'
 
 /** The root the virtual users derive from; the target verifies against the same one. */
 const ROOT = 'impersonation-secret-impersonation'
 
-// Minimal target app mirroring the Better Auth actor plugin's contract:
+// Minimal target app mirroring the Better Auth virtual user plugin's contract:
 // sign-in endpoint, exposed RPC endpoint, session by cookie.
 const startTarget = async () => {
   let logins = 0
@@ -20,11 +20,11 @@ const startTarget = async () => {
       const body = chunks.length
         ? JSON.parse(Buffer.concat(chunks).toString())
         : {}
-      if (req.url === '/api/auth/sign-in/actor') {
-        if (!(await verifyActorSecret(ROOT, body.email, body.secret))) {
+      if (req.url === '/api/auth/sign-in/virtual-user') {
+        if (!(await verifyVirtualUserSecret(ROOT, body.email, body.secret))) {
           res
             .writeHead(401)
-            .end(JSON.stringify({ message: 'bad actor secret' }))
+            .end(JSON.stringify({ message: 'bad virtual user secret' }))
           return
         }
         logins++
@@ -156,19 +156,19 @@ describe('HttpVirtualUser', async () => {
     })
 
   test('builds one lazy virtual user per declaration', () => {
-    const actors = makeVirtualUsers()
-    assert.deepEqual(Object.keys(actors).sort(), ['customer', 'manager'])
-    assert.equal(actors.customer!.name, 'customer')
+    const virtualUsers = makeVirtualUsers()
+    assert.deepEqual(Object.keys(virtualUsers).sort(), ['customer', 'manager'])
+    assert.equal(virtualUsers.customer!.name, 'customer')
     assert.equal(target.loginCount(), 0, 'no login until first invoke')
   })
 
   test('logs in lazily once and replays the session cookie on RPCs', async () => {
-    const actors = makeVirtualUsers()
+    const virtualUsers = makeVirtualUsers()
 
-    const first = (await actors.customer!.invoke('createTodo', {
+    const first = (await virtualUsers.customer!.invoke('createTodo', {
       title: 'x',
     })) as any
-    const second = (await actors.customer!.invoke('listTodos', {})) as any
+    const second = (await virtualUsers.customer!.invoke('listTodos', {})) as any
 
     assert.equal(first.rpcName, 'createTodo')
     assert.deepEqual(first.echoed, { title: 'x' })
@@ -183,23 +183,23 @@ describe('HttpVirtualUser', async () => {
   })
 
   test('re-logs-in once when the session expires mid-run', async () => {
-    const actors = makeVirtualUsers()
-    await actors.manager!.invoke('ping', {})
+    const virtualUsers = makeVirtualUsers()
+    await virtualUsers.manager!.invoke('ping', {})
     const loginsBefore = target.loginCount()
 
     target.expireSession()
-    const result = (await actors.manager!.invoke('ping', {})) as any
+    const result = (await virtualUsers.manager!.invoke('ping', {})) as any
 
     assert.equal(target.loginCount(), loginsBefore + 1, 'one re-login')
     assert.match(result.cookie, new RegExp(`session=s${loginsBefore + 1}`))
   })
 
   test('invokeRaw returns the status and body instead of throwing', async () => {
-    const actors = makeVirtualUsers()
+    const virtualUsers = makeVirtualUsers()
 
     // A refusal is the expected outcome of a permissions scenario, so the
     // status and the payload that names the missing scope both have to survive.
-    const res = await actors.customer!.invokeRaw('forbidden', {})
+    const res = await virtualUsers.customer!.invokeRaw('forbidden', {})
 
     assert.equal(res.status, 403)
     assert.equal(res.ok, false)
@@ -210,8 +210,8 @@ describe('HttpVirtualUser', async () => {
   })
 
   test('invokeRaw reports a success the same way', async () => {
-    const actors = makeVirtualUsers()
-    const res = await actors.manager!.invokeRaw('listTodos', { page: 2 })
+    const virtualUsers = makeVirtualUsers()
+    const res = await virtualUsers.manager!.invokeRaw('listTodos', { page: 2 })
 
     assert.equal(res.status, 200)
     assert.equal(res.ok, true)
@@ -219,16 +219,16 @@ describe('HttpVirtualUser', async () => {
   })
 
   test('invokeRaw carries the response text so a step can search it', async () => {
-    const actors = makeVirtualUsers()
-    const res = await actors.customer!.invokeRaw('forbidden', {})
+    const virtualUsers = makeVirtualUsers()
+    const res = await virtualUsers.customer!.invokeRaw('forbidden', {})
 
     assert.match(res.serialized, /MissingScopeError/)
     assert.match(res.serialized, /admin/)
   })
 
   test('invokeRaw keeps a non-JSON error body instead of failing to parse it', async () => {
-    const actors = makeVirtualUsers()
-    const res = await actors.manager!.invokeRaw('html-error', {})
+    const virtualUsers = makeVirtualUsers()
+    const res = await virtualUsers.manager!.invokeRaw('html-error', {})
 
     assert.equal(res.status, 500)
     assert.equal(res.ok, false)
@@ -237,15 +237,15 @@ describe('HttpVirtualUser', async () => {
   })
 
   test('invokeRaw reports an empty body as an empty string', async () => {
-    const actors = makeVirtualUsers()
-    const res = await actors.manager!.invokeRaw('listTodos', {})
+    const virtualUsers = makeVirtualUsers()
+    const res = await virtualUsers.manager!.invokeRaw('listTodos', {})
 
     assert.equal(typeof res.serialized, 'string')
   })
 
   test('invokeRaw passes extra headers through', async () => {
-    const actors = makeVirtualUsers()
-    const res = await actors.manager!.invokeRaw(
+    const virtualUsers = makeVirtualUsers()
+    const res = await virtualUsers.manager!.invokeRaw(
       'whoAmI',
       {},
       { headers: { 'x-user-id': 'impersonated-1' } }
@@ -255,9 +255,9 @@ describe('HttpVirtualUser', async () => {
   })
 
   test('invoke still throws on a refusal, naming the status and body', async () => {
-    const actors = makeVirtualUsers()
+    const virtualUsers = makeVirtualUsers()
     await assert.rejects(
-      actors.customer!.invoke('forbidden', {}),
+      virtualUsers.customer!.invoke('forbidden', {}),
       /'forbidden' as 'customer' returned 403.*MissingScopeError/
     )
   })
@@ -265,10 +265,12 @@ describe('HttpVirtualUser', async () => {
   // A caller holding one virtual user's credential and asking for another gets the
   // target's refusal, not a client-side guess about whether it would have worked.
   test('a credential the target will not accept surfaces status and body', async () => {
-    const actors = makeVirtualUsers(() => 'not-this-virtual-users-credential')
+    const virtualUsers = makeVirtualUsers(
+      () => 'not-this-virtual-users-credential'
+    )
     await assert.rejects(
-      actors.customer!.invoke('ping', {}),
-      /virtual user sign-in failed for 'customer' \(401\).*bad actor secret/
+      virtualUsers.customer!.invoke('ping', {}),
+      /virtual user sign-in failed for 'customer' \(401\).*bad virtual user secret/
     )
   })
 
@@ -280,10 +282,10 @@ describe('HttpVirtualUser', async () => {
   // `rolesRpc: false` because this is about the better-auth path specifically —
   // leaving the RPC in would answer first and the mount would go untested.
   test('reads the session from the mount the sign-in path names', async () => {
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
-      signInPath: '/api/auth/sign-in/actor',
+      signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       rolesRpc: false,
       virtualUsers: {
@@ -299,7 +301,10 @@ describe('HttpVirtualUser', async () => {
       },
     })
 
-    assert.deepEqual(await actors.manager!.sessionRoles(), ['admin', 'support'])
+    assert.deepEqual(await virtualUsers.manager!.sessionRoles(), [
+      'admin',
+      'support',
+    ])
   })
 
   // Scopes are the model in an app that authorizes on them; better-auth's
@@ -308,10 +313,10 @@ describe('HttpVirtualUser', async () => {
   // projection is how a guest holding exactly what it should got refused for
   // "roles drifted".
   test('reads roles from the app RPC in preference to better-auth', async () => {
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
-      signInPath: '/api/auth/sign-in/actor',
+      signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       virtualUsers: {
         manager: {
@@ -326,16 +331,16 @@ describe('HttpVirtualUser', async () => {
       },
     })
 
-    assert.deepEqual(await actors.manager!.sessionRoles(), ['guest'])
+    assert.deepEqual(await virtualUsers.manager!.sessionRoles(), ['guest'])
   })
 
   // An app without the RPC is not an app reporting "no roles" — going quiet
   // there would turn every virtual user into a mismatch against an empty list.
   test('falls back to better-auth when the roles RPC is absent', async () => {
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
-      signInPath: '/api/auth/sign-in/actor',
+      signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       rolesRpc: 'noSuchRpc',
       virtualUsers: {
@@ -351,17 +356,20 @@ describe('HttpVirtualUser', async () => {
       },
     })
 
-    assert.deepEqual(await actors.manager!.sessionRoles(), ['admin', 'support'])
+    assert.deepEqual(await virtualUsers.manager!.sessionRoles(), [
+      'admin',
+      'support',
+    ])
   })
 
   // The operator handshake sits under the same mount and must be derived from
-  // it, not inherited verbatim: posting an operator token to the ACTOR path is
+  // it, not inherited verbatim: posting an operator token to the VIRTUAL_USER path is
   // a validation error about a missing email, which reads like a broken
   // virtual user rather than a wrong URL.
   test('derives the operator sign-in path from the same auth mount', async () => {
-    const actors = createHttpVirtualUsers({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
-      signInPath: '/api/auth/sign-in/actor',
+      signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       operator: { token: 'operator-token' },
       virtualUsers: {
@@ -377,7 +385,7 @@ describe('HttpVirtualUser', async () => {
       },
     })
 
-    const result = (await actors.manager!.invoke('ping', {})) as any
+    const result = (await virtualUsers.manager!.invoke('ping', {})) as any
     assert.equal(result.rpcName, 'ping')
     assert.equal(result.impersonated, 'u-manager@virtualuser.invalid')
   })

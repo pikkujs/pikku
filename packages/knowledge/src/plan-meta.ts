@@ -13,8 +13,8 @@ import { scenarioDepths, type ScenarioDepth } from './hollow-scenarios.js'
  * A planned scenario that exists but cannot prove its own claim.
  *
  * Only `browser`-level claims are judged, and only against `reachability-only`. A
- * `permission` scenario proving a guard let an actor through is doing exactly its job with
- * that shape — the starter template's `signedInActorReachesTheAppScenario` is one, and
+ * `permission` scenario proving a guard let a virtual user through is doing exactly its job with
+ * that shape — the starter template's `signedInVirtualUserReachesTheAppScenario` is one, and
  * failing it would be wrong. A `browser` scenario says a PERSON did something on screen, so
  * navigating to a page and confirming the router left you there does not answer it.
  *

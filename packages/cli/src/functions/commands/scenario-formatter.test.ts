@@ -76,7 +76,7 @@ describe('formatScenarioFailure', () => {
         ...failure(),
         browser: [
           {
-            actor: 'admin',
+            virtualUser: 'admin',
             url: 'http://localhost:4077/console/functions',
             consoleErrors: ['TypeError: x is not a function'],
             pageErrors: [],
@@ -103,7 +103,7 @@ describe('formatScenarioFailure', () => {
         message: 'boom',
         browser: [
           {
-            actor: 'admin',
+            virtualUser: 'admin',
             url: 'http://localhost:4077/console',
             consoleErrors: [],
             pageErrors: [],

@@ -84,7 +84,7 @@ describe('the production workflow service carries no scenario surface', () => {
     assert.equal(typeof wire.do, 'function')
   })
 
-  test('the actor client is not reachable from the workflow service module graph', async () => {
+  test('the virtual user client is not reachable from the workflow service module graph', async () => {
     const { readFileSync } = await import('node:fs')
     const source = readFileSync(
       new URL('./pikku-workflow-service.ts', import.meta.url),
@@ -92,7 +92,7 @@ describe('the production workflow service carries no scenario surface', () => {
     )
     assert.ok(
       !source.includes('http-virtual-users'),
-      'PikkuWorkflowService must not reference the HTTP actor client — it pulls the AI virtual user loop into every bundle'
+      'PikkuWorkflowService must not reference the HTTP virtual user client — it pulls the AI virtual user loop into every bundle'
     )
   })
 })

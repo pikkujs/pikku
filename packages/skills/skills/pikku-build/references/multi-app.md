@@ -21,7 +21,7 @@ The split you are acting on should already be recorded, but this is the reasonin
 behind it — and the place people get it wrong is the third case at the bottom.
 
 **A group that comes in through its own front door gets its own app.** A role
-*inside* an app is not that: it changes which nav items and which buttons a person
+_inside_ an app is not that: it changes which nav items and which buttons a person
 sees, and lives in `useNavItems()` and the `permissions` on the function, not in a
 route subtree.
 
@@ -31,7 +31,7 @@ across the counter with an account of their own gets their own — the customer,
 tenant, the patient. One app is a real answer and often the right one.
 
 **The asymmetry that forces a split is sign-up.** Where staff accounts are created
-*for* people and customers create their own, the two need different sign-up, different
+_for_ people and customers create their own, the two need different sign-up, different
 onboarding and different session shape, and bending one app around both costs more
 than the second app does. Do not collapse two audiences into one app to save a build.
 
@@ -67,7 +67,7 @@ and someone else's record: if the invoices nav item is hidden but `listAllInvoic
 has no `permissions`, the app is wide open and the nav is decoration.
 
 Worth a scenario each, because they are two different claims: that a mechanic cannot
-*see* the invoices nav item, and that their call to an invoices RPC is *refused*. The
+_see_ the invoices nav item, and that their call to an invoices RPC is _refused_. The
 second is the one that catches a `permissions` field nobody wired.
 
 ## The second app
@@ -152,7 +152,7 @@ single `appUrl` fallback, and the CLI takes `--app-url <app>=<url>,<app>=<url>`:
 
 Three things follow, and each one has cost a run:
 
-- **An actor is bound to ONE app for the whole run.** The resolution happens once,
+- **A virtual user is bound to ONE app for the whole run.** The resolution happens once,
   at sign-in. A staff virtual user cannot be walked through the customer app to check
   something is absent from it — drive that assertion with a virtual user who lives
   there, and say in the scenario's docblock why the witness is who it is. This
@@ -160,7 +160,7 @@ Three things follow, and each one has cost a run:
   session cannot open the admin desk' driven by a customer-app virtual user points the
   browser at a router with no such route at all, so what the assertion measures is
   a 404, not the guard — and on an app with a catch-all redirect to login it
-  passes while proving nothing. Pick the actor by which app owns the ROUTE, not by
+  passes while proving nothing. Pick the virtual user by which app owns the ROUTE, not by
   who should be refused, and drop their session instead.
 - **Every frontend needs its API proxy pointed at the API you are actually
   running.** `vite.config.ts` reads a variable (`VITE_API_PROXY`) with a default

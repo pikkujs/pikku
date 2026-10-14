@@ -222,11 +222,11 @@ test('reading a schema-qualified map flat would lose every annotation', () => {
 test('merges tables across several schemas', () => {
   writeSidecar({
     app: { user: { email: { security: 'pii' } } },
-    audit: { entry: { actor: { security: 'private' } } },
+    audit: { entry: { virtualUser: { security: 'private' } } },
   })
   const loaded = loadAnnotations(root)
   assert.equal(loaded['user']?.['email']?.classification, 'pii')
-  assert.equal(loaded['entry']?.['actor']?.classification, 'private')
+  assert.equal(loaded['entry']?.['virtualUser']?.classification, 'private')
 })
 
 test('loadAnnotations carries a column keyId through', () => {

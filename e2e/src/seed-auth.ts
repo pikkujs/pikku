@@ -1,5 +1,5 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
-import { deriveActorSecret } from '@pikku/core/services'
+import { deriveVirtualUserSecret } from '@pikku/core/services'
 import {
   ADMIN_USER,
   GUEST_USER,
@@ -34,40 +34,43 @@ export const seedAuthUsers = async (
 }
 
 /**
- * Signs every declared scenario actor in once, through the actor plugin's own
- * endpoint, so its `actor: true` user row exists before seedScopes runs. Actor
+ * Signs every declared scenario virtual user in once, through the virtual user plugin's own
+ * endpoint, so its `virtualUser: true` user row exists before seedScopes runs. Virtual user
  * rows are otherwise created lazily on first sign-in, which is too late for a
  * scope grant keyed by email.
  */
-export const seedScenarioActors = async (
+export const seedScenarioVirtualUsers = async (
   services: CoreSingletonServices,
   baseUrl: string
 ) => {
-  const secret = await services.variables.get('SCENARIO_ACTOR_SECRET')
+  const secret = await services.variables.get('SCENARIO_VIRTUAL_USER_SECRET')
   if (!secret) {
     services.logger.info(
-      'SCENARIO_ACTOR_SECRET is unset — skipping scenario actor seeding'
+      'SCENARIO_VIRTUAL_USER_SECRET is unset — skipping scenario virtual user seeding'
     )
     return
   }
-  for (const [name, actor] of Object.entries(virtualUserConfigs)) {
-    const res = await fetch(`${baseUrl}/api/auth/sign-in/actor`, {
+  for (const [name, virtualUser] of Object.entries(virtualUserConfigs)) {
+    const res = await fetch(`${baseUrl}/api/auth/sign-in/virtual-user`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: baseUrl },
       body: JSON.stringify({
-        email: actor.email,
-        name: actor.name,
-        secret: await deriveActorSecret(String(secret), actor.email),
+        email: virtualUser.email,
+        name: virtualUser.name,
+        secret: await deriveVirtualUserSecret(
+          String(secret),
+          virtualUser.email
+        ),
       }),
     })
     if (!res.ok) {
       throw new Error(
-        `seed actor sign-in failed for ${name} (${actor.email}): ${res.status}`
+        `seed virtual user sign-in failed for ${name} (${virtualUser.email}): ${res.status}`
       )
     }
   }
   services.logger.info(
-    `seeded scenario actors: ${Object.values(virtualUserConfigs)
+    `seeded scenario virtual users: ${Object.values(virtualUserConfigs)
       .map((a) => a.email)
       .join(', ')}`
   )

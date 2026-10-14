@@ -3,7 +3,7 @@
  *
  * Nobody drives these. The order-update email goes out because an order
  * shipped, not because somebody clicked send, so writing it as a virtual user step
- * with the actor left off would put a person in a sentence that has none.
+ * with the virtual user left off would put a person in a sentence that has none.
  *
  * Not cast in any scenario here: a platform step runs against local services by
  * design, and every scenario in this suite runs against a spawned server, so

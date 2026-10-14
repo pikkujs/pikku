@@ -42,10 +42,10 @@ shows in the desktop sidebar (`NavList`) and in the phone's bottom bar (`MobileT
 
 `packages/functions/src/virtual-users.ts` declares the people. Replace the shipped `visitor` placeholder in four edits:
 the `defineVirtualUsers` call, `pikku.config.json` (`scenarios` virtual users), and the two shipped scenarios
-(`test/scenarios/every-page-loads`, `signed-in-actor-reaches-the-app`), which name `actors.visitor` literally
-(`sed -i '' 's/actors.visitor/actors.<id>/g' packages/functions/test/scenarios/*.ts`).
+(`test/scenarios/every-page-loads`, `signed-in-virtual-user-reaches-the-app`), which name `virtualUsers.visitor` literally
+(`sed -i '' 's/virtual-users.visitor/virtual-users.<id>/g' packages/functions/test/scenarios/*.ts`).
 
 ## Scenarios
 
-Inline zod schemas on functions must be exported consts (PKU489). Local actor sign-in grants no virtual user roles; a
+Inline zod schemas on functions must be exported consts (PKU489). Local virtual user sign-in grants no virtual user roles; a
 scoped RPC 403s until the role row exists (see the pikku-scenario skill).

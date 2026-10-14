@@ -103,13 +103,13 @@ export {
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export {
-  ACTOR_ROOT_SECRET_MIN_LENGTH,
-  ACTOR_SECRET_INFO,
-  ACTOR_SECRET_NAME,
-  actorSecretSubject,
-  deriveActorSecret,
-  verifyActorSecret,
-} from './virtual-user-actor-secret.js'
+  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
+  VIRTUAL_USER_SECRET_INFO,
+  VIRTUAL_USER_SECRET_NAME,
+  virtualUserSecretSubject,
+  deriveVirtualUserSecret,
+  verifyVirtualUserSecret,
+} from './virtual-user-secret.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

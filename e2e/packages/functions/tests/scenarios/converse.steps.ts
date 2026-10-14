@@ -1,21 +1,21 @@
 /**
- * Conversing with an agent in an actor's virtual user.
+ * Conversing with an agent in a virtual user's virtual user.
  *
- * `converse` is the actor's own capability: it holds a multi-turn conversation
+ * `converse` is the virtual user's own capability: it holds a multi-turn conversation
  * with a Pikku agent over the real transport, in virtual user, and returns a verdict
  * judging the task against the standard it was given. The steps here are thin
- * because the interesting machinery lives on the actor, not in the test.
+ * because the interesting machinery lives on the virtual user, not in the test.
  */
 import { pikkuScenarioStep } from '#pikku/scenario'
 
 /**
- * The part of an actor's verdict that survives being a step result.
+ * The part of a virtual user's verdict that survives being a step result.
  *
- * `ActorFlowVerdict` is ordinary JSON already, but pinning the shape here keeps
+ * `ConversationVerdict` is ordinary JSON already, but pinning the shape here keeps
  * the assertion step honest about what it reads — and keeps the transcript,
  * which is the only thing that makes a failure diagnosable.
  */
-export interface ActorVerdict {
+export interface VirtualUserVerdict {
   passed: boolean
   reasoning: string
   transcript: string[]
@@ -23,16 +23,16 @@ export interface ActorVerdict {
 
 export const conversesWithAgent = pikkuScenarioStep<
   { agent: string; task: string; evaluate: string },
-  ActorVerdict
+  VirtualUserVerdict
 >({
   name: 'conversesWithAgent',
-  actor: true,
+  virtualUser: true,
   description: 'converses with an agent in virtual user and returns a verdict',
   template: 'converses with {agent}',
-  default: async (_services, { agent, task, evaluate }, { actor }) => {
+  default: async (_services, { agent, task, evaluate }, { virtualUser }) => {
     // `always` because the agent's tools are approval-gated and there is nobody
     // at a keyboard: the virtual user is standing in for the user who would say yes.
-    const verdict = await actor.converse({
+    const verdict = await virtualUser.converse({
       agent: agent as never,
       task,
       evaluate,
@@ -47,23 +47,23 @@ export const conversesWithAgent = pikkuScenarioStep<
 })
 
 /**
- * Checks the actor's own judgement.
+ * Checks the virtual user's own judgement.
  *
  * The transcript travels into the failure message because a verdict on its own
  * says only that a model was unconvinced, which is not something anyone can act
  * on without seeing what was actually said.
  */
-export const expectsActorVerdict = pikkuScenarioStep<
-  { verdict: ActorVerdict; passed: boolean },
+export const expectsVirtualUserVerdict = pikkuScenarioStep<
+  { verdict: VirtualUserVerdict; passed: boolean },
   { passed: boolean }
 >({
-  name: 'expectsActorVerdict',
-  description: 'expects the actor to have judged the task a given way',
-  template: 'expects the actor to have judged the task {passed}',
+  name: 'expectsVirtualUserVerdict',
+  description: 'expects the virtual user to have judged the task a given way',
+  template: 'expects the virtual user to have judged the task {passed}',
   default: async (_services, { verdict, passed }) => {
     if (verdict.passed !== passed) {
       throw new Error(
-        `Expected the actor to judge the task ${passed ? 'succeeded' : 'failed'}: ${verdict.reasoning}\n\nTranscript:\n${verdict.transcript.join('\n')}`
+        `Expected the virtual user to judge the task ${passed ? 'succeeded' : 'failed'}: ${verdict.reasoning}\n\nTranscript:\n${verdict.transcript.join('\n')}`
       )
     }
     return { passed: verdict.passed }
@@ -82,11 +82,11 @@ export const expectsTodoTitled = pikkuScenarioStep<
   { titles: string[] }
 >({
   name: 'expectsTodoTitled',
-  actor: true,
+  virtualUser: true,
   description: 'expects the todo store to hold a todo with a given title',
   template: 'expects the store to hold a todo titled {title}',
-  default: async (_services, { title }, { actor }) => {
-    const { todos } = (await actor.invoke(
+  default: async (_services, { title }, { virtualUser }) => {
+    const { todos } = (await virtualUser.invoke(
       'todos:listTodos' as never,
       {} as never
     )) as { todos: Array<{ title: string }> }
@@ -119,11 +119,11 @@ export const expectsTodoCompleted = pikkuScenarioStep<
   { completed: boolean }
 >({
   name: 'expectsTodoCompleted',
-  actor: true,
+  virtualUser: true,
   description: 'expects the todo store to hold a completed todo with a title',
   template: 'expects the store to hold a completed todo titled {title}',
-  default: async (_services, { title }, { actor }) => {
-    const { todos } = (await actor.invoke(
+  default: async (_services, { title }, { virtualUser }) => {
+    const { todos } = (await virtualUser.invoke(
       'todos:listTodos' as never,
       {} as never
     )) as { todos: Array<{ title: string; completed: boolean }> }
@@ -142,7 +142,7 @@ export const expectsTodoCompleted = pikkuScenarioStep<
     // complete a todo, the agent has been observed adding a second one with the
     // same title and completing *that*, leaving the original open. Every
     // looser reading passes that: "some todo with this title is done" is true,
-    // and so is the actor's verdict, because the agent truthfully said it
+    // and so is the virtual user's verdict, because the agent truthfully said it
     // marked one done. Only counting catches it.
     if (matches.length > 1) {
       const open = matches.filter((todo) => !todo.completed).length

@@ -7,7 +7,7 @@
  * boundary runs a step as her and expects a 404.
  *
  * Addresses are never written down: each is derived from the virtual user id and
- * `scenarios.emailDomain`, so `theo` signs in as theo@actors.local.
+ * `scenarios.emailDomain`, so `theo` signs in as theo@virtualuser.local.
  */
 import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 

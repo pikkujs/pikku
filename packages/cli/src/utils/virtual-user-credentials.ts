@@ -1,16 +1,16 @@
 import type { VariablesService } from '@pikku/core/services'
 import type {
-  ActorSecretResolver,
+  VirtualUserSecretResolver,
   HttpVirtualUsersConfig,
 } from '@pikku/core/virtual-user'
 
 /** A Fabric operator token, which is what a deployed stage accepts. */
 export const OPERATOR_TOKEN_VARIABLE = 'FABRIC_OPERATOR_TOKEN'
 /**
- * The ROOT actor secret, which derives every virtual user's credential and so is
+ * The ROOT virtual user secret, which derives every virtual user's credential and so is
  * entitled to all of them. Only `pikku dev` serves the endpoint it opens.
  */
-export const ACTOR_SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
+export const VIRTUAL_USER_SECRET_VARIABLE = 'SCENARIO_VIRTUAL_USER_SECRET'
 /**
  * Already-derived per-virtual-user credentials, `id=secret` comma-separated — what a
  * run is given when it should be able to sign in as some virtual users and not the
@@ -19,13 +19,18 @@ export const ACTOR_SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
  */
 export const VIRTUAL_USER_SECRETS_VARIABLE = 'PIKKU_VIRTUAL_USER_SECRETS'
 
-export type VirtualUserCredentials = Pick<HttpVirtualUsersConfig, 'secret' | 'operator'>
+export type VirtualUserCredentials = Pick<
+  HttpVirtualUsersConfig,
+  'secret' | 'operator'
+>
 
 /**
  * `id=secret,id=secret` into a lookup. A value containing `=` is kept whole —
  * base64url never produces one, but a hand-written credential might.
  */
-export const parseVirtualUserSecrets = (raw: string): Record<string, string> => {
+export const parseVirtualUserSecrets = (
+  raw: string
+): Record<string, string> => {
   const secrets: Record<string, string> = {}
   for (const entry of raw.split(',')) {
     const trimmed = entry.trim()
@@ -39,7 +44,9 @@ export const parseVirtualUserSecrets = (raw: string): Record<string, string> => 
     secrets[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim()
   }
   if (Object.keys(secrets).length === 0) {
-    throw new Error(`${VIRTUAL_USER_SECRETS_VARIABLE} is set but lists no virtual users`)
+    throw new Error(
+      `${VIRTUAL_USER_SECRETS_VARIABLE} is set but lists no virtual users`
+    )
   }
   return secrets
 }
@@ -51,7 +58,7 @@ export const parseVirtualUserSecrets = (raw: string): Record<string, string> => 
  */
 export const virtualUserSecretResolver = (
   secrets: Record<string, string>
-): ActorSecretResolver => {
+): VirtualUserSecretResolver => {
   return (virtualUser) => {
     const secret = secrets[virtualUser.id]
     if (!secret) {
@@ -72,7 +79,7 @@ export const virtualUserSecretResolver = (
  * asymmetric, and it never needs an account the target would not otherwise
  * have — so a run that could use either should not fall back to the weaker one.
  *
- * `what` names the thing that cannot proceed ('scenario actors', 'a virtual
+ * `what` names the thing that cannot proceed ('scenario virtual users', 'a virtual
  * user'), because the same missing credential blocks several commands and the
  * message should say which one the operator was running.
  */
@@ -94,14 +101,14 @@ export const resolveVirtualUserCredentials = async (
     }
   }
 
-  const secret = await variables.get(ACTOR_SECRET_VARIABLE)
+  const secret = await variables.get(VIRTUAL_USER_SECRET_VARIABLE)
   if (secret) {
     return { secret }
   }
 
   throw new Error(
-    `Neither ${OPERATOR_TOKEN_VARIABLE} nor ${ACTOR_SECRET_VARIABLE} is set — ${what} cannot sign in. ` +
-      `Export ${ACTOR_SECRET_VARIABLE} against a local \`pikku dev\` target, or ` +
+    `Neither ${OPERATOR_TOKEN_VARIABLE} nor ${VIRTUAL_USER_SECRET_VARIABLE} is set — ${what} cannot sign in. ` +
+      `Export ${VIRTUAL_USER_SECRET_VARIABLE} against a local \`pikku dev\` target, or ` +
       `${OPERATOR_TOKEN_VARIABLE} against a deployed one (never put either in pikku.config.json). ` +
       `To hand this run only some virtual users, mint their credentials with \`pikku virtual-user secret\` and set ${VIRTUAL_USER_SECRETS_VARIABLE}.`
   )

@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Both validators check virtual users through one shared module, and a virtual user counts from either the meta or the source
-description: workspace validate and fabric validate are separate implementations, so the virtual user/actor/knowledge checks live in virtual-user-checks.ts and are called by both — and a virtual user is counted from the generated meta or a defineVirtualUsers() source scan, whichever answers first
+description: workspace validate and fabric validate are separate implementations, so the virtual user/virtual-user/knowledge checks live in virtual-user-checks.ts and are called by both — and a virtual user is counted from the generated meta or a defineVirtualUsers() source scan, whichever answers first
 tags: cli, validate, scenarios, virtual users
 ---
 

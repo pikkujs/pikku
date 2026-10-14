@@ -3,11 +3,11 @@ name: pikku-scenario
 description: >-
   Use when writing or running Pikku scenarios, running a virtual user against a stage, or when
   asked to test Pikku functions or improve coverage. A scenario (pikkuScenario) drives the app
-  the way users do — steps run as actors over the real transport against a running server — so a
+  the way users do — steps run as virtual users over the real transport against a running server — so a
   flow doubles as an e2e test and a staged/production health check. Covers scenario.do /
   expectEventually / expectError / expectService / expectScore, declared steps via
   pikkuScenarioStep (browser steps driven by @pikku/playwright) written as intent rather than
-  clicks, virtual users / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
+  clicks, virtual users / virtual users / environments in pikku.config.json, SCENARIO_VIRTUAL_USER_SECRET, the
   `pikku scenario` and `pikku virtual-user` commands, and live coverage
   via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
   coverage, e2e flows, browser/UI e2e, health checks, virtual users, or adversarial
@@ -31,23 +31,23 @@ installGroups: [core]
 This skill covers writing and running scenarios end to end. Five topics are one level down, and
 each says when to open it:
 
-| Read                        | For                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `references/steps.md`       | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                    |
-| `references/browser.md`     | Browser bindings, and locating by message key in a translated app                                            |
-| `references/virtual-users.md`    | Virtual users vs actors, `defineVirtualUsers`, upstream credentials for actors, and the human "Sign in as …" switcher |
-| `references/coverage.md`    | Live coverage, filling it, and unit tests for pure logic                                                     |
-| `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                         |
+| Read                             | For                                                                                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `references/steps.md`            | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                                           |
+| `references/browser.md`          | Browser bindings, and locating by message key in a translated app                                                                   |
+| `references/virtual-users.md`    | Virtual users vs virtual users, `defineVirtualUsers`, upstream credentials for virtual users, and the human "Sign in as …" switcher |
+| `references/coverage.md`         | Live coverage, filling it, and unit tests for pure logic                                                                            |
+| `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                                                 |
 
 ## What a scenario is
 
-A scenario is a `pikkuScenario` export that drives the app **as real actors over the real transport**, against a running server. That is what lets one artifact serve as both an e2e test and a staged/production health check.
+A scenario is a `pikkuScenario` export that drives the app **as real virtual users over the real transport**, against a running server. That is what lets one artifact serve as both an e2e test and a staged/production health check.
 
 Consequences that matter, and bite if ignored:
 
 - **There is no state reset.** A scenario runs against a live server. Scope what you create (unique ids, your own rows) and never assume a clean database.
-- **Every effect runs as somebody, or as a declared step.** `scenario.do(...)` without `{ actor }` throws `Scenario tried to run '<rpc>' as an internal step…` — there is no bare internal-RPC step. The other way to do work is `scenario.given/when/then`, which runs a `pikkuScenarioStep`; its actor is optional (setup steps have none) unless it declares `browser: true`.
-- **Actors must be configured and signed in**, or the scenario cannot run.
+- **Every effect runs as somebody, or as a declared step.** `scenario.do(...)` without `{ virtualUser }` throws `Scenario tried to run '<rpc>' as an internal step…` — there is no bare internal-RPC step. The other way to do work is `scenario.given/when/then`, which runs a `pikkuScenarioStep`; its virtual user is optional (setup steps have none) unless it declares `browser: true`.
+- **Virtual users must be configured and signed in**, or the scenario cannot run.
 
 Scenarios live in `srcDirectories` like any other function — by convention `*.scenario.ts`.
 
@@ -64,10 +64,10 @@ export const orderSupportScenario = pikkuScenario<
 >({
   title: 'Order support (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, data, { scenario, actors }) => {
-    if (!actors?.shopper || !actors?.support) {
+  func: async ({ logger }, data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.shopper || !virtualUsers?.support) {
       throw new Error(
-        'orderSupportScenario needs run actors (shopper + support) — run via `pikku scenario run <environment>`'
+        'orderSupportScenario needs run virtualUsers (shopper + support) — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -75,7 +75,7 @@ export const orderSupportScenario = pikkuScenario<
       'shopper doubles their order',
       'doubleValue',
       { value: data?.value ?? 21 },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     const settled = await scenario.expectEventually(
@@ -83,7 +83,7 @@ export const orderSupportScenario = pikkuScenario<
       'formatMessage',
       { greeting: 'Hello', name: 'Support' },
       (out: { message: string }) => out.message.length > 0,
-      { actor: actors.support, within: '5s', interval: 50 }
+      { virtualUser: virtualUsers.support, within: '5s', interval: 50 }
     )
 
     return { doubled: doubled.result, message: settled.message }
@@ -91,19 +91,19 @@ export const orderSupportScenario = pikkuScenario<
 })
 ```
 
-A scenario takes the same config fields as a workflow (`title`, `description`, `tags`, `input`/`output`, `auth`, `permissions`, `middleware`, `version`, …). The third argument is the scenario context: `{ scenario, actors }`.
+A scenario takes the same config fields as a workflow (`title`, `description`, `tags`, `input`/`output`, `auth`, `permissions`, `middleware`, `version`, …). The third argument is the scenario context: `{ scenario, virtualUsers }`.
 
 ### The scenario API
 
-| Call                                                                                 | Purpose                                                                                                                |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `scenario.do(step, rpc, data, { actor })`                                            | Run an RPC as that actor. The step name is what appears in the run output.                                             |
-| `scenario.expectEventually(step, rpc, data, predicate, { actor, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
-| `scenario.expectError(step, rpc, data, { actor, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
-| `scenario.expectService(step, 'service.method', { actor, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
-| `scenario.expectScore(step, runId, scorer, { atLeast, atMost, reference })`          | Grade a finished agent run with a declared scorer and assert the score. See below.                                     |
-| `scenario.given(stepName, step, data, { actor })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
-| `scenario.runScheduledTask(name)`                                                    | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
+| Call                                                                                       | Purpose                                                                                                                |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `scenario.do(step, rpc, data, { virtualUser })`                                            | Run an RPC as that virtual user. The step name is what appears in the run output.                                      |
+| `scenario.expectEventually(step, rpc, data, predicate, { virtualUser, within, interval })` | Poll until `predicate(out)` passes or `within` elapses. For anything asynchronous — queues, workers, eventual state.   |
+| `scenario.expectError(step, rpc, data, { virtualUser, matches })`                          | Assert the call **fails**. For fault injection and negative paths.                                                     |
+| `scenario.expectService(step, 'service.method', { virtualUser, calledWith })`              | Assert a stubbed service was called. Requires the server to run with `--test`.                                         |
+| `scenario.expectScore(step, runId, scorer, { atLeast, atMost, reference })`                | Grade a finished agent run with a declared scorer and assert the score. See below.                                     |
+| `scenario.given(stepName, step, data, { virtualUser })`                                    | Run a declared `pikkuScenarioStep` as setup. `when` is the same call; `then` also makes the step's bindings witnesses. |
+| `scenario.runScheduledTask(name)`                                                          | Fire a wired scheduler on the target now, rather than waiting for its cron.                                            |
 
 `expectEventually` is **scenario-only**. Calling it from a `pikkuWorkflowFunc` is a critical inspector error (`PKU675`) pointing you at `pikkuScenario`.
 
@@ -123,7 +123,7 @@ const { runId } = await scenario.when(
   {
     prompt: data.prompt,
   },
-  { actor: actors.user }
+  { virtualUser: virtualUsers.user }
 )
 
 await scenario.expectScore('answered briefly', runId, 'brevity', {
@@ -152,8 +152,8 @@ the default suite excludes it.
 A scenario config takes `before` and `after`. Both have the **same signature as `func`** — `(services, data, wire)` — with the return value discarded:
 
 ```typescript
-const resetsCredentials = async (_services, _data, { actors }) => {
-  await actors!.admin!.invoke('resetCredentials', {})
+const resetsCredentials = async (_services, _data, { virtualUsers }) => {
+  await virtualUsers!.admin!.invoke('resetCredentials', {})
 }
 
 export const credentialScenario = pikkuScenario({
@@ -161,7 +161,7 @@ export const credentialScenario = pikkuScenario({
   tags: ['scenario', 'credential'],
   before: resetsCredentials,
   after: removesInstalledAddon,
-  func: async (services, data, { scenario, actors }) => {
+  func: async (services, data, { scenario, virtualUsers }) => {
     /* … */
   },
 })
@@ -176,7 +176,7 @@ export const credentialScenario = pikkuScenario({
 | Neither runs when the run is suspended or waiting — teardown only fires at a terminal outcome.           |
 | Hooks are **not** ladder rows. The runner records nothing for them; a failure is labelled by phase.      |
 
-A hook reaches the app the same way the body does: through `wire.actors`. If you want cleanup to be _visible_ on the ladder, make it an ordinary `scenario.then(...)` instead.
+A hook reaches the app the same way the body does: through `wire.virtualUsers`. If you want cleanup to be _visible_ on the ladder, make it an ordinary `scenario.then(...)` instead.
 
 Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs — a workflow is durable and resumable, so a callback that reran on every replay would have no honest meaning.
 
@@ -229,7 +229,7 @@ read. Mark plumbing features `document: false`.
 
 `scenario.do` can only name an RPC. A **step** — `pikkuScenarioStep` — is a named, typed unit of
 scenario behaviour whose body is an ordinary pikku function, so it can call several RPCs as its
-actor, assert, or drive a browser. It is referenced by its typed string name (checked against the
+virtual user, assert, or drive a browser. It is referenced by its typed string name (checked against the
 generated step map), its body lives under a surface binding (`default` / `browser` / `cli`, never a
 `func`), and one row of the report is one step.
 
@@ -238,7 +238,7 @@ suite survives its first redesign:
 
 - **What a step is given** — a step runs in the CLI process, not where the app runs. There is no
   `kysely`, no `secrets`, and `rpc` is present but throws on purpose. Everything reaches the app
-  through the actor.
+  through the virtual user.
 - **Steps describe intent, not actions** — `buys the £5 strawberry milkshake`, never
   `clicks [data-testid=add]`. The clicking lives in plain utilities the step composes.
 - **`then` bindings are witnesses, not alternatives** — a `then` runs _every_ binding it declares
@@ -258,7 +258,7 @@ score a perfect run while checking nothing.
 
 Virtual users are declared in TypeScript. One `defineVirtualUsers({ … })` call for the
 whole project — codegen builds the `VirtualUserId` union from it, materialises one
-scenario actor per person, and seeds a user row each:
+scenario virtual user per person, and seeds a user row each:
 
 ```ts snippet:defineVirtualUsers
 
@@ -269,41 +269,41 @@ scenario actor per person, and seeds a user row each:
 ```json
 {
   "scenarios": {
-    "emailDomain": "actors.example.com",
+    "emailDomain": "virtualuser.example.com",
     "browserDriver": "@pikku/playwright",
     "model": "claude-sonnet-4-5"
   },
   "environments": {
     "local": {
       "apiUrl": "http://localhost:4077",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     }
   }
 }
 ```
 
-- `scenarios.emailDomain` is the mail domain actor addresses are built on.
+- `scenarios.emailDomain` is the mail domain virtual user addresses are built on.
 - `scenarios.browserDriver` is the package driving `browser` bindings.
-- `scenarios.model` is the model a virtual user thinks with (`actor.converse`, `pikku virtual-user run`).
-- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required; `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`, and `sessionPath` has a default too.
+- `scenarios.model` is the model a virtual user thinks with (`virtualUser.converse`, `pikku virtual-user run`).
+- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required; `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`, and `sessionPath` has a default too.
 
 **`references/virtual-users.md`** covers the parts that bite: one entry is one
-person and one actor, emails are derived and never written, `runnable: false`
+person and one virtual user, emails are derived and never written, `runnable: false`
 for someone only acted upon, `defineVirtualUsers` being read from source rather
-than evaluated, and the same actor list powering a human "Sign in as …"
+than evaluated, and the same virtual user list powering a human "Sign in as …"
 switcher.
 
-- **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
+- **`SCENARIO_VIRTUAL_USER_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs virtual users in. `pikku scenario run` throws without it; a server auto-building virtual users warns and runs without them.
 
 ## Running
 
 ```bash
 pikku scenario list                       # features with their scenarios indented, then ungrouped scenarios
-SCENARIO_ACTOR_SECRET=… pikku scenario run local
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --flows orderSupportScenario
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --features credentialFeature
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --tags smoke,scenario
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --exclude-tags ai-live
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --flows orderSupportScenario
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --features credentialFeature
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --tags smoke,scenario
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --spawn --exclude-tags ai-live
 ```
 
 `run` takes the environment as a **required positional** — the key from `environments`. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
@@ -325,7 +325,7 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --exclude-tags ai-liv
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 
-**Exit code is 1** if any scenario fails _or_ if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing `SCENARIO_ACTOR_SECRET`.
+**Exit code is 1** if any scenario fails _or_ if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing `SCENARIO_VIRTUAL_USER_SECRET`.
 
 ## Coverage
 
@@ -335,7 +335,7 @@ derived from unit tests:
 ```bash
 pikku enable scenarios                                 # sets scaffold.scenarios = true
 pikku dev --coverage                                   # V8 precise coverage, in-process
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --coverage
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --coverage
 ```
 
 That writes `<outDir>/coverage/scenario-coverage.json`. **`references/coverage.md`** has the
@@ -347,19 +347,19 @@ and where a plain unit test is still the right tool.
 | Smell                                               | Why it's wrong                                                                                                                                   |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                                       |
-| `scenario.do(...)` with no `{ actor }`              | Throws. Every step runs as somebody.                                                                                                             |
+| `scenario.do(...)` with no `{ virtualUser }`        | Throws. Every step runs as somebody.                                                                                                             |
 | A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                                     |
 | Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                                     |
 | `sleep()` before asserting                          | Use `expectEventually`.                                                                                                                          |
-| A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                                        |
+| A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the virtual user wanted; put the clicking in a utility.                                 |
 | A step named `kauftEinenApfel` / a `vorgang` table  | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `metaLocale`. |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                                                 |
 | `getByLabel('Full Name')` in a translated app       | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                                      |
-| A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                                                  |
+| A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing virtual user (`PKU677`).                                           |
 | A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.                                  |
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                                        |
-| Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured.                      |
+| Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no virtual users configured.               |
 
-`@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `VirtualUserData`, `DbUtils`) — out of scope here.
+`@pikku/cucumber` is a **browser/e2e** harness (`VirtualUser`, `BrowserWorld`, `VirtualUserData`, `DbUtils`) — out of scope here.
 
 See `pikku-concepts` for the core mental model.

@@ -24,36 +24,36 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
   description:
     'The journey the home page promises, performed by clicking rather than over RPC',
   tags: ['scenario', 'journey'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.visitor) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.visitor) {
       throw new Error(
-        'needs the `visitor` actor — run via `pikku scenario run <environment>`'
+        'needs the `visitor` virtual user — run via `pikku scenario run <environment>`'
       )
     }
     await scenario.then(
       'opens the app',
       'opensPage',
       { path: '/app' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'clicks through to the catalogue',
       'clicks',
       { name: 'Catalogue' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'is on the catalogue',
       'restsOnPath',
       { path: '/app/catalogue' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     await scenario.then(
       'sees a mug for sale',
       'seesText',
       { text: 'Enamel coffee mug' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     // Next to the mug specifically. The catalogue has eight of these buttons
     // and `clicks` would take the first, which belongs to the espresso.
@@ -61,7 +61,7 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
       'adds it to the basket',
       'clicksNear',
       { near: 'Enamel coffee mug', name: 'Add to basket' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     // Everything above this line passes today. Everything below it fails,
@@ -70,25 +70,25 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
       'opens the basket',
       'clicks',
       { name: 'Basket' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'sees the mug in it',
       'seesText',
       { text: 'Enamel coffee mug' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'checks out',
       'clicks',
       { name: 'Checkout' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'sees the order confirmed',
       'seesText',
       { text: 'Order' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     // The operations screen, which is also the only thing that opens the
@@ -99,13 +99,13 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
       'opens operations',
       'clicks',
       { name: 'Manage' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.then(
       'sees the live panel',
       'seesText',
       { text: 'activity' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     // The payment webhook, which is Stripe's receiver rather than one of ours.
@@ -124,7 +124,7 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
         minStatus: 400,
         maxStatus: 499,
       },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     // the analytics beacon — an HTTP-only surface. Posting from the browser rather than
@@ -138,7 +138,7 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
         minStatus: 0,
         maxStatus: 299,
       },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     // The realtime surface, opened and closed deliberately. Visiting the page
@@ -155,7 +155,7 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
         // holding a subscription for a channel that has gone.
         unsubscribeAction: 'unsubscribeFromOrder',
       },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     return { landed: basket.pathname }

@@ -8,12 +8,12 @@ import { pikkuScenario } from '#pikku/scenarios'
 //~ THE NAMES BELOW ARE A WORKSHOP'S, AND THEY ARE NOT YOURS. `mechanic`, `desk`,
 //~ "work queue", "front of house" — every one is an EXAMPLE. Rename each to a virtual user
 //~ your `defineVirtualUsers` actually declares, in the export name, the title, the
-//~ description, the `actors.<name>` lookups and the thrown message. A merch build
+//~ description, the `virtualUsers.<name>` lookups and the thrown message. A merch build
 //~ pasted this verbatim and shipped `mechanicSeesTheirWorkScenario` and
-//~ `deskSeesTheFrontOfHouseScenario` into a t-shirt shop: both reference actors that
+//~ `deskSeesTheFrontOfHouseScenario` into a t-shirt shop: both reference virtual users that
 //~ do not exist, so both fail on every run and neither failure means anything.
 //~
-//~ ONE SCENARIO PER VIRTUAL_USER — never one scenario looping over actors. A failure has to
+//~ ONE SCENARIO PER VIRTUAL_USER — never one scenario looping over virtual users. A failure has to
 //~ name WHO was let down ("the mechanic never got a work queue"), and a loop collapses
 //~ every person into one red line that says nothing about which of them is broken.
 //~
@@ -28,10 +28,10 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
   title: 'The mechanic lands on their own work queue',
   description: 'A mechanic signs in and gets the workshop floor, not the front desk',
   tags: ['scenario', 'smoke'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.mechanic) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.mechanic) {
       throw new Error(
-        'mechanicSeesTheirWorkScenario needs the mechanic actor — run via `pikku scenario run <environment>`',
+        'mechanicSeesTheirWorkScenario needs the mechanic virtual user — run via `pikku scenario run <environment>`',
       )
     }
 
@@ -39,7 +39,7 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
       'the mechanic opens the app',
       'opensPage',
       { path: '/app' },
-      { actor: actors.mechanic },
+      { virtualUser: virtualUsers.mechanic },
     )
 
     //~ WHERE THEY LAND IS HALF THE CLAIM. Two roles sharing an app usually differ first by
@@ -50,7 +50,7 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
       'they come to rest on the workshop floor',
       'restsOnPath',
       { path: '/app/jobs' },
-      { actor: actors.mechanic },
+      { virtualUser: virtualUsers.mechanic },
     )
 
     //~ THE ASSERTION THAT DOES THE WORK: text only THIS person's screen offers. You do not
@@ -63,7 +63,7 @@ export const mechanicSeesTheirWorkScenario = pikkuScenario<void, { pathname: str
       'their assigned repairs are on screen',
       'seesText',
       { text: 'Assigned repairs' },
-      { actor: actors.mechanic },
+      { virtualUser: virtualUsers.mechanic },
     )
 
     return { pathname: landed.pathname }
@@ -79,10 +79,10 @@ export const deskSeesTheFrontOfHouseScenario = pikkuScenario<void, { pathname: s
   title: 'The counter clerk lands on the front desk',
   description: 'A clerk signs in and gets bookings and customers, not the repair queue',
   tags: ['scenario', 'smoke'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.counter) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.counter) {
       throw new Error(
-        'deskSeesTheFrontOfHouseScenario needs the counter actor — run via `pikku scenario run <environment>`',
+        'deskSeesTheFrontOfHouseScenario needs the counter virtual user — run via `pikku scenario run <environment>`',
       )
     }
 
@@ -90,21 +90,21 @@ export const deskSeesTheFrontOfHouseScenario = pikkuScenario<void, { pathname: s
       'the clerk opens the app',
       'opensPage',
       { path: '/app' },
-      { actor: actors.counter },
+      { virtualUser: virtualUsers.counter },
     )
 
     await scenario.then(
       'they come to rest on the front desk',
       'restsOnPath',
       { path: '/app/bookings' },
-      { actor: actors.counter },
+      { virtualUser: virtualUsers.counter },
     )
 
     await scenario.then(
       "today's bookings are on screen",
       'seesText',
       { text: "Today's bookings" },
-      { actor: actors.counter },
+      { virtualUser: virtualUsers.counter },
     )
 
     return { pathname: landed.pathname }

@@ -65,7 +65,7 @@ which is what decides whether a thrown error becomes a 409 or a 500.
 
 - **Worked examples are sparse.** Most exports show a signature and keys, not usage.
 - **`pikkuFunc` lists keys that belong elsewhere.** `before`, `after`, `skip`, `surfaces` and
-  `requiresActor` apply only to scenarios; `workflowQueued`, `workflowRetries` and
+  `requiresVirtualUser` apply only to scenarios; `workflowQueued`, `workflowRetries` and
   `workflowTimeout` only to a workflow step. One shared config type offers all of them to
   every function — each key says which it belongs to.
 
@@ -96,28 +96,28 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 
 **Running**
 
-| Command                      | What it does                                                                   | Read                                    |
-| ---------------------------- | ------------------------------------------------------------------------------ | --------------------------------------- |
-| `dev`                        | Local dev server, all services wired, watch + HMR                              | `pikku-build`                           |
-| `serve`                      | Bundled bun/node runner — no watch, no codegen                                 | `pikku-deploy`                          |
-| `watch`                      | Regenerate on file change, without a server                                    | —                                       |
-| `scenario list\|run`         | Scenarios as e2e tests and health checks                                       | `pikku-scenario`                        |
-| `virtual-user run`               | A declared virtual user, model-driven, against a stage                              | `pikku-scenario`, virtual-user-run reference |
+| Command                           | What it does                                                                   | Read                                         |
+| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
+| `dev`                             | Local dev server, all services wired, watch + HMR                              | `pikku-build`                                |
+| `serve`                           | Bundled bun/node runner — no watch, no codegen                                 | `pikku-deploy`                               |
+| `watch`                           | Regenerate on file change, without a server                                    | —                                            |
+| `scenario list\|run`              | Scenarios as e2e tests and health checks                                       | `pikku-scenario`                             |
+| `virtual-user run`                | A declared virtual user, model-driven, against a stage                         | `pikku-scenario`, virtual-user-run reference |
 | `virtual-user list\|sync\|secret` | Who is declared; what an environment will provision; minting their credentials | `pikku-scenario`, virtual-user-run reference |
-| `db`                         | Local development database                                                     | `pikku-kysely`                          |
+| `db`                              | Local development database                                                     | `pikku-kysely`                               |
 
 **Inspecting and evolving**
 
-| Command               | What it does                                                            | Read                         |
-| --------------------- | ----------------------------------------------------------------------- | ---------------------------- |
-| `doc`                 | The installed API surface                                               | this skill                   |
-| `meta` / `info`       | What the project declares, machine- and human-readable                  | `pikku-meta`                 |
-| `validate`            | Every check that applies — app structure, an addon's published file set | `pikku-build`, `pikku-addon` |
-| `versions` / `release` | Contract hashes, breaking-change detection, versioned releases        | `pikku-meta`                 |
-| `audit` / `update`    | Advisories; which `@pikku/*` can move and what peers that needs         | `pikku-meta`                 |
-| `scopes` / `roles`    | Declared authorization scopes; roles from `defineSystemRole`            | `pikku-auth`                 |
-| `knowledge`           | The knowledge base — what this app is, in its users' language           | `pikku-knowledge`            |
-| `emails`              | Email template generation                                               | `pikku-emails`               |
+| Command                | What it does                                                            | Read                         |
+| ---------------------- | ----------------------------------------------------------------------- | ---------------------------- |
+| `doc`                  | The installed API surface                                               | this skill                   |
+| `meta` / `info`        | What the project declares, machine- and human-readable                  | `pikku-meta`                 |
+| `validate`             | Every check that applies — app structure, an addon's published file set | `pikku-build`, `pikku-addon` |
+| `versions` / `release` | Contract hashes, breaking-change detection, versioned releases          | `pikku-meta`                 |
+| `audit` / `update`     | Advisories; which `@pikku/*` can move and what peers that needs         | `pikku-meta`                 |
+| `scopes` / `roles`     | Declared authorization scopes; roles from `defineSystemRole`            | `pikku-auth`                 |
+| `knowledge`            | The knowledge base — what this app is, in its users' language           | `pikku-knowledge`            |
+| `emails`               | Email template generation                                               | `pikku-emails`               |
 
 **Shipping, and the CLI itself**
 
@@ -298,7 +298,7 @@ a Workers or serverless stage needs done belongs on the request path that needs 
 where Pikku is embedded in a server you own. Lifecycle hooks do not run on this path; do the
 startup work in the entrypoint.
 
-`pikku validate` warns when a project starts a server by hand *and* depends on no runtime adapter,
+`pikku validate` warns when a project starts a server by hand _and_ depends on no runtime adapter,
 because that means the first path was available and unused.
 
 **`references/bootstrap.md`** has both entrypoints in full.
@@ -355,17 +355,17 @@ src/
 Three different things in a Pikku project have a human language, and they are **not** the same
 language. Collapsing them is the common mistake:
 
-| Axis            | Covers                                                                        | Decided by                                     |
-| --------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Identifiers** | Function, component, type and file names; tables and columns; commit messages | Nothing. **Always English.** There is no setting |
-| **Meta**        | Prose authored inside the code — `description`, `title`, step `template`      | `metaLocale` in `pikku.config.json` (default `en`) |
+| Axis            | Covers                                                                        | Decided by                                                    |
+| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **Identifiers** | Function, component, type and file names; tables and columns; commit messages | Nothing. **Always English.** There is no setting              |
+| **Meta**        | Prose authored inside the code — `description`, `title`, step `template`      | `metaLocale` in `pikku.config.json` (default `en`)            |
 | **Product UI**  | Every string the app shows a user                                             | `messages/<locale>.json`, and `active.json`'s `defaultLocale` |
 
 Identifiers are the surface every other tool binds to — the generated clients, the RPC map a
 scenario is typed over, the SQL types — and unlike a string an identifier cannot be translated
 later: renaming one is a migration. `metaLocale` exists so a team can read their own Console in
 their own language; it is not licence to rename anything. And `baseLocale` in
-`project.inlang/settings.json` stays `en`, because it names the message *source* every other
+`project.inlang/settings.json` stays `en`, because it names the message _source_ every other
 language is cloned from.
 
 **When a brief tells you the product speaks a language, it is telling you about the third axis and

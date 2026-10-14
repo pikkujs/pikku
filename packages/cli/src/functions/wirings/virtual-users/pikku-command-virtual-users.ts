@@ -17,8 +17,12 @@ export const pikkuVirtualUsers = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
-    const { virtualUsersFile, virtualUsersMetaJsonFile, rolesFile, packageMappings } =
-      config
+    const {
+      virtualUsersFile,
+      virtualUsersMetaJsonFile,
+      rolesFile,
+      packageMappings,
+    } = config
 
     if (!virtualUsersFile) {
       return
@@ -53,7 +57,7 @@ export const pikkuVirtualUsers = pikkuSessionlessFunc<
     })
     await writeFileInDir(logger, virtualUsersFile, content)
 
-    // The actor sign-in secret only means anything once someone is declared
+    // The virtual user sign-in secret only means anything once someone is declared
     // to sign in. Drop the file again when the last virtual user goes, so a stale
     // declaration can't keep asking a deploy for a value nothing reads.
     const secretsFile = virtualUsersSecretsFilePath(virtualUsersFile)
@@ -64,7 +68,9 @@ export const pikkuVirtualUsers = pikkuSessionlessFunc<
     }
 
     if (virtualUsersMetaJsonFile) {
-      const meta = validateAndBuildVirtualUsersMeta(state.virtualUsers.definitions)
+      const meta = validateAndBuildVirtualUsersMeta(
+        state.virtualUsers.definitions
+      )
       await writeFileInDir(
         logger,
         virtualUsersMetaJsonFile,

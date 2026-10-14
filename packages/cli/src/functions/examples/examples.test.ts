@@ -14,7 +14,7 @@ import { EXAMPLES } from '../../examples.gen.js'
 import {
   entityNames,
   extractTeaching,
-  renameActorsInCode,
+  renameVirtualUsersInCode,
   renameEntityInCode,
   renameEntityInPath,
   requiredChain,
@@ -23,7 +23,11 @@ import {
   splitExampleFiles,
   stripTeaching,
 } from './corpus.js'
-import { entityWriteCoverage, virtualUserCast, resolveAppBase } from './project.js'
+import {
+  entityWriteCoverage,
+  virtualUserCast,
+  resolveAppBase,
+} from './project.js'
 import { runExamplesAdd, runExamplesList, runExamplesShow } from './run.js'
 
 const project = (files: Record<string, string>) => {
@@ -146,27 +150,27 @@ describe('renaming onto a real entity', () => {
     assert.equal(reservedEntityCollision('clientVisit'), null)
   })
 
-  test("an example's actors are pointed at people this project declares", () => {
+  test("an example's virtual users are pointed at people this project declares", () => {
     const code =
-      "scenario.do(actors.mechanic, 'x'); scenario.do(actors.clerk, 'y')"
+      "scenario.do(virtualUsers.mechanic, 'x'); scenario.do(virtualUsers.clerk, 'y')"
     assert.equal(
-      renameActorsInCode(code, ['owner', 'staff']),
-      "scenario.do(actors.owner, 'x'); scenario.do(actors.staff, 'y')"
+      renameVirtualUsersInCode(code, ['owner', 'staff']),
+      "scenario.do(virtualUsers.owner, 'x'); scenario.do(virtualUsers.staff, 'y')"
     )
   })
 
   test('a cast smaller than the example saturates on the last person', () => {
-    const code = 'actors.a actors.b actors.c'
+    const code = 'virtualUsers.a virtualUsers.b virtualUsers.c'
     assert.equal(
-      renameActorsInCode(code, ['solo']),
-      'actors.solo actors.solo actors.solo'
+      renameVirtualUsersInCode(code, ['solo']),
+      'virtualUsers.solo virtualUsers.solo virtualUsers.solo'
     )
   })
 
-  test('an actor the project already declares is left alone', () => {
+  test('a virtual user the project already declares is left alone', () => {
     assert.equal(
-      renameActorsInCode('actors.owner', ['owner', 'staff']),
-      'actors.owner'
+      renameVirtualUsersInCode('virtualUsers.owner', ['owner', 'staff']),
+      'virtualUsers.owner'
     )
   })
 })
@@ -251,7 +255,10 @@ describe('reading the project', () => {
         '})',
       ].join('\n'),
     })
-    assert.deepEqual(virtualUserCast(srcDirectories), ['dispatcher', 'technician'])
+    assert.deepEqual(virtualUserCast(srcDirectories), [
+      'dispatcher',
+      'technician',
+    ])
   })
 
   test('a framework-declared table is not something a person has to be able to edit', () => {

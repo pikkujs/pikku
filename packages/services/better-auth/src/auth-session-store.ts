@@ -10,7 +10,7 @@ import {
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { defaultSession } from './default-session.js'
-import { stampActorFlag } from './stamp-actor-flag.js'
+import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { verifySessionCredential } from './session-credential.js'
 import type { SessionStore } from './session-store.js'
@@ -179,7 +179,7 @@ export const betterAuthStoreSession = (
 
       await setSession(
         await withResolvedScopes(
-          stampActorFlag(mapped, stored.user),
+          stampVirtualUserFlag(mapped, stored.user),
           services as CoreServices
         )
       )

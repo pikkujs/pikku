@@ -127,7 +127,8 @@ export function refuseNewApp(
 
   for (const [otherSlug, other] of Object.entries(frontends)) {
     const taken = virtualUsers.filter(
-      (p) => virtualUserApps.get(p) === otherSlug || other.virtualUsers?.includes(p)
+      (p) =>
+        virtualUserApps.get(p) === otherSlug || other.virtualUsers?.includes(p)
     )
     if (taken.length > 0) {
       return (
@@ -193,14 +194,16 @@ export function virtualUserAppsInSource(repoDir: string): Map<string, string> {
 export function virtualUsersNamedInSource(repoDir: string): Set<string> {
   const path = virtualUsersSourcePath(repoDir)
   if (!existsSync(path)) return new Set()
-  return new Set(virtualUserEntries(readFileSync(path, 'utf8')).map((e) => e.id))
+  return new Set(
+    virtualUserEntries(readFileSync(path, 'utf8')).map((e) => e.id)
+  )
 }
 
 /**
  * Record on each named virtual user that they sign into `app`.
  *
  * The declaration is where this belongs: `virtualUser.app` is the field the
- * scenario runner already reads to pick an actor's base url, so keeping a
+ * scenario runner already reads to pick a virtual user's base url, so keeping a
  * second list beside the app leaves the two able to disagree about where a
  * browser step lands.
  */

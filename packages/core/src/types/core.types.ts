@@ -128,8 +128,8 @@ export interface CoreUserSession {
   userId?: string
   /** The tenant the session is acting inside, when the project has more than one. */
   orgId?: string
-  /** True when the session belongs to a synthetic scenario actor — lets audits/analytics address synthetic traffic */
-  actor?: boolean
+  /** True when the session belongs to a synthetic scenario virtual user — lets audits/analytics address synthetic traffic */
+  virtualUser?: boolean
   /**
    * Scopes granted to this session, checked against a function's `scopes`.
    * Populated by whoever builds the session — core reads them, never fetches.
@@ -279,7 +279,7 @@ export type PikkuWire<
   // context, and this default is what other generics constrain against. See
   // `ScenarioContext`.
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
+  TScenarioVirtualUsers extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
@@ -314,17 +314,17 @@ export type PikkuWire<
   cli: PikkuCLI<TypedRPC['remote']>
   workflow: TypedWorkflow
   scenario: TypedScenario
-  actors: TypedActors
+  virtualUsers: TScenarioVirtualUsers
   /**
    * The virtual user this step runs as, injected by the runner.
    *
    * Required on a `browser` binding, which cannot be provisioned without one,
-   * and on any binding whose step declares `actor: true`. A step that declares
-   * neither has no `actor` on its wire at all rather than an optional one —
+   * and on any binding whose step declares `virtualUser: true`. A step that declares
+   * neither has no `virtualUser` on its wire at all rather than an optional one —
    * a pure assertion has nobody to be, and `attemptsSignIn` deliberately posts
-   * credentials instead of reusing an actor's session.
+   * credentials instead of reusing a virtual user's session.
    */
-  actor: ScenarioVirtualUserOf<TypedActors>
+  virtualUser: ScenarioVirtualUserOf<TScenarioVirtualUsers>
   /** Present on every scenario step invocation */
   scenarioStep: PikkuScenarioStepWire
   /** Present only when the runner provisioned a browser for this step */

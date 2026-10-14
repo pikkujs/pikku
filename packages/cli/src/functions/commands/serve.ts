@@ -5,10 +5,7 @@ import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
-import {
-  ConsoleLogger,
-  InMemoryTriggerSourceStore,
-} from '@pikku/core/services'
+import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -39,7 +36,7 @@ import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
-import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
+import { disableDevVirtualUserSignIn } from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
@@ -61,7 +58,7 @@ export const serve = pikkuSessionlessFunc<
     { port, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
-    disableDevActorSignIn(logger)
+    disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({
       rootDir: config.rootDir,

@@ -883,7 +883,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     options?: {
       inline?: boolean
       startNode?: string
-      actors?: ScenarioVirtualUsers
+      virtualUsers?: ScenarioVirtualUsers
       onRunCreated?: (runId: string) => void
     }
   ): Promise<{ runId: string }> {
@@ -1549,7 +1549,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const resolvedStepOptions: WorkflowStepOptions = {
       retries: stepOptions?.retries ?? DEFAULT_STEP_RETRIES,
       retryDelay: stepOptions?.retryDelay,
-      actor: stepOptions?.actor,
+      virtualUser: stepOptions?.virtualUser,
     }
     const stepState = await this.loadOrCreateStep(runId, stepName, async () => {
       if (stepOptions?.compensate === false) {
@@ -1593,7 +1593,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    const dispatched = resolvedStepOptions.actor
+    const dispatched = resolvedStepOptions.virtualUser
       ? false
       : await this.dispatchStep(
           runId,
@@ -1619,8 +1619,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       retries,
       retryDelay,
       async (currentStepState) => {
-        if (resolvedStepOptions.actor) {
-          return resolvedStepOptions.actor.invoke(rpcName, data)
+        if (resolvedStepOptions.virtualUser) {
+          return resolvedStepOptions.virtualUser.invoke(rpcName, data)
         }
         if (pikkuState(null, 'workflows', 'meta')[rpcName]) {
           return runInlineChildStep(

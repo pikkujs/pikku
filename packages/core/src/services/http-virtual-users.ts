@@ -8,18 +8,18 @@ import type {
 import { readScenarioHttpResponse } from './virtual-users-service.js'
 import type {
   ConverseOptions,
-  ActorFlowVerdict,
+  ConversationVerdict,
   TargetAgentReply,
   TargetPendingApproval,
-} from '../wirings/actor-flow/actor-flow.types.js'
-import { runConversation } from '../wirings/actor-flow/run-conversation.js'
+} from '../wirings/virtual-user-conversation/virtual-user-conversation.types.js'
+import { runConversation } from '../wirings/virtual-user-conversation/run-conversation.js'
 import {
   createCookieJar,
   type ScenarioCookieJar,
 } from '../wirings/workflow/scenario-cookie-jar.js'
 import {
-  ActorSignIn,
-  type ActorSecretResolver,
+  VirtualUserSecretSignIn,
+  type VirtualUserSecretResolver,
   OperatorSignIn,
   type OperatorSignInOptions,
   type VirtualUserSignIn,
@@ -37,19 +37,19 @@ export interface HttpVirtualUsersConfig {
    */
   apiUrl: string
   /**
-   * The ROOT actor secret, from which each virtual user's own credential is derived
+   * The ROOT virtual user secret, from which each virtual user's own credential is derived
    * and bound to their address. Sign-in only ever works for user rows flagged
-   * `actor: true`, and a derived credential only ever works for the one address
+   * `virtualUser: true`, and a derived credential only ever works for the one address
    * it was derived for.
    *
-   * Pass an {@link ActorSecretResolver} instead to drive virtual users whose
+   * Pass an {@link VirtualUserSecretResolver} instead to drive virtual users whose
    * credentials were minted elsewhere — a caller entitled to one virtual user then
    * never holds the root.
    *
    * The local-development credential. A deployed stage has none, and passes
    * {@link HttpVirtualUsersConfig.operator} instead.
    */
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   /**
    * Fabric operator credentials, for signing virtual users into a DEPLOYED stage.
    *
@@ -62,8 +62,8 @@ export interface HttpVirtualUsersConfig {
   virtualUsers: Record<string, ResolvedVirtualUser>
   /**
    * Sign-in path under apiUrl, for whichever of the two paths is in use — an
-   * app that mounts auth under `/api` moves both. Default: the actor plugin's
-   * `/auth/sign-in/actor`, or `/auth/sign-in/fabric` for an operator.
+   * app that mounts auth under `/api` moves both. Default: the virtual user plugin's
+   * `/auth/sign-in/virtual-user`, or `/auth/sign-in/fabric` for an operator.
    * {@link OperatorSignInOptions.signInPath} overrides it.
    */
   signInPath?: string
@@ -101,7 +101,7 @@ export interface HttpVirtualUsersConfig {
  * health-check runs can outlive a session).
  *
  * How it signs in depends on the target, and the two ways are not
- * interchangeable — see {@link ActorSignIn} for local development and
+ * interchangeable — see {@link VirtualUserSecretSignIn} for local development and
  * {@link OperatorSignIn} for a deployed stage.
  */
 export class HttpVirtualUser implements ScenarioVirtualUser {
@@ -131,10 +131,10 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
             : undefined),
       })
     } else if (config.secret) {
-      this.signIn = new ActorSignIn(
+      this.signIn = new VirtualUserSecretSignIn(
         config.apiUrl,
         config.secret,
-        config.signInPath ?? '/auth/sign-in/actor'
+        config.signInPath ?? '/auth/sign-in/virtual-user'
       )
     } else {
       throw new Error(
@@ -175,7 +175,7 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
     return readScenarioHttpResponse(res)
   }
 
-  async converse(options: ConverseOptions): Promise<ActorFlowVerdict> {
+  async converse(options: ConverseOptions): Promise<ConversationVerdict> {
     const { agentRunner } = getSingletonServices()
     if (!agentRunner) {
       throw new AIProviderNotConfiguredError()
