@@ -1,6 +1,4 @@
 ---
-'@pikku/mantine': patch
-'@pikku/react-layout-panel': patch
 '@pikku/cli': patch
 'create-pikku': patch
 '@pikku/skills': patch
