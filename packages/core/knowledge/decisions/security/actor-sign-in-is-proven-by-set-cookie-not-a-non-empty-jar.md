@@ -1,16 +1,17 @@
 ---
 type: decision
 title: Actor sign-in is proven by Set-Cookie, not a non-empty jar
-description: HttpScenarioActor tracks its own signedIn flag and requires the sign-in response itself to set a cookie, because a populated jar proves nothing
+description: HttpPersona tracks its own signedIn flag and ActorSignIn requires the sign-in response itself to set a cookie, because a populated jar proves nothing
 tags: services
 ---
 
 # Actor sign-in is proven by Set-Cookie, not a non-empty jar
 
-`HttpScenarioActor` (`packages/core/src/services/http-scenario-actors.ts`) keeps
-a private `signedIn` boolean rather than inferring the session from its cookie
-jar, and `login()` throws when the sign-in response carries no `Set-Cookie`
-header even though the response was a 2xx.
+`HttpPersona` (`packages/core/src/services/http-personas.ts`) keeps a private
+`signedIn` boolean rather than inferring the session from its cookie jar.
+`ActorSignIn.login` (`packages/core/src/services/persona-sign-in.ts`, around line
+110) throws when the sign-in response carries no `Set-Cookie` header, even though
+the response was a 2xx.
 
 A cookie jar cannot answer "did sign-in happen". A target app may set a cookie on
 any request — a CSRF token, an anonymous session, a locale — so a non-empty jar

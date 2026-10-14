@@ -1,27 +1,29 @@
 ---
 type: decision
-title: Scenario agent calls sign in on 401 only
-description: postAgent sends the first request with whatever session it holds and logs in only if refused, so an actor can converse with a no-auth agent with no sign-in wiring
+title: Scenario agent calls retry sign-in only on 401
+description: HttpPersona.sendAgent sends with whatever session the jar holds and signs in only after a 401, so a no-auth agent route never needs a sign-in; converse signs in eagerly instead
 tags: services
 ---
 
-# Scenario agent calls sign in on 401 only
+# Scenario agent calls retry sign-in only on 401
 
-`HttpScenarioActor.postAgent`
-(`packages/core/src/services/http-scenario-actors.ts`) sends its first request
-with whatever cookie the jar happens to hold — none, for an actor that has never
-signed in — and only a 401 triggers `login()` and a single retry. Its sibling
-`invokeRaw` does the opposite: it signs in eagerly before the first RPC.
+`HttpPersona.sendAgent` (`packages/core/src/services/http-personas.ts`, around
+line 400) sends its request with whatever cookie the jar holds. Only a 401
+triggers `signOut()`, `login()` and a single retry. The agent calls that go
+through it are the stream and approve paths and `postAgent`.
 
-The asymmetry is deliberate. Agent HTTP routes may be public; RPC routes are
-assumed not to be. Making agent calls eager would mean an actor could not talk to
-a no-auth agent at all without a sign-in endpoint, an actor secret and a user
-table — a large amount of wiring to exercise an agent that requires none of it.
-Deferring to the 401 keeps the authenticated case working (the retry succeeds
-with the session attached) at the cost of one extra round trip the first time.
+`HttpPersona.converse` does not use that path. Before its first turn it calls
+`login()` when `signedIn` is false (around line 249). The reason is in the code
+comment there: a public agent route never returns 401, so the retry would never
+sign the persona in, and a persona is a real account, so conversing as nobody is
+not the intent. See [a persona's converse signs in before its first turn](a-persona-converse-signs-in-before-its-first-turn.md).
 
-**What this rules out:** unifying the two paths so `postAgent` signs in up front
-"like `invokeRaw` does", and removing the 401 retry on the grounds that
-`invokeRaw` already guarantees a session. Note the ordering consequence: an actor
-whose first action is `converse` against a no-auth agent never signs in at all, so
-nothing else may assume `signedIn` is true after a conversation.
+The 401 path exists because agent HTTP routes may be public. Making every agent
+call eager would mean a persona could not reach a no-auth agent without a
+sign-in endpoint and credentials. Deferring to the 401 keeps the authenticated
+case working (the retry succeeds with the session attached) at the cost of one
+extra round trip the first time.
+
+**What this rules out:** removing the 401 retry from `sendAgent` on the grounds
+that a sign-in always happens first, and making `sendAgent` sign in up front
+without first checking what the agent route requires.

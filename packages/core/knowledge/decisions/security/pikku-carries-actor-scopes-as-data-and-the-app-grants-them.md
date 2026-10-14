@@ -20,7 +20,7 @@ from a config file — the one place where a scenario author would least expect 
 security decision to take effect. Keeping the fields inert makes the grant an act
 the app performs deliberately, in code it owns, against a store it wired.
 
-**What this rules out:** teaching `createHttpScenarioActors` (or any core service)
+**What this rules out:** teaching `createHttpPersonas` (or any core service)
 to call `ScopeService.addScopeToUser` / `addUserToRole` from these fields, and
 treating a scope listed on an actor config as evidence that the actor holds it.
 If a scenario fails on a missing scope, the fix is in the app's seed, not here.

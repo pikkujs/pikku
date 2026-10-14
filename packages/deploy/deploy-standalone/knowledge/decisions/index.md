@@ -7,8 +7,11 @@ description: What "a standalone unit with a UI" does and does not mean, and what
 # Decisions
 
 <!-- pikku:knowledge-index -->
+- [A native biometric prompt is not access control, and the next-steps output says so](a-biometric-prompt-is-not-access-control.md) — The biometric native API entry carries a caveat that a biometric check in front of a server-served screen is decoration, and the next-steps output prints it
+- [A native shell grants its IPC permissions only to the origin its mode names](a-native-shell-grants-ipc-only-to-the-origin-its-mode-names.md) — nativeGrantUrl returns no grant for a bundled UI, the named origin for a remote url, and every loopback port for a sidecar, and the capability file is written from that value
 - [A pikku server serves a static frontend, not a rendered one](a-pikku-server-serves-a-static-frontend.md) — The frontend is TanStack Start built to static output and served through a static mount; pikku never runs a framework renderer in-process
 - [A remote desktop shell bundles nothing](a-remote-desktop-shell-bundles-nothing.md) — Superseded — --desktop-url produced a window onto an already-deployed server — no sidecar, no binary, no bun requirement — with the window declared in tauri.conf.json rather than opened from Rust
+- [A standalone artifact's command line has no way to invoke an RPC](a-standalone-artifact-has-no-command-to-invoke-an-rpc.md) — The bundle answers serve, version, help, db migrate, db status and backup, and an in-process RPC invoke is left out because it would skip auth, sessions and middleware
 - [Deploy consumes a built frontend, it does not build one](deploy-consumes-a-built-frontend.md) — pikku reads an already-built client directory named by a frontends entry; running the frontend's build command is the project's job
 - [Desktop builds are unsigned and never update themselves](desktop-builds-are-unsigned-and-never-update-themselves.md) — Code signing, notarization and auto-update are deliberately absent from the first version of the Tauri shell — a known limitation, not an oversight
 - [Standalone assets are embedded in the bun binary](standalone-assets-are-embedded-in-the-bun-binary.md) — A generated manifest of `with { type: 'file' }` imports puts the frontend inside the compiled binary; the imports must be static literals, which fixes the build order
