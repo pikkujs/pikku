@@ -771,14 +771,6 @@ export type PikkuCLIInput = {
      */
     browserDriver?: string
     /**
-     * A module, relative to the project root, whose default export (or
-     * `signIn` export) is a `PersonaSignIn` or a factory
-     * `({ apiUrl, fetch, signInPath }) => PersonaSignIn`. When set it replaces
-     * SCENARIO_ACTOR_SECRET and the operator token for every command that
-     * signs personas in, HTTP and browser alike.
-     */
-    signIn?: string
-    /**
      * The model a persona thinks with — for `actor.converse(...)` and for
      * `pikku virtual-user run`. Its own turns, its approval decisions and its
      * closing verdict. Not the model under test: that one belongs to the agent

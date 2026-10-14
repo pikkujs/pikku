@@ -855,6 +855,7 @@ export interface InspectorState {
   personas: {
     definitions: PersonaDefinitions
     files: Set<string>
+    signInFiles: Set<string>
   }
   variables: {
     definitions: VariableDefinitions

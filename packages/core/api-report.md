@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3292 observable things**: 1101 exported names, plus
-2191 members on the classes and interfaces among them, reachable
+**3297 observable things**: 1103 exported names, plus
+2194 members on the classes and interfaces among them, reachable
 through 59 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,15 +14,15 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 174 | 142 | 471 |
-| `./virtual-user` | 66 | 66 | 216 |
-| `./scenario` | 50 | 50 | 160 |
+| `./services` | 174 | 142 | 473 |
+| `./virtual-user` | 66 | 66 | 215 |
+| `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
+| `./persona` | 51 | 43 | 52 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 47 | 41 | 52 |
 | `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
@@ -162,6 +162,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -291,6 +292,7 @@ export interface PikkuPackageState {
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
+  persona: { signIn: PersonaSignInFactory | null }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
   package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
@@ -2371,7 +2373,7 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
-executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, signIn, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined
@@ -2388,7 +2390,6 @@ export interface ExecuteVirtualUserRunParams {
   seed: number
   budget?: { steps?: number; mutations?: number; durationMs?: number }
   operatorToken?: string
-  signIn?: PersonaSignIn | PersonaSignInFactory
 }
 export interface IntentRecord {
   id: string
@@ -4400,10 +4401,12 @@ export type CorePersona = {
   app?: string
 }
 export type CorePersonas = Record<string, CorePersona>
+createCookieJar: (apiUrl: string) => ScenarioCookieJar
 createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
 definePersonas: (_config: CorePersonas) => void
 deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
 establishOperatorSession: (fetchImpl: (input: URL | RequestInfo, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, persona: ResolvedPersona, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
+getWiredPersonaSignIn: () => PersonaSignInFactory | null
 export class HttpPersona implements ScenarioPersona {
   constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
   get email(): string
@@ -4416,7 +4419,7 @@ export interface HttpPersonasConfig {
   apiUrl: string
   secret?: string | ActorSecretResolver
   operator?: OperatorSignInOptions
-  signIn?: PersonaSignIn | PersonaSignInFactory
+  variables?: VariablesService
   personas: Record<string, ResolvedPersona>
   signInPath?: string
   sessionPath?: string
@@ -4485,12 +4488,12 @@ export type PersonaMeta = {
 }
 export interface PersonaSignIn {
   login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
-  headers(): Record<string, string>
+  headers?(): Record<string, string>
 }
 export interface PersonaSignInContext {
   apiUrl: string
-  fetch: typeof fetch
   signInPath?: string
+  variables: VariablesService
 }
 export type PersonaSignInFactory = (
   context: PersonaSignInContext
@@ -4517,9 +4520,15 @@ export interface RoleVerification {
   ok: boolean
 }
 runnablePersonas: (meta: PersonasMeta) => PersonaMeta[]
+export interface ScenarioCookieJar {
+  fetch: typeof fetch
+  clear(): void
+  readonly empty: boolean
+}
 validateAndBuildPersonasMeta: (definitions: PersonaDefinitions) => PersonasMeta
 verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
 verifyPersonaRoles: (persona: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
+wirePersonaSignIn: (factory: PersonaSignInFactory) => void
 ```
 
 ## ./secret
@@ -5556,6 +5565,7 @@ export class ScopedSecretService implements SecretService {
   async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async hasSecret(key: string): Promise<boolean>
   async setSecret(_key: string, _value: unknown): Promise<void>
+  async setEncryptedSecret(_key: string, _sealed: string): Promise<void>
   async deleteSecret(_key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5595,6 +5605,7 @@ export interface SecretService {
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
+  setEncryptedSecret?(key: string, sealed: string): Promise<void>
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
@@ -5734,6 +5745,7 @@ export class TypedSecretService< TMap = Record<string, unknown>, > implements Se
   async getSecret(key: string): Promise<unknown>
   async hasSecret(key: string): Promise<boolean>
   async setSecret<K extends string>(key: K, value: K extends keyof TMap ? TMap[K] : unknown): Promise<void>
+  async setEncryptedSecret(key: string, sealed: string): Promise<void>
   async deleteSecret(key: string): Promise<void>
   async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
   async getAllStatus(): Promise<CredentialStatus[]>
@@ -6381,6 +6393,7 @@ export interface PikkuPackageState {
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
+  persona: { signIn: PersonaSignInFactory | null }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
   package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }

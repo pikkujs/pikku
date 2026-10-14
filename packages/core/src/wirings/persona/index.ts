@@ -64,6 +64,14 @@ export {
   authMount,
 } from '../../services/persona-sign-in.js'
 export {
+  createCookieJar,
+  type ScenarioCookieJar,
+} from '../workflow/scenario-cookie-jar.js'
+export {
+  wirePersonaSignIn,
+  getWiredPersonaSignIn,
+} from './wire-persona-sign-in.js'
+export {
   ACTOR_ROOT_SECRET_MIN_LENGTH,
   ACTOR_SECRET_INFO,
   ACTOR_SECRET_NAME,

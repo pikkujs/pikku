@@ -404,3 +404,12 @@ describe('validatePersonaRoles', () => {
     assert.deepEqual(criticals, [])
   })
 })
+
+describe('wirePersonaSignIn', () => {
+  test('the file that calls it is recorded for the bootstrap', async () => {
+    const { state } = await inspectSource(
+      'wirePersonaSignIn(() => ({ login: async () => {} }))'
+    )
+    assert.equal(state.personas.signInFiles.size, 1)
+  })
+})

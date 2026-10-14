@@ -1,7 +1,10 @@
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
-import type { ResolvedPersona } from '@pikku/core/services'
+import {
+  LocalVariablesService,
+  type ResolvedPersona,
+} from '@pikku/core/services'
 import {
   authMount,
   deriveActorSecret,
@@ -9,8 +12,9 @@ import {
   IMPERSONATE_USER_ID_HEADER,
   type ActorSecretResolver,
   type OperatorSignInOptions,
-  type PersonaSignIn,
-  type PersonaSignInFactory,
+  createCookieJar,
+  getWiredPersonaSignIn,
+  type ScenarioCookieJar,
 } from '@pikku/core/persona'
 import type {
   ScenarioArtifact,
@@ -79,7 +83,6 @@ export interface PlaywrightScenarioBrowserProviderOptions {
    * one scenario still act as one user.
    */
   operator?: OperatorSignInOptions
-  personaSignIn?: PersonaSignIn | PersonaSignInFactory
   /** Actor name → the persona filling it, resolved from `definePersonas()`. */
   actors: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
@@ -523,53 +526,38 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * same reason it does on the HTTP side: it is the stronger of the two.
    */
   private defaultSignIn(persona: ResolvedPersona): ActorSignIn {
-    const personaSignIn = this.options.personaSignIn
-    if (personaSignIn) {
+    const wired = getWiredPersonaSignIn()
+    if (wired) {
       return async (context, _request, target) => {
+        const plugin = wired({
+          apiUrl: target.apiUrl,
+          signInPath: this.options.signInPath,
+          variables: new LocalVariablesService(),
+        })
         const held = new Map<string, string>()
-        const origin = new URL(target.appUrl).origin
-        const jarFetch: typeof fetch = async (input, init) => {
-          const headers = new Headers(init?.headers)
-          headers.set('origin', origin)
-          if (held.size > 0) {
-            headers.set(
-              'cookie',
-              [...held.values()].map((raw) => raw.split(';')[0]).join('; ')
-            )
-          }
-          const response = await fetch(input, { ...init, headers })
-          for (const raw of response.headers.getSetCookie?.() ?? []) {
-            const pair = raw.split(';')[0]!
-            const eq = pair.indexOf('=')
-            const name = pair.slice(0, eq).trim()
-            if (eq > 0 && pair.slice(eq + 1)) {
-              held.set(name, raw)
-            } else {
-              held.delete(name)
+        const base = createCookieJar(target.appUrl)
+        const jar: ScenarioCookieJar = {
+          ...base,
+          fetch: async (input, init) => {
+            const response = await base.fetch(input, init)
+            for (const raw of response.headers.getSetCookie?.() ?? []) {
+              const [pair = ''] = raw.split(';')
+              const eq = pair.indexOf('=')
+              const name = pair.slice(0, eq).trim()
+              if (eq > 0 && pair.slice(eq + 1)) {
+                held.set(name, raw)
+              } else {
+                held.delete(name)
+              }
             }
-          }
-          return response
-        }
-        const plugin =
-          typeof personaSignIn === 'function'
-            ? personaSignIn({
-                apiUrl: target.apiUrl,
-                fetch: jarFetch,
-                signInPath: this.options.signInPath,
-              })
-            : personaSignIn
-        const jar: Parameters<PersonaSignIn['login']>[0] = {
-          fetch: jarFetch,
-          clear: () => held.clear(),
-          get empty() {
-            return held.size === 0
+            return response
           },
         }
         await plugin.login(jar, persona)
         await context.addCookies(
           [...held.values()].map((raw) => parseCookie(raw, target.appUrl))
         )
-        const headers = plugin.headers()
+        const headers = plugin.headers?.() ?? {}
         if (Object.keys(headers).length > 0) {
           await headersOn(context, headers, [target.apiUrl, target.appUrl])
         }

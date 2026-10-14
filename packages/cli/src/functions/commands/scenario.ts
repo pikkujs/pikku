@@ -39,7 +39,7 @@ import {
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import {
   resolvePersonaCredentials,
-  loadConfiguredSignIn,
+  loadWiredPersonaSignIn,
 } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import {
@@ -296,10 +296,10 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
+    await loadWiredPersonaSignIn(state)
     const credentials = await resolvePersonaCredentials(
       variables,
-      'scenario actors',
-      await loadConfiguredSignIn(config)
+      'scenario actors'
     )
     // Every declared persona, with its address filled in. Resolved once: the
     // HTTP personas and the Playwright provider below must see the same
@@ -311,6 +311,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     const actors = createHttpPersonas({
       apiUrl: env.apiUrl,
       ...credentials,
+      variables,
       personas: scenarioActors,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,

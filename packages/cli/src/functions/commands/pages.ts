@@ -22,7 +22,10 @@ import {
 } from './scenario-browser.js'
 import { resolveEnvironment } from './environment.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import {
+  resolvePersonaCredentials,
+  loadWiredPersonaSignIn,
+} from '../../utils/persona-credentials.js'
 
 type PlaywrightDriver = typeof PlaywrightModule
 
@@ -116,6 +119,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
         environments: config.environments ?? {},
         appUrl: baseUrl,
       })
+      await loadWiredPersonaSignIn(state)
       const provider = await resolveScenarioBrowserProvider({
         environment,
         apiUrl: env.apiUrl,

@@ -26,6 +26,10 @@ import {
   type PersonaSignInFactory,
   authMount,
 } from './persona-sign-in.js'
+import { getWiredPersonaSignIn } from '../wirings/persona/wire-persona-sign-in.js'
+import { LocalVariablesService } from './local-variables.js'
+import type { VariablesService } from './variables-service.js'
+import { PikkuError } from '../errors/error-handler.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
@@ -49,6 +53,9 @@ export interface HttpPersonasConfig {
    *
    * The local-development credential. A deployed stage has none, and passes
    * {@link HttpPersonasConfig.operator} instead.
+   *
+   * Refused alongside a sign-in registered with `wirePersonaSignIn`, which
+   * replaces both.
    */
   secret?: string | ActorSecretResolver
   /**
@@ -59,7 +66,11 @@ export interface HttpPersonasConfig {
    * them, so no test credential has to exist on the target at all.
    */
   operator?: OperatorSignInOptions
-  signIn?: PersonaSignIn | PersonaSignInFactory
+  /**
+   * Handed to a sign-in registered with `wirePersonaSignIn`. Defaults to a
+   * service over the process environment.
+   */
+  variables?: VariablesService
   /** Persona id → the declaration with its address filled in. */
   personas: Record<string, ResolvedPersona>
   /**
@@ -97,15 +108,40 @@ export interface HttpPersonasConfig {
   model?: string
 }
 
-const assertSingleSignIn = (config: HttpPersonasConfig): void => {
-  if (!config.signIn) return
-  const clashing = (['secret', 'operator'] as const).filter(
-    (key) => config[key]
-  )
-  if (clashing.length > 0) {
-    throw new Error(
-      `[scenario] 'signIn' replaces ${clashing.join(' and ')} — set exactly one way to sign in`
+const buildWiredSignIn = (
+  factory: PersonaSignInFactory,
+  personaId: string,
+  config: HttpPersonasConfig
+): PersonaSignIn => {
+  let signIn: PersonaSignIn
+  try {
+    signIn = factory({
+      apiUrl: config.apiUrl,
+      signInPath: config.signInPath,
+      variables: config.variables ?? new LocalVariablesService(),
+    })
+  } catch (error) {
+    throw new PikkuError(
+      `[scenario] the wired PersonaSignIn failed to build for '${personaId}': ${error instanceof Error ? error.message : String(error)}`
     )
+  }
+  if (typeof (signIn as PersonaSignIn | undefined)?.login !== 'function') {
+    throw new PikkuError(
+      `[scenario] the wired PersonaSignIn returned no login() for '${personaId}'`
+    )
+  }
+  return {
+    login: async (jar, persona) => {
+      try {
+        await signIn.login(jar, persona)
+      } catch (error) {
+        if (error instanceof PikkuError) throw error
+        throw new PikkuError(
+          `[scenario] the wired PersonaSignIn failed for '${personaId}': ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+    },
+    headers: signIn.headers?.bind(signIn),
   }
 }
 
@@ -135,16 +171,17 @@ export class HttpPersona implements ScenarioPersona {
     private config: HttpPersonasConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
-    assertSingleSignIn(config)
-    if (config.signIn) {
-      this.signIn =
-        typeof config.signIn === 'function'
-          ? config.signIn({
-              apiUrl: config.apiUrl,
-              fetch: this.jar.fetch,
-              signInPath: config.signInPath,
-            })
-          : config.signIn
+    const wired = getWiredPersonaSignIn()
+    if (wired) {
+      const clashing = (['secret', 'operator'] as const).filter(
+        (key) => config[key]
+      )
+      if (clashing.length > 0) {
+        throw new PikkuError(
+          `[scenario] a PersonaSignIn is wired with wirePersonaSignIn, which replaces ${clashing.join(' and ')} — set exactly one way to sign in`
+        )
+      }
+      this.signIn = buildWiredSignIn(wired, name, config)
     } else if (config.operator) {
       this.signIn = new OperatorSignIn(config.apiUrl, {
         ...config.operator,
@@ -162,7 +199,7 @@ export class HttpPersona implements ScenarioPersona {
       )
     } else {
       throw new Error(
-        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target, 'operator' for a deployed one, or 'signIn' to bring your own`
+        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target, 'operator' for a deployed one, or wire a PersonaSignIn with wirePersonaSignIn`
       )
     }
   }
@@ -289,7 +326,7 @@ export class HttpPersona implements ScenarioPersona {
     const sessionPath =
       this.config.sessionPath ?? `${mount ?? '/auth'}/get-session`
     const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`, {
-      headers: this.signIn.headers(),
+      headers: this.signIn.headers?.(),
     })
     if (!res.ok) {
       return null
@@ -368,7 +405,7 @@ export class HttpPersona implements ScenarioPersona {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...this.signIn.headers(),
+          ...this.signIn.headers?.(),
         },
         body: JSON.stringify(body),
       })
@@ -405,7 +442,7 @@ export class HttpPersona implements ScenarioPersona {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...this.signIn.headers(),
+        ...this.signIn.headers?.(),
         ...extraHeaders,
       },
       body: JSON.stringify({ data }),
@@ -524,7 +561,6 @@ function normalizeAgentReply(raw: unknown): TargetAgentReply {
 export function createHttpPersonas(
   config: HttpPersonasConfig
 ): ScenarioPersonas {
-  assertSingleSignIn(config)
   const personas: ScenarioPersonas = {}
   for (const [id, persona] of Object.entries(config.personas)) {
     personas[id] = new HttpPersona(id, persona, config)

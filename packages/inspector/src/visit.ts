@@ -32,6 +32,7 @@ import { addScope } from './add/add-scope.js'
 import { addSystemRole } from './add/add-system-role.js'
 import { addFeatureFlag } from './add/add-feature-flag.js'
 import { addPersonas } from './add/add-personas.js'
+import { addPersonaSignIn } from './add/add-persona-sign-in.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addFeature } from './add/add-feature.js'
@@ -165,6 +166,7 @@ export const visitRoutes = (
   addSystemRole(logger, node, checker, state, nextOptions)
   addFeatureFlag(logger, node, checker, state, nextOptions)
   addPersonas(logger, node, checker, state, nextOptions)
+  addPersonaSignIn(logger, node, checker, state, nextOptions)
   addVariable(logger, node, checker, state, nextOptions)
 
   addHTTPRoute(logger, node, checker, state, nextOptions)

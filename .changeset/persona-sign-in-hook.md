@@ -1,7 +1,8 @@
 ---
 '@pikku/core': patch
+'@pikku/inspector': patch
 '@pikku/cli': patch
 '@pikku/playwright': patch
 ---
 
-Personas can sign in through a project-supplied `PersonaSignIn`. `createHttpPersonas` accepts `signIn` (an instance, or a factory called per persona with `{ apiUrl, fetch, signInPath }`), exclusive with `secret` and `operator`. `scenarios.signIn` in `pikku.config.json` names a module exporting one, which `pikku scenario run`, `pikku persona run` and `pikku persona rpc` load and pass to the browser driver as `personaSignIn`.
+`wirePersonaSignIn(factory)` registers how personas sign in, once, in app code. The deployed app's generated `runVirtualUser`, `pikku persona run`, `pikku scenario run`, `pikku persona rpc` and the Playwright provider all pick it up. When it is set the operator token and the actor secret are never read, and combining it with `secret` or `operator` in `createHttpPersonas` is refused. `PersonaSignIn.headers` is now optional. The inspector records files that call it so the generated bootstrap imports them.

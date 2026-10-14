@@ -8,8 +8,9 @@ import {
   PERSONA_SECRETS_VARIABLE,
   parsePersonaSecrets,
   personaSecretResolver,
-  loadConfiguredSignIn,
 } from './persona-credentials.js'
+import { wirePersonaSignIn } from '@pikku/core/persona'
+import { resetPikkuState } from '@pikku/core/state'
 import { LocalVariablesService } from '@pikku/core/services'
 
 // The real service, not a fake that hands back what it was given: `get`
@@ -20,6 +21,19 @@ const variablesFrom = (values: Record<string, string>) =>
   new LocalVariablesService(values)
 
 describe('resolvePersonaCredentials', () => {
+  test('a wired sign-in needs no token or secret, and none is read', async () => {
+    wirePersonaSignIn(() => ({ login: async () => {} }))
+    try {
+      const credentials = await resolvePersonaCredentials(
+        variablesFrom({ [ACTOR_SECRET_VARIABLE]: 'dev-secret' }),
+        'scenario actors'
+      )
+      assert.deepEqual(credentials, {})
+    } finally {
+      resetPikkuState()
+    }
+  })
+
   test('uses the actor secret when that is all the environment holds', async () => {
     const credentials = await resolvePersonaCredentials(
       variablesFrom({ [ACTOR_SECRET_VARIABLE]: 'dev-secret' }),
@@ -135,65 +149,5 @@ describe('personaSecretResolver', () => {
         return true
       }
     )
-  })
-})
-
-describe('configured sign-in module', () => {
-  const factory = () => ({ login: async () => {}, headers: () => ({}) })
-
-  test('names nothing unless scenarios.signIn is set', async () => {
-    assert.equal(await loadConfiguredSignIn({ rootDir: '/p' }), undefined)
-  })
-
-  test('resolves the module against the project root and takes its default export', async () => {
-    let loaded = ''
-    const found = await loadConfiguredSignIn(
-      { rootDir: '/project', scenarios: { signIn: './auth/sign-in.ts' } },
-      async (path) => {
-        loaded = path
-        return { default: factory }
-      }
-    )
-    assert.equal(loaded, '/project/auth/sign-in.ts')
-    assert.equal(found, factory)
-  })
-
-  test('accepts a named signIn export', async () => {
-    const found = await loadConfiguredSignIn(
-      { rootDir: '/project', scenarios: { signIn: '/abs/sign-in.js' } },
-      async () => ({ signIn: factory })
-    )
-    assert.equal(found, factory)
-  })
-
-  test('refuses a module that exports neither', async () => {
-    await assert.rejects(
-      loadConfiguredSignIn(
-        { rootDir: '/project', scenarios: { signIn: './x.ts' } },
-        async () => ({ default: 42 })
-      ),
-      /must export a PersonaSignIn factory/
-    )
-  })
-
-  test('says which module could not be loaded', async () => {
-    await assert.rejects(
-      loadConfiguredSignIn(
-        { rootDir: '/project', scenarios: { signIn: './x.ts' } },
-        async () => {
-          throw new Error('boom')
-        }
-      ),
-      /scenarios.signIn '.\/x.ts' could not be loaded: boom/
-    )
-  })
-
-  test('replaces env credentials, which then need not exist', async () => {
-    const credentials = await resolvePersonaCredentials(
-      variablesFrom({}),
-      'scenario actors',
-      factory
-    )
-    assert.deepEqual(credentials, { signIn: factory })
   })
 })

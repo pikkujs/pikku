@@ -365,10 +365,12 @@
     "appScopeId",
     "authMount",
     "buildAppScopeDefinition",
+    "createCookieJar",
     "createHttpPersonas",
     "definePersonas",
     "deriveActorSecret",
     "establishOperatorSession",
+    "getWiredPersonaSignIn",
     "isRunnablePersona",
     "personaEmail",
     "personaEmails",
@@ -380,7 +382,8 @@
     "runnablePersonas",
     "validateAndBuildPersonasMeta",
     "verifyActorSecret",
-    "verifyPersonaRoles"
+    "verifyPersonaRoles",
+    "wirePersonaSignIn"
   ],
   "./secret": [
     "defineSecret",

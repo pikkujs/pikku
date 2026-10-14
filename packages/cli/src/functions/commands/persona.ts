@@ -25,7 +25,7 @@ import {
   ACTOR_SECRET_VARIABLE,
   PERSONA_SECRETS_VARIABLE,
   resolvePersonaCredentials,
-  loadConfiguredSignIn,
+  loadWiredPersonaSignIn,
 } from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
@@ -161,10 +161,10 @@ export const personaRun = pikkuSessionlessFunc<
       throw new Error(refusal)
     }
 
+    await loadWiredPersonaSignIn(state)
     const credentials = await resolvePersonaCredentials(
       variables,
-      'a virtual user',
-      await loadConfiguredSignIn(config)
+      'a virtual user'
     )
 
     const resolvedModel = model ?? config.scenarios?.model
@@ -210,6 +210,7 @@ export const personaRun = pikkuSessionlessFunc<
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,
       ...credentials,
+      variables,
       personas,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,

@@ -5,7 +5,7 @@ import { PikkuError } from '@pikku/core/errors'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import {
   resolvePersonaCredentials,
-  loadConfiguredSignIn,
+  loadWiredPersonaSignIn,
 } from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 
@@ -74,13 +74,11 @@ export const personaRpc = pikkuSessionlessFunc<
       environments: config.environments ?? {},
       apiUrl,
     })
+    await loadWiredPersonaSignIn(state)
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,
-      ...(await resolvePersonaCredentials(
-        variables,
-        'an RPC call',
-        await loadConfiguredSignIn(config)
-      )),
+      variables,
+      ...(await resolvePersonaCredentials(variables, 'an RPC call')),
       personas,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,

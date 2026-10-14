@@ -1,12 +1,10 @@
 import type { VariablesService } from '@pikku/core/services'
-import { isAbsolute, resolve } from 'node:path'
+import { getWiredPersonaSignIn } from '@pikku/core/persona'
+import { loadUserModule } from '../functions/commands/load-user-project.js'
 import type {
   ActorSecretResolver,
   HttpPersonasConfig,
-  PersonaSignIn,
-  PersonaSignInFactory,
 } from '@pikku/core/persona'
-import { loadUserModule } from '../functions/commands/load-user-project.js'
 
 /** A Fabric operator token, which is what a deployed stage accepts. */
 export const OPERATOR_TOKEN_VARIABLE = 'FABRIC_OPERATOR_TOKEN'
@@ -23,10 +21,7 @@ export const ACTOR_SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
  */
 export const PERSONA_SECRETS_VARIABLE = 'PIKKU_PERSONA_SECRETS'
 
-export type PersonaCredentials = Pick<
-  HttpPersonasConfig,
-  'secret' | 'operator' | 'signIn'
->
+export type PersonaCredentials = Pick<HttpPersonasConfig, 'secret' | 'operator'>
 
 /**
  * `id=secret,id=secret` into a lookup. A value containing `=` is kept whole —
@@ -71,6 +66,14 @@ export const personaSecretResolver = (
   }
 }
 
+export const loadWiredPersonaSignIn = async (state: {
+  personas?: { signInFiles?: Iterable<string> }
+}): Promise<void> => {
+  for (const file of state.personas?.signInFiles ?? []) {
+    await loadUserModule(file)
+  }
+}
+
 /**
  * How the personas in this run will sign in, decided by which credential the
  * environment actually holds.
@@ -83,42 +86,12 @@ export const personaSecretResolver = (
  * user'), because the same missing credential blocks several commands and the
  * message should say which one the operator was running.
  */
-export const loadConfiguredSignIn = async (
-  config: { rootDir: string; scenarios?: { signIn?: string } },
-  load: (path: string) => Promise<Record<string, unknown>> = loadUserModule
-): Promise<PersonaSignIn | PersonaSignInFactory | undefined> => {
-  const specifier = config.scenarios?.signIn
-  if (!specifier) return undefined
-  const path = isAbsolute(specifier)
-    ? specifier
-    : resolve(config.rootDir, specifier)
-  const module = await load(path).catch((error: Error) => {
-    throw new Error(
-      `scenarios.signIn '${specifier}' could not be loaded: ${error.message}`
-    )
-  })
-  const exported = module.default ?? module.signIn
-  const usable =
-    typeof exported === 'function' ||
-    (typeof exported === 'object' &&
-      exported !== null &&
-      typeof (exported as PersonaSignIn).login === 'function' &&
-      typeof (exported as PersonaSignIn).headers === 'function')
-  if (!usable) {
-    throw new Error(
-      `scenarios.signIn '${specifier}' must export a PersonaSignIn factory as its default or as 'signIn'`
-    )
-  }
-  return exported as PersonaSignIn | PersonaSignInFactory
-}
-
 export const resolvePersonaCredentials = async (
   variables: VariablesService,
-  what: string,
-  signIn?: PersonaSignIn | PersonaSignInFactory
+  what: string
 ): Promise<PersonaCredentials> => {
-  if (signIn) {
-    return { signIn }
+  if (getWiredPersonaSignIn()) {
+    return {}
   }
   const token = await variables.get(OPERATOR_TOKEN_VARIABLE)
   if (token) {

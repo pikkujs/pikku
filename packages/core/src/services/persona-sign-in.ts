@@ -1,5 +1,6 @@
 import { deriveActorSecret } from './persona-actor-secret.js'
 import { PikkuError } from '../errors/error-handler.js'
+import type { VariablesService } from './variables-service.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
 
@@ -28,13 +29,13 @@ export interface PersonaSignIn {
    */
   login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
   /** Headers every request after `login` must carry. */
-  headers(): Record<string, string>
+  headers?(): Record<string, string>
 }
 
 export interface PersonaSignInContext {
   apiUrl: string
-  fetch: typeof fetch
   signInPath?: string
+  variables: VariablesService
 }
 
 export type PersonaSignInFactory = (

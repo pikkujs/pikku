@@ -145,17 +145,6 @@ describe('resolveScenarioBrowserProvider', () => {
     ...overrides,
   })
 
-  test('a configured sign-in reaches the driver as personaSignIn', async () => {
-    const signIn = () => ({ login: async () => {}, headers: () => ({}) })
-    const { built, importDriver } = driver()
-    await resolveScenarioBrowserProvider({
-      ...options({ secret: undefined, signIn }),
-      importDriver,
-    } as any)
-    assert.equal(built[0].personaSignIn, signIn)
-    assert.equal(built[0].signIn, undefined)
-  })
-
   test('an environment with browser steps but no appUrl fails before a scenario runs', async () => {
     await assert.rejects(
       resolveScenarioBrowserProvider({

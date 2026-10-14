@@ -2,11 +2,8 @@ import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
+import { getWiredPersonaSignIn } from '../persona/wire-persona-sign-in.js'
 import type { HttpPersonasConfig } from '../../services/http-personas.js'
-import type {
-  PersonaSignIn,
-  PersonaSignInFactory,
-} from '../../services/persona-sign-in.js'
 import type {
   ResolvedPersona,
   ScenarioPersonas,
@@ -539,7 +536,6 @@ export interface ExecuteVirtualUserRunParams {
     durationMs?: number
   }
   operatorToken?: string
-  signIn?: PersonaSignIn | PersonaSignInFactory
 }
 
 /**
@@ -566,7 +562,6 @@ export const executeVirtualUserRun = async ({
   seed,
   budget,
   operatorToken,
-  signIn,
 }: ExecuteVirtualUserRunParams): Promise<{ findings: number }> => {
   const store = requireVirtualUserRunStore(runStore)
   try {
@@ -592,15 +587,16 @@ export const executeVirtualUserRun = async ({
     // it does not need the target to hold a shared secret at all. The actor
     // secret is the local-only fallback, because only `pikku dev` serves the
     // endpoint that accepts it.
-    const token = signIn
+    const wired = getWiredPersonaSignIn() !== null
+    const token = wired
       ? undefined
       : (operatorToken ??
         (await variables.get(VIRTUAL_USER_VARIABLES.operatorToken)))
     const secret =
-      signIn || token
+      wired || token
         ? undefined
         : await variables.get(VIRTUAL_USER_VARIABLES.secret)
-    if (!signIn && !token && !secret) {
+    if (!wired && !token && !secret) {
       throw new Error(
         `Neither an operator token nor ${VIRTUAL_USER_VARIABLES.secret} is available — there is nobody for the virtual user to be. ` +
           `Hand a Fabric operator token in with the run against a deployed stage, or export ${VIRTUAL_USER_VARIABLES.secret} against a local \`pikku dev\` target.`
@@ -646,8 +642,8 @@ export const executeVirtualUserRun = async ({
       (await variables.get(VIRTUAL_USER_VARIABLES.signInPath)) ?? undefined
     const signedIn = createPersonas({
       apiUrl,
-      ...(signIn
-        ? { signIn }
+      ...(wired
+        ? {}
         : token
           ? {
               operator: {
@@ -656,8 +652,9 @@ export const executeVirtualUserRun = async ({
               },
             }
           : { secret }),
+      variables,
       model,
-      signInPath: signIn
+      signInPath: wired
         ? configuredSignInPath
         : signInPathFor(configuredSignInPath, 'actor'),
       rpcPath:

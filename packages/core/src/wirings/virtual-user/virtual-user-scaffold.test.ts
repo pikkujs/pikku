@@ -23,6 +23,8 @@ import type {
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
 import { createHttpPersonas } from '../../services/http-personas.js'
+import { wirePersonaSignIn } from '../persona/wire-persona-sign-in.js'
+import { resetPikkuState } from '../../pikku-state.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
@@ -899,28 +901,41 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.operator, undefined)
   })
 
-  test('a bring-your-own sign-in needs no token or secret and is handed to createPersonas as is', async () => {
-    let options: any
-    const signIn = () => ({ login: async () => {}, headers: () => ({}) })
+  test('a wired sign-in signs the persona in with no token or secret ever read', async () => {
+    const read: string[] = []
+    const logins: string[] = []
+    wirePersonaSignIn(() => ({
+      login: async (_jar, persona) => void logins.push(persona.id),
+    }))
+    const env: Record<string, string> = {
+      VIRTUAL_USER_API_URL: 'http://localhost:4000',
+      VIRTUAL_USER_MODEL: 'a-model',
+      SCENARIO_ACTOR_SECRET: 'shh',
+      FABRIC_OPERATOR_TOKEN: 'tok',
+    }
+    let built: any
     const { params: p } = params({
-      signIn,
       operatorToken: 'ignored',
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        VIRTUAL_USER_MODEL: 'a-model',
-        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/custom',
-      }),
+      variables: {
+        get: async (name: string) => (read.push(name), env[name]),
+      },
       createPersonas: (given: any) => {
-        options = given
-        createHttpPersonas({ ...given, personas: {} })
+        built = createHttpPersonas({ ...given, personas })
         return {}
       },
     })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.signIn, signIn)
-    assert.equal(options.secret, undefined)
-    assert.equal(options.operator, undefined)
-    assert.equal(options.signInPath, '/api/auth/sign-in/custom')
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response('{}')) as typeof fetch
+    try {
+      await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
+      await built.susan.invokeRaw('ping', {})
+    } finally {
+      globalThis.fetch = realFetch
+      resetPikkuState()
+    }
+    assert.deepEqual(logins, ['susan'])
+    assert.ok(!read.includes('SCENARIO_ACTOR_SECRET'))
+    assert.ok(!read.includes('FABRIC_OPERATOR_TOKEN'))
   })
 
   test('a persona nobody declares any more is refused before signing in', async () => {

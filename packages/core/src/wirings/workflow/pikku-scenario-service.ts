@@ -31,6 +31,7 @@ import type {
   PikkuWorkflowWire,
   WorkflowQueueOptions,
 } from './workflow.types.js'
+import { getWiredPersonaSignIn } from '../persona/wire-persona-sign-in.js'
 import type { PikkuScenarioWire } from './scenario.types.js'
 import type {
   WorkflowExpectEventuallyOptions,
@@ -674,9 +675,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     if (!variables || !metaService) {
       return undefined
     }
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
+    const wired = getWiredPersonaSignIn() !== null
+    const secret = wired
+      ? undefined
+      : await variables.get('SCENARIO_ACTOR_SECRET')
     const apiUrl = await variables.get('API_URL')
-    if (!secret || !apiUrl) {
+    if ((!secret && !wired) || !apiUrl) {
       services?.logger?.warn(
         'A scenario was started without personas but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without them.'
       )
@@ -699,7 +703,8 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       await import('../../services/http-personas.js')
     return createHttpPersonas({
       apiUrl,
-      secret,
+      ...(secret ? { secret } : {}),
+      variables,
       personas,
       signInPath,
       rpcPath,

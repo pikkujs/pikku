@@ -144,6 +144,9 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   permissions: {
     global: [],
   },
+  persona: {
+    signIn: null,
+  },
   misc: {
     errors: new Map(),
     schemas: new Map(),

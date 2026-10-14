@@ -224,6 +224,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     personas: {
       definitions: [],
       files: new Set(),
+      signInFiles: new Set(),
     },
     variables: {
       definitions: [],
