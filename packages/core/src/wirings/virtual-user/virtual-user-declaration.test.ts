@@ -1,44 +1,44 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { personaEmail, personaEmails } from './persona-email.js'
+import { virtualUserEmail, virtualUserEmails } from './virtual-user-email.js'
 import {
-  isRunnablePersona,
+  isRunnableVirtualUser,
   roleMismatchMessage,
-  verifyPersonaRoles,
-} from './validate-personas.js'
+  verifyVirtualUserRoles,
+} from './validate-virtual-users.js'
 import {
   allowedLinks,
   applyMailboxAllowlist,
   isAllowedSender,
-} from './persona-mailbox.js'
-import type { ReceivedEmail } from './persona-mailbox.js'
+} from './virtual-user-mailbox.js'
+import type { ReceivedEmail } from './virtual-user-mailbox.js'
 
 describe('computed addresses', () => {
   test('a run gets its own sub-address', () => {
     assert.equal(
-      personaEmail('susan', 'mail.example.com', 'r7'),
+      virtualUserEmail('susan', 'mail.example.com', 'r7'),
       'susan+r7@mail.example.com'
     )
   })
 
   test('without a run id the address is the stable, seedable form', () => {
     assert.equal(
-      personaEmail('susan', 'mail.example.com'),
+      virtualUserEmail('susan', 'mail.example.com'),
       'susan@mail.example.com'
     )
   })
 
   test('an id that is not address-shaped is reduced to one', () => {
     assert.equal(
-      personaEmail('Susan.Buyer_2', 'example.com'),
+      virtualUserEmail('Susan.Buyer_2', 'example.com'),
       'susan-buyer-2@example.com'
     )
   })
 
   test('an id with nothing usable in it is refused rather than guessed at', () => {
     assert.throws(
-      () => personaEmail('...', 'example.com'),
+      () => virtualUserEmail('...', 'example.com'),
       /no usable email label/
     )
   })
@@ -47,29 +47,29 @@ describe('computed addresses', () => {
   // email-driven flow untestable; something that is not a domain at all should
   // not slip through as one.
   test('a domain that is not a domain is refused', () => {
-    assert.throws(() => personaEmail('susan', 'personas'), /is not a domain/)
-    assert.throws(() => personaEmail('susan', 'a@b.com'), /is not a domain/)
+    assert.throws(() => virtualUserEmail('susan', 'virtualUsers'), /is not a domain/)
+    assert.throws(() => virtualUserEmail('susan', 'a@b.com'), /is not a domain/)
   })
 
   test('a leading @ on the domain is tolerated', () => {
-    assert.equal(personaEmail('susan', '@example.com'), 'susan@example.com')
+    assert.equal(virtualUserEmail('susan', '@example.com'), 'susan@example.com')
   })
 })
 
 describe('addresses across a run', () => {
-  test('every persona gets one', () => {
-    const emails = personaEmails(['susan', 'yasser'], 'example.com', 'r1')
+  test('every virtual user gets one', () => {
+    const emails = virtualUserEmails(['susan', 'yasser'], 'example.com', 'r1')
     assert.deepEqual(emails, {
       susan: 'susan+r1@example.com',
       yasser: 'yasser+r1@example.com',
     })
   })
 
-  // Two personas sharing an address share a user row and read each other's
+  // Two virtual users sharing an address share a user row and read each other's
   // magic links — the run passes and means nothing.
   test('two ids that reduce to the same label are refused', () => {
     assert.throws(
-      () => personaEmails(['susan-buyer', 'Susan.Buyer'], 'example.com'),
+      () => virtualUserEmails(['susan-buyer', 'Susan.Buyer'], 'example.com'),
       /both compute the address/
     )
   })
@@ -77,33 +77,33 @@ describe('addresses across a run', () => {
 
 describe('who can run', () => {
   test('an email login runs', () => {
-    assert.equal(isRunnablePersona({ account: {} }), true)
+    assert.equal(isRunnableVirtualUser({ account: {} }), true)
   })
 
-  test('a persona with no account block at all still runs', () => {
-    assert.equal(isRunnablePersona({}), true)
+  test('a virtual user with no account block at all still runs', () => {
+    assert.equal(isRunnableVirtualUser({}), true)
   })
 
   // Driving a consent screen needs a human, so this is a property of the
   // account rather than a decision anyone should have to remember to record.
   test('a provider login does not', () => {
-    assert.equal(isRunnablePersona({ account: { provider: 'google' } }), false)
+    assert.equal(isRunnableVirtualUser({ account: { provider: 'google' } }), false)
   })
 
   test('an explicit refusal wins over an otherwise runnable account', () => {
-    assert.equal(isRunnablePersona({ account: {}, runnable: false }), false)
+    assert.equal(isRunnableVirtualUser({ account: {}, runnable: false }), false)
   })
 })
 
 describe('verifying roles at sign-in', () => {
   test('a match runs', () => {
-    const v = verifyPersonaRoles('susan', ['buyer'], ['buyer'])
+    const v = verifyVirtualUserRoles('susan', ['buyer'], ['buyer'])
     assert.equal(v.ok, true)
     assert.equal(roleMismatchMessage(v), null)
   })
 
   test('order and duplication are not drift', () => {
-    const v = verifyPersonaRoles(
+    const v = verifyVirtualUserRoles(
       'yasser',
       ['admin', 'buyer'],
       ['buyer', 'admin', 'buyer']
@@ -113,15 +113,15 @@ describe('verifying roles at sign-in', () => {
 
   // Under-granted: the 403s look like authorization findings but are seed drift.
   test('a missing role stops the run and says which', () => {
-    const v = verifyPersonaRoles('susan', ['buyer'], [])
+    const v = verifyVirtualUserRoles('susan', ['buyer'], [])
     assert.equal(v.ok, false)
     assert.deepEqual(v.missing, ['buyer'])
     assert.match(roleMismatchMessage(v)!, /missing buyer/)
   })
 
-  // Over-granted: nothing fails, the persona just stops testing its boundary.
+  // Over-granted: nothing fails, the virtual user just stops testing its boundary.
   test('an extra role stops the run too', () => {
-    const v = verifyPersonaRoles('susan', ['buyer'], ['buyer', 'admin'])
+    const v = verifyVirtualUserRoles('susan', ['buyer'], ['buyer', 'admin'])
     assert.equal(v.ok, false)
     assert.deepEqual(v.extra, ['admin'])
     assert.match(roleMismatchMessage(v)!, /unexpectedly holds admin/)
@@ -129,7 +129,7 @@ describe('verifying roles at sign-in', () => {
 
   test('both directions are reported together', () => {
     const message = roleMismatchMessage(
-      verifyPersonaRoles('susan', ['buyer'], ['admin'])
+      verifyVirtualUserRoles('susan', ['buyer'], ['admin'])
     )!
     assert.match(message, /missing buyer and unexpectedly holds admin/)
   })

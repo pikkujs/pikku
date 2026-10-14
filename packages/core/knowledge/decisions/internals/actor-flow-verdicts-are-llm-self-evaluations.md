@@ -1,13 +1,13 @@
 ---
 type: decision
-title: An actor-flow verdict is the persona's self-evaluation, not an assertion
+title: An actor-flow verdict is the virtual user's self-evaluation, not an assertion
 description: The engine returns what the actor judged plus the transcript; deterministic checks stay with the caller
 tags: actor-flow
 ---
 
-# An actor-flow verdict is the persona's self-evaluation, not an assertion
+# An actor-flow verdict is the virtual user's self-evaluation, not an assertion
 
-`runConversation` ends by asking the persona LLM whether the `evaluate`
+`runConversation` ends by asking the virtual user LLM whether the `evaluate`
 criterion was met and returns that as `ActorFlowVerdict` — `passed`, `reasoning`
 and the full `transcript`
 (`packages/core/src/wirings/actor-flow/`). Nothing in the engine inspects the

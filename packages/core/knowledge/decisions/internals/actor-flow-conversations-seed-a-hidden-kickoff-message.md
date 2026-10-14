@@ -9,7 +9,7 @@ tags: actor-flow
 
 `runConversation` in
 `packages/core/src/wirings/actor-flow/run-conversation.ts` primes
-`actorMessages` with a single user message telling the persona to begin, before
+`actorMessages` with a single user message telling the virtual user to begin, before
 the first turn is generated.
 
 The actor speaks first, so at that point there is nothing for it to reply to —
@@ -19,5 +19,5 @@ pushed onto `transcript`: it is scaffolding, not something the simulated user
 said, and including it would corrupt the transcript the final evaluation reads.
 
 **What this rules out:** starting from an empty `actorMessages` array, folding
-the kickoff into the persona instructions where a provider may weight it
+the kickoff into the virtual user instructions where a provider may weight it
 differently, and pushing the seed into the transcript for symmetry.

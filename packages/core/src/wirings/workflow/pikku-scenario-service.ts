@@ -16,7 +16,7 @@ import type {
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
 import type { PikkuRawWire } from '../../types/core.types.js'
-import type { ScenarioPersonas } from '../../services/personas-service.js'
+import type { ScenarioVirtualUsers } from '../../services/virtual-users-service.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { ScenarioStepVideoOffset } from './scenario-run.types.js'
 import type {
@@ -107,8 +107,8 @@ export { requireScenarioEnv } from './scenario-step-guards.js'
 export type {
   ScenarioHttpResponse,
   ScenarioJsonRequest,
-} from '../../services/personas-service.js'
-// The readers themselves live on `@pikku/core/persona`
+} from '../../services/virtual-users-service.js'
+// The readers themselves live on `@pikku/core/virtual-user`
 
 /**
  * A workflow service with the scenario capability attached — the two lines
@@ -223,7 +223,7 @@ addError(ScenarioBrowserUnavailable, {
 })
 
 /**
- * A step that is driven by a persona was dispatched without one.
+ * A step that is driven by a virtual user was dispatched without one.
  *
  * Raised before the body runs rather than partway through it: the step declared
  * that it needs an actor — by having a `browser` binding, which cannot be
@@ -233,8 +233,8 @@ addError(ScenarioBrowserUnavailable, {
 export class ScenarioActorRequired extends PikkuError {
   constructor(public readonly stepFunc: string) {
     super(
-      `[scenario] step '${stepFunc}' is driven by a persona but was called without an actor. ` +
-        `Pass { actor: actors.<name> } so it runs as that persona.`
+      `[scenario] step '${stepFunc}' is driven by a virtual user but was called without an actor. ` +
+        `Pass { actor: actors.<name> } so it runs as that virtual user.`
     )
   }
 }
@@ -358,7 +358,7 @@ addError(ScenarioUnwitnessedAssertion, {
 export class PikkuScenarioService implements WorkflowRunExtension {
   // Scenario actors per run: live authenticated clients (cookie jars) are
   // process-local by nature, so they ride this map, never the persisted wire.
-  private runActors = new Map<string, ScenarioPersonas>()
+  private runActors = new Map<string, ScenarioVirtualUsers>()
   // What each run has accumulated so far — process-local like the actors above,
   // so the body and its hooks share one object rather than reading it back off
   // the persisted wire.
@@ -485,12 +485,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public async attachRunContext(
     runId: string,
     workflowMeta: any,
-    options?: { actors?: ScenarioPersonas }
+    options?: { actors?: ScenarioVirtualUsers }
   ): Promise<void> {
     const actors =
       options?.actors ??
       (workflowMeta.source === 'scenario'
-        ? await this.resolvePersonas()
+        ? await this.resolveVirtualUsers()
         : undefined)
     if (actors) {
       this.runActors.set(runId, actors)
@@ -664,10 +664,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
    * SCENARIO_ACTOR_SECRET or the API URL is missing.
    *
    * The actor client is imported lazily so that even a runner bundle only pays
-   * for the AI persona conversation loop it pulls in when a scenario actually
+   * for the AI virtual user conversation loop it pulls in when a scenario actually
    * signs an actor in.
    */
-  public async resolvePersonas(): Promise<ScenarioPersonas | undefined> {
+  public async resolveVirtualUsers(): Promise<ScenarioVirtualUsers | undefined> {
     const services = getSingletonServices()
     const variables = services?.variables
     const metaService = services?.metaService
@@ -678,12 +678,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     const apiUrl = await variables.get('API_URL')
     if (!secret || !apiUrl) {
       services?.logger?.warn(
-        'A scenario was started without personas but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without them.'
+        'A scenario was started without virtual users but SCENARIO_ACTOR_SECRET / API_URL is not configured — running without them.'
       )
       return undefined
     }
-    const personas = await metaService.getPersonasMeta()
-    if (!personas || Object.keys(personas).length === 0) {
+    const virtualUsers = await metaService.getVirtualUsersMeta()
+    if (!virtualUsers || Object.keys(virtualUsers).length === 0) {
       return undefined
     }
     const signInPath =
@@ -695,12 +695,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       apiUrl,
       appUrl: (await variables.get('APP_URL')) ?? undefined,
     }
-    const { createHttpPersonas } =
-      await import('../../services/http-personas.js')
-    return createHttpPersonas({
+    const { createHttpVirtualUsers } =
+      await import('../../services/http-virtual-users.js')
+    return createHttpVirtualUsers({
       apiUrl,
       secret,
-      personas,
+      virtualUsers,
       signInPath,
       rpcPath,
     })
@@ -971,7 +971,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         ? `${addonNamespace}:${stepFunc}`
         : stepFunc
 
-    const actor = options?.actor as ScenarioPersonas[string] | undefined
+    const actor = options?.actor as ScenarioVirtualUsers[string] | undefined
     const description =
       options?.description ??
       this.scenarioStepDescription(packageName, resolvedStepFunc) ??
@@ -1132,7 +1132,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   }
 
   /**
-   * Whether a step is driven by a persona, and so must be given one. Stamped by
+   * Whether a step is driven by a virtual user, and so must be given one. Stamped by
    * the definer from a `browser` binding or an explicit `actor: true`.
    */
   private requiresActor(packageName: string | null, stepFunc: string): boolean {

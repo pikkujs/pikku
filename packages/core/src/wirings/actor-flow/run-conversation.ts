@@ -4,7 +4,7 @@ import type {
   TargetAgentDriver,
   TargetPendingApproval,
 } from './actor-flow.types.js'
-import type { ResolvedPersona } from '../../services/personas-service.js'
+import type { ResolvedVirtualUser } from '../../services/virtual-users-service.js'
 import type { AgentMessage } from '../agent/agent.types.js'
 import type {
   AgentRunnerParams,
@@ -60,9 +60,9 @@ export type ActorLLM = (params: AgentRunnerParams) => Promise<AgentStepResult>
 
 export interface RunConversationParams {
   /** The person being played — name, job title, personality. */
-  persona: ResolvedPersona
+  virtualUser: ResolvedVirtualUser
   /** The id they were declared under (for transcript labelling). */
-  personaId: string
+  virtualUserId: string
   /** What the actor is trying to get the target agent to accomplish. */
   task: string
   /** Natural-language success criterion the actor evaluates at the end. */
@@ -107,13 +107,13 @@ function readObject<T>(result: { object?: unknown; text?: string }): T | null {
   return null
 }
 
-function actorInstructions(persona: ResolvedPersona, task: string): string {
+function actorInstructions(virtualUser: ResolvedVirtualUser, task: string): string {
   return [
     `You are role-playing a real user interacting with an AI assistant. Stay in character at all times — you are the user, not the assistant.`,
-    `Your name is ${persona.name}.`,
-    persona.jobTitle ? `Your role: ${persona.jobTitle}.` : '',
-    persona.personality
-      ? `Your personality and communication style: ${persona.personality}. Match this tone, vocabulary, and level of detail exactly.`
+    `Your name is ${virtualUser.name}.`,
+    virtualUser.jobTitle ? `Your role: ${virtualUser.jobTitle}.` : '',
+    virtualUser.personality
+      ? `Your personality and communication style: ${virtualUser.personality}. Match this tone, vocabulary, and level of detail exactly.`
       : '',
     `Your goal in this conversation: ${task}.`,
     `Send one message at a time. Set "done" to true only once your goal is clearly accomplished, or clearly impossible.`,
@@ -130,7 +130,7 @@ async function decideApprovals(
   instructions: string,
   pending: TargetPendingApproval[]
 ): Promise<{ toolCallId: string; approved: boolean }[]> {
-  const policy = params.approvals ?? 'in-persona'
+  const policy = params.approvals ?? 'in-virtual-user'
   if (policy === 'always') {
     return pending.map((p) => ({ toolCallId: p.toolCallId, approved: true }))
   }
@@ -208,14 +208,14 @@ async function converseWithTarget(
 /**
  * Run a conversation: an LLM-driven actor holds a real multi-turn exchange
  * with a target agent (driven via the injected transport), answers the target's
- * tool-approval requests in-persona, then evaluates whether the task was met.
+ * tool-approval requests in-virtual-user, then evaluates whether the task was met.
  * Deterministic checks are the caller's responsibility.
  */
 export async function runConversation(
   params: RunConversationParams
 ): Promise<ActorFlowVerdict> {
   const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
-  const instructions = actorInstructions(params.persona, params.task)
+  const instructions = actorInstructions(params.virtualUser, params.task)
   // Seed a kickoff so the very first actor turn has a non-empty message list
   // (providers reject an empty prompt). It's an instruction TO the actor, so
   // it never appears in the transcript.
@@ -245,7 +245,7 @@ export async function runConversation(
     }
 
     actorMessages.push(msg('assistant', actorMessage))
-    transcript.push(`${params.persona.name}: ${actorMessage}`)
+    transcript.push(`${params.virtualUser.name}: ${actorMessage}`)
 
     const reply = await converseWithTarget(params, instructions, actorMessage)
     actorMessages.push(msg('user', reply.text ?? ''))

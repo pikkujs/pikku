@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { rememberIds, runVirtualUser } from './run-virtual-user.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import type { AgentStepResult } from '../../services/agent-runner-service.js'
-import type { ScenarioHttpResponse } from '../../services/personas-service.js'
+import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
 import type {
   ApiCatalogueEntry,
   IntentSource,
@@ -48,7 +48,7 @@ const INTENTS: IntentSource[] = [
   },
 ]
 
-const PERSONA = {
+const VIRTUAL_USER = {
   id: 'member',
   email: 'ada@personas.invalid',
   name: 'Ada',
@@ -110,8 +110,8 @@ const recordingTarget = (
 }
 
 const base = {
-  persona: PERSONA,
-  personaId: 'member',
+  virtualUser: VIRTUAL_USER,
+  virtualUserId: 'member',
   catalogue: CATALOGUE,
   intents: INTENTS,
   model: 'test-model',
@@ -327,7 +327,7 @@ describe('what a virtual user reports', () => {
     assert.match(result.findings[0]!.detail, /missing required property/)
   })
 
-  test('succeeding at something this persona cannot satisfy is authorization drift', async () => {
+  test('succeeding at something this virtual user cannot satisfy is authorization drift', async () => {
     const target = recordingTarget(() => respond(200, { orgs: [] }))
     const { llm } = scripted(walkTo('listAllOrgs'))
 
@@ -599,7 +599,7 @@ describe('budgets and stopping', () => {
   })
 })
 
-describe('goals and persona', () => {
+describe('goals and virtual user', () => {
   test('goals in the user’s own words become intents alongside the derived ones', async () => {
     const seen: string[] = []
     const target = recordingTarget(() => respond(200, {}))
@@ -620,7 +620,7 @@ describe('goals and persona', () => {
     assert.ok(seen.some((m) => m.includes('already invited')))
   })
 
-  test('the persona reaches the model, and the step graph never does', async () => {
+  test('the virtual user reaches the model, and the step graph never does', async () => {
     let instructions = ''
     const seen: string[] = []
     const target = recordingTarget(() => respond(200, {}))
@@ -631,7 +631,7 @@ describe('goals and persona', () => {
 
     await runVirtualUser({
       ...base,
-      persona: { ...PERSONA, personality: 'blunt and in a hurry' },
+      virtualUser: { ...VIRTUAL_USER, personality: 'blunt and in a hurry' },
       target,
       llm,
       budget: { steps: 1 },

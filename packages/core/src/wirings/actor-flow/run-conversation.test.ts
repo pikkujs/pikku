@@ -32,7 +32,7 @@ const scriptedLLM = (script: {
     if ('message' in props) {
       assert.ok(
         params.messages.length > 0,
-        'persona turn requested with empty messages'
+        'virtual user turn requested with empty messages'
       )
       const t = script.turns[turn] ?? script.turns[script.turns.length - 1]
       turn++
@@ -105,7 +105,7 @@ const alwaysSuspendingTarget = (): {
 }
 
 const base = {
-  persona: {
+  virtualUser: {
     id: 'priya',
     email: 'priya@personas.local',
     name: 'Priya',
@@ -115,7 +115,7 @@ const base = {
     tags: [],
     runnable: true,
   },
-  personaId: 'priya',
+  virtualUserId: 'priya',
   agentName: 'todoBot',
   task: 'Get a todo created',
   evaluate: 'A todo now exists',
@@ -123,7 +123,7 @@ const base = {
 }
 
 describe('runConversation', () => {
-  test('drives turns, approves in-persona, evaluates', async () => {
+  test('drives turns, approves in-virtual-user, evaluates', async () => {
     const { llm, calls } = scriptedLLM({
       turns: [
         { message: 'please make a todo', done: false },
@@ -144,7 +144,7 @@ describe('runConversation', () => {
     assert.ok(calls.includes('eval'))
   })
 
-  test("approvals policy 'never' denies without asking the persona", async () => {
+  test("approvals policy 'never' denies without asking the virtual user", async () => {
     const { llm, calls } = scriptedLLM({
       turns: [{ message: 'make a todo', done: true }],
       decisions: [{ toolCallId: 'tc1', approved: true }],

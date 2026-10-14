@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import {
-  personaEnvironmentErrors,
-  personaEnvironmentRefusal,
-  resolvePersonaEnvironments,
-} from './persona-environments.js'
+  virtualUserEnvironmentErrors,
+  virtualUserEnvironmentRefusal,
+  resolveVirtualUserEnvironments,
+} from './virtual-user-environments.js'
 
 const ENVIRONMENTS = {
   local: {},
@@ -13,11 +13,11 @@ const ENVIRONMENTS = {
   'eu-prod': { production: true },
 }
 
-describe('resolvePersonaEnvironments', () => {
-  // The default that makes production opt-in: a persona nobody thought about
+describe('resolveVirtualUserEnvironments', () => {
+  // The default that makes production opt-in: a virtual user nobody thought about
   // runs everywhere it is harmless and nowhere it is not.
   test('omitting environments means everywhere but production', () => {
-    assert.deepEqual(resolvePersonaEnvironments({}, ENVIRONMENTS), [
+    assert.deepEqual(resolveVirtualUserEnvironments({}, ENVIRONMENTS), [
       'local',
       'staging',
     ])
@@ -25,7 +25,7 @@ describe('resolvePersonaEnvironments', () => {
 
   test('a declared list is taken verbatim, production included', () => {
     assert.deepEqual(
-      resolvePersonaEnvironments(
+      resolveVirtualUserEnvironments(
         { disposition: 'accountable', environments: ['staging', 'prod'] },
         ENVIRONMENTS
       ),
@@ -35,16 +35,16 @@ describe('resolvePersonaEnvironments', () => {
 
   test('more than one environment can be production', () => {
     assert.deepEqual(
-      resolvePersonaEnvironments({}, { a: {}, b: { production: true } }),
+      resolveVirtualUserEnvironments({}, { a: {}, b: { production: true } }),
       ['a']
     )
   })
 })
 
-describe('personaEnvironmentErrors', () => {
-  test('a persona that declares nothing cannot be wrong', () => {
+describe('virtualUserEnvironmentErrors', () => {
+  test('a virtual user that declares nothing cannot be wrong', () => {
     assert.deepEqual(
-      personaEnvironmentErrors(
+      virtualUserEnvironmentErrors(
         'shopper',
         { disposition: 'careless' },
         ENVIRONMENTS
@@ -53,9 +53,9 @@ describe('personaEnvironmentErrors', () => {
     )
   })
 
-  test('an accountable persona may name production', () => {
+  test('an accountable virtual user may name production', () => {
     assert.deepEqual(
-      personaEnvironmentErrors(
+      virtualUserEnvironmentErrors(
         'robin',
         { disposition: 'accountable', environments: ['staging', 'prod'] },
         ENVIRONMENTS
@@ -65,7 +65,7 @@ describe('personaEnvironmentErrors', () => {
   })
 
   test('a testing disposition naming production is an error', () => {
-    const [error, ...rest] = personaEnvironmentErrors(
+    const [error, ...rest] = virtualUserEnvironmentErrors(
       'shopper',
       { disposition: 'careless', environments: ['prod'] },
       ENVIRONMENTS
@@ -77,10 +77,10 @@ describe('personaEnvironmentErrors', () => {
   })
 
   // The default disposition is `realistic`, which is still a testing one. A
-  // persona that declares no disposition at all must not slip into production
+  // virtual user that declares no disposition at all must not slip into production
   // on the strength of having said nothing.
   test('no disposition at all is reported as realistic, and refused', () => {
-    const [error] = personaEnvironmentErrors(
+    const [error] = virtualUserEnvironmentErrors(
       'quiet',
       { environments: ['prod'] },
       ENVIRONMENTS
@@ -89,7 +89,7 @@ describe('personaEnvironmentErrors', () => {
   })
 
   test('every offending environment is reported, not just the first', () => {
-    const errors = personaEnvironmentErrors(
+    const errors = virtualUserEnvironmentErrors(
       'shopper',
       { disposition: 'careless', environments: ['prod', 'eu-prod'] },
       ENVIRONMENTS
@@ -97,10 +97,10 @@ describe('personaEnvironmentErrors', () => {
     assert.equal(errors.length, 2)
   })
 
-  // A typo silently narrows the persona to nothing, which is the same class of
+  // A typo silently narrows the virtual user to nothing, which is the same class of
   // bug the rule exists to prevent — only quieter.
   test('an unknown environment names the ones that exist', () => {
-    const [error] = personaEnvironmentErrors(
+    const [error] = virtualUserEnvironmentErrors(
       'shopper',
       { environments: ['stagng'] },
       ENVIRONMENTS
@@ -110,7 +110,7 @@ describe('personaEnvironmentErrors', () => {
   })
 
   test('with nothing configured it says where environments go', () => {
-    const [error] = personaEnvironmentErrors(
+    const [error] = virtualUserEnvironmentErrors(
       'shopper',
       { environments: ['x'] },
       {}
@@ -122,7 +122,7 @@ describe('personaEnvironmentErrors', () => {
   })
 })
 
-describe('personaEnvironmentRefusal', () => {
+describe('virtualUserEnvironmentRefusal', () => {
   const accountable = {
     disposition: 'accountable' as const,
     environments: ['staging', 'prod'],
@@ -130,7 +130,7 @@ describe('personaEnvironmentRefusal', () => {
 
   test('lets a declared environment through', () => {
     assert.equal(
-      personaEnvironmentRefusal('robin', accountable, 'prod', ENVIRONMENTS),
+      virtualUserEnvironmentRefusal('robin', accountable, 'prod', ENVIRONMENTS),
       null
     )
   })
@@ -139,7 +139,7 @@ describe('personaEnvironmentRefusal', () => {
   // check was passed by a different artifact than the one now running, so
   // "I don't know where I am" must not read as permission.
   test('an unresolved environment refuses everybody', () => {
-    const refusal = personaEnvironmentRefusal(
+    const refusal = virtualUserEnvironmentRefusal(
       'robin',
       accountable,
       undefined,
@@ -150,7 +150,7 @@ describe('personaEnvironmentRefusal', () => {
   })
 
   test('an unrecognised environment refuses rather than assuming staging', () => {
-    const refusal = personaEnvironmentRefusal(
+    const refusal = virtualUserEnvironmentRefusal(
       'robin',
       accountable,
       'somewhere-else',
@@ -160,9 +160,9 @@ describe('personaEnvironmentRefusal', () => {
   })
 
   // The check the deployed artifact cannot have been trusted on: whatever the
-  // file said, this persona is not allowed to act on real data.
+  // file said, this virtual user is not allowed to act on real data.
   test('production refuses a testing disposition whatever it declared', () => {
-    const refusal = personaEnvironmentRefusal(
+    const refusal = virtualUserEnvironmentRefusal(
       'shopper',
       { disposition: 'adversarial', environments: ['prod'] },
       'prod',
@@ -172,7 +172,7 @@ describe('personaEnvironmentRefusal', () => {
   })
 
   test('an environment outside the declared list is refused', () => {
-    const refusal = personaEnvironmentRefusal(
+    const refusal = virtualUserEnvironmentRefusal(
       'robin',
       accountable,
       'local',
@@ -181,13 +181,13 @@ describe('personaEnvironmentRefusal', () => {
     assert.match(refusal!, /it declares environments staging, prod/)
   })
 
-  test('a persona declaring nothing still runs everywhere but production', () => {
+  test('a virtual user declaring nothing still runs everywhere but production', () => {
     assert.equal(
-      personaEnvironmentRefusal('shopper', {}, 'staging', ENVIRONMENTS),
+      virtualUserEnvironmentRefusal('shopper', {}, 'staging', ENVIRONMENTS),
       null
     )
     assert.match(
-      personaEnvironmentRefusal('shopper', {}, 'prod', ENVIRONMENTS)!,
+      virtualUserEnvironmentRefusal('shopper', {}, 'prod', ENVIRONMENTS)!,
       /only 'accountable' may act on real data/
     )
   })

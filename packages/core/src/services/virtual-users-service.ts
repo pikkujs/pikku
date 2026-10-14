@@ -2,7 +2,7 @@ import type {
   ConverseOptions,
   ActorFlowVerdict,
 } from '../wirings/actor-flow/actor-flow.types.js'
-import type { PersonaMeta } from '../wirings/persona/persona.types.js'
+import type { VirtualUserMeta } from '../wirings/virtual-user/virtual-user-declaration.types.js'
 
 /**
  * What the transport answered, for a step that treats the status as data.
@@ -35,8 +35,8 @@ export interface ScenarioHttpResponse<T = unknown> {
  * Drain a response into the shape a step can carry: the parsed body (an empty
  * one counting as no body at all) alongside the text it was parsed from.
  *
- * `invokeRaw` returns this, and a step that has to reach past a persona — a
- * route with no RPC, an identity no persona can hold — reaches for this rather
+ * `invokeRaw` returns this, and a step that has to reach past a virtual user — a
+ * route with no RPC, an identity no virtual user can hold — reaches for this rather
  * than writing the same record by hand.
  *
  * @example snippet: scenarioPolling
@@ -80,7 +80,7 @@ export interface ScenarioJsonRequest {
 /**
  * POST JSON somewhere and report what came back, without throwing on a 4xx/5xx.
  *
- * Every scenario that reaches past a persona was writing this by hand — the same
+ * Every scenario that reaches past a virtual user was writing this by hand — the same
  * `content-type`, the same `JSON.stringify`, the same drain — and the copies had
  * drifted: some returned `res.json()`, which loses the status and throws
  * outright when the target answers an empty body or an HTML error page. A
@@ -109,37 +109,37 @@ export const postScenarioJson = async <T = unknown>(
 /** Per-call transport options. */
 export interface ScenarioInvokeOptions {
   /**
-   * Headers to send alongside the persona's own session. This is how a step
-   * expresses an identity no declared persona can — an impersonation header, or
+   * Headers to send alongside the virtual user's own session. This is how a step
+   * expresses an identity no declared virtual user can — an impersonation header, or
    * one of the header-shim principals a credential scenario invents.
    */
   headers?: Record<string, string>
 }
 
 /**
- * The RPC surface a persona can reach, as name → input/output. A project binds
+ * The RPC surface a virtual user can reach, as name → input/output. A project binds
  * its generated exposed RPC map here; the default leaves every name open, which
- * is what a persona built by hand (or by a third-party driver) gets.
+ * is what a virtual user built by hand (or by a third-party driver) gets.
  */
 export type ScenarioRpcMap = Record<string, { input: any; output: any }>
 
 /**
- * The persona a step's `actor` slot carries, for a project whose personas are
- * known. No declared personas keeps the open type rather than collapsing to
+ * The virtual user a step's `actor` slot carries, for a project whose virtual users are
+ * known. No declared virtual users keeps the open type rather than collapsing to
  * `never` — a project may still build one itself.
  */
-export type ScenarioPersonaOf<TPersonas> = [keyof TPersonas] extends [never]
-  ? ScenarioPersona
-  : TPersonas[keyof TPersonas]
+export type ScenarioVirtualUserOf<TVirtualUsers> = [keyof TVirtualUsers] extends [never]
+  ? ScenarioVirtualUser
+  : TVirtualUsers[keyof TVirtualUsers]
 
 /**
  * A declared person, signed in and acting over the real transport.
  *
- * The runtime half of `definePersonas()`: sign-in materialises a user row
+ * The runtime half of `defineVirtualUsers()`: sign-in materialises a user row
  * flagged `actor: true`, and everything a step or a virtual user does goes
  * through here.
  */
-export interface ScenarioPersona<
+export interface ScenarioVirtualUser<
   TAgentName extends string = string,
   TRpcMap extends ScenarioRpcMap = ScenarioRpcMap,
 > {
@@ -177,15 +177,15 @@ export interface ScenarioPersona<
 }
 
 /**
- * A declared persona with its address filled in — what codegen writes and what
+ * A declared virtual user with its address filled in — what codegen writes and what
  * a seed, a scenario run and a virtual-user run all read.
  *
- * The address is not declared. It is derived from the persona's id and the
- * project's persona domain, so two people can never accidentally share one and
+ * The address is not declared. It is derived from the virtual user's id and the
+ * project's virtual user domain, so two people can never accidentally share one and
  * sign in as the same user row — which would silently collapse exactly the
  * isolation scenarios a second person exists for.
  */
-export type ResolvedPersona = PersonaMeta & { email: string }
+export type ResolvedVirtualUser = VirtualUserMeta & { email: string }
 
-/** The injected `personas` service: persona id → persona. */
-export type ScenarioPersonas = Record<string, ScenarioPersona>
+/** The injected `virtualUsers` service: virtual user id → virtual user. */
+export type ScenarioVirtualUsers = Record<string, ScenarioVirtualUser>

@@ -1,11 +1,11 @@
 import type {
-  ScenarioPersona,
-  ResolvedPersona,
-  ScenarioPersonas,
+  ScenarioVirtualUser,
+  ResolvedVirtualUser,
+  ScenarioVirtualUsers,
   ScenarioInvokeOptions,
   ScenarioHttpResponse,
-} from './personas-service.js'
-import { readScenarioHttpResponse } from './personas-service.js'
+} from './virtual-users-service.js'
+import { readScenarioHttpResponse } from './virtual-users-service.js'
 import type {
   ConverseOptions,
   ActorFlowVerdict,
@@ -22,13 +22,13 @@ import {
   type ActorSecretResolver,
   OperatorSignIn,
   type OperatorSignInOptions,
-  type PersonaSignIn,
+  type VirtualUserSignIn,
   authMount,
-} from './persona-sign-in.js'
+} from './virtual-user-sign-in.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
-export interface HttpPersonasConfig {
+export interface HttpVirtualUsersConfig {
   /**
    * Base API URL of the target app, INCLUDING the HTTP prefix — e.g.
    * `https://app.example.com/api` or `http://localhost:4000/api`. Sign-in is
@@ -37,29 +37,29 @@ export interface HttpPersonasConfig {
    */
   apiUrl: string
   /**
-   * The ROOT actor secret, from which each persona's own credential is derived
+   * The ROOT actor secret, from which each virtual user's own credential is derived
    * and bound to their address. Sign-in only ever works for user rows flagged
    * `actor: true`, and a derived credential only ever works for the one address
    * it was derived for.
    *
-   * Pass an {@link ActorSecretResolver} instead to drive personas whose
-   * credentials were minted elsewhere — a caller entitled to one persona then
+   * Pass an {@link ActorSecretResolver} instead to drive virtual users whose
+   * credentials were minted elsewhere — a caller entitled to one virtual user then
    * never holds the root.
    *
    * The local-development credential. A deployed stage has none, and passes
-   * {@link HttpPersonasConfig.operator} instead.
+   * {@link HttpVirtualUsersConfig.operator} instead.
    */
   secret?: string | ActorSecretResolver
   /**
-   * Fabric operator credentials, for signing personas into a DEPLOYED stage.
+   * Fabric operator credentials, for signing virtual users into a DEPLOYED stage.
    *
-   * Mutually exclusive with {@link HttpPersonasConfig.secret}: the operator
-   * path acts as the persona through an admin session rather than logging in as
+   * Mutually exclusive with {@link HttpVirtualUsersConfig.secret}: the operator
+   * path acts as the virtual user through an admin session rather than logging in as
    * them, so no test credential has to exist on the target at all.
    */
   operator?: OperatorSignInOptions
-  /** Persona id → the declaration with its address filled in. */
-  personas: Record<string, ResolvedPersona>
+  /** Virtual user id → the declaration with its address filled in. */
+  virtualUsers: Record<string, ResolvedVirtualUser>
   /**
    * Sign-in path under apiUrl, for whichever of the two paths is in use — an
    * app that mounts auth under `/api` moves both. Default: the actor plugin's
@@ -69,7 +69,7 @@ export interface HttpPersonasConfig {
   signInPath?: string
   /**
    * Where the session (and its roles) is read back. Defaults to `get-session`
-   * under the same auth mount as {@link HttpPersonasConfig.signInPath}, so an
+   * under the same auth mount as {@link HttpVirtualUsersConfig.signInPath}, so an
    * app that moved auth under `/api` moves this with it and does not have to
    * say so twice.
    */
@@ -84,11 +84,11 @@ export interface HttpPersonasConfig {
    * on scopes that column is a projection rather than the model — it exists so
    * better-auth's own admin endpoints have something to read, is written by
    * whatever keeps it in step, and is absent entirely from an app that declares
-   * no such field. A persona verified against it is verified against a copy.
+   * no such field. A virtual user verified against it is verified against a copy.
    */
   rolesRpc?: string | false
   /**
-   * Default model a persona thinks with when `converse(...)` is called without
+   * Default model a virtual user thinks with when `converse(...)` is called without
    * an explicit `model`. Its own turns/approvals/evaluation run in-process via
    * the configured `agentRunner`.
    */
@@ -96,7 +96,7 @@ export interface HttpPersonasConfig {
 }
 
 /**
- * Default HTTP-backed persona. Signs in lazily on first invoke, holds the
+ * Default HTTP-backed virtual user. Signs in lazily on first invoke, holds the
  * session cookies for its lifetime, and re-logs-in once on a 401 mid-run (long
  * health-check runs can outlive a session).
  *
@@ -104,7 +104,7 @@ export interface HttpPersonasConfig {
  * interchangeable — see {@link ActorSignIn} for local development and
  * {@link OperatorSignIn} for a deployed stage.
  */
-export class HttpPersona implements ScenarioPersona {
+export class HttpVirtualUser implements ScenarioVirtualUser {
   private jar: ScenarioCookieJar
   /**
    * Whether `login()` has succeeded since the last time the session was
@@ -113,12 +113,12 @@ export class HttpPersona implements ScenarioPersona {
    * established.
    */
   private signedIn = false
-  private signIn: PersonaSignIn
+  private signIn: VirtualUserSignIn
 
   constructor(
     readonly name: string,
-    private persona: ResolvedPersona,
-    private config: HttpPersonasConfig
+    private virtualUser: ResolvedVirtualUser,
+    private config: HttpVirtualUsersConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
     if (config.operator) {
@@ -138,13 +138,13 @@ export class HttpPersona implements ScenarioPersona {
       )
     } else {
       throw new Error(
-        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target or 'operator' for a deployed one`
+        `[scenario] virtual user '${name}' has no way to sign in — set 'secret' for a dev target or 'operator' for a deployed one`
       )
     }
   }
 
   get email(): string {
-    return this.persona.email
+    return this.virtualUser.email
   }
 
   async invoke(rpcName: string, data: unknown): Promise<unknown> {
@@ -183,7 +183,7 @@ export class HttpPersona implements ScenarioPersona {
     // Signed in here rather than left to postAgent's 401 retry, which a public
     // agent route never triggers. An unowned thread is minted under a fresh
     // anonymous id per request, so turn one succeeds and turn two is refused as
-    // somebody else's — and a persona is a real account with real credentials,
+    // somebody else's — and a virtual user is a real account with real credentials,
     // so there is no case where conversing as nobody is the intent.
     if (!this.signedIn) {
       await this.login()
@@ -191,15 +191,15 @@ export class HttpPersona implements ScenarioPersona {
     const model = options.model ?? this.config.model
     if (!model) {
       throw new Error(
-        `[scenario] persona '${this.name}' converse needs a model — pass options.model or set 'model' on the personas service`
+        `[scenario] virtual user '${this.name}' converse needs a model — pass options.model or set 'model' on the virtual users service`
       )
     }
     const threadId = globalThis.crypto.randomUUID()
-    const resourceId = `persona:${this.name}`
+    const resourceId = `virtualUser:${this.name}`
 
     return runConversation({
-      persona: this.persona,
-      personaId: this.name,
+      virtualUser: this.virtualUser,
+      virtualUserId: this.name,
       agentName: options.agent,
       task: options.task,
       evaluate: options.evaluate,
@@ -219,7 +219,7 @@ export class HttpPersona implements ScenarioPersona {
   /**
    * The roles the stage says this session holds.
    *
-   * {@link HttpPersonasConfig.rolesRpc} first, then better-auth's
+   * {@link HttpVirtualUsersConfig.rolesRpc} first, then better-auth's
    * `get-session` — where its admin plugin puts `role` on the user, as a
    * comma-separated list. A target that answers neither returns `null` rather
    * than an empty list, because "this stage does not report roles" and "this
@@ -297,7 +297,7 @@ export class HttpPersona implements ScenarioPersona {
   }
 
   /**
-   * Start/continue the target agent's run over HTTP as this persona.
+   * Start/continue the target agent's run over HTTP as this virtual user.
    *
    * The SSE route, not the plain one. `POST /rpc/agent/:name` buffers the whole
    * run before it sends a single byte, so a run longer than the client's
@@ -395,7 +395,7 @@ export class HttpPersona implements ScenarioPersona {
   }
 
   private async login(): Promise<void> {
-    await this.signIn.login(this.jar, this.persona)
+    await this.signIn.login(this.jar, this.virtualUser)
     this.signedIn = true
   }
 }
@@ -494,15 +494,15 @@ function normalizeAgentReply(raw: unknown): TargetAgentReply {
 }
 
 /**
- * Build the injected `personas` service from the declared personas: id → lazy
- * HTTP persona. Wire the result as the `personas` singleton service.
+ * Build the injected `virtualUsers` service from the declared virtual users: id → lazy
+ * HTTP virtual user. Wire the result as the `virtualUsers` singleton service.
  */
-export function createHttpPersonas(
-  config: HttpPersonasConfig
-): ScenarioPersonas {
-  const personas: ScenarioPersonas = {}
-  for (const [id, persona] of Object.entries(config.personas)) {
-    personas[id] = new HttpPersona(id, persona, config)
+export function createHttpVirtualUsers(
+  config: HttpVirtualUsersConfig
+): ScenarioVirtualUsers {
+  const virtualUsers: ScenarioVirtualUsers = {}
+  for (const [id, virtualUser] of Object.entries(config.virtualUsers)) {
+    virtualUsers[id] = new HttpVirtualUser(id, virtualUser, config)
   }
-  return personas
+  return virtualUsers
 }

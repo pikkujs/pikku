@@ -7,7 +7,7 @@ tags: services
 
 # Actor sign-in only works for actor-flagged users
 
-`HttpPersonasConfig.secret` (`packages/core/src/services/http-personas.ts`) is
+`HttpVirtualUsersConfig.secret` (`packages/core/src/services/http-virtual-users.ts`) is
 what `ActorSignIn.login` presents: it POSTs `{ email, name, secret }` to
 `/auth/sign-in/actor` and gets back a session. That looks like a master key, and
 it deliberately is not one — for two independent reasons.
@@ -20,7 +20,7 @@ scenario traffic from human traffic after the fact.
 
 The second is that a credential is not shared. What is presented is derived from
 the root `SCENARIO_ACTOR_SECRET` and the address it signs in as — see
-[an actor credential is derived per persona](an-actor-credential-is-derived-per-persona.md) —
+[an actor credential is derived per virtual user](an-actor-credential-is-derived-per-virtual-user.md) —
 so the blast radius of a leaked credential is one synthetic account, not the
 synthetic actor population.
 

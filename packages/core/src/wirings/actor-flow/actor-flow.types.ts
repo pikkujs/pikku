@@ -1,4 +1,4 @@
-export type ActorFlowApprovalPolicy = 'in-persona' | 'always' | 'never'
+export type ActorFlowApprovalPolicy = 'in-virtual-user' | 'always' | 'never'
 
 export interface ConverseOptions<TAgentName extends string = string> {
   agent: TAgentName

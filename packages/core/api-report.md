@@ -7,7 +7,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 **3288 observable things**: 1099 exported names, plus
 2189 members on the classes and interfaces among them, reachable
-through 59 entry points.
+through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -15,14 +15,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 174 | 142 | 473 |
-| `./virtual-user` | 66 | 66 | 215 |
+| `./virtual-user` | 111 | 105 | 263 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
@@ -111,7 +110,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
@@ -136,7 +135,7 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors
-  actor: ScenarioPersonaOf<TypedActors>
+  actor: ScenarioVirtualUserOf<TypedActors>
   scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
@@ -306,7 +305,7 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
@@ -331,7 +330,7 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors
-  actor: ScenarioPersonaOf<TypedActors>
+  actor: ScenarioVirtualUserOf<TypedActors>
   scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
@@ -1214,7 +1213,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected async scheduleSleep(runId: string, stepId: string, duration: number | string): Promise<boolean>
   public setRunExtension<T extends WorkflowRunExtension>(create: (engine: WorkflowRunEngine) => T): T
   public getRunExtension(): WorkflowRunExtension | undefined
-  public async startWorkflow<I>(name: string, input: I, wire: WorkflowRunWire, rpcService: PikkuRPC, options?: { inline?: boolean; startNode?: string; actors?: ScenarioPersonas; onRunCreated?: (runId: string) => void }): Promise<{ runId: string }>
+  public async startWorkflow<I>(name: string, input: I, wire: WorkflowRunWire, rpcService: PikkuRPC, options?: { inline?: boolean; startNode?: string; actors?: ScenarioVirtualUsers; onRunCreated?: (runId: string) => void }): Promise<{ runId: string }>
   public async runToCompletion<I>(name: string, input: I, rpcService: PikkuRPC, options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }): Promise<any>
   protected async awaitRunEnd(runId: string, maxIntervalMs: number): Promise<WorkflowRun>
   protected async waitBeforeNextRead(ms: number): Promise<void>
@@ -1556,7 +1555,7 @@ export interface WorkflowStepOptions {
   retries?: number
   retryDelay?: string | number
   compensate?: false
-  actor?: ScenarioPersona
+  actor?: ScenarioVirtualUser
 }
 export interface WorkflowStepInput {
   runId: string
@@ -1633,13 +1632,13 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
   public getScenarioEnvironment(): ScenarioEnvironment | undefined
   public takeStepVideoOffsets(runId: string): Map<string, ScenarioStepVideoOffset[]>
-  public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioPersonas }): Promise<void>
+  public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioVirtualUsers }): Promise<void>
   public detachRunContext(runId: string): void
   public getRunContext(runId: string): Record<string, unknown> | undefined
   public decorateRunWire(wire: PikkuRawWire, context: { runId: string; workflowMeta: any; workflowWire: PikkuWorkflowWire }): void
   public async onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
   public async onAfterRunFunc(context: RunLifecycleContext, outcome: 'completed' | 'failed' | 'interrupted', failure: unknown): Promise<void>
-  public async resolvePersonas(): Promise<ScenarioPersonas | undefined>
+  public async resolveVirtualUsers(): Promise<ScenarioVirtualUsers | undefined>
   public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
 }
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
@@ -1807,7 +1806,7 @@ export interface ScenarioScreenshotOptions {
   showcase?: boolean
   fullPage?: boolean
 }
-export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
+export type ScenarioStepKind = 'virtualUser' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
   type: 'scenarioStep'
   stepName: string
@@ -2279,7 +2278,7 @@ export interface WorkflowStepOptions {
   retries?: number
   retryDelay?: string | number
   compensate?: false
-  actor?: ScenarioPersona
+  actor?: ScenarioVirtualUser
 }
 export interface WorkflowStepWire {
   runId: string
@@ -2316,8 +2315,8 @@ export interface ConverseOptions<TAgentName extends string = string> {
 }
 runConversation: (params: RunConversationParams) => Promise<ActorFlowVerdict>
 export interface RunConversationParams {
-  persona: ResolvedPersona
-  personaId: string
+  virtualUser: ResolvedVirtualUser
+  virtualUserId: string
   task: string
   evaluate: string
   approvals?: ActorFlowApprovalPolicy
@@ -2337,6 +2336,18 @@ export interface TargetAgentDriver {
 ## ./virtual-user
 
 ```ts
+ACTOR_ROOT_SECRET_MIN_LENGTH: 32
+ACTOR_SECRET_INFO: "pikku:actor-sign-in"
+ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
+export type ActorSecretResolver = (
+  virtualUser: ResolvedVirtualUser
+) => string | Promise<string>
+actorSecretSubject: (email: string) => string
+export class ActorSignIn implements VirtualUserSignIn {
+  constructor(private readonly apiUrl: string, private readonly secret: string | ActorSecretResolver, private readonly signInPath: string)
+  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
+  headers(): Record<string, string>
+}
 export interface AgentReachability {
   description?: string
   scopes?: readonly string[]
@@ -2354,10 +2365,36 @@ export interface ApiCatalogueEntry {
   inputSchema?: Record<string, unknown>
   outputSchema?: Record<string, unknown>
 }
+APP_SCOPE_ROOT: "app"
+appScopeId: (app: string) => string
+authMount: (signInPath?: string | undefined) => string | undefined
+buildAppScopeDefinition: (virtualUsers: VirtualUserMeta[]) => ScopeDefinitionMeta | null
 catalogueClassification: (entries: readonly ApiCatalogueEntry[]) => { total: number; annotated: number; inferred: number; }
 catalogueLookup: (index: Map<string, ApiCatalogueEntry>, rpcName: string) => ApiCatalogueEntry | undefined
+export type CoreVirtualUser = {
+  name: string
+  jobTitle?: string
+  description?: string
+  avatarUrl?: string
+  roles?: string[]
+  personality?: string
+  goals?: string[]
+  tags?: string[]
+  disposition?: VirtualUserDisposition
+  tuning?: VirtualUserTuning
+  fixtures?: string[]
+  account?: CoreVirtualUserAccount
+  linkedAccounts?: Record<string, CoreVirtualUserAccount>
+  environments?: string[]
+  runnable?: boolean
+  app?: string
+}
+export type CoreVirtualUsers = Record<string, CoreVirtualUser>
+createHttpVirtualUsers: (config: HttpVirtualUsersConfig) => ScenarioVirtualUsers
 DEFAULT_MAX_INTERVAL_MS: number
 DEFAULT_MIN_INTERVAL_MS: number
+defineVirtualUsers: (_config: CoreVirtualUsers) => void
+deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
 deriveCatalogue: (functions: FunctionsMeta, schemas?: SchemaMap) => ApiCatalogueEntry[]
 deriveIntents: (workflows: WorkflowsMeta, functions?: FunctionsMeta) => IntentSource[]
 dispositionProfile: (disposition?: VirtualUserDisposition, tuning?: VirtualUserTuning | undefined) => DispositionProfile
@@ -2372,17 +2409,18 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
-executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+establishOperatorSession: (fetchImpl: (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, virtualUser: ResolvedVirtualUser, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, virtualUsers, createVirtualUsers, runId, virtualUser: virtualUserId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined
   agentRunner: AgentRunnerService | undefined
   variables: VariablesService
   logger: Logger
-  personas: ScaffoldPersonas
-  createPersonas: (options: Omit<HttpPersonasConfig, 'personas'>) => ScenarioPersonas
+  virtualUsers: ScaffoldVirtualUsers
+  createVirtualUsers: (options: Omit<HttpVirtualUsersConfig, 'virtualUsers'>) => ScenarioVirtualUsers
   runId: string
-  persona: string
+  virtualUser: string
   disposition: string
   goals: string[]
   memory: Record<string, string>
@@ -2390,6 +2428,26 @@ export interface ExecuteVirtualUserRunParams {
   budget?: { steps?: number; mutations?: number; durationMs?: number }
   operatorToken?: string
 }
+export class HttpVirtualUser implements ScenarioVirtualUser {
+  constructor(readonly name: string, private virtualUser: ResolvedVirtualUser, private config: HttpVirtualUsersConfig)
+  get email(): string
+  async invoke(rpcName: string, data: unknown): Promise<unknown>
+  async invokeRaw(rpcName: string, data: unknown, options?: ScenarioInvokeOptions): Promise<ScenarioHttpResponse>
+  async converse(options: ConverseOptions): Promise<ActorFlowVerdict>
+  async sessionRoles(): Promise<string[] | null>
+}
+export interface HttpVirtualUsersConfig {
+  apiUrl: string
+  secret?: string | ActorSecretResolver
+  operator?: OperatorSignInOptions
+  virtualUsers: Record<string, ResolvedVirtualUser>
+  signInPath?: string
+  sessionPath?: string
+  rpcPath?: string
+  rolesRpc?: string | false
+  model?: string
+}
+IMPERSONATE_USER_ID_HEADER: "x-pikku-impersonate-user-id"
 export interface IntentRecord {
   id: string
   sourceId: string
@@ -2399,14 +2457,14 @@ export interface IntentRecord {
   suspensions: number
   summary?: string
 }
-intentsForPersona: (sources: readonly IntentSource[], personaId: string) => IntentSource[]
+intentsForVirtualUser: (sources: readonly IntentSource[], virtualUserId: string) => IntentSource[]
 export interface IntentSource {
   id: string
   title: string
   description?: string
   steps?: readonly string[]
   tags?: readonly string[]
-  personas?: readonly string[]
+  virtualUsers?: readonly string[]
 }
 export class IntentStack {
   constructor(sources: readonly IntentSource[], private readonly rng: VirtualUserRng, private readonly profile: DispositionProfile, private readonly maxOpen = 3)
@@ -2417,28 +2475,61 @@ export class IntentStack {
 }
 isDue: (schedule: VirtualUserScheduleRecord, now: Date) => boolean
 isReadOnly: (entry: ApiCatalogueEntry) => boolean
+isRunnableVirtualUser: (virtualUser: { runnable?: boolean | undefined; account?: { provider?: string | undefined; } | undefined; }) => boolean
 logVirtualUserTick: (logger: Logger, result: VirtualUserTickResult) => void
-nextRunAt: (schedule: Pick<VirtualUserScheduleRecord, "minIntervalMs" | "maxIntervalMs">, now: Date, random: () => number) => Date
-personaScopes: (persona: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
-export interface PersonaTargetOptions {
-  model?: string
-  agents?: readonly string[]
+export interface MailboxAllowlist {
+  senders: readonly string[]
+  linkOrigins?: readonly string[]
 }
-personaVirtualUserTarget: (persona: ScenarioPersona<string, ScenarioRpcMap>, { model, agents }?: PersonaTargetOptions) => VirtualUserTarget
-prepareVirtualUserRun: (input: { persona: { roles?: readonly string[] | undefined; }; functionsMeta: FunctionsMeta; schemas?: SchemaMap | undefined; workflowsMeta?: WorkflowsMeta | undefined; systemRoles?: SystemRoleDefinitions | SystemRoleDefinitionsMeta | undefined; agentsMeta?: Readonly<Record<string, AgentReachability>> | undefined; }) => VirtualUserPreparation
+nextRunAt: (schedule: Pick<VirtualUserScheduleRecord, "minIntervalMs" | "maxIntervalMs">, now: Date, random: () => number) => Date
+export interface OperatorSessionResult {
+  setCookies: string[]
+  userId: string
+}
+export class OperatorSignIn implements VirtualUserSignIn {
+  constructor(private readonly apiUrl: string, private readonly options: OperatorSignInOptions)
+  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
+  headers(): Record<string, string>
+}
+export interface OperatorSignInOptions {
+  token: string | (() => string | Promise<string>)
+  signInPath?: string
+}
+postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>
+prepareVirtualUserRun: (input: { virtualUser: { roles?: readonly string[] | undefined; }; functionsMeta: FunctionsMeta; schemas?: SchemaMap | undefined; workflowsMeta?: WorkflowsMeta | undefined; systemRoles?: SystemRoleDefinitions | SystemRoleDefinitionsMeta | undefined; agentsMeta?: Readonly<Record<string, AgentReachability>> | undefined; }) => VirtualUserPreparation
 PRODUCTION_DISPOSITION: VirtualUserDisposition
 export interface ReachableAgent {
   name: string
   description?: string
 }
 reachableCatalogue: (entries: readonly ApiCatalogueEntry[], { readOnly, allowApprovalRequired, scopes, }?: { readOnly?: boolean | undefined; allowApprovalRequired?: boolean | undefined; scopes?: readonly string[] | undefined; }) => ApiCatalogueEntry[]
+readScenarioHttpResponse: <T = unknown>(res: Response) => Promise<ScenarioHttpResponse<T>>
+export interface ReceivedEmail {
+  to: string
+  from: string
+  subject: string
+  receivedAt: Date
+  links: string[]
+  codes: string[]
+  body?: string
+}
 requireVirtualUserRunStore: (store: VirtualUserRunStore | undefined, reading?: boolean) => VirtualUserRunStore
 requireVirtualUserScheduleStore: (store: VirtualUserScheduleStore | undefined) => VirtualUserScheduleStore
-runnablePersona: (personas: ScaffoldPersonas, personaId: string) => ResolvedPersona
+roleMismatchMessage: (verification: RoleVerification) => string | null
+export interface RoleVerification {
+  virtualUser: string
+  expected: string[]
+  actual: string[]
+  missing: string[]
+  extra: string[]
+  ok: boolean
+}
+runnableVirtualUser: (virtualUsers: ScaffoldVirtualUsers, virtualUserId: string) => ResolvedVirtualUser
+runnableVirtualUsers: (meta: VirtualUsersMeta) => VirtualUserMeta[]
 runVirtualUser: (params: RunVirtualUserParams) => Promise<VirtualUserRunResult>
 export interface RunVirtualUserParams {
-  persona: ResolvedPersona
-  personaId: string
+  virtualUser: ResolvedVirtualUser
+  virtualUserId: string
   disposition?: VirtualUserDisposition
   tuning?: VirtualUserTuning
   catalogue: readonly ApiCatalogueEntry[]
@@ -2459,29 +2550,29 @@ export interface RunVirtualUserParams {
   allowApprovalRequired?: boolean
   maxStepsPerIntent?: number
 }
-export type ScaffoldPersonas = Record<string, ResolvedPersona>
+export type ScaffoldVirtualUsers = Record<string, ResolvedVirtualUser>
 export type SchemaMap = Record<string, Record<string, unknown> | undefined>
-serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; persona: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
-serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, personas: ScaffoldPersonas) => { persona: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
+serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; virtualUser: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
+serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, virtualUsers: ScaffoldVirtualUsers) => { virtualUser: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
 serializeVirtualUserSteps: (steps: readonly StepRecord[]) => { index: number; intentId: string | undefined; action: Record<string, unknown>; status: number | undefined; ok: boolean | undefined; response: string | undefined; findingKinds: string[] | undefined; tokensIn: number; tokensOut: number; }[]
 signInPathFor: (configured: string | undefined, plugin: "actor" | "fabric") => string | undefined
 STALE_RUN_AFTER_MS: number
 export interface StartedVirtualUserRun {
   runId: string
-  persona: string
+  virtualUser: string
   disposition: VirtualUserDisposition
   seed: number
   goals: string[]
   memory: Record<string, string>
 }
-startVirtualUserRun: ({ store, personas, config, environments, environment, persona: personaId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
+startVirtualUserRun: ({ store, virtualUsers, config, environments, environment, virtualUser: virtualUserId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
 export interface StartVirtualUserRunParams {
   store: VirtualUserRunStore | undefined
-  personas: ScaffoldPersonas
+  virtualUsers: ScaffoldVirtualUsers
   config: { nodeEnv?: string } | undefined
-  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environments?: Readonly<Record<string, VirtualUserEnvironment>>
   environment?: string
-  persona: string
+  virtualUser: string
   disposition?: string
   seed?: number
   goals?: string[]
@@ -2501,12 +2592,19 @@ export interface StepRecord {
 }
 tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterMs, }: VirtualUserTickParams) => Promise<VirtualUserTickResult>
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
+validateAndBuildVirtualUsersMeta: (definitions: VirtualUserDefinitions) => VirtualUsersMeta
+verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
+verifyVirtualUserRoles: (virtualUser: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
 VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
+export type VirtualUserAccountMeta = {
+  provider?: string
+}
 export interface VirtualUserBudget {
   steps?: number
   mutations?: number
   duration?: number | string
 }
+export type VirtualUserDefinitions = VirtualUserMeta[]
 export type VirtualUserDisposition =
   | 'realistic'
   | 'careless'
@@ -2515,6 +2613,17 @@ export type VirtualUserDisposition =
   | 'auditor'
   | 'adversarial'
   | 'accountable'
+virtualUserEmail: (virtualUserId: string, domain: string, runId?: string | undefined) => string
+virtualUserEmails: (virtualUserIds: readonly string[], domain: string, runId?: string | undefined) => Record<string, string>
+export interface VirtualUserEnvironment {
+  production?: boolean
+}
+virtualUserEnvironmentErrors: (id: string, virtualUser: VirtualUserEnvironmentSubject, environments: Readonly<Record<string, VirtualUserEnvironment>>) => string[]
+virtualUserEnvironmentRefusal: (id: string, virtualUser: VirtualUserEnvironmentSubject, environmentName: string | undefined, environments: Readonly<Record<string, VirtualUserEnvironment>>) => string | null
+export interface VirtualUserEnvironmentSubject {
+  disposition?: VirtualUserDisposition
+  environments?: string[]
+}
 export interface VirtualUserFinding {
   kind: VirtualUserFindingKind
   detail: string
@@ -2522,6 +2631,31 @@ export interface VirtualUserFinding {
   status?: number
   intentId?: string
   step: number
+}
+export interface VirtualUserMailbox {
+  waitFor(address: string, opts?: { subject?: RegExp; from?: string; since?: Date; timeoutMs?: number }): Promise<ReceivedEmail>
+  list(address: string): Promise<ReceivedEmail[]>
+  clear(address: string): Promise<void>
+}
+export type VirtualUserMeta = {
+  id: string
+  name: string
+  jobTitle?: string
+  description?: string
+  avatarUrl?: string
+  roles: string[]
+  personality?: string
+  goals: string[]
+  tags: string[]
+  disposition?: VirtualUserDisposition
+  tuning?: VirtualUserTuning
+  fixtures?: string[]
+  account?: VirtualUserAccountMeta
+  linkedAccounts?: Record<string, VirtualUserAccountMeta>
+  environments?: string[]
+  runnable: boolean
+  app?: string
+  sourceFile?: string
 }
 export interface VirtualUserPreparation {
   catalogue: ApiCatalogueEntry[]
@@ -2539,7 +2673,7 @@ export interface VirtualUserRunOutcome {
 }
 export interface VirtualUserRunRecord {
   runId: string
-  persona: string
+  virtualUser: string
   disposition: VirtualUserDisposition
   seed: number
   status: 'running' | 'completed' | 'failed'
@@ -2564,7 +2698,7 @@ export interface VirtualUserRunResult {
   stoppedBy: | 'no-intents' | 'budget-steps' | 'budget-mutations' | 'budget-duration' | 'stop-hook' | 'exhausted'
 }
 export interface VirtualUserRunStart {
-  persona: string
+  virtualUser: string
   disposition: VirtualUserDisposition
   seed: number
   goals?: readonly string[]
@@ -2576,11 +2710,11 @@ export interface VirtualUserRunStore {
   complete(runId: string, outcome: VirtualUserRunOutcome): Promise<void>
   fail(runId: string, error: string): Promise<void>
   get(runId: string): Promise<VirtualUserRunRecord | null>
-  list(options?: { persona?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
+  list(options?: { virtualUser?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
   steps(runId: string, options?: { limit?: number; offset?: number }): Promise<StepRecord[]>
 }
 export interface VirtualUserScheduleInput {
-  persona: string
+  virtualUser: string
   enabled?: boolean
   disposition?: VirtualUserDisposition
   goals?: readonly string[]
@@ -2590,7 +2724,7 @@ export interface VirtualUserScheduleInput {
   nextRunAt?: Date
 }
 export interface VirtualUserScheduleRecord {
-  persona: string
+  virtualUser: string
   enabled: boolean
   disposition: VirtualUserDisposition
   goals: string[]
@@ -2601,19 +2735,30 @@ export interface VirtualUserScheduleRecord {
   lastRunId: string | null
   lastRunAt: Date | null
 }
-virtualUserScheduleRunInput: (schedule: VirtualUserScheduleRecord) => { persona: string; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | undefined; }
+virtualUserScheduleRunInput: (schedule: VirtualUserScheduleRecord) => { virtualUser: string; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | undefined; }
 export interface VirtualUserScheduleStore {
   set(schedule: VirtualUserScheduleInput): Promise<VirtualUserScheduleRecord>
-  get(persona: string): Promise<VirtualUserScheduleRecord | null>
+  get(virtualUser: string): Promise<VirtualUserScheduleRecord | null>
   list(): Promise<VirtualUserScheduleRecord[]>
   due(now: Date): Promise<VirtualUserScheduleRecord[]>
-  claim(persona: string, claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }): Promise<boolean>
-  remove(persona: string): Promise<void>
+  claim(virtualUser: string, claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }): Promise<boolean>
+  remove(virtualUser: string): Promise<void>
 }
+virtualUserScopes: (virtualUser: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
+export interface VirtualUserSignIn {
+  login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
+  headers(): Record<string, string>
+}
+export type VirtualUsersMeta = Record<string, VirtualUserMeta>
+virtualUserTarget: (virtualUser: ScenarioVirtualUser<string, ScenarioRpcMap>, { model, agents }?: VirtualUserTargetOptions) => VirtualUserTarget
 export interface VirtualUserTarget {
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
   talkTo?(agent: string, task: string): Promise<ActorFlowVerdict>
   upload?(file: string): Promise<ScenarioHttpResponse>
+}
+export interface VirtualUserTargetOptions {
+  model?: string
+  agents?: readonly string[]
 }
 export interface VirtualUserTickParams {
   schedules: VirtualUserScheduleStore
@@ -2624,8 +2769,8 @@ export interface VirtualUserTickParams {
   staleAfterMs?: number
 }
 export interface VirtualUserTickResult {
-  dispatched: { persona: string; runId: string }[]
-  skipped: { persona: string; reason: VirtualUserSkipReason }[]
+  dispatched: { virtualUser: string; runId: string }[]
+  skipped: { virtualUser: string; reason: VirtualUserSkipReason }[]
   reaped: string[]
 }
 export interface VirtualUserTuning {
@@ -2638,11 +2783,11 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+writeVirtualUserSchedule: ({ store, virtualUsers, virtualUser, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
-  personas: ScaffoldPersonas
-  persona: string
+  virtualUsers: ScaffoldVirtualUsers
+  virtualUser: string
   enabled?: boolean
   disposition?: string
   goals?: string[]
@@ -2651,7 +2796,7 @@ export interface WriteVirtualUserScheduleParams {
   maxIntervalMs?: number
   nextRunAt?: string
   config?: { nodeEnv?: string }
-  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environments?: Readonly<Record<string, VirtualUserEnvironment>>
   environment?: string
 }
 ```
@@ -2743,7 +2888,7 @@ export type CoreHTTPFunctionWiring<
 DEFAULT_MAX_BODY_SIZE: number
 defineHTTPRoutes: { <T extends HTTPRouteMap>(routes: T): HTTPRouteContract<T>; <T extends HTTPRouteMap>(config: HTTPRoutesGroupConfig & { routes: T; }): HTTPRouteContract<T>; }
 fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
-fetchData: <In, Out>(request: PikkuHTTPRequest<unknown> | Request, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
+fetchData: <In, Out>(request: Request | PikkuHTTPRequest<unknown>, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
 export type HTTPMethod =
   'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export type HTTPRouteBaseConfig = {
@@ -4362,157 +4507,6 @@ export type SystemRoleDefinitionsMeta = Record<string, SystemRoleDefinitionMeta>
 validateAndBuildSystemRoleDefinitionsMeta: (definitions: SystemRoleDefinitions) => SystemRoleDefinitionsMeta
 ```
 
-## ./persona
-
-```ts
-ACTOR_ROOT_SECRET_MIN_LENGTH: 32
-ACTOR_SECRET_INFO: "pikku:actor-sign-in"
-ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
-export type ActorSecretResolver = (
-  persona: ResolvedPersona
-) => string | Promise<string>
-actorSecretSubject: (email: string) => string
-export class ActorSignIn implements PersonaSignIn {
-  constructor(private readonly apiUrl: string, private readonly secret: string | ActorSecretResolver, private readonly signInPath: string)
-  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
-  headers(): Record<string, string>
-}
-APP_SCOPE_ROOT: "app"
-appScopeId: (app: string) => string
-authMount: (signInPath?: string | undefined) => string | undefined
-buildAppScopeDefinition: (personas: PersonaMeta[]) => ScopeDefinitionMeta | null
-export type CorePersona = {
-  name: string
-  jobTitle?: string
-  description?: string
-  avatarUrl?: string
-  roles?: string[]
-  personality?: string
-  goals?: string[]
-  tags?: string[]
-  disposition?: VirtualUserDisposition
-  tuning?: VirtualUserTuning
-  fixtures?: string[]
-  account?: CorePersonaAccount
-  linkedAccounts?: Record<string, CorePersonaAccount>
-  environments?: string[]
-  runnable?: boolean
-  app?: string
-}
-export type CorePersonas = Record<string, CorePersona>
-createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
-definePersonas: (_config: CorePersonas) => void
-deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
-establishOperatorSession: (fetchImpl: (input: URL | RequestInfo, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, persona: ResolvedPersona, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
-export class HttpPersona implements ScenarioPersona {
-  constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
-  get email(): string
-  async invoke(rpcName: string, data: unknown): Promise<unknown>
-  async invokeRaw(rpcName: string, data: unknown, options?: ScenarioInvokeOptions): Promise<ScenarioHttpResponse>
-  async converse(options: ConverseOptions): Promise<ActorFlowVerdict>
-  async sessionRoles(): Promise<string[] | null>
-}
-export interface HttpPersonasConfig {
-  apiUrl: string
-  secret?: string | ActorSecretResolver
-  operator?: OperatorSignInOptions
-  personas: Record<string, ResolvedPersona>
-  signInPath?: string
-  sessionPath?: string
-  rpcPath?: string
-  rolesRpc?: string | false
-  model?: string
-}
-IMPERSONATE_USER_ID_HEADER: "x-pikku-impersonate-user-id"
-isRunnablePersona: (persona: { runnable?: boolean | undefined; account?: { provider?: string | undefined; } | undefined; }) => boolean
-export interface MailboxAllowlist {
-  senders: readonly string[]
-  linkOrigins?: readonly string[]
-}
-export interface OperatorSessionResult {
-  setCookies: string[]
-  userId: string
-}
-export class OperatorSignIn implements PersonaSignIn {
-  constructor(private readonly apiUrl: string, private readonly options: OperatorSignInOptions)
-  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
-  headers(): Record<string, string>
-}
-export interface OperatorSignInOptions {
-  token: string | (() => string | Promise<string>)
-  signInPath?: string
-}
-export type PersonaAccountMeta = {
-  provider?: string
-}
-export type PersonaDefinitions = PersonaMeta[]
-personaEmail: (personaId: string, domain: string, runId?: string | undefined) => string
-personaEmails: (personaIds: readonly string[], domain: string, runId?: string | undefined) => Record<string, string>
-export interface PersonaEnvironment {
-  production?: boolean
-}
-personaEnvironmentErrors: (id: string, persona: PersonaEnvironmentSubject, environments: Readonly<Record<string, PersonaEnvironment>>) => string[]
-personaEnvironmentRefusal: (id: string, persona: PersonaEnvironmentSubject, environmentName: string | undefined, environments: Readonly<Record<string, PersonaEnvironment>>) => string | null
-export interface PersonaEnvironmentSubject {
-  disposition?: VirtualUserDisposition
-  environments?: string[]
-}
-export interface PersonaMailbox {
-  waitFor(address: string, opts?: { subject?: RegExp; from?: string; since?: Date; timeoutMs?: number }): Promise<ReceivedEmail>
-  list(address: string): Promise<ReceivedEmail[]>
-  clear(address: string): Promise<void>
-}
-export type PersonaMeta = {
-  id: string
-  name: string
-  jobTitle?: string
-  description?: string
-  avatarUrl?: string
-  roles: string[]
-  personality?: string
-  goals: string[]
-  tags: string[]
-  disposition?: VirtualUserDisposition
-  tuning?: VirtualUserTuning
-  fixtures?: string[]
-  account?: PersonaAccountMeta
-  linkedAccounts?: Record<string, PersonaAccountMeta>
-  environments?: string[]
-  runnable: boolean
-  app?: string
-  sourceFile?: string
-}
-export interface PersonaSignIn {
-  login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
-  headers(): Record<string, string>
-}
-export type PersonasMeta = Record<string, PersonaMeta>
-postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>
-readScenarioHttpResponse: <T = unknown>(res: Response) => Promise<ScenarioHttpResponse<T>>
-export interface ReceivedEmail {
-  to: string
-  from: string
-  subject: string
-  receivedAt: Date
-  links: string[]
-  codes: string[]
-  body?: string
-}
-roleMismatchMessage: (verification: RoleVerification) => string | null
-export interface RoleVerification {
-  persona: string
-  expected: string[]
-  actual: string[]
-  missing: string[]
-  extra: string[]
-  ok: boolean
-}
-runnablePersonas: (meta: PersonasMeta) => PersonaMeta[]
-validateAndBuildPersonasMeta: (definitions: PersonaDefinitions) => PersonasMeta
-verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
-verifyPersonaRoles: (persona: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
-```
-
 ## ./secret
 
 ```ts
@@ -5333,7 +5327,7 @@ export interface MetaService {
   getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
-  getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  getVirtualUsersMeta(): Promise<Record<string, ResolvedVirtualUser>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
   getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
@@ -5473,7 +5467,7 @@ export interface RenderEmailRequest {
 export type ResolvedAuditConfig = {
   durability: AuditDurability
 }
-export type ResolvedPersona = PersonaMeta & { email: string }
+export type ResolvedVirtualUser = VirtualUserMeta & { email: string }
 export interface Role {
   name: string
   description?: string
@@ -5483,7 +5477,7 @@ export interface Role {
 }
 export type RPCMetaRecord = Record<string, string>
 export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
-export interface ScenarioPersona< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
+export interface ScenarioVirtualUser< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
   readonly name: string
   readonly email: string
   invoke<TName extends keyof TRpcMap & string>(rpcName: TName, data: TRpcMap[TName]['input']): Promise<TRpcMap[TName]['output']>
@@ -5491,7 +5485,7 @@ export interface ScenarioPersona< TAgentName extends string = string, TRpcMap ex
   converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
   sessionRoles(): Promise<string[] | null>
 }
-export type ScenarioPersonas = Record<string, ScenarioPersona>
+export type ScenarioVirtualUsers = Record<string, ScenarioVirtualUser>
 export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   data?: any
   session?: CoreUserSession
@@ -5988,7 +5982,7 @@ export class LocalMetaService implements MetaService {
   async getGatewayMeta(): Promise<GatewaysMeta>
   async getRpcMeta(): Promise<RPCMetaRecord>
   async getWorkflowMeta(): Promise<WorkflowsMeta>
-  async getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  async getVirtualUsersMeta(): Promise<Record<string, ResolvedVirtualUser>>
   async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
   async getScopesMeta(): Promise<ScopeDefinitionsMeta>
   async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
@@ -6032,7 +6026,7 @@ export interface MetaService {
   getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
-  getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  getVirtualUsersMeta(): Promise<Record<string, ResolvedVirtualUser>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
   getScopesMeta(): Promise<ScopeDefinitionsMeta>
   getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>

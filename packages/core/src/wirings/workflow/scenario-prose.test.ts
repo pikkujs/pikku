@@ -214,7 +214,7 @@ describe('composeStepProse basics', () => {
     )
   })
 
-  test('a persona named after a person reads as that person', () => {
+  test('a virtual user named after a person reads as that person', () => {
     assert.equal(
       composeStepProse({
         phase: 'when',

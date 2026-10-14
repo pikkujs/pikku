@@ -4,7 +4,7 @@ import {
 } from '../virtual-user/virtual-user.types.js'
 
 /**
- * Which environments a persona may run against, and the one rule on it.
+ * Which environments a virtual user may run against, and the one rule on it.
  *
  * Two callers, deliberately sharing this file. The inspector checks the
  * declaration at build time; sign-in re-checks against the environment actually
@@ -13,29 +13,29 @@ import {
  */
 
 /** The part of an environment entry this rule cares about. */
-export interface PersonaEnvironment {
+export interface VirtualUserEnvironment {
   production?: boolean
 }
 
-/** What a persona needs to expose for the rule to be applied to it. */
-export interface PersonaEnvironmentSubject {
+/** What a virtual user needs to expose for the rule to be applied to it. */
+export interface VirtualUserEnvironmentSubject {
   disposition?: VirtualUserDisposition
   environments?: string[]
 }
 
 /**
- * The environments a persona may target, resolved.
+ * The environments a virtual user may target, resolved.
  *
  * An omitted `environments` means every configured environment **except** the
  * production ones: production is opt-in for everybody, so nothing reaches it by
  * being forgotten.
  */
-export const resolvePersonaEnvironments = (
-  persona: PersonaEnvironmentSubject,
-  environments: Readonly<Record<string, PersonaEnvironment>>
+export const resolveVirtualUserEnvironments = (
+  virtualUser: VirtualUserEnvironmentSubject,
+  environments: Readonly<Record<string, VirtualUserEnvironment>>
 ): string[] => {
-  if (persona.environments) {
-    return [...persona.environments]
+  if (virtualUser.environments) {
+    return [...virtualUser.environments]
   }
   return Object.entries(environments)
     .filter(([, env]) => !env.production)
@@ -43,40 +43,40 @@ export const resolvePersonaEnvironments = (
 }
 
 /**
- * The declaration check, as a list of messages. Empty means the persona's
+ * The declaration check, as a list of messages. Empty means the virtual user's
  * `environments` are coherent with the config and its disposition.
  *
  * An unknown environment name is an error rather than a shrug: a typo silently
- * narrowing a persona to nothing is the same class of bug as the one this whole
+ * narrowing a virtual user to nothing is the same class of bug as the one this whole
  * rule exists to prevent, only quieter.
  */
-export const personaEnvironmentErrors = (
+export const virtualUserEnvironmentErrors = (
   id: string,
-  persona: PersonaEnvironmentSubject,
-  environments: Readonly<Record<string, PersonaEnvironment>>
+  virtualUser: VirtualUserEnvironmentSubject,
+  environments: Readonly<Record<string, VirtualUserEnvironment>>
 ): string[] => {
-  if (!persona.environments) {
+  if (!virtualUser.environments) {
     return []
   }
 
   const errors: string[] = []
   const known = Object.keys(environments)
 
-  for (const name of persona.environments) {
+  for (const name of virtualUser.environments) {
     const env = environments[name]
     if (!env) {
       errors.push(
-        `Persona '${id}' names environment '${name}', which is not configured. ` +
+        `VirtualUser '${id}' names environment '${name}', which is not configured. ` +
           (known.length
             ? `Configured environments: ${known.join(', ')}.`
             : `Declare it under 'environments' in pikku.config.json.`)
       )
       continue
     }
-    if (env.production && persona.disposition !== PRODUCTION_DISPOSITION) {
+    if (env.production && virtualUser.disposition !== PRODUCTION_DISPOSITION) {
       errors.push(
-        `Persona '${id}' names production environment '${name}' with disposition ` +
-          `'${persona.disposition ?? 'realistic'}'. ` +
+        `VirtualUser '${id}' names production environment '${name}' with disposition ` +
+          `'${virtualUser.disposition ?? 'realistic'}'. ` +
           `Only '${PRODUCTION_DISPOSITION}' may run against production — every other ` +
           `disposition exists to find out what the product does wrong, which is not a ` +
           `thing to do to real data. Either give '${id}' disposition '${PRODUCTION_DISPOSITION}', ` +
@@ -97,15 +97,15 @@ export const personaEnvironmentErrors = (
  * artifact than the one running, so treating "I don't know where I am" as
  * permission is exactly backwards.
  */
-export const personaEnvironmentRefusal = (
+export const virtualUserEnvironmentRefusal = (
   id: string,
-  persona: PersonaEnvironmentSubject,
+  virtualUser: VirtualUserEnvironmentSubject,
   environmentName: string | undefined,
-  environments: Readonly<Record<string, PersonaEnvironment>>
+  environments: Readonly<Record<string, VirtualUserEnvironment>>
 ): string | null => {
   if (!environmentName) {
     return (
-      `Refusing to sign in persona '${id}': no environment is resolved. ` +
+      `Refusing to sign in virtual user '${id}': no environment is resolved. ` +
       `Set PIKKU_ENV to one of the configured environments (${Object.keys(environments).join(', ') || 'none are configured'}).`
     )
   }
@@ -113,23 +113,23 @@ export const personaEnvironmentRefusal = (
   const env = environments[environmentName]
   if (!env) {
     return (
-      `Refusing to sign in persona '${id}': environment '${environmentName}' is not configured. ` +
+      `Refusing to sign in virtual user '${id}': environment '${environmentName}' is not configured. ` +
       `Configured environments: ${Object.keys(environments).join(', ') || 'none'}.`
     )
   }
 
-  if (env.production && persona.disposition !== PRODUCTION_DISPOSITION) {
+  if (env.production && virtualUser.disposition !== PRODUCTION_DISPOSITION) {
     return (
-      `Refusing to sign in persona '${id}' against production environment '${environmentName}': ` +
-      `its disposition is '${persona.disposition ?? 'realistic'}', and only ` +
+      `Refusing to sign in virtual user '${id}' against production environment '${environmentName}': ` +
+      `its disposition is '${virtualUser.disposition ?? 'realistic'}', and only ` +
       `'${PRODUCTION_DISPOSITION}' may act on real data.`
     )
   }
 
-  const allowed = resolvePersonaEnvironments(persona, environments)
+  const allowed = resolveVirtualUserEnvironments(virtualUser, environments)
   if (!allowed.includes(environmentName)) {
     return (
-      `Refusing to sign in persona '${id}' against '${environmentName}': ` +
+      `Refusing to sign in virtual user '${id}' against '${environmentName}': ` +
       `it declares environments ${allowed.join(', ') || 'none'}.`
     )
   }

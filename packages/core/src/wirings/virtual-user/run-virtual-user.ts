@@ -1,4 +1,4 @@
-import type { ResolvedPersona } from '../../services/personas-service.js'
+import type { ResolvedVirtualUser } from '../../services/virtual-users-service.js'
 import type { AgentMessage } from '../agent/agent.types.js'
 import type { ActorLLM } from '../actor-flow/run-conversation.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
@@ -15,7 +15,7 @@ import {
   type DispositionProfile,
   type VirtualUserTuning,
 } from './virtual-user-dispositions.js'
-import { IntentStack, intentsForPersona } from './virtual-user-intents.js'
+import { IntentStack, intentsForVirtualUser } from './virtual-user-intents.js'
 import { createRng } from './virtual-user-rng.js'
 import type {
   ApiCatalogueEntry,
@@ -76,9 +76,9 @@ export interface VirtualUserCallContext {
 
 export interface RunVirtualUserParams {
   /** The person being run — name, job title, personality, goals. */
-  persona: ResolvedPersona
+  virtualUser: ResolvedVirtualUser
   /** The id they were declared under, as the intent sources refer to them. */
-  personaId: string
+  virtualUserId: string
   /** How it behaves. Default `realistic`. */
   disposition?: VirtualUserDisposition
   /** Per-user overrides for that disposition's dials. */
@@ -120,7 +120,7 @@ export interface RunVirtualUserParams {
   /** Ids and slugs remembered from an earlier run, for a `stale` user. */
   memory?: Record<string, string>
   /**
-   * The scopes this persona actually holds, resolved from its roles at sign-in.
+   * The scopes this virtual user actually holds, resolved from its roles at sign-in.
    *
    * Used two ways: to narrow a large catalogue to what it is entitled to reach,
    * and as an oracle — a call whose scopes it does not hold that nonetheless
@@ -218,8 +218,8 @@ export const rememberIds = (
   return into
 }
 
-const personaInstructions = (
-  persona: ResolvedPersona,
+const virtualUserInstructions = (
+  virtualUser: ResolvedVirtualUser,
   profile: DispositionProfile,
   catalogue: string,
   agents: readonly { name: string; description?: string }[],
@@ -227,9 +227,9 @@ const personaInstructions = (
 ): string =>
   [
     `You are a real person using a product through its API. Stay in character; you are the user, not the system.`,
-    `Your name is ${persona.name}.`,
-    persona.jobTitle ? `Your role: ${persona.jobTitle}.` : '',
-    persona.personality ? `Your manner: ${persona.personality}.` : '',
+    `Your name is ${virtualUser.name}.`,
+    virtualUser.jobTitle ? `Your role: ${virtualUser.jobTitle}.` : '',
+    virtualUser.personality ? `Your manner: ${virtualUser.personality}.` : '',
     '',
     profile.instructions,
     '',
@@ -270,8 +270,8 @@ export const runVirtualUser = async (
   params: RunVirtualUserParams
 ): Promise<VirtualUserRunResult> => {
   const {
-    persona,
-    personaId,
+    virtualUser,
+    virtualUserId,
     disposition = 'realistic',
     tuning,
     target,
@@ -304,7 +304,7 @@ export const runVirtualUser = async (
   const index = catalogueIndex(reachable)
 
   const sources: IntentSource[] = [
-    ...intentsForPersona(params.intents, personaId),
+    ...intentsForVirtualUser(params.intents, virtualUserId),
     ...(params.goals ?? []).map((goal, i) => ({
       id: `goal_${i + 1}`,
       title: goal,
@@ -339,8 +339,8 @@ export const runVirtualUser = async (
         ? budget.duration
         : getDurationInMilliseconds(budget.duration)
 
-  const instructions = personaInstructions(
-    persona,
+  const instructions = virtualUserInstructions(
+    virtualUser,
     profile,
     renderCatalogue(reachable),
     agents,
@@ -624,7 +624,7 @@ export const runVirtualUser = async (
           })
         }
       }
-      // This persona does not hold the scopes this endpoint declares, and the
+      // This virtual user does not hold the scopes this endpoint declares, and the
       // server served it anyway — the declaration and the enforcement disagree.
       if (
         response.ok &&
@@ -634,7 +634,7 @@ export const runVirtualUser = async (
         kinds.push('unexpected-success')
         addFinding({
           kind: 'unexpected-success',
-          detail: `${entry.name} succeeded for '${personaId}', who does not hold ${entry.scopes
+          detail: `${entry.name} succeeded for '${virtualUserId}', who does not hold ${entry.scopes
             .filter((scope) => !scopes.includes(scope))
             .join(', ')}`,
           rpcName: entry.name,

@@ -12,7 +12,7 @@ When a workflow step carries `options.actor`, `rpcStep` in
 authenticated client, over the real network transport — and never falls back to
 internal dispatch. Internal dispatch skips auth middleware and permission
 checks, so a scenario that "passed" that way would prove only that the function
-body runs, not that the persona is allowed to run it. That is a green health
+body runs, not that the virtual user is allowed to run it. That is a green health
 check for a system that may be wide open.
 
 For the same reason, actor steps never queue: `rpcStep` short-circuits

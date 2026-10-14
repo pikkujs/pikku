@@ -23,7 +23,7 @@ export type ScenarioStepPhase = 'given' | 'when' | 'then'
 /**
  * Who acts in a step.
  *
- * `persona` is a person driving the system through one of its surfaces — the
+ * `virtualUser` is a person driving the system through one of its surfaces — the
  * ordinary `pikkuScenarioStep`. `platform` is the app acting on itself ("the
  * platform has expired the trial"), and `addon` is a third-party system acting
  * on it ("Stripe's webhook arrives"), contributed by the addon that wraps that
@@ -34,7 +34,7 @@ export type ScenarioStepPhase = 'given' | 'when' | 'then'
  * trusting a string literal — and so an addon package exports only addon steps,
  * which is checkable.
  */
-export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
+export type ScenarioStepKind = 'virtualUser' | 'platform' | 'addon'
 
 /**
  * How an actor drives the system for one step.
@@ -125,7 +125,7 @@ export interface ScenarioEnvironment {
 /**
  * The `scenarioStep` wire, present on every scenario step invocation.
  *
- * The persona a step runs as is not here: it arrives as `wire.actor`, injected
+ * The virtual user a step runs as is not here: it arrives as `wire.actor`, injected
  * by the runner and typed as present exactly on the bindings that declared they
  * need one. Keeping it off this interface is what makes that possible — a wire
  * member can be required per binding, a property of one cannot.

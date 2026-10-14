@@ -5,7 +5,7 @@ import {
   ACTOR_ROOT_SECRET_MIN_LENGTH,
   deriveActorSecret,
   verifyActorSecret,
-} from './persona-actor-secret.js'
+} from './virtual-user-actor-secret.js'
 
 const ROOT = 'root-secret-root-secret-root-secret'
 const OTHER_ROOT = 'other-secret-other-secret-other-sec'

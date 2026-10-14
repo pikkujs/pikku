@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Scenario sessions are isolated per actor and reset between scenarios
-description: One jar per actor keeps two personas from sharing a session; a browser reset keeps one scenario from leaving the next signed in as somebody else
+description: One jar per actor keeps two virtual users from sharing a session; a browser reset keeps one scenario from leaving the next signed in as somebody else
 tags: workflow
 ---
 

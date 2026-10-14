@@ -4,7 +4,7 @@ import type { CoreUserSession, GetCredential, PikkuWire } from './core.types.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { PikkuWorkflowWire } from '../wirings/workflow/workflow.types.js'
 import type { PikkuScenarioWire } from '../wirings/workflow/scenario.types.js'
-import type { ScenarioPersonas } from '../services/personas-service.js'
+import type { ScenarioVirtualUsers } from '../services/virtual-users-service.js'
 
 interface CredentialsMap {
   slack: { token: string }
@@ -22,7 +22,7 @@ type TypedWire = PikkuWire<
   PikkuWorkflowWire,
   unknown,
   PikkuScenarioWire<any>,
-  ScenarioPersonas,
+  ScenarioVirtualUsers,
   CredentialsMap
 >
 

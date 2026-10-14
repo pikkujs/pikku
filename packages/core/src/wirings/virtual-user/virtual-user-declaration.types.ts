@@ -2,10 +2,10 @@ import type { VirtualUserDisposition } from '../virtual-user/virtual-user.types.
 import type { VirtualUserTuning } from '../virtual-user/virtual-user-dispositions.js'
 
 /**
- * One login belonging to a persona.
+ * One login belonging to a virtual user.
  *
  * Deliberately near-empty in the common case: the address is computed from the
- * persona's name and the run id, and the password derives from
+ * virtual user's name and the run id, and the password derives from
  * `SCENARIO_ACTOR_SECRET`, so there is nothing left to write down. It fills up
  * only for a provider login.
  *
@@ -13,12 +13,12 @@ import type { VirtualUserTuning } from '../virtual-user/virtual-user-disposition
  * actually running: `providerId` plus the provider's own id, and no email
  * column — the address belongs to the person, not the login.
  */
-export type CorePersonaAccount = {
+export type CoreVirtualUserAccount = {
   /**
    * The identity provider, e.g. `'google'`. Omit for email and password.
    *
    * A provider account is declarable but not runnable: driving its consent
-   * screen needs a human, so `pikku persona run` refuses rather than failing
+   * screen needs a human, so `pikku virtual-user run` refuses rather than failing
    * somewhere inside a browser.
    */
   provider?: string
@@ -28,12 +28,12 @@ export type CorePersonaAccount = {
  * A person who uses your product: a name, a job, a temperament, and what they
  * are trying to get done.
  *
- * This is Cooper's persona — "a fictional character created to represent a user
+ * This is Cooper's virtual user — "a fictional character created to represent a user
  * type" — with the two things a synthetic user additionally needs: the roles
- * that say what they may do, and the account they log in with. A persona while
+ * that say what they may do, and the account they log in with. A virtual user while
  * running is a virtual user; there is no second declaration for that.
  */
-export type CorePersona = {
+export type CoreVirtualUser = {
   /** The person's name, as a person would give it. */
   name: string
   jobTitle?: string
@@ -43,14 +43,14 @@ export type CorePersona = {
    * serves, an asset on a CDN, a Gravatar link.
    *
    * Optional because it is decoration. Omitted, the console draws a colour and
-   * an icon derived from the persona's id, which is stable, needs no network and
+   * an icon derived from the virtual user's id, which is stable, needs no network and
    * is more legible than the identicon a synthetic address would resolve to —
    * which is also why nothing is derived here.
    */
   avatarUrl?: string
   /**
    * The roles this person holds. Only system roles may be named — a custom
-   * role can be deleted from the console, so a persona pinned to one silently
+   * role can be deleted from the console, so a virtual user pinned to one silently
    * stops testing what it claims to.
    *
    * These are granted, not merely recorded: the generated seed applies them,
@@ -76,15 +76,15 @@ export type CorePersona = {
   /** Fixture paths this person may upload, relative to the project root. */
   fixtures?: string[]
   /** Their login. `{}` — email and password — is the normal case. */
-  account?: CorePersonaAccount
+  account?: CoreVirtualUserAccount
   /**
    * Further logins belonging to the same human, keyed by name.
    *
-   * Rare, and shaped that way on purpose. All of them share the persona's one
+   * Rare, and shaped that way on purpose. All of them share the virtual user's one
    * computed address: better-auth's `allowDifferentEmails` defaults to false,
    * so distinct addresses would be refused linking by the library under test.
    */
-  linkedAccounts?: Record<string, CorePersonaAccount>
+  linkedAccounts?: Record<string, CoreVirtualUserAccount>
   /**
    * The environments this person may run against, by config key.
    *
@@ -102,7 +102,7 @@ export type CorePersona = {
    *
    * An assertion, not something inferred from the absence of a disposition:
    * `target` *must not* run, because a run signing in as her would race the
-   * scenario banning her. "Nobody has given this persona a disposition yet" is
+   * scenario banning her. "Nobody has given this virtual user a disposition yet" is
    * a different state, and collapsing the two turns a deliberate constraint
    * into a flaky suite.
    */
@@ -121,14 +121,14 @@ export type CorePersona = {
   app?: string
 }
 
-/** Personas to declare, keyed by id. */
-export type CorePersonas = Record<string, CorePersona>
+/** Virtual users to declare, keyed by id. */
+export type CoreVirtualUsers = Record<string, CoreVirtualUser>
 
-export type PersonaAccountMeta = {
+export type VirtualUserAccountMeta = {
   provider?: string
 }
 
-export type PersonaMeta = {
+export type VirtualUserMeta = {
   /** The key it was declared under. */
   id: string
   name: string
@@ -142,8 +142,8 @@ export type PersonaMeta = {
   disposition?: VirtualUserDisposition
   tuning?: VirtualUserTuning
   fixtures?: string[]
-  account?: PersonaAccountMeta
-  linkedAccounts?: Record<string, PersonaAccountMeta>
+  account?: VirtualUserAccountMeta
+  linkedAccounts?: Record<string, VirtualUserAccountMeta>
   /** Absent means "everywhere but production", which is resolved, not stored. */
   environments?: string[]
   runnable: boolean
@@ -152,5 +152,5 @@ export type PersonaMeta = {
   sourceFile?: string
 }
 
-export type PersonaDefinitions = PersonaMeta[]
-export type PersonasMeta = Record<string, PersonaMeta>
+export type VirtualUserDefinitions = VirtualUserMeta[]
+export type VirtualUsersMeta = Record<string, VirtualUserMeta>

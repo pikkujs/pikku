@@ -7,7 +7,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { SerializedError } from '../../../errors/serialized-error.js'
 import type { WorkflowRun } from '../workflow.types.js'
-import type { ScenarioPersona } from '../../../services/personas-service.js'
+import type { ScenarioVirtualUser } from '../../../services/virtual-users-service.js'
 import type {
   ScenarioStepOptions,
   ScenarioStepPhase,
@@ -36,7 +36,7 @@ export interface WorkflowStepOptions {
    * internally — so auth middleware and permissions are exercised end-to-end.
    * The step is recorded durably like any RPC step.
    */
-  actor?: ScenarioPersona
+  actor?: ScenarioVirtualUser
   // Future: timeout, failFast, priority
 }
 

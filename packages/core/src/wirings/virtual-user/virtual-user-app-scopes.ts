@@ -1,5 +1,5 @@
 import type { ScopeDefinitionMeta, ScopeNodeMeta } from '../scope/scope.types.js'
-import type { PersonaMeta } from './persona.types.js'
+import type { VirtualUserMeta } from './virtual-user-declaration.types.js'
 
 /**
  * The root every app grant hangs off. One segment, so a grant of `app` alone
@@ -13,24 +13,24 @@ export const APP_SCOPE_ROOT = 'app'
 export const appScopeId = (app: string) => `${APP_SCOPE_ROOT}:${app}`
 
 /**
- * The apps named across the declared personas, sorted and deduplicated.
+ * The apps named across the declared virtual users, sorted and deduplicated.
  *
- * The personas *are* the registry. There is no separate list of apps to keep in
+ * The virtual users *are* the registry. There is no separate list of apps to keep in
  * step, because a frontend nobody signs into is not a thing the auth layer has
  * an opinion about — and the moment somebody does sign into it, they are a
- * persona and they name it.
+ * virtual user and they name it.
  */
-export const declaredApps = (personas: PersonaMeta[]): string[] =>
+export const declaredApps = (virtualUsers: VirtualUserMeta[]): string[] =>
   [
     ...new Set(
-      personas
-        .map((persona) => persona.app)
+      virtualUsers
+        .map((virtualUser) => virtualUser.app)
         .filter((app): app is string => typeof app === 'string' && app !== '')
     ),
   ].sort()
 
 /**
- * The `app` scope tree, synthesised from the personas that name an app.
+ * The `app` scope tree, synthesised from the virtual users that name an app.
  *
  * Which frontend a person may sign into is a different question from what they
  * may do once inside it, but it is the same *kind* of question — a grant that
@@ -42,17 +42,17 @@ export const declaredApps = (personas: PersonaMeta[]): string[] =>
  *
  * Synthesised rather than written by hand because the declaration already
  * exists. Asking an app to also spell out `defineScope({ app: { staff: {} } })`
- * beside its personas invites the two to drift, and the failure that produces —
- * a persona provisioned with a grant the vocabulary no longer declares — is one
+ * beside its virtual users invites the two to drift, and the failure that produces —
+ * a virtual user provisioned with a grant the vocabulary no longer declares — is one
  * `pikku scopes prune` away from silently revoking sign-in.
  *
- * Null when no persona names an app, which is the single-frontend case: nothing
+ * Null when no virtual user names an app, which is the single-frontend case: nothing
  * to declare, and no empty root cluttering the console's grant list.
  */
 export const buildAppScopeDefinition = (
-  personas: PersonaMeta[]
+  virtualUsers: VirtualUserMeta[]
 ): ScopeDefinitionMeta | null => {
-  const apps = declaredApps(personas)
+  const apps = declaredApps(virtualUsers)
   if (apps.length === 0) {
     return null
   }

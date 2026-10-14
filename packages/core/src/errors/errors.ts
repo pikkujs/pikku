@@ -386,7 +386,7 @@ addError(AIProviderAuthError, {
  *
  * System roles ship with the product: the console may show and grant them, but
  * renaming, re-scoping or deleting one would let a UI action silently change
- * what a declared persona means, and what every scenario written against that
+ * what a declared virtual user means, and what every scenario written against that
  * role is actually testing.
  * @group Error
  */

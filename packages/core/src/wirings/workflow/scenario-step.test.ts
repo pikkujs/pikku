@@ -5,7 +5,7 @@ import { createScenarioRunner } from './pikku-scenario-service.js'
 import type { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
-import type { ScenarioPersona } from '../../services/personas-service.js'
+import type { ScenarioVirtualUser } from '../../services/virtual-users-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
 import type { ScenarioSurface } from './scenario-step.types.js'
 import { requireScenarioEnv } from './scenario-step-guards.js'
@@ -15,7 +15,7 @@ const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 const fakeActor = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
-): ScenarioPersona & { calls: Array<{ rpcName: string; data: unknown }> } => {
+): ScenarioVirtualUser & { calls: Array<{ rpcName: string; data: unknown }> } => {
   const calls: Array<{ rpcName: string; data: unknown }> = []
   return {
     name,
@@ -857,7 +857,7 @@ describe('the scenario environment reaches the step wire', () => {
   })
 })
 
-describe('a step driven by a persona is given its actor', () => {
+describe('a step driven by a virtual user is given its actor', () => {
   beforeEach(() => resetPikkuState())
 
   test('the actor is on the wire, not something the body unwraps', async () => {
@@ -901,7 +901,7 @@ describe('a step driven by a persona is given its actor', () => {
     assert.equal(bodyRan, false)
   })
 
-  test('a step that declares no persona runs without one', async () => {
+  test('a step that declares no virtual user runs without one', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     let seen: unknown = 'unset'
     registerStep('assertsSomething', {

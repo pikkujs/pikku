@@ -1,4 +1,4 @@
-/** One email a persona received. */
+/** One email a virtual user received. */
 export interface ReceivedEmail {
   to: string
   from: string
@@ -8,7 +8,7 @@ export interface ReceivedEmail {
    * Links found in the body, already extracted.
    *
    * Extracted rather than handed over as text on purpose — see
-   * {@link PersonaMailbox}. A magic link is the only part of most emails a
+   * {@link VirtualUserMailbox}. A magic link is the only part of most emails a
    * virtual user needs, and it is checkable in a way prose is not.
    */
   links: string[]
@@ -31,7 +31,7 @@ export interface ReceivedEmail {
 }
 
 /**
- * Where a persona reads its mail.
+ * Where a virtual user reads its mail.
  *
  * Capturing inbound mail is platform-specific — on Cloudflare an Email Worker
  * on the test domain, elsewhere whatever the stage can receive with — so pikku
@@ -42,7 +42,7 @@ export interface ReceivedEmail {
  * user's address is real and deliverable, so anyone who learns it can send it
  * instructions, and the run holds a live session against a real stage.
  */
-export interface PersonaMailbox {
+export interface VirtualUserMailbox {
   /**
    * Wait for a matching email, or reject on timeout.
    *

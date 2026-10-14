@@ -1,14 +1,14 @@
 import type {
-  PersonaDefinitions,
-  PersonaMeta,
-  PersonasMeta,
-} from './persona.types.js'
+  VirtualUserDefinitions,
+  VirtualUserMeta,
+  VirtualUsersMeta,
+} from './virtual-user-declaration.types.js'
 
 /**
- * Whether a persona can actually be driven by a virtual user.
+ * Whether a virtual user can actually be run.
  *
  * A provider login cannot: driving Google's or GitHub's consent screen needs a
- * human, so the persona is seedable and assertable but not runnable. Derived
+ * human, so the virtual user is seedable and assertable but not runnable. Derived
  * rather than asked for, because it is a consequence of the account rather than
  * a separate decision — and a flag someone must remember to set is a flag that
  * ships wrong.
@@ -16,53 +16,53 @@ import type {
  * An explicit `runnable: false` still wins: it marks the person who is only
  * ever acted *upon*, which no account shape reveals.
  */
-export const isRunnablePersona = (persona: {
+export const isRunnableVirtualUser = (virtualUser: {
   runnable?: boolean
   account?: { provider?: string }
 }): boolean => {
-  if (persona.runnable === false) {
+  if (virtualUser.runnable === false) {
     return false
   }
-  return persona.account?.provider === undefined
+  return virtualUser.account?.provider === undefined
 }
 
 /**
- * Validates declared personas and keys them by id.
+ * Validates declared virtual users and keys them by id.
  *
  * Definitions sharing an id must be identical; a conflicting redeclaration is a
  * hard error naming both source files, on the same terms as scopes and roles.
  */
-export function validateAndBuildPersonasMeta(
-  definitions: PersonaDefinitions
-): PersonasMeta {
-  const meta: PersonasMeta = {}
+export function validateAndBuildVirtualUsersMeta(
+  definitions: VirtualUserDefinitions
+): VirtualUsersMeta {
+  const meta: VirtualUsersMeta = {}
 
-  for (const persona of definitions) {
-    if (!persona.id) {
-      throw new Error('A persona is declared with an empty id.')
+  for (const virtualUser of definitions) {
+    if (!virtualUser.id) {
+      throw new Error('A virtual user is declared with an empty id.')
     }
-    if (!persona.name) {
+    if (!virtualUser.name) {
       throw new Error(
-        `Persona '${persona.id}' has no name. A persona is a person; give them one.`
+        `VirtualUser '${virtualUser.id}' has no name. A virtual user is a person; give them one.`
       )
     }
 
-    const existing = meta[persona.id]
+    const existing = meta[virtualUser.id]
     if (existing) {
       const same =
         JSON.stringify({ ...existing, sourceFile: undefined }) ===
-        JSON.stringify({ ...persona, sourceFile: undefined })
+        JSON.stringify({ ...virtualUser, sourceFile: undefined })
       if (!same) {
         throw new Error(
-          `Persona '${persona.id}' is declared twice with different content.\n` +
+          `VirtualUser '${virtualUser.id}' is declared twice with different content.\n` +
             `  First declaration: ${existing.sourceFile ?? 'unknown'}\n` +
-            `  Second declaration: ${persona.sourceFile ?? 'unknown'}`
+            `  Second declaration: ${virtualUser.sourceFile ?? 'unknown'}`
         )
       }
       continue
     }
 
-    meta[persona.id] = persona
+    meta[virtualUser.id] = virtualUser
   }
 
   return meta
@@ -70,7 +70,7 @@ export function validateAndBuildPersonasMeta(
 
 /** What a run compares against the store before its first step. */
 export interface RoleVerification {
-  persona: string
+  virtualUser: string
   expected: string[]
   actual: string[]
   missing: string[]
@@ -79,20 +79,20 @@ export interface RoleVerification {
 }
 
 /**
- * Compares a persona's declared roles against what the stage actually granted.
+ * Compares a virtual user's declared roles against what the stage actually granted.
  *
  * Run at sign-in, before the first step. The declaration is authoritative —
  * the generated seed applies it — but pikku cannot guarantee the seed ran on a
  * stage it did not deploy, and virtual users are meant to run against staging
  * and production, so that case is the normal one.
  *
- * Both directions matter, for opposite reasons. An under-granted persona
+ * Both directions matter, for opposite reasons. An under-granted virtual user
  * reports authorization bugs that are really seed drift. An over-granted one
  * silently stops testing the boundary it was written to test — nothing fails,
  * the findings just quietly stop being about anything.
  */
-export const verifyPersonaRoles = (
-  persona: string,
+export const verifyVirtualUserRoles = (
+  virtualUser: string,
   expected: readonly string[],
   actual: readonly string[]
 ): RoleVerification => {
@@ -101,7 +101,7 @@ export const verifyPersonaRoles = (
   const missing = [...expectedSet].filter((r) => !actualSet.has(r)).sort()
   const extra = [...actualSet].filter((r) => !expectedSet.has(r)).sort()
   return {
-    persona,
+    virtualUser,
     expected: [...expectedSet].sort(),
     actual: [...actualSet].sort(),
     missing,
@@ -125,13 +125,13 @@ export const roleMismatchMessage = (
     parts.push(`unexpectedly holds ${verification.extra.join(', ')}`)
   }
   return (
-    `Persona '${verification.persona}' ${parts.join(' and ')}. ` +
+    `VirtualUser '${verification.virtualUser}' ${parts.join(' and ')}. ` +
     `Declared: ${verification.expected.join(', ') || 'none'}. ` +
     `On the stage: ${verification.actual.join(', ') || 'none'}. ` +
-    `Refusing to run — findings from a persona whose roles have drifted are about the seed, not the product.`
+    `Refusing to run — findings from a virtual user whose roles have drifted are about the seed, not the product.`
   )
 }
 
 /** Convenience: the meta a run needs, with `runnable` already resolved. */
-export const runnablePersonas = (meta: PersonasMeta): PersonaMeta[] =>
-  Object.values(meta).filter((persona) => persona.runnable)
+export const runnableVirtualUsers = (meta: VirtualUsersMeta): VirtualUserMeta[] =>
+  Object.values(meta).filter((virtualUser) => virtualUser.runnable)

@@ -2,10 +2,10 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpPersonas } from './http-personas.js'
-import { verifyActorSecret } from './persona-actor-secret.js'
+import { createHttpVirtualUsers } from './http-virtual-users.js'
+import { verifyActorSecret } from './virtual-user-actor-secret.js'
 
-/** The root the personas derive from; the target verifies against the same one. */
+/** The root the virtual users derive from; the target verifies against the same one. */
 const ROOT = 'impersonation-secret-impersonation'
 
 // Minimal target app mirroring the Better Auth actor plugin's contract:
@@ -122,17 +122,17 @@ const startTarget = async () => {
   }
 }
 
-describe('HttpPersona', async () => {
+describe('HttpVirtualUser', async () => {
   const target = await startTarget()
   after(() => target.server.close())
 
-  const makePersonas = (
-    secret: Parameters<typeof createHttpPersonas>[0]['secret'] = ROOT
+  const makeVirtualUsers = (
+    secret: Parameters<typeof createHttpVirtualUsers>[0]['secret'] = ROOT
   ) =>
-    createHttpPersonas({
+    createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret,
-      personas: {
+      virtualUsers: {
         customer: {
           id: 'customer',
           name: 'Customer',
@@ -155,15 +155,15 @@ describe('HttpPersona', async () => {
       },
     })
 
-  test('builds one lazy persona per declaration', () => {
-    const actors = makePersonas()
+  test('builds one lazy virtual user per declaration', () => {
+    const actors = makeVirtualUsers()
     assert.deepEqual(Object.keys(actors).sort(), ['customer', 'manager'])
     assert.equal(actors.customer!.name, 'customer')
     assert.equal(target.loginCount(), 0, 'no login until first invoke')
   })
 
   test('logs in lazily once and replays the session cookie on RPCs', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
 
     const first = (await actors.customer!.invoke('createTodo', {
       title: 'x',
@@ -183,7 +183,7 @@ describe('HttpPersona', async () => {
   })
 
   test('re-logs-in once when the session expires mid-run', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     await actors.manager!.invoke('ping', {})
     const loginsBefore = target.loginCount()
 
@@ -195,7 +195,7 @@ describe('HttpPersona', async () => {
   })
 
   test('invokeRaw returns the status and body instead of throwing', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
 
     // A refusal is the expected outcome of a permissions scenario, so the
     // status and the payload that names the missing scope both have to survive.
@@ -210,7 +210,7 @@ describe('HttpPersona', async () => {
   })
 
   test('invokeRaw reports a success the same way', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     const res = await actors.manager!.invokeRaw('listTodos', { page: 2 })
 
     assert.equal(res.status, 200)
@@ -219,7 +219,7 @@ describe('HttpPersona', async () => {
   })
 
   test('invokeRaw carries the response text so a step can search it', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     const res = await actors.customer!.invokeRaw('forbidden', {})
 
     assert.match(res.serialized, /MissingScopeError/)
@@ -227,7 +227,7 @@ describe('HttpPersona', async () => {
   })
 
   test('invokeRaw keeps a non-JSON error body instead of failing to parse it', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     const res = await actors.manager!.invokeRaw('html-error', {})
 
     assert.equal(res.status, 500)
@@ -237,14 +237,14 @@ describe('HttpPersona', async () => {
   })
 
   test('invokeRaw reports an empty body as an empty string', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     const res = await actors.manager!.invokeRaw('listTodos', {})
 
     assert.equal(typeof res.serialized, 'string')
   })
 
   test('invokeRaw passes extra headers through', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     const res = await actors.manager!.invokeRaw(
       'whoAmI',
       {},
@@ -255,20 +255,20 @@ describe('HttpPersona', async () => {
   })
 
   test('invoke still throws on a refusal, naming the status and body', async () => {
-    const actors = makePersonas()
+    const actors = makeVirtualUsers()
     await assert.rejects(
       actors.customer!.invoke('forbidden', {}),
       /'forbidden' as 'customer' returned 403.*MissingScopeError/
     )
   })
 
-  // A caller holding one persona's credential and asking for another gets the
+  // A caller holding one virtual user's credential and asking for another gets the
   // target's refusal, not a client-side guess about whether it would have worked.
   test('a credential the target will not accept surfaces status and body', async () => {
-    const actors = makePersonas(() => 'not-this-personas-credential')
+    const actors = makeVirtualUsers(() => 'not-this-virtual-users-credential')
     await assert.rejects(
       actors.customer!.invoke('ping', {}),
-      /persona sign-in failed for 'customer' \(401\).*bad actor secret/
+      /virtual user sign-in failed for 'customer' \(401\).*bad actor secret/
     )
   })
 
@@ -280,13 +280,13 @@ describe('HttpPersona', async () => {
   // `rolesRpc: false` because this is about the better-auth path specifically —
   // leaving the RPC in would answer first and the mount would go untested.
   test('reads the session from the mount the sign-in path names', async () => {
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
       signInPath: '/api/auth/sign-in/actor',
       rpcPath: '/api/rpc',
       rolesRpc: false,
-      personas: {
+      virtualUsers: {
         manager: {
           id: 'manager',
           name: 'Manager',
@@ -308,12 +308,12 @@ describe('HttpPersona', async () => {
   // projection is how a guest holding exactly what it should got refused for
   // "roles drifted".
   test('reads roles from the app RPC in preference to better-auth', async () => {
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
       signInPath: '/api/auth/sign-in/actor',
       rpcPath: '/api/rpc',
-      personas: {
+      virtualUsers: {
         manager: {
           id: 'manager',
           name: 'Manager',
@@ -330,15 +330,15 @@ describe('HttpPersona', async () => {
   })
 
   // An app without the RPC is not an app reporting "no roles" — going quiet
-  // there would turn every persona into a mismatch against an empty list.
+  // there would turn every virtual user into a mismatch against an empty list.
   test('falls back to better-auth when the roles RPC is absent', async () => {
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.origin,
       secret: ROOT,
       signInPath: '/api/auth/sign-in/actor',
       rpcPath: '/api/rpc',
       rolesRpc: 'noSuchRpc',
-      personas: {
+      virtualUsers: {
         manager: {
           id: 'manager',
           name: 'Manager',
@@ -357,14 +357,14 @@ describe('HttpPersona', async () => {
   // The operator handshake sits under the same mount and must be derived from
   // it, not inherited verbatim: posting an operator token to the ACTOR path is
   // a validation error about a missing email, which reads like a broken
-  // persona rather than a wrong URL.
+  // virtual user rather than a wrong URL.
   test('derives the operator sign-in path from the same auth mount', async () => {
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.origin,
       signInPath: '/api/auth/sign-in/actor',
       rpcPath: '/api/rpc',
       operator: { token: 'operator-token' },
-      personas: {
+      virtualUsers: {
         manager: {
           id: 'manager',
           name: 'Manager',

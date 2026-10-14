@@ -125,7 +125,7 @@ describe('what a given user is offered', () => {
     assert.deepEqual(names, ['getProject', 'listOrgs', 'getOrgMembers'])
   })
 
-  test('a scope the persona does not hold is left out', () => {
+  test('a scope the virtual user does not hold is left out', () => {
     const names = reachableCatalogue(entries, {
       scopes: ['org:read'],
     }).map((e) => e.name)
@@ -139,7 +139,7 @@ describe('what a given user is offered', () => {
     assert.deepEqual(names, ['listOrgs'])
   })
 
-  // Every scope a persona holds means the whole surface is entitled, which is
+  // Every scope a virtual user holds means the whole surface is entitled, which is
   // what an unscoped project looks like — and an empty oracle is the honest
   // answer there, not a catalogue of everything.
   test('an unscoped catalogue has nothing to withhold', () => {

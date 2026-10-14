@@ -32,7 +32,7 @@ import {
   stripInstanceOrdinal,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
-import type { ScenarioPersonas } from '../../services/personas-service.js'
+import type { ScenarioVirtualUsers } from '../../services/virtual-users-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
@@ -883,7 +883,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     options?: {
       inline?: boolean
       startNode?: string
-      actors?: ScenarioPersonas
+      actors?: ScenarioVirtualUsers
       onRunCreated?: (runId: string) => void
     }
   ): Promise<{ runId: string }> {

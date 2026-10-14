@@ -98,7 +98,7 @@ export const reachableCatalogue = (
     readOnly?: boolean
     allowApprovalRequired?: boolean
     /**
-     * The scopes this persona holds, resolved from its roles. Omit to keep
+     * The scopes this virtual user holds, resolved from its roles. Omit to keep
      * every entry.
      *
      * Scopes rather than permission-function names: a function's `scopes` are
@@ -119,7 +119,7 @@ export const reachableCatalogue = (
   })
 
 /**
- * Endpoints this persona is *not* entitled to reach.
+ * Endpoints this virtual user is *not* entitled to reach.
  *
  * The adversarial oracle. Withheld from the catalogue, so reaching one takes
  * initiative — and a 2xx from one is the finding, because the server is the

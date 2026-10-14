@@ -67,11 +67,11 @@ export type {
   CopyFileArgs,
 } from './content-service.js'
 export type {
-  ScenarioPersona,
-  ResolvedPersona,
-  ScenarioPersonas,
-} from './personas-service.js'
-// knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
+  ScenarioVirtualUser,
+  ResolvedVirtualUser,
+  ScenarioVirtualUsers,
+} from './virtual-users-service.js'
+// knowledge: decisions/internals/the-virtual-user-runtime-is-exported-from-the-virtual-user-entry-point.md
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailAttachment,
@@ -109,7 +109,7 @@ export {
   actorSecretSubject,
   deriveActorSecret,
   verifyActorSecret,
-} from './persona-actor-secret.js'
+} from './virtual-user-actor-secret.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

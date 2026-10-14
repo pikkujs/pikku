@@ -33,7 +33,7 @@ the driver resolves it against a real page.
 
 The same dependency discipline applies at runtime: `resolveScenarioActors` in
 `pikku-scenario-service.ts` imports the HTTP actor client lazily, so even a
-runner bundle only pays for the AI persona conversation loop when a scenario
+runner bundle only pays for the AI virtual user conversation loop when a scenario
 actually signs an actor in.
 
 **What this rules out:** importing playwright (or any driver) from core,

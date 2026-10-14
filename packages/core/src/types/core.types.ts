@@ -35,9 +35,9 @@ import type { AgentStorageService } from '../services/agent-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
 import type {
-  ScenarioPersonaOf,
-  ScenarioPersonas,
-} from '../services/personas-service.js'
+  ScenarioVirtualUserOf,
+  ScenarioVirtualUsers,
+} from '../services/virtual-users-service.js'
 import type { AgentRunnerService } from '../services/agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AgentRunStateService } from '../services/agent-run-state-service.js'
@@ -192,7 +192,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    */
   virtualUserRunStore?: VirtualUserRunStore
   /**
-   * Each persona's cadence, for apps that want their virtual users to keep
+   * Each virtual user's cadence, for apps that want their virtual users to keep
    * going without being asked. Separate from the run store on purpose: wiring
    * nothing is how an app says it only wants the runs it starts itself.
    */
@@ -279,7 +279,7 @@ export type PikkuWire<
   // context, and this default is what other generics constrain against. See
   // `ScenarioContext`.
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
-  TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedActors extends ScenarioVirtualUsers = ScenarioVirtualUsers,
   TypedCredentials = Record<string, unknown>,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
@@ -316,7 +316,7 @@ export type PikkuWire<
   scenario: TypedScenario
   actors: TypedActors
   /**
-   * The persona this step runs as, injected by the runner.
+   * The virtual user this step runs as, injected by the runner.
    *
    * Required on a `browser` binding, which cannot be provisioned without one,
    * and on any binding whose step declares `actor: true`. A step that declares
@@ -324,7 +324,7 @@ export type PikkuWire<
    * a pure assertion has nobody to be, and `attemptsSignIn` deliberately posts
    * credentials instead of reusing an actor's session.
    */
-  actor: ScenarioPersonaOf<TypedActors>
+  actor: ScenarioVirtualUserOf<TypedActors>
   /** Present on every scenario step invocation */
   scenarioStep: PikkuScenarioStepWire
   /** Present only when the runner provisioned a browser for this step */

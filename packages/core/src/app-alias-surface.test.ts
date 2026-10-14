@@ -92,14 +92,14 @@ const coreImports = (file: string) => {
 }
 
 /**
- * The scenario and persona surfaces are test-only names — actors, cookie jars,
- * polling helpers, the typed personas an app declares. They are app code, but a
+ * The scenario and virtual user surfaces are test-only names — actors, cookie jars,
+ * polling helpers, the typed virtual users an app declares. They are app code, but a
  * distinct surface from wiring, so they reach the app through their own
  * sub-entry rather than crowding the main hub.
  */
 const scenarioSubpaths = new Set([
   '@pikku/core/scenario',
-  '@pikku/core/persona',
+  '@pikku/core/virtual-user',
 ])
 
 /**
@@ -160,10 +160,10 @@ describe('the #pikku alias is the app surface', () => {
     assert.deepStrictEqual(
       offenders,
       [],
-      `Scenario and persona names come from the generated ` +
+      `Scenario and virtual user names come from the generated ` +
         `'#pikku/scenario' entry, which is typed against this app's own ` +
-        `personas and steps.\n` +
-        `Reaching '@pikku/core/scenario' or '@pikku/core/persona' directly ` +
+        `virtualUsers and steps.\n` +
+        `Reaching '@pikku/core/scenario' or '@pikku/core/virtual-user' directly ` +
         `gets the untyped shape, from a subpath scheduled for deletion.\n\n` +
         offenders.join('\n')
     )

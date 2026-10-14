@@ -2,13 +2,13 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { deriveCatalogue, deriveIntents } from './virtual-user-derive.js'
-import { personaVirtualUserTarget } from './virtual-user-target.js'
+import { virtualUserTarget } from './virtual-user-target.js'
 import type { FunctionsMeta } from '../../function/function-meta.types.js'
 import type { WorkflowsMeta } from '../workflow/workflow.types.js'
 import type {
-  ScenarioPersona,
+  ScenarioVirtualUser,
   ScenarioHttpResponse,
-} from '../../services/personas-service.js'
+} from '../../services/virtual-users-service.js'
 
 /**
  * `expose: true` by default, because these fixtures stand for functions a
@@ -215,7 +215,7 @@ describe('deriving intents from scenarios', () => {
       intent!.description,
       'An admin brings someone new into the org'
     )
-    assert.deepEqual(intent!.personas, ['orgAdmin'])
+    assert.deepEqual(intent!.virtualUsers, ['orgAdmin'])
     assert.deepEqual(intent!.tags, ['org'])
   })
 
@@ -301,7 +301,7 @@ describe('deriving intents from scenarios', () => {
       'Given orgAdmin is signed in',
       'When orgAdmin invites {email}',
     ])
-    assert.deepEqual(intents[0]!.personas, ['orgAdmin'])
+    assert.deepEqual(intents[0]!.virtualUsers, ['orgAdmin'])
   })
 
   test('an ordinary workflow read off disk is still not a scenario', () => {
@@ -323,9 +323,9 @@ describe('driving a virtual user through a signed-in actor', () => {
     serialized: '{}',
   }
 
-  const stubPersona = (
-    overrides: Partial<ScenarioPersona> = {}
-  ): ScenarioPersona =>
+  const stubVirtualUser = (
+    overrides: Partial<ScenarioVirtualUser> = {}
+  ): ScenarioVirtualUser =>
     ({
       name: 'orgAdmin',
       email: 'admin@personas.invalid',
@@ -334,12 +334,12 @@ describe('driving a virtual user through a signed-in actor', () => {
       converse: async () => ({ passed: true, reasoning: 'ok', transcript: [] }),
       sessionRoles: async () => [],
       ...overrides,
-    }) as ScenarioPersona
+    }) as ScenarioVirtualUser
 
-  test('a call goes out as the persona, and a refusal comes back as data', async () => {
+  test('a call goes out as the virtual user, and a refusal comes back as data', async () => {
     const seen: unknown[] = []
-    const target = personaVirtualUserTarget(
-      stubPersona({
+    const target = virtualUserTarget(
+      stubVirtualUser({
         invokeRaw: async (rpcName: string, data: unknown) => {
           seen.push([rpcName, data])
           return { status: 403, ok: false, body: {}, serialized: '{}' }
@@ -353,13 +353,13 @@ describe('driving a virtual user through a signed-in actor', () => {
   })
 
   test('an app with no agents gives its users nobody to talk to', () => {
-    assert.equal(personaVirtualUserTarget(stubPersona()).talkTo, undefined)
+    assert.equal(virtualUserTarget(stubVirtualUser()).talkTo, undefined)
   })
 
-  test('an agent it was told about is reached in persona', async () => {
+  test('an agent it was told about is reached in virtual user', async () => {
     let asked: unknown = null
-    const target = personaVirtualUserTarget(
-      stubPersona({
+    const target = virtualUserTarget(
+      stubVirtualUser({
         converse: async (options: unknown) => {
           asked = options
           return { passed: true, reasoning: 'sorted', transcript: [] }
@@ -380,8 +380,8 @@ describe('driving a virtual user through a signed-in actor', () => {
 
   test('an agent it invented is answered, not dialled', async () => {
     let called = false
-    const target = personaVirtualUserTarget(
-      stubPersona({
+    const target = virtualUserTarget(
+      stubVirtualUser({
         converse: async () => {
           called = true
           return { passed: true, reasoning: '', transcript: [] }

@@ -13,7 +13,7 @@ export const ACTOR_SECRET_NAME = 'SCENARIO_ACTOR_SECRET'
  */
 export const ACTOR_SECRET_INFO = 'pikku:actor-sign-in'
 
-/** The root must be strong: every persona's credential is derived from it. */
+/** The root must be strong: every virtual user's credential is derived from it. */
 export const ACTOR_ROOT_SECRET_MIN_LENGTH = MIN_KEY_MATERIAL_LENGTH
 
 /**
@@ -25,7 +25,7 @@ export const actorSecretSubject = (email: string): string =>
   email.trim().toLowerCase()
 
 /**
- * One persona's actor credential: `HMAC-SHA256(root, email)`, base64url.
+ * One virtual user's actor credential: `HMAC-SHA256(root, email)`, base64url.
  *
  * The root secret is not itself a valid credential and never travels: what a
  * scenario run, a CI job or a virtual user is handed is the derived value for
@@ -36,7 +36,7 @@ export const actorSecretSubject = (email: string): string =>
  * Deterministic, so nothing is stored and nothing is provisioned — the target
  * re-derives the expected value from the address being signed in as. Rotating
  * the root invalidates every derived credential at once, which is the property
- * a per-persona secret table would have to implement by hand.
+ * a per-virtual-user secret table would have to implement by hand.
  */
 export const deriveActorSecret = async (
   rootSecret: string,

@@ -2,7 +2,7 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpPersonas } from './http-personas.js'
+import { createHttpVirtualUsers } from './http-virtual-users.js'
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import type { AgentStepResult } from './agent-runner-service.js'
 
@@ -57,7 +57,7 @@ const startAgentTarget = async () => {
         json({ runId: body.runId, text: 'Created it.', status: 'completed' })
         return
       }
-      // The SSE route, because that is the one a persona's turn goes to — the
+      // The SSE route, because that is the one a virtual user's turn goes to — the
       // plain route buffers the whole run and dies on undici's headers timeout.
       if (req.url === '/api/rpc/agent/todoBot/stream') {
         agentRuns++
@@ -112,7 +112,7 @@ const startAgentTarget = async () => {
   }
 }
 
-/** Persona LLM scripted by the outputSchema it's asked for. */
+/** Virtual user LLM scripted by the outputSchema it's asked for. */
 const scriptedRunner = () => {
   let turn = 0
   const turns = [
@@ -157,22 +157,22 @@ const wireRunner = () => {
   } as any)
 }
 
-describe('HttpPersona.converse', async () => {
+describe('HttpVirtualUser.converse', async () => {
   const target = await startAgentTarget()
   after(() => {
     target.server.close()
     resetPikkuState()
   })
 
-  test('converses over HTTP, approves in-persona, returns a verdict', async () => {
+  test('converses over HTTP, approves in-virtual-user, returns a verdict', async () => {
     wireRunner()
     target.reset()
 
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
-      personas: {
+      virtualUsers: {
         pm: {
           id: 'pm',
           name: 'Priya',
@@ -194,13 +194,13 @@ describe('HttpPersona.converse', async () => {
 
     assert.equal(verdict.passed, true)
     assert.match(verdict.reasoning, /todo/i)
-    // The target's approval was answered in-persona (approved) over HTTP.
+    // The target's approval was answered in-virtual-user (approved) over HTTP.
     assert.deepEqual(target.approvalsSeen(), [
       [{ toolCallId: 'tc1', approved: true }],
     ])
     // Signed in even though the agent route is public: a thread minted under a
     // fresh anonymous id per request belongs to nobody, so turn two comes back
-    // as somebody else's. A persona is a real account either way — and it is
+    // as somebody else's. A virtual user is a real account either way — and it is
     // the *first* call that has to carry the session, which a login count
     // alone would not show.
     assert.equal(target.loginCount(), 1)
@@ -211,11 +211,11 @@ describe('HttpPersona.converse', async () => {
     wireRunner()
     target.reset({ authRequired: true })
 
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
-      personas: {
+      virtualUsers: {
         pm: {
           id: 'pm',
           name: 'Priya',
@@ -250,11 +250,11 @@ describe('HttpPersona.converse', async () => {
       },
     } as any)
 
-    const actors = createHttpPersonas({
+    const actors = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
-      personas: {
+      virtualUsers: {
         pm: {
           id: 'pm',
           name: 'Priya',

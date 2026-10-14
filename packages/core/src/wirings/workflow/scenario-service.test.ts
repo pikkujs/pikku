@@ -13,7 +13,7 @@ const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 const SCENARIO_MEMBERS = [
   'scenarioStep',
   'runScenarioHook',
-  'resolvePersonas',
+  'resolveVirtualUsers',
   'setScenarioBrowserProvider',
   'getScenarioBrowserProvider',
   'setScenarioEnvironment',
@@ -91,8 +91,8 @@ describe('the production workflow service carries no scenario surface', () => {
       'utf8'
     )
     assert.ok(
-      !source.includes('http-personas'),
-      'PikkuWorkflowService must not reference the HTTP actor client — it pulls the AI persona loop into every bundle'
+      !source.includes('http-virtual-users'),
+      'PikkuWorkflowService must not reference the HTTP actor client — it pulls the AI virtual user loop into every bundle'
     )
   })
 })

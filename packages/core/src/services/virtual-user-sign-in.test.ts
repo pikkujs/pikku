@@ -2,8 +2,8 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpPersonas } from './http-personas.js'
-import { establishOperatorSession } from './persona-sign-in.js'
+import { createHttpVirtualUsers } from './http-virtual-users.js'
+import { establishOperatorSession } from './virtual-user-sign-in.js'
 
 const OPERATOR_TOKEN = 'operator.jwt.token'
 
@@ -74,7 +74,7 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
   }
 }
 
-const persona = (email: string) => ({
+const virtualUser = (email: string) => ({
   id: 'customer',
   name: 'Customer',
   email,
@@ -84,7 +84,7 @@ const persona = (email: string) => ({
   runnable: true,
 })
 
-describe('operator persona sign-in', () => {
+describe('operator virtual user sign-in', () => {
   const servers: Server[] = []
   after(() => servers.forEach((s) => s.close()))
 
@@ -94,13 +94,13 @@ describe('operator persona sign-in', () => {
     ])
     servers.push(stage.server)
 
-    const personas = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      personas: { customer: persona('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
     })
 
-    const result = (await personas.customer!.invoke('whoami', {})) as {
+    const result = (await virtualUsers.customer!.invoke('whoami', {})) as {
       actingAs: string | null
       cookie: string
     }
@@ -116,32 +116,32 @@ describe('operator persona sign-in', () => {
     ])
     servers.push(stage.server)
 
-    const personas = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl.replace(/\/api$/, ''),
       operator: { token: OPERATOR_TOKEN },
       signInPath: '/api/auth/sign-in/fabric',
       rpcPath: '/api/rpc',
-      personas: { customer: persona('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
     })
 
-    const result = (await personas.customer!.invoke('whoami', {})) as {
+    const result = (await virtualUsers.customer!.invoke('whoami', {})) as {
       actingAs: string | null
     }
     assert.equal(result.actingAs, 'user-7')
   })
 
-  test('refuses a persona the stage has no account for', async () => {
+  test('refuses a virtual user the stage has no account for', async () => {
     const stage = await startStage([])
     servers.push(stage.server)
 
-    const personas = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      personas: { customer: persona('ghost@personas.invalid') },
+      virtualUsers: { customer: virtualUser('ghost@personas.invalid') },
     })
 
     await assert.rejects(
-      () => personas.customer!.invoke('whoami', {}),
+      () => virtualUsers.customer!.invoke('whoami', {}),
       /operator sign-in failed for 'customer' \(404\)/
     )
   })
@@ -155,13 +155,13 @@ describe('operator persona sign-in', () => {
     ])
     servers.push(stage.server)
 
-    const personas = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: { token: OPERATOR_TOKEN },
-      personas: { customer: persona('customer@personas.invalid') },
+      virtualUsers: { customer: virtualUser('customer@personas.invalid') },
     })
 
-    await personas.customer!.invoke('whoami', {})
+    await virtualUsers.customer!.invoke('whoami', {})
     assert.deepEqual(stage.sentBodies, [{ email: 'customer@personas.invalid' }])
   })
 
@@ -172,7 +172,7 @@ describe('operator persona sign-in', () => {
     servers.push(stage.server)
 
     let minted = 0
-    const personas = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl,
       operator: {
         token: () => {
@@ -180,10 +180,10 @@ describe('operator persona sign-in', () => {
           return OPERATOR_TOKEN
         },
       },
-      personas: { customer: persona('lazy@personas.invalid') },
+      virtualUsers: { customer: virtualUser('lazy@personas.invalid') },
     })
 
-    await personas.customer!.invoke('whoami', {})
+    await virtualUsers.customer!.invoke('whoami', {})
     assert.equal(minted, 1)
   })
 
@@ -193,25 +193,25 @@ describe('operator persona sign-in', () => {
 
     // Plain fetch keeps no cookies, which is the browser provider's situation:
     // it plants them on a Playwright context only once this has returned. The
-    // handshake must not need a session of its own to resolve the persona.
+    // handshake must not need a session of its own to resolve the virtual user.
     const { userId } = await establishOperatorSession(
       fetch,
       stage.apiUrl,
-      persona('susan@acme.test'),
+      virtualUser('susan@acme.test'),
       { token: OPERATOR_TOKEN }
     )
     assert.equal(userId, 'user-9')
   })
 
-  test('a persona with neither credential is refused at construction', async () => {
+  test('a virtual user with neither credential is refused at construction', async () => {
     const stage = await startStage([])
     servers.push(stage.server)
 
     assert.throws(
       () =>
-        createHttpPersonas({
+        createHttpVirtualUsers({
           apiUrl: stage.apiUrl,
-          personas: { customer: persona('nobody@personas.invalid') },
+          virtualUsers: { customer: virtualUser('nobody@personas.invalid') },
         }),
       /has no way to sign in/
     )

@@ -15,13 +15,13 @@ const TYPE_ONLY = /^\s*(?:import|export)\s+type\b/
 /**
  * The modules a production server must never load by importing a barrel.
  *
- * Each is scenario or virtual-user runtime: `http-personas` signs personas in
+ * Each is scenario or virtual-user runtime: `http-virtual-users` signs virtual users in
  * and reaches the actor-flow conversation runner, which reaches the agent
  * runner. None of it runs in production, and an unbundled Node or Lambda deploy
  * does no tree-shaking — it loads whatever the graph names.
  */
 const FORBIDDEN = [
-  'services/http-personas.ts',
+  'services/http-virtual-users.ts',
   'wirings/actor-flow/run-conversation.ts',
   'wirings/workflow/pikku-scenario-service.ts',
 ]
@@ -40,7 +40,7 @@ const resolveSpecifier = (fromFile: string, specifier: string) => {
  *
  * A dynamic `await import(...)` is not followed: it does not run at module
  * init, which is the whole reason `pikku-scenario-service` reaches
- * `http-personas` that way.
+ * `http-virtual-users` that way.
  */
 const runtimeGraph = (entry: string): Set<string> => {
   const seen = new Set<string>()
@@ -76,23 +76,23 @@ describe('production barrels stay lean', () => {
         [],
         `${barrel} pulls scenario runtime into every app that imports it:\n` +
           `${offenders.join('\n')}\n` +
-          `Export the value from '@pikku/core/persona' instead — types may stay here.`
+          `Export the value from '@pikku/core/virtual-user' instead — types may stay here.`
       )
     })
   }
 
-  test('the persona entry point still exports the runtime that moved', async () => {
-    const persona = await import('./wirings/persona/index.js')
+  test('the virtual user entry point still exports the runtime that moved', async () => {
+    const virtualUser = await import('./wirings/virtual-user/index.js')
 
     for (const name of [
-      'createHttpPersonas',
-      'HttpPersona',
+      'createHttpVirtualUsers',
+      'HttpVirtualUser',
       'postScenarioJson',
       'readScenarioHttpResponse',
     ]) {
       assert.ok(
-        name in persona,
-        `@pikku/core/persona no longer exports ${name}; it has to live somewhere`
+        name in virtualUser,
+        `@pikku/core/virtual-user no longer exports ${name}; it has to live somewhere`
       )
     }
   })
@@ -100,9 +100,9 @@ describe('production barrels stay lean', () => {
   test('the graph walker actually reaches things', () => {
     // Guards the test above: a walker that silently resolved nothing would pass
     // no matter what the barrels imported.
-    const reached = runtimeGraph(join(srcRoot, 'wirings/persona/index.ts'))
+    const reached = runtimeGraph(join(srcRoot, 'wirings/virtual-user/index.ts'))
     assert.ok(
-      reached.has(join(srcRoot, 'services/http-personas.ts')),
+      reached.has(join(srcRoot, 'services/http-virtual-users.ts')),
       `walker failed to reach a known value import; reached ${reached.size} files:\n` +
         [...reached].map((f) => relative(srcRoot, f)).join('\n')
     )
