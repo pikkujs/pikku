@@ -19,8 +19,8 @@ build the hook's sign-in (line 184). The config doc agrees with the code, not th
 alongside a sign-in registered with `wirePersonaSignIn`" (lines 57-58).
 
 So the credentials are read by the caller and then refused, not left unread. The runtime path avoids the throw by
-omitting `secret` when a hook is wired (`packages/core/src/wirings/workflow/pikku-scenario-service.ts:678-681`,
-`:706`), see
+omitting `secret` when a hook is wired (`packages/core/src/wirings/workflow/pikku-scenario-service.ts:677-680`,
+`:705`), see
 [should-a-run-without-actors-use-the-cli-credential-order](./should-a-run-without-actors-use-the-cli-credential-order.md).
 
 **Question:** is the intended contract "set the hook and nothing else", with the thrown error as the guard, in which

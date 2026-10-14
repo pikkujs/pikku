@@ -7,7 +7,7 @@ tags: core, scenario, cookies
 
 # Should the scenario cookie jar scope cookies to the API origin?
 
-`createCookieJar` in `packages/core/src/wirings/workflow/scenario-cookie-jar.ts`
+`createCookieJar` in `packages/core/src/services/scenario-cookie-jar.ts`
 takes one `apiUrl` and reads its origin once. Its `fetch` ignores the host of
 `input`. It sets the `Origin` header to that origin on every call, and it adds
 every held cookie to every call whatever URL the call goes to.

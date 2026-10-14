@@ -7,7 +7,7 @@ tags: core, scenario, cookies
 
 # A cookie the caller sets wins over the jar's copy of the same name
 
-In `createCookieJar` (`packages/core/src/wirings/workflow/scenario-cookie-jar.ts`)
+In `createCookieJar` (`packages/core/src/services/scenario-cookie-jar.ts`)
 the jar builds the outgoing `cookie` header from the caller's own header and the
 jar's held cookies. A held cookie is left out when the caller's header already
 names it. The code comment says a request that already carries a session "is

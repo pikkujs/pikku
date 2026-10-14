@@ -9,18 +9,18 @@ tags: core, scenario, personas, sign-in
 
 When a scenario run starts without actors, `PikkuScenarioService.resolvePersonas`
 in `packages/core/src/wirings/workflow/pikku-scenario-service.ts` builds them. It first asks whether a persona sign-in hook is wired
-(`getWiredPersonaSignIn() !== null`, line 678). When one is, the root secret is
-not read at all (lines 679-681). Otherwise it reads `SCENARIO_ACTOR_SECRET`
-(line 681) and passes the root secret straight through. It requires `API_URL`
-(line 682) and takes `APP_URL` for the environment (line 700). It never reads
+(`pikkuState(null, 'persona', 'signIn') !== null`, line 677). When one is, the root secret is
+not read at all (lines 678-680). Otherwise it reads `SCENARIO_ACTOR_SECRET`
+(line 680) and passes the root secret straight through. It requires `API_URL`
+(line 681) and takes `APP_URL` for the environment (line 699). It never reads
 `FABRIC_OPERATOR_TOKEN` or `PIKKU_PERSONA_SECRETS`. Its sign-in and RPC paths come
-from `SCENARIO_SIGN_IN_PATH` and `SCENARIO_RPC_PATH` (lines 693-696). The sign-in
+from `SCENARIO_SIGN_IN_PATH` and `SCENARIO_RPC_PATH` (lines 692-695). The sign-in
 default is `/api/auth/sign-in/actor`.
 
 The wired hook changes what the runtime path hands on. With a hook wired, `secret`
-stays unset and is left out of the config (`pikku-scenario-service.ts:679-681`,
-`:706`), and the run proceeds with no secret when `API_URL` is set (`:683`). The
-sign-in path it resolves (`:693-695`, default `/api/auth/sign-in/actor`) is passed
+stays unset and is left out of the config (`pikku-scenario-service.ts:678-680`,
+`:705`), and the run proceeds with no secret when `API_URL` is set (`:682`). The
+sign-in path it resolves (`:692-694`, default `/api/auth/sign-in/actor`) is passed
 to the hook as `signInPath` (`packages/core/src/services/http-personas.ts:118-122`).
 `HttpPersona` then builds the hook's sign-in in place of the operator and secret
 paths (`http-personas.ts:174`, `:184`), and throws if the config also holds a
