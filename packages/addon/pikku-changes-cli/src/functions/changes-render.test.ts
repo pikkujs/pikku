@@ -278,6 +278,12 @@ describe('changes reply', () => {
       } as never)
     )
     assert.ok(out.includes('keeps its status'))
+    const answered = printed(() =>
+      renderChangesReply(null, {
+        message: { body: 'A', authorKind: 'user', attachments: [] },
+      } as never)
+    )
+    assert.ok(answered.includes('back in progress'))
     assert.ok(!out.includes('\x1b[2J'))
     assert.ok(out.includes('[evidence]'))
   })

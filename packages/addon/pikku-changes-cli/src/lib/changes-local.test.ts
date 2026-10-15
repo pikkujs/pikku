@@ -265,7 +265,7 @@ describe('local changes queue', () => {
     assert.ok(saved.changes.every((c: object) => !('backlog' in c)))
   })
 
-  test('ask records a question, shot a visual, and a reply clears it', async () => {
+  test('ask records a question, shot a visual, and only a person reply clears it', async () => {
     const rpc = await store()
     await rpc.invoke('createChange', { stageId: 'local', title: 'A' })
     await rpc.invoke('createChange', { stageId: 'local', title: 'B' })
@@ -289,10 +289,22 @@ describe('local changes queue', () => {
     ])
     await rpc.invoke('replyToChange', {
       changeId: '1',
+      body: 'Still thinking',
+      authorName: 'me',
+    } as any)
+    assert.deepStrictEqual((await asks())[0], ['needs_answer', 'question', 'me'])
+    await rpc.invoke('replyToChange', {
+      changeId: '1',
       body: 'Go with A',
       authorName: 'person',
+      person: true,
     } as any)
     assert.deepStrictEqual((await asks())[0], ['in_progress', undefined, undefined])
+    const thread = await rpc.invoke('getChange', { changeId: '1' })
+    assert.deepStrictEqual(
+      thread.thread.map((m) => m.authorKind),
+      ['agent', 'agent', 'user']
+    )
   })
 
   test('migration gives a needs_answer row without ask the question kind', async () => {

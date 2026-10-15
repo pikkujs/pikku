@@ -281,6 +281,11 @@ export const changesCommands = defineCLICommands({
           'image/png, image/jpeg or image/webp (inferred from --image)',
       },
       authorName: { description: 'Who is replying, e.g. claude-code' },
+      person: {
+        description:
+          'Post it as the person answering, not as an agent: a parked (needs answer) change goes back to in progress. Local queue only',
+        type: 'boolean',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
