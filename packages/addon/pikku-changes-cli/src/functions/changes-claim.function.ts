@@ -138,7 +138,7 @@ async function declare(
           status: ['open'],
           includeDone: false,
         })
-      ).changes
+      ).changes.filter((c) => !(c as { backlog?: boolean }).backlog)
   const verdict = await needsPlan(
     {
       title: input.title ?? changes[0]?.title ?? '',

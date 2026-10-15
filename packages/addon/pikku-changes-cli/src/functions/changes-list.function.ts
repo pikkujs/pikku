@@ -50,6 +50,9 @@ export const ChangesList = pikkuSessionlessFunc({
 type Change = ListChangesOutput['changes'][number]
 type Group = ListChangesOutput['groups'][number]
 
+const isBacklog = (change: Change): boolean =>
+  !!(change as { backlog?: boolean }).backlog
+
 const line = (change: Change): void => {
   const flags = [
     statusColor(change.status),
@@ -82,9 +85,11 @@ export const renderChangesList = (
     return
   }
 
+  const shelved = changes.filter(isBacklog)
+  const active = changes.filter((change) => !isBacklog(change))
   const listed = new Set(groups.map((group) => group.groupId))
-  const ungrouped = changes.filter((change) => !change.groupId)
-  const grouped = changes.filter((change) => change.groupId)
+  const ungrouped = active.filter((change) => !change.groupId)
+  const grouped = active.filter((change) => change.groupId)
 
   if (ungrouped.length) {
     console.log(`unclaimed (${ungrouped.length})`)
@@ -110,5 +115,11 @@ export const renderChangesList = (
     console.log('')
     console.log(dim('grouped, group not listed'))
     orphaned.forEach(line)
+  }
+
+  if (shelved.length) {
+    if (active.length) console.log('')
+    console.log(`backlog (${shelved.length})`)
+    shelved.forEach(line)
   }
 }

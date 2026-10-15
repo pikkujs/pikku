@@ -279,4 +279,22 @@ describe('changes reply', () => {
     assert.ok(!out.includes('\x1b[2J'))
     assert.ok(out.includes('[evidence]'))
   })
+
+  test('lists backlogged changes in their own group, hidden from the rest', () => {
+    const out = printed(() =>
+      renderChangesList(
+        undefined,
+        {
+          changes: [
+            change({ shortId: '1', title: 'Active' }),
+            change({ shortId: '2', title: 'Shelved', backlog: true }),
+          ],
+          groups: [],
+        } as any
+      )
+    )
+    assert.match(out, /unclaimed \(1\)\n  #1  Active/)
+    assert.match(out, /backlog \(1\)\n  #2  Shelved/)
+    assert.doesNotMatch(out, /unclaimed \(2\)/)
+  })
 })

@@ -100,7 +100,7 @@ async function route(
   return { ...(await pick(root, rpc, projectId!, parallel)), merged }
 }
 
-async function pick(
+export async function pick(
   root: string,
   rpc: Awaited<ReturnType<typeof changesContext>>['rpc'],
   projectId: string,

@@ -58,6 +58,7 @@ export function claimable(
   return changes.filter(
     (change) =>
       !change.held &&
+      !(change as { backlog?: boolean }).backlog &&
       (change.status === 'open' || change.status === 'claimed') &&
       !liveLease(change.groupId ? byId.get(change.groupId) : undefined, now)
   )
@@ -95,6 +96,7 @@ export function soonestClaimable(
   for (const change of changes) {
     if (change.status !== 'open' && change.status !== 'claimed') continue
     if (!change.heldUntil) continue
+    if ((change as { backlog?: boolean }).backlog) continue
     const at = new Date(change.heldUntil).getTime()
     if (at > now && (soonest === null || at < soonest)) soonest = at
   }

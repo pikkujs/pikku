@@ -5,6 +5,7 @@ import {
   HELD_MARGIN_MS,
   MAX_CONSECUTIVE_FAILURES,
   SAFETY_POLL_MS,
+  claimable,
   waitForNext,
   type NextOptions,
 } from './changes-next.js'
@@ -90,6 +91,19 @@ const httpError = (status: number, message = 'nope') =>
 const empty = { changes: [], groups: [] }
 
 describe('waitForNext', () => {
+  test('never returns a backlogged change and keeps waiting', async () => {
+    const list = { changes: [change({ backlog: true })], groups: [] }
+    assert.deepStrictEqual(claimable(list as any, NOW), [])
+    const { rpc } = fakeRpc([list])
+    const { clock } = fakeClock()
+    const result = await waitForNext(
+      rpc,
+      options({ timeoutMs: 30_000 }),
+      clock
+    )
+    assert.strictEqual(result.outcome, 'timeout')
+  })
+
   test('returns straight away when something is claimable', async () => {
     const { rpc, calls } = fakeRpc([{ changes: [change()], groups: [] }])
     const { clock, sleeps } = fakeClock()
