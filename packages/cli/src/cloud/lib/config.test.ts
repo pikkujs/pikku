@@ -4,8 +4,8 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-// `authFilePath` is fixed when config.js loads, so HOME has to point somewhere
-// disposable first — otherwise these tests read the developer's own login.
+// The auth file lives under HOME, so HOME has to point somewhere disposable —
+// otherwise these tests read the developer's own login.
 const home = await mkdtemp(join(tmpdir(), 'pikku-cloud-home-'))
 process.env.HOME = home
 const { resolveApiContext, writeAuthFile, DEFAULT_API_URL } =
