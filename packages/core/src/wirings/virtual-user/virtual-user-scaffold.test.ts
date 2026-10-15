@@ -882,7 +882,7 @@ describe('executeVirtualUserRun', () => {
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        FABRIC_OPERATOR_TOKEN: 'from-the-environment',
+        PIKKUSTUDIO_OPERATOR_TOKEN: 'from-the-environment',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: (given: any) => {

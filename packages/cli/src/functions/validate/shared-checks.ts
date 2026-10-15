@@ -15,7 +15,7 @@ import {
   projectWiresChannels,
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
-import { blankComments } from '../../fabric/lib/blank-comments.js'
+import { blankComments } from '../../cloud/lib/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
 
@@ -63,7 +63,7 @@ export type SharedCheckResult = {
 /**
  * A malformed config is named, never reported as absent.
  *
- * `pikku fabric validate` used to swallow the parse error and report
+ * `pikku cloud validate` used to swallow the parse error and report
  * `pikku-config-missing` for a file that is right there — the one message
  * guaranteed to send you looking in the wrong place.
  */
@@ -179,7 +179,7 @@ type MiddlewareGroupsMeta = {
  * Matches any `betterAuth*Session` definition rather than the literal
  * `betterAuthSession`. The stateless variant is a separate definition id that
  * the CLI wires whenever `session.cookieCache` is enabled, which is the
- * configuration Fabric asks for — so an exact-match check saw no auth on
+ * configuration Pikku Studio Cloud asks for — so an exact-match check saw no auth on
  * precisely the apps most likely to have it, and silently skipped every auth
  * schema check below.
  */
@@ -559,7 +559,7 @@ const REQUIRED_SCAFFOLD: Array<{
 /**
  * Every check that is true of any pikku project, regardless of where it deploys.
  *
- * `pikku validate`'s app-project check is exactly this; `pikku fabric validate` is this
+ * `pikku validate`'s app-project check is exactly this; `pikku cloud validate` is this
  * plus the deploy-shaped checks (themes, frontends, the Cloudflare adapter, the
  * .gitignore contract). Before this module the two were separate walks over the
  * same project that duplicated sixteen findings verbatim, and each carried
@@ -838,7 +838,7 @@ export async function runSharedProjectChecks(
     // box, and is what the console's Users and Scopes pages call. It arrives as
     // `@pikku/addon-admin`, not as application code: an app that has not wired
     // it exposes no `admin:*` RPC, so those pages have nothing to talk to and a
-    // Fabric operator signs in holding a grant that reaches nothing.
+    // Pikku Studio Cloud operator signs in holding a grant that reaches nothing.
     //
     // Gated on better-auth being wired because `admin:users:*` reads and writes
     // through its adapter — an app with no auth has no directory to administer.
@@ -861,7 +861,7 @@ export async function runSharedProjectChecks(
           '',
           'The functions are each gated on their own `admin:*` scope, so registering a',
           'ScopeService in createSingletonServices is what makes those grants land —',
-          'without one nobody, including the Fabric operator, holds anything.',
+          'without one nobody, including the Pikku Studio Cloud operator, holds anything.',
           'Banning additionally needs better-auth wired with `pikkuBan()`.'
         )
       )

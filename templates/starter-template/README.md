@@ -1,6 +1,6 @@
 # starter-template
 
-The Tailwind v4 + shadcn/ui Fabric starter, self-contained: backend (`packages/functions`, `functions-sdk`, `db`,
+The Tailwind v4 + shadcn/ui Pikku Studio Cloud starter, self-contained: backend (`packages/functions`, `functions-sdk`, `db`,
 `emails`, `knowledge`), `apps/app` (TanStack Start) and `packages/theme` (`themes/<id>.json`, `active.json`,
 generated `theme.css`). `bunfig.toml` pins bun's hoisted linker; see AGENTS.md for first run.
 

@@ -9,8 +9,8 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { fabricCommands } from './fabric/fabric-commands.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { cloudCommands } from './cloud/cloud-commands.js'
+import { changesCommands } from './cloud/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -1631,10 +1631,10 @@ wireCLI({
         }),
       },
     },
-    fabric: {
+    cloud: {
       description:
-        'PikkuFabric commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: fabricCommands,
+        'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
+      subcommands: cloudCommands,
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
@@ -2113,9 +2113,9 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [core]',
               default: false,
             },
-            fabric: {
+            cloud: {
               description:
-                'Install skills whose frontmatter includes installGroups: [fabric]',
+                'Install skills whose frontmatter includes installGroups: [cloud]',
               default: false,
             },
             client: {

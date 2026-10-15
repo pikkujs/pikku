@@ -1,8 +1,8 @@
 /**
- * Fabric-injected product-analytics forwarder. The deploy container drops this
+ * Pikku Studio Cloud-injected product-analytics forwarder. The deploy container drops this
  * file into the user's `packages/functions/src/__fabric_analytics__/` before
  * `pikku bootstrap` runs, overwriting the copy that ships in the template. The
- * template's copy exists only so the app typechecks and runs locally; fabric
+ * template's copy exists only so the app typechecks and runs locally; cloud
  * owns the deployed one so the transport can change without touching anyone's
  * repo.
  *
@@ -15,7 +15,7 @@
  *   - CF Worker  → `console.log(JSON.stringify(record))` → tail worker → OO
  *   - container  → `queueService.add('fabric-telemetry', …)` → backend → OO
  *
- * If FABRIC_STREAM_CLASS is unset (local dev, or an un-injected build) this
+ * If PIKKUSTUDIO_STREAM_CLASS is unset (local dev, or an un-injected build) this
  * no-ops, so nothing has to branch on the environment at the call site.
  */
 
@@ -66,21 +66,24 @@ export async function forwardAnalyticsEvents(
 ): Promise<void> {
   if (events.length === 0) return
 
-  const streamClass = variables?.get?.('FABRIC_STREAM_CLASS') as
+  const streamClass = variables?.get?.('PIKKUSTUDIO_STREAM_CLASS') as
     string | undefined
   if (!streamClass) return
 
-  const orgId = variables?.get?.('FABRIC_ORG_ID') as string | undefined
-  const stageId = variables?.get?.('FABRIC_STAGE_ID') as string | undefined
-  const stageShortId = variables?.get?.('FABRIC_STAGE_SHORT_ID') as
+  const orgId = variables?.get?.('PIKKUSTUDIO_ORG_ID') as string | undefined
+  const stageId = variables?.get?.('PIKKUSTUDIO_STAGE_ID') as string | undefined
+  const stageShortId = variables?.get?.('PIKKUSTUDIO_STAGE_SHORT_ID') as
     string | undefined
-  const stageType = variables?.get?.('FABRIC_STAGE_TYPE') as string | undefined
-  const branch = variables?.get?.('FABRIC_BRANCH') as string | undefined
-  const projectId = variables?.get?.('FABRIC_PROJECT_ID') as string | undefined
-  const deploymentId = variables?.get?.('FABRIC_DEPLOYMENT_ID') as
+  const stageType = variables?.get?.('PIKKUSTUDIO_STAGE_TYPE') as
+    string | undefined
+  const branch = variables?.get?.('PIKKUSTUDIO_BRANCH') as string | undefined
+  const projectId = variables?.get?.('PIKKUSTUDIO_PROJECT_ID') as
+    string | undefined
+  const deploymentId = variables?.get?.('PIKKUSTUDIO_DEPLOYMENT_ID') as
     string | undefined
   const viaQueue =
-    (variables?.get?.('FABRIC_TELEMETRY_QUEUE') as string | undefined) != null
+    (variables?.get?.('PIKKUSTUDIO_TELEMETRY_QUEUE') as string | undefined) !=
+    null
 
   const now = Date.now()
   const identityKind = identity.userId ? 'user' : 'none'

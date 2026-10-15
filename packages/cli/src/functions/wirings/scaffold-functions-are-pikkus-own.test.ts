@@ -40,10 +40,10 @@ const tagsOf = (config: string): string[] => {
 }
 
 const channelCLI = serializeChannelCLI(
-  'fabric',
+  'cloud',
   {
-    name: 'fabric',
-    description: 'fabric',
+    name: 'cloud',
+    description: 'cloud',
     commands: {},
     options: {},
   } as unknown as CLIProgramMeta,

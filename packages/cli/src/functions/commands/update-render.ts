@@ -1,4 +1,4 @@
-import { added, changed, dim, removed, table } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed, table } from '../../cloud/lib/output.js'
 import type { UpdateResult, UpdateStatus } from './update.js'
 
 const STATUS_LABEL: Record<UpdateStatus, string> = {

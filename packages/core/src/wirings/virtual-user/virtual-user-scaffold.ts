@@ -73,12 +73,12 @@ export const VIRTUAL_USER_VARIABLES = {
   signInPath: 'SCENARIO_SIGN_IN_PATH',
   rpcPath: 'SCENARIO_RPC_PATH',
   /**
-   * The deployed way in. A Fabric operator token is asymmetric — a stage can
+   * The deployed way in. A Pikku Studio Cloud operator token is asymmetric — a stage can
    * verify one and can never mint one — so unlike the virtual user secret it is safe
    * for a run against a real environment. Read from the environment only as the
    * fallback for a run nobody handed a token to, which is what a schedule is.
    */
-  operatorToken: 'FABRIC_OPERATOR_TOKEN',
+  operatorToken: 'PIKKUSTUDIO_OPERATOR_TOKEN',
 } as const
 
 /**
@@ -603,7 +603,7 @@ export const executeVirtualUserRun = async ({
     if (!token && !secret) {
       throw new Error(
         `Neither an operator token nor ${VIRTUAL_USER_VARIABLES.secret} is available — there is nobody for the virtual user to be. ` +
-          `Hand a Fabric operator token in with the run against a deployed stage, or export ${VIRTUAL_USER_VARIABLES.secret} against a local \`pikku dev\` target.`
+          `Hand a Pikku Studio Cloud operator token in with the run against a deployed stage, or export ${VIRTUAL_USER_VARIABLES.secret} against a local \`pikku dev\` target.`
       )
     }
 

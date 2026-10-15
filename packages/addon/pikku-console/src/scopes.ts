@@ -177,7 +177,7 @@ defineScope({
           },
           changes: {
             description:
-              'Changes to make to the app — local, or filed by Fabric against the deployed app',
+              'Changes to make to the app — local, or filed by Pikku Studio Cloud against the deployed app',
             scopes: {
               read: { description: 'Read the changes queue' },
               write: { description: 'File, move, answer and complete changes' },

@@ -124,7 +124,7 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 | Command                       | What it does                                                                                                                                   | Read           |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | `deploy`                      | Deploy to cloud infrastructure                                                                                                                 | `pikku-deploy` |
-| `fabric`                      | PikkuFabric: login, link, deploy, domains, secrets, logs                                                                                       | `pikku-fabric` |
+| `cloud`                       | Pikku Studio Cloud: login, link, deploy, domains, secrets, logs                                                                                | `pikku-cloud`  |
 | `binary`                      | Compile an entrypoint to a native binary (`bun build --compile`)                                                                               | —              |
 | `dist`                        | Copy what `tsc` cannot emit — `.gen.json` meta, hand-authored `.d.ts` — into the build output. Run it after `tsc`, as a package's build script | —              |
 | `login` / `logout` / `whoami` | The CLI's session against a pikku server                                                                                                       | —              |

@@ -1,23 +1,23 @@
 ---
 type: decision
 title: Both validators check virtual users through one shared module, and a virtual user counts from either the meta or the source
-description: workspace validate and fabric validate are separate implementations, so the virtual user/virtual-user/knowledge checks live in virtual-user-checks.ts and are called by both — and a virtual user is counted from the generated meta or a defineVirtualUsers() source scan, whichever answers first
+description: workspace validate and cloud validate are separate implementations, so the virtual user/virtual-user/knowledge checks live in virtual-user-checks.ts and are called by both — and a virtual user is counted from the generated meta or a defineVirtualUsers() source scan, whichever answers first
 tags: cli, validate, scenarios, virtual users
 ---
 
 # Both validators check virtual users through one shared module, and a virtual user counts from either the meta or the source
 
-`pikku workspace validate` and `pikku fabric validate` read like one command
+`pikku workspace validate` and `pikku cloud validate` read like one command
 with a flag. They are not. They are two implementations that walk the same
 project and duplicate about eighteen findings between them verbatim —
 `functions-dir-missing` exists twice, character for character, in two files.
-Fabric adds the deploy-shaped checks (themes, frontends, the Cloudflare
+Pikku Studio Cloud adds the deploy-shaped checks (themes, frontends, the Cloudflare
 adapter, the `.gitignore` contract); workspace adds the local-development ones
 (`dev.db`, the auth migrations).
 
 So a check written into either one is a check half the projects never run. An
-app that never deploys through fabric only ever sees workspace validate; an app
-that does sees fabric validate in CI. The virtual user checks are the kind that only
+app that never deploys through cloud only ever sees workspace validate; an app
+that does sees cloud validate in CI. The virtual user checks are the kind that only
 pay off when nobody remembers to ask for them, which means they had to be in
 both. Rather than duplicate them a nineteenth time, they live in
 `virtual-user-checks.ts` and both validators call `runVirtualUserChecks`. Merging the

@@ -32,9 +32,9 @@ const findFreePort = (): Promise<number> =>
  * the root this app's virtual user sign-in route derives each virtual user's credential
  * from — long enough to be key material, or every sign-in is refused before it
  * is compared. `PIKKU_MOCK_LLM`
- * scripts the model instead of calling OpenAI, and `FABRIC_API_URL` points the
+ * scripts the model instead of calling OpenAI, and `PIKKUSTUDIO_API_URL` points the
  * console's addon gallery at the catalogue this repo checks in rather than the
- * live Fabric registry — all three are this project's choices, not the
+ * live Pikku Studio Cloud registry — all three are this project's choices, not the
  * framework's, which is why they stay here.
  *
  * Opt out with PIKKU_MOCK_LLM=0 to run the @ai-live tier against a real key.
@@ -43,7 +43,7 @@ export const applyTestEnvDefaults = (): void => {
   process.env.SCENARIO_VIRTUAL_USER_SECRET ??=
     'e2e-virtual-user-secret-long-enough-to-derive-from'
   process.env.PIKKU_MOCK_LLM ??= '1'
-  process.env.FABRIC_API_URL ??= mockRegistryUrl
+  process.env.PIKKUSTUDIO_API_URL ??= mockRegistryUrl
 }
 
 /**
@@ -75,7 +75,7 @@ export const startBackend = async (
   if (!process.env.MOCK_REGISTRY_PORT) {
     const registryPort = await findFreePort()
     process.env.MOCK_REGISTRY_PORT = String(registryPort)
-    process.env.FABRIC_API_URL = `http://localhost:${registryPort}`
+    process.env.PIKKUSTUDIO_API_URL = `http://localhost:${registryPort}`
   }
 
   const server = await spawnDevServer({

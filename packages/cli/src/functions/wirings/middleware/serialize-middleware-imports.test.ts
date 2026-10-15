@@ -30,7 +30,7 @@ describe('serializeMiddlewareImports global middleware', () => {
   // middlewareState.instances (keyed global:middleware:N) with no associated
   // wire group. The per-unit --names filter strips the state.http.files
   // fallback, so without emitting them here a globally-registered middleware
-  // (e.g. the CI-injected fabric telemetry middleware) never imports into a
+  // (e.g. the CI-injected cloud telemetry middleware) never imports into a
   // deployed unit and silently no-ops at runtime.
   test('emits a side-effect import for a global middleware source file', () => {
     const state = emptyMiddlewareState({

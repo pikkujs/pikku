@@ -81,7 +81,7 @@ export const RunVirtualUserInput = z.object({
   /** Fixed seed, so a run replays into the same finding. */
   seed: z.number().int().optional(),
   /**
-   * A short-lived Fabric operator token, handed in by whoever starts the run.
+   * A short-lived Pikku Studio Cloud operator token, handed in by whoever starts the run.
    *
    * Handed in rather than held: a deployed stage that could ask for a token
    * would be holding a credential able to mint admin sessions for itself, for

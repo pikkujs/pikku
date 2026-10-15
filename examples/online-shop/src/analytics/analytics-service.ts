@@ -3,7 +3,7 @@ import type { SingletonServices } from '#pikku/function'
 import { forwardAnalyticsEvents } from '../__fabric_analytics__/fabric-analytics.js'
 
 /**
- * The fabric destination, as an `AnalyticsService` the generated ingest can be
+ * The cloud destination, as an `AnalyticsService` the generated ingest can be
  * given.
  *
  * Before analytics moved into core this app owned the whole ingest and called

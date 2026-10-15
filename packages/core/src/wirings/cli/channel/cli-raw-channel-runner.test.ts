@@ -17,7 +17,7 @@ import {
 const wireTestCLI = (func: (services: any, data: any, wire: any) => any) => {
   pikkuState(null, 'cli', 'meta', {
     programs: {
-      fabric: {
+      cloud: {
         program: 'fabric',
         commands: {
           deploy: {
@@ -34,7 +34,7 @@ const wireTestCLI = (func: (services: any, data: any, wire: any) => any) => {
   })
 
   pikkuState(null, 'cli', 'programs', {
-    fabric: { defaultRenderer: undefined, middleware: [], renderers: {} },
+    cloud: { defaultRenderer: undefined, middleware: [], renderers: {} },
   })
 
   pikkuState(null, 'function', 'meta', {

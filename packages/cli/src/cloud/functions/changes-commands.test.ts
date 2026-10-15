@@ -1,0 +1,558 @@
+import { after, describe, test } from 'node:test'
+import assert from 'node:assert'
+import { mock } from 'bun:test'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import * as changesLib from '../lib/changes.js'
+import * as gitLib from '../../utils/git.js'
+
+/**
+ * The commands themselves, not the helpers they call: what reaches
+ * `rpc.invoke` is the whole of what cloud API sees, so the defaults each
+ * command fills in — the claimant, the lease, the git metadata, the encoded
+ * image — are only ever true at this boundary.
+ *
+ * `changesContext` and the git probes are replaced because both read the
+ * machine: an auth token from `~/.pikkustudio/auth.json` and whatever branch the
+ * checkout running the suite happens to be on.
+ */
+const invoked: { name: string; data: any }[] = []
+
+let respond: (name: string, data: any) => unknown = () => ({ ok: true })
+
+let projectId: string | null = 'proj_linked'
+let git: { repo: boolean; branch: string; sha: string } = {
+  repo: true,
+  branch: 'fix/1677-changes',
+  sha: 'abc1234def5678',
+}
+
+await mock.module('../lib/changes.js', () => ({
+  ...changesLib,
+  changesContext: async (_apiUrl?: string, projectIdOverride?: string) => ({
+    rpc: {
+      invoke: async (name: string, data: unknown) => {
+        invoked.push({ name, data })
+        return respond(name, data)
+      },
+    },
+    projectId: projectIdOverride ?? projectId,
+  }),
+}))
+
+/**
+ * The real probes, snapshotted before the mock takes their place.
+ *
+ * `mock.module` replaces the module for the whole process and is never undone,
+ * so this mock outlives the file that installs it: every test file that runs
+ * after this one gets it too. That makes both halves below load-bearing. The
+ * spread keeps the exports this file does not fake — `isTracked` among them —
+ * pointing at the real implementations instead of becoming `undefined`, and
+ * `gitOverride` hands the real probes back once these tests are done. Without
+ * the second part `isGitRepo` keeps answering `git.repo`, left `true` by the
+ * last test here, and a later suite asking about a bare temporary directory is
+ * told it is a git repository.
+ */
+const realGit = { ...gitLib }
+
+/** Whether the faked answers above are still in force. */
+let gitOverride = true
+
+await mock.module('../../utils/git.js', () => ({
+  ...realGit,
+  isGitRepo: async (cwd?: string) =>
+    gitOverride ? git.repo : realGit.isGitRepo(cwd),
+  currentBranch: async (cwd?: string) =>
+    gitOverride ? git.branch : realGit.currentBranch(cwd),
+  headSha: async (cwd?: string) =>
+    gitOverride ? git.sha : realGit.headSha(cwd),
+}))
+
+after(() => {
+  gitOverride = false
+})
+
+const { CloudChangesClaim } = await import('./changes-claim.function.js')
+const { CloudChangesAsk } = await import('./changes-ask.function.js')
+const { CloudChangesDone } = await import('./changes-done.function.js')
+const { CloudChangesShot } = await import('./changes-shot.function.js')
+const { CloudChangesFile } = await import('./changes-file.function.js')
+const { CloudChangesReply } = await import('./changes-reply.function.js')
+const { CloudChangesShow } = await import('./changes-show.function.js')
+const { clockTime } = changesLib
+
+const sent = async (run: () => Promise<unknown>) => {
+  invoked.length = 0
+  await run()
+  assert.strictEqual(invoked.length, 1, 'expected exactly one RPC')
+  return invoked[0]!
+}
+
+describe('changes claim', () => {
+  test('sends the linked project, a normalized id list and the defaults', async () => {
+    const { name, data } = await sent(() =>
+      CloudChangesClaim.func(
+        {} as any,
+        {
+          changeIds: ['chg_1, chg_2', ' chg_3 '],
+          needsPlan: false,
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'claimChanges')
+    assert.strictEqual(data.projectId, 'proj_linked')
+    assert.deepStrictEqual(data.changeIds, ['chg_1', 'chg_2', 'chg_3'])
+    assert.strictEqual(data.claimedBy, 'pikku-cli')
+    assert.strictEqual(data.leaseMinutes, 30)
+  })
+
+  test('--project-id wins over the linked checkout', async () => {
+    const { data } = await sent(() =>
+      CloudChangesClaim.func(
+        {} as any,
+        { projectId: 'proj_flag', needsPlan: false } as any
+      )
+    )
+    assert.strictEqual(data.projectId, 'proj_flag')
+  })
+
+  test('refuses to claim when nothing says which project', async () => {
+    projectId = null
+    try {
+      await assert.rejects(
+        CloudChangesClaim.func({} as any, {} as any),
+        /No cloud project/
+      )
+    } finally {
+      projectId = 'proj_linked'
+    }
+  })
+})
+
+describe('changes claim, refused', () => {
+  const HELD = '5f0f6a4e-0000-4000-8000-000000000001'
+  const TAKEN = '5f0f6a4e-0000-4000-8000-000000000002'
+  const heldUntil = new Date(Date.now() + 40_000)
+  const leaseEnds = new Date(Date.now() + 20 * 60_000)
+
+  test('a 409 names why each item could not be taken, and when it can', async () => {
+    respond = (name, data) => {
+      if (name === 'claimChanges')
+        throw Object.assign(
+          new Error('already claimed by another group: #4 by other-agent'),
+          { status: 409 }
+        )
+      if (data.changeId === '#3')
+        return {
+          change: {
+            changeId: HELD,
+            shortId: '3',
+            status: 'open',
+            held: true,
+            heldUntil: heldUntil.toISOString(),
+          },
+        }
+      if (data.changeId === TAKEN)
+        return {
+          change: {
+            changeId: TAKEN,
+            shortId: '4',
+            status: 'claimed',
+            held: false,
+            heldUntil: leaseEnds.toISOString(),
+          },
+        }
+      throw Object.assign(new Error('change not found'), { status: 404 })
+    }
+    try {
+      invoked.length = 0
+      await assert.rejects(
+        CloudChangesClaim.func(
+          {} as any,
+          { changeIds: ['#3', TAKEN, '#99'], needsPlan: false } as any
+        ),
+        (error: Error) => {
+          assert.match(
+            error.message,
+            new RegExp(
+              `#3: still held for the person filing it — claimable at ${clockTime(heldUntil)}`
+            )
+          )
+          assert.match(
+            error.message,
+            new RegExp(
+              `#4: claimed, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
+            )
+          )
+          assert.match(error.message, /#99: not found in this project/)
+          assert.match(error.message, /cloud: already claimed .* other-agent/)
+          assert.match(error.message, /changes wait --claim/)
+          return true
+        }
+      )
+      const lookups = invoked.filter((call) => call.name === 'getChange')
+      assert.deepStrictEqual(
+        lookups.map((call) => call.data),
+        [
+          { changeId: '#3', projectId: 'proj_linked' },
+          { changeId: TAKEN },
+          { changeId: '#99', projectId: 'proj_linked' },
+        ]
+      )
+      assert.ok(!invoked.some((call) => call.name === 'listChanges'))
+    } finally {
+      respond = () => ({ ok: true })
+    }
+  })
+
+  test('short ids go to cloud as they are, to look up in the project', async () => {
+    invoked.length = 0
+    await CloudChangesClaim.func(
+      {} as any,
+      { changeIds: ['#3', '4'], needsPlan: false } as any
+    )
+    assert.deepStrictEqual(
+      invoked.map((call) => call.name),
+      ['claimChanges']
+    )
+    assert.deepStrictEqual(invoked[0]!.data.changeIds, ['#3', '4'])
+  })
+})
+
+describe('changes ask', () => {
+  test('sends the question with a default author', async () => {
+    const { name, data } = await sent(() =>
+      CloudChangesAsk.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          question: 'Which total?',
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'askChangeQuestion')
+    assert.deepStrictEqual(data, {
+      changeId: 'chg_1',
+      question: 'Which total?',
+      authorName: 'pikku-cli',
+    })
+  })
+
+  test('a short id is sent with the linked project', async () => {
+    const { data } = await sent(() =>
+      CloudChangesAsk.func(
+        {} as any,
+        { changeId: '#7', question: 'Which?' } as any
+      )
+    )
+    assert.strictEqual(data.changeId, '#7')
+    assert.strictEqual(data.projectId, 'proj_linked')
+  })
+
+  // The CLI runs no input schema, so these are the function's own refusals.
+  test('a blank question never reaches the api', async () => {
+    invoked.length = 0
+    for (const question of ['', '   '])
+      await assert.rejects(
+        CloudChangesAsk.func({} as any, { changeId: 'chg_1', question } as any),
+        /the question is empty/
+      )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('a blank option never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      CloudChangesAsk.func(
+        {} as any,
+        { changeId: 'chg_1', question: 'Which?', option: ['a', ' '] } as any
+      ),
+      /An --option is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the question and its options travel trimmed', async () => {
+    const { data } = await sent(() =>
+      CloudChangesAsk.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          question: '  Grouped or per-line?  ',
+          option: [' Grouped ', 'Per line'],
+        } as any
+      )
+    )
+    assert.strictEqual(data.question, 'Grouped or per-line?')
+    assert.deepStrictEqual(data.option, ['Grouped', 'Per line'])
+  })
+})
+
+describe('changes done', () => {
+  test('outside a repo it sends neither, rather than guessing', async () => {
+    git = { repo: false, branch: '', sha: '' }
+    try {
+      const { data } = await sent(() =>
+        CloudChangesDone.func({} as any, { changeId: 'chg_1' } as any)
+      )
+      assert.strictEqual(data.branch, undefined)
+      assert.strictEqual(data.headCommit, undefined)
+    } finally {
+      git = { repo: true, branch: 'fix/1677-changes', sha: 'abc1234def5678' }
+    }
+  })
+})
+
+describe('changes file', () => {
+  test('sends the named stage and drops what was not given', async () => {
+    const { name, data } = await sent(() =>
+      CloudChangesFile.func(
+        {} as any,
+        {
+          stageId: 'stage_1',
+          title: 'Drop the days-free figure',
+          route: '/availability',
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'createChange')
+    assert.strictEqual(data.stageId, 'stage_1')
+    assert.strictEqual(data.route, '/availability')
+    assert.strictEqual(data.body, undefined)
+  })
+
+  test('reads the body from a file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-file-'))
+    const path = join(dir, 'body.md')
+    await writeFile(path, '  one\n\ntwo  \n')
+    const { data } = await sent(() =>
+      CloudChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: 'Two paragraphs', bodyFile: path } as any
+      )
+    )
+    assert.strictEqual(data.body, 'one\n\ntwo')
+  })
+
+  test('refuses both body flags at once', async () => {
+    await assert.rejects(
+      () =>
+        CloudChangesFile.func(
+          {} as any,
+          {
+            stageId: 'stage_1',
+            title: 'Ambiguous',
+            body: 'inline',
+            bodyFile: '/tmp/nope.md',
+          } as any
+        ) as Promise<unknown>,
+      /not both/
+    )
+  })
+
+  test('a blank title never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      CloudChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  ' } as any
+      ),
+      /Give the item a title/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the title travels trimmed', async () => {
+    const { data } = await sent(() =>
+      CloudChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: '  Drop the figure  ' } as any
+      )
+    )
+    assert.strictEqual(data.title, 'Drop the figure')
+  })
+})
+
+describe('changes shot', () => {
+  const image = async (name: string, bytes: Buffer) => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-shot-'))
+    const path = join(dir, name)
+    await writeFile(path, bytes)
+    return path
+  }
+
+  test('reads the file, encodes it, and infers the type from the name', async () => {
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])
+    const path = await image('variant.PNG', bytes)
+    const { name, data } = await sent(() =>
+      CloudChangesShot.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          label: 'option a',
+          image: path,
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'attachChangeShot')
+    assert.strictEqual(data.contentType, 'image/png')
+    assert.strictEqual(data.imageBase64, bytes.toString('base64'))
+    assert.strictEqual(data.kind, 'option')
+  })
+
+  test('--content-type wins over the extension', async () => {
+    const path = await image('variant.png', Buffer.from([1, 2, 3]))
+    const { data } = await sent(() =>
+      CloudChangesShot.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          label: 'evidence',
+          image: path,
+          contentType: 'image/webp',
+          kind: 'evidence',
+        } as any
+      )
+    )
+    assert.strictEqual(data.contentType, 'image/webp')
+    assert.strictEqual(data.kind, 'evidence')
+  })
+
+  test('--image-base64 still goes straight through', async () => {
+    const { data } = await sent(() =>
+      CloudChangesShot.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          label: 'option a',
+          imageBase64: 'AAEC',
+        } as any
+      )
+    )
+    assert.strictEqual(data.imageBase64, 'AAEC')
+    assert.strictEqual(data.contentType, 'image/png')
+  })
+
+  test('a name that implies nothing is refused before anything is read', async () => {
+    const path = await image('variant.gif', Buffer.from([1]))
+    invoked.length = 0
+    await assert.rejects(
+      CloudChangesShot.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          label: 'option a',
+          image: path,
+        } as any
+      ),
+      /pass --content-type/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('neither --image nor --image-base64 is refused', async () => {
+    await assert.rejects(
+      CloudChangesShot.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          label: 'option a',
+        } as any
+      ),
+      /--image <path> or --image-base64/
+    )
+  })
+})
+
+describe('changes show', () => {
+  test('looks a short id up on the server, not by listing the project', async () => {
+    const { name, data } = await sent(() =>
+      CloudChangesShow.func({} as any, { changeId: '243' } as any)
+    )
+    assert.strictEqual(name, 'getChange')
+    assert.deepStrictEqual(data, { changeId: '243', projectId: 'proj_linked' })
+  })
+})
+
+describe('changes reply', () => {
+  test('sends the message with a default author and no image', async () => {
+    const { name, data } = await sent(() =>
+      CloudChangesReply.func(
+        {} as any,
+        {
+          changeId: '#4',
+          message: 'Not doing this: the copy comes from the CMS.',
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'replyToChange')
+    assert.deepStrictEqual(data, {
+      changeId: '#4',
+      projectId: 'proj_linked',
+      body: 'Not doing this: the copy comes from the CMS.',
+      authorName: 'pikku-cli',
+      contentType: 'image/png',
+      imageLabel: 'screenshot',
+    })
+  })
+
+  test('reads an image, encodes it and infers its type', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-reply-'))
+    const path = join(dir, 'staging.jpg')
+    const bytes = Buffer.from([0xff, 0xd8, 0xff])
+    await writeFile(path, bytes)
+    const { data } = await sent(() =>
+      CloudChangesReply.func(
+        {} as any,
+        {
+          changeId: 'chg_1',
+          message: 'Cannot reproduce on staging.',
+          image: path,
+          imageLabel: 'staging @ abc123',
+          authorName: 'claude-code',
+        } as any
+      )
+    )
+    assert.strictEqual(data.changeId, 'chg_1')
+    assert.strictEqual(data.projectId, undefined)
+    assert.strictEqual(data.imageBase64, bytes.toString('base64'))
+    assert.strictEqual(data.contentType, 'image/jpeg')
+    assert.strictEqual(data.imageLabel, 'staging @ abc123')
+    assert.strictEqual(data.authorName, 'claude-code')
+  })
+
+  test('an image whose name implies nothing is refused before anything is sent', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      CloudChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: 'see', image: '/tmp/shot.gif' } as any
+      ),
+      /pass --content-type/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('a blank message never reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      CloudChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  ' } as any
+      ),
+      /the message is empty/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('the message travels trimmed', async () => {
+    const { data } = await sent(() =>
+      CloudChangesReply.func(
+        {} as any,
+        { changeId: 'chg_1', message: '  Blocked on X.  ' } as any
+      )
+    )
+    assert.strictEqual(data.body, 'Blocked on X.')
+  })
+})

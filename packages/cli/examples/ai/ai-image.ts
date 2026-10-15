@@ -18,7 +18,7 @@ import { defineVariable } from '#pikku/variables'
 
 //~ ⚠️ READ THIS BEFORE COPYING — image generation is NOT free like vision/extract.
 //~ Text→image needs a DEDICATED image model, and `generateImage` is an OPTIONAL method
-//~ on the AI runner. Fabric's DEFAULT LiteLLM proxy routes CHAT models only (no image
+//~ on the AI runner. Pikku Studio Cloud's DEFAULT LiteLLM proxy routes CHAT models only (no image
 //~ route), and every provider prefix resolves to that same proxy — so on a
 //~ stock sandbox `agentRunner.generateImage` THROWS. To enable it you must (a) route
 //~ an image model in your LiteLLM config (e.g. an `gpt-image-1` / `dall-e-3` model_name)

@@ -133,7 +133,7 @@ export interface OperatorSignInOptions {
    * the function: tokens expire, and a long run re-logs-in after a 401.
    */
   token: string | (() => string | Promise<string>)
-  /** Fabric operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
+  /** Pikku Studio Cloud operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
   signInPath?: string
 }
 
@@ -146,7 +146,7 @@ export interface OperatorSessionResult {
 }
 
 /**
- * Establish a Fabric operator session against `apiUrl` and resolve the target's
+ * Establish a Pikku Studio Cloud operator session against `apiUrl` and resolve the target's
  * own id for `virtualUser`, which is what the impersonation header names.
  *
  * Takes the fetch to use rather than making one, because the two callers need
@@ -198,11 +198,11 @@ export const establishOperatorSession = async (
 }
 
 /**
- * Sign a virtual user in on a DEPLOYED stage, by having a Fabric operator act as
+ * Sign a virtual user in on a DEPLOYED stage, by having a Pikku Studio Cloud operator act as
  * them — the path that needs no test credential to exist anywhere.
  *
  * `POST /auth/sign-in/fabric` verifies an RS256 token against the stage's
- * `FABRIC_AUTH_PUBLIC_KEY` and mints a session for a synthetic operator row
+ * `PIKKUSTUDIO_AUTH_PUBLIC_KEY` and mints a session for a synthetic operator row
  * granted the umbrella `admin` scope. Impersonation is then a header on each
  * request rather than a second session, and its gate is that scope — not
  * `user.role`, which is why this works without touching the app's roles.

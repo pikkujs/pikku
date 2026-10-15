@@ -4,8 +4,8 @@ import type {
   HttpVirtualUsersConfig,
 } from '@pikku/core/virtual-user'
 
-/** A Fabric operator token, which is what a deployed stage accepts. */
-export const OPERATOR_TOKEN_VARIABLE = 'FABRIC_OPERATOR_TOKEN'
+/** A Pikku Studio Cloud operator token, which is what a deployed stage accepts. */
+export const OPERATOR_TOKEN_VARIABLE = 'PIKKUSTUDIO_OPERATOR_TOKEN'
 /**
  * The ROOT virtual user secret, which derives every virtual user's credential and so is
  * entitled to all of them. Only `pikku dev` serves the endpoint it opens.

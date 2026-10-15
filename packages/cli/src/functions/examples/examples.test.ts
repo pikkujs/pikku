@@ -58,7 +58,7 @@ describe('the corpus', () => {
     for (const example of EXAMPLES) {
       assert.ok(
         !/@pikkufabric\//.test(example.content),
-        `${example.name} imports a fabric package`
+        `${example.name} imports a cloud package`
       )
     }
   })

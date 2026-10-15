@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed } from '../../cloud/lib/output.js'
 import { PROBLEM_REASON, runMocksCheck } from '../mocks/run-check.js'
 import type { StubCheck } from '../mocks/stub-scan.js'
 

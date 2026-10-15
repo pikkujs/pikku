@@ -206,7 +206,7 @@ const listAll = (names: string[]): string =>
  * `PIKKU_DATA_DIR`.
  *
  * The migrations are copied in beside the bundle under the same `db/<engine>/`
- * path they have in the project, which is also where Fabric's build container
+ * path they have in the project, which is also where Pikku Studio Cloud's build container
  * stages them. Two producers writing the artifact cannot disagree about where
  * the SQL lives, and `bundle.js db migrate` finds it either way.
  */

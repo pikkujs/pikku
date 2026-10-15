@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed } from '../../cloud/lib/output.js'
 import { runValidate } from './validate-registry.js'
 
 export { readJsonSafe, readTextSafe } from './shared-checks.js'

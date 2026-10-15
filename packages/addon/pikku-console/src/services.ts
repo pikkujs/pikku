@@ -50,7 +50,7 @@ export const createSingletonServices = pikkuAddonServices(
     }
     const metaService = existingMetaService
     const fabricApiUrl =
-      (await variables.get('FABRIC_API_URL')) ?? 'https://api.pikkufabric.com'
+      (await variables.get('PIKKUSTUDIO_API_URL')) ?? 'https://api.pikkufabric.com'
 
     const wiringService = new WiringService(metaService)
     const secretAdminService = new SecretAdminService(secrets)

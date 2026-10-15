@@ -1,8 +1,8 @@
 /**
- * A local stand-in for the Fabric addon registry.
+ * A local stand-in for the Pikku Studio Cloud addon registry.
  *
  * The console's addon gallery reads its catalogue from
- * `${FABRIC_API_URL}/registry/packages`, which in production is
+ * `${PIKKUSTUDIO_API_URL}/registry/packages`, which in production is
  * api.pikkufabric.com. Pointing the e2e suite at that means the addons
  * scenarios assert against a catalogue that changes without anybody touching
  * this repo — a package renamed upstream turns them red, and they cannot run at

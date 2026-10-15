@@ -12,7 +12,7 @@ const CLIENT_MODULE = fileURLToPath(new URL('./cross-site-session.client.ts', im
 
 /**
  * Dev-only: relay the Better Auth session cookie through localStorage so the app
- * stays signed in inside the Fabric console's cross-site preview iframe on
+ * stays signed in inside the Pikku Studio Cloud console's cross-site preview iframe on
  * browsers that refuse third-party cookies (WebKit — i.e. every browser on iOS).
  * See cross-site-session.client.ts for the mechanism.
  *

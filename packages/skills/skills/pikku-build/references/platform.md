@@ -13,7 +13,7 @@
 **This file is a delta: it adds to the app workflow, which stays the base and is
 followed in full.** Everything there applies: knowledge base first, virtual users and roles,
 changes grouped into changesets, planned then built one at a time, scenarios, design pass, deploy
-gates, Fabric-readiness. This file adds the surfaces that turn an app into a
+gates, Pikku Studio Cloud-readiness. This file adds the surfaces that turn an app into a
 demonstration of the platform, and says where each one slots into that workflow.
 
 Do not blend the two into one plan —

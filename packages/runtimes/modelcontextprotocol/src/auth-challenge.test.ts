@@ -254,7 +254,7 @@ describe('the advertised origin is the one the client reached', () => {
     assert.equal(response.status, 401)
     assert.match(
       response.headers.get('WWW-Authenticate') ?? '',
-      /resource_metadata="https:\/\/fabric\.example\.com\/\.well-known\/oauth-protected-resource\/mcp"/
+      /resource_metadata="https:\/\/cloud\.example\.com\/\.well-known\/oauth-protected-resource\/mcp"/
     )
 
     await server.stop()

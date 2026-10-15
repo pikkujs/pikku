@@ -11,7 +11,7 @@ import type { AgentRunnerService } from '@pikku/core/services'
  * Deployed agent units get their runner wired by the bundler; the dev server
  * has no equivalent, so agents 503 with AIProviderNotConfiguredError unless we
  * construct one here. When an OpenAI-compatible base URL + key are present
- * (fabric injects LITELLM_PROXY_URL/LITELLM_API_KEY; the standard OPENAI_*
+ * (cloud injects LITELLM_PROXY_URL/LITELLM_API_KEY; the standard OPENAI_*
  * vars are also honored) we point one provider at it and register it under
  * `'*'`, so every provider prefix resolves to it. The CLI ships the SDK rather
  * than asking the project for it — behind a proxy one openai-compatible

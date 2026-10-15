@@ -39,7 +39,7 @@ import { pikkuFunc } from '#pikku/function'
 //
 // Then run `pikku db migrate` — it applies the migration and regenerates the schema types.
 //
-// ⚠️ THE `audit` TABLE HAS NO CRUD. Fabric writes it for you — there is no create,
+// ⚠️ THE `audit` TABLE HAS NO CRUD. Pikku Studio Cloud writes it for you — there is no create,
 // edit or delete screen for an audit row, and you must NEVER write
 // `insertInto('audit')` / `updateTable('audit')` in a function. An audit trail the app
 // can edit is not an audit trail. Rows arrive one of two ways, both below: `audit: true`

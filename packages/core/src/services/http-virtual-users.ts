@@ -51,7 +51,7 @@ export interface HttpVirtualUsersConfig {
    */
   secret?: string | VirtualUserSecretResolver
   /**
-   * Fabric operator credentials, for signing virtual users into a DEPLOYED stage.
+   * Pikku Studio Cloud operator credentials, for signing virtual users into a DEPLOYED stage.
    *
    * Mutually exclusive with {@link HttpVirtualUsersConfig.secret}: the operator
    * path acts as the virtual user through an admin session rather than logging in as

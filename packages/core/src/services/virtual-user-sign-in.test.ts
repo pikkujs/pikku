@@ -8,7 +8,7 @@ import { establishOperatorSession } from './virtual-user-sign-in.js'
 const OPERATOR_TOKEN = 'operator.jwt.token'
 
 /**
- * Minimal deployed stage: the fabric plugin's sign-in, which resolves the
+ * Minimal deployed stage: the cloud plugin's sign-in, which resolves the
  * account to act as in the same request, and an RPC route that reports back who
  * it was addressed as.
  */

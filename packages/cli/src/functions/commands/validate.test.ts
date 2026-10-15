@@ -345,7 +345,7 @@ describe('pikku validate', () => {
     }
   })
 
-  test('fabric-only db adapter checks stay out of the app-project check', async () => {
+  test('cloud-only db adapter checks stay out of the app-project check', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidWorkspace(tmp)

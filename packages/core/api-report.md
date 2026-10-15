@@ -2588,7 +2588,7 @@ verifyVirtualUserSecret: (rootSecret: string, email: string, presented: string) 
 VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH: 32
 VIRTUAL_USER_SECRET_INFO: "pikku:virtual-user-sign-in"
 VIRTUAL_USER_SECRET_NAME: "SCENARIO_VIRTUAL_USER_SECRET"
-VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_VIRTUAL_USER_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
+VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_VIRTUAL_USER_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "PIKKUSTUDIO_OPERATOR_TOKEN"; }
 export type VirtualUserAccountMeta = {
   provider?: string
 }

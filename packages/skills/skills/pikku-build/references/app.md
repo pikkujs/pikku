@@ -19,12 +19,12 @@
 - 6a. Close the changeset against its plan, not against your memory
 - 7. Prove it — scenarios
 - 8. Make it look like someone designed it
-- 9. Ship it, and stay Fabric-ready
+- 9. Ship it, and stay Pikku Studio Cloud-ready
 - Reference
 
 You have a scaffolded project with skills installed. This skill owns everything
-from here: no Fabric account, no card, no hosted build — while keeping the
-project shaped so `pikku fabric init` later adopts it with zero rework.
+from here: no Pikku Studio Cloud account, no card, no hosted build — while keeping the
+project shaped so `pikku cloud init` later adopts it with zero rework.
 
 **Four phases, and you do not skip ahead:**
 
@@ -160,7 +160,7 @@ A German medical portal, correctly:
 ```jsonc
 // project.inlang/settings.json
 { "baseLocale": "en", "locales": ["en", "de"] }
-// apps/app/src/i18n/active.json   (or: fabric i18n --default-locale de)
+// apps/app/src/i18n/active.json   (or: cloud i18n --default-locale de)
 { "defaultLocale": "de" }
 // pikku.config.json
 { "metaLocale": "de" }
@@ -558,7 +558,7 @@ grep -q '^SCENARIO_VIRTUAL_USER_SECRET=' .env 2>/dev/null || echo "SCENARIO_VIRT
 ```
 
 `.env` is gitignored and local only — never commit it. A deployed stage gets its
-secrets from the platform (`pikku fabric secrets`), not from this file.
+secrets from the platform (`pikku cloud secrets`), not from this file.
 
 Then run it:
 
@@ -738,7 +738,7 @@ Three separate jobs, and conflating them is why open-source builds come out
 looking like the template:
 
 - **Direction** — deciding what it should look like. **No open-source tool does
-  this.** Fabric has `fabric-theme`; you have §1's answer and 8a below.
+  this.** Pikku Studio Cloud has `cloud-theme`; you have §1's answer and 8a below.
 - **Execution** — whether the screens actually realise that direction, or
   default to whatever component was nearest. No theme does this, and it is where
   "works but looks like nobody decided anything" comes from.
@@ -831,12 +831,12 @@ seven copies deep. Run `pikku db reset` and restart the dev server before you
 screenshot anything — a screen judged against that data gets designed for a
 problem it does not have.
 
-## 9. Ship it, and stay Fabric-ready
+## 9. Ship it, and stay Pikku Studio Cloud-ready
 
 When the queue is empty, `pikku knowledge gaps` lists nothing and the scenarios are green, read
 the ship reference (see SKILL.md). It carries the open-source deploy paths (`--provider
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
-API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
+API, the pre-release gate to run, and the contract that keeps `pikku cloud init`
 a one-command import later rather than a migration.
 
 The app is not handed over without its user guide. The scenarios you wrote are
@@ -864,8 +864,8 @@ says when to open each one:
 - design — committing to a design direction, and how to tell whether the
   screens realise it. Read BEFORE the first screen (§6), not at §8
 - theming — authoring the theme (§8a)
-- ship — deploying, and the Fabric-readiness contract (§9)
+- ship — deploying, and the Pikku Studio Cloud-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
-  `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
+  `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-cloud` (§9)
 - Project conventions written by the template: `AGENTS.md`
 - Doing less than this: the quick reference. Doing more: the platform reference (both in SKILL.md).

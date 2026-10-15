@@ -49,7 +49,7 @@ like it works, because the app does come up in that language, and then:
 - a message missing from a locale falls back to a catalogue nobody wrote
 
 The setting that actually decides what a first-time visitor sees is
-`defaultLocale`, held in `apps/app/src/i18n/active.json` in the Fabric app
+`defaultLocale`, held in `apps/app/src/i18n/active.json` in the Pikku Studio Cloud app
 template and read by `src/i18n/config.ts`. It is deliberately a separate file
 from `settings.json` for exactly this reason — the source language and the
 served language are different questions.
@@ -67,12 +67,12 @@ So a German medical portal is **three** settings, not one:
 { "metaLocale": "de" }
 ```
 
-In the Fabric template both of the first two have a command, so you rarely edit
+In the Pikku Studio Cloud template both of the first two have a command, so you rarely edit
 them by hand:
 
 ```sh
-fabric i18n --add-locale de       # adds "de" to locales, seeds messages/de.json from en.json
-fabric i18n --default-locale de   # writes active.json — the app now OPENS in German
+cloud i18n --add-locale de       # adds "de" to locales, seeds messages/de.json from en.json
+cloud i18n --default-locale de   # writes active.json — the app now OPENS in German
 ```
 
 ### The failure this is written from
@@ -190,7 +190,7 @@ The gate catches _invalid_ messages but not _inlined_ strings. The starter templ
 2. Add `"fr"` to `locales` in `project.inlang/settings.json`. **Leave `baseLocale` at `en`** — step 1 only works because there is an English catalogue to mirror.
 3. Recompile (restart/`vite dev` or the CLI compile). A locale file missing keys falls back to the base locale per message.
 4. Content is reachable via the `/<lang>` URL prefix (`detectLocale` already resolves it); the base locale needs no prefix. Expose the switcher via `useLocale().setLocale`.
-5. Only if the app should **open** in the new language rather than merely offer it: set `defaultLocale` (`active.json` / `fabric i18n --default-locale fr`). Adding a locale and changing the default are different asks — do the second only when asked.
+5. Only if the app should **open** in the new language rather than merely offer it: set `defaultLocale` (`active.json` / `cloud i18n --default-locale fr`). Adding a locale and changing the default are different asks — do the second only when asked.
 
 ## i18n debug mode (find inlined strings)
 

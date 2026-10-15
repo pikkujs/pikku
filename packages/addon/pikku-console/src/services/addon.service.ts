@@ -152,7 +152,7 @@ export class AddonService {
     return JSON.parse(text)
   }
 
-  /** Browse the fabric registry's OpenAPI catalogue (apis.guru + published). */
+  /** Browse the cloud registry's OpenAPI catalogue (apis.guru + published). */
   async readOpenapis(opts: {
     limit: number
     offset: number

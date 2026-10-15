@@ -9,11 +9,11 @@
  *
  * Output is plain ESM JS (no esbuild step). CF handles `cloudflare:workers`
  * natively, and the script has no other imports — there's nothing to
- * bundle. The orchestrator (fabric / wrangler) uploads the file as-is.
+ * bundle. The orchestrator (cloud / wrangler) uploads the file as-is.
  *
- * This is generic CF-Containers wiring (a non-fabric pikku user deploying
+ * This is generic CF-Containers wiring (a non-cloud pikku user deploying
  * to plain CF needs the same Worker), so it lives in the CF provider, not
- * in fabric. Account-level resources (the container app, image push,
+ * in cloud. Account-level resources (the container app, image push,
  * dispatch namespace) are still the orchestrator's job.
  */
 
@@ -61,7 +61,7 @@ export class ${PIKKU_CONTAINER_CLASS} extends DurableObject {
       if (!container.running) {
         try {
           // enableInternet: containers default to no outbound networking,
-          // which breaks anything reaching DBs, third-party APIs, or fabric's
+          // which breaks anything reaching DBs, third-party APIs, or cloud's
           // /tenant/enqueue. Always enable — opt-out is a user-level concern.
           await container.start({ enableInternet: true })
           startErr = null

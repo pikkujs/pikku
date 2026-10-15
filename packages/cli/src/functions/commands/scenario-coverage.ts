@@ -6,7 +6,7 @@ import {
   readScenarioCoverage,
   type ScenarioCoverage,
 } from '@pikku/core/scenario/coverage'
-import { dim } from '../../fabric/lib/output.js'
+import { dim } from '../../cloud/lib/output.js'
 
 export const scenarioCoverage = pikkuSessionlessFunc<
   { routes?: string },

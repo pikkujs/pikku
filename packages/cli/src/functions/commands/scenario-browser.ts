@@ -28,7 +28,7 @@ export interface ScenarioBrowserDriverOptions {
    * credentials for only some virtual users.
    */
   secret?: string | VirtualUserSecretResolver
-  /** Fabric operator credentials, for a deployed target. */
+  /** Pikku Studio Cloud operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
@@ -98,7 +98,7 @@ export interface ResolveScenarioBrowserProviderOptions {
    * credentials for only some virtual users.
    */
   secret?: string | VirtualUserSecretResolver
-  /** Fabric operator credentials, for a deployed target. */
+  /** Pikku Studio Cloud operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string

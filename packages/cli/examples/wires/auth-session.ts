@@ -41,7 +41,7 @@
 //~
 //~ ⚠️ CARRY OVER the authBearer(PIKKU_CONSOLE_TOKEN) block too. The generated file
 //~ you're replacing had it in the SAME addHTTPMiddleware array — and because #754
-//~ removes the WHOLE file, dropping it here silently breaks the Fabric console/agent
+//~ removes the WHOLE file, dropping it here silently breaks the Pikku Studio Cloud console/agent
 //~ (they read the app with that bearer token, so every console read starts 403'ing).
 //~ Keep it verbatim as the 2nd entry below.
 //~
@@ -120,7 +120,7 @@ addHTTPMiddleware('*', [
   }),
   // Console bridge — carried over verbatim from the generated auth-middleware.gen.ts
   // that #754 removes when you register your own session above. Do NOT drop it, and do
-  // NOT drop its `scopes`: the Fabric console/agent authenticate to the app with this
+  // NOT drop its `scopes`: the Pikku Studio Cloud console/agent authenticate to the app with this
   // bearer token, and the console addon is gated on `pikku:console`. Without the grant
   // the token authenticates fine and then every console read 403s on a missing scope.
   authBearer({
