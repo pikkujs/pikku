@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SPECIALISTS } from '../../fabric/lib/specialists.js'
+import { SPECIALISTS } from '../../cloud/lib/specialists.js'
 
 export const NextInput = z.object({
   prompt: z.string().optional(),

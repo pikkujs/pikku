@@ -5,8 +5,8 @@ import type { CLIProgramMeta } from '@pikku/core/cli'
 
 const programMeta = (auth?: boolean): CLIProgramMeta =>
   ({
-    name: 'fabric',
-    description: 'fabric',
+    name: 'cloud',
+    description: 'cloud',
     commands: {},
     options: {},
     ...(auth === undefined ? {} : { auth }),
@@ -14,7 +14,7 @@ const programMeta = (auth?: boolean): CLIProgramMeta =>
 
 const serialize = (auth?: boolean): string =>
   serializeChannelCLI(
-    'fabric',
+    'cloud',
     programMeta(auth),
     '#channel',
     new Map(),

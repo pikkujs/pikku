@@ -71,7 +71,7 @@ describe('Cloudflare runtime profile', () => {
     assert.match(toml, /compatibility_flags = \["nodejs_compat_v2"\]/)
   })
 
-  // Fabric's live workers are uploaded with nodejs_compat_v2 and 2024-12-18
+  // Pikku Studio Cloud's live workers are uploaded with nodejs_compat_v2 and 2024-12-18
   // (its own uploader, and `wrangler.toml` here). Changing either alters the
   // runtime of every deployed worker, so the literals are pinned.
   it('pins the default to nodejs_compat_v2 and 2024-12-18 on every path', () => {

@@ -5,7 +5,7 @@
  * - Local dev/testing: `wrangler dev --local -c .deploy/build/<unit>/wrangler.toml`
  * - Eject: `pikku deploy eject` outputs these as standalone deployable units
  *
- * Fabric's own deploy pipeline uses the CF API directly for speed,
+ * Pikku Studio Cloud's own deploy pipeline uses the CF API directly for speed,
  * but these files ensure every unit is also deployable via wrangler.
  */
 import type {

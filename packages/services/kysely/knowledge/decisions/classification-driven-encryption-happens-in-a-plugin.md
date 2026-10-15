@@ -53,7 +53,7 @@ path is the thing actually hurting.
 
 That plugin lives here, in `@pikku/kysely`, and not in a SQLite-specific
 package. Nothing about wrapping a column value is dialect-specific, and the same
-plugin is wanted against Postgres — fabric has the same classified columns and
+plugin is wanted against Postgres — cloud has the same classified columns and
 the same reason to protect them. Putting it beside the dialect would mean
 writing it twice.
 

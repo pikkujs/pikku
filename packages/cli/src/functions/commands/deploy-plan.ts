@@ -127,7 +127,7 @@ export const deployPlan = pikkuSessionlessFunc<
     )
     logger.info(`Output: ${result.providerDir}`)
 
-    // Write result file if --result-file is set (used by Fabric build pipeline)
+    // Write result file if --result-file is set (used by Pikku Studio Cloud build pipeline)
     const resultFile = data?.resultFile
     if (resultFile) {
       const { writeFile } = await import('node:fs/promises')

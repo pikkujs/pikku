@@ -178,7 +178,7 @@ describe('readSurface — platform plumbing', () => {
     writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
       getUser: { sourceFile: '/app/src/users.function.ts' },
       relayChangeRequest: {
-        sourceFile: '/app/src/scaffold/fabric/changes/relay.function.ts',
+        sourceFile: '/app/src/scaffold/cloud/changes/relay.function.ts',
       },
     })
     writeJson(join(dir, 'http', 'pikku-http-wirings-meta.gen.json'), {
@@ -195,14 +195,14 @@ describe('readSurface — platform plumbing', () => {
       post: {
         '/changes': {
           pikkuFuncId: 'relayChangeRequest',
-          sourceFile: '/app/src/scaffold/fabric/changes/changes.http.ts',
+          sourceFile: '/app/src/scaffold/cloud/changes/changes.http.ts',
         },
       },
     })
     writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
       audit: {
         pikkuFuncId: 'audit',
-        sourceFile: '/app/src/scaffold/fabric/audit/audit.queue.ts',
+        sourceFile: '/app/src/scaffold/cloud/audit/audit.queue.ts',
       },
     })
 
@@ -224,19 +224,19 @@ describe('readSurface — platform plumbing', () => {
   test('a wiring with no sourceFile is platform when its function is', () => {
     const dir = join(root, 'platform-queue', '.pikku')
     writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
-      'queue:fabric-audit': { pikkuFuncId: 'queue:fabric-audit' },
+      'queue:cloud-audit': { pikkuFuncId: 'queue:cloud-audit' },
       sendEmail: { pikkuFuncId: 'sendEmail' },
     })
     writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
-      'queue:fabric-audit': {
-        sourceFile: '/app/src/scaffold/fabric/audit/fabric-audit.queue.ts',
+      'queue:cloud-audit': {
+        sourceFile: '/app/src/scaffold/cloud/audit/cloud-audit.queue.ts',
       },
       sendEmail: { sourceFile: '/app/src/email.function.ts' },
     })
     writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
-      'fabric-audit': {
-        pikkuFuncId: 'queue:fabric-audit',
-        name: 'fabric-audit',
+      'cloud-audit': {
+        pikkuFuncId: 'queue:cloud-audit',
+        name: 'cloud-audit',
       },
       emails: { pikkuFuncId: 'sendEmail', name: 'emails' },
     })
@@ -245,7 +245,7 @@ describe('readSurface — platform plumbing', () => {
       string,
       { platform?: boolean }
     >
-    assert.equal(queue['fabric-audit']!.platform, true)
+    assert.equal(queue['cloud-audit']!.platform, true)
     assert.equal(queue.emails!.platform, undefined)
   })
 })

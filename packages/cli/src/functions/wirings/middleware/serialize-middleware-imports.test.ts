@@ -30,13 +30,13 @@ describe('serializeMiddlewareImports global middleware', () => {
   // middlewareState.instances (keyed global:middleware:N) with no associated
   // wire group. The per-unit --names filter strips the state.http.files
   // fallback, so without emitting them here a globally-registered middleware
-  // (e.g. the CI-injected fabric telemetry middleware) never imports into a
+  // (e.g. the CI-injected cloud telemetry middleware) never imports into a
   // deployed unit and silently no-ops at runtime.
   test('emits a side-effect import for a global middleware source file', () => {
     const state = emptyMiddlewareState({
       'global:middleware:0': {
         definitionId: 'telemetryMiddleware',
-        sourceFile: '/project/src/__fabric_telemetry__/telemetry.wiring.ts',
+        sourceFile: '/project/src/__cloud_telemetry__/telemetry.wiring.ts',
         position: 0,
         isFactoryCall: false,
       },
@@ -50,7 +50,7 @@ describe('serializeMiddlewareImports global middleware', () => {
     )
 
     assert.match(output, /Side-effect imports/)
-    assert.match(output, /__fabric_telemetry__\/telemetry\.wiring/)
+    assert.match(output, /__cloud_telemetry__\/telemetry\.wiring/)
   })
 
   // `isFactoryCall` describes the array element — `betterAuthStatelessSession()`

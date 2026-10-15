@@ -151,7 +151,7 @@ describe('changelog', () => {
           changes.changes[1]!,
           {
             kind: 'queue',
-            id: 'fabric-audit',
+            id: 'cloud-audit',
             status: 'added',
             breaking: false,
             platform: true,
@@ -172,7 +172,7 @@ describe('changelog', () => {
         '',
         '### Platform',
         '',
-        '- `queue` `fabric-audit` — queue wiring added',
+        '- `queue` `cloud-audit` — queue wiring added',
         '',
       ].join('\n')
     )

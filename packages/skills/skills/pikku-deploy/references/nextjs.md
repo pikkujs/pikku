@@ -88,7 +88,7 @@ route definitions.
 
 - **`PikkuNextJSWorkerRPC({ fetcher })`** — same surface as `PikkuNextJS`, but
   every call is dispatched through a `Fetcher` (a Cloudflare service binding, a
-  local HTTP client, a fabric dispatcher) instead of loading function code
+  local HTTP client, a cloud dispatcher) instead of loading function code
   in-process. Use it to keep functions out of the SSR bundle. A non-2xx response
   throws with the status and body text.
 - **`toNextJsAuthHandler(auth)`** — wraps a better-auth instance or handler

@@ -17,26 +17,26 @@ import {
 assert.ok(skillsDir, 'expected a skills/ directory beside this package')
 const root = skillsDir
 
-const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
+const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'cloud'])
 
 /**
- * Fabric group membership is deliberate and small, so it is pinned here rather
+ * Pikku Studio Cloud group membership is deliberate and small, so it is pinned here rather
  * than derived from the corpus — deriving it would make the assertion vacuous
  * (dropping a tag would shrink both sides and still pass). Adding a skill to
- * the Fabric set means updating this list on purpose.
+ * the Pikku Studio Cloud set means updating this list on purpose.
  *
  * The criterion is what the skill is *about*, not who happens to use it. A
- * Fabric sandbox relies on better-auth, Kysely and the agent runner, but those
- * are general Pikku capabilities — tagging them here says Fabric depends on
- * them, which is a fact about Fabric's stack rather than about the skill. That
- * conflation grew the group to a catch-all twice; if a Fabric install needs a
- * general skill, name it in Fabric's own install rather than tagging it here.
+ * Pikku Studio Cloud sandbox relies on better-auth, Kysely and the agent runner, but those
+ * are general Pikku capabilities — tagging them here says Pikku Studio Cloud depends on
+ * them, which is a fact about Pikku Studio Cloud's stack rather than about the skill. That
+ * conflation grew the group to a catch-all twice; if a Pikku Studio Cloud install needs a
+ * general skill, name it in Pikku Studio Cloud's own install rather than tagging it here.
  */
-const FABRIC_SKILLS = [
-  'pikku-admin-to-fabric',
-  'pikku-blueprint-to-fabric',
+const PIKKUSTUDIO_SKILLS = [
+  'pikku-admin-to-cloud',
+  'pikku-blueprint-to-cloud',
   'pikku-changes',
-  'pikku-fabric',
+  'pikku-cloud',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
@@ -210,30 +210,30 @@ describe('bundled skills corpus', () => {
     }
   })
 
-  test('the fabric group holds exactly the intended skills', async () => {
+  test('the cloud group holds exactly the intended skills', async () => {
     const tagged: string[] = []
     for (const skill of await readSkills()) {
-      if (installGroupsOf(skill).includes('fabric')) tagged.push(skill.name)
+      if (installGroupsOf(skill).includes('cloud')) tagged.push(skill.name)
     }
     assert.deepEqual(
       tagged.sort(),
-      [...FABRIC_SKILLS].sort(),
-      'fabric group membership changed — update FABRIC_SKILLS if this is intended'
+      [...PIKKUSTUDIO_SKILLS].sort(),
+      'cloud group membership changed — update PIKKUSTUDIO_SKILLS if this is intended'
     )
   })
 
-  test('no skill outside pikku-fabric teaches a bare `fabric` command', async () => {
+  test('no skill outside pikku-cloud teaches a bare `cloud` command', async () => {
     // The corpus is the OSS one: a reader running these skills has the `pikku`
-    // CLI and no `fabric` binary, so `fabric verify` is a command that does not
-    // exist on their machine. Fabric's own overlay skills keep those; what must
-    // not happen is one migrating back in as a skill moves out of Fabric.
+    // CLI and no `cloud` binary, so `cloud verify` is a command that does not
+    // exist on their machine. Pikku Studio Cloud's own overlay skills keep those; what must
+    // not happen is one migrating back in as a skill moves out of Pikku Studio Cloud.
     //
-    // `pikku fabric <verb>` is the real OSS command and stays, as does
-    // the `fabric-theme` tool named as Fabric's, and
-    // prose about the platform — only a bare `fabric ` + verb is a hit.
+    // `pikku cloud <verb>` is the real OSS command and stays, as does
+    // the `cloud-theme` tool named as Pikku Studio Cloud's, and
+    // prose about the platform — only a bare `cloud ` + verb is a hit.
     const offenders: string[] = []
     for (const skill of await readSkills()) {
-      if (FABRIC_SKILLS.includes(skill.name)) continue
+      if (PIKKUSTUDIO_SKILLS.includes(skill.name)) continue
       const docs: Array<[string, string]> = [['SKILL.md', skill.body]]
       const refs = join(skill.dir, 'references')
       if (existsSync(refs))
@@ -251,15 +251,11 @@ describe('bundled skills corpus', () => {
             continue
           }
           // A command an agent would copy: inside a fence, or backticked in
-          // prose. A lowercase noun phrase ("the fabric plugin", "a fabric
-          // dispatcher") is describing Fabric, not telling anyone to run it.
+          // prose. A lowercase noun phrase ("the cloud plugin", "a cloud
+          // dispatcher") is describing Pikku Studio Cloud, not telling anyone to run it.
           const commands = inFence
-            ? [
-                ...line.matchAll(
-                  /(?<!pikku )(?<![\w/@-])fabric ([a-z][a-z-]+)/g
-                ),
-              ]
-            : [...line.matchAll(/`(?<!pikku )fabric ([a-z][a-z-]+)[^`]*`/g)]
+            ? [...line.matchAll(/(?<!pikku )(?<![\w/@-])cloud ([a-z][a-z-]+)/g)]
+            : [...line.matchAll(/`(?<!pikku )cloud ([a-z][a-z-]+)[^`]*`/g)]
           for (const m of commands)
             offenders.push(`${skill.name}/${where}:${i + 1}: ${m[0]}`)
         }
@@ -268,7 +264,7 @@ describe('bundled skills corpus', () => {
     assert.deepEqual(
       offenders,
       [],
-      `the OSS corpus has no fabric binary — use the pikku equivalent:\n  ${offenders.join('\n  ')}`
+      `the OSS corpus has no cloud binary — use the pikku equivalent:\n  ${offenders.join('\n  ')}`
     )
   })
 

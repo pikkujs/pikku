@@ -13,7 +13,7 @@ import { defineVariable } from '#pikku/variables'
 
 //~ Un-pinned model: pick the vision model via a variable, with a vision-capable default.
 //~ The value MUST be provider-prefixed AND a model your LiteLLM proxy actually routes
-//~ WITH vision. On Fabric's default proxy that is `openai/gpt-5.6-luna` (cheap), `openai/gemini-pro-latest`,
+//~ WITH vision. On Pikku Studio's default proxy that is `openai/gpt-5.6-luna` (cheap), `openai/gemini-pro-latest`,
 //~ or `anthropic/claude-opus-4-8` — a text-only route (e.g. a deepseek chat model) rejects
 //~ the image. Change the default per app; never assume a specific model exists.
 defineVariable({
@@ -38,7 +38,7 @@ export const AnalyzeImageOutput = z.object({
 //~ Destructuring `agentRunner` (the same VercelAgentRunner that powers pikkuAgent)
 //~ is what tags this unit with the `ai-model` capability so the AI SDK stays bundled —
 //~ a plain function that never touches it gets the SDK stubbed at build time. It is an
-//~ OPTIONAL core service, so guard it. No API key to set up — Fabric injects AI creds.
+//~ OPTIONAL core service, so guard it. On Pikku Studio Cloud there is no API key to set up, it injects AI creds; elsewhere set your provider key.
 export const analyzeImage = pikkuFunc({
   expose: true,
   auth: true,

@@ -1,4 +1,4 @@
-import { added, changed, dim, removed, table } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed, table } from '../../cloud/lib/output.js'
 import type { SurfaceChange } from '../../utils/surface-diff.js'
 import type { SemverResult } from './semver.js'
 

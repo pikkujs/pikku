@@ -1,6 +1,6 @@
 import { apiUrl } from '@/lib/env'
 
-// Session relay for the Fabric console's preview iframe. Injected into the
+// Session relay for the Pikku Studio console's preview iframe. Injected into the
 // client module graph by cross-site-session.plugin.ts on `vite dev` ONLY —
 // nothing here is reachable from app source, so `vite build` never sees it.
 //

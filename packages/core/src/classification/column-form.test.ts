@@ -47,7 +47,7 @@ describe('the form brands', () => {
 
   test('the three do not substitute for one another', () => {
     const wrapped = unsafeAsWrapped('ct')
-    // @ts-expect-error a value fabric cannot read is not one it can
+    // @ts-expect-error a value cloud cannot read is not one it can
     const asWrapped: WrappedValue = unsafeAsSealed('ct')
     // @ts-expect-error a digest is not ciphertext
     const asHashed: HashedValue = wrapped

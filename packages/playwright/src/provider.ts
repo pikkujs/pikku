@@ -75,7 +75,7 @@ export interface PlaywrightScenarioBrowserProviderOptions {
    */
   secret?: string | VirtualUserSecretResolver
   /**
-   * Fabric operator credentials, for browsing a DEPLOYED stage as a virtual user.
+   * Pikku Studio Cloud operator credentials, for browsing a DEPLOYED stage as a virtual user.
    * Same handshake the HTTP virtual users use, so a browser step and an RPC step in
    * one scenario still act as one user.
    */
@@ -540,7 +540,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
           ...operator,
           signInPath:
             operator.signInPath ??
-            (mount ? `${mount}/sign-in/fabric` : undefined),
+            (mount ? `${mount}/sign-in/cloud` : undefined),
         },
         { origin: new URL(target.appUrl).origin }
       )

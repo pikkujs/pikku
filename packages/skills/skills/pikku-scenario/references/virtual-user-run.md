@@ -81,7 +81,7 @@ shape.
 Three variables, checked in this order. None of them belongs in
 `pikku.config.json`.
 
-1. **`FABRIC_OPERATOR_TOKEN`** — what a deployed stage accepts. Asymmetric, and
+1. **`PIKKUSTUDIO_OPERATOR_TOKEN`** — what a deployed stage accepts. Asymmetric, and
    it needs no account the target would not otherwise have, so it wins over the
    other two when both are present.
 2. **`PIKKU_VIRTUAL_USER_SECRETS`** — `id=secret,id=secret`, already-derived

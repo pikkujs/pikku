@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { added, changed, dim, removed } from '../../fabric/lib/output.js'
+import { added, changed, dim, removed } from '../../cloud/lib/output.js'
 import { loadSurface } from '../mocks/load.js'
 import { LOCK_FILE, lockPath, readLock } from '../mocks/lock.js'
 import { MOCKS_DIR, readMocks } from '../mocks/read.js'

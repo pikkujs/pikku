@@ -165,7 +165,7 @@ export function parseStandaloneCommand(
  * The migrations directory, honouring an operator who keeps them elsewhere.
  *
  * `bundleDir` is where the build put them, which is the same `db/<engine>/`
- * path Fabric's build container stages into an artifact — so an artifact from
+ * path Pikku Studio Cloud's build container stages into an artifact — so an artifact from
  * either producer answers `db migrate` without being told where to look.
  */
 export const resolveMigrationsDir = (

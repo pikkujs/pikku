@@ -192,11 +192,11 @@ through the CLI.
 prints one JSON line per source: `{ source, status, state?, instructions?,
 error? }`.
 
-## Fabric
+## Pikku Studio Cloud
 
 - CI gets a **webhooks** phase after publish, like migrations: it runs
   `pikku webhooks setup` and posts results back.
-- fabric-api stores each source's `state` as `previous` for the next deploy,
+- cloud API stores each source's `state` as `previous` for the next deploy,
   and runs `teardown` when a stage is deleted. Signing secrets land in the
   stage's credential store through `setup` itself.
 - `StageStripeSandboxService` keeps provisioning credentials and loses its
@@ -212,7 +212,7 @@ error? }`.
 teardown`.
 4. **@pikku/kysely** — `KyselyIncomingWebhookService` and its tables.
 5. **commerce-stripe** — the four functions and event schemas.
-6. **Fabric** — the CI phase, stored results, the gate, removing the event map.
+6. **Pikku Studio Cloud** — the CI phase, stored results, the gate, removing the event map.
 7. **poll sources** — `wireTriggerPollSource`, cursor in a `triggerSourceState`
    row.
 

@@ -17,8 +17,8 @@ import {
 const wireTestCLI = (func: (services: any, data: any, wire: any) => any) => {
   pikkuState(null, 'cli', 'meta', {
     programs: {
-      fabric: {
-        program: 'fabric',
+      cloud: {
+        program: 'cloud',
         commands: {
           deploy: {
             command: 'deploy',
@@ -34,7 +34,7 @@ const wireTestCLI = (func: (services: any, data: any, wire: any) => any) => {
   })
 
   pikkuState(null, 'cli', 'programs', {
-    fabric: { defaultRenderer: undefined, middleware: [], renderers: {} },
+    cloud: { defaultRenderer: undefined, middleware: [], renderers: {} },
   })
 
   pikkuState(null, 'function', 'meta', {
@@ -76,7 +76,7 @@ describe('handleRawCLI', () => {
     })
 
     const result = await handleRawCLI({
-      programName: 'fabric',
+      programName: 'cloud',
       args: ['deploy'],
       singletonServices,
       onOutput: (data) => void streamed.push(data),
@@ -94,7 +94,7 @@ describe('handleRawCLI', () => {
     })
 
     const result = await handleRawCLI({
-      programName: 'fabric',
+      programName: 'cloud',
       args: ['deploy'],
       singletonServices,
     })
@@ -112,7 +112,7 @@ describe('handleRawCLI', () => {
       })
 
       const result = await handleRawCLI({
-        programName: 'fabric',
+        programName: 'cloud',
         args: ['deploy'],
         singletonServices,
       })
@@ -130,7 +130,7 @@ describe('handleRawCLI', () => {
     wireTestCLI(() => ({}))
 
     const help = await handleRawCLI({
-      programName: 'fabric',
+      programName: 'cloud',
       args: ['--help'],
       singletonServices,
     })
@@ -138,7 +138,7 @@ describe('handleRawCLI', () => {
     assert.ok(help.help)
 
     const unknown = await handleRawCLI({
-      programName: 'fabric',
+      programName: 'cloud',
       args: ['not-a-command'],
       singletonServices,
     })
@@ -176,7 +176,7 @@ describe('handleRawCLI', () => {
     })
 
     const result = await handleRawCLI({
-      programName: 'fabric',
+      programName: 'cloud',
       args: ['deploy'],
       singletonServices,
       onOutput: (data) => void streamed.push(data),

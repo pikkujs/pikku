@@ -35,7 +35,7 @@ had to already know the answer was under `deploy`.
   an app, and "tauri" means nothing to someone who has not met it.
 
 The verb comes before the name — `pikku app native init customer` — matching
-`pikku fabric addon get <name>`. A bare `pikku app native customer` would have
+`pikku cloud addon get <name>`. A bare `pikku app native customer` would have
 to guess which verb was meant.
 
 Signing and store upload, when they arrive, are `pikku app native release`,

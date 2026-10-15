@@ -1,0 +1,283 @@
+import { after, before, beforeEach, describe, test } from 'node:test'
+import assert from 'node:assert'
+import { mock } from 'bun:test'
+import { execFileSync } from 'node:child_process'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import * as configLib from './config.js'
+import * as httpLib from './http.js'
+
+let token: string | null = null
+let linked: string | null = null
+let cloudDown: 'refused' | 'http' | null = null
+let stagesDenied = false
+let stages = [{ stageId: 'stage_main', branch: 'main' }]
+const cloudCalls: { name: string; data: any }[] = []
+
+void mock.module('./config.js', () => ({
+  ...configLib,
+  resolveApiContext: async (opts: { resolveProject?: boolean } = {}) => ({
+    apiUrl: 'https://cloud.test',
+    apiUrlSource: 'flag',
+    token,
+    projectId: null,
+    project: null,
+  }),
+}))
+
+void mock.module('./http.js', () => ({
+  ...httpLib,
+  getCloudRPC: () => ({
+    invoke: async (name: string, data: any) => {
+      cloudCalls.push({ name, data })
+      if (cloudDown === 'refused') throw new Error('connect ECONNREFUSED')
+      if (cloudDown === 'http')
+        throw Object.assign(new Error('forbidden'), { status: 403 })
+      if (name === 'listStages') {
+        if (stagesDenied) throw Object.assign(new Error('denied'), { status: 403 })
+        return { stages }
+      }
+      if (name === 'createChange' || name === 'createSandboxChange')
+        return { change: { changeId: 'fab_1', shortId: '1', title: data.title } }
+      if (name === 'listChanges') return { changes: [], groups: [] }
+      return {}
+    },
+  }),
+}))
+
+const { changesContext } = await import('./changes.js')
+const { CloudChangesFile } =
+  await import('../functions/changes-file.function.js')
+const { CloudChangesList } =
+  await import('../functions/changes-list.function.js')
+const { next } = await import('../../functions/commands/next.js')
+const { knowledgeGaps } = await import('../../functions/commands/knowledge-gaps.js')
+
+const home = process.cwd()
+let repo: string
+
+const file = (title: string) =>
+  CloudChangesFile.func({} as any, { title } as any) as Promise<any>
+const list = () =>
+  CloudChangesList.func(
+    {} as any,
+    { includeDone: true } as any
+  ) as Promise<any>
+
+before(() => {
+  const sh = (...args: string[]) =>
+    execFileSync('git', args, { cwd: repo, stdio: 'ignore' })
+  return mkdtemp(join(tmpdir(), 'changes-context-')).then((dir) => {
+    repo = dir
+    sh('init', '-q', '-b', 'main')
+    sh(
+      '-c',
+      'user.email=t@t',
+      '-c',
+      'user.name=t',
+      'commit',
+      '-q',
+      '--allow-empty',
+      '-m',
+      'init'
+    )
+    process.chdir(repo)
+  })
+})
+
+after(() => process.chdir(home))
+
+beforeEach(() => {
+  token = null
+  linked = null
+  cloudDown = null
+  stagesDenied = false
+  stages = [{ stageId: 'stage_main', branch: 'main' }]
+  delete process.env.PIKKUSTUDIO_PROJECT_ID
+  delete process.env.PIKKU_CHANGES_DIR
+  cloudCalls.length = 0
+})
+
+describe('changes on a local project', () => {
+  test('file and list work without a cloud login', async () => {
+    const { change } = await file('Local one')
+    const { changes } = await list()
+    assert.ok(changes.some((c: any) => c.changeId === change.changeId))
+    assert.strictEqual(cloudCalls.length, 0)
+    const store = JSON.parse(
+      await readFile(join(repo, '.git', 'pikku-changes.json'), 'utf8')
+    )
+    assert.ok(store.changes.some((c: any) => c.title === 'Local one'))
+  })
+
+  test('being signed in does not link a project', async () => {
+    token = 'tok'
+    const { change } = await file('Signed in, unlinked')
+    const { changes } = await list()
+    assert.ok(changes.some((c: any) => c.changeId === change.changeId))
+    assert.strictEqual(cloudCalls.length, 0)
+  })
+
+  test('the host decides where the local file lives', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'changes-host-'))
+    process.env.PIKKU_CHANGES_DIR = join(dir, 'nested')
+    await file('In the host folder')
+    const store = JSON.parse(
+      await readFile(join(dir, 'nested', 'pikku-changes.json'), 'utf8')
+    )
+    assert.ok(store.changes.some((c: any) => c.title === 'In the host folder'))
+  })
+
+  test('knowledge gaps works on a local project without calling cloud', async () => {
+    await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
+    assert.strictEqual(cloudCalls.length, 0)
+  })
+
+  test('changes next routes the open changes to the changes agent', async () => {
+    const route = (await next.func(
+      { config: { rootDir: repo } } as any,
+      {} as any
+    )) as any
+    assert.strictEqual(route.agent, 'changes')
+    assert.match(route.context, /Local one/)
+  })
+})
+
+describe('changes on a project backed by cloud', () => {
+  const countLocal = async () => {
+    const path = join(repo, '.git', 'pikku-changes.json')
+    return JSON.parse(await readFile(path, 'utf8')).changes.length
+  }
+
+  test('writes and reads go to cloud only', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    const before = await countLocal()
+    await file('Pikku Studio Cloud one')
+    await list()
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    assert.strictEqual(created.data.title, 'Pikku Studio Cloud one')
+    assert.ok(cloudCalls.some((c) => c.name === 'listChanges'))
+    assert.strictEqual(await countLocal(), before)
+  })
+
+  test('the project id in pikku.config.json links it', async () => {
+    token = 'tok'
+    await writeFile(
+      join(repo, 'pikku.config.json'),
+      JSON.stringify({ cloud: { projectId: 'proj_cfg' } })
+    )
+    try {
+      await list()
+      const call = cloudCalls.find((c) => c.name === 'listChanges')!
+      assert.strictEqual(call.data.projectId, 'proj_cfg')
+    } finally {
+      await rm(join(repo, 'pikku.config.json'))
+    }
+  })
+
+  test('without a sign-in it refuses and writes nothing', async () => {
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    const before = await countLocal()
+    await assert.rejects(file('No sign-in'), /backed by Pikku Studio Cloud.*signed in/s)
+    assert.strictEqual(cloudCalls.length, 0)
+    assert.strictEqual(await countLocal(), before)
+  })
+
+  test('when cloud cannot be reached it refuses, and never falls back to the local file', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    cloudDown = 'refused'
+    const before = await countLocal()
+    await assert.rejects(file('Offline'), /need a connection/)
+    await assert.rejects(list(), /need a connection/)
+    assert.strictEqual(await countLocal(), before)
+  })
+
+  test('an answer from cloud, even an error, is passed through as it is', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    cloudDown = 'http'
+    await assert.rejects(file('Forbidden'), /forbidden/)
+  })
+
+  test('knowledge gaps reads the list from cloud, not the local file', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
+    const call = cloudCalls.find((c) => c.name === 'listChanges')!
+    assert.strictEqual(call.data.projectId, 'proj_1')
+  })
+
+  test('next picks from cloud, not the local file', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    await next.func({ config: { rootDir: repo } } as any, {} as any)
+    assert.ok(
+      cloudCalls.some(
+        (c) => c.name === 'listChanges' && c.data.projectId === 'proj_1'
+      )
+    )
+  })
+
+  test('both refuse when cloud cannot be reached', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    cloudDown = 'refused'
+    await assert.rejects(
+      knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any),
+      /need a connection/
+    )
+    await assert.rejects(
+      next.func({ config: { rootDir: repo } } as any, {} as any),
+      /need a connection/
+    )
+  })
+
+  test('filing picks the stage on the checked-out branch', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    stages = [
+      { stageId: 'stage_other', branch: 'other' },
+      { stageId: 'stage_main', branch: 'main' },
+    ]
+    await file('Which stage')
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    assert.strictEqual(created.data.stageId, 'stage_main')
+  })
+
+  test('an explicit stage is used as it is, with no lookup', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    await CloudChangesFile.func(
+      {} as any,
+      { title: 'Explicit', stageId: 'stage_x' } as any
+    )
+    assert.ok(!cloudCalls.some((c) => c.name === 'listStages'))
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
+    assert.strictEqual(created.data.stageId, 'stage_x')
+  })
+
+  test('filing with no stage on this branch and several stages refuses', async () => {
+    token = 'tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    stages = [
+      { stageId: 'a', branch: 'one' },
+      { stageId: 'b', branch: 'two' },
+    ]
+    await assert.rejects(file('Ambiguous'), /No stage for main among 2 stages/)
+  })
+
+  test('a sandbox, which may not list stages, files through createSandboxChange', async () => {
+    token = 'sandbox-tok'
+    process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
+    stagesDenied = true
+    await file('From a sandbox')
+    assert.ok(!cloudCalls.some((c) => c.name === 'createChange'))
+    const created = cloudCalls.find((c) => c.name === 'createSandboxChange')!
+    assert.strictEqual(created.data.title, 'From a sandbox')
+    assert.strictEqual(created.data.stageId, undefined)
+  })
+})
+

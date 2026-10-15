@@ -55,7 +55,7 @@ export interface CloudflareProviderAdapterOptions {
    * Override whether the deploy pipeline emits per-step workflow queues.
    * Defaults to `false` (CF's DO-backed workflow runtime needs no queue
    * hop). Platforms that replace the workflow runtime with a queue-driven
-   * one (e.g. fabric's libsql workflow service) should set this to `true`
+   * one (e.g. cloud's libsql workflow service) should set this to `true`
    * so per-unit codegen bundles the workflow queue meta and step-worker
    * queue resolution works at runtime.
    */

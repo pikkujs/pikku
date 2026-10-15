@@ -39,7 +39,7 @@ export class CloudflareApiError extends Error {
  * Typed wrapper around the Cloudflare REST API (v4).
  *
  * Uses native `fetch` — no external HTTP library required.
- * Works with both Fabric-managed accounts and BYOK (Bring Your Own Keys) accounts;
+ * Works with both Pikku Studio Cloud-managed accounts and BYOK (Bring Your Own Keys) accounts;
  * the only difference is the `accountId` and `apiToken` passed at construction time.
  *
  * @example

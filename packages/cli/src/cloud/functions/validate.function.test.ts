@@ -1,0 +1,3255 @@
+import { describe, test } from 'node:test'
+import assert from 'node:assert'
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+// The link findings depend on whether there is a session, so HOME points at a
+// disposable directory before anything reads ~/.pikkustudio/auth.json.
+process.env.HOME = await mkdtemp(join(tmpdir(), 'pikku-validate-home-'))
+delete process.env.PIKKUSTUDIO_API_URL
+delete process.env.PIKKUSTUDIO_PROJECT_ID
+const { writeAuthFile, DEFAULT_API_URL } = await import('../lib/config.js')
+const {
+  runValidate,
+  renderValidate,
+  runValidate: runLiveValidate,
+} = await import('./validate.function.js')
+
+async function makeTmp() {
+  return mkdtemp(join(tmpdir(), 'pikku-validate-'))
+}
+
+async function writeJson(path: string, data: unknown) {
+  await writeFile(path, JSON.stringify(data, null, 2), 'utf8')
+}
+
+async function writeFrontends(root: string, frontends: unknown) {
+  const path = join(root, 'pikku.config.json')
+  const config = JSON.parse(await readFile(path, 'utf8'))
+  await writeFile(
+    path,
+    JSON.stringify({ ...config, frontends }, null, 2),
+    'utf8'
+  )
+}
+
+// A skeleton with no toolchain; oxlint has its own tests.
+const NO_OXLINT = {
+  rules: {
+    'oxlint-not-installed': 'off',
+    'oxlint-config-missing': 'off',
+    'oxlint-rule-missing': 'off',
+    'oxlint-type-aware-off': 'off',
+    'oxlint-run': 'off',
+  },
+}
+
+async function makeValidProject(root: string) {
+  await writeJson(join(root, 'pikku.config.json'), {
+    srcDirectories: ['packages/functions/src'],
+    outDir: 'packages/functions/.pikku',
+    scaffold: {
+      console: true,
+      rpc: true,
+      agent: true,
+      workflow: true,
+      events: true,
+    },
+    clientFiles: {
+      rpcMapDeclarationFile:
+        'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+      reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
+    },
+    environments: { local: { apiUrl: 'http://localhost:4002' } },
+    validate: NO_OXLINT,
+  })
+  await writeJson(join(root, 'package.json'), {
+    packageManager: 'bun@1.3.14',
+    workspaces: ['packages/*', 'apps/*'],
+    dependencies: { '@pikku/core': '^1.0.0' },
+  })
+  await mkdir(join(root, 'packages', 'functions', 'src', 'functions'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'functions', 'src', 'wirings'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'functions', 'src', 'types'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'functions', 'tests'), {
+    recursive: true,
+  })
+  await writeJson(join(root, 'packages', 'functions', 'package.json'), {
+    type: 'module',
+    imports: {
+      '#pikku/*.js': './.pikku/*.ts',
+      '#pikku/*': './.pikku/*/index.ts',
+    },
+    dependencies: {
+      '@pikku/schema-cfworker': '^0.12.0',
+      '@pikku/kysely': '^0.12.0',
+      '@pikku/addon-console': '^0.12.0',
+      '@pikku/better-auth': '^0.12.0',
+      zod: '^4',
+    },
+  })
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'services.ts'),
+    '// no DB\nexport const createSingletonServices = () => ({})\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'config.ts'),
+    'export const createConfig = () => ({})\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'virtual-users.virtual-user.ts'),
+    [
+      "import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'",
+      "defineVirtualUsers({ founder: { name: 'Anna Müller' } })",
+      '',
+    ].join('\n'),
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'packages', 'functions', 'src', 'auth.wiring.ts'),
+    [
+      "import { pikkuVirtualUser } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [pikkuVirtualUser({ secret: undefined })] })',
+      '',
+    ].join('\n'),
+    'utf8'
+  )
+  await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'db', 'sqlite'), {
+    recursive: true,
+  })
+  await writeFile(
+    join(root, 'db', 'sqlite', '0001-init.sql'),
+    'CREATE TABLE audit (eventId TEXT PRIMARY KEY);\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'db', 'sqlite-dev-seed.sql'),
+    '-- seed data\n',
+    'utf8'
+  )
+  await mkdir(join(root, 'packages', 'theme', 'themes'), {
+    recursive: true,
+  })
+  await writeJson(join(root, 'packages', 'theme', 'themes', 'default.json'), {
+    name: 'Default',
+    brand: { colors: { primary: '#4f46e5' } },
+  })
+  await writeJson(join(root, 'packages', 'theme', 'active.json'), {
+    id: 'default',
+  })
+  await mkdir(join(root, 'packages', 'components'), {
+    recursive: true,
+  })
+  await writeFile(
+    join(root, 'db', 'annotations.ts'),
+    '// db column annotations\nexport const annotations = {}\n',
+    'utf8'
+  )
+  // A knowledge base in the sectioned profile. The three flat files this fixture
+  // used to write (design-language.md, security.md, technology.md) are exactly
+  // what the profile rejects: untyped documents at the root of knowledge/ that
+  // nothing can link into and no gate can read.
+  await mkdir(join(root, 'knowledge', 'decisions', 'design'), {
+    recursive: true,
+  })
+  await writeFile(
+    join(root, 'knowledge', 'index.md'),
+    '---\ntype: overview\ntitle: Knowledge\n---\n\n# Knowledge\n\nWhat this app is.\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'decisions', 'index.md'),
+    '---\ntype: overview\ntitle: Decisions\n---\n\n# Decisions\n\nRules that were chosen.\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'decisions', 'design', 'index.md'),
+    '---\ntype: overview\ntitle: Design\n---\n\n# Design\n\nHow the app looks and behaves.\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'decisions', 'design', 'inline-not-toasts.md'),
+    '---\ntype: decision\ntitle: Inline, not toasts\n---\n\nErrors appear beside the field.\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, '.gitignore'),
+    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__cloud_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
+    'utf8'
+  )
+}
+
+describe('pikku cloud validate', () => {
+  test('empty directory → errors for all required items', async () => {
+    const tmp = await makeTmp()
+    try {
+      const result = await runValidate(tmp)
+      assert.strictEqual(result.ok, false)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(ids.includes('pikku-config-missing'), 'pikku-config-missing')
+      assert.ok(ids.includes('root-package-missing'), 'root-package-missing')
+      assert.ok(ids.includes('functions-pkg-missing'), 'functions-pkg-missing')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('valid project → ok=true, zero findings', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      const result = await runValidate(tmp)
+      assert.strictEqual(result.ok, true)
+      assert.strictEqual(
+        result.findings.length,
+        0,
+        `unexpected findings: ${JSON.stringify(result.findings.map((f) => f.id))}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('no virtual users → warn, and the project still passes', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(
+        join(
+          tmp,
+          'packages',
+          'functions',
+          'src',
+          'virtual-users.virtual-user.ts'
+        )
+      )
+      const result = await runValidate(tmp)
+      const finding = result.findings.find((f) => f.id === 'no-virtual-users')
+      assert.ok(finding, 'expected a no-virtual-users finding')
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('virtual users without virtual user sign-in → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'packages', 'functions', 'src', 'auth.wiring.ts'))
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'virtual-users-no-virtual-user-sign-in'
+      )
+      assert.ok(
+        finding,
+        'expected a virtual-users-no-virtual-user-sign-in finding'
+      )
+      assert.strictEqual(finding!.severity, 'warn')
+      assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('virtual users with no configured environments → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      const config = JSON.parse(
+        await readFile(join(tmp, 'pikku.config.json'), 'utf8')
+      )
+      delete config.environments
+      await writeJson(join(tmp, 'pikku.config.json'), config)
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'virtual-users-no-environments'
+      )
+      assert.ok(finding, 'expected a virtual-users-no-environments finding')
+      assert.strictEqual(finding!.severity, 'warn')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('root is detected from a subdirectory', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      const subdir = join(tmp, 'packages', 'functions', 'src')
+      const result = await runValidate(subdir)
+      assert.strictEqual(result.ok, true)
+      assert.strictEqual(result.root, tmp)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  describe('cloud project link', () => {
+    test('logged out, the link is not checked', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeAuthFile({ tokens: {} })
+        const ids = (await runValidate(tmp)).findings.map((f) => f.id)
+        assert.ok(!ids.includes('cloud-project-not-linked'))
+        assert.ok(!ids.includes('cloud-project-unresolved'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('logged in with no matching remote → info (not blocking)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeAuthFile({ tokens: { [DEFAULT_API_URL]: 'tok' } })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true)
+        const finding = result.findings.find(
+          (f) => f.id === 'cloud-project-not-linked'
+        )
+        assert.strictEqual(finding?.severity, 'info')
+      } finally {
+        await writeAuthFile({ tokens: {} })
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('pikku.config.json', () => {
+    test('missing srcDirectories → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'pikku.config.json'), {
+          outDir: 'packages/functions/.pikku',
+          clientFiles: {
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'pikku-config-no-src-dirs')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing outDir → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'pikku.config.json'), {
+          srcDirectories: ['packages/functions/src'],
+          clientFiles: {
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'pikku-config-no-out-dir')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('empty scaffold → error for console/rpc/agent/workflow, warn for events', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'pikku.config.json'), {
+          srcDirectories: ['packages/functions/src'],
+          outDir: 'packages/functions/.pikku',
+          scaffold: {
+            pikkuDir: 'packages/functions/src/scaffold',
+            // console/rpc/agent/workflow/events all omitted
+          },
+          clientFiles: {
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          },
+        })
+        const result = await runLiveValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const byId = (id: string) => result.findings.find((f) => f.id === id)
+        for (const key of ['console', 'rpc', 'agent', 'workflow']) {
+          const f = byId(`pikku-config-no-scaffold-${key}`)
+          assert.ok(f, `expected error for scaffold.${key}`)
+          assert.strictEqual(f!.severity, 'error')
+        }
+        const events = byId('pikku-config-no-scaffold-events')
+        assert.ok(events, 'expected events finding')
+        assert.strictEqual(events!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('full canonical scaffold → no scaffold findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // console/rpc/agent/workflow/events all set
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) =>
+            f.id.startsWith('pikku-config-no-scaffold-')
+          ),
+          `unexpected scaffold findings: ${JSON.stringify(
+            result.findings
+              .filter((f) => f.id.startsWith('pikku-config-no-scaffold-'))
+              .map((f) => f.id)
+          )}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing clientFiles → info (not an error)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'pikku.config.json'), {
+          srcDirectories: ['packages/functions/src'],
+          outDir: 'packages/functions/.pikku',
+          scaffold: {
+            console: true,
+            rpc: true,
+            agent: true,
+            workflow: true,
+            events: true,
+          },
+          validate: NO_OXLINT,
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true) // info only
+        const finding = result.findings.find(
+          (f) => f.id === 'pikku-config-no-client-files'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('.gitignore generated/runtime artifacts', () => {
+    test('missing entries → warn listing them', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // .gitignore without .opencode, .pikku-runtime, the scaffold vite config
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.pikku\n*.gen.ts\n*.gen.js\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'gitignore-missing-generated'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'warn') // warn — does not block ok
+        assert.ok(finding!.message.includes('.opencode'))
+        assert.ok(finding!.message.includes('.pikku-runtime'))
+        assert.ok(finding!.message.includes('__cloud_scaffold.vite.config.mjs'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing .pikku and gen-file ignore → flagged', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.opencode\n.pikku-runtime\n__cloud_scaffold.vite.config.mjs\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'gitignore-missing-generated'
+        )
+        assert.ok(finding)
+        assert.ok(finding!.message.includes('.pikku'))
+        assert.ok(finding!.message.includes('*.gen.*'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('*.gen.* glob satisfies the gen-file requirement', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.opencode\n.pikku\n.pikku-runtime\n.reports\n__cloud_scaffold.vite.config.mjs\n*.gen.*\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'gitignore-missing-generated')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('canonical .gitignore (gen.ts + gen.js pair) → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // writes the canonical .gitignore
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'gitignore-missing-generated')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('packageManager', () => {
+    test('yarn → error (Pikku Studio Cloud is bun-only)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'yarn@4.6.0',
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'package-manager-not-bun'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('undeclared → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'package-manager-undeclared')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a bun: builtin is not an undeclared package', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'functions', 'a.test.ts'),
+          [
+            "import { test, expect } from 'bun:test'",
+            "import { Database } from 'bun:sqlite'",
+            '',
+            "test('runs', () => expect(Database).toBeDefined())",
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => f.id.startsWith('undeclared-deps-')),
+          [],
+          `expected no finding, got: ${JSON.stringify(result.findings.map((f) => f.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('prose quoting a word after "from" is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'functions', 'a.ts'),
+          [
+            '/**',
+            ' * Converted from the Gherkin scenario of the same name.',
+            ' * The original asserted the redirect from "signed out".',
+            ' */',
+            'export const description = \'Unauthenticated request from "protected endpoint"\'',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => f.id.startsWith('undeclared-deps-')),
+          [],
+          `expected no finding, got: ${JSON.stringify(result.findings.map((f) => f.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('bun → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('package-manager-'))
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('@pikku/cloudflare floor', () => {
+    test('0.12.19 → error (imports @pikku/core/internal, bundles 0 workers)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+          dependencies: {
+            '@pikku/cloudflare': '^0.12.19',
+            '@pikku/schema-cfworker': '^0.12.0',
+            '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-console': '^0.12.0',
+            '@pikku/better-auth': '^0.12.0',
+            zod: '^4',
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'pikku-version-below-min--pikku-cloudflare'
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('root package.json', () => {
+    test('missing @pikku/core → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
+          workspaces: ['packages/*'],
+          dependencies: {},
+          devDependencies: { '@pikku/cloud-cli': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(result.findings.some((f) => f.id === 'missing-core'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing workspaces → warn (ok=true)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
+          dependencies: { '@pikku/core': '^1.0.0' },
+          devDependencies: { '@pikku/cloud-cli': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true)
+        const finding = result.findings.find(
+          (f) => f.id === 'root-package-no-workspaces'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('referenced vendor tgz missing → warn per package', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
+          workspaces: ['packages/*'],
+          dependencies: {
+            '@pikku/core': 'file:./vendor/pikku-core.tgz',
+          },
+          devDependencies: {
+            '@pikku/cloud-cli': 'file:./vendor/pikku-cloud-cli.tgz',
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true) // vendor missing = warn, not error
+        const vendorFindings = result.findings.filter((f) =>
+          f.id.startsWith('vendor-missing-')
+        )
+        assert.ok(
+          vendorFindings.length >= 2,
+          'expected warn for each missing tgz'
+        )
+        assert.ok(vendorFindings.every((f) => f.severity === 'warn'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('vendor tgz present → no warning', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'vendor'), { recursive: true })
+        await writeFile(join(tmp, 'vendor', 'pikku-core.tgz'), 'fake', 'utf8')
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
+          workspaces: ['packages/*'],
+          dependencies: { '@pikku/core': 'file:./vendor/pikku-core.tgz' },
+          devDependencies: { '@pikku/cloud-cli': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'vendor-missing--pikku-core')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('packages/functions/package.json', () => {
+    test('missing type: "module" → warn (ok=true)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+          dependencies: {
+            '@pikku/cloudflare': '^0.12.20',
+            '@pikku/schema-cfworker': '^0.12.0',
+            '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-console': '^0.12.0',
+            '@pikku/better-auth': '^0.12.0',
+            zod: '^4',
+          },
+          // no type: 'module'
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true)
+        const finding = result.findings.find(
+          (f) => f.id === 'functions-pkg-no-esm'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('@pikku/kysely-postgres in functions deps → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          dependencies: { '@pikku/kysely-postgres': '^0.12.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'fn-pkg-postgres-dep'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing @pikku/schema-cfworker → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+          dependencies: { '@pikku/kysely': '^0.12.0' }, // schema-cfworker omitted
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'missing-schema-cfworker'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing @pikku/kysely → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+          dependencies: { '@pikku/schema-cfworker': '^0.12.0' }, // kysely omitted
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'missing-pikku-kysely'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('agent units declared but @pikku/ai-vercel / @ai-sdk/openai-compatible missing → errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // declare an agent via the generated agent meta, but omit the AI deps
+        await mkdir(join(tmp, 'packages', 'functions', '.pikku', 'agent'), {
+          recursive: true,
+        })
+        await writeJson(
+          join(
+            tmp,
+            'packages',
+            'functions',
+            '.pikku',
+            'agent',
+            'pikku-agent-wirings-meta.gen.json'
+          ),
+          { agentsMeta: { bookingAgent: {} } }
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'missing-ai-vercel'),
+          'expected missing-ai-vercel'
+        )
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'missing-ai-sdk-openai-compatible'
+          ),
+          'expected missing-ai-sdk-openai-compatible'
+        )
+        assert.ok(
+          result.findings.some((f) => f.id === 'missing-ai-sdk-core'),
+          'expected missing-ai-sdk-core'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('no agent units → no AI dep errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // no agent meta written
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) =>
+              f.id === 'missing-ai-vercel' ||
+              f.id === 'missing-ai-sdk-openai-compatible' ||
+              f.id === 'missing-ai-sdk-core'
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('services.ts', () => {
+    test('constructs Kysely without LibsqlWebDialect → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          // Must CONSTRUCT the client, not merely import it — the rule only
+          // flags a services.ts that builds its own Kysely with the wrong
+          // dialect (import-only scaffolds take kysely from injection).
+          "import { Kysely, PostgresDialect } from 'kysely'\nexport const db = new Kysely({ dialect: new PostgresDialect({}) })\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'services-wrong-db-adapter')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('imports Kysely but constructs nothing → no adapter error', async () => {
+      const tmp = await makeTmp()
+      try {
+        // The starter template takes kysely from injection and never builds a
+        // client, so importing the type must not be flagged as the wrong dialect.
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import type { Kysely } from 'kysely'\n" +
+            'export type Services = { db: Kysely<unknown> }\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'services-wrong-db-adapter')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('uses LibsqlWebDialect → no adapter error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
+          workspaces: ['packages/*'],
+          dependencies: {
+            '@pikku/core': '^1.0.0',
+            '@pikku/kysely-sqlite': '^1.0.0',
+          },
+          devDependencies: { '@pikku/cloud-cli': '^1.0.0' },
+        })
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { Kysely } from 'kysely'\nimport { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'services-wrong-db-adapter')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('uses process.env directly → info (not blocking)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          'const url = process.env.DATABASE_URL\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true) // info only — process.env works with nodejs_compat_v2
+        const finding = result.findings.find(
+          (f) => f.id === 'services-process-env'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('LibsqlWebDialect used but @pikku/kysely-sqlite absent → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // @pikku/kysely-sqlite intentionally absent from package.json
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(result.findings.some((f) => f.id === 'missing-kysely-sqlite'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('db migrations', () => {
+    test('sequential migrations → no error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(
+          join(migrDir, '0001-init.sql'),
+          'CREATE TABLE a (id INTEGER);',
+          'utf8'
+        )
+        await writeFile(
+          join(migrDir, '0002-users.sql'),
+          'CREATE TABLE b (id INTEGER);',
+          'utf8'
+        )
+        await writeFile(
+          join(migrDir, '0003-index.sql'),
+          'CREATE INDEX idx ON a (id);',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(!result.findings.some((f) => f.id === 'migration-gap'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('gap in migration numbering → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(join(migrDir, '0001-init.sql'), 'SELECT 1;', 'utf8')
+        await writeFile(join(migrDir, '0003-skip.sql'), 'SELECT 1;', 'utf8') // 0002 missing
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'migration-gap')
+        assert.ok(finding)
+        assert.ok(finding!.message.includes('2'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('PostgreSQL SERIAL syntax → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(
+          join(migrDir, '0001-init.sql'),
+          'CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) =>
+          f.id?.startsWith('migration-postgres-sql-')
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+        assert.ok(finding!.message.includes('SERIAL'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('PostgreSQL JSONB type → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(
+          join(migrDir, '0001-init.sql'),
+          'CREATE TABLE events (id TEXT PRIMARY KEY, payload JSONB NOT NULL);',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some(
+            (f) =>
+              f.id?.startsWith('migration-postgres-sql-') &&
+              f.message.includes('JSONB')
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('PostgreSQL :: cast syntax → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(
+          join(migrDir, '0001-init.sql'),
+          "INSERT INTO settings VALUES ('x'::text, 'y'::text);",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) =>
+            f.id?.startsWith('migration-postgres-sql-')
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('SQLite-compatible migration → no postgres errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const migrDir = join(tmp, 'db', 'sqlite')
+        await mkdir(migrDir, { recursive: true })
+        await writeFile(
+          join(migrDir, '0001-init.sql'),
+          "CREATE TABLE kanban_card (\n  card_id TEXT PRIMARY KEY,\n  title TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT (datetime('now'))\n);",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) =>
+            f.id?.startsWith('migration-postgres-sql-')
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('db/sqlite-dev-seed.sql', () => {
+    /**
+     * A dev seed is optional by definition — it is the file `pikku db reset`
+     * replays locally, and Pikku Studio Cloud never reads it. Data the deployed stage
+     * needs belongs in a migration, and a project that has correctly moved it
+     * there was being failed for no longer carrying the file it deliberately
+     * does not need.
+     */
+    test('missing db/sqlite-dev-seed.sql → info, and does not fail validate', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'db', 'sqlite-dev-seed.sql'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'dev-seed-sql-missing'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'info')
+        assert.strictEqual(result.ok, true)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing db/sqlite/ → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'db', 'sqlite'), {
+          recursive: true,
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'migrations-dir-missing'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('db.types.ts', () => {
+    test('re-export only → no warning', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'types', 'db.types.ts'),
+          "export type { DB } from '../../.pikku/db/schema.gen.js'\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(!result.findings.some((f) => f.id === 'db-types-hand-edited'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('inline interface definitions without re-export → warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'types', 'db.types.ts'),
+          'export interface User { id: number; name: string }\nexport interface Card { id: number }\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true) // warn only
+        assert.ok(result.findings.some((f) => f.id === 'db-types-hand-edited'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('optional structure (info findings)', () => {
+    test('missing src/functions, src/wirings, src/config.ts → info not error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'functions', 'src', 'functions'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'functions', 'src', 'wirings'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'functions', 'src', 'config.ts'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true)
+        const ids = result.findings.map((f) => f.id)
+        assert.ok(ids.includes('functions-dir-missing'))
+        assert.ok(ids.includes('wirings-dir-missing'))
+        assert.ok(ids.includes('config-missing'))
+        assert.ok(result.findings.every((f) => f.severity === 'info'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing packages/functions-sdk → info not error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'functions-sdk'), {
+          recursive: true,
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, true)
+        assert.ok(result.findings.some((f) => f.id === 'functions-sdk-missing'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('packages/theme and packages/components presence', () => {
+    test('missing packages/theme → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'theme'), {
+          recursive: true,
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-missing')
+        assert.ok(finding, 'expected theme-missing finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    const addTailwindApp = async (root: string) => {
+      await mkdir(join(root, 'apps', 'web', 'src', 'components'), {
+        recursive: true,
+      })
+      await writeJson(join(root, 'apps', 'web', 'package.json'), {
+        name: '@project/web',
+        type: 'module',
+        dependencies: {
+          react: '^19.0.0',
+          tailwindcss: '^4.0.0',
+        },
+      })
+    }
+
+    test('missing packages/theme with a Tailwind frontend → warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addTailwindApp(tmp)
+        await rm(join(tmp, 'packages', 'theme'), {
+          recursive: true,
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-missing')
+        assert.ok(finding, 'expected theme-missing finding')
+        assert.strictEqual(finding!.severity, 'warn')
+        assert.match(finding!.message, /No themes yet/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme package but no spec, with a Tailwind frontend → theme-no-spec warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addTailwindApp(tmp)
+        await rm(join(tmp, 'packages', 'theme', 'themes'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-spec')
+        assert.ok(finding, 'expected theme-no-spec finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('an app with components but no stories → design-no-stories', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addTailwindApp(tmp)
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'design-no-stories'
+        )
+        assert.ok(finding, 'expected design-no-stories finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a story beside a component clears it', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addTailwindApp(tmp)
+        await writeFile(
+          join(tmp, 'apps', 'web', 'src', 'components', 'Wordmark.stories.tsx'),
+          "export default { title: 'Wordmark' }\nexport const Default = {}\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'design-no-stories'),
+          'design-no-stories should not fire when a story exists'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('no apps at all → silence, there is nothing to story', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'design-no-stories'),
+          'design-no-stories should not fire without a component kit'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme package but no themes/<id>.json spec → theme-no-spec info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // Drop the spec + active.json but keep the package (a hand-written
+        // createTheme() with no console-readable spec).
+        await rm(join(tmp, 'packages', 'theme', 'themes'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-spec')
+        assert.ok(finding, 'expected theme-no-spec finding')
+        assert.strictEqual(finding!.severity, 'info')
+        assert.ok(
+          !result.findings.some((f) => f.id === 'theme-missing'),
+          'theme-missing should not fire when the package exists'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme spec present but active.json missing → theme-no-active info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-active')
+        assert.ok(finding, 'expected theme-no-active finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('active.json points at a missing spec → theme-active-mismatch info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'theme', 'active.json'), {
+          id: 'nope',
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'theme-active-mismatch'
+        )
+        assert.ok(finding, 'expected theme-active-mismatch finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('valid theme spec + active.json → no theme findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('theme-')),
+          `unexpected theme finding: ${JSON.stringify(
+            result.findings.map((f) => f.id)
+          )}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('apps/ frontend checks', () => {
+    test('app not declared in pikku.config.json frontends → warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        await writeJson(join(tmp, 'apps', 'web', 'package.json'), {
+          name: 'web',
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'app-not-declared-web'
+        )
+        assert.ok(finding, 'expected app-not-declared-web finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('pikku.config.json frontend cwd does not exist → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps'), { recursive: true })
+        await writeFrontends(tmp, { web: { cwd: './apps/web', kind: 'ssr' } })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'frontend-cwd-missing-web'
+        )
+        assert.ok(finding, 'expected frontend-cwd-missing-web finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('app missing functions-sdk, theme, and components deps → info findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(
+          join(tmp, 'packages', 'functions-sdk', 'package.json'),
+          {
+            name: '@project/functions-sdk',
+          }
+        )
+        await writeJson(join(tmp, 'packages', 'theme', 'package.json'), {
+          name: '@project/theme',
+        })
+        await writeJson(join(tmp, 'packages', 'components', 'package.json'), {
+          name: '@project/components',
+        })
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        await writeJson(join(tmp, 'apps', 'web', 'package.json'), {
+          name: 'web',
+          dependencies: {},
+        })
+        await writeFrontends(tmp, { web: { cwd: 'apps/web', kind: 'ssr' } })
+        const result = await runValidate(tmp)
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-functions-sdk-web'),
+          'expected app-missing-functions-sdk-web'
+        )
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-theme-web'),
+          'expected app-missing-theme-web'
+        )
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-components-web'),
+          'expected app-missing-components-web'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('app directory without package.json is skipped gracefully', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        // no package.json in apps/web — appPkg will be null → continue
+        const result = await runValidate(tmp)
+        // app-not-declared warn fires (no frontends declared), but no crash
+        assert.ok(result.findings.some((f) => f.id === 'app-not-declared-web'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('virtual user quick login', () => {
+    // Writes a React frontend at apps/web. `files` is a map of app-relative
+    // path → contents, so each test only spells out the UI it cares about.
+    async function makeFrontend(
+      root: string,
+      files: Record<string, string>,
+      pkgExtra: Record<string, unknown> = {}
+    ) {
+      const app = join(root, 'apps', 'web')
+      await mkdir(app, { recursive: true })
+      await writeJson(join(app, 'package.json'), {
+        name: 'web',
+        dependencies: { react: '^19.0.0', ...(pkgExtra as any).dependencies },
+        devDependencies: {
+          '@babel/core': '^7.26.0',
+          '@inlang/paraglide-js': '^2.0.0',
+        },
+      })
+      await mkdir(join(app, 'messages'), { recursive: true })
+      await mkdir(join(app, 'project.inlang'), { recursive: true })
+      await writeJson(join(app, 'project.inlang', 'settings.json'), {})
+      for (const [rel, body] of Object.entries(files)) {
+        const full = join(app, rel)
+        await mkdir(dirname(full), { recursive: true })
+        await writeFile(full, body, 'utf8')
+      }
+      return app
+    }
+
+    test('login screen without the virtual user switcher → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            'export const LoginPage = () => <form>email + password</form>\n',
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+        )
+        assert.ok(
+          finding,
+          'expected app-missing-virtual-user-quick-login-web finding'
+        )
+        assert.strictEqual(finding!.severity, 'error')
+        assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
+        assert.match(finding!.fixHint, /featureFlags/)
+        assert.match(finding!.fixHint, /virtualUserSignIn/)
+        assert.doesNotMatch(finding!.fixHint, /VITE_DEV_VIRTUAL_USER/)
+        assert.strictEqual(result.ok, false)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('login screen rendering <DevVirtualUserSwitcher /> → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            "import { DevVirtualUserSwitcher } from '@/components/DevVirtualUserSwitcher'\n" +
+            'export const LoginPage = () => <><form /><DevVirtualUserSwitcher /></>\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'expected no virtual user quick-login finding'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('custom UI built on useDevVirtualUsers() → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          // An app that wants its own control rather than the template's
+          // still satisfies the rule, as long as it drives the shared hook.
+          'src/pages/LoginPage.tsx':
+            "import { useDevVirtualUsers } from '@pikku/react'\n" +
+            'export const LoginPage = () => {\n' +
+            '  const { virtualUsers, signInAs } = useDevVirtualUsers({ apiUrl: "/api" })\n' +
+            '  return <>{virtualUsers.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'useDevVirtualUsers() is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a login screen calling signInAsVirtualUser() → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            "import { signInAsVirtualUser } from '@pikku/react'\n" +
+            'export const LoginPage = () =>\n' +
+            '  <button onClick={() => signInAsVirtualUser({ apiUrl: "/api", id: "admin" })} />\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'signInAsVirtualUser() is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a DevVirtualUserSwitcher that is defined but never rendered still errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/LoginPage.tsx':
+            'export const LoginPage = () => <form>email + password</form>\n',
+          // Definition only — nothing renders it, so the reviewer is still
+          // locked out. `signInAsVirtualUser(` here is the declaration, not a call.
+          'src/lib/auth.ts':
+            'export async function signInAsVirtualUser(email: string) {\n' +
+            '  return email\n}\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'expected the finding to survive a definition-only auth helper'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a frontend with no login screen is not asked for one', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(tmp, {
+          'src/pages/HomePage.tsx': 'export const HomePage = () => <main />\n',
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'an app with no auth has nothing to attach the control to'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('Next.js app/login/page.tsx is scanned even though it is outside src/', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(
+          tmp,
+          {
+            'app/login/page.tsx':
+              'export default function Page() { return <form /> }\n',
+          },
+          { dependencies: { next: '^15.0.0' } }
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+        )
+        assert.ok(finding, 'expected the Next.js route to be scanned')
+        assert.match(finding!.message, /app\/login\/page\.tsx/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('Next.js login route wired to the virtual user endpoint → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await makeFrontend(
+          tmp,
+          {
+            'app/login/page.tsx':
+              "const signIn = (email: string) => fetch('/auth/sign-in/virtual-user', {\n" +
+              "  method: 'POST', body: JSON.stringify({ email }) })\n" +
+              'export default function Page() { return <button onClick={() => signIn("a@b.c")} /> }\n',
+          },
+          { dependencies: { next: '^15.0.0' } }
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
+          ),
+          'the /auth/sign-in/virtual-user endpoint is a valid quick-login fingerprint'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('renderValidate', () => {
+    function captureLog(fn: () => void): string[] {
+      const lines: string[] = []
+      const orig = console.log
+      console.log = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '))
+      }
+      try {
+        fn()
+      } finally {
+        console.log = orig
+      }
+      return lines
+    }
+
+    test('prints ok message when there are no findings', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, { ok: true, root: '/tmp/proj', findings: [] })
+      )
+      assert.ok(lines.some((l) => l.includes('All checks passed')))
+    })
+
+    test('prints error, warn, and info findings with correct icons', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: false,
+          root: '/tmp/proj',
+          findings: [
+            {
+              id: 'e1',
+              severity: 'error',
+              message: 'bad error',
+              path: '/tmp/proj/foo',
+              fixHint: 'fix it',
+            },
+            {
+              id: 'w1',
+              severity: 'warn',
+              message: 'a warning',
+              path: '/tmp/proj/bar',
+              fixHint: 'consider this',
+            },
+            {
+              id: 'i1',
+              severity: 'info',
+              message: 'some info',
+              path: '/tmp/proj/baz',
+              fixHint: 'note this',
+            },
+          ],
+        })
+      )
+      assert.ok(lines.some((l) => l.includes('bad error')))
+      assert.ok(lines.some((l) => l.includes('a warning')))
+      assert.ok(lines.some((l) => l.includes('some info')))
+    })
+
+    test('prints no-errors footer when ok=true but findings exist', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: true,
+          root: '/tmp/proj',
+          findings: [
+            {
+              id: 'w1',
+              severity: 'warn',
+              message: 'a warning',
+              path: '/tmp/proj/bar',
+              fixHint: 'consider this',
+            },
+          ],
+        })
+      )
+      assert.ok(lines.some((l) => l.includes('no errors')))
+    })
+
+    test('relative path is shown instead of absolute in findings', () => {
+      const root = '/tmp/proj'
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: false,
+          root,
+          findings: [
+            {
+              id: 'e1',
+              severity: 'error',
+              message: 'bad error',
+              path: `${root}/packages/functions/src/services.ts`,
+              fixHint: 'fix it',
+            },
+          ],
+        })
+      )
+      assert.ok(
+        lines.some((l) => l.includes('packages/functions/src/services.ts'))
+      )
+    })
+  })
+})
+
+describe('knowledge base (live validate.function)', () => {
+  test('the old flat shape is reported instead of being required', async () => {
+    // This check used to demand knowledge/design-language.md, security.md and
+    // technology.md. Those are three documents, not a knowledge base — nothing
+    // links into them and no gate reads them. Requiring them taught every project
+    // to write the one shape the profile rejects.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'knowledge'), { recursive: true, force: true })
+      await mkdir(join(tmp, 'knowledge'), { recursive: true })
+      for (const name of [
+        'design-language.md',
+        'security.md',
+        'technology.md',
+      ]) {
+        await writeFile(join(tmp, 'knowledge', name), `# ${name}\n`, 'utf8')
+      }
+
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const ids = result.findings.map((f) => f.id)
+
+      assert.ok(
+        !ids.some((id) => id.startsWith('missing-required-file-knowledge')),
+        'no longer demands the flat files'
+      )
+      assert.ok(
+        ids.includes('knowledge-no-index'),
+        'reports the missing entry point'
+      )
+      for (const name of [
+        'design-language.md',
+        'security.md',
+        'technology.md',
+      ]) {
+        assert.ok(
+          ids.includes(`knowledge-flat-note-${name}`),
+          `reports ${name} as a flat note`
+        )
+      }
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the sectioned shape passes, and db/annotations.ts is still required', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await rm(join(tmp, 'db', 'annotations.ts'), { force: true })
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        !ids.some((id) => id.startsWith('knowledge-')),
+        `expected a clean knowledge base, got ${ids.filter((id) => id.startsWith('knowledge-')).join(', ')}`
+      )
+      assert.ok(ids.includes('missing-required-file-db-annotations-ts'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a dangling resource: in a note fails the project', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await mkdir(join(tmp, 'packages', 'functions', '.pikku', 'function'), {
+        recursive: true,
+      })
+      await writeFile(
+        join(
+          tmp,
+          'packages',
+          'functions',
+          '.pikku',
+          'function',
+          'pikku-functions-meta.gen.json'
+        ),
+        '{"createEntry":{}}',
+        'utf8'
+      )
+      await writeFile(
+        join(tmp, 'knowledge', 'decisions', 'design', 'inline-not-toasts.md'),
+        '---\ntype: decision\ntitle: Inline\nresource: func:renamedAway\n---\n\nx\n',
+        'utf8'
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some((f) =>
+          f.id.startsWith('knowledge-resource-dangling-')
+        ),
+        'resolves resource: against the outDir from pikku.config.json'
+      )
+      assert.strictEqual(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('better-auth stateless session (live validate.function)', () => {
+  const authFile = (cookieCache: boolean) =>
+    `import { betterAuth } from 'better-auth'
+import { pikkuBetterAuth } from '#pikku/auth'
+export const auth = pikkuBetterAuth(async ({ kysely, secrets }) => {
+  const BETTER_AUTH_SECRET = await secrets.getSecret('BETTER_AUTH_SECRET')
+  return betterAuth({
+    secret: BETTER_AUTH_SECRET,
+    database: { db: kysely as any, type: 'sqlite' },
+    emailAndPassword: { enabled: true },
+    ${cookieCache ? 'session: { cookieCache: { enabled: true } },' : ''}
+  })
+})
+`
+
+  test('cookieCache disabled → warns better-auth-stateless-session-disabled', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
+        authFile(false),
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        ids.includes('better-auth-stateless-session-disabled'),
+        `expected warn, got: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('cookieCache enabled → no stateless-session warning', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
+        authFile(true),
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        !ids.includes('better-auth-stateless-session-disabled'),
+        `unexpected warn: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('global stateful betterAuthSession → warns better-auth-stateful-session-global', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'middleware.ts'),
+        `import { addHTTPMiddleware } from '#pikku/http'
+import { betterAuthSession } from '@pikku/better-auth'
+addHTTPMiddleware('*', [betterAuthSession()])
+`,
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        ids.includes('better-auth-stateful-session-global'),
+        `expected warn, got: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('i18n convergence — Paraglide (live validate.function)', () => {
+  // Scaffold an apps/web react frontend with the given package deps + src file,
+  // optionally wiring the full Paraglide stack (messages/ + project.inlang/).
+  const makeApp = async (
+    root: string,
+    opts: {
+      deps: Record<string, string>
+      srcFile?: { name: string; body: string }
+      paraglideWired?: boolean
+    }
+  ) => {
+    const app = join(root, 'apps', 'web')
+    await mkdir(join(app, 'src'), { recursive: true })
+    await writeJson(join(app, 'package.json'), {
+      name: 'web',
+      dependencies: opts.deps,
+    })
+    if (opts.srcFile) {
+      const dest = join(app, 'src', opts.srcFile.name)
+      await mkdir(join(dest, '..'), { recursive: true })
+      await writeFile(dest, opts.srcFile.body, 'utf8')
+    }
+    if (opts.paraglideWired) {
+      await mkdir(join(app, 'messages'), { recursive: true })
+      await writeJson(join(app, 'messages', 'en.json'), { hello: 'Hello' })
+      await mkdir(join(app, 'project.inlang'), { recursive: true })
+      await writeJson(join(app, 'project.inlang', 'settings.json'), {
+        baseLocale: 'en',
+        locales: ['en'],
+      })
+    }
+  }
+  const PARAGLIDE_DEPS = {
+    react: '^19.0.0',
+    '@inlang/paraglide-js': '^2.20.0',
+  }
+
+  test('residual i18next dep → error app-legacy-i18next-dep-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: {
+          react: '^19.0.0',
+          i18next: '^23.0.0',
+          'react-i18next': '^15.0.0',
+        },
+        paraglideWired: true,
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find(
+        (f) => f.id === 'app-legacy-i18next-dep-web'
+      )
+      assert.ok(
+        f,
+        `expected app-legacy-i18next-dep-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('residual useTranslation()/useI18n() call → error app-legacy-i18n-usage-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'Page.tsx',
+          body: `import { useTranslation } from 'react-i18next'\nexport const Page = () => { const { t } = useTranslation(); return t('a.b') }\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find(
+        (f) => f.id === 'app-legacy-i18n-usage-web'
+      )
+      assert.ok(
+        f,
+        `expected app-legacy-i18n-usage-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('missing @inlang/paraglide-js → error app-missing-paraglide-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: { react: '^19.0.0' },
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find(
+        (f) => f.id === 'app-missing-paraglide-web'
+      )
+      assert.ok(
+        f,
+        `expected app-missing-paraglide-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('paraglide dep but no messages/ → error app-paraglide-not-wired-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, { deps: PARAGLIDE_DEPS }) // no paraglideWired
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find(
+        (f) => f.id === 'app-paraglide-not-wired-web'
+      )
+      assert.ok(
+        f,
+        `expected app-paraglide-not-wired-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('full Paraglide stack + m usage → no i18n errors', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'Page.tsx',
+          body: `import { m } from '@/i18n/messages'\nexport const Page = () => <button>{m.hello()}</button>\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      const i18nErrors = result.findings.filter(
+        (f) =>
+          f.severity === 'error' &&
+          (f.id.startsWith('app-legacy-i18n') ||
+            f.id.startsWith('app-missing-paraglide') ||
+            f.id.startsWith('app-paraglide-not-wired'))
+      )
+      assert.strictEqual(
+        i18nErrors.length,
+        0,
+        `unexpected i18n errors: ${JSON.stringify(i18nErrors.map((x) => x.id))}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('scaffold src/i18n/config.ts comment mentioning useTranslation is not flagged legacy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'i18n/config.ts',
+          body: `// the codemod injects useLocale() wherever const { t } = useTranslation() lived\nexport const useLocale = () => 'en'\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'app-legacy-i18n-usage-web'),
+        `scaffold comment wrongly flagged: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  describe('deprecated Next.js pikku client', () => {
+    test('nextHTTPFile config + nextjs-http.gen import → errors, ok=false', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const app = join(tmp, 'apps', 'website', 'pikku')
+        await mkdir(app, { recursive: true })
+        await writeJson(join(tmp, 'apps', 'website', 'pikku.config.json'), {
+          extends: '../../pikku.config.json',
+          nextHTTPFile: './pikku/nextjs-http.gen.ts',
+        })
+        await writeFile(
+          join(app, 'http.ts'),
+          "import { pikku } from './nextjs-http.gen'\nexport { pikku }\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some(
+            (f) =>
+              f.id.startsWith('dead-next-codegen-config-') &&
+              f.severity === 'error'
+          ),
+          `expected dead-next-codegen-config finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+        assert.ok(
+          result.findings.some(
+            (f) =>
+              f.id.startsWith('dead-next-client-import-') &&
+              f.severity === 'error'
+          ),
+          `expected dead-next-client-import finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('valid project (fetch client, no next) → no dead-next findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('dead-next-')),
+          `unexpected dead-next finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+})
+
+describe('declared frontends + type-check (live validate.function)', () => {
+  // pikku.config.json is unvalidated JSON — validate has to survive
+  // whatever is in it and report the problem, not crash on a property access.
+  const declareFrontends = async (root: string, frontends: unknown) => {
+    await writeFrontends(root, frontends)
+  }
+
+  const findingIds = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('a null frontend entry is reported, not thrown', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, { app: null })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-entry-invalid-app'
+      )
+      assert.ok(
+        f,
+        `expected frontend-entry-invalid-app, got: ${findingIds(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a non-string cwd is reported, not thrown', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, { app: { cwd: 42 } })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'frontend-cwd-invalid-app')
+      assert.ok(
+        f,
+        `expected frontend-cwd-invalid-app, got: ${findingIds(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a non-object "frontends" is reported', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, 'apps/app')
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'frontends-invalid')
+      assert.ok(
+        f,
+        `expected frontends-invalid, got: ${findingIds(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a deployable frontend with a missing directory errors even without apps/', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, { app: { cwd: './apps/app' } })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'frontend-cwd-missing-app')
+      assert.ok(
+        f,
+        `expected frontend-cwd-missing-app, got: ${findingIds(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+      assert.strictEqual(result.ok, false)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a frontend that cannot be type-checked warns — and --skip-typecheck suppresses it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, { app: { cwd: 'apps/app' } })
+      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
+      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
+
+      const checked = await runLiveValidate(tmp)
+      assert.ok(
+        checked.findings.some((f) => f.id === 'frontend-typecheck-skipped-app'),
+        `expected frontend-typecheck-skipped-app, got: ${findingIds(checked.findings)}`
+      )
+
+      const skipped = await runLiveValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !skipped.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
+        `expected no type-check findings, got: ${findingIds(skipped.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a frontend declared with deploy:false is not type-checked', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareFrontends(tmp, {
+        app: { cwd: 'apps/app', deploy: false },
+      })
+      await mkdir(join(tmp, 'apps', 'app'), { recursive: true })
+      await writeJson(join(tmp, 'apps', 'app', 'package.json'), { name: 'app' })
+
+      const result = await runLiveValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-typecheck-')),
+        `expected no type-check findings, got: ${findingIds(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('deployed frontend API base (live validate.function)', () => {
+  const declareWeb = async (root: string, deploy = true) => {
+    await writeFrontends(root, { web: { cwd: 'apps/web', deploy } })
+  }
+
+  const writeApiLib = async (root: string, source: string) => {
+    await mkdir(join(root, 'apps', 'web', 'src', 'lib'), { recursive: true })
+    await writeJson(join(root, 'apps', 'web', 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeFile(
+      join(root, 'apps', 'web', 'src', 'lib', 'api.ts'),
+      source,
+      'utf8'
+    )
+  }
+
+  const ids = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('an env read defaulting to localhost → error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-env-fallback-localhost-web'
+      )
+      assert.ok(
+        f,
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('process.env / NEXT_PUBLIC_ is caught the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api"\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-env-fallback-localhost-web'
+        ),
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('deriving the base from location.origin passes clean', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `const LOCAL_API_URL = 'http://localhost:3002'`,
+          `export function apiUrl(): string {`,
+          `  if (typeof window === 'undefined') return LOCAL_API_URL`,
+          `  if (import.meta.env.DEV) return LOCAL_API_URL`,
+          `  return window.location.origin + '/api'`,
+          `}`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-localhost-url')),
+        `expected no bare-URL warning, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a bare localhost URL, with no origin derivation anywhere → error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const CHANNEL_URL = 'ws://localhost:3002/meditation'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-localhost-url-web'
+      )
+      assert.ok(
+        f,
+        `expected the bare-URL finding, got: ${ids(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a localhost URL only in a comment is not a finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `// locally the API is at http://localhost:3002, in prose only`,
+          `export const API_URL = '/api'`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with a non-localhost fallback still fails — nothing injects it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(
+        f,
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /VITE_API_URL/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with no fallback at all fails the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-api-base-not-derived-web'
+        ),
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the finding names the variable the app actually read', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_BASE ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(
+        f,
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
+      assert.match(f!.message, /NEXT_PUBLIC_API_BASE/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read is fine once the origin is the fallback', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `export function apiUrl(): string {`,
+          `  return import.meta.env.VITE_API_URL ?? window.location.origin + '/api'`,
+          `}`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a frontend with deploy:false is not checked — it never reaches a browser', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp, false)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('scenario steps vs the message catalogue (live validate.function)', () => {
+  const writeCatalogue = async (
+    root: string,
+    messages: Record<string, string>
+  ) => {
+    await mkdir(join(root, 'apps', 'web', 'project.inlang'), {
+      recursive: true,
+    })
+    await mkdir(join(root, 'apps', 'web', 'messages'), { recursive: true })
+    await writeJson(join(root, 'apps', 'web', 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeJson(
+      join(root, 'apps', 'web', 'project.inlang', 'settings.json'),
+      {
+        baseLocale: 'en',
+        locales: ['en', 'de'],
+      }
+    )
+    await writeJson(join(root, 'apps', 'web', 'messages', 'en.json'), messages)
+  }
+
+  const writeSteps = async (root: string, source: string) => {
+    const dir = join(root, 'packages', 'functions', 'tests', 'scenarios')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'application.steps.ts'), source, 'utf8')
+  }
+
+  const hardcoded = (findings: Array<{ id: string }>) =>
+    findings.filter((f) => f.id.startsWith('scenario-hardcoded-copy-'))
+
+  const ids = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('a locator repeating catalogue copy → error naming the key', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { jobs_apply_fullname: 'Full Name' })
+      await writeSteps(tmp, `await page.getByLabel('Full Name').fill(name)\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(finding!.severity, 'error')
+      assert.match(finding!.fixHint, /jobs_apply_fullname/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('copy passed to a project helper is caught too', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, {
+        jobs_worklocation: 'Where would you like to work?',
+      })
+      await writeSteps(
+        tmp,
+        `await pick('Where would you like to work?', 'Berlin')\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        hardcoded(result.findings).length === 1,
+        `expected a finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('copy quoted in a comment is not a locator', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { common_yes: 'Yes' })
+      await writeSteps(
+        tmp,
+        [
+          `/**`,
+          ` * A dozen selects each offer "Yes", so the lookup is scoped.`,
+          ` */`,
+          `// the "Yes" option is ambiguous page-wide`,
+          `await scoped.getByRole('option', { name: yesLabel }).click()`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  const writeScenario = async (root: string, source: string) => {
+    const dir = join(root, 'packages', 'functions', 'tests', 'scenarios')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'downloads.scenario.ts'), source, 'utf8')
+  }
+
+  /**
+   * A feature's `name`/`description` are Console meta, authored in the
+   * project's locale and never rendered by the app. Flagging them made the two
+   * rules disagree: moving a `pikkuFeature` into a `*.scenario.ts` — the
+   * documented fix for the file-naming rule — is what put it in front of this
+   * one, and its advice would tie the Console's language to the product's.
+   */
+  test("a feature's own name is meta, not app copy", async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, {
+        nav__downloads: 'Downloads',
+        downloads__title: 'Downloads',
+      })
+      await writeScenario(
+        tmp,
+        [
+          'export const downloadsFeature = pikkuFeature({',
+          "  name: 'Downloads',",
+          "  description: 'Downloads',",
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a selector nested inside a step is still caught', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { common_save: 'Speichern' })
+      await writeScenario(
+        tmp,
+        [
+          'export const step = pikkuScenarioStep({',
+          "  name: 'save the form',",
+          '  run: async ({ page }) => {',
+          "    await page.getByRole('button', { name: 'Speichern' }).click()",
+          '  },',
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /common_save/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a string the catalogue does not own is left alone', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { jobs_apply_fullname: 'Full Name' })
+      await writeSteps(
+        tmp,
+        `await page.getByText('favicon-16x16.png').waitFor()\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a UI-facing step argument is copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { rooms_create_room: 'Create Room' })
+      await writeSteps(
+        tmp,
+        `await scenario.when('start', 'clicksControl', { name: 'Create Room' })\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /rooms_create_room/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a payload field that happens to match a label is not copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { unit_kg: 'kg' })
+      await writeSteps(
+        tmp,
+        `await rpc.invoke('addItem', { name: itemName, unit: 'kg', quantity: 5 })\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a value asserted with expect is not copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { unit_kg: 'kg' })
+      await writeSteps(tmp, `expect(item.unit, 'kg', 'the item unit')\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a locator nested inside expect is still copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { rooms_create_room: 'Create Room' })
+      await writeSteps(
+        tmp,
+        `expect(await page.getByText('Create Room').count(), 1)\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /rooms_create_room/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a project with no inlang app is not scanned', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeSteps(tmp, `await page.getByLabel('Full Name').fill(name)\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('an app whose baseLocale is not English (live validate.function)', () => {
+  const writeInlangApp = async (
+    root: string,
+    settings: Record<string, unknown>,
+    catalogueLocale: string
+  ) => {
+    const app = join(root, 'apps', 'web')
+    await mkdir(join(app, 'project.inlang'), { recursive: true })
+    await mkdir(join(app, 'messages'), { recursive: true })
+    await writeJson(join(app, 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeJson(join(app, 'project.inlang', 'settings.json'), settings)
+    await writeJson(join(app, 'messages', `${catalogueLocale}.json`), {
+      jobs_apply_fullname: 'Full Name',
+    })
+  }
+
+  const baseLocaleFindings = (findings: Array<{ id: string }>) =>
+    findings.filter((f) => f.id.startsWith('app-base-locale-not-english-'))
+
+  test('baseLocale "de" → warn pointing at defaultLocale instead', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(tmp, { baseLocale: 'de', locales: ['de'] }, 'de')
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = baseLocaleFindings(result.findings)
+      assert.ok(finding, 'expected an app-base-locale-not-english finding')
+      assert.strictEqual(finding!.id, 'app-base-locale-not-english-web')
+      assert.strictEqual(finding!.severity, 'warn')
+      // The fix has to name the setting that actually serves a language, or
+      // the reader repoints baseLocale again and lands back here.
+      assert.match(finding!.fixHint, /"defaultLocale": "de"/)
+      assert.match(finding!.fixHint, /"baseLocale": "en"/)
+      // A project already keyed in German is a re-key, not a rename, and the
+      // hint has to say so before someone tries it as a one-line edit.
+      assert.match(finding!.fixHint, /re-key, not a rename/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('baseLocale "en" with a second locale → no finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(
+        tmp,
+        { baseLocale: 'en', locales: ['en', 'de'] },
+        'en'
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(baseLocaleFindings(result.findings), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an omitted baseLocale defaults to en and does not warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(tmp, { locales: ['en'] }, 'en')
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(baseLocaleFindings(result.findings), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+  describe('undeclared dependencies', () => {
+    const fnSrc = (root: string, name: string) =>
+      join(root, 'packages', 'functions', 'src', name)
+
+    /**
+     * The scan matched `from "…"` in raw file text, so a sentence that puts a
+     * quoted phrase after the word *from* became a phantom dependency —
+     * reported at error severity, against the app, with no line to find it by:
+     *
+     *   ✗ @project/app imports undeclared package(s): is fine — …
+     */
+    test('prose in a comment is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'prose.ts'),
+          [
+            '// what separates "needs you" from "is fine" at a glance across the',
+            '// list, and require("not a package") in prose is not one either.',
+            '/* a block comment importing "nothing at all" from "nowhere" */',
+            'export const prose = true',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const undeclared = result.findings.filter((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.deepStrictEqual(
+          undeclared.map((f) => f.message),
+          [],
+          'a comment was read as an import'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a string that merely follows the word from is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'runtime.ts'),
+          [
+            'export const pick = (from: string[]) => from[0]',
+            "export const label = `chosen from ${'somewhere'}`",
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings
+            .filter((f) => f.id.startsWith('undeclared-deps-'))
+            .map((f) => f.message),
+          []
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a real undeclared import is still an error, and names where it is', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'uses-lodash.ts'),
+          [
+            '// a comment mentioning "lodash" on its own does not count',
+            "import groupBy from 'lodash/groupBy'",
+            'export const use = groupBy',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.ok(finding, 'a genuine undeclared import went unreported')
+        assert.match(finding!.message, /lodash/)
+        assert.strictEqual(finding!.severity, 'error')
+        assert.match(finding!.fixHint, /uses-lodash\.ts:2/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+})
+
+describe('the generated coercion map', () => {
+  const coercionPath = (root: string) =>
+    join(root, 'packages', 'functions', '.pikku', 'db', 'coercion.gen.ts')
+
+  const writeCoercionMap = async (root: string, body: string) => {
+    await mkdir(dirname(coercionPath(root)), { recursive: true })
+    await writeFile(coercionPath(root), body, 'utf8')
+  }
+
+  const withCoercions = `export const coercionMap = {
+  "assessment": {
+    "created_at": "date",
+    "admin_rights": "bool"
+  }
+} as const
+`
+
+  test('is an error when nothing applies it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'coercion-map-not-wired'
+      )
+      assert.ok(finding, 'expected coercion-map-not-wired')
+      assert.strictEqual(finding.severity, 'error')
+      assert.match(finding.fixHint, /createCoercionPlugin/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent once a source file attaches the plugin', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `import { createCoercionPlugin } from '@pikku/kysely'\n` +
+          `import { coercionMap } from '#pikku/db/coercion.gen.js'\n` +
+          `export const kysely = (k: any) =>\n` +
+          `  k.withPlugin(createCoercionPlugin({ map: coercionMap }))\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding once the plugin is wired'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is an error when the only declared kind is bool', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n  "assessment": {\n    "admin_rights": "bool"\n  }\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected coercion-map-not-wired for a bool-only map'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when no column declared a kind', async () => {
+    // An empty map is not an unwired map — there is nothing to apply.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding for an empty map'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})

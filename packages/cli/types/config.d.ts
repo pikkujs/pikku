@@ -376,7 +376,7 @@ export type PikkuFrontendInput = {
    */
   dist?: string
   primary?: boolean
-  /** Whether Fabric deploys it. */
+  /** Whether Pikku Studio Cloud deploys it. */
   deploy?: boolean
   kind?: 'spa' | 'ssr' | 'static'
   dev?: { command: string[]; port: number; healthPath: string }
@@ -385,7 +385,7 @@ export type PikkuFrontendInput = {
   virtualUsers?: string[]
   /**
    * A value for each dynamic route segment (`$postId` → `postId`), so a tool
-   * that visits every route — Fabric's route coverage — can build a real URL.
+   * that visits every route — Pikku Studio Cloud's route coverage — can build a real URL.
    */
   routeParams?: Record<string, string>
   planSlug?: string
@@ -547,12 +547,12 @@ export type PikkuCLIInput = {
     ignore?: string[]
   }
 
-  /** Settings for deploying this project on Pikku Fabric. */
-  fabric?: {
+  /** Settings for deploying this project on Pikku Pikku Studio Cloud. */
+  cloud?: {
     /**
-     * The Fabric project this checkout belongs to. Optional: without it the
+     * The Pikku Studio Cloud project this checkout belongs to. Optional: without it the
      * CLI finds the project from the git remote and writes the id here,
-     * uncommitted. `FABRIC_PROJECT_ID` overrides it.
+     * uncommitted. `PIKKUSTUDIO_PROJECT_ID` overrides it.
      */
     projectId?: string
   }
@@ -884,7 +884,7 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * Community-registry addons installed via `pikku fabric addon add`. The
+   * Community-registry addons installed via `pikku cloud addon add`. The
    * source is copied into the project shadcn-style; each lands in
    * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
    * `wireAddon({ package })` resolves it by name. `addonDir` defaults to

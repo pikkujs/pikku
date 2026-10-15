@@ -8,7 +8,7 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "scripts": {
-    "//tsc": "No tsconfig of its own: the root tsconfig.json is the backend's, and it is found by directory lookup from here — which is also how `fabric verify` runs it. Without this script `bun run --filter '*' tsc` matches on script NAME and silently skips the whole backend.",
+    "//tsc": "No tsconfig of its own: the root tsconfig.json is the backend's, and it is found by directory lookup from here — which is also how `cloud verify` runs it. Without this script `bun run --filter '*' tsc` matches on script NAME and silently skips the whole backend.",
     "tsc": "tsc --noEmit",
     "db:types": "pikku db types"
   },

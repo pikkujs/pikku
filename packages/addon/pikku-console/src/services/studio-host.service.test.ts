@@ -155,7 +155,7 @@ describe('Studio AI choice', () => {
 })
 
 describe('resolveStudioHost', () => {
-  test('is local when nothing links the project to Fabric', async () => {
+  test('is local when nothing links the project to Pikku Studio Cloud', async () => {
     const key = process.env.OPENAI_API_KEY
     delete process.env.OPENAI_API_KEY
     const host = await resolveStudioHost(await root())

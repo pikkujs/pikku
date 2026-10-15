@@ -32,7 +32,7 @@ const full = () =>
   makeServices(
     {
       OAUTH_PROXY_SECRET: 'stage-key',
-      GOOGLE_OAUTH: { clientId: 'fabric-google-id', clientSecret: 'oauth-proxy' },
+      GOOGLE_OAUTH: { clientId: 'cloud-google-id', clientSecret: 'oauth-proxy' },
     },
     {
       OAUTH_PROXY_URL: PROXY,
@@ -64,7 +64,7 @@ describe('resolveOAuthProxyConfig', () => {
       secret: 'stage-key',
       keyId: KEY_ID,
       providers: {
-        google: { clientId: 'fabric-google-id', clientSecret: 'oauth-proxy' },
+        google: { clientId: 'cloud-google-id', clientSecret: 'oauth-proxy' },
       },
     })
   })
@@ -163,7 +163,7 @@ describe('applyOAuthProxy', () => {
     const url = new URL(result.url!)
 
     assert.equal(url.host, 'accounts.google.com')
-    assert.equal(url.searchParams.get('client_id'), 'fabric-google-id')
+    assert.equal(url.searchParams.get('client_id'), 'cloud-google-id')
     assert.equal(
       url.searchParams.get('redirect_uri'),
       `${PROXY}/api/auth/callback/google`
@@ -182,7 +182,7 @@ describe('applyOAuthProxy', () => {
     )
     const options = (auth as any).options
     assert.equal(options.socialProviders.github.clientId, 'own-github')
-    assert.equal(options.socialProviders.google.clientId, 'fabric-google-id')
+    assert.equal(options.socialProviders.google.clientId, 'cloud-google-id')
     assert.equal(options.emailAndPassword.enabled, true)
   })
 
@@ -190,7 +190,7 @@ describe('applyOAuthProxy', () => {
     const { services } = makeServices(
       {
         OAUTH_PROXY_SECRET: 'stage-key',
-        GOOGLE_OAUTH: { clientId: 'fabric-google-id', clientSecret: 'x' },
+        GOOGLE_OAUTH: { clientId: 'cloud-google-id', clientSecret: 'x' },
       },
       { OAUTH_PROXY_URL: PROXY, OAUTH_PROXY_PROVIDERS: 'google' }
     )

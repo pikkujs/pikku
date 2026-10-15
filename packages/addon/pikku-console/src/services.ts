@@ -49,12 +49,12 @@ export const createSingletonServices = pikkuAddonServices(
       )
     }
     const metaService = existingMetaService
-    const fabricApiUrl =
-      (await variables.get('FABRIC_API_URL')) ?? 'https://api.pikkufabric.com'
+    const cloudApiUrl =
+      (await variables.get('PIKKUSTUDIO_API_URL')) ?? 'https://api.pikkustudio.app'
 
     const wiringService = new WiringService(metaService)
     const secretAdminService = new SecretAdminService(secrets)
-    const addonService = new AddonService(fabricApiUrl)
+    const addonService = new AddonService(cloudApiUrl)
     await addonService.init()
     const addonReadinessService = new AddonReadinessService(secrets, variables)
 

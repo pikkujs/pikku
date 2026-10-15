@@ -7,11 +7,11 @@ import { fileURLToPath, URL } from 'node:url'
 import { crossSiteSession } from './dev/cross-site-session.plugin'
 import { testIds } from './build/testids.plugin'
 
-const base = process.env.FABRIC_FRONTEND_BASE || '/'
+const base = process.env.PIKKUSTUDIO_FRONTEND_BASE || '/'
 
 // Plain TanStack Start config (Node target) — used for local sandbox dev. This
 // template is deploy-provider agnostic: it ships NO @cloudflare/vite-plugin. At
-// deploy, fabric CI injects the CF adapter (vite.config.cf.ts merges cloudflare()
+// deploy, cloud CI injects the CF adapter (vite.config.cf.ts merges cloudflare()
 // on top of this config) to emit the CF Workers SSR bundle. Do not add cloudflare
 // here — that would double-apply it and couple the template to a provider.
 export default defineConfig({

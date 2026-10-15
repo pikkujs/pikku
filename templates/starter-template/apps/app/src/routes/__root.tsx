@@ -72,7 +72,7 @@ function RootDocument({ children }: { children: ReactNode }) {
     const onMessage = (event: MessageEvent) => {
       const data = event.data
       if (event.source !== window.parent) return
-      if (data?.source !== 'fabric-console' || data.type !== 'set-theme-css') return
+      if (data?.source !== 'cloud-console' || data.type !== 'set-theme-css') return
       let style = document.getElementById('theme-preview')
       if (!style) {
         style = document.createElement('style')

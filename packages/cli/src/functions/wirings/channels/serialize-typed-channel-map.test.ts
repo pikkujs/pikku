@@ -37,8 +37,8 @@ const channelsMeta = (routeKey: string, methods: string[]) => {
     functionsMeta,
     channelsMeta: {
       cli: {
-        name: 'fabric-cli',
-        route: '/cli/fabric',
+        name: 'cloud-cli',
+        route: '/cli/cloud',
         input: null,
         connect: null,
         disconnect: null,

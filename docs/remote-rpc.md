@@ -36,7 +36,7 @@ handler (`serialize-remote-rpc.ts`) is the **mesh** one, gated by
 **consumer** side of `wireRemoteAddon` — the typed dispatch, the `.remote.gen` map,
 and the dev-dependency/auth validation. Serving a public, client-authenticated
 remote surface on the host (a distinct route/auth that never hijacks the trusted
-mesh handler) is a separate follow-up landed alongside the fabric registry
+mesh handler) is a separate follow-up landed alongside the cloud registry
 integration — it is intentionally _not_ folded into the mesh handler here.
 
 ## The three call forms
@@ -90,9 +90,9 @@ host) and wire it:
 ```ts
 wireRemoteAddon({
   name: 'registry',
-  package: '@pikkufabric/addon-registry', // devDependency
-  serverUrl: (services) => services.variables.get('FABRIC_API_URL'),
-  auth: { credentialId: 'fabricRegistryToken' }, // see below; omit if public
+  package: '@pikkustudio/addon-registry', // devDependency
+  serverUrl: (services) => services.variables.get('PIKKUSTUDIO_API_URL'),
+  auth: { credentialId: 'cloudRegistryToken' }, // see below; omit if public
 })
 
 // fully typed against the addon's `.remote.gen` map:
