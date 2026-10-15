@@ -103,7 +103,7 @@ export const auth = pikkuBetterAuth(async ({ secrets }) => {
 
 By default the CLI wires the **stateful** `betterAuthSession` bridge globally — it calls `services.auth()`, so EVERY unit/worker bundles the full better-auth server (~2.5MB each). On per-unit deploy targets (Pikku Studio Cloud/Cloudflare) that bloats every bundle and the serial upload phase.
 
-Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a lean `betterAuthStatelessSession` (`src/scaffold/auth-middleware.gen.ts`) that verifies the signed session cookie using only `BETTER_AUTH_SECRET` — no `services.auth()`, no server bundled. Non-auth units drop from ~2.5MB to ~20KB. Only the auth unit carries the server. `pikku cloud validate` warns (`better-auth-stateless-session-disabled`) when it's off.
+Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a lean `betterAuthStatelessSession` (`src/scaffold/auth-middleware.gen.ts`) that verifies the signed session cookie using only `BETTER_AUTH_SECRET` — no `services.auth()`, no server bundled. Non-auth units drop from ~2.5MB to ~20KB. Only the auth unit carries the server. `pikku validate` warns (`better-auth-stateless-session-disabled`) when it's off.
 
 **Tradeoff:** server-side session revocation isn't seen until the cookie cache expires (sign-out is still immediate — it deletes the cookie).
 
