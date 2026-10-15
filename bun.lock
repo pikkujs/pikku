@@ -2319,9 +2319,11 @@
     "verifiers/virtual-users": {
       "name": "@pikku/verifiers-virtual-users",
       "dependencies": {
+        "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
         "@pikku/kysely": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
+        "better-auth": "^1.7.5",
         "better-sqlite3": "^13.0.3",
         "kysely": "^0.29.5",
       },

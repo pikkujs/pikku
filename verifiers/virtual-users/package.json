@@ -7,9 +7,11 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
+    "better-auth": "^1.7.5",
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.5"
   },
@@ -23,6 +25,6 @@
   "scripts": {
     "build": "tsc -b",
     "pikku": "pikku",
-    "test": "pikku && tsc -b && npx tsx --test src/tests/schedule.assert.ts"
+    "test": "pikku && tsc -b && npx tsx --test src/tests/schedule.assert.ts src/tests/run.assert.ts"
   }
 }
