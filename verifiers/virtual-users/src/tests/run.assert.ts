@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
-import { createServer, type Server } from 'node:http'
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, test } from 'node:test'
 
@@ -24,7 +29,7 @@ const startApp = async (gateOpen: boolean) => {
   else delete process.env[GATE]
   const hits: { email: string }[] = []
   let auth: any
-  const server: Server = createServer(async (req, res) => {
+  const handle = async (req: IncomingMessage, res: ServerResponse) => {
     const body = await new Promise<Buffer>((resolve) => {
       const chunks: Buffer[] = []
       req.on('data', (c) => chunks.push(c))
@@ -66,6 +71,9 @@ const startApp = async (gateOpen: boolean) => {
     const cookies = response.headers.getSetCookie()
     if (cookies.length) res.setHeader('set-cookie', cookies)
     res.end(Buffer.from(await response.arrayBuffer()))
+  }
+  const server: Server = createServer((req, res) => {
+    void handle(req, res)
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const apiUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`

@@ -134,7 +134,6 @@ describe('resolveScenarioBrowserProvider', () => {
     environment: 'local',
     apiUrl: 'http://localhost:4077',
     appUrl: 'http://localhost:4077/console',
-    secret: 'top-secret',
     virtualUsers: { admin: { email: 'admin@test' } },
     capture: {
       dir: '/project/.pikku/scenario-runs',
@@ -364,7 +363,6 @@ describe('resolveScenarioBrowserProvider', () => {
       runId: 'run-1',
       video: 'failed',
     })
-    assert.equal(built[0].secret, 'top-secret')
     assert.deepEqual(built[0].virtualUsers, { admin: { email: 'admin@test' } })
     assert.equal(built[0].config.appUrl, 'http://localhost:4077/console')
   })
