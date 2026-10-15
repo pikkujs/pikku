@@ -165,6 +165,22 @@ describe('serializeReactQueryHooks', () => {
       assert.doesNotMatch(segment, /const \w+ = \(?import\.meta/)
     })
 
+    test('finds the default among several mocks whether metas are modules or plain objects', async () => {
+      const plain = {
+        '/.mocks/reminders.list/healthy.meta.json': { default: true },
+        '/.mocks/reminders.list/empty.meta.json': { default: false },
+      }
+      const plainFiles = {
+        '/.mocks/reminders.list/healthy.json': async () => [{ id: 1 }],
+        '/.mocks/reminders.list/empty.json': async () => [],
+      }
+      for (const [f, m] of [[files, meta], [plainFiles, plain]] as const) {
+        const { api } = load({ DEV: true })
+        api.registerMocks(f, m)
+        assert.deepStrictEqual(await api.defaultMock('reminders:list'), [{ id: 1 }])
+      }
+    })
+
     test('a stub with no default mock fails loudly', async () => {
       const { api } = load({ DEV: true })
       api.registerMocks(files, meta)

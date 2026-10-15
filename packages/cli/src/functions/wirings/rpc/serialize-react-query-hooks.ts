@@ -141,10 +141,15 @@ export const registerMocks = (
 
 const unwrapDefault = (value: unknown) => (value as { default?: unknown })?.default ?? value
 
+const metaOf = (value: unknown) => {
+  const inner = (value as { default?: unknown })?.default
+  return (inner !== null && typeof inner === 'object' ? inner : value) as { default?: boolean } | undefined
+}
+
 const mockFileFor = (name: string) => {
   const dir = '/.mocks/' + name.replace(/:/g, '.') + '/'
   const metas = Object.keys(mockMeta).filter((key) => key.includes(dir))
-  const chosen = metas.find((key) => (unwrapDefault(mockMeta[key]) as { default?: boolean })?.default) ?? (metas.length === 1 ? metas[0] : undefined)
+  const chosen = metas.find((key) => metaOf(mockMeta[key])?.default === true) ?? (metas.length === 1 ? metas[0] : undefined)
   return chosen && Object.keys(mockFiles).find((key) => key === chosen.replace(/\\.meta\\.json$/, '.json'))
 }
 
