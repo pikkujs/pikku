@@ -54,7 +54,7 @@ virtual user's instructions. Anything that must shape how someone talks belongs 
 A project that never declares a virtual user keeps working: a scenario that names no virtual user needs none.
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/virtual-user`, `rpcPath` to `/rpc`.
-- **`SCENARIO_VIRTUAL_USER_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs virtual users in. `pikku scenario run` throws without it; a server auto-building virtual users warns and runs without them.
+- **The signing key never goes in `pikku.config.json`.** `pikku dev` creates one under `.pikku-runtime/virtual-user/`; a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. `pikku scenario run` throws without a key.
 
 ## Virtual users that call a third-party API
 

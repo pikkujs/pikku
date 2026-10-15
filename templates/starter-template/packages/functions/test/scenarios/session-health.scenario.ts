@@ -6,8 +6,8 @@ import { pikkuScenario } from '#pikku/scenarios'
  * the REAL transport with the virtual user's session cookie, so a passing scenario
  * proves the deployed API works exactly as a signed-in user would experience it.
  *
- * Run it with `pikku scenario run local` (needs SCENARIO_VIRTUAL_USER_SECRET in the
- * environment — the virtual user plugin in src/auth.ts refuses sign-ins without it).
+ * Run it with `pikku scenario run local` (needs the key `pikku dev` creates —
+ * the virtual user plugin in src/auth.ts refuses sign-ins without a signed statement).
  * It signs ANY defined virtual user in and reads their own session: virtual user sign-in,
  * session cookie, authed RPC, and session mapping in one pass — a ready-made
  * health check for staging or production.

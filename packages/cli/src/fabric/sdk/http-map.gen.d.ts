@@ -2015,7 +2015,6 @@ export type ExecuteVirtualUserRunInput = {
         durationMs?: number | undefined;
     } | undefined;
     seed: number;
-    operatorToken?: string | undefined;
 }
 export type ExecuteVirtualUserRunOutput = {
     findings: number;
@@ -7642,7 +7641,6 @@ export type RunVirtualUserInput = {
         durationMs?: number | undefined;
     } | undefined;
     seed?: number | undefined;
-    operatorToken?: string | undefined;
 }
 export type RunVirtualUserOutput = {
     runId: string;

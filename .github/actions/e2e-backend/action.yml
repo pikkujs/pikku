@@ -12,7 +12,6 @@ runs:
       shell: bash
       working-directory: e2e
       env:
-        SCENARIO_VIRTUAL_USER_SECRET: e2e-virtual-user-secret-long-enough-to-derive-from
         PIKKU_MOCK_LLM: '1'
         FABRIC_API_URL: http://localhost:4096
         API_URL: http://localhost:4077

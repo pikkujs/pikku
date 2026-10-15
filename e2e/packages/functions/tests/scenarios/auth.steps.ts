@@ -2,8 +2,8 @@
  * Sign-in against Better Auth's own email endpoint.
  *
  * A virtual user cannot answer "can this person still sign in?": it authenticates
- * through the virtual user plugin with `SCENARIO_VIRTUAL_USER_SECRET`, which a step has no
- * sanctioned way to read, and its session is established once and reused. The
+ * through the virtual user plugin with a signed statement, which a step has no
+ * sanctioned way to produce, and its session is established once and reused. The
  * user-management suite needs the opposite — a fresh credential check whose
  * refusal is the assertion — so these steps drive the real endpoint with an
  * email and password and report what it answered.

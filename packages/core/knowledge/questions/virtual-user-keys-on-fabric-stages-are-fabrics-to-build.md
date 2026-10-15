@@ -20,7 +20,7 @@ following is built or confirmed. Fabric must:
    statements with the stage's private key for callers acting on a stage, or hand the
    key to the CLI as `VIRTUAL_USER_SIGNING_KEY` through the channel it already uses
    for stage credentials.
-5. Stop sending `operatorToken` in `runVirtualUser` requests; the field no longer
+5. Stop sending the operator token field in `runVirtualUser` requests; the field no longer
    exists.
 6. For the stage switcher, sign a statement for the chosen virtual user and pass it to
    `/sign-in/switch-virtual-user` as `statement`.

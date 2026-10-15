@@ -4,7 +4,7 @@ import { defineVariable } from '#pikku/variables/pikku-variable-types.gen.js'
 // @snippet start variables
 export const DatabaseUrlSchema = z.string()
 export const LowStockThresholdSchema = z.number().int().positive()
-export const ScenarioVirtualUserSecretSchema = z.string()
+export const VirtualUserVerifyKeySchema = z.string()
 export const BetterAuthUrlSchema = z.string().url()
 
 defineVariable({
@@ -24,12 +24,13 @@ defineVariable({
 })
 
 defineVariable({
-  name: 'scenarioVirtualUserSecret',
-  displayName: 'Scenario Virtual user Secret',
+  name: 'virtualUserVerifyKey',
+  displayName: 'Virtual User Verify Key',
   description:
-    'Impersonation secret for `pikku scenario run` virtual users. Leave unset to disable virtual user sign-in',
-  variableId: 'SCENARIO_VIRTUAL_USER_SECRET',
-  schema: ScenarioVirtualUserSecretSchema,
+    'Public key that checks the signed statements `pikku scenario run` presents. Leave unset to refuse virtual user sign-in from outside the app',
+  variableId: 'VIRTUAL_USER_VERIFY_KEY',
+  schema: VirtualUserVerifyKeySchema,
+  optional: true,
 })
 
 defineVariable({

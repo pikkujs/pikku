@@ -2373,7 +2373,6 @@ export type ExecuteVirtualUserRunInput = {
       }
     | undefined
   seed: number
-  operatorToken?: string | undefined
 }
 export type ExecuteVirtualUserRunOutput = {
   findings: number
@@ -9036,7 +9035,6 @@ export type RunVirtualUserInput = {
       }
     | undefined
   seed?: number | undefined
-  operatorToken?: string | undefined
 }
 export type RunVirtualUserOutput = {
   runId: string

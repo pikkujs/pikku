@@ -12,7 +12,9 @@ import type {
   VirtualUserStatementVerifier,
 } from '@pikku/core/services'
 
+import { JoseVirtualUserStatementVerifier } from '@pikku/jose'
 import {
+  VIRTUAL_USER_NO_VERIFY_KEY_MESSAGE,
   VIRTUAL_USER_NOT_PROVISIONED_MESSAGE,
   VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE,
   virtualUserSignInEnabledMessage,
@@ -42,12 +44,13 @@ export interface VirtualUserPluginOptions {
    */
   allowSignIn?: string
   /**
-   * Checks the signed statement an external caller presents. Build it from the
-   * stage's public key: `new JoseVirtualUserStatementVerifier(await
-   * variables.get(VIRTUAL_USER_VERIFY_KEY_VARIABLE))` from `@pikku/jose`.
-   * Without it there is no statement endpoint, and the switcher is open under
-   * `pikku dev` only.
+   * The stage's virtual user public key, as the variable
+   * `VIRTUAL_USER_VERIFY_KEY` holds it. Statements from outside the app are
+   * checked against it. Without a key (or a `statementVerifier`) there is no
+   * statement endpoint, and the switcher is open under `pikku dev` only.
    */
+  verifyKey?: string
+  /** A verifier of your own, for a key held somewhere other than a variable. */
   statementVerifier?: VirtualUserStatementVerifier
   /**
    * The audience a statement must name. Defaults to the origin of the auth
@@ -160,12 +163,20 @@ export const pikkuVirtualUser = (
 ): BetterAuthPlugin => {
   const logger = options.logger ?? console
   const gate = resolveVirtualUserSignIn(options.allowSignIn)
+  const statementVerifier =
+    options.statementVerifier ??
+    (options.verifyKey
+      ? new JoseVirtualUserStatementVerifier(options.verifyKey)
+      : undefined)
 
   if (gate.nearMissOptIn) {
     logger.warn(virtualUserSignInNearMissMessage())
   }
   if (gate.enabled) {
     logger.info(virtualUserSignInEnabledMessage(gate.reason))
+    if (options.virtualUserSignIn && !statementVerifier) {
+      logger.warn(VIRTUAL_USER_NO_VERIFY_KEY_MESSAGE)
+    }
   }
 
   const virtualUserAllowed = async () =>
@@ -239,16 +250,16 @@ export const pikkuVirtualUser = (
   }
 
   const verifyStatement = async (ctx: any, statement: string) => {
-    if (!options.statementVerifier) {
+    if (!statementVerifier) {
       throw new APIError('UNAUTHORIZED', {
         message:
-          'This app has no verify key for virtual user statements — set VIRTUAL_USER_VERIFY_KEY and pass a statementVerifier to pikkuVirtualUser',
+          'This app has no verify key for virtual user statements — set the VIRTUAL_USER_VERIFY_KEY variable and pass it to pikkuVirtualUser as verifyKey',
       })
     }
     const audience =
       options.audience ?? new URL(ctx.context.baseURL as string).origin
     try {
-      return await options.statementVerifier.verify(statement, audience)
+      return await statementVerifier.verify(statement, audience)
     } catch (error) {
       if (error instanceof VirtualUserStatementError) {
         throw new APIError('UNAUTHORIZED', { message: error.message })
@@ -275,7 +286,7 @@ export const pikkuVirtualUser = (
       async (ctx) => signIn(ctx, ctx.body.email.toLowerCase(), ctx.body.name)
     )
 
-    if (options.statementVerifier && options.virtualUserSignIn) {
+    if (statementVerifier && options.virtualUserSignIn) {
       endpoints.signInWithStatement = createAuthEndpoint(
         '/sign-in/virtual-user',
         { method: 'POST', body: z.object({ statement: z.string() }) },

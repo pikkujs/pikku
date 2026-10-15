@@ -79,9 +79,11 @@ const keyPair = async () => {
   const { publicKey, privateKey } = await generateKeyPair('EdDSA', {
     extractable: true,
   })
+  const publicPem = await exportSPKI(publicKey)
   return {
     privateKey,
-    verifier: new JoseVirtualUserStatementVerifier(await exportSPKI(publicKey)),
+    publicKey: publicPem,
+    verifier: new JoseVirtualUserStatementVerifier(publicPem),
   }
 }
 
@@ -347,6 +349,53 @@ describe('signed statement sign-in (external callers)', () => {
       statement: await statementFor(privateKey, 'customer'),
     })
     assert.equal(ok.status, 200)
+  })
+})
+
+describe('a stage without a verify key', () => {
+  beforeEach(() => {
+    process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  test('says which variable to set and registers no statement endpoint', async () => {
+    const logger = recordingLogger()
+    const options = {
+      logger,
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
+    }
+    assert.ok(
+      !Object.keys(pikkuVirtualUser(options).endpoints ?? {}).includes(
+        'signInWithStatement'
+      )
+    )
+    assert.ok(
+      logger.lines.warn.some((line) => /VIRTUAL_USER_VERIFY_KEY/.test(line))
+    )
+  })
+
+  test('builds the verifier from a verifyKey, so an app needs no @pikku/jose of its own', async () => {
+    const { privateKey, publicKey } = await keyPair()
+    const db = emptyDb()
+    const auth = makeAuth(db, {
+      verifyKey: publicKey,
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
+    })
+    const res = await post(auth, '/sign-in/virtual-user', {
+      statement: await statementFor(privateKey, 'customer'),
+    })
+    assert.equal(res.status, 200)
+  })
+
+  test('stays quiet when the key is there', async () => {
+    const logger = recordingLogger()
+    const { verifier } = await keyPair()
+    pikkuVirtualUser({
+      logger,
+      statementVerifier: verifier,
+      virtualUserSignIn: { virtualUsers, allowed: () => true },
+    })
+    assert.deepEqual(logger.lines.warn, [])
   })
 })
 

@@ -290,7 +290,7 @@ collision in step bookkeeping.
 - `e2e/package.json` declares `"start": "tsx bin/start.ts"` and `"main":
 "bin/start.ts"`, but `bin/` contains only `backend-harness.ts`. The working
   path is `pikku serve`.
-- Without `SCENARIO_VIRTUAL_USER_SECRET`, `seedScenarioVirtualUsers` logs a skip and returns,
+- When virtual user sign-in is not open, `seedScenarioVirtualUsers` logs a skip and returns,
   then `seedScopes` throws `no user for admin@virtualuser.local` from `afterStart`
   and **takes the whole server down**. A graceful skip followed by a fatal
   dependency on what was skipped is worth reconciling.

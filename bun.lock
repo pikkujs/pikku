@@ -1029,6 +1029,9 @@
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
       "version": "0.12.55",
+      "dependencies": {
+        "@pikku/jose": "^0.12.8",
+      },
       "devDependencies": {
         "@better-auth/api-key": "^1.7.5",
         "@better-auth/core": "^1.7.5",

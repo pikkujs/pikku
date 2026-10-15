@@ -1,5 +1,5 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
-import { deriveVirtualUserSecret } from '@pikku/core/services'
+import { VIRTUAL_USER_IN_PROCESS_ENDPOINT } from '@pikku/core/services'
 import {
   ADMIN_USER,
   GUEST_USER,
@@ -34,34 +34,27 @@ export const seedAuthUsers = async (
 }
 
 /**
- * Signs every declared scenario virtual user in once, through the virtual user plugin's own
- * endpoint, so its `virtualUser: true` user row exists before seedScopes runs. Virtual user
+ * Signs every declared scenario virtual user in once, in-process through the auth
+ * service, so its `virtualUser: true` user row exists before seedScopes runs. Virtual user
  * rows are otherwise created lazily on first sign-in, which is too late for a
  * scope grant keyed by email.
  */
 export const seedScenarioVirtualUsers = async (
-  services: CoreSingletonServices,
-  baseUrl: string
+  services: CoreSingletonServices
 ) => {
-  const secret = await services.variables.get('SCENARIO_VIRTUAL_USER_SECRET')
-  if (!secret) {
+  const signIn = (await services.auth?.())?.api[
+    VIRTUAL_USER_IN_PROCESS_ENDPOINT
+  ]
+  if (typeof signIn !== 'function') {
     services.logger.info(
-      'SCENARIO_VIRTUAL_USER_SECRET is unset — skipping scenario virtual user seeding'
+      'virtual user sign-in is not open — skipping scenario virtual user seeding'
     )
     return
   }
   for (const [name, virtualUser] of Object.entries(virtualUserConfigs)) {
-    const res = await fetch(`${baseUrl}/api/auth/sign-in/virtual-user`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: baseUrl },
-      body: JSON.stringify({
-        email: virtualUser.email,
-        name: virtualUser.name,
-        secret: await deriveVirtualUserSecret(
-          String(secret),
-          virtualUser.email
-        ),
-      }),
+    const res: Response = await signIn({
+      body: { email: virtualUser.email, name: virtualUser.name },
+      asResponse: true,
     })
     if (!res.ok) {
       throw new Error(

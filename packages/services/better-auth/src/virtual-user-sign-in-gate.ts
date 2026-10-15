@@ -90,3 +90,7 @@ export const virtualUserSignInEnabledMessage = (
  */
 export const virtualUserSignInNearMissMessage = (): string =>
   `virtualUser: ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} is set to an unsupported value, which is ignored — the only value that enables virtual user sign-in outside \`pikku dev\` is '${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}'.`
+
+export const VIRTUAL_USER_NO_VERIFY_KEY_MESSAGE =
+  'Virtual user sign-in is on but this app has no VIRTUAL_USER_VERIFY_KEY, so the CLI, scenarios and the dev switcher cannot sign in from outside. ' +
+  "Set the variable to this stage's virtual user public key (pikku dev sets it for you); runs inside the app are not affected."

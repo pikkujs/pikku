@@ -176,12 +176,11 @@ than they save:
   keystroke now and a rewrite later.
 - Never hardcode a host or port — the API base resolves to same-origin `/api`.
 
-Before the first run, make sure `.env` holds both local secrets — `bun run dev`
-appends missing ones, but an older scaffold or a copied `.env` may not have them:
+Before the first run, make sure `.env` holds the local secret — `bun run dev`
+appends it if missing, but an older scaffold or a copied `.env` may not have it:
 
 ```sh
 grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-grep -q '^SCENARIO_VIRTUAL_USER_SECRET=' .env 2>/dev/null || echo "SCENARIO_VIRTUAL_USER_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 Never commit `.env`. Then run it — through `bun run dev`, never `vite` on its
@@ -250,9 +249,9 @@ export const ownerCreatesAndSeesItScenario = pikkuScenario<
   `pikkuScenarioStep`.** An RPC name in a `then` will not resolve.
 - **Every scenario must assert.** A ladder with no `then` is a PKU680 critical —
   it fails `pikku all`, stopping codegen rather than a test.
-- **`SCENARIO_VIRTUAL_USER_SECRET` must be in `.env`** (above). Without it
-  `/api/auth/sign-in/virtual-user` is disabled and every scenario fails at sign-in, for
-  a reason that reads like an auth bug.
+- **Run scenarios against a `pikku dev` server.** `pikku dev` creates the virtual
+  user signing key; without a running or previously started dev server every
+  scenario fails at sign-in, for a reason that reads like an auth bug.
 - **There is no state reset** — scope what you create to unique ids.
 
 Keep the three shipped scenarios in `packages/functions/test/scenarios/` green.

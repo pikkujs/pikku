@@ -725,7 +725,7 @@ export type PikkuCLIInput = {
    * suite is one thing that runs against an environment, and a virtual user is
    * another, so an environment belongs to neither of them.
    *
-   * The virtual user secret comes from SCENARIO_VIRTUAL_USER_SECRET, never from here.
+   * The virtual user signing key comes from VIRTUAL_USER_SIGNING_KEY or `pikku dev`, never from here.
    */
   environments?: Record<
     string,

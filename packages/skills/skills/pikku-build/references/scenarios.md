@@ -71,10 +71,10 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 (server-side by default, plus a `browser` one that drives the page). Reaching for an RPC name in a
 `then` will not resolve.
 
-**`SCENARIO_VIRTUAL_USER_SECRET` must be in `.env`** (the app workflow's §6, before the first run). Without it
-`/api/auth/sign-in/virtual-user` is disabled — every scenario then fails at sign-in, before its first step,
-for a reason that reads like an auth bug. `pikku scenario run` reads it from the environment, so
-source `.env` first (`set -a && . ./.env && set +a`) when you run outside `bun run dev`.
+**Scenarios sign in with the key `pikku dev` created.** Start `pikku dev` once in the project (it writes
+`.pikku-runtime/virtual-user/signing.key`); without that key every scenario fails at sign-in, before its
+first step, for a reason that reads like an auth bug. Against a deployed stage export
+`VIRTUAL_USER_SIGNING_KEY`, which that stage's deployer holds.
 
 ---
 

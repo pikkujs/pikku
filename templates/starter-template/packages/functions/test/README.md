@@ -21,10 +21,10 @@ the moment it exists — nothing lists them.
 Run them:
 
 ```sh
-SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local
-SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --features pagesFeature
-SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --tags smoke
-SCENARIO_VIRTUAL_USER_SECRET=... bunx pikku scenario run local --no-browser   # API scenarios only
+bunx pikku scenario run local
+bunx pikku scenario run local --features pagesFeature
+bunx pikku scenario run local --tags smoke
+bunx pikku scenario run local --no-browser   # API scenarios only
 ```
 
 `--features` takes the **export name** (`pagesFeature`), not the display name.
@@ -62,10 +62,11 @@ The runner opens one BrowserContext per virtual user and signs each in at
   (`browser.context.clearCookies()`), because signing up while another user's
   cookie is attached is refused outright.
 - One virtual user exists per virtual user declared with `defineVirtualUsers` (see
-  `src/virtual-users.ts`); pikku derives each address from the virtual user id. The secret
-  is **never** in that file: it is `SCENARIO_VIRTUAL_USER_SECRET` in the environment,
-  and its absence disables `/api/auth/sign-in/virtual-user` entirely. That absence is
-  what keeps the door shut in production.
+  `src/virtual-users.ts`); pikku derives each address from the virtual user id. No key
+  is in that file: `pikku dev` creates a signing key, and the app's
+  `VIRTUAL_USER_VERIFY_KEY` is the public half. With no verify key
+  `/api/auth/sign-in/virtual-user` refuses everything, and in production it is
+  not registered at all.
 
 ## Writing a scenario
 

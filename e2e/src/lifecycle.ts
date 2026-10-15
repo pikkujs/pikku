@@ -17,7 +17,7 @@ export const lifecycle = pikkuServerLifecycle<SingletonServices>({
     await startMockRegistryServer()
     const apiBase = process.env.API_URL ?? `http://localhost:3000`
     await seedAuthUsers(services, apiBase)
-    await seedScenarioVirtualUsers(services, apiBase)
+    await seedScenarioVirtualUsers(services)
     await seedScopes(services)
   },
   afterStop: async () => {

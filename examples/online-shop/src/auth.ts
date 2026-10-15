@@ -37,13 +37,12 @@ export const auth = pikkuBetterAuth(
     const BETTER_AUTH_SECRET = (
       await secrets.getSecret('BETTER_AUTH_SECRET')
     ).reveal()
-    // Genuinely optional: unset simply disables /api/auth/sign-in/virtual-user (scenarios
-    // off for this deployment) — the virtual user plugin refuses all sign-ins
-    // without it.
-    const SCENARIO_VIRTUAL_USER_SECRET = await secrets
-      .getSecret('SCENARIO_VIRTUAL_USER_SECRET')
-      .then((value) => value?.reveal())
-      .catch(() => undefined)
+    // The public half of this stage's virtual user key pair, from the deployer; `pikku dev`
+    // sets it for you. Without it the app registers no endpoint for callers outside it
+    // (and says so at boot). Runs inside the app do not need it.
+    const VIRTUAL_USER_VERIFY_KEY = await variables.get(
+      'VIRTUAL_USER_VERIFY_KEY'
+    )
     // The opt-in that lets a deployed stage run scenarios. Read through
     // `variables` rather than left to `process.env`, because a Worker receives
     // it as a binding and has no populated environment to find it in.
@@ -87,7 +86,7 @@ export const auth = pikkuBetterAuth(
       // sessions, set password — is scoped RPCs in @pikku/addon-admin.
       plugins: [
         pikkuVirtualUser({
-          secret: SCENARIO_VIRTUAL_USER_SECRET,
+          verifyKey: VIRTUAL_USER_VERIFY_KEY,
           allowSignIn: ALLOW_VIRTUAL_USER_SIGN_IN,
         }),
         pikkuBan(),
