@@ -1,8 +1,5 @@
-import { added, changed, dim, removed } from '../../cloud/lib/output.js'
-import type {
-  ReleaseInitResult,
-  ReleasePrepareResult,
-} from './release.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
+import type { ReleaseInitResult, ReleasePrepareResult } from './release.js'
 
 export const renderReleaseInit = (
   _services: unknown,

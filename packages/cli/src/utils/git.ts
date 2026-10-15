@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
-import { CloudPreconditionError } from '../cloud/lib/errors.js'
+import { CloudPreconditionError } from './precondition-error.js'
 
 /**
  * Local git probes for the deploy safety checks (clean tree, HEAD == remote,

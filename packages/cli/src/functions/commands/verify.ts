@@ -2,7 +2,7 @@ import { runVerify, type VerifyResult } from '@pikku/code-edit/verify'
 import { verifyOptions, type PikkuVerifyInput } from './verify-options.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import type { CLILogger } from '../../services/cli-logger.service.js'
-import { added, changed, dim, removed } from '../../cloud/lib/output.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
 
 export const pikkuVerify = pikkuSessionlessFunc<PikkuVerifyInput, VerifyResult>(
   {

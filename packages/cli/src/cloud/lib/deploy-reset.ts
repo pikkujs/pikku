@@ -1,4 +1,4 @@
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * `pikku cloud deploy apply --reset` — wipe the target stage's database and

@@ -8,7 +8,7 @@ import {
 } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { deriveConsoleUrl } from '../lib/console-url.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudLoginInput = z.object({
   apiKey: z.string().optional(),

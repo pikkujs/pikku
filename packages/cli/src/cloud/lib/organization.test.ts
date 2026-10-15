@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { resolveOrganizationId } from './organization.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import type { getCloudRPC } from './http.js'
 
 type Org = {

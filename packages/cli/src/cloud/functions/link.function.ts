@@ -18,7 +18,7 @@ import {
   writeConfigProjectId,
 } from '../lib/project-id.js'
 import { assertDeploySafety } from '../lib/deploy-safety.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { resolveOrganizationId } from '../lib/organization.js'
 import { promptConfirm } from '../lib/prompt.js'
 

@@ -3,7 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { resolveStage } from '../lib/stage.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudSecretsRotateInput = z.object({
   branch: z.string().optional(),

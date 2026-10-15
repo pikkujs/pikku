@@ -9,7 +9,7 @@ import {
   assertDeploySafety,
   assertNamedBranchDeploySafety,
 } from './deploy-safety.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 const run = (cwd: string, ...args: string[]) =>
   execFileSync(

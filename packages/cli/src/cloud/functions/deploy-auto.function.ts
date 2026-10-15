@@ -3,8 +3,8 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { resolveStage } from '../lib/stage.js'
-import { added, dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { added, dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudDeployAutoInput = z.object({
   state: z.enum(['on', 'off']).optional(),

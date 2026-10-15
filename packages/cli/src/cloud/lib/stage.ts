@@ -1,5 +1,5 @@
 import type { ChangesRPC } from './changes-local.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export interface ResolvedStage {
   stageId: string

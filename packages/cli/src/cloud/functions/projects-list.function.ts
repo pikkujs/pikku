@@ -4,8 +4,8 @@ import { resolveApiContext } from '../lib/config.js'
 import { matchRemoteProjects } from '../lib/project-link.js'
 import { readConfigProjectId } from '../lib/project-id.js'
 import { getCloudRPC } from '../lib/http.js'
-import { dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudProjectsListInput = z.object({
   apiUrl: z.string().optional(),

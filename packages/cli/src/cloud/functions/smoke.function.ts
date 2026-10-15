@@ -20,8 +20,8 @@ import {
   readJsonSafe,
 } from '../../functions/validate/validate.js'
 import { headSha, isWorkingTreeClean } from '../../utils/git.js'
-import { added, changed, dim, removed } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 const DEFAULT_BUN_VERSION = 'bun@1.4.0'
 const DEFAULT_STEP_TIMEOUT_SECONDS = 300

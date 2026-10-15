@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changeRef, changesContext } from '../lib/changes.js'
 import { currentBranch, git, headSha, isGitRepo } from '../../utils/git.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { planRefusal } from '../lib/plan-gate.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
-import { dim, safe } from '../lib/output.js'
+import { dim, safe } from '../../utils/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const CloudChangesDoneInput = z.object({

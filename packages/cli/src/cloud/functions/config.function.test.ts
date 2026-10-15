@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { mock } from 'bun:test'
 import * as configLib from '../lib/config.js'
 import * as httpLib from '../lib/http.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * The command against a faked cloud: with no arguments it reads the project's

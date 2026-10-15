@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
-import { CloudPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
 import { mergeChangeset } from '../lib/changeset-merge.js'
 
 export const CloudChangesMergeInput = z.object({

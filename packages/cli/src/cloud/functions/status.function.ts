@@ -3,8 +3,8 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { autoDeployOffHints } from '../lib/stage.js'
-import { keyValue, statusColor, dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { keyValue, statusColor, dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudStatusInput = z.object({})
 

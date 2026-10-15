@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import {
   changeRef,
   changesContext,
   imageContentType,
   type ImageContentType,
 } from '../lib/changes.js'
-import { dim, safe } from '../lib/output.js'
+import { dim, safe } from '../../utils/output.js'
 import type { AttachChangeShotOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const CloudChangesShotInput = z.object({

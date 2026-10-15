@@ -4,7 +4,7 @@ import { mock } from 'bun:test'
 import * as configLib from '../lib/config.js'
 import * as httpLib from '../lib/http.js'
 import * as stageLib from '../lib/stage.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * The command against a faked cloud: showing the flag may be a plain read of

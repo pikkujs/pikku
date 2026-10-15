@@ -1,4 +1,4 @@
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 export interface JudgedChange {
   title: string
   body: string | null
