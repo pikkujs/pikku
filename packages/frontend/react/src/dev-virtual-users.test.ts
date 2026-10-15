@@ -4,10 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import {
-  listDevVirtualUsers,
-  signInAsVirtualUser,
-} from './dev-virtual-users.ts'
+import { signInAsVirtualUser } from './dev-virtual-users.ts'
 
 test('signInAsVirtualUser posts only the virtual user id to the virtual user endpoint', async () => {
   let seen: { url: string; init: RequestInit } | null = null
@@ -50,34 +47,4 @@ test('signInAsVirtualUser throws on a refused sign-in', async () => {
   } finally {
     globalThis.fetch = original
   }
-})
-
-test('listDevVirtualUsers asks the virtual user list for the app, and treats a refusal as nobody', async () => {
-  const urls: string[] = []
-  const original = globalThis.fetch
-  let ok = true
-  globalThis.fetch = (async (url: string) => {
-    urls.push(url)
-    return {
-      ok,
-      status: ok ? 200 : 404,
-      json: async () => ({
-        virtualUsers: [{ id: 'admin', name: 'Admin', jobTitle: null }],
-      }),
-    } as Response
-  }) as unknown as typeof fetch
-  try {
-    assert.deepEqual(
-      await listDevVirtualUsers({ apiUrl: '/api', app: 'web' }),
-      [{ id: 'admin', name: 'Admin', jobTitle: null }]
-    )
-    ok = false
-    assert.deepEqual(await listDevVirtualUsers({ apiUrl: '/api' }), [])
-  } finally {
-    globalThis.fetch = original
-  }
-  assert.deepEqual(urls, [
-    '/api/auth/sign-in/virtual-users?app=web',
-    '/api/auth/sign-in/virtual-users',
-  ])
 })

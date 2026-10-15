@@ -253,9 +253,8 @@ await signInAsVirtualUser({ apiUrl: apiUrl(), id: virtualUser.id })
 ```
 
 - **No credential reaches the bundle.** It posts only the virtual user id to
-  `/auth/sign-in/switch-virtual-user`; `listDevVirtualUsers({ apiUrl, app })` reads
-  `/auth/sign-in/virtual-users`. The server decides who is offered and who may
-  sign in, and offers nobody in production — see **pikku-scenario** for
+  `/auth/sign-in/switch-virtual-user`. The server decides who may sign in, and
+  signs in nobody in production — see **pikku-scenario** for
   `virtualUserSignIn`.
 - The endpoint only signs in rows flagged `virtualUser: true`, so it can never
   impersonate a real user — see **pikku-auth**.

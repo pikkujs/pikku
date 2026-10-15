@@ -1,17 +1,13 @@
 ---
 type: decision
 title: The React virtual user switcher makes no access decision; the server gate decides who can sign in
-description: The client helpers send only a virtual user id and render whatever list comes back, while the server refuses switcher sign-in unless its gate is open and only offers declared, sign-inable virtual users
+description: The client helper sends only a virtual user id, while the server refuses switcher sign-in unless its gate is open and only signs in declared, sign-inable virtual users
 tags: frontend, react, sign-in, virtual-users
 ---
 
 # The React virtual user switcher makes no access decision; the server gate decides who can sign in
 
-The module doc describes a virtual user as "No address and no credential: sign-in names the virtual user by id and the server resolves the rest" (`packages/frontend/react/src/dev-virtual-users.ts:3-7`).
-
-**Sign-in.** `signInAsVirtualUser` posts `{ id }` to `/auth/sign-in/switch-virtual-user` with `credentials: 'include'` (`dev-virtual-users.ts:32-37`). Its doc says the server decides: `pikkuVirtualUser({ virtualUserSignIn })` refuses unless its gate is open, and only ever signs in rows flagged `virtualUser: true` (`dev-virtual-users.ts:24-26`). A non-OK response only throws,.
-
-**Listing.** `listDevVirtualUsers` returns `[]` when the response is not OK (`dev-virtual-users.ts:59`).
+**Sign-in.** `signInAsVirtualUser` posts `{ id }` to `/auth/sign-in/switch-virtual-user` with `credentials: 'include'`. Its doc says the server decides: `pikkuVirtualUser({ virtualUserSignIn })` refuses unless its gate is open, and 
 
 **The server side, which holds the decisions** (`packages/services/better-auth/src/virtual-user-plugin.ts`):
 

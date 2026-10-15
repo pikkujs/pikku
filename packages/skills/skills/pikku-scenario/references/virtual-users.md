@@ -89,8 +89,7 @@ Declared virtual users are not only for automated runs. `signInPath` is Better A
 frontend can sign in as the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-It holds no credential. `listDevVirtualUsers()` reads virtual users from
-`/auth/sign-in/virtual-users` and `signInAsVirtualUser()` (both from `pikku-react`,
+It holds no credential. `signInAsVirtualUser()` (from `pikku-react`,
 a separate install) signs in by posting only a virtual user id to
 `/auth/sign-in/switch-virtual-user`; the server resolves the address. One server
 piece serves both, in the auth config:
