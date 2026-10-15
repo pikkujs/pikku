@@ -1225,7 +1225,23 @@ wireCLI({
       func: validate,
       render: renderValidate,
       description:
-        'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+        'Run every check that applies to this project — app structure, deploy readiness, and the published file set of any addon it contains',
+      options: {
+        skipTypecheck: {
+          description:
+            'Skip the frontend type-check stage (structural checks only)',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)',
+          default: false,
+        },
+        migrationsBase: {
+          description:
+            'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
+        },
+      },
     }),
     verify: pikkuCLICommand({
       func: pikkuVerify,

@@ -1,32 +1,21 @@
 import { z } from 'zod'
 import { readFile, readdir } from 'node:fs/promises'
-import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
-import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { added, changed, removed, dim } from '../../utils/output.js'
-import { typeCheckFrontends } from '../lib/frontend-typecheck.js'
+import { typeCheckFrontends } from './frontend-typecheck.js'
 import {
   readJsonSafe,
   readTextSafe,
   runSharedProjectChecks,
-} from '../../functions/validate/shared-checks.js'
-import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
-import {
-  runOxlintRun,
-  runOxlintSetupChecks,
-} from '../../functions/validate/oxlint-checks.js'
-import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
-import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
-import { resolveApiContext } from '../lib/config.js'
-import {
-  compareMigrationsWithBase,
-  DEFAULT_BASES,
-} from '../lib/migration-base.js'
-import { getCloudRPC } from '../lib/http.js'
+} from './shared-checks.js'
+import { runTypeIdentityChecks } from './type-identity-checks.js'
+import { runOxlintRun, runOxlintSetupChecks } from './oxlint-checks.js'
+import { runDeployReadinessChecks } from './deploy-readiness-checks.js'
+import { migrationCreatesTable } from './shared-checks.js'
+import { compareMigrationsWithBase, DEFAULT_BASES } from './migration-base.js'
 import { blankComments, lineOfOffset } from '../../utils/blank-comments.js'
-import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
+import { blankScenarioMeta } from './blank-scenario-meta.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -37,7 +26,7 @@ const FindingSchema = z.object({
 })
 type Finding = z.infer<typeof FindingSchema>
 
-export const CloudValidateInput = z.object({
+export const ProjectChecksInput = z.object({
   skipTypecheck: z
     .boolean()
     .optional()
@@ -52,10 +41,11 @@ export const CloudValidateInput = z.object({
     ),
 })
 
-export const CloudValidateOutput = z.object({
+export const ProjectChecksOutput = z.object({
   ok: z.boolean(),
   root: z.string(),
   findings: z.array(FindingSchema),
+  migrationsDir: z.string().optional(),
 })
 
 async function findProjectRoot(startDir: string): Promise<string> {
@@ -221,84 +211,7 @@ const POSTGRES_SQL_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /\bARRAY\s*\[/i, label: 'ARRAY[…]' },
 ]
 
-/** One stage's record of what it has applied, as the control plane holds it. */
-export interface StageLedger {
-  stageId: string
-  branch: string
-  migrations: Array<{ name: string; hash: string | null; appliedAt: string }>
-}
-
-/** Same digest the stage migrator records: sha256 of the file's bytes as UTF-8. */
-export function hashMigration(sql: string): string {
-  return createHash('sha256').update(sql, 'utf-8').digest('hex')
-}
-
 const slug = (s: string): string => s.replace(/[^a-z0-9]/gi, '-')
-
-/**
- * Compares what each stage applied against the files in the repo now. Split
- * out from the RPC call so the comparison is testable without a session.
- *
- * A row whose `hash` is null was applied before the stage migrator recorded
- * hashes; the file it named is unrecoverable, so it is reported as unverified
- * rather than as clean.
- */
-export function migrationDriftFindings(
-  migrationsDir: string,
-  local: Map<string, string>,
-  stages: StageLedger[]
-): Finding[] {
-  const findings: Finding[] = []
-  let unverifiable = 0
-
-  for (const stage of stages) {
-    for (const applied of stage.migrations) {
-      const localHash = local.get(applied.name)
-      if (localHash === undefined) {
-        findings.push({
-          id: `migration-applied-file-missing-${slug(stage.branch)}-${slug(applied.name)}`,
-          severity: 'error',
-          message: `${applied.name} was applied to the "${stage.branch}" stage but no longer exists locally`,
-          path: join(migrationsDir, applied.name),
-          fixHint:
-            'Restore the file under its original name. Deleting or renaming an applied migration does not undo it — the stage keeps the schema that file produced, and a fresh database will never reach that shape.',
-        })
-        continue
-      }
-      if (applied.hash === null) {
-        unverifiable++
-        continue
-      }
-      if (applied.hash !== localHash) {
-        findings.push({
-          id: `migration-drift-${slug(stage.branch)}-${slug(applied.name)}`,
-          severity: 'error',
-          message: `${applied.name} differs from the copy applied to the "${stage.branch}" stage (applied ${applied.hash.slice(0, 12)}, local ${localHash.slice(0, 12)})`,
-          path: join(migrationsDir, applied.name),
-          fixHint: [
-            'Revert the file to what was applied and put the change in a NEW',
-            'numbered migration. A migration is recorded by filename and never',
-            're-runs, so this edit will never reach that stage — the next',
-            'migration that depends on it fails there instead.',
-          ].join('\n'),
-        })
-      }
-    }
-  }
-
-  if (unverifiable > 0) {
-    findings.push({
-      id: 'migration-drift-partially-unverifiable',
-      severity: 'info',
-      message: `${unverifiable} applied migration${unverifiable === 1 ? '' : 's'} predate hash recording and cannot be compared`,
-      path: migrationsDir,
-      fixHint:
-        'Nothing to do — rows written before the stage migrator recorded hashes carry none. Each deploy records hashes for what it applies.',
-    })
-  }
-
-  return findings
-}
 
 /**
  * A migration that exists on the base branch is treated as applied: it must
@@ -383,77 +296,16 @@ export function migrationHistoryErrors<
   )
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-const PRODUCTION_BRANCH = 'main'
-
-/**
- * Silent when the project is unlinked or logged out — both already have their
- * own findings — and degrades to an info when the API cannot be reached, so an
- * offline developer still gets the rest of validate.
- *
- * A deploy passes its `deployTarget`: then only that stage and production are
- * compared, and a ledger that cannot be read is an error, not an info.
- */
-async function checkMigrationDrift(
-  root: string,
-  migrationsDir: string,
-  deployTarget?: string
-): Promise<Finding[]> {
-  if (!existsSync(migrationsDir)) return []
-  const unchecked = (reason: string): Finding[] => [
-    {
-      id: 'migration-drift-unchecked',
-      severity: deployTarget ? 'error' : 'info',
-      message: deployTarget
-        ? `could not read the deployed migration ledger (${reason}) — refusing to deploy "${deployTarget}" unchecked`
-        : `could not read the deployed migration ledger (${reason}) — local migrations were not compared against any stage`,
-      path: migrationsDir,
-      fixHint: deployTarget
-        ? 'Run `pikku cloud login` if the session expired, and retry once cloud API is reachable.'
-        : 'Run `pikku cloud login` if the session expired. Offline this check is skipped; `pikku cloud deploy apply` will not skip it.',
-    },
-  ]
-  const ctx = await resolveApiContext({ startDir: root }).catch(() => null)
-  if (!ctx?.token || !ctx.projectId) {
-    return deployTarget ? unchecked('not logged in or not linked') : []
-  }
-  if (!deployTarget && !UUID.test(ctx.projectId)) return []
-
-  let stages: StageLedger[]
-  try {
-    const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const res = await rpc.invoke('listStageMigrationLedger', {
-      projectId: ctx.projectId,
-    })
-    stages = deployTarget
-      ? res.stages.filter(
-          (s) => s.branch === deployTarget || s.branch === PRODUCTION_BRANCH
-        )
-      : res.stages
-  } catch (err) {
-    return unchecked(err instanceof Error ? err.message : String(err))
-  }
-
-  const local = new Map<string, string>()
-  for (const file of (await readdir(migrationsDir)).filter((f) =>
-    f.endsWith('.sql')
-  )) {
-    const sql = await readTextSafe(join(migrationsDir, file))
-    if (sql !== null) local.set(file, hashMigration(sql))
-  }
-
-  return migrationDriftFindings(migrationsDir, local, stages)
-}
-
-export async function runValidate(
+export async function runProjectChecks(
   startDir = process.cwd(),
   opts: {
     skipTypecheck?: boolean
     migrationsBase?: string
     deployTarget?: string
+    withRegistryChecks?: boolean
   } = {}
-): Promise<z.infer<typeof CloudValidateOutput>> {
+): Promise<z.infer<typeof ProjectChecksOutput>> {
+  const withRegistryChecks = opts.withRegistryChecks ?? true
   const root = await findProjectRoot(startDir)
   const findings: Finding[] = []
 
@@ -482,6 +334,7 @@ export async function runValidate(
     findings.push({ id, severity: 'info', message, path, fixHint })
   }
   const lines = (...parts: string[]): string => parts.join('\n')
+  let reportedMigrationsDir: string | undefined
 
   // ── everything true of any pikku project ───────────────────────────────
   // Pikku Studio Cloud validate is the app-project check plus the deploy-shaped checks. The
@@ -491,7 +344,7 @@ export async function runValidate(
   //
   // knowledge: decisions/internals/one-project-shape-check-two-validators.md
   const shared = await runSharedProjectChecks(root)
-  findings.push(...shared.findings)
+  if (withRegistryChecks) findings.push(...shared.findings)
   const { pikkuConfig, dbEngine } = shared
   const pikkuConfigPath = join(root, 'pikku.config.json')
   const rootPkgPath = join(root, 'package.json')
@@ -534,36 +387,6 @@ export async function runValidate(
         )
       )
     }
-  }
-
-  // ── cloud project link ────────────────────────────────────────────────
-  // Info, never an error: any pikku project can be validated before it is
-  // linked. The link is the git remote, so it can only be checked with a
-  // session; logged out, validate stays silent rather than guess.
-  const link = await resolveApiContext({ startDir: root }).then(
-    (ctx) => ({ ctx, error: null }),
-    (error: unknown) => ({
-      ctx: null,
-      error: error instanceof Error ? error.message : String(error),
-    })
-  )
-  if (link.error) {
-    info(
-      'cloud-project-unresolved',
-      `could not tell which cloud project this repo is — ${link.error.split('\n')[0]}`,
-      root,
-      link.error
-    )
-  } else if (link.ctx?.token && !link.ctx.project) {
-    info(
-      'cloud-project-not-linked',
-      'no cloud project has this repo as its git remote — project has not been linked to cloud yet',
-      root,
-      lines(
-        'Run `pikku cloud link` to create the project from this repo.',
-        'If the project already exists under a different remote, set PIKKUSTUDIO_PROJECT_ID=<projectId> (see `pikku cloud projects`).'
-      )
-    )
   }
 
   // ── deploy-only failure classes ────────────────────────────────────────
@@ -689,15 +512,17 @@ export async function runValidate(
           lines(
             `Bump ${pkg} to ^${floorStr} (or newer) and reinstall:`,
             `  bun add ${pkg}@^${floorStr}`,
-            'Then run `bun install` and re-run `pikku cloud validate`.'
+            'Then run `bun install` and re-run `pikku validate`.'
           )
         )
       }
     }
   }
 
-  findings.push(...(await runTypeIdentityChecks(root)))
-  findings.push(...(await runOxlintSetupChecks(root)))
+  if (withRegistryChecks) {
+    findings.push(...(await runTypeIdentityChecks(root)))
+    findings.push(...(await runOxlintSetupChecks(root)))
+  }
 
   // ── scaffold-implied dependencies ──────────────────────────────────────
   // `scaffold.console` makes codegen import
@@ -1273,6 +1098,7 @@ export async function runValidate(
       'db',
       dbEngine === 'postgres' ? 'postgres' : 'sqlite'
     )
+    reportedMigrationsDir = migrationsDir
     if (!existsSync(migrationsDir)) {
       e(
         'migrations-dir-missing',
@@ -1332,9 +1158,6 @@ export async function runValidate(
     // edited a migration another stage already ran. A deploy narrows it to
     // its target stage and production, and the base comparison covers what
     // main has merged but production has not applied yet.
-    findings.push(
-      ...(await checkMigrationDrift(root, migrationsDir, opts.deployTarget))
-    )
     findings.push(
       ...(await checkMigrationsAgainstBase(
         root,
@@ -2272,97 +2095,10 @@ export async function runValidate(
   // ── oxlint (last: it is the slow one) ──────────────────────────────────
   // Type-aware, so it is held back with the type-check: `skipTypecheck` is
   // "structural checks only" (the deploy guard runs it that way).
-  if (!opts.skipTypecheck) {
+  if (withRegistryChecks && !opts.skipTypecheck) {
     findings.push(...(await runOxlintRun(root)))
   }
 
   const ok = !findings.some((f) => f.severity === 'error')
-  return { ok, root, findings }
-}
-
-export const CloudValidate = pikkuSessionlessFunc({
-  description:
-    'Check the current project structure for cloud compatibility. Prints all missing or misconfigured items with fix hints so an AI agent or developer can resolve them.',
-  input: CloudValidateInput,
-  output: CloudValidateOutput,
-  func: async (_services, { skipTypecheck, migrationsBase }) =>
-    runValidate(process.cwd(), { skipTypecheck, migrationsBase }),
-})
-
-export const renderValidate = (
-  _s: unknown,
-  { ok, root, findings }: z.infer<typeof CloudValidateOutput>
-): void => {
-  if (findings.length === 0) {
-    console.log(added('✓  All checks passed — project is cloud-compatible'))
-    return
-  }
-
-  const relPath = (p: string): string =>
-    p.startsWith(root + '/') || p.startsWith(root + '\\')
-      ? p.slice(root.length + 1)
-      : p
-
-  const errors = findings.filter((f) => f.severity === 'error')
-  const warns = findings.filter((f) => f.severity === 'warn')
-  const infos = findings.filter((f) => f.severity === 'info')
-
-  for (const f of [...errors, ...warns, ...infos]) {
-    const icon =
-      f.severity === 'error'
-        ? removed('✗')
-        : f.severity === 'warn'
-          ? changed('⚠')
-          : dim('ℹ')
-    const fixLines = f.fixHint.split('\n')
-    console.log(`${icon}  ${f.message}`)
-    console.log(`   ${dim('path:')}   ${relPath(f.path)}`)
-    console.log(`   ${dim('fix:')}`)
-    for (const line of fixLines) {
-      console.log(`           ${line}`)
-    }
-    console.log()
-  }
-
-  const counts: string[] = []
-  if (errors.length)
-    counts.push(
-      removed(`${errors.length} error${errors.length !== 1 ? 's' : ''}`)
-    )
-  if (warns.length)
-    counts.push(
-      changed(`${warns.length} warning${warns.length !== 1 ? 's' : ''}`)
-    )
-  if (infos.length) counts.push(dim(`${infos.length} info`))
-
-  console.log('─'.repeat(40))
-  console.log(counts.join('  '))
-  if (ok) {
-    console.log()
-    // "can be linked" is not "will deploy", and conflating them is how a green
-    // validate is followed straight by a failed deploy. The link findings are
-    // info on purpose — an unlinked project is still worth validating — but
-    // reporting unqualified success for a project nothing can deploy is the
-    // part that misleads. So the success line says which of the two it earned.
-    const notLinked = findings.find((f) =>
-      ['cloud-project-not-linked', 'cloud-project-unresolved'].includes(f.id)
-    )
-    if (notLinked) {
-      console.log(
-        added('✓') +
-          '  ' +
-          dim(
-            'no errors — but the project is not linked, so it cannot deploy yet'
-          )
-      )
-      console.log(
-        '   ' +
-          dim(`${notLinked.message.split(' — ')[0]}. Run \`pikku cloud link\`.`)
-      )
-    } else {
-      console.log(
-        added('✓') + '  ' + dim('no errors — project can be linked to cloud')
-      )
-    }
-  }
+  return { ok, root, findings, migrationsDir: reportedMigrationsDir }
 }

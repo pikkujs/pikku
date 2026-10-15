@@ -4,7 +4,7 @@ import {
   hashMigration,
   migrationDriftFindings,
   type StageLedger,
-} from './validate.function.js'
+} from '../lib/project-checks.js'
 
 const dir = '/repo/db/sqlite'
 

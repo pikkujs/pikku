@@ -79,7 +79,6 @@ import { CloudDomainsList } from './functions/domains-list.function.js'
 import { CloudDomainsAdd } from './functions/domains-add.function.js'
 import { CloudDomainsRemove } from './functions/domains-remove.function.js'
 import { CloudLLMKey, renderLLMKey } from './functions/llm-key.function.js'
-import { CloudValidate, renderValidate } from './functions/validate.function.js'
 import { CloudSmoke, renderSmoke } from './functions/smoke.function.js'
 import { CloudPublish } from './functions/publish.function.js'
 import { CloudAdd } from './functions/add.function.js'
@@ -98,23 +97,6 @@ import {
 } from './functions/addon-verify.function.js'
 
 export const cloudCommands = defineCLICommands({
-  validate: pikkuCLICommand({
-    func: CloudValidate,
-    render: renderValidate,
-    description:
-      'Check the project structure for cloud compatibility — prints all missing or misconfigured items with fix hints',
-    options: {
-      skipTypecheck: {
-        description:
-          'Skip the frontend type-check the build container runs (structural checks only)',
-        default: false,
-      },
-      migrationsBase: {
-        description:
-          'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
-      },
-    },
-  }),
   smoke: pikkuCLICommand({
     func: CloudSmoke,
     render: renderSmoke,
