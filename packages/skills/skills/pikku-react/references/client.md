@@ -239,40 +239,26 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
-### Dev virtual user sign-in (`useDevVirtualUsers`)
+### Virtual user sign-in (`signInAsVirtualUser`)
 
-The dev-only "Sign in as …" control: one click signs in as a declared scenario
-virtual user with no password, so the app can be reviewed as each kind of user.
-`pikku cloud validate` **requires** any frontend with a login screen to ship one
-(`app-missing-virtual-user-quick-login-<app>`) — without it a reviewer is locked out of
-their own sandbox.
+`signInAsVirtualUser({ apiUrl, id })` signs in as a declared scenario virtual user
+with no password. `pikku cloud validate` **requires** any frontend with a login
+screen to call it (`app-missing-virtual-user-quick-login-<app>`) — without it a
+reviewer is locked out of their own sandbox.
 
 ```tsx
-import { useDevVirtualUsers } from '@pikku/react'
+import { signInAsVirtualUser } from '@pikku/react'
 
-const { virtualUsers, signInAs, pendingId, isPending, error } =
-  useDevVirtualUsers({
-    apiUrl: apiUrl(),
-    app: appSlug,
-    onSignedIn: () => navigate({ to: '/' }),
-  })
+await signInAsVirtualUser({ apiUrl: apiUrl(), id: virtualUser.id })
 ```
 
-- **It is UI-free**, so render it however you like. For the default rendering use
-  the starter template's `<DevVirtualUserSwitcher />` (`components/dev/DevVirtualUserSwitcher.tsx`).
-- **No credential reaches the bundle.** It lists from `/auth/sign-in/virtual-users`
-  and `signInAs(id)` posts only the virtual user id to `/auth/sign-in/switch-virtual-user`. The
-  server decides who is offered and who may sign in, and offers nobody in
-  production — see **pikku-scenario** for `virtualUserSignIn`.
-- **It takes `onSignedIn` rather than a router**, since every app lands
-  somewhere different.
-- `listDevVirtualUsers()` and `signInAsVirtualUser()` are exported too, for a non-React
-  caller. The endpoint only
-  signs in rows flagged `virtualUser: true`, so it can never impersonate a real user —
-  see **pikku-auth**.
-
-Do not hand-write the list-and-sign-in pair per app; that copy-paste is exactly
-what this replaced.
+- **No credential reaches the bundle.** It posts only the virtual user id to
+  `/auth/sign-in/switch-virtual-user`; `listDevVirtualUsers({ apiUrl, app })` reads
+  `/auth/sign-in/virtual-users`. The server decides who is offered and who may
+  sign in, and offers nobody in production — see **pikku-scenario** for
+  `virtualUserSignIn`.
+- The endpoint only signs in rows flagged `virtualUser: true`, so it can never
+  impersonate a real user — see **pikku-auth**.
 
 ## What NOT to do
 

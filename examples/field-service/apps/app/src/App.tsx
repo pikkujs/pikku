@@ -8,7 +8,6 @@ import { LiveBoard } from './examples/ui-live-board.js'
 import { QuoteForm } from './examples/ui-typed-form.js'
 import { QuoteGate } from './examples/ui-workflow-gate.js'
 import { DispatchChat } from './examples/ui-agent-chat.js'
-import { DevSignIn } from './examples/ui-dev-sign-in.js'
 
 /**
  * The app is the examples, mounted.
@@ -25,7 +24,6 @@ export const App = () => (
     <QueryClientProvider client={queryClient}>
       <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 720 }}>
         <h1>Field Service</h1>
-        <DevSignIn />
         <RaiseJobForm />
         <JobList />
         <LiveBoard companyId="co_northwind" />

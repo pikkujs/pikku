@@ -9,7 +9,7 @@
  * `visitor` is a PLACEHOLDER for a project with no roles yet. REPLACE it with this
  * app's real people — do not add yours beside it. Declaration order is the ranking,
  * so a leftover `visitor` sorts first and every consumer that takes the first virtual user
- * (the dev virtual user switcher, the vision critic) treats a synthetic health-check user
+ * (the vision critic) treats a synthetic health-check user
  * as the person this app is for. Declare the primary role — the one who uses the app
  * daily, not the one who administers it — FIRST.
  *

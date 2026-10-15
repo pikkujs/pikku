@@ -184,8 +184,7 @@ grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(op
 ```
 
 Never commit `.env`. Then run it — through `bun run dev`, never `vite` on its
-own, because the dev script is what hands the frontend the virtual user list for the
-"Sign in as …" switcher; without it the switcher silently renders nothing:
+own, because the dev script is what points the frontend at your API:
 
 ```sh
 bun run prebuild && bun run dev

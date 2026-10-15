@@ -537,10 +537,9 @@ Rules that are not optional:
   tables. A domain table with one of those names — a class _session_, a drop-in
   _session_ — collides in the migration. Name it for the domain instead
   (`evening`, `class_meeting`) and keep the word in the UI copy.
-- The template's `/` redirects to `/app`, so the login screen — and its "Sign in
-  as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
-  public homepage and that stops being true: mount `<DevVirtualUserSwitcher />` in the
-  public layout as well, or a reviewer lands on a site with no way in.
+- The template's `/` redirects to `/app`, so the login screen is what a
+  signed-out visitor sees first. Replace `/` with a public homepage and a
+  reviewer lands on a site with no way in: link it to the login screen.
 
 Before the first run, make sure `.env` at the project root holds the secret
 the local stack needs. `bun run dev` appends it if missing, but check anyway —
@@ -570,13 +569,10 @@ frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
 
 **Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
-yourself.** The "Sign in as …" switcher asks the API for its virtual users at
-runtime, so the frontend needs nothing baked in — but it does need to reach
-_your_ API. If you start the frontend on its own (say :3000 is taken by another
-project), point `VITE_API_PROXY` at your API: the dev proxy defaults to
-`http://localhost:3000`, so beside another project's server the switcher lists
-_its_ virtual users, or none, which reads like a missing switcher rather than the
-wrong server.
+yourself.** The frontend needs to reach _your_ API. If you start the
+frontend on its own (say :3000 is taken by another project), point
+`VITE_API_PROXY` at your API: the dev proxy defaults to `http://localhost:3000`,
+so beside another project's server every request goes to the wrong API.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
 CLI's `#!/usr/bin/env node` shebang hands the process to whatever Node is on

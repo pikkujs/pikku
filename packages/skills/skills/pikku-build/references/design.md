@@ -204,9 +204,8 @@ the thing that made it is always yes. Use evidence.
   Then drive it over CDP from a script: `Page.navigate`,
   `Emulation.setDeviceMetricsOverride` for the two widths,
   `Page.captureScreenshot`, write the PNG, and open it. Sign in the way a person
-  does — click the dev virtual user switcher on the login page — rather than reaching
-  for the secret the client uses; the UI path is shorter and it also proves the
-  login screen works. Keep the script; you will run it at every changeset.
+  does — through the login page — rather than reaching for the secret the
+  client uses; the UI path also proves the login screen works. Keep the script; you will run it at every changeset.
 
 - **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
   screenshots. It is external, it does not flatter, and it scores execution

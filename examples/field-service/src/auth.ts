@@ -30,7 +30,7 @@ import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 // so never re-construct a service here or reach for a dynamic import.
 // @snippet start betterAuthConfig
 export const auth = pikkuBetterAuth(
-  async ({ kysely, secrets, variables, emailService, featureFlags }) => {
+  async ({ kysely, secrets, variables, emailService }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
     // is one greppable call. Better Auth wants the raw string, and this is where
@@ -90,11 +90,8 @@ export const auth = pikkuBetterAuth(
         pikkuVirtualUser({
           verifyKey: VIRTUAL_USER_VERIFY_KEY,
           allowSignIn: ALLOW_VIRTUAL_USER_SIGN_IN,
-          // The "Sign in as …" switcher: GET /api/auth/sign-in/virtual-users lists,
-          // POST /api/auth/sign-in/virtual-user { id } signs in. No credential.
           virtualUserSignIn: {
             virtualUsers: virtualUserList,
-            featureFlags,
           },
         }),
         // @snippet end virtualUserSignIn

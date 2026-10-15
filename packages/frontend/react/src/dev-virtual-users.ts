@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-
 /**
- * One scenario virtual user the switcher offers for one-click sign-in, as
+ * One scenario virtual user offered for one-click sign-in, as
  * `GET /auth/sign-in/virtual-users` lists it. No address and no credential: sign-in
  * names the virtual user by id and the server resolves the rest.
  */
@@ -47,7 +45,7 @@ export type ListDevVirtualUsersOptions = {
   app?: string
 }
 
-/** The virtual users `pikkuVirtualUser({ virtualUserSignIn })` will sign in — none wherever the switcher is off. */
+/** The virtual users `pikkuVirtualUser({ virtualUserSignIn })` will sign in — none wherever virtual user sign-in is off. */
 export const listDevVirtualUsers = async ({
   apiUrl,
   app,
@@ -61,75 +59,4 @@ export const listDevVirtualUsers = async ({
     ((await response.json()) as { virtualUsers?: DevVirtualUser[] })
       .virtualUsers ?? []
   )
-}
-
-export type UseDevVirtualUsersOptions = ListDevVirtualUsersOptions & {
-  /** Called after a successful sign-in — the app owns where that lands. */
-  onSignedIn?: () => void | Promise<void>
-}
-
-export type UseDevVirtualUsersResult = {
-  /** Empty until loaded, and whenever the server offers none — render nothing. */
-  virtualUsers: DevVirtualUser[]
-  signInAs: (id: string) => void
-  /** The virtual user currently signing in, or null. */
-  pendingId: string | null
-  isPending: boolean
-  error: Error | null
-}
-
-/**
- * State for the "Sign in as …" switcher.
- *
- * A listing that fails leaves the list empty rather than surfacing an error:
- * a broken dev affordance must not take the login screen down with it.
- */
-export const useDevVirtualUsers = ({
-  apiUrl,
-  app,
-  onSignedIn,
-}: UseDevVirtualUsersOptions): UseDevVirtualUsersResult => {
-  const [virtualUsers, setVirtualUsers] = useState<DevVirtualUser[]>([])
-  const [pendingId, setPendingId] = useState<string | null>(null)
-  const [error, setError] = useState<Error | null>(null)
-
-  useEffect(() => {
-    let live = true
-    listDevVirtualUsers({ apiUrl, app })
-      .then((listed) => {
-        if (live) setVirtualUsers(listed)
-      })
-      .catch(() => {
-        if (live) setVirtualUsers([])
-      })
-    return () => {
-      live = false
-    }
-  }, [apiUrl, app])
-
-  const signInAs = useCallback(
-    (id: string) => {
-      setPendingId(id)
-      setError(null)
-      signInAsVirtualUser({ apiUrl, id })
-        .then(async () => {
-          await onSignedIn?.()
-        })
-        .catch((cause) => {
-          setError(cause instanceof Error ? cause : new Error(String(cause)))
-        })
-        .finally(() => {
-          setPendingId(null)
-        })
-    },
-    [apiUrl, onSignedIn]
-  )
-
-  return {
-    virtualUsers,
-    signInAs,
-    pendingId,
-    isPending: pendingId !== null,
-    error,
-  }
 }

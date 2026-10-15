@@ -244,7 +244,7 @@ like any other. None is automatic — an app wires the ones it needs.
 | Plugin                   | Plugin `id`        | Adds                                                                    | Use it when                                                   |
 | ------------------------ | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `pikkuBan()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
-| `pikkuVirtualUser()`     | `virtualUser`      | `POST /sign-in/virtual-user`, `user.virtualUser`                        | Scenarios or a dev switcher sign in as a virtual user         |
+| `pikkuVirtualUser()`     | `virtualUser`      | `POST /sign-in/virtual-user`, `user.virtualUser`                        | Scenarios sign in as a virtual user         |
 | `pikkuCredentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
 | `pikkuDelegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
 
@@ -539,10 +539,10 @@ virtual user`. So a statement cannot take over a **real user's** account.
   be used once, so a leaked one is a single short-lived session.
 
 This is the endpoint `pikku scenario` signs its virtual users in through. The frontend
-switcher does not use it: it lists from `/sign-in/virtual-users` and posts a virtual user
+does not use it: it lists from `/sign-in/virtual-users` and posts a virtual user
 id to `/sign-in/switch-virtual-user`, both served by
-`pikkuVirtualUser({ virtualUserSignIn: { virtualUsers, featureFlags } })` with no credential — see
-`pikku-scenario` for the setup and `pikku-react` for `useDevVirtualUsers()`.
+`pikkuVirtualUser({ virtualUserSignIn: { virtualUsers } })` with no credential — see
+`pikku-scenario` for the setup and `pikku-react` for `signInAsVirtualUser()`.
 
 ### Provisioning virtual users
 

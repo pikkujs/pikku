@@ -36,7 +36,6 @@ export const auth = pikkuBetterAuth(
     secrets,
     variables,
     emailService,
-    featureFlags,
     logger,
   }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
@@ -164,7 +163,6 @@ export const auth = pikkuBetterAuth(
           verifyKey: VIRTUAL_USER_VERIFY_KEY,
           virtualUserSignIn: {
             virtualUsers: virtualUserList,
-            featureFlags,
           },
         }),
         pikkuBan(),
