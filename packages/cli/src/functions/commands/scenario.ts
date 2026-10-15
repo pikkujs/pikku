@@ -632,7 +632,7 @@ export const scenarioRun = pikkuSessionlessFunc<
        *
        * Its context is *feature*-scoped — shared by that feature's `before` and
        * `after`, and deliberately not the context the group's scenarios see:
-       * one bag across a group is the invisible coupling a Cucumber world had.
+       * one bag across a group is the invisible coupling a shared mutable world has.
        */
       const singletonServices = pikkuState(null, 'package', 'singletonServices')
       const runFeatureHook = async (

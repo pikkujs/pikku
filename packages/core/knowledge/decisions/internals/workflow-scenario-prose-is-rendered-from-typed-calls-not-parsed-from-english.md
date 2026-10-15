@@ -1,14 +1,14 @@
 ---
 type: decision
 title: Scenario prose is rendered out of typed calls, not parsed into them
-description: The inversion of cucumber — a readable report with no regex step registry to maintain
+description: A readable report with no regex step registry to maintain
 tags: workflow
 ---
 
 # Scenario prose is rendered out of typed calls, not parsed into them
 
 `scenario-prose.ts` renders the English sentence a reporter shows for a scenario
-step. It is the inversion of cucumber: instead of parsing English into a call
+step. Instead of parsing English into a call
 through a registry of regexes, the call is typed and the English is rendered out
 of it. The readable report survives without anyone maintaining a step-definition
 registry, and a step that no longer exists cannot leave a dangling phrase behind.

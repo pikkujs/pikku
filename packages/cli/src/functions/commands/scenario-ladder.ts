@@ -2,7 +2,7 @@
  * The scenario step ladder — joining a recorded run back to the English that
  * declared it.
  *
- * Cucumber parsed English into calls; this recovers English out of the typed
+ * This recovers English out of the typed
  * calls the inspector already recorded, joined against the run the engine
  * already persisted. No engine change, no step-event bus. Layout of the result
  * belongs to `scenario-formatter.ts`; this module only decides what each step

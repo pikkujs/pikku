@@ -5,7 +5,7 @@
  * browser. Locally, falls back to a dev server. Everything is overridable per
  * environment via env vars.
  *
- * Unlike the cucumber harness this replaces, there are no virtual users here:
+ * There are no separate browser users here:
  * identity comes from the scenario's own virtual users, so a browser step and an HTTP
  * step run as the same user.
  */

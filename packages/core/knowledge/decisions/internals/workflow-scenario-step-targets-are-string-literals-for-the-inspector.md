@@ -19,7 +19,7 @@ generated `TypedScenario` narrows these over `FlattenedScenarioStepMap`.
 prose a reporter renders (`scenario-prose.ts`), never what executes.
 
 The prose direction is itself the decision: rather than parsing English into a
-call the way cucumber does, `composeStepProse` renders English out of a typed
+call through a regex registry, `composeStepProse` renders English out of a typed
 call, so a readable report survives without a regex registry paying for it. It
 lives in core so the CLI reporter and the console render the same sentence for
 the same step, and `renderStepTemplate` fills `{placeholders}` from the input

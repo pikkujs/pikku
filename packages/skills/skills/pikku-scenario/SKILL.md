@@ -346,7 +346,7 @@ and where a plain unit test is still the right tool.
 
 | Smell                                               | Why it's wrong                                                                                                                                   |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                                       |
+| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. There is no in-process function world.                                                       |
 | `scenario.do(...)` with no `{ virtualUser }`        | Throws. Every step runs as somebody.                                                                                                             |
 | A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                                     |
 | Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                                     |
@@ -359,7 +359,5 @@ and where a plain unit test is still the right tool.
 | A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.                                  |
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                                        |
 | Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no virtual users configured.               |
-
-`@pikku/cucumber` is a **browser/e2e** harness (`VirtualUser`, `BrowserWorld`, `VirtualUserData`, `DbUtils`) — out of scope here.
 
 See `pikku-concepts` for the core mental model.

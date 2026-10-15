@@ -1,8 +1,7 @@
 /**
  * Steps for the agent's SSE surface.
  *
- * The cucumber glue passed a `StreamRecording` class between steps and called
- * `ofType`/`first`/`indexOf` on it. A step result has to be JSON, so the effect
+ * A step result has to be JSON, so the effect
  * step precomputes everything the assertions need — the ordered event types, the
  * concatenated text, the finished-run usage and the two correlated tool call ids
  * — and the ordering helpers become module-local functions here.

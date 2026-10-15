@@ -173,7 +173,7 @@ const templates = [
   {
     template: 'starter-template',
     description:
-      'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + Cucumber e2e',
+      'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + pikkuScenario e2e',
     supports: ['http', 'fullstack'],
   },
 ] as const
