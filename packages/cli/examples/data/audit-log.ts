@@ -39,7 +39,7 @@ import { pikkuFunc } from '#pikku/function'
 //
 // Then run `pikku db migrate` — it applies the migration and regenerates the schema types.
 //
-// ⚠️ THE `audit` TABLE HAS NO CRUD. Pikku Studio writes it for you — there is no create,
+// ⚠️ THE `audit` TABLE HAS NO CRUD. Only the audit service writes it — there is no create,
 // edit or delete screen for an audit row, and you must NEVER write
 // `insertInto('audit')` / `updateTable('audit')` in a function. An audit trail the app
 // can edit is not an audit trail. Rows arrive one of two ways, both below: `audit: true`
@@ -48,7 +48,7 @@ import { pikkuFunc } from '#pikku/function'
 //
 // ⚠️ READ THIS BEFORE YOU BUILD A UI ON IT — in the sandbox the audit SINK is a
 // no-op. services.ts resolves `existingServices?.audit ?? new NoopAuditService()`:
-// a DEPLOYED stage gets the platform's real sink injected, the sandbox does not.
+// a stage deployed to Pikku Studio Cloud gets the real sink injected; the sandbox and a local run do not.
 // So the table stays EMPTY here no matter how many records you create. That is
 // correct, not a bug. Do NOT "fix" it by rewriting the function, by inserting into
 // `audit` by hand, or by hunting for the row in the UI — an audit screen that
