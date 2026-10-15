@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "ignoreFiles": [
+    "**/sdk/**",
+    "**/*.test.ts",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "outDir": "./.pikku",
+  "addon": {
+    "displayName": "Pikku Studio Cloud CLI",
+    "description": "The pikku cloud command group",
+    "categories": ["Utility"],
+    "icon": "./package.svg"
+  }
+}
