@@ -16,9 +16,8 @@ following is built or confirmed. Pikku Studio Cloud must:
    base64), and accept that name, which starts with neither `PIKKU_` nor `PIKKUSTUDIO_`.
 3. Set `VIRTUAL_USER_API_URL` on every stage that runs virtual users, to the public
    URL including any HTTP prefix.
-4. Replace the operator sign-in route and `PIKKUSTUDIO_OPERATOR_TOKEN` handling: sign
-   statements with the stage's private key for callers acting on a stage, or hand the
-   key to the CLI as `VIRTUAL_USER_SIGNING_KEY` through the channel it already uses
+4. Sign statements with the stage's private key for callers acting on a stage, or hand
+   the key to the CLI as `VIRTUAL_USER_SIGNING_KEY` through the channel it already uses
    for stage credentials.
 5. Stop sending the operator token field in `runVirtualUser` requests; the field no longer
    exists.

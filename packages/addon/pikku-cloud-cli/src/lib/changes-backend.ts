@@ -34,7 +34,7 @@ export async function cloudChangesBackend({
   })
   if (!ctx.token)
     throw new CloudPreconditionError(
-      `This project is backed by Pikku Studio Cloud (${projectId}), so its changes live there and you need to be signed in. Run \`pikku cloud login\`, or set PIKKUSTUDIO_TOKEN.`
+      `This project is backed by Pikku Studio Cloud (${projectId}), so its changes live there and you need to be signed in. Run \`pikku cloud login\`, or set PIKKUSTUDIO_API_KEY.`
     )
   const cloud = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
   const invoke = async (name: string, data: unknown) => {
