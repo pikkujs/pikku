@@ -287,6 +287,30 @@ done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 echo "Building TypeScript to dist..."
 npx tsc -b || true
 
+# The pikku CLI imports the bootstraps of @pikku/addon-changes-cli and
+# @pikku/addon-cloud-cli at startup (it wires the `changes` and `cloud` command
+# groups from them), and the addons are built by the CLI, and they import
+# `@pikku/cli/addon-support`, which the tsc pass above has just emitted. So the
+# order is: CLI tsc (this tolerated pass), then the addons — changes first,
+# because the cloud addon registers its changes backend through
+# `@pikku/addon-changes-cli/backend` — then the CLI's own codegen and strict tsc
+# below, which read the addons' contract metadata. On a clean checkout an addon
+# has no dist yet, so a placeholder bootstrap lets the CLI start long enough to
+# build it.
+_shim_dir=$(mktemp -d)
+printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
+chmod +x "$_shim_dir/pikku"
+for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
+  if [ ! -f "$_addon/dist/.pikku/addon/pikku-bootstrap.gen.js" ]; then
+    mkdir -p "$_addon/dist/.pikku/addon"
+    echo "export {}" > "$_addon/dist/.pikku/addon/pikku-bootstrap.gen.js"
+  fi
+done
+for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
+  echo "Building $_addon..."
+  (cd "$_addon" && PATH="$_shim_dir:$PATH" bun run build)
+done
+
 # Patch stale wireMCPTool import in compiled output (removed in current version)
 if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
   tmp=$(mktemp)
@@ -312,8 +336,6 @@ done
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
-# `export type *` in src/cloud/client.ts points at a hand-kept .d.ts, which tsc does not emit
-cp src/cloud/sdk/rpc-map.gen.d.ts dist/src/cloud/sdk/
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.

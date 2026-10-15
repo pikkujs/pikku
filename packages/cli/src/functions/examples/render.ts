@@ -1,4 +1,4 @@
-import { added, changed, dim, removed } from '../../cloud/lib/output.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
 import type {
   ExamplesAddResult,
   ExamplesListResult,

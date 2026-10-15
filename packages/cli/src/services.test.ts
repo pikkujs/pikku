@@ -9,7 +9,7 @@ import {
   createConfig,
   createSingletonServices,
 } from './services.js'
-import { changesCommands } from './cloud/changes-commands.js'
+import { changesCommands } from '@pikku/addon-changes-cli/contracts'
 
 const created: string[] = []
 let restoreCwd: string | undefined

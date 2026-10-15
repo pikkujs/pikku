@@ -285,10 +285,49 @@
         "@pikku/better-auth",
       ],
     },
+    "packages/addon/pikku-changes-cli": {
+      "name": "@pikku/addon-changes-cli",
+      "version": "0.12.0",
+      "dependencies": {
+        "@pikku/knowledge": "^0.12.19",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/cli": "^0.12.186",
+        "@pikku/core": "^0.12.141",
+        "zod": "^4",
+      },
+    },
+    "packages/addon/pikku-cloud-cli": {
+      "name": "@pikku/addon-cloud-cli",
+      "version": "0.12.0",
+      "dependencies": {
+        "@pikku/fetch": "^0.12.12",
+      },
+      "devDependencies": {
+        "@pikku/addon-changes-cli": "workspace:*",
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/addon-changes-cli": "^0.12.0",
+        "@pikku/cli": "^0.12.186",
+        "@pikku/core": "^0.12.141",
+        "zod": "^4",
+      },
+    },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
       "version": "0.12.60",
       "dependencies": {
+        "@pikku/addon-cloud-cli": "^0.12.0",
         "@pikku/code-edit": "^0.12.6",
         "@pikku/knowledge": "^0.12.18",
         "json-schema": "^0.4.0",
@@ -362,6 +401,8 @@
         "@electric-sql/pglite-pgvector": "0.0.9",
         "@jridgewell/trace-mapping": "^0.3.31",
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
+        "@pikku/addon-changes-cli": "^0.12.0",
+        "@pikku/addon-cloud-cli": "^0.12.0",
         "@pikku/ai-vercel": "^0.12.15",
         "@pikku/better-auth": "^0.12.55",
         "@pikku/bun-server": "^0.12.14",
@@ -3128,6 +3169,10 @@
     "@parcel/watcher-win32-x64": ["@parcel/watcher-win32-x64@2.6.0", "", { "os": "win32", "cpu": "x64" }, "sha512-cA+/pXV2YkfxlIcXOQ5fSWqAzzPyD78/x5qbK/I0vUkrlYHA8TIz+MXjAbGouguKVSI4bOmkTSJ1/poVSsgt+A=="],
 
     "@pikku/addon-admin": ["@pikku/addon-admin@workspace:packages/addon/pikku-admin"],
+
+    "@pikku/addon-changes-cli": ["@pikku/addon-changes-cli@workspace:packages/addon/pikku-changes-cli"],
+
+    "@pikku/addon-cloud-cli": ["@pikku/addon-cloud-cli@workspace:packages/addon/pikku-cloud-cli"],
 
     "@pikku/addon-console": ["@pikku/addon-console@workspace:packages/addon/pikku-console"],
 

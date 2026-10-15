@@ -177,7 +177,10 @@ describe('pikku validate', () => {
     const tmp = await makeTmp()
     try {
       await makeValidWorkspace(tmp)
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.strictEqual(result.ok, true)
       assert.strictEqual(
         result.findings.length,
@@ -194,7 +197,8 @@ describe('pikku validate', () => {
     try {
       await makeValidWorkspace(tmp)
       const result = await runProjectValidate(
-        join(tmp, 'packages', 'functions', 'src')
+        join(tmp, 'packages', 'functions', 'src'),
+        { skipTypecheck: true, skipDeployChecks: true }
       )
       assert.strictEqual(result.ok, true)
       assert.strictEqual(result.root, tmp)
@@ -217,7 +221,10 @@ describe('pikku validate', () => {
           reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
         },
       })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = result.findings.find(
         (f) => f.id === 'pikku-config-no-scaffold-console'
       )
@@ -242,7 +249,10 @@ describe('pikku validate', () => {
           'virtual-users.virtual-user.ts'
         )
       )
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = result.findings.find((f) => f.id === 'no-virtual-users')
       assert.ok(finding, 'expected a no-virtual-users finding')
       assert.strictEqual(finding!.severity, 'warn')
@@ -259,7 +269,10 @@ describe('pikku validate', () => {
       await rm(
         join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts')
       )
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = result.findings.find(
         (f) => f.id === 'virtual-users-no-virtual-user-sign-in'
       )
@@ -279,7 +292,10 @@ describe('pikku validate', () => {
     try {
       await makeValidWorkspace(tmp)
       await rm(join(tmp, 'knowledge'), { recursive: true, force: true })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.ok(
         result.findings.some((f) => f.id === 'knowledge-empty'),
         'expected a knowledge-empty finding'
@@ -302,7 +318,10 @@ describe('pikku validate', () => {
         compilerOptions: { types: ['node'] },
       })
 
-      const withoutIt = await runProjectValidate(tmp)
+      const withoutIt = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = withoutIt.findings.find(
         (f) => f.id === 'playwright-types-not-loaded'
       )
@@ -313,7 +332,10 @@ describe('pikku validate', () => {
       await writeJson(join(tmp, 'packages', 'functions', 'tsconfig.json'), {
         compilerOptions: { types: ['node', '@pikku/playwright'] },
       })
-      const withIt = await runProjectValidate(tmp)
+      const withIt = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.ok(
         !withIt.findings.some((f) => f.id === 'playwright-types-not-loaded')
       )
@@ -335,7 +357,10 @@ describe('pikku validate', () => {
         compilerOptions: { strict: true },
       })
 
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.ok(
         !result.findings.some((f) => f.id === 'playwright-types-not-loaded'),
         'no types array means the compiler already loads what it resolves'
@@ -366,7 +391,10 @@ describe('pikku validate', () => {
         'utf8'
       )
 
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const ids = result.findings.map((f) => f.id)
 
       assert.ok(!ids.includes('fn-pkg-postgres-dep'))
@@ -429,7 +457,10 @@ describe('pikku validate', () => {
         'utf8'
       )
 
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const ids = result.findings.map((f) => f.id)
 
       assert.strictEqual(result.ok, false)
@@ -493,7 +524,10 @@ describe('pikku validate', () => {
         'utf8'
       )
 
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const ids = result.findings.map((f) => f.id)
 
       assert.ok(!ids.includes('auth-dev-db-missing'))
@@ -530,7 +564,10 @@ describe('custom-server-bootstrap', () => {
     try {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { build: 'tsc' })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.strictEqual(findBootstrap(result.findings), undefined)
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -542,7 +579,10 @@ describe('custom-server-bootstrap', () => {
     try {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { start: 'node dist/start.js' })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = findBootstrap(result.findings)
       assert.ok(finding, 'expected custom-server-bootstrap finding')
       assert.strictEqual(finding!.severity, 'warn')
@@ -559,7 +599,10 @@ describe('custom-server-bootstrap', () => {
     try {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { dev: 'tsx watch src/server.ts' })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = findBootstrap(result.findings)
       assert.ok(finding, 'expected custom-server-bootstrap finding')
       assert.match(finding!.message, /"dev"/)
@@ -576,7 +619,10 @@ describe('custom-server-bootstrap', () => {
         start: 'node dist/start.js',
         dev: 'tsx watch src/server.ts',
       })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const matches = result.findings.filter(
         (f) => f.id === 'custom-server-bootstrap'
       )
@@ -602,7 +648,10 @@ describe('custom-server-bootstrap', () => {
       try {
         await makeValidWorkspace(tmp)
         await setRootScripts(tmp, { start: script })
-        const result = await runProjectValidate(tmp)
+        const result = await runProjectValidate(tmp, {
+          skipTypecheck: true,
+          skipDeployChecks: true,
+        })
         assert.strictEqual(findBootstrap(result.findings), undefined)
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -621,7 +670,10 @@ describe('custom-server-bootstrap', () => {
       try {
         await makeValidWorkspace(tmp)
         await setRootScripts(tmp, { start: script })
-        const result = await runProjectValidate(tmp)
+        const result = await runProjectValidate(tmp, {
+          skipTypecheck: true,
+          skipDeployChecks: true,
+        })
         assert.strictEqual(findBootstrap(result.findings), undefined)
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -650,7 +702,10 @@ describe('custom-server-bootstrap', () => {
           { start: 'node dist/start.js' },
           { [pkg]: '^1.0.0' }
         )
-        const result = await runProjectValidate(tmp)
+        const result = await runProjectValidate(tmp, {
+          skipTypecheck: true,
+          skipDeployChecks: true,
+        })
         assert.strictEqual(findBootstrap(result.findings), undefined)
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -664,7 +719,10 @@ describe('custom-server-bootstrap', () => {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { start: 'node dist/start.js' })
       await setFunctionsDeps(tmp, { '@pikku/fastify-plugin': '^1.0.0' })
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.strictEqual(findBootstrap(result.findings), undefined)
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -680,7 +738,10 @@ describe('custom-server-bootstrap', () => {
         { start: 'node dist/start.js' },
         { '@pikku/jose': '^1.0.0', '@pikku/kysely': '^1.0.0' }
       )
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.ok(
         findBootstrap(result.findings),
         'expected custom-server-bootstrap finding'
@@ -696,7 +757,10 @@ describe('custom-server-bootstrap', () => {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { start: 'node dist/start.js' })
       await setLintRule(tmp, 'off')
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       assert.strictEqual(findBootstrap(result.findings), undefined)
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -709,7 +773,10 @@ describe('custom-server-bootstrap', () => {
       await makeValidWorkspace(tmp)
       await setRootScripts(tmp, { start: 'node dist/start.js' })
       await setLintRule(tmp, 'error')
-      const result = await runProjectValidate(tmp)
+      const result = await runProjectValidate(tmp, {
+        skipTypecheck: true,
+        skipDeployChecks: true,
+      })
       const finding = findBootstrap(result.findings)
       assert.ok(finding, 'expected custom-server-bootstrap finding')
       assert.strictEqual(finding!.severity, 'error')

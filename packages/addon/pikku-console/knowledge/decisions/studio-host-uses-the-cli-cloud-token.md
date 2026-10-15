@@ -9,7 +9,7 @@ tags: console, studio, cloud, credentials
 
 The token comes from `resolveApiContext`. It is `PIKKUSTUDIO_TOKEN` from the
 environment, or the token stored in the CLI auth file for the API URL
-(`packages/cli/src/cloud/lib/config.ts:120`).
+(`packages/addon/pikku-cloud-cli/src/lib/config.ts:120`).
 
 `resolveStudioHost` (`packages/addon/pikku-console/src/services/studio-host.service.ts:405`)
 treats a project as linked when the context has both a token and a `projectId`
