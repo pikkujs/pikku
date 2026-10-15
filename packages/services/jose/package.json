@@ -16,6 +16,7 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
+    "test": "bun test --timeout 120000 src",
     "release": "npm run build && npm test",
     "prepublishOnly": "bun run build"
   },
