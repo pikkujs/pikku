@@ -1,3 +1,4 @@
+import type { BoardChange, BoardGroup } from './changes-board.js'
 export type AskChangeQuestionInput = {
   changeId: string
   projectId?: string | undefined
@@ -557,10 +558,8 @@ export type ChangesRPC = {
 
 export interface NextResult {
   outcome: 'ready' | 'timeout'
-  changes: (
-    ListChangesOutput['changes'][number] | ClaimChangesOutput['changes'][number]
-  )[]
-  answered: ListChangesOutput['changes'][number][]
-  groups: ListChangesOutput['groups'][number][]
+  changes: (BoardChange | ClaimChangesOutput['changes'][number])[]
+  answered: BoardChange[]
+  groups: BoardGroup[]
   claimed: ClaimChangesOutput | null
 }

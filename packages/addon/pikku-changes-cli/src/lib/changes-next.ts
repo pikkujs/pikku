@@ -1,5 +1,5 @@
 import type { ChangesRPC } from './changes-local.js'
-import type { ClaimChangesOutput } from './types.js'
+import type { ClaimChangesOutput, NextResult } from './types.js'
 import {
   board,
   liveLease,

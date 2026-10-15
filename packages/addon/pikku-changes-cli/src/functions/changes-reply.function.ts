@@ -10,7 +10,10 @@ import {
   nonBlank,
 } from '../lib/changes.js'
 import { dim, safe, safeBlock } from '@pikku/cli/addon-support'
-import type { ReplyToChangeOutput } from '../lib/types.js'
+import type {
+  ReplyToChangeInput,
+  ReplyToChangeOutput,
+} from '../lib/types.js'
 import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 
 export const ChangesReplyInput = z.object({
@@ -54,10 +57,10 @@ export const ChangesReply = pikkuSessionlessFunc({
 
     const { rpc, projectId } = await changesContext(input.apiUrl)
     if (input.person && projectId !== LOCAL_PROJECT_ID)
-      throw new CloudPreconditionError(
+      throw new PreconditionError(
         'A person answers a hosted project from the console; --person is for the local changes queue.'
       )
-    return await rpc.invoke('replyToChange', {
+    const reply: ReplyToChangeInput & { person?: boolean } = {
       ...changeRef(projectId, input.changeId),
       body: nonBlank(input.message, 'Say something — the message is empty.'),
       authorName: input.authorName ?? 'pikku-cli',
@@ -65,7 +68,8 @@ export const ChangesReply = pikkuSessionlessFunc({
       imageLabel: input.imageLabel ?? 'screenshot',
       ...(imageBase64 ? { imageBase64 } : {}),
       ...(input.person ? { person: true } : {}),
-    } as Parameters<typeof rpc.invoke<'replyToChange'>>[1])
+    }
+    return await rpc.invoke('replyToChange', reply)
   },
 })
 
