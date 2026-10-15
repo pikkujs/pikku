@@ -1,4 +1,5 @@
 import assert from 'node:assert'
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,7 +14,7 @@ import { readMocks } from './read.js'
 import {
   callIndex,
   checkStubs,
-  frontendRoots,
+  frontendFiles,
   scanFrontend,
 } from './stub-scan.js'
 import { validateAgainstSchema } from './validate.js'
@@ -319,7 +320,7 @@ const usePikkuQueryStubby = 1`
   )
   write('apps/app/src/skipped.gen.ts', `usePikkuQueryStub('x:y')`)
 
-  const result = checkStubs(scanFrontend(root, frontendRoots(root)), [
+  const result = checkStubs(scanFrontend(root, frontendFiles(root)), [
     'reminders',
   ])
   const at = (file: string) => result.calls.filter((c) => c.file.endsWith(file))
@@ -363,7 +364,7 @@ const usePikkuQueryStubby = 1`
     rmSync(join(root, 'apps/app/src/undeclared.tsx'))
     rmSync(join(root, 'apps/app/src/dynamic.tsx'))
     assert.strictEqual(
-      checkStubs(scanFrontend(root, frontendRoots(root)), ['reminders']).ok,
+      checkStubs(scanFrontend(root, frontendFiles(root)), ['reminders']).ok,
       true
     )
     rmSync(root, { recursive: true, force: true })
@@ -404,7 +405,7 @@ usePikkuQueryStub('rooms:list', { featureFlag: 'rooms' })`
     ).rpcs.map((r) => [r.rpc, r.status] as const)
   )
   const result = checkStubs(
-    scanFrontend(root, frontendRoots(root)),
+    scanFrontend(root, frontendFiles(root)),
     ['rooms'],
     { status: (rpc) => statuses.get(rpc) }
   )
@@ -432,7 +433,7 @@ const fixture = (files: Record<string, string>) => {
     mkdirSync(join(root, rel, '..'), { recursive: true })
     writeFileSync(join(root, rel), text)
   }
-  return { root, scan: scanFrontend(root, frontendRoots(root)) }
+  return { root, scan: scanFrontend(root, frontendFiles(root)) }
 }
 
 const withFunctions = (...keys: string[]): SurfaceView => ({
@@ -606,6 +607,111 @@ usePikkuQuery(name)`,
     assert.strictEqual(plain.ok, true)
     const strict = checkStubs(scan, ['rooms'], facts, { strict: true })
     assert.strictEqual(strict.ok, false)
+    rmSync(root, { recursive: true, force: true })
+  })
+})
+
+describe('stub scan by import', () => {
+  const root = mkdtempSync(join(tmpdir(), 'stubimports-'))
+  const write = (rel: string, text: string) => {
+    mkdirSync(join(root, rel, '..'), { recursive: true })
+    writeFileSync(join(root, rel), text)
+  }
+  const stub = (name: string, from: string, rpc: string) =>
+    `import { ${name} } from '${from}'
+${name.split(' as ').pop()}('${rpc}', { featureFlag: 'f' })`
+  execFileSync('git', ['init', '-q'], { cwd: root })
+  write('.gitignore', 'ignored/\n')
+  write(
+    'sdk/src/pikku/api.gen.ts',
+    'export const usePikkuQueryStub = () => {}\nexport const usePikkuCloudQuery = () => {}'
+  )
+  write('other/api.gen.ts', 'export const usePikkuQueryStub = () => {}')
+  write(
+    'apps/web/tsconfig.json',
+    JSON.stringify({
+      compilerOptions: { paths: { '@sdk/*': ['../../sdk/src/pikku/*'] } },
+    })
+  )
+  write(
+    'apps/web/src/relative.tsx',
+    stub('usePikkuQueryStub', '../../../sdk/src/pikku/api.gen', 'a:relative')
+  )
+  write(
+    'apps/web/src/alias.tsx',
+    stub('usePikkuQueryStub', '@sdk/api.gen', 'a:alias')
+  )
+  write(
+    'apps/web/src/lib/api.ts',
+    "export { usePikkuQueryStub } from '../../../../sdk/src/pikku/api.gen'"
+  )
+  write(
+    'apps/web/src/reexported.tsx',
+    stub('usePikkuQueryStub', './lib/api', 'a:reexported')
+  )
+  write(
+    'apps/web/src/renamed.tsx',
+    stub(
+      'usePikkuCloudQuery as usePikkuQueryStub',
+      '../../../sdk/src/pikku/api.gen',
+      'a:renamed'
+    )
+  )
+  write(
+    'apps/web/src/other.tsx',
+    stub('usePikkuQueryStub', '../../../other/api.gen', 'a:other')
+  )
+  write(
+    'apps/web/src/unknown.tsx',
+    stub('usePikkuQueryStub', 'nowhere-sdk', 'a:unknown')
+  )
+  write(
+    'packages/blocks/src/screen.tsx',
+    stub('usePikkuQueryStub', '../../../sdk/src/pikku/api.gen', 'a:blocks')
+  )
+  write(
+    'ignored/screen.tsx',
+    stub('usePikkuQueryStub', '../sdk/src/pikku/api.gen', 'a:ignored')
+  )
+  const rpcs = scanFrontend(
+    root,
+    frontendFiles(root),
+    'sdk/src/pikku/api.gen.ts'
+  ).stubCalls.map((call) => call.rpc)
+
+  test("this project's client counts, by relative path, path alias and re-export", () => {
+    assert.ok(rpcs.includes('a:relative'))
+    assert.ok(rpcs.includes('a:alias'))
+    assert.ok(rpcs.includes('a:reexported'))
+  })
+
+  test('a hook name aliased to another export is skipped', () => {
+    assert.ok(!rpcs.includes('a:renamed'))
+  })
+
+  test('a hook from another client is skipped', () => {
+    assert.ok(!rpcs.includes('a:other'))
+  })
+
+  test('an import that cannot be resolved still counts', () => {
+    assert.ok(rpcs.includes('a:unknown'))
+  })
+
+  test('stubs outside apps/ are found, ignored files are not', () => {
+    assert.ok(rpcs.includes('a:blocks'))
+    assert.ok(!rpcs.includes('a:ignored'))
+    assert.strictEqual(rpcs.length, 5)
+  })
+
+  test('--src limits the scan to the given directories', () => {
+    assert.deepStrictEqual(
+      scanFrontend(
+        root,
+        frontendFiles(root, 'packages'),
+        'sdk/src/pikku/api.gen.ts'
+      ).stubCalls.map((call) => call.rpc),
+      ['a:blocks']
+    )
     rmSync(root, { recursive: true, force: true })
   })
 })

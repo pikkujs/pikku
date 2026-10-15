@@ -1104,7 +1104,7 @@ wireCLI({
             },
             src: {
               description:
-                'Frontend source directories, comma separated (default: apps/*/src); used to find unused mocks',
+                'Frontend source directories, comma separated (default: every file git tracks or does not ignore); used to find unused mocks',
               type: 'string',
             },
           },
@@ -1123,7 +1123,7 @@ wireCLI({
           options: {
             src: {
               description:
-                'Frontend source directories, comma separated (default: apps/*/src)',
+                'Frontend source directories, comma separated (default: every file git tracks or does not ignore)',
               type: 'string',
             },
             strict: {
