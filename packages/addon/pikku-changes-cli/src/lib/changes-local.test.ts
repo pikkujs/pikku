@@ -4,6 +4,7 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { localChangesRPC, releaseChangeset } from './changes-local.js'
+import { claimable } from './changes-next.js'
 
 const tempStore = async () =>
   join(await mkdtemp(join(tmpdir(), 'changes-')), 'q.json')
@@ -77,5 +78,67 @@ describe('local changes queue', () => {
     await assert.rejects(rpc.invoke('listStages', { projectId: 'local' }), {
       status: 501,
     })
+  })
+
+  test('a backlogged change is tracked but never picked up', async () => {
+    const rpc = await store()
+    await rpc.invoke('createChange', {
+      stageId: 'local',
+      title: 'Later',
+      backlog: true,
+    })
+    await rpc.invoke('createChange', { stageId: 'local', title: 'Now' })
+    const list = () =>
+      rpc.invoke('listChanges', { projectId: 'local', status: ['open'] })
+
+    assert.deepStrictEqual(
+      claimable(await list(), Date.now()).map((c) => c.title),
+      ['Now']
+    )
+
+    const claimed = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      claimedBy: 'me',
+    })
+    assert.deepStrictEqual(
+      claimed.changes.map((c) => c.title),
+      ['Now']
+    )
+
+    await assert.rejects(
+      rpc.invoke('claimChanges', {
+        projectId: 'local',
+        changeIds: ['1'],
+        claimedBy: 'me',
+      }),
+      /#1 is in the backlog; run `pikku changes unbacklog 1` first/
+    )
+    await assert.rejects(
+      rpc.invoke('claimChanges', { projectId: 'local', claimedBy: 'me' }),
+      { status: 409 }
+    )
+    const all = await rpc.invoke('listChanges', { projectId: 'local' })
+    assert.strictEqual(all.changes.length, 2)
+  })
+
+  test('unbacklog makes it claimable again', async () => {
+    const rpc = await store()
+    await rpc.invoke('createChange', {
+      stageId: 'local',
+      title: 'Later',
+      backlog: true,
+    })
+    await rpc.invoke('updateChange', { changeId: '1', backlog: false })
+    const list = await rpc.invoke('listChanges', {
+      projectId: 'local',
+      status: ['open'],
+    })
+    assert.strictEqual(claimable(list, Date.now()).length, 1)
+    const claimed = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      changeIds: ['1'],
+      claimedBy: 'me',
+    })
+    assert.strictEqual(claimed.changes.length, 1)
   })
 })

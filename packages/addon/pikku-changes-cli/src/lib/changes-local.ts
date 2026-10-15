@@ -40,7 +40,11 @@ export const LOCAL_PROJECT_ID = 'local'
 const LOCAL_STAGE_ID = 'local'
 const STORE_FILE = 'pikku-changes.json'
 
-export type Routing = { specialist?: Specialist; dependsOn?: string[] }
+export type Routing = {
+  specialist?: Specialist
+  dependsOn?: string[]
+  backlog?: boolean
+}
 
 type Change = ListChangesOutput['changes'][number] & Routing
 
@@ -273,6 +277,7 @@ const handlers: {
       changeId,
       specialist: tag(input.specialist, input.title, input.body),
       dependsOn,
+      backlog: input.backlog === true,
       shortId: String(store.nextShortId++),
       projectId: LOCAL_PROJECT_ID,
       stageId: LOCAL_STAGE_ID,
@@ -310,6 +315,7 @@ const handlers: {
       change.specialist = tag(input.specialist, change.title, change.body)
     if (input.dependsOn !== undefined)
       change.dependsOn = dependencies(store, change.changeId, input.dependsOn)
+    if (input.backlog !== undefined) change.backlog = input.backlog
     return { change }
   },
 
@@ -317,7 +323,18 @@ const handlers: {
     const now = new Date()
     const wanted = input.changeIds?.length
       ? input.changeIds.map((ref) => find(store, ref))
-      : store.changes.filter((c) => c.status === 'open')
+      : store.changes.filter((c) => c.status === 'open' && !c.backlog)
+    const shelved = wanted.filter((c) => c.backlog)
+    if (shelved.length)
+      throw new LocalChangesError(
+        shelved
+          .map(
+            (c) =>
+              `#${c.shortId} is in the backlog; run \`pikku changes unbacklog ${c.shortId}\` first`
+          )
+          .join('\n'),
+        409
+      )
     const taken = wanted.filter(
       (c) =>
         (c.status !== 'open' && c.status !== 'claimed') ||

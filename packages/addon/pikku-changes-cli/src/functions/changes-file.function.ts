@@ -5,6 +5,7 @@ import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { changesContext, idList, nonBlank } from '../lib/changes.js'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { CreateChangeOutput } from '../lib/types.js'
+import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 import { SPECIALISTS } from '../lib/specialists.js'
 
 export const ChangesFileInput = z.object({
@@ -18,6 +19,7 @@ export const ChangesFileInput = z.object({
   locale: z.string().optional(),
   specialist: z.enum(SPECIALISTS).optional(),
   dependsOn: z.array(z.string()).optional(),
+  backlog: z.boolean().optional(),
 })
 
 export const ChangesFileOutput = z.object({
@@ -42,7 +44,14 @@ export const ChangesFile = pikkuSessionlessFunc({
     if (input.body && input.bodyFile)
       throw new CloudPreconditionError('Pass --body or --body-file, not both.')
 
-    const { rpc } = await changesContext(input.apiUrl, input.projectId)
+    const { rpc, projectId } = await changesContext(
+      input.apiUrl,
+      input.projectId
+    )
+    if (input.backlog && projectId !== LOCAL_PROJECT_ID)
+      throw new PreconditionError(
+        'The backlog is kept in the local changes queue; this project keeps its changes in fabric.'
+      )
 
     const body = input.bodyFile
       ? await readFile(input.bodyFile, 'utf8')
@@ -56,6 +65,7 @@ export const ChangesFile = pikkuSessionlessFunc({
       locale: input.locale,
       specialist: input.specialist,
       dependsOn: idList(input.dependsOn),
+      backlog: input.backlog ? true : undefined,
     }
     return await rpc.invoke('createChange', filing)
   },
