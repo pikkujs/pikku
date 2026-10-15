@@ -244,7 +244,7 @@ export function getAddonFiles(
             './dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
       },
-      files: ['dist'],
+      files: ['dist', '.mocks'],
       scripts: {
         prepublishOnly: 'yarn build',
         prebuild: 'pikku all',

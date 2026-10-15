@@ -11,11 +11,14 @@ const RPC_MAP = './pikku-rpc-map.gen.js'
 describe('serializeReactQueryHooks', () => {
   test('usePikkuQuery does not retry a 4xx, and options can override it', () => {
     const output = serializeReactQueryHooks(RPC_MAP)
-    const source = output.match(/const retryUnlessClientError = [\s\S]*?\n\}/)![0]
+    const source = output.match(
+      /const retryUnlessClientError = [\s\S]*?\n\}/
+    )![0]
     const retry = new Function(
       `${ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText}; return retryUnlessClientError`
     )()
-    const withStatus = (status?: number) => Object.assign(new Error('x'), { status })
+    const withStatus = (status?: number) =>
+      Object.assign(new Error('x'), { status })
     assert.strictEqual(retry(0, withStatus(404)), false)
     assert.strictEqual(retry(0, withStatus(403)), false)
     assert.strictEqual(retry(0, withStatus(500)), true)
@@ -80,17 +83,22 @@ describe('serializeReactQueryHooks', () => {
 
   describe('stub hooks', () => {
     const stubs = [
-      { name: 'reminders:list', outputType: 'Array<{ "id": number; "note"?: string }>' },
+      {
+        name: 'reminders:list',
+        outputType: 'Array<{ "id": number; "note"?: string }>',
+      },
     ]
     const output = serializeReactQueryHooks(RPC_MAP, undefined, false, stubs)
     const segment = output.slice(
-      output.indexOf('let mockFiles'),
+      output.indexOf('type MockGlob'),
       output.indexOf('type PaginatedKeys')
     )
 
     const load = (env: { DEV?: boolean; VITE_MOCK?: string }) => {
       const code = ts.transpileModule(
-        segment.replace(/import\.meta/g, '__meta').replace(/export const/g, 'const'),
+        segment
+          .replace(/import\.meta/g, '__meta')
+          .replace(/export (const|type)/g, '$1'),
         { compilerOptions: { target: ts.ScriptTarget.ES2022 } }
       ).outputText
       const calls: unknown[][] = []
@@ -111,18 +119,24 @@ describe('serializeReactQueryHooks', () => {
       return { api, calls }
     }
     const files = {
-      '/.mocks/reminders.list/healthy.json': async () => ({ default: [{ id: 1 }] }),
+      '/.mocks/reminders.list/healthy.json': async () => ({
+        default: [{ id: 1 }],
+      }),
       '/.mocks/reminders.list/empty.json': async () => ({ default: [] }),
     }
     const meta = {
-      '/.mocks/reminders.list/healthy.meta.json': { default: { default: true } },
+      '/.mocks/reminders.list/healthy.meta.json': {
+        default: { default: true },
+      },
       '/.mocks/reminders.list/empty.meta.json': { default: { default: false } },
     }
 
     test('in dev the stub query answers with the default mock and never calls the backend', async () => {
       const { api, calls } = load({ DEV: true })
       api.registerMocks(files, meta)
-      const result = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders' })
+      const result = api.usePikkuQueryStub('reminders:list', {
+        featureFlag: 'reminders',
+      })
       assert.strictEqual(result.via, 'useQuery')
       assert.deepStrictEqual(await result.o.queryFn(), [{ id: 1 }])
       assert.strictEqual(calls.length, 0)
@@ -131,7 +145,9 @@ describe('serializeReactQueryHooks', () => {
     test('VITE_MOCK enables the stub mutation outside dev', async () => {
       const { api } = load({ VITE_MOCK: '1' })
       api.registerMocks(files, meta)
-      const result = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' })
+      const result = api.usePikkuMutationStub('reminders:list', {
+        featureFlag: 'reminders',
+      })
       assert.strictEqual(result.via, 'useMutation')
       assert.deepStrictEqual(await result.o.mutationFn({}), [{ id: 1 }])
     })
@@ -139,10 +155,15 @@ describe('serializeReactQueryHooks', () => {
     test('in production the stub is a plain backend call with its input', async () => {
       const { api, calls } = load({})
       api.registerMocks(files, meta)
-      const q = api.usePikkuQueryStub('reminders:list', { featureFlag: 'reminders', input: { a: 1 } })
+      const q = api.usePikkuQueryStub('reminders:list', {
+        featureFlag: 'reminders',
+        input: { a: 1 },
+      })
       assert.strictEqual(await q.o.queryFn(), 'real')
       assert.deepStrictEqual(calls[0], ['reminders:list', { a: 1 }])
-      const m = api.usePikkuMutationStub('reminders:list', { featureFlag: 'reminders' })
+      const m = api.usePikkuMutationStub('reminders:list', {
+        featureFlag: 'reminders',
+      })
       assert.strictEqual(await m.o.mutationFn({ b: 2 }), 'real')
       assert.deepStrictEqual(calls[1], ['reminders:list', { b: 2 }])
     })
@@ -155,12 +176,21 @@ describe('serializeReactQueryHooks', () => {
 
       const mocked = load({ VITE_MOCK: '1' })
       mocked.api.registerMocks(files, meta)
-      assert.deepStrictEqual(await mocked.api.usePikkuQuery('reminders:list', {}).o.queryFn(), [{ id: 1 }])
-      assert.strictEqual(await mocked.api.usePikkuQuery('other:rpc', {}).o.queryFn(), 'real')
+      assert.deepStrictEqual(
+        await mocked.api.usePikkuQuery('reminders:list', {}).o.queryFn(),
+        [{ id: 1 }]
+      )
+      assert.strictEqual(
+        await mocked.api.usePikkuQuery('other:rpc', {}).o.queryFn(),
+        'real'
+      )
     })
 
     test('reads the env as literal import.meta.env.* so a bundler folds the mock path away in production', () => {
-      assert.match(segment, /import\.meta\.env\.DEV \|\| import\.meta\.env\.VITE_MOCK/)
+      assert.match(
+        segment,
+        /import\.meta\.env\.DEV \|\| import\.meta\.env\.VITE_MOCK/
+      )
       assert.match(segment, /import\.meta\.env\.VITE_MOCK && hasMock/)
       assert.doesNotMatch(segment, /const \w+ = \(?import\.meta/)
     })
@@ -174,24 +204,101 @@ describe('serializeReactQueryHooks', () => {
         '/.mocks/reminders.list/healthy.json': async () => [{ id: 1 }],
         '/.mocks/reminders.list/empty.json': async () => [],
       }
-      for (const [f, m] of [[files, meta], [plainFiles, plain]] as const) {
+      for (const [f, m] of [
+        [files, meta],
+        [plainFiles, plain],
+      ] as const) {
         const { api } = load({ DEV: true })
         api.registerMocks(f, m)
-        assert.deepStrictEqual(await api.defaultMock('reminders:list'), [{ id: 1 }])
+        assert.deepStrictEqual(await api.defaultMock('reminders:list'), [
+          { id: 1 },
+        ])
       }
+    })
+
+    test('an addon ships mocks under the namespace the app wires, and the app overrides them', async () => {
+      const addon = {
+        namespace: 'studio',
+        files: {
+          '/addon/.mocks/listSetups/gym.json': async () => ['addon gym'],
+          '/addon/.mocks/listSetups/none.json': async () => [],
+          '/addon/.mocks/projectHome/home.json': async () => 'addon home',
+        },
+        meta: {
+          '/addon/.mocks/listSetups/gym.meta.json': { default: true },
+          '/addon/.mocks/listSetups/none.meta.json': { default: false },
+          '/addon/.mocks/projectHome/home.meta.json': { default: true },
+        },
+      }
+      const { api } = load({ DEV: true })
+      api.registerMocks([addon])
+      assert.deepStrictEqual(await api.defaultMock('studio:listSetups'), [
+        'addon gym',
+      ])
+      assert.strictEqual(
+        await api.defaultMock('studio:projectHome'),
+        'addon home'
+      )
+      await assert.rejects(
+        () => api.defaultMock('listSetups'),
+        /No default mock/
+      )
+
+      const app = {
+        files: {
+          '/.mocks/studio.listSetups/gym.json': async () => ['app gym'],
+          '/.mocks/studio.listSetups/spa.json': async () => ['app spa'],
+        },
+        meta: {
+          '/.mocks/studio.listSetups/gym.meta.json': { default: true },
+          '/.mocks/studio.listSetups/spa.meta.json': { default: false },
+        },
+      }
+      const overridden = load({ DEV: true })
+      overridden.api.registerMocks([app, addon])
+      assert.deepStrictEqual(
+        await overridden.api.defaultMock('studio:listSetups'),
+        ['app gym']
+      )
+
+      const appDefault = load({ DEV: true })
+      appDefault.api.registerMocks([
+        addon,
+        {
+          files: {
+            '/.mocks/studio.listSetups/spa.json': async () => ['app spa'],
+          },
+          meta: {
+            '/.mocks/studio.listSetups/spa.meta.json': { default: true },
+          },
+        },
+      ])
+      assert.deepStrictEqual(
+        await appDefault.api.defaultMock('studio:listSetups'),
+        ['app spa']
+      )
     })
 
     test('a stub with no default mock fails loudly', async () => {
       const { api } = load({ DEV: true })
       api.registerMocks(files, meta)
-      await assert.rejects(() => api.defaultMock('missing:rpc'), /No default mock for missing:rpc/)
+      await assert.rejects(
+        () => api.defaultMock('missing:rpc'),
+        /No default mock for missing:rpc/
+      )
     })
 
     describe('types', () => {
       const dir = mkdtempSync(join(tmpdir(), 'stub-hooks-'))
-      const write = (name: string, body: string) => writeFileSync(join(dir, name), body)
-      write('pikku-rpc-map.gen.d.ts', `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }`)
-      write('shims.d.ts', `
+      const write = (name: string, body: string) =>
+        writeFileSync(join(dir, name), body)
+      write(
+        'pikku-rpc-map.gen.d.ts',
+        `export type FlattenedRPCMap = { 'bookings:list': { input: { page: number }; output: { id: number }[] }; 'reminders:list': { input: {}; output: { id: string }[] } }`
+      )
+      write(
+        'shims.d.ts',
+        `
 declare module '@tanstack/react-query' {
   export type UseQueryOptions<T, E> = { [k: string]: unknown }
   export type UseInfiniteQueryOptions<A, B, C, D, E> = { [k: string]: unknown }
@@ -203,9 +310,12 @@ declare module '@tanstack/react-query' {
 }
 declare module '@pikku/react' { export const usePikkuRPC: <T>() => T }
 interface ImportMeta { env: Record<string, any> }
-`)
+`
+      )
       write('api.ts', output)
-      write('use.ts', `
+      write(
+        'use.ts',
+        `
 import { usePikkuQuery, usePikkuQueryStub, usePikkuMutationStub } from './api'
 const ok = usePikkuQueryStub('reminders:list', { featureFlag: 'x', input: { a: 1 } })
 const first: number | undefined = ok.data?.[0]?.id
@@ -226,13 +336,28 @@ usePikkuQueryStub('nothing:here', { featureFlag: 'x' })
 // @ts-expect-error the output is the mock shape
 const wrong: string = ok.data?.[0]?.id
 export { first, note, wrong, realId, stubId, mixed }
-`)
+`
+      )
       test('stub names are any RPC with a mock and the output is the inferred mock shape, not the function output', () => {
         const program = ts.createProgram(
-          ['pikku-rpc-map.gen.d.ts', 'shims.d.ts', 'api.ts', 'use.ts'].map((f) => join(dir, f)),
-          { noEmit: true, strict: true, skipLibCheck: true, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, target: ts.ScriptTarget.ES2022 }
+          ['pikku-rpc-map.gen.d.ts', 'shims.d.ts', 'api.ts', 'use.ts'].map(
+            (f) => join(dir, f)
+          ),
+          {
+            noEmit: true,
+            strict: true,
+            skipLibCheck: true,
+            module: ts.ModuleKind.ESNext,
+            moduleResolution: ts.ModuleResolutionKind.Bundler,
+            target: ts.ScriptTarget.ES2022,
+          }
         )
-        const diagnostics = ts.getPreEmitDiagnostics(program).map((d) => `${d.file?.fileName.split('/').pop()}: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`)
+        const diagnostics = ts
+          .getPreEmitDiagnostics(program)
+          .map(
+            (d) =>
+              `${d.file?.fileName.split('/').pop()}: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`
+          )
         rmSync(dir, { recursive: true, force: true })
         assert.deepStrictEqual(diagnostics, [])
       })

@@ -123,7 +123,7 @@ export const diffMocks = (
     }
     const calls = options.calls
     const called =
-      calls && calls.unresolved === 0
+      calls && calls.unresolved === 0 && mocks.some((m) => !m.from)
         ? calls.plain.has(rpc) || calls.stub.has(rpc)
         : undefined
     const dir = `.mocks/${rpc.replaceAll(':', '.')}`

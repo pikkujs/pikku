@@ -128,15 +128,17 @@ const retryUnlessClientError = (failureCount: number, error: Error) => {
   return !(status !== undefined && status >= 400 && status < 500) && failureCount < 3
 }
 
-let mockFiles: Record<string, () => Promise<unknown>> = {}
-let mockMeta: Record<string, unknown> = {}
+type MockGlob = Record<string, () => Promise<unknown>>
+export type MockSource = { namespace?: string; files: MockGlob; meta: Record<string, unknown> }
+
+let mockSources: MockSource[] = []
 
 export const registerMocks = (
-  files: Record<string, () => Promise<unknown>>,
-  meta: Record<string, unknown>
+  files: MockGlob | MockSource[],
+  meta: Record<string, unknown> = {}
 ) => {
-  mockFiles = files
-  mockMeta = meta
+  const sources = Array.isArray(files) ? files : [{ files, meta }]
+  mockSources = [...sources.filter((source) => source.namespace), ...sources.filter((source) => !source.namespace)]
 }
 
 const unwrapDefault = (value: unknown) => (value as { default?: unknown })?.default ?? value
@@ -147,10 +149,20 @@ const metaOf = (value: unknown) => {
 }
 
 const mockFileFor = (name: string) => {
-  const dir = '/.mocks/' + name.replace(/:/g, '.') + '/'
-  const metas = Object.keys(mockMeta).filter((key) => key.includes(dir))
-  const chosen = metas.find((key) => metaOf(mockMeta[key])?.default === true) ?? (metas.length === 1 ? metas[0] : undefined)
-  return chosen && Object.keys(mockFiles).find((key) => key === chosen.replace(/\\.meta\\.json$/, '.json'))
+  const scenarios = new Map<string, { file: () => Promise<unknown>; isDefault: boolean; app: boolean }>()
+  for (const source of mockSources) {
+    const prefix = source.namespace ? source.namespace + ':' : ''
+    if (prefix && !name.startsWith(prefix)) continue
+    const dir = '/.mocks/' + (prefix ? name.slice(prefix.length) : name.replace(/:/g, '.')) + '/'
+    for (const key of Object.keys(source.meta)) {
+      if (!key.includes(dir)) continue
+      const file = source.files[key.replace(/\\.meta\\.json$/, '.json')]
+      if (!file) continue
+      scenarios.set(key.slice(key.lastIndexOf('/') + 1), { file, isDefault: metaOf(source.meta[key])?.default === true, app: !prefix })
+    }
+  }
+  const all = [...scenarios.values()]
+  return (all.find((s) => s.app && s.isDefault) ?? all.find((s) => s.isDefault) ?? (all.length === 1 ? all[0] : undefined))?.file
 }
 
 const hasMock = (name: string) => !!mockFileFor(name)
@@ -158,7 +170,7 @@ const hasMock = (name: string) => !!mockFileFor(name)
 export const defaultMock = async (name: string) => {
   const file = mockFileFor(name)
   if (!file) throw new Error('No default mock for ' + name + ' in .mocks/')
-  return unwrapDefault(await mockFiles[file]!())
+  return unwrapDefault(await file())
 }
 
 export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(

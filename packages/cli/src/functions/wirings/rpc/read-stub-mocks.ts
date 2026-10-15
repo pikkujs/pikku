@@ -14,7 +14,14 @@ const typeOfSamples = (samples: unknown[]): string => {
   for (const sample of samples) {
     if (sample === null) kinds.add('null')
     else if (isRecord(sample) || Array.isArray(sample)) continue
-    else kinds.add(typeof sample === 'number' ? 'number' : typeof sample === 'boolean' ? 'boolean' : 'string')
+    else
+      kinds.add(
+        typeof sample === 'number'
+          ? 'number'
+          : typeof sample === 'boolean'
+            ? 'boolean'
+            : 'string'
+      )
   }
   if (objects.length) {
     const keys = [...new Set(objects.flatMap((o) => Object.keys(o)))]
@@ -43,34 +50,76 @@ const readJson = async (file: string): Promise<unknown> => {
   }
 }
 
-export const readStubMocks = async (mocksDir: string): Promise<StubMock[]> => {
+type Scenario = { sample?: unknown; error: boolean }
+
+const readScenarios = async (
+  mocksDir: string,
+  rpcOf: (dir: string) => string,
+  labelOf: (dir: string) => string,
+  into: Map<string, Map<string, Scenario>>,
+  labels: Map<string, string>
+) => {
   let dirs: string[]
   try {
     dirs = (await readdir(mocksDir, { withFileTypes: true }))
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
   } catch {
-    return []
+    return
   }
-  const stubs: StubMock[] = []
-  for (const dir of dirs.sort()) {
+  for (const dir of dirs) {
     const files = (await readdir(join(mocksDir, dir))).filter(
       (file) => file.endsWith('.json') && !file.endsWith('.meta.json')
     )
-    const samples: unknown[] = []
+    if (!files.length) continue
+    const scenarios = into.get(rpcOf(dir)) ?? new Map<string, Scenario>()
     for (const file of files) {
-      const meta = (await readJson(join(mocksDir, dir, file.replace(/\.json$/, '.meta.json')))) as
-        | { state?: string; status?: number }
-        | undefined
-      if (meta?.state === 'error' || (meta?.status ?? 200) >= 400) continue
-      const data = await readJson(join(mocksDir, dir, file))
-      if (data !== undefined) samples.push(data)
+      const meta = (await readJson(
+        join(mocksDir, dir, file.replace(/\.json$/, '.meta.json'))
+      )) as { state?: string; status?: number } | undefined
+      const error = meta?.state === 'error' || (meta?.status ?? 200) >= 400
+      scenarios.set(file, {
+        error,
+        sample: error ? undefined : await readJson(join(mocksDir, dir, file)),
+      })
     }
+    into.set(rpcOf(dir), scenarios)
+    labels.set(rpcOf(dir), labelOf(dir))
+  }
+}
+
+export const readStubMocks = async (
+  mocksDir: string,
+  addons: { namespace: string; package: string; dir: string }[] = []
+): Promise<StubMock[]> => {
+  const rpcs = new Map<string, Map<string, Scenario>>()
+  const labels = new Map<string, string>()
+  for (const addon of addons) {
+    await readScenarios(
+      addon.dir,
+      (dir) => `${addon.namespace}:${dir}`,
+      (dir) => `${addon.package}/.mocks/${dir}`,
+      rpcs,
+      labels
+    )
+  }
+  await readScenarios(
+    mocksDir,
+    (dir) => dir.replace(/\./g, ':'),
+    (dir) => `.mocks/${dir}`,
+    rpcs,
+    labels
+  )
+  const stubs: StubMock[] = []
+  for (const name of [...rpcs.keys()].sort()) {
+    const samples = [...rpcs.get(name)!.values()]
+      .filter((scenario) => !scenario.error && scenario.sample !== undefined)
+      .map((scenario) => scenario.sample)
     if (samples.length) {
-      stubs.push({ name: dir.replace(/\./g, ':'), outputType: typeOfSamples(samples) })
-    } else if (files.length) {
+      stubs.push({ name, outputType: typeOfSamples(samples) })
+    } else {
       throw new Error(
-        `.mocks/${dir} has only error mocks, so its stub has no type. Add a healthy mock and mark it default (meta: { "state": "healthy", "default": true }).`
+        `${labels.get(name)} has only error mocks, so its stub has no type. Add a healthy mock and mark it default (meta: { "state": "healthy", "default": true }).`
       )
     }
   }

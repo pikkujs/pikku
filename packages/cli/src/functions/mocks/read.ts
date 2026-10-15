@@ -18,6 +18,7 @@ export interface MockMeta {
 
 export interface Mock {
   name: string
+  from?: string
   hasData: boolean
   data?: unknown
   meta?: MockMeta
@@ -77,9 +78,11 @@ export const parseMeta = (
 /** `bookings.list` on disk is the RPC `bookings:list`. */
 export const rpcNameOf = (dir: string): string => dir.replaceAll('.', ':')
 
-/** Reads `<root>/.mocks/<rpc.name>/<mock>.json` with its `<mock>.meta.json`. */
-export const readMocks = async (rootDir: string): Promise<RpcMocks[]> => {
-  const base = join(rootDir, MOCKS_DIR)
+const readMocksDir = async (
+  base: string,
+  rpcOf: (dir: string) => string,
+  from?: string
+): Promise<RpcMocks[]> => {
   if (!existsSync(base)) return []
   const dirs = (await readdir(base, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
@@ -102,6 +105,7 @@ export const readMocks = async (rootDir: string): Promise<RpcMocks[]> => {
           const problems: string[] = []
           const mock: Mock = {
             name,
+            ...(from ? { from } : {}),
             hasData: files.includes(`${name}.json`),
             problems,
           }
@@ -133,7 +137,63 @@ export const readMocks = async (rootDir: string): Promise<RpcMocks[]> => {
           return mock
         })
       )
-      return { rpc: rpcNameOf(dir), mocks }
+      return { rpc: rpcOf(dir), mocks }
     })
   )
+}
+
+export interface AddonMocksSource {
+  namespace: string
+  package: string
+  dir: string
+}
+
+export const mergeMocks = (addon: RpcMocks[], app: RpcMocks[]): RpcMocks[] => {
+  const merged = new Map<string, Map<string, Mock>>()
+  for (const { rpc, mocks } of addon) {
+    const scenarios = merged.get(rpc) ?? new Map<string, Mock>()
+    for (const mock of mocks) scenarios.set(mock.name, mock)
+    merged.set(rpc, scenarios)
+  }
+  for (const { rpc, mocks } of app) {
+    const scenarios = merged.get(rpc) ?? new Map<string, Mock>()
+    if (mocks.some((mock) => mock.meta?.default === true)) {
+      for (const [name, mock] of scenarios) {
+        if (mock.meta?.default === true)
+          scenarios.set(name, {
+            ...mock,
+            meta: { ...mock.meta, default: false },
+          })
+      }
+    }
+    for (const mock of mocks) scenarios.set(mock.name, mock)
+    merged.set(rpc, scenarios)
+  }
+  return [...merged.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([rpc, scenarios]) => ({
+      rpc,
+      mocks: [...scenarios.values()].sort((a, b) =>
+        a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+      ),
+    }))
+}
+
+/** Reads `<root>/.mocks/<rpc.name>/<mock>.json` with its `<mock>.meta.json`, over the mocks each addon ships in `<addon>/.mocks/<fn>/`. */
+export const readMocks = async (
+  rootDir: string,
+  addons: AddonMocksSource[] = []
+): Promise<RpcMocks[]> => {
+  const app = await readMocksDir(join(rootDir, MOCKS_DIR), rpcNameOf)
+  if (!addons.length) return app
+  const fromAddons = await Promise.all(
+    addons.map((source) =>
+      readMocksDir(
+        source.dir,
+        (dir) => `${source.namespace}:${dir}`,
+        source.package
+      )
+    )
+  )
+  return mergeMocks(fromAddons.flat(), app)
 }

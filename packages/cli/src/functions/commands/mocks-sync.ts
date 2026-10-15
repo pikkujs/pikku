@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { added, changed, dim, removed } from '../../cloud/lib/output.js'
+import { projectAddonMockSources } from '../mocks/addon-mocks.js'
 import { loadSurface } from '../mocks/load.js'
 import { LOCK_FILE, lockPath, readLock } from '../mocks/lock.js'
 import { MOCKS_DIR, readMocks } from '../mocks/read.js'
@@ -26,7 +27,10 @@ export const mocksSync = pikkuSessionlessFunc<
     'Record the shape of every mock, and of the function behind it, in .mocks/mocks.lock.json so later edits to a mock show up in pikku mocks diff',
   func: async ({ config }) => {
     const path = lockPath(config.rootDir)
-    const rpcMocks = await readMocks(config.rootDir)
+    const rpcMocks = await readMocks(
+      config.rootDir,
+      projectAddonMockSources(config.rootDir, config.outDir)
+    )
     const plan = planSync(
       rpcMocks,
       loadSurface(config.rootDir, config.outDir),

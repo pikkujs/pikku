@@ -164,4 +164,49 @@ describe('validate and mocks', () => {
       ])
     })
   })
+
+  describe('mocks an addon ships', () => {
+    const withAddon = (extra: Record<string, string>) =>
+      project({
+        '.mocks/x.y/healthy.json': '{}',
+        '.pikku/addon/pikku-addons-meta.gen.json': JSON.stringify({
+          studio: { package: '@scope/addon-studio', functions: {} },
+        }),
+        '.pikku/scopes/pikku-flags-meta.gen.json': '{"setups":{}}',
+        'node_modules/@scope/addon-studio/package.json': '{}',
+        'apps/web/src/screen.tsx':
+          "export const S = () => usePikkuQueryStub('studio:listSetups', { featureFlag: 'setups' })\n",
+        ...extra,
+      })
+
+    test('a stub backed only by an addon mock passes', async () => {
+      const root = await withAddon({
+        'node_modules/@scope/addon-studio/.mocks/listSetups/gym.json': '[]',
+        'node_modules/@scope/addon-studio/.mocks/listSetups/gym.meta.json':
+          '{"default":true}',
+      })
+      try {
+        assert.deepStrictEqual(
+          (await runMocksChecks(root)).filter((f) => f.severity === 'error'),
+          []
+        )
+      } finally {
+        await rm(root, { recursive: true, force: true })
+      }
+    })
+
+    test('without the addon mock the stub has no mock', async () => {
+      const root = await withAddon({})
+      try {
+        assert.deepStrictEqual(
+          (await runMocksChecks(root))
+            .filter((f) => f.severity === 'error')
+            .map((f) => f.id),
+          ['mocks-no-mock']
+        )
+      } finally {
+        await rm(root, { recursive: true, force: true })
+      }
+    })
+  })
 })
