@@ -11,6 +11,7 @@ import {
 } from '../lib/changes.js'
 import { dim, safe, safeBlock } from '@pikku/cli/addon-support'
 import type { ReplyToChangeOutput } from '../lib/types.js'
+import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 
 export const ChangesReplyInput = z.object({
   apiUrl: z.string().optional(),
@@ -20,6 +21,7 @@ export const ChangesReplyInput = z.object({
   imageLabel: z.string().optional(),
   contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']).optional(),
   authorName: z.string().optional(),
+  person: z.boolean().optional(),
 })
 
 export const ChangesReplyOutput = z.object({
@@ -51,6 +53,10 @@ export const ChangesReply = pikkuSessionlessFunc({
     }
 
     const { rpc, projectId } = await changesContext(input.apiUrl)
+    if (input.person && projectId !== LOCAL_PROJECT_ID)
+      throw new CloudPreconditionError(
+        'A person answers a hosted project from the console; --person is for the local changes queue.'
+      )
     return await rpc.invoke('replyToChange', {
       ...changeRef(projectId, input.changeId),
       body: nonBlank(input.message, 'Say something — the message is empty.'),
@@ -58,7 +64,8 @@ export const ChangesReply = pikkuSessionlessFunc({
       contentType: contentType ?? 'image/png',
       imageLabel: input.imageLabel ?? 'screenshot',
       ...(imageBase64 ? { imageBase64 } : {}),
-    })
+      ...(input.person ? { person: true } : {}),
+    } as Parameters<typeof rpc.invoke<'replyToChange'>>[1])
   },
 })
 
@@ -66,7 +73,11 @@ export const renderChangesReply = (
   _s: unknown,
   { message }: ReplyToChangeOutput
 ): void => {
-  console.log('Replied — the item keeps its status.')
+  console.log(
+    message.authorKind === 'user'
+      ? 'Answered — a parked change is back in progress.'
+      : 'Replied — the item keeps its status; a parked change stays parked until the person answers.'
+  )
   console.log(dim(`  ${safeBlock(message.body)}`))
   for (const attachment of message.attachments)
     console.log(dim(`  [${safe(attachment.kind)}] ${safe(attachment.label)}`))

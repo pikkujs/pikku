@@ -83,7 +83,7 @@ type LocalMap = {
   claimChanges: [ClaimChangesInput, ClaimChangesOutput]
   completeChange: [CompleteChangeInput, CompleteChangeOutput]
   askChangeQuestion: [AskChangeQuestionInput, AskChangeQuestionOutput]
-  replyToChange: [ReplyToChangeInput, ReplyToChangeOutput]
+  replyToChange: [ReplyToChangeInput & { person?: boolean }, ReplyToChangeOutput]
   attachChangeShot: [AttachChangeShotInput, AttachChangeShotOutput]
 }
 
@@ -458,12 +458,18 @@ const handlers: {
 
   replyToChange: (store, input) => {
     const change = find(store, input.changeId)
-    if (change.status === 'needs_answer') {
+    if (input.person && change.status === 'needs_answer') {
       change.status = 'in_progress'
       delete change.ask
     }
     return {
-      message: message(store, change, 'agent', input.authorName, input.body),
+      message: message(
+        store,
+        change,
+        input.person ? 'user' : 'agent',
+        input.authorName,
+        input.body
+      ),
     }
   },
 
