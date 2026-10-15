@@ -5,8 +5,11 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { join } from 'path'
 import {
+  ADDONS_META_FILE,
   serializeAddonInstallTypes,
+  serializeAddonsMeta,
   serializeAddonTypes,
 } from './serialize-addon-types.js'
 
@@ -67,13 +70,22 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
     // installed — but only the full run knows what each addon publishes, so
     // that is when `mcp` gets its names.
     if (!config.addon) {
+      const state = bootstrap ? undefined : await getInspectorState()
       await writeFileInDir(
         logger,
         addonTypesFile,
-        serializeAddonInstallTypes(
-          bootstrap ? {} : addonFunctionNames(await getInspectorState())
-        )
+        serializeAddonInstallTypes(state ? addonFunctionNames(state) : {})
       )
+      if (state) {
+        await writeFileInDir(
+          logger,
+          join(config.outDir, ADDONS_META_FILE),
+          serializeAddonsMeta(
+            state.rpc.wireAddonDeclarations,
+            state.addonFunctions
+          )
+        )
+      }
       return
     }
 

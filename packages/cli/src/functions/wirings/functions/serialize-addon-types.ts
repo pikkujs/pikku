@@ -1,3 +1,36 @@
+import { join } from 'node:path'
+
+export const ADDONS_META_FILE = join('addon', 'pikku-addons-meta.gen.json')
+
+export type AddonsMeta = Record<
+  string,
+  {
+    package: string
+    remote?: true
+    functions?: Record<string, { expose?: true }>
+  }
+>
+
+export const serializeAddonsMeta = (
+  declarations: Iterable<[string, { package: string; remote?: boolean }]>,
+  addonFunctions: Record<string, Record<string, { expose?: boolean }>>
+): string => {
+  const meta: AddonsMeta = {}
+  for (const [namespace, decl] of declarations) {
+    meta[namespace] = decl.remote
+      ? { package: decl.package, remote: true }
+      : {
+          package: decl.package,
+          functions: Object.fromEntries(
+            Object.entries(addonFunctions[namespace] ?? {}).map(
+              ([name, fn]) => [name, fn?.expose ? { expose: true } : {}]
+            )
+          ),
+        }
+  }
+  return JSON.stringify(meta, null, 2)
+}
+
 /**
  * The install side of `#pikku/addon`, written for an application rather than an
  * addon. Installing an addon and authoring one are the same concept approached

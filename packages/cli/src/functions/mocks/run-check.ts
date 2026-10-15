@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { readSurface } from '../../utils/surface.js'
+import {
+  ADDONS_META_FILE,
+  type AddonsMeta,
+} from '../wirings/functions/serialize-addon-types.js'
 import { diffMocks } from './diff.js'
 import { readMocks } from './read.js'
 import {
@@ -42,6 +46,24 @@ const readDeclaredFlags = (pikkuDir: string): string[] => {
   }
 }
 
+const readAddons = (pikkuDir: string): AddonsMeta => {
+  try {
+    return JSON.parse(readFileSync(join(pikkuDir, ADDONS_META_FILE), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+export const addonHasFunction = (addons: AddonsMeta, rpc: string): boolean => {
+  const at = rpc.indexOf(':')
+  if (at < 0 || !Object.hasOwn(addons, rpc.slice(0, at))) return false
+  const addon = addons[rpc.slice(0, at)]!
+  return (
+    addon.remote === true ||
+    (!!addon.functions && Object.hasOwn(addon.functions, rpc.slice(at + 1)))
+  )
+}
+
 export interface MocksCheckOptions {
   rootDir: string
   outDir: string
@@ -66,11 +88,12 @@ export const runMocksCheck = async (
   const diff = diffMocks(rpcMocks, surface, { calls: callIndex(scan) })
   const status = new Map(diff.rpcs.map((report) => [report.rpc, report.status]))
   const keys = new Set(Object.values(surface.functions).map((fn) => fn.key))
+  const addons = readAddons(pikkuDir)
   return checkStubs(
     scan,
     readDeclaredFlags(pikkuDir),
     {
-      hasFunction: (rpc) => keys.has(rpc),
+      hasFunction: (rpc) => keys.has(rpc) || addonHasFunction(addons, rpc),
       status: (rpc) => status.get(rpc),
       mocked: new Set(rpcMocks.map((entry) => entry.rpc)),
       dead: diff.rpcs.filter((r) => r.status === 'removed').map((r) => r.rpc),
