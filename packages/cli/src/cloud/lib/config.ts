@@ -25,17 +25,17 @@ export interface AuthFile {
   defaultApiUrl?: string
 }
 
-const authFilePath = join(homedir(), '.pikkustudio', 'auth.json')
+const authFilePath = () => join(homedir(), '.pikkustudio', 'auth.json')
 
 export async function readAuthFile(): Promise<AuthFile> {
-  if (!existsSync(authFilePath)) return { tokens: {} }
-  const raw = await readFile(authFilePath, 'utf8')
+  if (!existsSync(authFilePath())) return { tokens: {} }
+  const raw = await readFile(authFilePath(), 'utf8')
   return JSON.parse(raw) as AuthFile
 }
 
 export async function writeAuthFile(file: AuthFile): Promise<void> {
-  await mkdir(dirname(authFilePath), { recursive: true })
-  await writeFile(authFilePath, JSON.stringify(file, null, 2) + '\n', {
+  await mkdir(dirname(authFilePath()), { recursive: true })
+  await writeFile(authFilePath(), JSON.stringify(file, null, 2) + '\n', {
     encoding: 'utf8',
     mode: 0o600,
   })
