@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-cloud-cli",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -44,10 +44,10 @@
     "test": "bun test --parallel src"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.141",
+    "@pikku/core": "^0.12.142",
     "zod": "^4",
-    "@pikku/cli": "^0.12.186",
-    "@pikku/addon-changes-cli": "^0.12.0"
+    "@pikku/cli": "^0.12.187",
+    "@pikku/addon-changes-cli": "^0.12.1"
   },
   "dependencies": {
     "@pikku/fetch": "^0.12.12"

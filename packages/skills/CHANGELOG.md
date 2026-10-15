@@ -1,5 +1,34 @@
 # @pikku/skills
 
+## 0.12.55
+
+### Patch Changes
+
+- fdcc821: Fabric is gone from the open toolchain. The previous names are removed with no aliases.
+
+  The CLI group is `pikku cloud …` and the export is `@pikku/cli/cloud`. The project link is the `cloud` key of `pikku.config.json` (`cloud.projectId`), the CLI keeps its local state in `~/.pikkustudio` (run `pikku cloud login` again), and the project config file is `pikkustudio.config.json`.
+
+  Every environment variable drops the `FABRIC_` prefix for `PIKKUSTUDIO_` with the same suffix: `PIKKUSTUDIO_API_URL`, `PIKKUSTUDIO_PROJECT_ID`, `PIKKUSTUDIO_TOKEN`, `PIKKUSTUDIO_OPERATOR_TOKEN`, `PIKKUSTUDIO_AUTH_PUBLIC_KEY`, `PIKKUSTUDIO_STAGE_ID` and the rest. Rename them wherever you set them.
+
+  Wire ids: the operator sign-in route is `/sign-in/cloud`, the plugin and mode literal is `'cloud'`, the Better Auth plugin is `pikkuCloud`, its session field is `pikkustudioadmin`, and the signature header is `x-cloud-sig`. The cloud API calls are `getCloudLogs`, `getCloudLogsByStageKind`, `cloudCliProjects`, `cloudCliDeployments`, `providedByCloud` and `recordCloudAnalyticsEvents`. Addon packages are `@pikkustudio/*`, scaffolded files live under `scaffold/cloud` and `__cloud_*__`, and the API hosts are the `pikkustudio.app` and `pikkustudio.dev` domains.
+
+  `pikku skills install --fabric` is `--cloud`, the install group is `cloud`, and the skills are `pikku-cloud`, `pikku-cloud-debug`, `pikku-admin-to-cloud` and `pikku-blueprint-to-cloud`.
+
+  The stale analytics forwarder copies are removed from the online-shop example and the starter template.
+
+  The sealed-box salt stays `pikkufabric/sealed-box/v1`: it is a cryptographic constant that already-sealed secrets depend on.
+
+- 88c7d37: The Pikku Studio Cloud skills (`pikku-cloud`, `pikku-blueprint-to-cloud`, `pikku-admin-to-cloud`) and the `cloud` install group are removed from the OSS skills corpus, along with the `--cloud` flag of `pikku skills install`. The `pikku cloud` command group is unchanged.
+- 6a0d4d3: `@pikku/cucumber` is removed from the repo; deprecating it on npm is a manual follow-up after this release. Its final release (0.12.18) was already an empty stub; nothing in Pikku depends on it. Pikku end-to-end tests are written with `pikkuFeature` / `pikkuScenario` and `pikkuScenarioStep`, which are typed Pikku functions run by `pikku scenario run`; there is no Gherkin, step-definition registry or World. The scenario skill, knowledge decisions and `create-pikku` starter description no longer mention Cucumber.
+- 6cfe3b1: `pikku cloud validate` is merged into `pikku validate`, which gains `--skip-typecheck`, `--skip-deploy-checks` and `--migrations-base`. The deploy-readiness checks run as a `project-checks` entry in the validate registry; the checks that need a Pikku Studio Cloud project (migration drift against the deployed stages, and the project-link findings) are passed in as a `projectChecks` hook, and a hook that throws becomes a `project-checks-skipped` finding — an info for `pikku validate`, an error for a deploy. The skills and knowledge notes now say `pikku validate`.
+- 33b102d: Virtual users now have one name everywhere. The id column of `virtual_user_run` and `virtual_user_schedule` is `virtual_user_id` (a migration renames it in place), the CLI group is `pikku virtual-user …`, and the declarations and imports live under `@pikku/core/virtual-user`. The previous names are removed with no aliases.
+
+  The default virtual user email domain is now `virtualuser.invalid`: apps that rely on the default domain get new accounts at the next provisioning (`pikku virtual-user sync`, deploy, or `pikku dev` start), and the old rows stay unused.
+
+  The sign-in surface carries the same name. The route is `/sign-in/virtual-user`, the environment variables are `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN` and the `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` / `VITE_*` equivalents, the Better Auth plugin is `pikkuVirtualUser`, the scenario step option and wire member are `virtualUser` and `virtualUsers`, and the Better Auth user flag column is `virtual_user`. Rename the environment variables wherever you set them, and add a migration that renames the flag column on the `user` table. Nothing is aliased.
+
+  The conversation runner is now `@pikku/core/virtual-user/conversation`, replacing the old `-flow` subpath. Update the import; the old subpath is gone.
+
 ## 0.12.54
 
 ### Patch Changes
