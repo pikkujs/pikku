@@ -13,9 +13,8 @@ const AUDIO =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC'
 
 /**
- * The absence assertion is scoped to this run's calls, where the cucumber step
- * searched the whole process-global log. Strictly narrower, and the property is
- * the same: the middleware replaced the audio part rather than adding to it.
+ * The absence assertion is scoped to this run's calls rather than the whole
+ * process-global log. The property: the middleware replaced the audio part rather than adding to it.
  */
 export const agentVoiceTranscriptReachesModelScenario = pikkuScenario<
   void,

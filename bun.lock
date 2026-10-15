@@ -485,10 +485,6 @@
         "tsx": "^4.23.12",
       },
     },
-    "packages/cucumber": {
-      "name": "@pikku/cucumber",
-      "version": "0.12.18",
-    },
     "packages/deploy/deploy-azure": {
       "name": "@pikku/deploy-azure",
       "version": "0.12.4",
@@ -3186,8 +3182,6 @@
     "@pikku/console": ["@pikku/console@workspace:packages/deprecated/console"],
 
     "@pikku/core": ["@pikku/core@workspace:packages/core"],
-
-    "@pikku/cucumber": ["@pikku/cucumber@workspace:packages/cucumber"],
 
     "@pikku/deploy": ["@pikku/deploy@workspace:packages/deploy/deploy-core"],
 

@@ -1,10 +1,7 @@
 /**
  * Scenario steps for the console addons page.
  *
- * These replace the cucumber glue in tests/steps/addons.steps.ts. That glue
- * still waits for a `table` the page stopped rendering when the addons gallery
- * became cards, so it fails before its first assertion; these steps target the
- * gallery as it is, through `data-testid` rather than i18n copy or component
+ * These steps target the addons gallery as it is, through `data-testid` rather than i18n copy or component
  * internals. The page itself is reached with the shared `opensConsolePage`
  * step, so everything here acts on a surface that page already rendered.
  */

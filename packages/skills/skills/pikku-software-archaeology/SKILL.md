@@ -91,7 +91,7 @@ Where intent hides, per ecosystem (read these first):
 Tests are the closest thing to an executable product spec. For every test file:
 
 - `describe`/`context`/`it` names → **scenarios** (attach to the matching workflow in `workflows.json` under `scenarios[]`, with `fromTest` set).
-- User-flow/journey harnesses (`pikkuUserFlow` stories, cucumber `.feature` files, Playwright journeys) are the highest-grade scenario source — they already ARE given/when/outcome sequences; extract them verbatim.
+- User-flow/journey harnesses (`pikkuUserFlow` stories, `.feature` files, Playwright journeys) are the highest-grade scenario source — they already ARE given/when/outcome sequences; extract them verbatim.
 - Assertions → confirmations of policies and invariants (upgrade their `confidence` to `high`, add the test as evidence).
 - Fixtures/factories → entity attribute shapes and realistic example data.
 - Edge-case tests → business rules that exist **nowhere else in the code** (e.g. "replayed webhook events are idempotent" may only be stated in a test).

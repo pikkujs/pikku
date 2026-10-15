@@ -11,8 +11,7 @@ import {
 import { pikkuScenarioStep } from '#pikku/scenarios'
 
 /**
- * The generic browser vocabulary, the scenario equivalent of what
- * `registerBrowserSteps` from `@pikku/cucumber/browser` used to supply. Keep
+ * The generic browser vocabulary. Keep
  * this file generic — per-domain steps belong in their own `*.steps.ts`
  * alongside the feature that uses them.
  *

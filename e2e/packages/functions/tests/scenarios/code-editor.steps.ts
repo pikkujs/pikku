@@ -1,8 +1,7 @@
 /**
  * Scenario steps for the console code editor.
  *
- * These replace the cucumber glue in tests/steps/code-editor.steps.ts. Every
- * effect goes through the step's virtual user, so the RPC calls and the browser
+ * Every effect goes through the step's virtual user, so the RPC calls and the browser
  * session are the same signed-in identity.
  */
 import {

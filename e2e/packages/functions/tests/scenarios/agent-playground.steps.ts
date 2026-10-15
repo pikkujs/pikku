@@ -430,9 +430,8 @@ export const lastAssistantMessageExcludes = pikkuScenarioStep<
  *
  * An empty bubble is how a silently dropped stream shows up: the turn appears to
  * have happened, the run reports success, and the reply is blank. Every scenario
- * that renders an assistant ends with this, which is what the cucumber suite's
- * pass-only `After` hook amounted to — it is really a trailing assertion, so it
- * is written as one.
+ * that renders an assistant ends with this, a trailing assertion rather than a
+ * pass-only hook.
  */
 export const expectsNoEmptyAssistantBlocks = pikkuScenarioStep<
   void,

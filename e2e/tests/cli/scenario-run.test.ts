@@ -1,8 +1,7 @@
 /**
  * `pikku scenario run` itself, tested as the CLI it is.
  *
- * This was a cucumber feature until the rest of the suite moved onto
- * `pikkuScenario`, and it is the one file that could not follow: it spawns
+ * This is not a scenario: it spawns
  * `pikku scenario run` and asserts on its stdout, so written as a scenario it
  * would invoke itself. Exit codes, the step ladder, the skip report and the
  * coverage attribution are all *output*, and output is a CLI's contract — so

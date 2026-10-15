@@ -1,8 +1,7 @@
 /**
  * Effect steps for the deterministic agent scenarios.
  *
- * These replace the `I run agent …` family in tests/steps — ten cucumber
- * definitions that differed only in which optional field they bolted on.
+ * One run step takes every optional field.
  *
  * None of them throws on a non-2xx. A refusal is the expected outcome in twelve
  * of these scenarios, so status is data the assertion steps read.
@@ -72,8 +71,8 @@ export interface AgentRunResult {
    */
   modelCalls: MockLlmCall[]
   /**
-   * The subset whose `userMessage` is this run's own message — what the
-   * cucumber `callsFor(message)` filter used to return.
+   * The subset whose `userMessage` is this run's own message — the calls
+   * a `callsFor(message)` filter would return.
    */
   ownCalls: MockLlmCall[]
 }
@@ -96,10 +95,9 @@ export const startsAgentThread = pikkuScenarioStep<void, { threadId: string }>({
  * need, including the model calls the run caused.
  *
  * The call log is scoped by **position** — length before, length after — not by
- * filtering on message text. The cucumber version filtered by `userMessage`,
- * which silently hid every sub-agent call (whose message is the sub-agent's,
- * not this run's). `ownCalls` preserves the old semantics for the assertions
- * that genuinely wanted it.
+ * filtering on message text, which would hide every sub-agent call (whose
+ * message is the sub-agent's, not this run's). `ownCalls` filters by message
+ * for the assertions that want it.
  */
 export const runsAgent = pikkuScenarioStep<
   {
