@@ -1,4 +1,7 @@
-import { pikkuState } from '../../pikku-state.js'
+import {
+  inProcessSignIn,
+  type InProcessAuth,
+} from '../../services/virtual-user-sign-in.js'
 import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
@@ -61,44 +64,13 @@ export const VIRTUAL_USER_VARIABLES = {
    * somewhere it only assumed was itself.
    */
   apiUrl: 'VIRTUAL_USER_API_URL',
-  secret: 'SCENARIO_VIRTUAL_USER_SECRET',
   model: 'VIRTUAL_USER_MODEL',
   /**
-   * The same two variables a scenario run reads, because a virtual user signs
-   * in and calls through exactly the doors a scenario does. An app that mounts
-   * auth somewhere other than the root — `/api/auth` is the common one — has no
-   * other way to say so, and without them the run signs in against a 404 and
-   * spends its whole budget thinking about why nothing works.
+   * Where the app serves its exposed RPCs, as a scenario run reads it. An app
+   * that mounts them somewhere other than `/rpc` has no other way to say so.
    */
-  signInPath: 'SCENARIO_SIGN_IN_PATH',
   rpcPath: 'SCENARIO_RPC_PATH',
-  /**
-   * The deployed way in. A Fabric operator token is asymmetric — a stage can
-   * verify one and can never mint one — so unlike the virtual user secret it is safe
-   * for a run against a real environment. Read from the environment only as the
-   * fallback for a run nobody handed a token to, which is what a schedule is.
-   */
-  operatorToken: 'FABRIC_OPERATOR_TOKEN',
 } as const
-
-/**
- * Which door under the auth mount, given the credential in hand.
- *
- * Both are better-auth plugins mounted side by side, so `SCENARIO_SIGN_IN_PATH`
- * names the mount and the last segment is ours to pick — an app that moved auth
- * to `/api/auth` says so once and both paths follow. A path that names neither
- * plugin is left alone, since it was configured deliberately.
- */
-export const signInPathFor = (
-  configured: string | undefined,
-  plugin: 'virtual-user' | 'fabric'
-): string | undefined => {
-  if (!configured) {
-    return undefined
-  }
-  const mount = configured.replace(/\/sign-in\/(virtual-user|fabric)$/, '')
-  return mount === configured ? configured : `${mount}/sign-in/${plugin}`
-}
 
 /**
  * The declared virtual user behind an id, refused unless it is one a run may be.
@@ -524,7 +496,8 @@ export interface ExecuteVirtualUserRunParams {
     mutations?: number
     durationMs?: number
   }
-  operatorToken?: string
+  /** The app's auth instance, which a run signs in through without a credential. */
+  auth: InProcessAuth | undefined
 }
 
 /**
@@ -550,7 +523,7 @@ export const executeVirtualUserRun = async ({
   memory,
   seed,
   budget,
-  operatorToken,
+  auth,
 }: ExecuteVirtualUserRunParams): Promise<{ findings: number }> => {
   const store = requireVirtualUserRunStore(runStore)
   try {
@@ -568,27 +541,14 @@ export const executeVirtualUserRun = async ({
     const apiUrl = await variables.get(VIRTUAL_USER_VARIABLES.apiUrl)
     if (!apiUrl) {
       throw new Error(
-        `${VIRTUAL_USER_VARIABLES.apiUrl} is not set — a virtual user has no address to sign in at.`
+        `${VIRTUAL_USER_VARIABLES.apiUrl} is not set, so the virtual user has no address to drive. ` +
+          `Set it to the URL this app is reached at, including any HTTP prefix (for example https://my-app.example.com/api). \`pikku dev\` sets it for you.`
       )
     }
 
-    // An operator token wins wherever one is available: it is asymmetric, and
-    // it does not need the target to hold a shared secret at all. The virtual user
-    // secret is the local-only fallback, because only `pikku dev` serves the
-    // endpoint that accepts it.
-    const wired = pikkuState(null, 'virtualUser', 'signIn') !== null
-    const token = wired
-      ? undefined
-      : (operatorToken ??
-        (await variables.get(VIRTUAL_USER_VARIABLES.operatorToken)))
-    const secret =
-      wired || token
-        ? undefined
-        : await variables.get(VIRTUAL_USER_VARIABLES.secret)
-    if (!wired && !token && !secret) {
+    if (!auth) {
       throw new Error(
-        `Neither an operator token nor ${VIRTUAL_USER_VARIABLES.secret} is available — there is nobody for the virtual user to be. ` +
-          `Hand a Fabric operator token in with the run against a deployed stage, or export ${VIRTUAL_USER_VARIABLES.secret} against a local \`pikku dev\` target.`
+        'The app has no auth service, so the virtual user has no way to sign in. Register better-auth (with the pikkuVirtualUser plugin) as the auth singleton service.'
       )
     }
 
@@ -627,25 +587,10 @@ export const executeVirtualUserRun = async ({
       agentsMeta: await metaService.getAgentsMeta(),
     })
 
-    const configuredSignInPath =
-      (await variables.get(VIRTUAL_USER_VARIABLES.signInPath)) ?? undefined
     const signedIn = createVirtualUsers({
       apiUrl,
-      ...(wired
-        ? {}
-        : token
-          ? {
-              operator: {
-                token,
-                signInPath: signInPathFor(configuredSignInPath, 'fabric'),
-              },
-            }
-          : { secret }),
-      variables,
+      signIn: inProcessSignIn(auth),
       model,
-      signInPath: wired
-        ? configuredSignInPath
-        : signInPathFor(configuredSignInPath, 'virtual-user'),
       rpcPath:
         (await variables.get(VIRTUAL_USER_VARIABLES.rpcPath)) ?? undefined,
     })

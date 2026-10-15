@@ -5,8 +5,8 @@ import type { VirtualUserTuning } from '../virtual-user/virtual-user-disposition
  * One login belonging to a virtual user.
  *
  * Deliberately near-empty in the common case: the address is computed from the
- * virtual user's name and the run id, and the password derives from
- * `SCENARIO_VIRTUAL_USER_SECRET`, so there is nothing left to write down. It fills up
+ * virtual user's name and the run id, and sign-in needs no password, so there is
+ * nothing left to write down. It fills up
  * only for a provider login.
  *
  * Shaped after better-auth's `account` table, which is what most pikku apps are

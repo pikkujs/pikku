@@ -224,7 +224,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     virtualUsers: {
       definitions: [],
       files: new Set(),
-      signInFiles: new Set(),
     },
     variables: {
       definitions: [],

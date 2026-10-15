@@ -661,7 +661,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
 
   /**
    * Build HTTP scenario virtual users for a run started without them; undefined when
-   * SCENARIO_VIRTUAL_USER_SECRET or the API URL is missing.
+   * the app has no auth service or the API URL is missing.
    *
    * The virtual user client is imported lazily so that even a runner bundle only pays
    * for the AI virtual user conversation loop it pulls in when a scenario actually
@@ -676,14 +676,11 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     if (!variables || !metaService) {
       return undefined
     }
-    const wired = pikkuState(null, 'virtualUser', 'signIn') !== null
-    const secret = wired
-      ? undefined
-      : await variables.get('SCENARIO_VIRTUAL_USER_SECRET')
+    const auth = await services?.auth?.()
     const apiUrl = await variables.get('API_URL')
-    if ((!secret && !wired) || !apiUrl) {
+    if (!auth || !apiUrl) {
       services?.logger?.warn(
-        'A scenario was started without virtual users but SCENARIO_VIRTUAL_USER_SECRET / API_URL is not configured — running without them.'
+        'A scenario was started without virtual users but the auth service / API_URL is not configured — running without them.'
       )
       return undefined
     }
@@ -691,9 +688,6 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     if (!virtualUsers || Object.keys(virtualUsers).length === 0) {
       return undefined
     }
-    const signInPath =
-      (await variables.get('SCENARIO_SIGN_IN_PATH')) ??
-      '/api/auth/sign-in/virtual-user'
     const rpcPath = (await variables.get('SCENARIO_RPC_PATH')) ?? '/rpc'
     // A run started outside the CLI still targets an environment — its own.
     this.scenarioEnvironment ??= {
@@ -702,12 +696,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     }
     const { createHttpVirtualUsers } =
       await import('../../services/http-virtual-users.js')
+    const { inProcessSignIn } =
+      await import('../../services/virtual-user-sign-in.js')
     return createHttpVirtualUsers({
       apiUrl,
-      ...(secret ? { secret } : {}),
-      variables,
+      signIn: inProcessSignIn(auth),
       virtualUsers,
-      signInPath,
       rpcPath,
     })
   }

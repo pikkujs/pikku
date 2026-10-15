@@ -855,7 +855,6 @@ export interface InspectorState {
   virtualUsers: {
     definitions: VirtualUserDefinitions
     files: Set<string>
-    signInFiles: Set<string>
   }
   variables: {
     definitions: VariableDefinitions

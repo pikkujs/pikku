@@ -1,12 +1,15 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { createHttpVirtualUsers } from '@pikku/core/virtual-user'
+import {
+  createHttpVirtualUsers,
+  statementSignIn,
+} from '@pikku/core/virtual-user'
 import { PikkuError } from '@pikku/core/errors'
 
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  resolveVirtualUserCredentials,
-  loadWiredVirtualUserSignIn,
-} from '../../utils/virtual-user-credentials.js'
+  resolveStatementMint,
+  runtimeDirOf,
+} from '../../utils/virtual-user-signer.js'
 import { resolveEnvironment } from './environment.js'
 
 const unreachable = (error: unknown): boolean => {
@@ -74,11 +77,17 @@ export const virtualUserRpc = pikkuSessionlessFunc<
       environments: config.environments ?? {},
       apiUrl,
     })
-    await loadWiredVirtualUserSignIn(state)
     const signedIn = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
-      variables,
-      ...(await resolveVirtualUserCredentials(variables, 'an RPC call')),
+      signIn: statementSignIn({
+        apiUrl: env.apiUrl,
+        signInPath: env.signInPath,
+        mint: await resolveStatementMint(variables, {
+          apiUrl: env.apiUrl,
+          runtimeDir: runtimeDirOf(config),
+          what: 'an RPC call',
+        }),
+      }),
       virtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,

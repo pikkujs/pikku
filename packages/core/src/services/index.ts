@@ -103,14 +103,6 @@ export {
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export {
-  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
-  VIRTUAL_USER_SECRET_INFO,
-  VIRTUAL_USER_SECRET_NAME,
-  virtualUserSecretSubject,
-  deriveVirtualUserSecret,
-  verifyVirtualUserSecret,
-} from './virtual-user-secret.js'
-export {
   VIRTUAL_USER_IN_PROCESS_ENDPOINT,
   VIRTUAL_USER_STATEMENT_ALGORITHM,
   VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS,

@@ -32,13 +32,6 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
     )
 
-    const virtualUserSignInFileImports = Array.from(
-      stateBeforeBootstrap.virtualUsers?.signInFiles ?? []
-    ).map(
-      (to) =>
-        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
-    )
-
     const localImportTargets = Array.from(
       new Set([
         ...(config.rpcInternalWiringMetaFile &&
@@ -92,7 +85,6 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     const allBootstrapImports = [
       ...localImports,
       ...wireAddonFileImports,
-      ...virtualUserSignInFileImports,
       ...addonImports,
     ]
       .sort((a, b) => {

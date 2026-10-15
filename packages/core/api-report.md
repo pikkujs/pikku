@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3297 observable things**: 1103 exported names, plus
-2194 members on the classes and interfaces among them, reachable
+**3282 observable things**: 1098 exported names, plus
+2184 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,8 +14,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 174 | 142 | 473 |
-| `./virtual-user` | 117 | 109 | 267 |
+| `./services` | 176 | 150 | 475 |
+| `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
@@ -291,7 +291,6 @@ export interface PikkuPackageState {
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
-  virtualUser: { signIn: VirtualUserSignInFactory | null }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
   package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
@@ -1698,6 +1697,7 @@ export class ScenarioBrowserUnavailable extends PikkuError {
 export interface ScenarioCookieJar {
   fetch: typeof fetch
   clear(): void
+  absorb(setCookies: readonly string[]): void
   readonly empty: boolean
 }
 export interface ScenarioEnvironment {
@@ -2388,7 +2388,6 @@ DEFAULT_MIN_INTERVAL_MS: number
 defineVirtualUsers: (_config: CoreVirtualUsers) => void
 deriveCatalogue: (functions: FunctionsMeta, schemas?: SchemaMap) => ApiCatalogueEntry[]
 deriveIntents: (workflows: WorkflowsMeta, functions?: FunctionsMeta) => IntentSource[]
-deriveVirtualUserSecret: (rootSecret: string, email: string) => Promise<string>
 dispositionProfile: (disposition?: VirtualUserDisposition, tuning?: VirtualUserTuning | undefined) => DispositionProfile
 export interface DispositionProfile {
   instructions: string
@@ -2401,8 +2400,7 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
-establishOperatorSession: (fetchImpl: (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, virtualUser: ResolvedVirtualUser, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
-executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, virtualUsers, createVirtualUsers, runId, virtualUserId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, virtualUsers, createVirtualUsers, runId, virtualUserId, disposition, goals, memory, seed, budget, auth, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
 export interface ExecuteVirtualUserRunParams {
   runStore: VirtualUserRunStore | undefined
   metaService: MetaService | undefined
@@ -2418,9 +2416,8 @@ export interface ExecuteVirtualUserRunParams {
   memory: Record<string, string>
   seed: number
   budget?: { steps?: number; mutations?: number; durationMs?: number }
-  operatorToken?: string
+  auth: InProcessAuth | undefined
 }
-getWiredVirtualUserSignIn: () => VirtualUserSignInFactory | null
 export class HttpVirtualUser implements ScenarioVirtualUser {
   constructor(readonly name: string, private virtualUser: ResolvedVirtualUser, private config: HttpVirtualUsersConfig)
   get email(): string
@@ -2431,9 +2428,7 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
 }
 export interface HttpVirtualUsersConfig {
   apiUrl: string
-  secret?: string | VirtualUserSecretResolver
-  operator?: OperatorSignInOptions
-  variables?: VariablesService
+  signIn: VirtualUserSignIn
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   sessionPath?: string
@@ -2441,7 +2436,10 @@ export interface HttpVirtualUsersConfig {
   rolesRpc?: string | false
   model?: string
 }
-IMPERSONATE_USER_ID_HEADER: "x-pikku-impersonate-user-id"
+export interface InProcessAuth {
+  api: Record<string, any>
+}
+inProcessSignIn: (auth: InProcessAuth) => VirtualUserSignIn
 export interface IntentRecord {
   id: string
   sourceId: string
@@ -2476,19 +2474,6 @@ export interface MailboxAllowlist {
   linkOrigins?: readonly string[]
 }
 nextRunAt: (schedule: Pick<VirtualUserScheduleRecord, "minIntervalMs" | "maxIntervalMs">, now: Date, random: () => number) => Date
-export interface OperatorSessionResult {
-  setCookies: string[]
-  userId: string
-}
-export class OperatorSignIn implements VirtualUserSignIn {
-  constructor(private readonly apiUrl: string, private readonly options: OperatorSignInOptions)
-  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
-  headers(): Record<string, string>
-}
-export interface OperatorSignInOptions {
-  token: string | (() => string | Promise<string>)
-  signInPath?: string
-}
 postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>
 prepareVirtualUserRun: (input: { virtualUser: { roles?: readonly string[] | undefined; }; functionsMeta: FunctionsMeta; schemas?: SchemaMap | undefined; workflowsMeta?: WorkflowsMeta | undefined; systemRoles?: SystemRoleDefinitions | SystemRoleDefinitionsMeta | undefined; agentsMeta?: Readonly<Record<string, AgentReachability>> | undefined; }) => VirtualUserPreparation
 PRODUCTION_DISPOSITION: VirtualUserDisposition
@@ -2548,13 +2533,13 @@ export type ScaffoldVirtualUsers = Record<string, ResolvedVirtualUser>
 export interface ScenarioCookieJar {
   fetch: typeof fetch
   clear(): void
+  absorb(setCookies: readonly string[]): void
   readonly empty: boolean
 }
 export type SchemaMap = Record<string, Record<string, unknown> | undefined>
 serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; virtualUserId: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
 serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, virtualUsers: ScaffoldVirtualUsers) => { virtualUserId: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
 serializeVirtualUserSteps: (steps: readonly StepRecord[]) => { index: number; intentId: string | undefined; action: Record<string, unknown>; status: number | undefined; ok: boolean | undefined; response: string | undefined; findingKinds: string[] | undefined; tokensIn: number; tokensOut: number; }[]
-signInPathFor: (configured: string | undefined, plugin: "virtual-user" | "fabric") => string | undefined
 STALE_RUN_AFTER_MS: number
 export interface StartedVirtualUserRun {
   runId: string
@@ -2578,6 +2563,12 @@ export interface StartVirtualUserRunParams {
   memory?: Record<string, string>
   startedBy?: string | null
 }
+statementSignIn: ({ apiUrl, signInPath, mint, }: StatementSignInOptions) => VirtualUserSignIn
+export interface StatementSignInOptions {
+  apiUrl: string
+  signInPath?: string
+  mint: VirtualUserStatementMint
+}
 export interface StepRecord {
   index: number
   intentId?: string
@@ -2593,11 +2584,7 @@ tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterM
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
 validateAndBuildVirtualUsersMeta: (definitions: VirtualUserDefinitions) => VirtualUsersMeta
 verifyVirtualUserRoles: (virtualUserId: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
-verifyVirtualUserSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
-VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH: 32
-VIRTUAL_USER_SECRET_INFO: "pikku:virtual-user-sign-in"
-VIRTUAL_USER_SECRET_NAME: "SCENARIO_VIRTUAL_USER_SECRET"
-VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_VIRTUAL_USER_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
+VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly model: "VIRTUAL_USER_MODEL"; readonly rpcPath: "SCENARIO_RPC_PATH"; }
 export type VirtualUserAccountMeta = {
   provider?: string
 }
@@ -2747,28 +2734,13 @@ export interface VirtualUserScheduleStore {
   remove(virtualUserId: string): Promise<void>
 }
 virtualUserScopes: (virtualUser: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
-export type VirtualUserSecretResolver = (
-  virtualUser: ResolvedVirtualUser
-) => string | Promise<string>
-export class VirtualUserSecretSignIn implements VirtualUserSignIn {
-  constructor(private readonly apiUrl: string, private readonly secret: string | VirtualUserSecretResolver, private readonly signInPath: string)
-  async login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
-  headers(): Record<string, string>
-}
-virtualUserSecretSubject: (email: string) => string
 export interface VirtualUserSignIn {
   login(jar: ScenarioCookieJar, virtualUser: ResolvedVirtualUser): Promise<void>
-  headers?(): Record<string, string>
 }
-export interface VirtualUserSignInContext {
-  apiUrl: string
-  signInPath?: string
-  variables: VariablesService
-}
-export type VirtualUserSignInFactory = (
-  context: VirtualUserSignInContext
-) => VirtualUserSignIn
 export type VirtualUsersMeta = Record<string, VirtualUserMeta>
+export type VirtualUserStatementMint = (
+  virtualUser: ResolvedVirtualUser
+) => string | Promise<string>
 virtualUserTarget: (virtualUser: ScenarioVirtualUser<string, ScenarioRpcMap>, { model, agents }?: VirtualUserTargetOptions) => VirtualUserTarget
 export interface VirtualUserTarget {
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
@@ -2802,7 +2774,6 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-wireVirtualUserSignIn: (factory: VirtualUserSignInFactory) => void
 writeVirtualUserSchedule: ({ store, virtualUsers, virtualUserId, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
@@ -2908,7 +2879,7 @@ export type CoreHTTPFunctionWiring<
 DEFAULT_MAX_BODY_SIZE: number
 defineHTTPRoutes: { <T extends HTTPRouteMap>(routes: T): HTTPRouteContract<T>; <T extends HTTPRouteMap>(config: HTTPRoutesGroupConfig & { routes: T; }): HTTPRouteContract<T>; }
 fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
-fetchData: <In, Out>(request: Request | PikkuHTTPRequest<unknown>, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
+fetchData: <In, Out>(request: PikkuHTTPRequest<unknown> | Request, response: PikkuHTTPResponse<unknown>, { skipUserSession, respondWith404, logWarningsForStatusCodes, coerceDataFromSchema, bubbleErrors, exposeErrors, generateRequestId, traceId: externalTraceId, maxBodySize, }?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<void | Out>
 export type HTTPMethod =
   'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 export type HTTPRouteBaseConfig = {
@@ -5007,7 +4978,6 @@ export interface DeploymentServiceConfig {
   heartbeatInterval?: number
   heartbeatTtl?: number
 }
-deriveVirtualUserSecret: (rootSecret: string, email: string) => Promise<string>
 export interface EmailAssets {
   theme: Record<string, unknown>
   locales: Record<string, Record<string, unknown>>
@@ -5775,11 +5745,18 @@ export interface VariablesService {
   has: (name: string) => Promise<boolean> | boolean
   delete: (name: string) => Promise<void> | void
 }
-verifyVirtualUserSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
-VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH: 32
-VIRTUAL_USER_SECRET_INFO: "pikku:virtual-user-sign-in"
-VIRTUAL_USER_SECRET_NAME: "SCENARIO_VIRTUAL_USER_SECRET"
-virtualUserSecretSubject: (email: string) => string
+VIRTUAL_USER_IN_PROCESS_ENDPOINT: "signInVirtualUserInternal"
+VIRTUAL_USER_SIGNING_KEY_VARIABLE: "VIRTUAL_USER_SIGNING_KEY"
+VIRTUAL_USER_STATEMENT_ALGORITHM: "EdDSA"
+VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS: 300
+VIRTUAL_USER_STATEMENT_TTL_SECONDS: 180
+VIRTUAL_USER_VERIFY_KEY_VARIABLE: "VIRTUAL_USER_VERIFY_KEY"
+export class VirtualUserStatementError extends Error {
+  constructor(message: string)
+}
+export interface VirtualUserStatementVerifier {
+  verify(statement: string, audience: string): Promise<{ virtualUserId: string }>
+}
 export interface WebhookAttemptResult {
   statusCode?: number
   responseBody?: string
@@ -6389,7 +6366,6 @@ export interface PikkuPackageState {
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
   channelMiddleware: { tagGroup: Record<string, CorePikkuChannelMiddleware[]> }
   permissions: { global: (CorePermissionGroup | CorePikkuPermission)[] }
-  virtualUser: { signIn: VirtualUserSignInFactory | null }
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
   package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }

@@ -18,10 +18,13 @@ const services = (
       virtualUserSchemasFile:
         '/app/src/scaffold/virtual-user/virtual-user.schemas.gen.ts',
       outDir: '/app/.pikku',
-      virtualUsersWiringFile: '/app/.pikku/scenarios/pikku-virtual-users.gen.ts',
+      virtualUsersWiringFile:
+        '/app/.pikku/scenarios/pikku-virtual-users.gen.ts',
       packageMappings: {},
     },
-    getInspectorState: async () => ({ virtualUsers: { definitions: virtualUsers } }),
+    getInspectorState: async () => ({
+      virtualUsers: { definitions: virtualUsers },
+    }),
   }) as any
 
 describe('serializeVirtualUserFunctions', () => {
@@ -250,26 +253,11 @@ describe('serializeVirtualUserFunctions', () => {
     assert.match(schemas, /seed: z\.number\(\)/)
   })
 
-  // The whole point of handing the token in rather than letting the stage ask
-  // for one: a box that can ask holds a credential that mints admin sessions
-  // for itself, for as long as it lives.
-  test('a deployed run is started with a token, not with a way to get one', () => {
-    assert.match(
-      schemas,
-      /operatorToken: z\.string\(\)\.min\(1\)\.optional\(\)/
-    )
-    assert.match(out, /operatorToken: input\.operatorToken/)
-  })
-
-  // A run record outlives the run and is read back over RPC, so a credential
-  // stored on it is a credential anyone with read scope can collect.
-  test('the handed-in token rides the dispatch and is never recorded', () => {
-    const recorded = out.slice(
-      out.indexOf('await startVirtualUserRun({'),
-      out.indexOf('const job = {')
-    )
-    assert.doesNotMatch(recorded, /operatorToken/)
-    assert.match(out, /operatorToken: input\.operatorToken/)
+  // A run is already inside the app, so it asks the app's own auth for its
+  // session. A credential on the request would only be something to leak.
+  test('a run takes no credential in and signs in through the auth service', () => {
+    assert.doesNotMatch(schemas, /secret|credential|bearer/i)
+    assert.match(out, /auth: await auth\?\.\(\)/)
   })
 })
 

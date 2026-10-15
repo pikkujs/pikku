@@ -37,9 +37,7 @@ const inspectSource = async (source: string) => {
 
 /** Inspects several files at once, keyed by basename. */
 const inspectSources = async (sources: Record<string, string>) => {
-  const rootDir = await mkdtemp(
-    join(tmpdir(), 'pikku-add-virtual-users-multi-')
-  )
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-virtual-users-multi-'))
   const files: Record<string, string> = {}
   for (const [name, source] of Object.entries(sources)) {
     files[name] = join(rootDir, name)
@@ -145,10 +143,7 @@ describe('addVirtualUsers inspector', () => {
         '})'
       )
     )
-    assert.equal(
-      state.virtualUsers.definitions[0]!.avatarUrl,
-      '/avatars/susan.png'
-    )
+    assert.equal(state.virtualUsers.definitions[0]!.avatarUrl, '/avatars/susan.png')
   })
 
   // The console draws a colour-and-icon avatar from the virtual user's id when none
@@ -313,9 +308,7 @@ describe('addVirtualUsers inspector', () => {
 
   test('a second defineVirtualUsers in another file is refused', async () => {
     const { criticals, files } = await inspectSources({
-      'virtual-users.ts': withRoles(
-        "defineVirtualUsers({ susan: { name: 'Susan' } })"
-      ),
+      'virtual-users.ts': withRoles("defineVirtualUsers({ susan: { name: 'Susan' } })"),
       'more-virtual-users.ts': [
         "import { defineVirtualUsers } from '@pikku/core/virtual-user'",
         "defineVirtualUsers({ dave: { name: 'Dave' } })",
@@ -345,9 +338,7 @@ describe('addVirtualUsers inspector', () => {
         "import { defineVirtualUsers } from '@pikku/core/virtual-user'",
         "defineVirtualUsers({ dave: { name: 'Dave' } })",
       ].join('\n'),
-      'virtual-users.ts': withRoles(
-        "defineVirtualUsers({ susan: { name: 'Susan' } })"
-      ),
+      'virtual-users.ts': withRoles("defineVirtualUsers({ susan: { name: 'Susan' } })"),
     })
 
     assert.deepEqual(
@@ -411,14 +402,5 @@ describe('validateVirtualUserRoles', () => {
       withRoles('defineVirtualUsers({', "  susan: { name: 'Susan' },", '})')
     )
     assert.deepEqual(criticals, [])
-  })
-})
-
-describe('wireVirtualUserSignIn', () => {
-  test('the file that calls it is recorded for the bootstrap', async () => {
-    const { state } = await inspectSource(
-      'wireVirtualUserSignIn(() => ({ login: async () => {} }))'
-    )
-    assert.equal(state.virtualUsers.signInFiles.size, 1)
   })
 })

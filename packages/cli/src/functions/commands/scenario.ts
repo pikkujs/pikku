@@ -6,7 +6,10 @@ import { glob } from 'tinyglobby'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
-import { createHttpVirtualUsers } from '@pikku/core/virtual-user'
+import {
+  createHttpVirtualUsers,
+  statementSignIn,
+} from '@pikku/core/virtual-user'
 import {
   PikkuScenarioService,
   resolveFeatureScenarios,
@@ -38,9 +41,9 @@ import {
 } from './scenario-browser.js'
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  resolveVirtualUserCredentials,
-  loadWiredVirtualUserSignIn,
-} from '../../utils/virtual-user-credentials.js'
+  resolveStatementMint,
+  runtimeDirOf,
+} from '../../utils/virtual-user-signer.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import {
   checkGuideCoverage,
@@ -296,11 +299,11 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
-    await loadWiredVirtualUserSignIn(state)
-    const credentials = await resolveVirtualUserCredentials(
-      variables,
-      'scenario virtual users'
-    )
+    const mint = await resolveStatementMint(variables, {
+      apiUrl: env.apiUrl,
+      runtimeDir: runtimeDirOf(config),
+      what: 'scenario virtual users',
+    })
     // Every declared virtual user, with its address filled in. Resolved once: the
     // HTTP virtual users and the Playwright provider below must see the same
     // registry, and codegen resolved the same way to type `VirtualUserName`.
@@ -310,8 +313,11 @@ export const scenarioRun = pikkuSessionlessFunc<
     )
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
-      ...credentials,
-      variables,
+      signIn: statementSignIn({
+        apiUrl: env.apiUrl,
+        signInPath: env.signInPath,
+        mint,
+      }),
       virtualUsers: scenarioVirtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
@@ -476,7 +482,7 @@ export const scenarioRun = pikkuSessionlessFunc<
               apiUrl: env.apiUrl,
               appUrl: env.appUrl,
               appUrls: env.appUrls,
-              ...credentials,
+              mint,
               virtualUsers: scenarioVirtualUsers,
               signInPath: env.signInPath,
               capture,

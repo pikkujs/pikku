@@ -8,7 +8,6 @@ import {
   serializeVirtualUserRun,
   serializeVirtualUserSchedule,
   serializeVirtualUserSteps,
-  signInPathFor,
   startVirtualUserRun,
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
@@ -23,8 +22,6 @@ import type {
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
 import { createHttpVirtualUsers } from '../../services/http-virtual-users.js'
-import { wireVirtualUserSignIn } from './wire-virtual-user-sign-in.js'
-import { resetPikkuState } from '../../pikku-state.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
@@ -108,32 +105,6 @@ const emptyMeta = {
   getSystemRolesMeta: async () => ({}),
   getAgentsMeta: async () => ({}),
 } as any
-
-describe('signInPathFor', () => {
-  // Both are better-auth plugins on one mount, so an app that moved auth to
-  // `/api/auth` should not have to name each door separately.
-  test('an app that moved its auth mount moves both sign-in paths', () => {
-    assert.equal(
-      signInPathFor('/api/auth/sign-in/virtual-user', 'fabric'),
-      '/api/auth/sign-in/fabric'
-    )
-    assert.equal(
-      signInPathFor('/api/auth/sign-in/fabric', 'virtual-user'),
-      '/api/auth/sign-in/virtual-user'
-    )
-  })
-
-  test('a path naming neither plugin was configured deliberately', () => {
-    assert.equal(
-      signInPathFor('/custom/login', 'virtual-user'),
-      '/custom/login'
-    )
-  })
-
-  test('nothing configured stays nothing, so the default applies', () => {
-    assert.equal(signInPathFor(undefined, 'virtual-user'), undefined)
-  })
-})
 
 describe('runnableVirtualUser', () => {
   test('an undeclared virtual user is named, with what declares one', () => {
@@ -810,6 +781,7 @@ describe('executeVirtualUserRun', () => {
         logger,
         virtualUsers,
         createVirtualUsers: () => ({}) as any,
+        auth: { api: {} },
         runId: 'run-1',
         virtualUserId: 'susan',
         disposition: 'realistic',
@@ -835,13 +807,22 @@ describe('executeVirtualUserRun', () => {
     assert.match(lines[0]!, /^error Virtual user run run-1 \(susan\) failed/)
   })
 
-  test('says which credential is missing rather than assuming the local one', async () => {
+  test('says what the address is for and what to put there', async () => {
+    const { params: p } = params()
+    await assert.rejects(
+      executeVirtualUserRun(p),
+      /VIRTUAL_USER_API_URL is not set.*URL this app is reached at/
+    )
+  })
+
+  test('an app with no auth service says so rather than failing later', async () => {
     const { params: p } = params({
+      auth: undefined,
       variables: variables({ VIRTUAL_USER_API_URL: 'http://localhost:4000' }),
     })
     await assert.rejects(
       executeVirtualUserRun(p),
-      /Neither an operator token nor SCENARIO_VIRTUAL_USER_SECRET is available/
+      /no auth service.*pikkuVirtualUser plugin/
     )
   })
 
@@ -849,7 +830,6 @@ describe('executeVirtualUserRun', () => {
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
       }),
     })
     await assert.rejects(
@@ -858,81 +838,25 @@ describe('executeVirtualUserRun', () => {
     )
   })
 
-  // Asymmetric, so the stage can verify one and can never mint one. The virtual user
-  // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
-  test('an operator token wins over the virtual user secret wherever both exist', async () => {
-    let options: any
-    const { params: p } = params({
-      operatorToken: 'handed-in',
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
-        VIRTUAL_USER_MODEL: 'a-model',
-        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/virtual-user',
-      }),
-      createVirtualUsers: (given: any) => {
-        options = given
-        return {}
-      },
-    })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.secret, undefined)
-    assert.equal(options.operator.token, 'handed-in')
-    assert.equal(options.operator.signInPath, '/api/auth/sign-in/fabric')
-    // The virtual user door moves with the mount too, for the run that has no token.
-    assert.equal(options.signInPath, '/api/auth/sign-in/virtual-user')
-  })
-
-  test('a run nobody handed a token to falls back to the environment', async () => {
-    let options: any
-    const { params: p } = params({
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        FABRIC_OPERATOR_TOKEN: 'from-the-environment',
-        VIRTUAL_USER_MODEL: 'a-model',
-      }),
-      createVirtualUsers: (given: any) => {
-        options = given
-        return {}
-      },
-    })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.operator.token, 'from-the-environment')
-  })
-
-  test('with no token at all the virtual user secret is what signs in', async () => {
-    let options: any
-    const { params: p } = params({
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
-        VIRTUAL_USER_MODEL: 'a-model',
-      }),
-      createVirtualUsers: (given: any) => {
-        options = given
-        return {}
-      },
-    })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.secret, 'shh')
-    assert.equal(options.operator, undefined)
-  })
-
-  test('a wired sign-in signs the virtual user in with no token or secret ever read', async () => {
+  test("signs in through the app's own auth, with no credential read", async () => {
     const read: string[] = []
-    const logins: string[] = []
-    wireVirtualUserSignIn(() => ({
-      login: async (_jar, virtualUser) => void logins.push(virtualUser.id),
-    }))
+    const calls: any[] = []
     const env: Record<string, string> = {
       VIRTUAL_USER_API_URL: 'http://localhost:4000',
       VIRTUAL_USER_MODEL: 'a-model',
-      SCENARIO_VIRTUAL_USER_SECRET: 'shh',
-      FABRIC_OPERATOR_TOKEN: 'tok',
     }
     let built: any
     const { params: p } = params({
-      operatorToken: 'ignored',
+      auth: {
+        api: {
+          signInVirtualUserInternal: async (input: any) => {
+            calls.push(input.body.email)
+            return new Response('{}', {
+              headers: { 'set-cookie': 'session=in-process; Path=/' },
+            })
+          },
+        },
+      },
       variables: {
         get: async (name: string) => (read.push(name), env[name]),
       },
@@ -948,11 +872,12 @@ describe('executeVirtualUserRun', () => {
       await built.susan.invokeRaw('ping', {})
     } finally {
       globalThis.fetch = realFetch
-      resetPikkuState()
     }
-    assert.deepEqual(logins, ['susan'])
-    assert.ok(!read.includes('SCENARIO_VIRTUAL_USER_SECRET'))
-    assert.ok(!read.includes('FABRIC_OPERATOR_TOKEN'))
+    assert.deepEqual(calls, [virtualUsers.susan.email])
+    assert.deepEqual(
+      read.filter((name) => /SECRET|TOKEN|KEY/.test(name)),
+      []
+    )
   })
 
   test('a virtual user nobody declares any more is refused before signing in', async () => {
@@ -961,7 +886,6 @@ describe('executeVirtualUserRun', () => {
       virtualUserId: 'gone',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => {
@@ -1008,7 +932,6 @@ describe('executeVirtualUserRun', () => {
       },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
     })
@@ -1033,7 +956,6 @@ describe('executeVirtualUserRun', () => {
       budget: { steps: 0 },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => ({

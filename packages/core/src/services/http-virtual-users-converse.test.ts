@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpVirtualUsers } from './http-virtual-users.js'
+import { statementSignIn } from './virtual-user-sign-in.js'
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import type { AgentStepResult } from './agent-runner-service.js'
 
@@ -170,7 +171,7 @@ describe('HttpVirtualUser.converse', async () => {
 
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret-impersonation',
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
       model: 'test/test-model',
       virtualUsers: {
         pm: {
@@ -213,7 +214,7 @@ describe('HttpVirtualUser.converse', async () => {
 
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret-impersonation',
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
       model: 'test/test-model',
       virtualUsers: {
         pm: {
@@ -252,7 +253,7 @@ describe('HttpVirtualUser.converse', async () => {
 
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret-impersonation',
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
       model: 'test/test-model',
       virtualUsers: {
         pm: {
