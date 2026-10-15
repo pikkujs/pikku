@@ -80,15 +80,6 @@ export const RunVirtualUserInput = z.object({
   budget: Budget.optional(),
   /** Fixed seed, so a run replays into the same finding. */
   seed: z.number().int().optional(),
-  /**
-   * A short-lived Pikku Studio Cloud operator token, handed in by whoever starts the run.
-   *
-   * Handed in rather than held: a deployed stage that could ask for a token
-   * would be holding a credential able to mint admin sessions for itself, for
-   * as long as the box lives. This way it holds one receipt, for one run, and
-   * the receipt expires on its own. It is never written to the run record.
-   */
-  operatorToken: z.string().min(1).optional(),
 })
 
 export const RunVirtualUserOutput = z.object({
@@ -262,8 +253,6 @@ export const ExecuteVirtualUserRunInput = z.object({
     })
     .optional(),
   seed: z.number(),
-  /** Carried from the caller for the duration of the dispatch, never stored. */
-  operatorToken: z.string().optional(),
 })
 
 export const ExecuteVirtualUserRunOutput = z.object({
@@ -370,10 +359,6 @@ export const runVirtualUser = pikkuFunc({
       memory,
       seed,
       budget: input.budget,
-      // Rides the dispatch and nothing else. The run record is deliberately
-      // not given it: a record outlives the run, and a credential in a row
-      // somebody can read back is a credential leak.
-      operatorToken: input.operatorToken,
     }
 
     if (queueService) {
@@ -596,10 +581,11 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
   input: ExecuteVirtualUserRunInput,
   output: ExecuteVirtualUserRunOutput,
   func: async (
-    { virtualUserRunStore, metaService, agentRunner, variables, logger },
+    { virtualUserRunStore, metaService, agentRunner, variables, logger, auth },
     input
   ) =>
     executeRun({
+      auth: await auth?.(),
       runStore: virtualUserRunStore,
       metaService,
       agentRunner,

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, test, before, after, beforeEach } from 'node:test'
+import { generateVirtualUserKeyPair } from '../../utils/virtual-user-signer.js'
 import { virtualUserRpc } from './virtual-user-rpc.js'
+
+const { signingKey } = generateVirtualUserKeyPair()
 
 const VIRTUAL_USERS = [
   {
@@ -24,7 +27,10 @@ let output = ''
 const run = (data: Record<string, unknown>, url = apiUrl) =>
   virtualUserRpc.func(
     {
-      config: { environments: { local: { apiUrl: url } } },
+      config: {
+        rootDir: '/nonexistent',
+        environments: { local: { apiUrl: url } },
+      },
       getInspectorState: async () => ({
         virtualUsers: { definitions: VIRTUAL_USERS },
         rpc: {
@@ -34,7 +40,7 @@ const run = (data: Record<string, unknown>, url = apiUrl) =>
       }),
       variables: {
         get: async (name: string) =>
-          name === 'SCENARIO_VIRTUAL_USER_SECRET' ? 'x'.repeat(48) : undefined,
+          name === 'VIRTUAL_USER_SIGNING_KEY' ? signingKey : undefined,
       },
     } as any,
     data as any,
@@ -50,7 +56,7 @@ before(async () => {
         signInStatus,
         signInStatus === 200 ? { 'set-cookie': 'session=1' } : {}
       )
-      res.end(signInStatus === 200 ? '{}' : '{"message":"bad secret"}')
+      res.end(signInStatus === 200 ? '{}' : '{"message":"bad statement"}')
       return
     }
     res.writeHead(rpcReply.status, { 'content-type': 'application/json' })

@@ -22,7 +22,10 @@ import {
 } from './scenario-browser.js'
 import { resolveEnvironment } from './environment.js'
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
-import { resolveVirtualUserCredentials } from '../../utils/virtual-user-credentials.js'
+import {
+  resolveStatementMint,
+  runtimeDirOf,
+} from '../../utils/virtual-user-signer.js'
 
 type PlaywrightDriver = typeof PlaywrightModule
 
@@ -120,7 +123,11 @@ export const pagesScreenshot = pikkuSessionlessFunc({
         environment,
         apiUrl: env.apiUrl,
         appUrl: baseUrl,
-        ...(await resolveVirtualUserCredentials(variables, 'page screenshots')),
+        mint: await resolveStatementMint(variables, {
+          apiUrl: env.apiUrl,
+          runtimeDir: runtimeDirOf(config),
+          what: 'page screenshots',
+        }),
         virtualUsers: resolveVirtualUsers(
           state.virtualUsers?.definitions ?? [],
           config.scenarios?.emailDomain

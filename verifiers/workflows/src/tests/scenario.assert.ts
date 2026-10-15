@@ -126,7 +126,7 @@ describe('pikkuScenario verification', () => {
   })
 
   test('codegen: declaring virtual users declares the virtual user sign-in secret', async () => {
-    // Nothing in this verifier's source declares SCENARIO_VIRTUAL_USER_SECRET. It is
+    // Nothing in this verifier's source declares VIRTUAL_USER_VERIFY_KEY. It is
     // the platform's — the scenario service and `pikku virtual-user` read it, no app
     // code does — so the virtual users scaffold declares it, the way the auth
     // scaffold declares BETTER_AUTH_SECRET. A project that has to hand-write it
@@ -137,12 +137,12 @@ describe('pikkuScenario verification', () => {
         'utf-8'
       )
     )
-    const secret = meta['scenarioVirtualUserSecret']
+    const secret = meta['virtualUserVerifyKey']
     assert.ok(
       secret,
-      `scenarioVirtualUserSecret not in the secrets manifest, got: ${Object.keys(meta).join(', ')}`
+      `virtualUserVerifyKey not in the secrets manifest, got: ${Object.keys(meta).join(', ')}`
     )
-    assert.equal(secret.secretId, 'SCENARIO_VIRTUAL_USER_SECRET')
+    assert.equal(secret.secretId, 'VIRTUAL_USER_VERIFY_KEY')
   })
 
   test('runtime: virtual user steps route through injected virtual users, internal steps stay in-process', async () => {

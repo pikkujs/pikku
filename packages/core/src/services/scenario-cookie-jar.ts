@@ -1,6 +1,8 @@
 export interface ScenarioCookieJar {
   fetch: typeof fetch
   clear(): void
+  /** Take in raw `Set-Cookie` values from a response this jar did not fetch. */
+  absorb(setCookies: readonly string[]): void
   readonly empty: boolean
 }
 
@@ -13,7 +15,23 @@ export interface ScenarioCookieJar {
 export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
   const jar = new Map<string, string>()
   const origin = new URL(apiUrl).origin
+  const absorb = (setCookies: readonly string[]) => {
+    for (const raw of setCookies) {
+      const [pair] = raw.split(';')
+      const separator = pair!.indexOf('=')
+      if (separator > 0) {
+        const name = pair!.slice(0, separator)
+        const value = pair!.slice(separator + 1)
+        if (value) {
+          jar.set(name, value)
+        } else {
+          jar.delete(name)
+        }
+      }
+    }
+  }
   return {
+    absorb,
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers)
       headers.set('origin', origin)
@@ -34,19 +52,7 @@ export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
         headers.set('cookie', [caller, ...held].filter(Boolean).join('; '))
       }
       const response = await fetch(input, { ...init, headers })
-      for (const raw of response.headers.getSetCookie()) {
-        const [pair] = raw.split(';')
-        const separator = pair!.indexOf('=')
-        if (separator > 0) {
-          const name = pair!.slice(0, separator)
-          const value = pair!.slice(separator + 1)
-          if (value) {
-            jar.set(name, value)
-          } else {
-            jar.delete(name)
-          }
-        }
-      }
+      absorb(response.headers.getSetCookie())
       return response
     },
     clear: () => jar.clear(),

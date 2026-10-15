@@ -30,7 +30,7 @@ export type VirtualUserDisposition =
   | 'accountable'
 
 /**
- * The one disposition a production environment accepts.
+ * The one disposition a declaration may name for a production environment. Virtual users never run against production, so this only keeps the declaration check honest.
  *
  * Every other disposition exists to find out what the product does wrong, which
  * is not a thing to do to real customers' data. Named here so the declaration

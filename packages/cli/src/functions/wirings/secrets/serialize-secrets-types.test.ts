@@ -102,7 +102,7 @@ describe('serializeSecretsTypes — shipping the declared set', () => {
 describe('serializeSecretsTypes — optional secrets', () => {
   const schemaLookup = new Map([
     [
-      'SecretSchema_scenarioVirtualUser',
+      'SecretSchema_sampleApi',
       {
         variableName: 'VirtualUserSchema',
         sourceFile: '/project/src/schemas.ts',
@@ -122,10 +122,10 @@ describe('serializeSecretsTypes — optional secrets', () => {
   const output = serializeSecretsTypes({
     definitions: [
       {
-        name: 'scenarioVirtualUser',
-        displayName: 'Scenario Virtual user Secret',
-        secretId: 'SCENARIO_VIRTUAL_USER_SECRET',
-        schema: 'SecretSchema_scenarioVirtualUser',
+        name: 'sampleApi',
+        displayName: 'Sample API Secret',
+        secretId: 'SAMPLE_API_SECRET',
+        schema: 'SecretSchema_sampleApi',
         optional: true,
       },
       {
@@ -145,7 +145,7 @@ describe('serializeSecretsTypes — optional secrets', () => {
   test('declares an optional secret as an optional map property', () => {
     assert.match(
       output,
-      /'SCENARIO_VIRTUAL_USER_SECRET'\?: z\.infer<typeof VirtualUserSchema>/
+      /'SAMPLE_API_SECRET'\?: z\.infer<typeof VirtualUserSchema>/
     )
   })
 
@@ -158,7 +158,7 @@ describe('serializeSecretsTypes — optional secrets', () => {
   test('marks the entry optional in the runtime credentials meta', () => {
     assert.match(
       output,
-      /'SCENARIO_VIRTUAL_USER_SECRET': \{ name: 'scenarioVirtualUser', displayName: "Scenario Virtual user Secret", optional: true \}/
+      /'SAMPLE_API_SECRET': \{ name: 'sampleApi', displayName: "Sample API Secret", optional: true \}/
     )
     assert.match(
       output,

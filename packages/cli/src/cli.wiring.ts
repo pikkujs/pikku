@@ -118,7 +118,6 @@ import {
 import {
   virtualUserList,
   virtualUserRun,
-  virtualUserSecret,
 } from './functions/commands/virtual-user.js'
 import { virtualUserSync } from './functions/commands/virtual-user-sync.js'
 import { virtualUserRpc } from './functions/commands/virtual-user-rpc.js'
@@ -1260,7 +1259,7 @@ wireCLI({
         run: pikkuCLICommand({
           func: scenarioRun,
           description:
-            'Run scenarios against a configured environment (environments in pikku.config.json). Virtual user secret comes from SCENARIO_VIRTUAL_USER_SECRET.',
+            'Run scenarios against a configured environment (environments in pikku.config.json). Virtual users sign in with a statement signed by the key `pikku dev` created, or by VIRTUAL_USER_SIGNING_KEY for a deployed stage.',
           parameters: '<environment>',
           options: {
             flows: {
@@ -1540,7 +1539,7 @@ wireCLI({
         run: pikkuCLICommand({
           func: virtualUserRun,
           description:
-            'Sign in as a declared virtual user and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_VIRTUAL_USER_SECRET.',
+            'Sign in as a declared virtual user and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. It signs in with the key `pikku dev` created, or VIRTUAL_USER_SIGNING_KEY for a deployed stage.',
           parameters: '<environment> <virtualUserId>',
           options: {
             disposition: {
@@ -1597,12 +1596,6 @@ wireCLI({
           func: virtualUserList,
           description:
             'List the declared virtual users — who each one is, what they may do, and what they are trying to get done',
-        }),
-        secret: pikkuCLICommand({
-          func: virtualUserSecret,
-          description:
-            'Mint the virtual user credential for a virtual user from SCENARIO_VIRTUAL_USER_SECRET, bound to their address. Hand these to a run as PIKKU_VIRTUAL_USER_SECRETS instead of the root, which is entitled to every virtual user. Names none, mints all.',
-          parameters: '[virtualUsers...]',
         }),
         rpc: pikkuCLICommand({
           func: virtualUserRpc,

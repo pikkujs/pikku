@@ -18,7 +18,7 @@ one as a flag would be worse than failing.
 ```bash
 pikku dev --coverage                                   # V8 precise coverage, in-process
 pikku dev --coverage --test                            # also enable stubs (needed for expectService)
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --coverage
+pikku scenario run local --coverage
 ```
 
 The run resets coverage before each scenario and snapshots after, writing **`<outDir>/coverage/scenario-coverage.json`**:

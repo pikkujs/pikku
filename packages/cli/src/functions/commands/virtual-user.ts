@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   createHttpVirtualUsers,
-  deriveVirtualUserSecret,
+  statementSignIn,
   virtualUserEnvironmentRefusal,
   roleMismatchMessage,
   verifyVirtualUserRoles,
@@ -22,10 +22,9 @@ import { PikkuError } from '@pikku/core/errors'
 
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  VIRTUAL_USER_SECRET_VARIABLE,
-  VIRTUAL_USER_SECRETS_VARIABLE,
-  resolveVirtualUserCredentials,
-} from '../../utils/virtual-user-credentials.js'
+  resolveStatementMint,
+  runtimeDirOf,
+} from '../../utils/virtual-user-signer.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
@@ -160,10 +159,11 @@ export const virtualUserRun = pikkuSessionlessFunc<
       throw new Error(refusal)
     }
 
-    const credentials = await resolveVirtualUserCredentials(
-      variables,
-      'a virtual user'
-    )
+    const mint = await resolveStatementMint(variables, {
+      apiUrl: env.apiUrl,
+      runtimeDir: runtimeDirOf(config),
+      what: 'a virtual user',
+    })
 
     const resolvedModel = model ?? config.scenarios?.model
     if (!resolvedModel) {
@@ -207,7 +207,11 @@ export const virtualUserRun = pikkuSessionlessFunc<
 
     const signedIn = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
-      ...credentials,
+      signIn: statementSignIn({
+        apiUrl: env.apiUrl,
+        signInPath: env.signInPath,
+        mint,
+      }),
       virtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
@@ -299,62 +303,6 @@ export const virtualUserRun = pikkuSessionlessFunc<
 })
 
 /** Who this app is for, and what each of them wants, without running anything. */
-/**
- * Mint the virtual user credential for one virtual user, or for every declared virtual user.
- *
- * The root secret is entitled to all of them, so nothing that only needs to be
- * one person should ever hold it. What comes out is bound to that virtual user's
- * address by the target — presenting it for anyone else is refused — so a CI
- * job, a container or a virtual user can be handed exactly the people it is
- * meant to be and no more.
- *
- * Printed as `id=secret` lines, which is the shape PIKKU_VIRTUAL_USER_SECRETS reads.
- */
-export const virtualUserSecret = pikkuSessionlessFunc<
-  { virtualUsers?: string[] },
-  void
->({
-  func: async ({ logger, config, variables, getInspectorState }, input) => {
-    const root = await variables.get(VIRTUAL_USER_SECRET_VARIABLE)
-    if (!root) {
-      throw new Error(
-        `${VIRTUAL_USER_SECRET_VARIABLE} is not set — there is no root to derive from. ` +
-          `It lives in the environment of whoever mints credentials, and never in pikku.config.json.`
-      )
-    }
-
-    const state = await getInspectorState(true, false, false, true)
-    const declared = resolveVirtualUsers(
-      state.virtualUsers?.definitions ?? [],
-      config.scenarios?.emailDomain
-    )
-    const wanted = input.virtualUsers?.length
-      ? input.virtualUsers
-      : Object.keys(declared)
-    const unknown = wanted.filter((id) => !declared[id])
-    if (unknown.length > 0) {
-      throw new Error(
-        `No virtual user ${unknown.map((id) => `'${id}'`).join(', ')} is declared. ` +
-          `Declared: ${Object.keys(declared).sort().join(', ') || 'none'}.`
-      )
-    }
-
-    const minted: string[] = []
-    for (const id of wanted) {
-      minted.push(
-        `${id}=${await deriveVirtualUserSecret(String(root), declared[id]!.email)}`
-      )
-    }
-    for (const line of minted) {
-      logger.info(line)
-    }
-    logger.info('')
-    logger.info(
-      `Hand these to a run as ${VIRTUAL_USER_SECRETS_VARIABLE}='${minted.join(',')}'`
-    )
-  },
-})
-
 export const virtualUserList = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState(true, false, false, true)

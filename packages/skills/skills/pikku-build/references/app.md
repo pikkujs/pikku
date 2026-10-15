@@ -542,19 +542,18 @@ Rules that are not optional:
   public homepage and that stops being true: mount `<DevVirtualUserSwitcher />` in the
   public layout as well, or a reviewer lands on a site with no way in.
 
-Before the first run, make sure `.env` at the project root holds the two
-secrets the local stack needs. `bun run dev` appends whichever is missing, but
-check anyway — a project scaffolded from an older template, or a `.env` copied
-in from elsewhere, can lack one, and neither failure names the variable:
+Before the first run, make sure `.env` at the project root holds the secret
+the local stack needs. `bun run dev` appends it if missing, but check anyway —
+a project scaffolded from an older template, or a `.env` copied in from
+elsewhere, can lack it, and the failure does not name the variable:
 
 - `BETTER_AUTH_SECRET` — without it the first sign-up is a 500.
-- `SCENARIO_VIRTUAL_USER_SECRET` — without it `/api/auth/sign-in/virtual-user` is disabled:
-  every scenario fails at sign-in before its first step, and the "Sign in as …"
-  switcher renders nothing.
+
+Virtual user sign-in needs nothing in `.env`: `pikku dev` creates its own key
+pair and hands the app the public half.
 
 ```sh
 grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-grep -q '^SCENARIO_VIRTUAL_USER_SECRET=' .env 2>/dev/null || echo "SCENARIO_VIRTUAL_USER_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 `.env` is gitignored and local only — never commit it. A deployed stage gets its

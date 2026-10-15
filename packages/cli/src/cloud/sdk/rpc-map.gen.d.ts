@@ -2373,7 +2373,6 @@ export type ExecuteVirtualUserRunInput = {
       }
     | undefined
   seed: number
-  operatorToken?: string | undefined
 }
 export type ExecuteVirtualUserRunOutput = {
   findings: number
@@ -4867,7 +4866,15 @@ export type GetStageWorkflowRunOutput = {
   run: {
     id: string
     workflow: string
-    status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
+    status:
+      | 'running'
+      | 'suspended'
+      | 'completed'
+      | 'failed'
+      | 'cancelled'
+      | 'compensating'
+      | 'compensated'
+      | 'compensation_failed'
     input: unknown
     output?: unknown | undefined
     error?:
@@ -9036,7 +9043,6 @@ export type RunVirtualUserInput = {
       }
     | undefined
   seed?: number | undefined
-  operatorToken?: string | undefined
 }
 export type RunVirtualUserOutput = {
   runId: string
@@ -11604,7 +11610,15 @@ export type TypedWorkflowStatus = (
   runId: string
 ) => Promise<{
   id: string
-  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
+  status:
+    | 'running'
+    | 'suspended'
+    | 'completed'
+    | 'failed'
+    | 'cancelled'
+    | 'compensating'
+    | 'compensated'
+    | 'compensation_failed'
   output?: unknown
   error?: { message?: string }
 }>

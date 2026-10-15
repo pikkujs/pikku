@@ -13,23 +13,14 @@ import type {
   ScenarioBrowserProvider,
 } from '@pikku/core/scenario'
 import type { ResolvedVirtualUser } from '@pikku/core/services'
-import type {
-  VirtualUserSecretResolver,
-  OperatorSignInOptions,
-} from '@pikku/core/virtual-user'
+import type { VirtualUserStatementMint } from '@pikku/core/virtual-user'
 
 /** The default driver, used when a project names no other. */
 export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
 
 export interface ScenarioBrowserDriverOptions {
-  /**
-   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
-   * credential is derived from it. A resolver instead when this run was handed
-   * credentials for only some virtual users.
-   */
-  secret?: string | VirtualUserSecretResolver
-  /** Pikku Studio Cloud operator credentials, for a deployed target. */
-  operator?: OperatorSignInOptions
+  /** Signs the statement the stage's sign-in endpoint takes, one per login. */
+  mint?: VirtualUserStatementMint
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   capture?: ScenarioCaptureOptions
@@ -92,14 +83,8 @@ export interface ResolveScenarioBrowserProviderOptions {
   appUrl?: string
   /** Base url per app, for a product whose virtual users sign into more than one. */
   appUrls?: Record<string, string>
-  /**
-   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
-   * credential is derived from it. A resolver instead when this run was handed
-   * credentials for only some virtual users.
-   */
-  secret?: string | VirtualUserSecretResolver
-  /** Pikku Studio Cloud operator credentials, for a deployed target. */
-  operator?: OperatorSignInOptions
+  /** Signs the statement the stage's sign-in endpoint takes, one per login. */
+  mint?: VirtualUserStatementMint
   virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   /**
@@ -144,8 +129,7 @@ export const resolveScenarioBrowserProvider = async ({
   apiUrl,
   appUrl,
   appUrls,
-  secret,
-  operator,
+  mint,
   virtualUsers,
   signInPath,
   capture,
@@ -191,8 +175,7 @@ export const resolveScenarioBrowserProvider = async ({
     )
   }
   const options: ScenarioBrowserDriverOptions = {
-    secret,
-    operator,
+    mint,
     virtualUsers,
     signInPath,
     capture,

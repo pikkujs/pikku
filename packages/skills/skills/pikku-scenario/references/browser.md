@@ -2,7 +2,7 @@
 
 Declaring a `browser` binding is the whole switch: inside that binding `wire.browser` is guaranteed present and non-optional, and a step without one never sees a browser at all. There is nothing to null-check.
 
-A `browser` binding gets a session bound to **its virtual user**, signed in through the same `signInPath` + `SCENARIO_VIRTUAL_USER_SECRET` path the HTTP virtual users use, so the browser and the RPC calls are one identity. Calling such a step without a virtual user is a critical error (`PKU677`).
+A `browser` binding gets a session bound to **its virtual user**, signed in through the same signed-statement path the HTTP virtual users use, so the browser and the RPC calls are one identity. Calling such a step without a virtual user is a critical error (`PKU677`).
 
 Browser steps are where **intent, not actions** earns its keep: the step is one intent, the clicking lives in shared utilities, and the step arrives before it acts. Write the mechanics below into utilities and keep the step body to three or four calls that read as a sentence.
 

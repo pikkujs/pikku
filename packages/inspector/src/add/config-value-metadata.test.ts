@@ -187,9 +187,9 @@ describe('config value gating flags', () => {
         'export const VirtualUserSchema = z.string()',
         'export const StripeSchema = z.string()',
         'defineSecret({',
-        "  name: 'scenarioVirtualUser',",
-        "  displayName: 'Scenario Virtual user Secret',",
-        "  secretId: 'SCENARIO_VIRTUAL_USER_SECRET',",
+        "  name: 'sampleApi',",
+        "  displayName: 'Sample API Secret',",
+        "  secretId: 'SAMPLE_API_SECRET',",
         '  optional: true,',
         '  schema: VirtualUserSchema,',
         '})',
@@ -206,7 +206,7 @@ describe('config value gating flags', () => {
     try {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
       const optional = state.secrets.definitions.find(
-        (d) => d.secretId === 'SCENARIO_VIRTUAL_USER_SECRET'
+        (d) => d.secretId === 'SAMPLE_API_SECRET'
       )
       const required = state.secrets.definitions.find(
         (d) => d.secretId === 'STRIPE_KEY'

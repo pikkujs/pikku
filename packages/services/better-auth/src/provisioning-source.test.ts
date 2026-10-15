@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
-import { deriveVirtualUserSecret } from '@pikku/core/services'
-
 import { pikkuVirtualUser } from './virtual-user-plugin.js'
 import { DEV_VIRTUAL_USER_SIGN_IN_ENV } from './virtual-user-sign-in-gate.js'
 import {
@@ -52,8 +50,6 @@ const emptyDb = (): Record<string, any[]> => ({
   verification: [],
 })
 
-const ROOT = 'flow-secret-flow-secret-flow-secret'
-
 const post = (
   auth: ReturnType<typeof betterAuth>,
   path: string,
@@ -89,13 +85,12 @@ describe('every plugin tells better-auth who is provisioning the user', () => {
       database: memoryAdapter(db),
       emailAndPassword: { enabled: true },
       user: recorder.user,
-      plugins: [pikkuVirtualUser({ secret: ROOT })],
+      plugins: [pikkuVirtualUser()],
     })
 
-    const res = await post(auth, '/sign-in/virtual-user', {
-      email: 'customer@virtualuser.local',
-      name: 'Customer',
-      secret: await deriveVirtualUserSecret(ROOT, 'customer@virtualuser.local'),
+    const res: Response = await (auth.api as any).signInVirtualUserInternal({
+      body: { email: 'customer@virtualuser.local', name: 'Customer' },
+      asResponse: true,
     })
 
     assert.equal(res.status, 200, await res.text())

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
 import {
@@ -9,11 +12,14 @@ import {
 } from '@pikku/better-auth'
 
 import {
-  VIRTUAL_USER_SECRET_ENV,
-  VITE_VIRTUAL_USER_SECRET_ENV,
   disableDevVirtualUserSignIn,
   enableDevVirtualUserSignIn,
+  setDevVirtualUserApiUrl,
 } from './virtual-user-sign-in.js'
+import {
+  verifyKeyFor,
+  readDevSigningKey,
+} from '../utils/virtual-user-signer.js'
 
 const recordingLogger = () => {
   const info: string[] = []
@@ -31,105 +37,78 @@ const recordingLogger = () => {
 const clearEnv = () => {
   delete process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV]
   delete process.env[VIRTUAL_USER_SIGN_IN_OPT_IN_ENV]
-  delete process.env[VIRTUAL_USER_SECRET_ENV]
-  delete process.env[VITE_VIRTUAL_USER_SECRET_ENV]
-  delete process.env.VITE_DEV_VIRTUAL_USER_SECRETS
+  delete process.env.VIRTUAL_USER_VERIFY_KEY
+  delete process.env.VIRTUAL_USER_API_URL
 }
+
+const runtimeDir = () => mkdtempSync(join(tmpdir(), 'pikku-vu-'))
 
 describe('pikku dev enabling virtual user sign-in', () => {
   beforeEach(clearEnv)
   afterEach(clearEnv)
 
-  test('mints an ephemeral root and opens the gate', async () => {
-    const logger = recordingLogger()
-    await enableDevVirtualUserSignIn(logger as any)
+  test('opens the gate and hands the app only the public key', () => {
+    const dir = runtimeDir()
+    enableDevVirtualUserSignIn(recordingLogger() as any, dir)
 
-    const minted = process.env[VIRTUAL_USER_SECRET_ENV]
-    assert.ok(minted && minted.length >= 32, 'a real secret, not a placeholder')
-    assert.equal(
-      process.env[VITE_VIRTUAL_USER_SECRET_ENV],
-      undefined,
-      'the root derives every virtual user, so it never reaches the bundle'
-    )
     assert.equal(resolveVirtualUserSignIn().enabled, true)
-    assert.match(logger.lines.info.join('\n'), /minted for this run/)
+    assert.equal(
+      process.env.VIRTUAL_USER_VERIFY_KEY,
+      verifyKeyFor(readDevSigningKey(dir)!)
+    )
+    assert.ok(
+      !Object.values(process.env).includes(readDevSigningKey(dir)),
+      'the private key is on disk only'
+    )
   })
 
-  test('the minted root is per-run, so nothing from a previous run signs in', async () => {
-    await enableDevVirtualUserSignIn(recordingLogger() as any)
-    const first = process.env[VIRTUAL_USER_SECRET_ENV]
+  test('a restart keeps the key, so a statement signed before it still verifies', () => {
+    const dir = runtimeDir()
+    enableDevVirtualUserSignIn(recordingLogger() as any, dir)
+    const first = process.env.VIRTUAL_USER_VERIFY_KEY
     clearEnv()
-    await enableDevVirtualUserSignIn(recordingLogger() as any)
+    enableDevVirtualUserSignIn(recordingLogger() as any, dir)
 
-    assert.notEqual(process.env[VIRTUAL_USER_SECRET_ENV], first)
+    assert.equal(process.env.VIRTUAL_USER_VERIFY_KEY, first)
   })
 
-  test('an explicitly-set root beats the minted one', async () => {
-    process.env[VIRTUAL_USER_SECRET_ENV] =
-      'the-one-the-scenario-runs-use-and-then-some'
-    const logger = recordingLogger()
-    await enableDevVirtualUserSignIn(logger as any)
+  test('another project gets another key', () => {
+    enableDevVirtualUserSignIn(recordingLogger() as any, runtimeDir())
+    const first = process.env.VIRTUAL_USER_VERIFY_KEY
+    clearEnv()
+    enableDevVirtualUserSignIn(recordingLogger() as any, runtimeDir())
 
-    assert.equal(
-      process.env[VIRTUAL_USER_SECRET_ENV],
-      'the-one-the-scenario-runs-use-and-then-some'
+    assert.notEqual(process.env.VIRTUAL_USER_VERIFY_KEY, first)
+  })
+})
+
+describe('the address a run drives the dev server at', () => {
+  beforeEach(clearEnv)
+  afterEach(clearEnv)
+
+  test('is the bound origin plus the prefix the dev environment names', () => {
+    setDevVirtualUserApiUrl(
+      'http://localhost:4123',
+      'http://localhost:3000/api/'
     )
-    assert.match(logger.lines.info.join('\n'), /already in this environment/)
+    assert.equal(process.env.VIRTUAL_USER_API_URL, 'http://localhost:4123/api')
   })
 
-  test('a frontend-only root is mirrored onto the name the server derives from', async () => {
-    process.env[VITE_VIRTUAL_USER_SECRET_ENV] =
-      'set-by-the-frontend-env-file-and-long-enough'
-    await enableDevVirtualUserSignIn(recordingLogger() as any)
-
-    assert.equal(
-      process.env[VIRTUAL_USER_SECRET_ENV],
-      'set-by-the-frontend-env-file-and-long-enough',
-      'otherwise the switcher posts credentials the server never derived'
-    )
-    assert.equal(process.env[VITE_VIRTUAL_USER_SECRET_ENV], undefined)
+  test('is the bound origin alone when the environment names none', () => {
+    setDevVirtualUserApiUrl('http://localhost:4123', undefined)
+    assert.equal(process.env.VIRTUAL_USER_API_URL, 'http://localhost:4123')
   })
 
-  test('names a disagreement between the two rather than picking silently', async () => {
-    process.env[VIRTUAL_USER_SECRET_ENV] =
-      'server-side-root-that-is-long-enough-ok'
-    process.env[VITE_VIRTUAL_USER_SECRET_ENV] =
-      'frontend-side-root-that-is-long-enough'
-    const logger = recordingLogger()
-    await enableDevVirtualUserSignIn(logger as any)
-
-    assert.equal(
-      process.env[VIRTUAL_USER_SECRET_ENV],
-      'server-side-root-that-is-long-enough-ok'
-    )
-    assert.match(logger.lines.warn.join('\n'), /different values/)
-  })
-
-  test('puts no virtual user credential in the frontend env', async () => {
-    await enableDevVirtualUserSignIn(recordingLogger() as any)
-
-    assert.equal(process.env.VITE_DEV_VIRTUAL_USER_SECRETS, undefined)
-  })
-
-  test('a root too short to derive from says why', async () => {
-    process.env[VIRTUAL_USER_SECRET_ENV] = 'too-short'
-    const logger = recordingLogger()
-    await enableDevVirtualUserSignIn(logger as any)
-
-    assert.match(logger.lines.warn.join('\n'), /shorter than 32 characters/)
+  test('leaves an address the project set itself alone', () => {
+    process.env.VIRTUAL_USER_API_URL = 'https://tunnel.example.com'
+    setDevVirtualUserApiUrl('http://localhost:4123', undefined)
+    assert.equal(process.env.VIRTUAL_USER_API_URL, 'https://tunnel.example.com')
   })
 })
 
 describe('pikku serve refusing virtual user sign-in', () => {
   beforeEach(clearEnv)
   afterEach(clearEnv)
-
-  test('leaves the gate shut even with a secret in the environment', () => {
-    process.env[VIRTUAL_USER_SECRET_ENV] = 'leaked-into-production'
-    disableDevVirtualUserSignIn(recordingLogger() as any)
-
-    assert.equal(resolveVirtualUserSignIn().enabled, false)
-  })
 
   test('clears an inherited dev marker and says that it did', () => {
     process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV] = 'true'

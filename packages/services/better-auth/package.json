@@ -23,6 +23,9 @@
     "release": "npm run build && npm test",
     "prepublishOnly": "bun run build"
   },
+  "dependencies": {
+    "@pikku/jose": "^0.12.8"
+  },
   "peerDependencies": {
     "@pikku/core": "^0.12.140",
     "better-auth": "^1.7.5",

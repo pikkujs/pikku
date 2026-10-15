@@ -190,12 +190,13 @@ export const runVirtualUserChecks = async (
       lines(
         'Wire the virtual user plugin where better-auth is configured:',
         "  import { pikkuVirtualUser } from '@pikku/better-auth'",
-        '  plugins: [pikkuVirtualUser({ secret: SCENARIO_VIRTUAL_USER_SECRET })]',
-        '`pikku dev` turns the endpoint on and mints the secret itself, so there',
-        'is nothing to configure locally. A deployed stage that must run',
-        'scenarios opts in with',
-        'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in; everywhere else',
-        'the endpoint stays off whatever the environment happens to contain.'
+        '  plugins: [pikkuVirtualUser({ statementVerifier, virtualUserSignIn })]',
+        '`pikku dev` turns sign-in on and creates the keys itself, so there is',
+        'nothing to configure locally. A deployed stage that must run scenarios',
+        'opts in with',
+        'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in and is',
+        'given VIRTUAL_USER_VERIFY_KEY (a public key; whoever deploys keeps the',
+        'private one). Everywhere else the endpoints are not registered at all.'
       )
     )
   }

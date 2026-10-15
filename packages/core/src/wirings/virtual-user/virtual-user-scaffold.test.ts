@@ -8,7 +8,6 @@ import {
   serializeVirtualUserRun,
   serializeVirtualUserSchedule,
   serializeVirtualUserSteps,
-  signInPathFor,
   startVirtualUserRun,
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
@@ -22,6 +21,7 @@ import type {
   VirtualUserScheduleRecord,
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
+import { createHttpVirtualUsers } from '../../services/http-virtual-users.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
@@ -105,32 +105,6 @@ const emptyMeta = {
   getSystemRolesMeta: async () => ({}),
   getAgentsMeta: async () => ({}),
 } as any
-
-describe('signInPathFor', () => {
-  // Both are better-auth plugins on one mount, so an app that moved auth to
-  // `/api/auth` should not have to name each door separately.
-  test('an app that moved its auth mount moves both sign-in paths', () => {
-    assert.equal(
-      signInPathFor('/api/auth/sign-in/virtual-user', 'cloud'),
-      '/api/auth/sign-in/cloud'
-    )
-    assert.equal(
-      signInPathFor('/api/auth/sign-in/cloud', 'virtual-user'),
-      '/api/auth/sign-in/virtual-user'
-    )
-  })
-
-  test('a path naming neither plugin was configured deliberately', () => {
-    assert.equal(
-      signInPathFor('/custom/login', 'virtual-user'),
-      '/custom/login'
-    )
-  })
-
-  test('nothing configured stays nothing, so the default applies', () => {
-    assert.equal(signInPathFor(undefined, 'virtual-user'), undefined)
-  })
-})
 
 describe('runnableVirtualUser', () => {
   test('an undeclared virtual user is named, with what declares one', () => {
@@ -265,7 +239,7 @@ describe('startVirtualUserRun', () => {
     assert.equal(started[0].disposition, 'realistic')
   })
 
-  test('refuses every disposition but the accountable one in production', async () => {
+  test('refuses every disposition in production', async () => {
     const { store, started } = runStore()
     await assert.rejects(
       startVirtualUserRun({
@@ -275,23 +249,24 @@ describe('startVirtualUserRun', () => {
         virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
-      /Only the 'accountable' disposition may run against production/
+      /Virtual users do not run against production/
     )
     assert.equal(started.length, 0)
   })
 
-  // Checked against the effective disposition, so an override cannot smuggle
-  // one past a virtual user that declares the safe one.
-  test('the accountable disposition is allowed through in production', async () => {
+  test('the accountable disposition is refused in production too', async () => {
     const { store, started } = runStore()
-    await startVirtualUserRun({
-      store,
-      virtualUsers,
-      config: { nodeEnv: 'production' },
-      virtualUserId: 'susan',
-      disposition: 'accountable',
-    })
-    assert.equal(started[0].disposition, 'accountable')
+    await assert.rejects(
+      startVirtualUserRun({
+        store,
+        virtualUsers,
+        config: { nodeEnv: 'production' },
+        virtualUserId: 'susan',
+        disposition: 'accountable',
+      }),
+      /Virtual users do not run against production/
+    )
+    assert.equal(started.length, 0)
   })
 
   // The case NODE_ENV cannot answer: a staging environment that is a production
@@ -323,7 +298,7 @@ describe('startVirtualUserRun', () => {
         virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
-      /Only the 'accountable' disposition may run against production/
+      /Virtual users do not run against production/
     )
     assert.equal(started.length, 0)
   })
@@ -345,7 +320,7 @@ describe('startVirtualUserRun', () => {
           virtualUserId: 'susan',
           disposition: 'adversarial',
         }),
-        /Only the 'accountable' disposition may run against production/
+        /Virtual users do not run against production/
       )
     } finally {
       if (pikkuEnv !== undefined) process.env.PIKKU_ENV = pikkuEnv
@@ -587,7 +562,7 @@ describe('writeVirtualUserSchedule', () => {
     environment: 'production',
   }
 
-  test('refuses enabling a probing disposition in production', async () => {
+  test('refuses enabling a cadence in production', async () => {
     const { store, writes } = scheduleStore()
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -599,14 +574,14 @@ describe('writeVirtualUserSchedule', () => {
       }),
       (e) =>
         getErrorResponse(e)?.status === 403 &&
-        /Only the 'accountable' disposition/.test((e as Error).message)
+        /Virtual users do not run against production/.test((e as Error).message)
     )
     assert.equal(writes.length, 0)
   })
 
   // Fields left out keep what the row had, so the disposition checked is the
   // one it will hold after the write.
-  test('refuses enabling a row saved earlier with a probing disposition', async () => {
+  test('refuses enabling a row saved earlier in production', async () => {
     const { store, writes } = scheduleStore({ ...schedule(), enabled: false })
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -616,12 +591,12 @@ describe('writeVirtualUserSchedule', () => {
         enabled: true,
         ...production,
       }),
-      /"susan" is adversarial/
+      /Virtual users do not run against production/
     )
     assert.equal(writes.length, 0)
   })
 
-  test('refuses a probing disposition on a row that is already enabled', async () => {
+  test('refuses editing a row that is already enabled in production', async () => {
     const { store, writes } = scheduleStore(schedule())
     await assert.rejects(
       writeVirtualUserSchedule({
@@ -631,22 +606,25 @@ describe('writeVirtualUserSchedule', () => {
         disposition: 'careless',
         ...production,
       }),
-      /"susan" is careless/
+      /Virtual users do not run against production/
     )
     assert.equal(writes.length, 0)
   })
 
-  test('an accountable cadence may be enabled in production', async () => {
+  test('an accountable cadence is refused in production too', async () => {
     const { store, writes } = scheduleStore()
-    await writeVirtualUserSchedule({
-      store,
-      virtualUsers,
-      virtualUserId: 'susan',
-      enabled: true,
-      disposition: 'accountable',
-      ...production,
-    })
-    assert.equal(writes.length, 1)
+    await assert.rejects(
+      writeVirtualUserSchedule({
+        store,
+        virtualUsers,
+        virtualUserId: 'susan',
+        enabled: true,
+        disposition: 'accountable',
+        ...production,
+      }),
+      /Virtual users do not run against production/
+    )
+    assert.equal(writes.length, 0)
   })
 
   // A new row takes the virtual user's declared disposition, so the one checked is
@@ -660,7 +638,6 @@ describe('writeVirtualUserSchedule', () => {
       } as unknown as ScaffoldVirtualUsers,
       virtualUserId: 'susan',
       enabled: true,
-      ...production,
     })
     assert.equal(writes[0].disposition, 'accountable')
   })
@@ -804,6 +781,7 @@ describe('executeVirtualUserRun', () => {
         logger,
         virtualUsers,
         createVirtualUsers: () => ({}) as any,
+        auth: { api: {} },
         runId: 'run-1',
         virtualUserId: 'susan',
         disposition: 'realistic',
@@ -829,13 +807,22 @@ describe('executeVirtualUserRun', () => {
     assert.match(lines[0]!, /^error Virtual user run run-1 \(susan\) failed/)
   })
 
-  test('says which credential is missing rather than assuming the local one', async () => {
+  test('says what the address is for and what to put there', async () => {
+    const { params: p } = params()
+    await assert.rejects(
+      executeVirtualUserRun(p),
+      /VIRTUAL_USER_API_URL is not set.*URL this app is reached at/
+    )
+  })
+
+  test('an app with no auth service says so rather than failing later', async () => {
     const { params: p } = params({
+      auth: undefined,
       variables: variables({ VIRTUAL_USER_API_URL: 'http://localhost:4000' }),
     })
     await assert.rejects(
       executeVirtualUserRun(p),
-      /Neither an operator token nor SCENARIO_VIRTUAL_USER_SECRET is available/
+      /no auth service.*pikkuVirtualUser plugin/
     )
   })
 
@@ -843,7 +830,6 @@ describe('executeVirtualUserRun', () => {
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
       }),
     })
     await assert.rejects(
@@ -852,64 +838,46 @@ describe('executeVirtualUserRun', () => {
     )
   })
 
-  // Asymmetric, so the stage can verify one and can never mint one. The virtual user
-  // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
-  test('an operator token wins over the virtual user secret wherever both exist', async () => {
-    let options: any
+  test("signs in through the app's own auth, with no credential read", async () => {
+    const read: string[] = []
+    const calls: any[] = []
+    const env: Record<string, string> = {
+      VIRTUAL_USER_API_URL: 'http://localhost:4000',
+      VIRTUAL_USER_MODEL: 'a-model',
+    }
+    let built: any
     const { params: p } = params({
-      operatorToken: 'handed-in',
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
-        VIRTUAL_USER_MODEL: 'a-model',
-        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/virtual-user',
-      }),
+      auth: {
+        api: {
+          signInVirtualUserInternal: async (input: any) => {
+            calls.push(input.body.email)
+            return new Response('{}', {
+              headers: { 'set-cookie': 'session=in-process; Path=/' },
+            })
+          },
+        },
+      },
+      variables: {
+        get: async (name: string) => (read.push(name), env[name]),
+      },
       createVirtualUsers: (given: any) => {
-        options = given
+        built = createHttpVirtualUsers({ ...given, virtualUsers })
         return {}
       },
     })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.secret, undefined)
-    assert.equal(options.operator.token, 'handed-in')
-    assert.equal(options.operator.signInPath, '/api/auth/sign-in/cloud')
-    // The virtual user door moves with the mount too, for the run that has no token.
-    assert.equal(options.signInPath, '/api/auth/sign-in/virtual-user')
-  })
-
-  test('a run nobody handed a token to falls back to the environment', async () => {
-    let options: any
-    const { params: p } = params({
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        PIKKUSTUDIO_OPERATOR_TOKEN: 'from-the-environment',
-        VIRTUAL_USER_MODEL: 'a-model',
-      }),
-      createVirtualUsers: (given: any) => {
-        options = given
-        return {}
-      },
-    })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.operator.token, 'from-the-environment')
-  })
-
-  test('with no token at all the virtual user secret is what signs in', async () => {
-    let options: any
-    const { params: p } = params({
-      variables: variables({
-        VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
-        VIRTUAL_USER_MODEL: 'a-model',
-      }),
-      createVirtualUsers: (given: any) => {
-        options = given
-        return {}
-      },
-    })
-    await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
-    assert.equal(options.secret, 'shh')
-    assert.equal(options.operator, undefined)
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response('{}')) as typeof fetch
+    try {
+      await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
+      await built.susan.invokeRaw('ping', {})
+    } finally {
+      globalThis.fetch = realFetch
+    }
+    assert.deepEqual(calls, [virtualUsers.susan.email])
+    assert.deepEqual(
+      read.filter((name) => /SECRET|TOKEN|KEY/.test(name)),
+      []
+    )
   })
 
   test('a virtual user nobody declares any more is refused before signing in', async () => {
@@ -918,7 +886,6 @@ describe('executeVirtualUserRun', () => {
       virtualUserId: 'gone',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => {
@@ -965,7 +932,6 @@ describe('executeVirtualUserRun', () => {
       },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
     })
@@ -990,7 +956,6 @@ describe('executeVirtualUserRun', () => {
       budget: { steps: 0 },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
       createVirtualUsers: () => ({

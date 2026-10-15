@@ -7,7 +7,7 @@ description: >-
   flow doubles as an e2e test and a staged/production health check. Covers scenario.do /
   expectEventually / expectError / expectService / expectScore, declared steps via
   pikkuScenarioStep (browser steps driven by @pikku/playwright) written as intent rather than
-  clicks, virtual users / virtual users / environments in pikku.config.json, SCENARIO_VIRTUAL_USER_SECRET, the
+  clicks, virtual users / virtual users / environments in pikku.config.json, VIRTUAL_USER_SIGNING_KEY, the
   `pikku scenario` and `pikku virtual-user` commands, and live coverage
   via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
   coverage, e2e flows, browser/UI e2e, health checks, virtual users, or adversarial
@@ -293,17 +293,17 @@ for someone only acted upon, `defineVirtualUsers` being read from source rather
 than evaluated, and the same virtual user list powering a human "Sign in as …"
 switcher.
 
-- **`SCENARIO_VIRTUAL_USER_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs virtual users in. `pikku scenario run` throws without it; a server auto-building virtual users warns and runs without them.
+- **The signing key never goes in `pikku.config.json`.** `pikku dev` creates one under `.pikku-runtime/virtual-user/`; a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. Each run signs a short-lived statement with it. `pikku scenario run` throws without a key.
 
 ## Running
 
 ```bash
 pikku scenario list                       # features with their scenarios indented, then ungrouped scenarios
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --flows orderSupportScenario
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --features credentialFeature
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --tags smoke,scenario
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --spawn --exclude-tags ai-live
+pikku scenario run local
+pikku scenario run local --flows orderSupportScenario
+pikku scenario run local --features credentialFeature
+pikku scenario run local --tags smoke,scenario
+pikku scenario run local --spawn --exclude-tags ai-live
 ```
 
 `run` takes the environment as a **required positional** — the key from `environments`. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
@@ -325,7 +325,7 @@ SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --spawn --exclude-tags
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 
-**Exit code is 1** if any scenario fails _or_ if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing `SCENARIO_VIRTUAL_USER_SECRET`.
+**Exit code is 1** if any scenario fails _or_ if no scenario matched the filter — a typo'd `--flows` is a hard error, not a silent zero-run pass. It throws outright on an unknown environment, an unknown flow name, or a missing signing key.
 
 ## Coverage
 
@@ -335,7 +335,7 @@ derived from unit tests:
 ```bash
 pikku enable scenarios                                 # sets scaffold.scenarios = true
 pikku dev --coverage                                   # V8 precise coverage, in-process
-SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --coverage
+pikku scenario run local --coverage
 ```
 
 That writes `<outDir>/coverage/scenario-coverage.json`. **`references/coverage.md`** has the

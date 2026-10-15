@@ -166,6 +166,7 @@ jobs:
             db-schema,
             validate,
             mcp-auth,
+            virtual-users,
           ]
     steps:
       - uses: actions/checkout@v7

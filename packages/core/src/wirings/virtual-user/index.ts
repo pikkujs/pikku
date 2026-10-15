@@ -94,7 +94,6 @@ export {
   serializeVirtualUserRun,
   serializeVirtualUserSchedule,
   serializeVirtualUserSteps,
-  signInPathFor,
   startVirtualUserRun,
   VIRTUAL_USER_VARIABLES,
   virtualUserScheduleRunInput,
@@ -158,24 +157,18 @@ export {
   type HttpVirtualUsersConfig,
 } from '../../services/http-virtual-users.js'
 export {
-  VirtualUserSecretSignIn,
-  OperatorSignIn,
-  establishOperatorSession,
-  IMPERSONATE_USER_ID_HEADER,
-  type VirtualUserSecretResolver,
-  type VirtualUserSignIn,
-  type OperatorSignInOptions,
-  type OperatorSessionResult,
+  statementSignIn,
+  inProcessSignIn,
   authMount,
+  type VirtualUserSignIn,
+  type VirtualUserStatementMint,
+  type StatementSignInOptions,
+  type InProcessAuth,
 } from '../../services/virtual-user-sign-in.js'
 export {
-  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
-  VIRTUAL_USER_SECRET_INFO,
-  VIRTUAL_USER_SECRET_NAME,
-  virtualUserSecretSubject,
-  deriveVirtualUserSecret,
-  verifyVirtualUserSecret,
-} from '../../services/virtual-user-secret.js'
+  createCookieJar,
+  type ScenarioCookieJar,
+} from '../../services/scenario-cookie-jar.js'
 export {
   postScenarioJson,
   readScenarioHttpResponse,

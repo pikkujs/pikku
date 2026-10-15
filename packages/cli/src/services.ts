@@ -46,7 +46,6 @@ import { BunBundler } from './deploy/bundler/bun-bundler.js'
 import { NodeServerRunner } from './server/node-server-runner.js'
 import { BunServerRunner } from './server/bun-server-runner.js'
 import { parseCLIFilters } from './utils/parse-cli-filters.js'
-import { virtualUsersSecretsFilePath } from './functions/wirings/virtual-users/virtual-users-secrets-file.js'
 
 const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   string,
@@ -356,12 +355,6 @@ export const createSingletonServices: CreateSingletonServices<
         // unreachable via the import graph — add it explicitly to get inspected.
         config.authFile
           ? path.join(path.dirname(config.authFile), 'auth-middleware.gen.ts')
-          : undefined,
-        // The virtual users scaffold's sibling secrets file (SCENARIO_VIRTUAL_USER_SECRET),
-        // generated into outDir where nothing imports it — same reasoning as the
-        // auth files above.
-        config.virtualUsersFile
-          ? virtualUsersSecretsFilePath(config.virtualUsersFile)
           : undefined,
       ]
       for (const file of scaffoldFiles) {

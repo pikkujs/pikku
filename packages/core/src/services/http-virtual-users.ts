@@ -16,15 +16,8 @@ import { runConversation } from '../wirings/virtual-user/conversation/run-conver
 import {
   createCookieJar,
   type ScenarioCookieJar,
-} from '../wirings/workflow/scenario-cookie-jar.js'
-import {
-  VirtualUserSecretSignIn,
-  type VirtualUserSecretResolver,
-  OperatorSignIn,
-  type OperatorSignInOptions,
-  type VirtualUserSignIn,
-  authMount,
-} from './virtual-user-sign-in.js'
+} from './scenario-cookie-jar.js'
+import { authMount, type VirtualUserSignIn } from './virtual-user-sign-in.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
@@ -37,34 +30,16 @@ export interface HttpVirtualUsersConfig {
    */
   apiUrl: string
   /**
-   * The ROOT virtual user secret, from which each virtual user's own credential is derived
-   * and bound to their address. Sign-in only ever works for user rows flagged
-   * `virtualUser: true`, and a derived credential only ever works for the one address
-   * it was derived for.
-   *
-   * Pass an {@link VirtualUserSecretResolver} instead to drive virtual users whose
-   * credentials were minted elsewhere — a caller entitled to one virtual user then
-   * never holds the root.
-   *
-   * The local-development credential. A deployed stage has none, and passes
-   * {@link HttpVirtualUsersConfig.operator} instead.
+   * How each virtual user obtains a session: {@link inProcessSignIn} from inside
+   * the app, {@link statementSignIn} from outside it.
    */
-  secret?: string | VirtualUserSecretResolver
-  /**
-   * Pikku Studio Cloud operator credentials, for signing virtual users into a DEPLOYED stage.
-   *
-   * Mutually exclusive with {@link HttpVirtualUsersConfig.secret}: the operator
-   * path acts as the virtual user through an admin session rather than logging in as
-   * them, so no test credential has to exist on the target at all.
-   */
-  operator?: OperatorSignInOptions
+  signIn: VirtualUserSignIn
   /** Virtual user id → the declaration with its address filled in. */
   virtualUsers: Record<string, ResolvedVirtualUser>
   /**
-   * Sign-in path under apiUrl, for whichever of the two paths is in use — an
-   * app that mounts auth under `/api` moves both. Default: the virtual user plugin's
-   * `/auth/sign-in/virtual-user`, or `/auth/sign-in/cloud` for an operator.
-   * {@link OperatorSignInOptions.signInPath} overrides it.
+   * The sign-in path, when the app mounts auth somewhere other than `/auth`.
+   * Only the mount is used here, to find `get-session`; signing in itself is
+   * the job of {@link HttpVirtualUsersConfig.signIn}.
    */
   signInPath?: string
   /**
@@ -99,10 +74,6 @@ export interface HttpVirtualUsersConfig {
  * Default HTTP-backed virtual user. Signs in lazily on first invoke, holds the
  * session cookies for its lifetime, and re-logs-in once on a 401 mid-run (long
  * health-check runs can outlive a session).
- *
- * How it signs in depends on the target, and the two ways are not
- * interchangeable — see {@link VirtualUserSecretSignIn} for local development and
- * {@link OperatorSignIn} for a deployed stage.
  */
 export class HttpVirtualUser implements ScenarioVirtualUser {
   private jar: ScenarioCookieJar
@@ -121,26 +92,7 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
     private config: HttpVirtualUsersConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
-    if (config.operator) {
-      this.signIn = new OperatorSignIn(config.apiUrl, {
-        ...config.operator,
-        signInPath:
-          config.operator.signInPath ??
-          (authMount(config.signInPath)
-            ? `${authMount(config.signInPath)}/sign-in/cloud`
-            : undefined),
-      })
-    } else if (config.secret) {
-      this.signIn = new VirtualUserSecretSignIn(
-        config.apiUrl,
-        config.secret,
-        config.signInPath ?? '/auth/sign-in/virtual-user'
-      )
-    } else {
-      throw new Error(
-        `[scenario] virtual user '${name}' has no way to sign in — set 'secret' for a dev target or 'operator' for a deployed one`
-      )
-    }
+    this.signIn = config.signIn
   }
 
   get email(): string {
@@ -259,14 +211,10 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
   }
 
   private async rolesFromSession(): Promise<string[] | null> {
-    const mount = authMount(
-      this.config.operator?.signInPath ?? this.config.signInPath
-    )
+    const mount = authMount(this.config.signInPath)
     const sessionPath =
       this.config.sessionPath ?? `${mount ?? '/auth'}/get-session`
-    const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`, {
-      headers: this.signIn.headers(),
-    })
+    const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`)
     if (!res.ok) {
       return null
     }
@@ -342,10 +290,7 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
     const send = () =>
       this.jar.fetch(url, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...this.signIn.headers(),
-        },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       })
 
@@ -381,7 +326,6 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...this.signIn.headers(),
         ...extraHeaders,
       },
       body: JSON.stringify({ data }),

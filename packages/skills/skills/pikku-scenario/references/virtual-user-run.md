@@ -4,7 +4,7 @@
 
 - [The shape of a run](#the-shape-of-a-run)
 - [The dispositions](#the-dispositions)
-- [Credentials, and which one wins](#credentials-and-which-one-wins)
+- [The key](#the-key)
 - [Production is opt-in, twice](#production-is-opt-in-twice)
 - [The role check happens before the first step](#the-role-check-happens-before-the-first-step)
 - [The other subcommands](#the-other-subcommands)
@@ -31,9 +31,9 @@ running half.
 ## The shape of a run
 
 ```bash
-SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run local shopper
-SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run local shopper -d careless --seed 42
-SCENARIO_VIRTUAL_USER_SECRET=… pikku virtual-user run staging auditor \
+pikku virtual-user run local shopper
+pikku virtual-user run local shopper -d careless --seed 42
+pikku virtual-user run staging auditor \
   --goals "reconcile the order totals" --steps 80 --out runs/auditor.json
 ```
 
@@ -76,22 +76,18 @@ shape.
 | `adversarial` | Probing whether the boundaries are enforced. Inverted oracle — a 2xx from something it should not reach is the finding        |
 | `accountable` | Doing the job for real. The **only** disposition production accepts                                                           |
 
-## Credentials, and which one wins
+## The key
 
-Three variables, checked in this order. None of them belongs in
-`pikku.config.json`.
+A run signs one short-lived statement per virtual user and presents it to the
+app. The key comes from, in this order:
 
-1. **`PIKKUSTUDIO_OPERATOR_TOKEN`** — what a deployed stage accepts. Asymmetric, and
-   it needs no account the target would not otherwise have, so it wins over the
-   other two when both are present.
-2. **`PIKKU_VIRTUAL_USER_SECRETS`** — `id=secret,id=secret`, already-derived
-   per-virtual-user credentials. Hand a run only the virtual users it should be able to
-   be; asking for one outside the list is refused by name rather than falling
-   through to the root. Mint them with `pikku virtual-user secret [virtual users...]` —
-   naming none mints all.
-3. **`SCENARIO_VIRTUAL_USER_SECRET`** — the root secret, which derives every virtual user's
-   credential and is therefore entitled to all of them. Only `pikku dev` serves
-   the endpoint it opens.
+1. **`VIRTUAL_USER_SIGNING_KEY`** in the environment — a deployed stage's
+   private key, held by whoever deploys it.
+2. **The file `pikku dev` wrote**, `.pikku-runtime/virtual-user/signing.key` —
+   so a local run needs nothing set.
+
+Neither belongs in `pikku.config.json`. The app only ever holds the public half,
+`VIRTUAL_USER_VERIFY_KEY`.
 
 ## Production is opt-in, twice
 
@@ -127,11 +123,10 @@ drift.
 
 ## The other subcommands
 
-| Command                                        | What it answers                                                                                 |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `pikku virtual-user list`                      | Who is declared — who each one is, what they may do, what they want                             |
-| `pikku virtual-user sync <environment>`        | Which virtual users that environment will provision, with which roles, and why any were skipped |
-| `pikku virtual-user secret [virtual users...]` | Mint per-virtual-user credentials from the root secret                                          |
+| Command                                 | What it answers                                                                                 |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `pikku virtual-user list`               | Who is declared — who each one is, what they may do, what they want                             |
+| `pikku virtual-user sync <environment>` | Which virtual users that environment will provision, with which roles, and why any were skipped |
 
 `sync` **reports**; it does not provision. The CLI has no connection to a
 deployed environment's database, so the provisioning happens in the deployment —

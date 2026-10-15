@@ -2,14 +2,7 @@ import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
 import type { ResolvedVirtualUser } from '@pikku/core/services'
-import {
-  authMount,
-  deriveVirtualUserSecret,
-  establishOperatorSession,
-  IMPERSONATE_USER_ID_HEADER,
-  type VirtualUserSecretResolver,
-  type OperatorSignInOptions,
-} from '@pikku/core/virtual-user'
+import type { VirtualUserStatementMint } from '@pikku/core/virtual-user'
 import type {
   ScenarioArtifact,
   ScenarioBrowserFailure,
@@ -41,8 +34,6 @@ const VIDEO_STAGING_DIR = '.video-raw'
 export interface VirtualUserSignInRequest {
   email: string
   name: string
-  /** Absent on a deployed stage, which has no virtual user secret to post. */
-  secret?: string
 }
 
 /** Where the virtual user sign-in endpoint lives, and which origin it is called from. */
@@ -56,7 +47,7 @@ export interface VirtualUserSignInTarget {
  * Establish the virtual user's session inside its own browser context. Overridable so
  * a project on a different auth plugin can plant its own cookie.
  */
-export type VirtualUserSecretSignIn = (
+export type BrowserVirtualUserSignIn = (
   context: BrowserContext,
   request: VirtualUserSignInRequest,
   target: VirtualUserSignInTarget
@@ -65,21 +56,11 @@ export type VirtualUserSecretSignIn = (
 export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
   /**
-   * The ROOT virtual user secret — the same SCENARIO_VIRTUAL_USER_SECRET the HTTP virtual users
-   * use — from which each virtual user's own credential is derived and bound to
-   * their address. Pass an {@link VirtualUserSecretResolver} to browse as virtual users
-   * whose credentials were minted elsewhere, without holding the root.
-   *
-   * The local-development credential; a deployed stage passes
-   * {@link PlaywrightScenarioBrowserProviderOptions.operator} instead.
+   * Signs the statement the stage's sign-in endpoint takes, one per login. Needed
+   * by the default sign-in; a project that passes its own `signIn` can leave it
+   * out.
    */
-  secret?: string | VirtualUserSecretResolver
-  /**
-   * Pikku Studio Cloud operator credentials, for browsing a DEPLOYED stage as a virtual user.
-   * Same handshake the HTTP virtual users use, so a browser step and an RPC step in
-   * one scenario still act as one user.
-   */
-  operator?: OperatorSignInOptions
+  mint?: VirtualUserStatementMint
   /** Virtual user name → the virtual user filling it, resolved from `defineVirtualUsers()`. */
   virtualUsers: Record<string, ResolvedVirtualUser>
   /** Sign-in path under apiUrl. Default: the virtual user plugin's `/auth/sign-in/virtual-user`. */
@@ -92,47 +73,17 @@ export interface PlaywrightScenarioBrowserProviderOptions {
    */
   capture?: CaptureOptions
   connectBrowser?: () => Promise<BrowserConnection>
-  signIn?: VirtualUserSecretSignIn
+  signIn?: BrowserVirtualUserSignIn
 }
 
 /**
  * Hands scenario steps a browser, one isolated context per virtual user.
  *
  * The context signs in through the SAME virtual user path the HTTP virtual users use
- * (`signInPath` + the virtual user secret) rather than a virtual user email/password, so
+ * (`signInPath` + a signed statement) rather than a virtual user email/password, so
  * `wire.browser` and `wire.scenarioStep.virtualUser` are the same identity — a
  * browser step and an RPC step in one scenario act as one user.
  */
-/**
- * Send the impersonation header to the product's own origins and nowhere else.
- *
- * `setExtraHTTPHeaders` would be one line, but it stamps every request the
- * context makes — analytics, fonts, any third-party subresource a page pulls —
- * and telling an unrelated host which user this run is acting as is not
- * something a test should do. Routing is the origin-aware alternative, and
- * `fallback` rather than `continue` so a project's own route handlers still see
- * the request.
- */
-const impersonateOn = async (
-  context: BrowserContext,
-  userId: string,
-  origins: string[]
-): Promise<void> => {
-  const trusted = new Set(origins.map((url) => new URL(url).origin))
-  await context.route('**/*', async (route) => {
-    const request = route.request()
-    if (!trusted.has(new URL(request.url()).origin)) {
-      return route.fallback()
-    }
-    return route.fallback({
-      headers: {
-        ...request.headers(),
-        [IMPERSONATE_USER_ID_HEADER]: userId,
-      },
-    })
-  })
-}
-
 export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvider {
   private readonly config: BrowserConfig
   private sessions = new Map<string, Promise<VirtualUserSession>>()
@@ -493,21 +444,11 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       }
     }
     const signIn = this.options.signIn ?? this.defaultSignIn(virtualUserConfig)
-    const secret =
-      typeof this.options.secret === 'function'
-        ? await this.options.secret(virtualUserConfig)
-        : this.options.secret
-          ? await deriveVirtualUserSecret(
-              this.options.secret,
-              virtualUserConfig.email
-            )
-          : undefined
     await signIn(
       session.context,
       {
         email: virtualUserConfig.email,
         name: virtualUserConfig.name ?? virtualUserName,
-        secret,
       },
       {
         apiUrl: config.apiUrl,
@@ -520,34 +461,49 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   /**
    * How a context gets its session when the project has not supplied its own
-   * `signIn`. The operator path wins when both credentials are present, for the
-   * same reason it does on the HTTP side: it is the stronger of the two.
+   * `signIn`: a signed statement posted to the stage, whose cookies land in the
+   * context.
    */
   private defaultSignIn(
     virtualUser: ResolvedVirtualUser
-  ): VirtualUserSecretSignIn {
-    const operator = this.options.operator
-    if (!operator) {
-      return defaultVirtualUserSignIn
-    }
-    return async (context, _request, target) => {
-      const mount = authMount(this.options.signInPath)
-      const { setCookies, userId } = await establishOperatorSession(
-        fetch,
-        target.apiUrl,
-        virtualUser,
-        {
-          ...operator,
-          signInPath:
-            operator.signInPath ??
-            (mount ? `${mount}/sign-in/cloud` : undefined),
+  ): BrowserVirtualUserSignIn {
+    return async (context, request, target) => {
+      const mint = this.options.mint
+      if (!mint) {
+        throw new Error(
+          `[scenario] browser virtual user sign-in for '${request.email}' has nothing to sign with. ` +
+            'Pass `mint` (the CLI does), or a `signIn` of your own.'
+        )
+      }
+      const res = await fetch(`${target.apiUrl}${target.signInPath}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: new URL(target.appUrl).origin,
         },
-        { origin: new URL(target.appUrl).origin }
-      )
+        body: JSON.stringify({ statement: await mint(virtualUser) }),
+      })
+      if (res.status === 404) {
+        throw new Error(
+          `[scenario] ${target.apiUrl}${target.signInPath} does not exist, so '${request.email}' cannot sign in. ` +
+            'The stage has no VIRTUAL_USER_VERIFY_KEY set, or does not serve virtual user sign-in at all (production never does).'
+        )
+      }
+      if (!res.ok) {
+        const body = (await res.text().catch(() => '')).slice(0, 300)
+        throw new Error(
+          `[scenario] browser virtual user sign-in failed for '${request.email}' (${res.status}): ${body}`
+        )
+      }
+      const setCookies = res.headers.getSetCookie?.() ?? []
+      if (setCookies.length === 0) {
+        throw new Error(
+          `[scenario] browser virtual user sign-in for '${request.email}' returned no session cookie`
+        )
+      }
       await context.addCookies(
-        setCookies.map((raw: string) => parseCookie(raw, target.appUrl))
+        setCookies.map((raw) => parseCookie(raw, target.appUrl))
       )
-      await impersonateOn(context, userId, [target.apiUrl, target.appUrl])
     }
   }
 
@@ -583,40 +539,6 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     }
     return this.connection
   }
-}
-
-/**
- * Sign in via the Better Auth virtual user plugin and land its Set-Cookie headers in
- * this virtual user's browser context, so page navigations carry the session.
- */
-const defaultVirtualUserSignIn: VirtualUserSecretSignIn = async (
-  context,
-  request,
-  target
-) => {
-  const res = await fetch(`${target.apiUrl}${target.signInPath}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      origin: new URL(target.appUrl).origin,
-    },
-    body: JSON.stringify(request),
-  })
-  if (!res.ok) {
-    const body = (await res.text().catch(() => '')).slice(0, 300)
-    throw new Error(
-      `[scenario] browser virtual user sign-in failed for '${request.email}' (${res.status}): ${body}`
-    )
-  }
-  const setCookies = res.headers.getSetCookie?.() ?? []
-  if (setCookies.length === 0) {
-    throw new Error(
-      `[scenario] browser virtual user sign-in for '${request.email}' returned no session cookie`
-    )
-  }
-  await context.addCookies(
-    setCookies.map((raw) => parseCookie(raw, target.appUrl))
-  )
 }
 
 function parseCookie(

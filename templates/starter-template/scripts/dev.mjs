@@ -15,11 +15,9 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const envPath = resolve(root, '.env')
 
-// A missing BETTER_AUTH_SECRET is a 500 on the first sign-up; a missing
-// SCENARIO_VIRTUAL_USER_SECRET disables /api/auth/sign-in/virtual-user, which fails every scenario
-// at sign-in. Appended rather than written once, so a project scaffolded before one of
-// these was added here still picks it up.
-const generatedSecrets = ['BETTER_AUTH_SECRET', 'SCENARIO_VIRTUAL_USER_SECRET']
+// A missing BETTER_AUTH_SECRET is a 500 on the first sign-up. Appended rather than
+// written once, so a project scaffolded before one was added here still picks it up.
+const generatedSecrets = ['BETTER_AUTH_SECRET']
 
 if (!existsSync(envPath)) {
   writeFileSync(

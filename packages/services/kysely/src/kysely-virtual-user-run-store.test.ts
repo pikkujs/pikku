@@ -165,11 +165,11 @@ describe('KyselyVirtualUserRunStore', () => {
       seed: 1,
     })
 
-    await store.fail(runId, 'SCENARIO_VIRTUAL_USER_SECRET is not set')
+    await store.fail(runId, 'SAMPLE_API_SECRET is not set')
 
     const run = await store.get(runId)
     assert.equal(run?.status, 'failed')
-    assert.equal(run?.error, 'SCENARIO_VIRTUAL_USER_SECRET is not set')
+    assert.equal(run?.error, 'SAMPLE_API_SECRET is not set')
     assert.deepEqual(run?.findings, [])
     assert.ok(run?.finishedAt instanceof Date)
   })

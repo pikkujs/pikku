@@ -103,13 +103,15 @@ export {
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export {
-  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
-  VIRTUAL_USER_SECRET_INFO,
-  VIRTUAL_USER_SECRET_NAME,
-  virtualUserSecretSubject,
-  deriveVirtualUserSecret,
-  verifyVirtualUserSecret,
-} from './virtual-user-secret.js'
+  VIRTUAL_USER_IN_PROCESS_ENDPOINT,
+  VIRTUAL_USER_STATEMENT_ALGORITHM,
+  VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS,
+  VIRTUAL_USER_STATEMENT_TTL_SECONDS,
+  VIRTUAL_USER_SIGNING_KEY_VARIABLE,
+  VIRTUAL_USER_VERIFY_KEY_VARIABLE,
+  VirtualUserStatementError,
+  type VirtualUserStatementVerifier,
+} from './virtual-user-statement.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

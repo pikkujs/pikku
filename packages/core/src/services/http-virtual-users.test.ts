@@ -3,10 +3,17 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpVirtualUsers } from './http-virtual-users.js'
-import { verifyVirtualUserSecret } from './virtual-user-secret.js'
+import { statementSignIn } from './virtual-user-sign-in.js'
 
-/** The root the virtual users derive from; the target verifies against the same one. */
-const ROOT = 'impersonation-secret-impersonation'
+/** Stands in for a signed statement: the target accepts exactly this shape. */
+const statementFor = (email: string) => `statement-for:${email}`
+
+const signInWith = (
+  apiUrl: string,
+  mint: (virtualUser: { email: string }) => string = (v) =>
+    statementFor(v.email),
+  signInPath?: string
+) => statementSignIn({ apiUrl, signInPath, mint })
 
 // Minimal target app mirroring the Better Auth virtual user plugin's contract:
 // sign-in endpoint, exposed RPC endpoint, session by cookie.
@@ -21,10 +28,12 @@ const startTarget = async () => {
         ? JSON.parse(Buffer.concat(chunks).toString())
         : {}
       if (req.url === '/api/auth/sign-in/virtual-user') {
-        if (!(await verifyVirtualUserSecret(ROOT, body.email, body.secret))) {
-          res
-            .writeHead(401)
-            .end(JSON.stringify({ message: 'bad virtual user secret' }))
+        const email = String(body.statement ?? '').replace(
+          /^statement-for:/,
+          ''
+        )
+        if (body.statement !== statementFor(email)) {
+          res.writeHead(401).end(JSON.stringify({ message: 'bad statement' }))
           return
         }
         logins++
@@ -32,19 +41,7 @@ const startTarget = async () => {
           `session=s${logins}; Path=/; HttpOnly`,
           `csrf=c${logins}; Path=/`,
         ])
-        res.writeHead(200).end(JSON.stringify({ ok: true, email: body.email }))
-        return
-      }
-      if (req.url === '/api/auth/sign-in/cloud') {
-        if (body.token !== 'operator-token') {
-          res.writeHead(401).end(JSON.stringify({ message: 'bad operator' }))
-          return
-        }
-        logins++
-        res.setHeader('set-cookie', [`session=s${logins}; Path=/; HttpOnly`])
-        res
-          .writeHead(200)
-          .end(JSON.stringify({ actAs: { userId: `u-${body.actAs.email}` } }))
+        res.writeHead(200).end(JSON.stringify({ ok: true, email: email }))
         return
       }
       if (req.url === '/api/auth/get-session') {
@@ -96,7 +93,6 @@ const startTarget = async () => {
             echoed: body.data,
             cookie,
             userHeader: req.headers['x-user-id'] ?? null,
-            impersonated: req.headers['x-pikku-impersonate-user-id'] ?? null,
           })
         )
         return
@@ -127,11 +123,11 @@ describe('HttpVirtualUser', async () => {
   after(() => target.server.close())
 
   const makeVirtualUsers = (
-    secret: Parameters<typeof createHttpVirtualUsers>[0]['secret'] = ROOT
+    mint?: (virtualUser: { email: string }) => string
   ) =>
     createHttpVirtualUsers({
       apiUrl: target.apiUrl,
-      secret,
+      signIn: signInWith(target.apiUrl, mint),
       virtualUsers: {
         customer: {
           id: 'customer',
@@ -262,15 +258,13 @@ describe('HttpVirtualUser', async () => {
     )
   })
 
-  // A caller holding one virtual user's credential and asking for another gets the
-  // target's refusal, not a client-side guess about whether it would have worked.
-  test('a credential the target will not accept surfaces status and body', async () => {
-    const virtualUsers = makeVirtualUsers(
-      () => 'not-this-virtual-users-credential'
-    )
+  // A statement naming someone else gets the target's refusal, not a
+  // client-side guess about whether it would have worked.
+  test('a statement the target will not accept surfaces status and body', async () => {
+    const virtualUsers = makeVirtualUsers(() => 'not-a-statement-for-anyone')
     await assert.rejects(
       virtualUsers.customer!.invoke('ping', {}),
-      /virtual user sign-in failed for 'customer' \(401\).*bad virtual user secret/
+      /virtual user sign-in failed for 'customer' \(401\).*bad statement/
     )
   })
 
@@ -284,7 +278,11 @@ describe('HttpVirtualUser', async () => {
   test('reads the session from the mount the sign-in path names', async () => {
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
-      secret: ROOT,
+      signIn: signInWith(
+        target.origin,
+        undefined,
+        '/api/auth/sign-in/virtual-user'
+      ),
       signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       rolesRpc: false,
@@ -315,7 +313,11 @@ describe('HttpVirtualUser', async () => {
   test('reads roles from the app RPC in preference to better-auth', async () => {
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
-      secret: ROOT,
+      signIn: signInWith(
+        target.origin,
+        undefined,
+        '/api/auth/sign-in/virtual-user'
+      ),
       signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       virtualUsers: {
@@ -339,7 +341,11 @@ describe('HttpVirtualUser', async () => {
   test('falls back to better-auth when the roles RPC is absent', async () => {
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: target.origin,
-      secret: ROOT,
+      signIn: signInWith(
+        target.origin,
+        undefined,
+        '/api/auth/sign-in/virtual-user'
+      ),
       signInPath: '/api/auth/sign-in/virtual-user',
       rpcPath: '/api/rpc',
       rolesRpc: 'noSuchRpc',
@@ -360,33 +366,5 @@ describe('HttpVirtualUser', async () => {
       'admin',
       'support',
     ])
-  })
-
-  // The operator handshake sits under the same mount and must be derived from
-  // it, not inherited verbatim: posting an operator token to the VIRTUAL_USER path is
-  // a validation error about a missing email, which reads like a broken
-  // virtual user rather than a wrong URL.
-  test('derives the operator sign-in path from the same auth mount', async () => {
-    const virtualUsers = createHttpVirtualUsers({
-      apiUrl: target.origin,
-      signInPath: '/api/auth/sign-in/virtual-user',
-      rpcPath: '/api/rpc',
-      operator: { token: 'operator-token' },
-      virtualUsers: {
-        manager: {
-          id: 'manager',
-          name: 'Manager',
-          email: 'manager@virtualuser.invalid',
-          roles: ['admin'],
-          goals: [],
-          tags: [],
-          runnable: true,
-        },
-      },
-    })
-
-    const result = (await virtualUsers.manager!.invoke('ping', {})) as any
-    assert.equal(result.rpcName, 'ping')
-    assert.equal(result.impersonated, 'u-manager@virtualuser.invalid')
   })
 })

@@ -469,35 +469,39 @@ import {
 
 plugins: [
   pikkuVirtualUser({
-    secret: SCENARIO_VIRTUAL_USER_SECRET,
+    verifyKey: await variables.get('VIRTUAL_USER_VERIFY_KEY'),
     allowSignIn: await variables.get(VIRTUAL_USER_SIGN_IN_OPT_IN_ENV),
   }),
 ]
 ```
 
-`POST ${basePath}/sign-in/virtual-user` `{ email, secret, name? }` → 200 + the normal
-session cookie. The plugin's `secret` is the **root**, and it may be a (possibly
-async) function so it can come off the secrets service instead of a captured
-value.
+There is one door, and two ways through it.
 
-**What a caller presents is not the root.** It is
-`deriveVirtualUserSecret(root, email)` from `@pikku/core/services` — HKDF-expanded
-HMAC-SHA256 over the lowercased address. The endpoint re-derives the expected
-value for the address being signed in as and compares, so a credential minted
-for one virtual user is refused for every other, and the root itself is never a valid
-credential. A root under 32 characters refuses the endpoint outright rather than
-deriving weak credentials from it (the server log names the problem; the client
-is not told which). Callers rarely derive by hand — `pikku virtual-user secret <id>`
-mints them for a run, and the two `VirtualUserSignIn` implementations derive on the
-fly. The browser switcher holds none: it signs in through `/sign-in/switch-virtual-user`.
+- **A run signs in from inside the app.** A scheduled virtual user run calls
+  `auth.api.signInVirtualUserInternal`, which is `SERVER_ONLY`: it exists on
+  `auth.api` and answers 404 through `auth.handler`, so no HTTP caller can reach
+  it. The run takes the cookie and then drives the app over HTTP.
+- **An outside caller presents one signed statement.** `pikku dev`, `pikku
+scenario run`, `pikku virtual-user run`, `pikku pages screenshot --as` and the
+  Playwright provider `POST ${basePath}/sign-in/virtual-user` `{ statement }` →
+  200 + the normal session cookie. The statement is an EdDSA JWT with `sub` (the
+  virtual user id), `aud` (the app's origin), a short expiry (180 seconds by
+  default, 300 at most) and a one-time `jti`. The plugin verifies it against
+  `verifyKey` with a verify-only service; a replayed `jti` is refused. The replay
+  record is in memory, so it is per process.
 
-**Which command is running decides whether it works, not whether a secret is
-set.** `pikku dev` sets `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` and mints an ephemeral
-`SCENARIO_VIRTUAL_USER_SECRET` for the run, so local development needs no configuration
-at all. Everywhere else the endpoint refuses (`VirtualUser sign-in is disabled outside
-\`pikku dev\``) — `pikku serve` clears the marker outright, so a secret that
-leaked into a production environment enables nothing and gets a warning naming
-itself instead.
+**Keys.** `pikku dev` generates a key pair under
+`<runtimeDir>/virtual-user/signing.key` (mode 0600, next to a `.gitignore` of
+`*`) and gives the app the public half, so local development needs no
+configuration. A deployed stage has one key pair: the deployer holds the private
+key (`VIRTUAL_USER_SIGNING_KEY`) and the app reads the public key from
+`VIRTUAL_USER_VERIFY_KEY`. A stage without a verify key refuses statements and
+logs why; it never falls back to anything weaker.
+
+**Which command is running decides whether it works.** `pikku dev` sets
+`PIKKU_DEV_VIRTUAL_USER_SIGN_IN`. Everywhere else the endpoint refuses
+(`VirtualUser sign-in is disabled outside \`pikku dev\``) — `pikku serve` clears the
+marker outright. In production neither endpoint is registered at all.
 
 A stage that genuinely must run scenarios opts in on purpose, with
 `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN=passwordless-virtual-user-sign-in`. Any other value is
@@ -507,43 +511,32 @@ the line above.
 **Pass it in on any runtime without a populated `process.env`.** The gate reads
 the environment by default, which is enough for Node but not for a Worker: there
 the opt-in arrives as a binding and reaches user code through the variables
-service, so a gate left to `process.env` stays shut on exactly the stages a
-deployment targets. `allowSignIn` takes the value the caller already read —
+service. `allowSignIn` takes the value the caller already read —
 `await variables.get(VIRTUAL_USER_SIGN_IN_OPT_IN_ENV)` — and is checked against the same
-literal, near-miss warning included. It is deliberately a value and not a flag:
-what opens the gate is still something the deployment set and an operator can
-read back out of it, never something compiled into the bundle. A value passed
-here is the one consulted, so the environment cannot quietly override what the
-stage was configured with.
+literal, near-miss warning included. A value passed here is the one consulted, so
+the environment cannot quietly override what the stage was configured with.
 
 **Signing in and provisioning are separate powers.** An unknown address becomes
-an `virtualUser: true` row only under `pikku dev`. With the opt-in set, a stage signs
+a `virtualUser: true` row only under `pikku dev`. With the opt-in set, a stage signs
 in as the virtual users the deployment provisioned when it started and refuses
 everything else (`No virtual user account exists for that address`), so holding the
-secret on such a stage does not let anyone invent identities. Those rows are
-written by `provisionVirtualUsers` when an operator sign-in route is asked to act
-as an address the stage has no account for, so provisioning needs no virtual user
-secret and works on a stage whose endpoint is shut.
+signing key on such a stage does not let anyone invent identities.
 
-**`SCENARIO_VIRTUAL_USER_SECRET` is a credential as powerful as the most privileged
-virtual user.** Provisioning grants declared roles to virtual user accounts, so an
-`admin` virtual user is a virtual user holding real admin — anyone with the secret _and_ the
-opt-in can take a session as one. Do not treat "virtual users only" as a licence to open
-the hatch in production.
+**The signing key is as powerful as the most privileged virtual user.** Provisioning
+grants declared roles to virtual user accounts, so an `admin` virtual user holds
+real admin — anyone with the private key _and_ the opt-in can take a session as one.
+Keep it with the deployer; the app only ever needs the public half.
 
 Within that boundary, three properties bound the damage:
 
 - **It only ever signs in virtual users.** The plugin adds a `user.virtualUser` boolean
   column; an email matching a row without it is refused with `User is not an
-virtual user`. So the secret cannot take over a **real user's** account — the blast
-  radius is the virtual user accounts and whatever roles they were granted.
+virtual user`. So a statement cannot take over a **real user's** account.
 - **Unknown emails are created only under `pikku dev`**, flagged `virtualUser: true`,
   so a local scenario declaring a new virtual user needs no seed step. Anywhere else
   the account has to have been provisioned at boot first.
-- **A credential is bound to one address**, so a leaked one is one synthetic
-  account rather than the whole virtual user population; only the root is worth the
-  paragraph above. The comparison is constant-time and length-hiding, so a wrong
-  credential leaks neither the length nor a prefix of the right one.
+- **A statement is bound to one virtual user, one app and a few minutes**, and can
+  be used once, so a leaked one is a single short-lived session.
 
 This is the endpoint `pikku scenario` signs its virtual users in through. The frontend
 switcher does not use it: it lists from `/sign-in/virtual-users` and posts a virtual user

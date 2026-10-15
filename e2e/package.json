@@ -15,7 +15,7 @@
     "pretest": "pikku all",
     "start": "tsx bin/start.ts",
     "dev": "tsx --watch bin/start.ts",
-    "scenarios": "SCENARIO_VIRTUAL_USER_SECRET=${SCENARIO_VIRTUAL_USER_SECRET:-e2e-virtual-user-secret-long-enough-to-derive-from} PIKKU_MOCK_LLM=${PIKKU_MOCK_LLM:-1} PIKKUSTUDIO_API_URL=${PIKKUSTUDIO_API_URL:-http://localhost:4096} pikku scenario run",
+    "scenarios": "PIKKU_MOCK_LLM=${PIKKU_MOCK_LLM:-1} PIKKUSTUDIO_API_URL=${PIKKUSTUDIO_API_URL:-http://localhost:4096} pikku scenario run",
     "test": "bun run scenarios local --spawn --exclude-tags ai-live,test-fixture,console,browser",
     "test:agent": "bun run scenarios local --spawn --tags agent-protocol",
     "test:web": "bun --cwd packages/web run build && bun run scenarios local --spawn --run browser --features webAppFeature",
