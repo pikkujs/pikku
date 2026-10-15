@@ -67,12 +67,12 @@ describe("computeDiagnostics", () => {
 
   test("does NOT flag the stub a wiring registers for the function it references", () => {
     const state = stateWithFunctions({
-      "queue:fabric-audit": {
-        pikkuFuncId: "queue:fabric-audit",
+      "queue:cloud-audit": {
+        pikkuFuncId: "queue:cloud-audit",
         functionType: "inline",
         inputSchemaName: null,
         outputSchemaName: null,
-        sourceFile: "/project/src/scaffold/fabric/audit/fabric-audit.queue.ts",
+        sourceFile: "/project/src/scaffold/cloud/audit/cloud-audit.queue.ts",
         services: { optimized: false, services: [] },
       },
     });

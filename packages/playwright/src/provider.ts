@@ -540,7 +540,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
           ...operator,
           signInPath:
             operator.signInPath ??
-            (mount ? `${mount}/sign-in/fabric` : undefined),
+            (mount ? `${mount}/sign-in/cloud` : undefined),
         },
         { origin: new URL(target.appUrl).origin }
       )

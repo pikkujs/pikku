@@ -49,7 +49,7 @@ like it works, because the app does come up in that language, and then:
 - a message missing from a locale falls back to a catalogue nobody wrote
 
 The setting that actually decides what a first-time visitor sees is
-`defaultLocale`, held in `apps/app/src/i18n/active.json` in the Pikku Studio Cloud app
+`defaultLocale`, held in `apps/app/src/i18n/active.json` in the Pikku Studio app
 template and read by `src/i18n/config.ts`. It is deliberately a separate file
 from `settings.json` for exactly this reason — the source language and the
 served language are different questions.
@@ -67,7 +67,7 @@ So a German medical portal is **three** settings, not one:
 { "metaLocale": "de" }
 ```
 
-In the Pikku Studio Cloud template both of the first two have a command, so you rarely edit
+In the Pikku Studio template both of the first two have a command, so you rarely edit
 them by hand:
 
 ```sh

@@ -133,7 +133,7 @@ export interface OperatorSignInOptions {
    * the function: tokens expire, and a long run re-logs-in after a 401.
    */
   token: string | (() => string | Promise<string>)
-  /** Pikku Studio Cloud operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
+  /** Pikku Studio Cloud operator sign-in path under apiUrl. Default `/auth/sign-in/cloud`. */
   signInPath?: string
 }
 
@@ -162,7 +162,7 @@ export const establishOperatorSession = async (
   options: OperatorSignInOptions,
   extraHeaders: Record<string, string> = {}
 ): Promise<OperatorSessionResult> => {
-  const signInPath = options.signInPath ?? '/auth/sign-in/fabric'
+  const signInPath = options.signInPath ?? '/auth/sign-in/cloud'
   const token =
     typeof options.token === 'function' ? await options.token() : options.token
 
@@ -201,7 +201,7 @@ export const establishOperatorSession = async (
  * Sign a virtual user in on a DEPLOYED stage, by having a Pikku Studio Cloud operator act as
  * them — the path that needs no test credential to exist anywhere.
  *
- * `POST /auth/sign-in/fabric` verifies an RS256 token against the stage's
+ * `POST /auth/sign-in/cloud` verifies an RS256 token against the stage's
  * `PIKKUSTUDIO_AUTH_PUBLIC_KEY` and mints a session for a synthetic operator row
  * granted the umbrella `admin` scope. Impersonation is then a header on each
  * request rather than a second session, and its gate is that scope — not

@@ -10,10 +10,10 @@ import * as httpLib from './http.js'
 
 let token: string | null = null
 let linked: string | null = null
-let fabricDown: 'refused' | 'http' | null = null
+let cloudDown: 'refused' | 'http' | null = null
 let stagesDenied = false
 let stages = [{ stageId: 'stage_main', branch: 'main' }]
-const fabricCalls: { name: string; data: any }[] = []
+const cloudCalls: { name: string; data: any }[] = []
 
 void mock.module('./config.js', () => ({
   ...configLib,
@@ -30,9 +30,9 @@ void mock.module('./http.js', () => ({
   ...httpLib,
   getCloudRPC: () => ({
     invoke: async (name: string, data: any) => {
-      fabricCalls.push({ name, data })
-      if (fabricDown === 'refused') throw new Error('connect ECONNREFUSED')
-      if (fabricDown === 'http')
+      cloudCalls.push({ name, data })
+      if (cloudDown === 'refused') throw new Error('connect ECONNREFUSED')
+      if (cloudDown === 'http')
         throw Object.assign(new Error('forbidden'), { status: 403 })
       if (name === 'listStages') {
         if (stagesDenied) throw Object.assign(new Error('denied'), { status: 403 })
@@ -91,12 +91,12 @@ after(() => process.chdir(home))
 beforeEach(() => {
   token = null
   linked = null
-  fabricDown = null
+  cloudDown = null
   stagesDenied = false
   stages = [{ stageId: 'stage_main', branch: 'main' }]
   delete process.env.PIKKUSTUDIO_PROJECT_ID
   delete process.env.PIKKU_CHANGES_DIR
-  fabricCalls.length = 0
+  cloudCalls.length = 0
 })
 
 describe('changes on a local project', () => {
@@ -104,7 +104,7 @@ describe('changes on a local project', () => {
     const { change } = await file('Local one')
     const { changes } = await list()
     assert.ok(changes.some((c: any) => c.changeId === change.changeId))
-    assert.strictEqual(fabricCalls.length, 0)
+    assert.strictEqual(cloudCalls.length, 0)
     const store = JSON.parse(
       await readFile(join(repo, '.git', 'pikku-changes.json'), 'utf8')
     )
@@ -116,7 +116,7 @@ describe('changes on a local project', () => {
     const { change } = await file('Signed in, unlinked')
     const { changes } = await list()
     assert.ok(changes.some((c: any) => c.changeId === change.changeId))
-    assert.strictEqual(fabricCalls.length, 0)
+    assert.strictEqual(cloudCalls.length, 0)
   })
 
   test('the host decides where the local file lives', async () => {
@@ -131,7 +131,7 @@ describe('changes on a local project', () => {
 
   test('knowledge gaps works on a local project without calling cloud', async () => {
     await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
-    assert.strictEqual(fabricCalls.length, 0)
+    assert.strictEqual(cloudCalls.length, 0)
   })
 
   test('changes next routes the open changes to the changes agent', async () => {
@@ -156,9 +156,9 @@ describe('changes on a project backed by cloud', () => {
     const before = await countLocal()
     await file('Pikku Studio Cloud one')
     await list()
-    const created = fabricCalls.find((c) => c.name === 'createChange')!
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
     assert.strictEqual(created.data.title, 'Pikku Studio Cloud one')
-    assert.ok(fabricCalls.some((c) => c.name === 'listChanges'))
+    assert.ok(cloudCalls.some((c) => c.name === 'listChanges'))
     assert.strictEqual(await countLocal(), before)
   })
 
@@ -170,7 +170,7 @@ describe('changes on a project backed by cloud', () => {
     )
     try {
       await list()
-      const call = fabricCalls.find((c) => c.name === 'listChanges')!
+      const call = cloudCalls.find((c) => c.name === 'listChanges')!
       assert.strictEqual(call.data.projectId, 'proj_cfg')
     } finally {
       await rm(join(repo, 'pikku.config.json'))
@@ -181,14 +181,14 @@ describe('changes on a project backed by cloud', () => {
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
     const before = await countLocal()
     await assert.rejects(file('No sign-in'), /backed by Pikku Studio Cloud.*signed in/s)
-    assert.strictEqual(fabricCalls.length, 0)
+    assert.strictEqual(cloudCalls.length, 0)
     assert.strictEqual(await countLocal(), before)
   })
 
   test('when cloud cannot be reached it refuses, and never falls back to the local file', async () => {
     token = 'tok'
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
-    fabricDown = 'refused'
+    cloudDown = 'refused'
     const before = await countLocal()
     await assert.rejects(file('Offline'), /need a connection/)
     await assert.rejects(list(), /need a connection/)
@@ -198,7 +198,7 @@ describe('changes on a project backed by cloud', () => {
   test('an answer from cloud, even an error, is passed through as it is', async () => {
     token = 'tok'
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
-    fabricDown = 'http'
+    cloudDown = 'http'
     await assert.rejects(file('Forbidden'), /forbidden/)
   })
 
@@ -206,7 +206,7 @@ describe('changes on a project backed by cloud', () => {
     token = 'tok'
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
     await knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any)
-    const call = fabricCalls.find((c) => c.name === 'listChanges')!
+    const call = cloudCalls.find((c) => c.name === 'listChanges')!
     assert.strictEqual(call.data.projectId, 'proj_1')
   })
 
@@ -215,7 +215,7 @@ describe('changes on a project backed by cloud', () => {
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
     await next.func({ config: { rootDir: repo } } as any, {} as any)
     assert.ok(
-      fabricCalls.some(
+      cloudCalls.some(
         (c) => c.name === 'listChanges' && c.data.projectId === 'proj_1'
       )
     )
@@ -224,7 +224,7 @@ describe('changes on a project backed by cloud', () => {
   test('both refuse when cloud cannot be reached', async () => {
     token = 'tok'
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
-    fabricDown = 'refused'
+    cloudDown = 'refused'
     await assert.rejects(
       knowledgeGaps.func({ config: { rootDir: repo } } as any, {} as any),
       /need a connection/
@@ -243,7 +243,7 @@ describe('changes on a project backed by cloud', () => {
       { stageId: 'stage_main', branch: 'main' },
     ]
     await file('Which stage')
-    const created = fabricCalls.find((c) => c.name === 'createChange')!
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
     assert.strictEqual(created.data.stageId, 'stage_main')
   })
 
@@ -254,8 +254,8 @@ describe('changes on a project backed by cloud', () => {
       {} as any,
       { title: 'Explicit', stageId: 'stage_x' } as any
     )
-    assert.ok(!fabricCalls.some((c) => c.name === 'listStages'))
-    const created = fabricCalls.find((c) => c.name === 'createChange')!
+    assert.ok(!cloudCalls.some((c) => c.name === 'listStages'))
+    const created = cloudCalls.find((c) => c.name === 'createChange')!
     assert.strictEqual(created.data.stageId, 'stage_x')
   })
 
@@ -274,8 +274,8 @@ describe('changes on a project backed by cloud', () => {
     process.env.PIKKUSTUDIO_PROJECT_ID = 'proj_1'
     stagesDenied = true
     await file('From a sandbox')
-    assert.ok(!fabricCalls.some((c) => c.name === 'createChange'))
-    const created = fabricCalls.find((c) => c.name === 'createSandboxChange')!
+    assert.ok(!cloudCalls.some((c) => c.name === 'createChange'))
+    const created = cloudCalls.find((c) => c.name === 'createSandboxChange')!
     assert.strictEqual(created.data.title, 'From a sandbox')
     assert.strictEqual(created.data.stageId, undefined)
   })

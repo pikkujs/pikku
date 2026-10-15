@@ -137,7 +137,7 @@ export const resolveLinkedProject = async ({
   }
 
   if (rpc && (await listRemotes(cwd)).length > 0) {
-    const { projects } = await rpc.invoke('fabricCliProjects', {})
+    const { projects } = await rpc.invoke('cloudCliProjects', {})
     {
       const [first] = await matchRemoteProjects(projects, cwd)
       if (first) {

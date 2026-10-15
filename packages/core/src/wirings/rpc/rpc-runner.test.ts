@@ -1122,7 +1122,7 @@ describe('wireRemoteAddon dispatch', () => {
     try {
       wireRemoteAddon({
         name: 'registry',
-        package: '@pikkufabric/addon-registry',
+        package: '@pikkustudio/addon-registry',
         serverUrl: 'https://api.example.com/',
         auth: { secretId: 'REGISTRY_TOKEN' },
       })
@@ -1168,9 +1168,9 @@ describe('wireRemoteAddon dispatch', () => {
     try {
       wireRemoteAddon({
         name: 'registry',
-        package: '@pikkufabric/addon-registry',
+        package: '@pikkustudio/addon-registry',
         serverUrl: () => 'https://api.example.com',
-        auth: { credentialId: 'fabricRegistryToken' },
+        auth: { credentialId: 'cloudRegistryToken' },
       })
 
       const service = new ContextAwareRPCService(
@@ -1178,7 +1178,7 @@ describe('wireRemoteAddon dispatch', () => {
         {
           pikkuUserId: 'user-9',
           getCredential: async (name: string) =>
-            name === 'fabricRegistryToken' ? 'user-token-9' : null,
+            name === 'cloudRegistryToken' ? 'user-token-9' : null,
         } as never,
         {}
       )
@@ -1195,7 +1195,7 @@ describe('wireRemoteAddon dispatch', () => {
     try {
       wireRemoteAddon({
         name: 'registry',
-        package: '@pikkufabric/addon-registry',
+        package: '@pikkustudio/addon-registry',
         serverUrl: 'https://api.example.com',
       })
 
@@ -1217,9 +1217,9 @@ describe('wireRemoteAddon dispatch', () => {
     try {
       wireRemoteAddon({
         name: 'registry',
-        package: '@pikkufabric/addon-registry',
+        package: '@pikkustudio/addon-registry',
         serverUrl: 'https://api.example.com',
-        auth: { credentialId: 'fabricRegistryToken' },
+        auth: { credentialId: 'cloudRegistryToken' },
       })
 
       const service = new ContextAwareRPCService(
@@ -1243,7 +1243,7 @@ describe('wireRemoteAddon dispatch', () => {
     try {
       wireRemoteAddon({
         name: 'registry',
-        package: '@pikkufabric/addon-registry',
+        package: '@pikkustudio/addon-registry',
         serverUrl: 'https://api.example.com',
       })
 

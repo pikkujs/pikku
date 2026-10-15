@@ -10,7 +10,7 @@ import {
   type ListChangesOutput,
 } from '@pikku/cli/cloud'
 
-export type StudioMode = 'local' | 'fabric'
+export type StudioMode = 'local' | 'cloud'
 
 export type ChangeStatus =
   | 'open'
@@ -397,7 +397,7 @@ const localModels = async (): Promise<ModelAccess | null> => {
   }
 }
 
-const fabricModels = (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
+const cloudModels = (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
   ...(await rpc.invoke('getDeveloperLiteLLMKey', {})),
   model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
 })
@@ -412,17 +412,17 @@ export async function resolveStudioHost(projectRoot: string): Promise<StudioHost
   if (ctx?.token && ctx.projectId) {
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     return {
-      mode: 'fabric',
+      mode: 'cloud',
       projectId: ctx.projectId,
       changes: new CloudChangesStore(rpc, ctx.projectId),
       wishes: new CloudWishStore(rpc, ctx.projectId),
-      models: fabricModels(rpc),
+      models: cloudModels(rpc),
       ...projectApi,
     }
   }
   const models =
-    process.env.PIKKU_STUDIO_AI === 'fabric' && ctx?.token
-      ? fabricModels(getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token }))
+    process.env.PIKKU_STUDIO_AI === 'cloud' && ctx?.token
+      ? cloudModels(getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token }))
       : localModels
   return {
     mode: 'local',

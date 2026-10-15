@@ -6,7 +6,7 @@ import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js
 const PLACEHOLDER_SEVERITY: ValidateSeverity = 'warn'
 
 export const PLACEHOLDER_APP_NAMES = [
-  'Pikku Studio Cloud Starter',
+  'Pikku Studio Starter',
   'Pikku Starter',
   'Pikku App',
 ]

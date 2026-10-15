@@ -57,7 +57,7 @@ describe('the corpus', () => {
   test('nothing in the corpus reaches for a package outside this repo', () => {
     for (const example of EXAMPLES) {
       assert.ok(
-        !/@pikkufabric\//.test(example.content),
+        !/@pikkustudio\//.test(example.content),
         `${example.name} imports a cloud package`
       )
     }

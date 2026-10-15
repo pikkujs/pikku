@@ -26,7 +26,7 @@ export function apiUrl(): string {
 }
 
 /**
- * The path this frontend is mounted under. A non-primary Pikku Studio Cloud app is served at
+ * The path this frontend is mounted under. A non-primary Pikku Studio app is served at
  * `/_frontend/<slug>/` on the sandbox's single origin, which the runtime hands to
  * vite as PIKKUSTUDIO_FRONTEND_BASE — so BASE_URL is the only truth about the prefix.
  */

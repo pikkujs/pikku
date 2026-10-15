@@ -35,7 +35,7 @@ const startTarget = async () => {
         res.writeHead(200).end(JSON.stringify({ ok: true, email: body.email }))
         return
       }
-      if (req.url === '/api/auth/sign-in/fabric') {
+      if (req.url === '/api/auth/sign-in/cloud') {
         if (body.token !== 'operator-token') {
           res.writeHead(401).end(JSON.stringify({ message: 'bad operator' }))
           return

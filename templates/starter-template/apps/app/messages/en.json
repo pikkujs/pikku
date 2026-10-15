@@ -20,7 +20,7 @@
   "common__name_placeholder": "Ada Lovelace",
   "validation__required": "Required.",
   "validation__email_invalid": "Enter a valid email address.",
-  "app__name": "Pikku Studio Cloud Starter",
+  "app__name": "Pikku Studio Starter",
   "auth__or": "or",
   "auth__continue_with_google": "Continue with Google",
   "auth__google_error": "Unable to continue with Google right now.",

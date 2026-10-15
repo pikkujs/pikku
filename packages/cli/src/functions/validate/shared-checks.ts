@@ -179,7 +179,7 @@ type MiddlewareGroupsMeta = {
  * Matches any `betterAuth*Session` definition rather than the literal
  * `betterAuthSession`. The stateless variant is a separate definition id that
  * the CLI wires whenever `session.cookieCache` is enabled, which is the
- * configuration Pikku Studio Cloud asks for — so an exact-match check saw no auth on
+ * configuration Pikku Studio asks for — so an exact-match check saw no auth on
  * precisely the apps most likely to have it, and silently skipped every auth
  * schema check below.
  */
@@ -838,7 +838,7 @@ export async function runSharedProjectChecks(
     // box, and is what the console's Users and Scopes pages call. It arrives as
     // `@pikku/addon-admin`, not as application code: an app that has not wired
     // it exposes no `admin:*` RPC, so those pages have nothing to talk to and a
-    // Pikku Studio Cloud operator signs in holding a grant that reaches nothing.
+    // Pikku Studio operator signs in holding a grant that reaches nothing.
     //
     // Gated on better-auth being wired because `admin:users:*` reads and writes
     // through its adapter — an app with no auth has no directory to administer.
@@ -861,7 +861,7 @@ export async function runSharedProjectChecks(
           '',
           'The functions are each gated on their own `admin:*` scope, so registering a',
           'ScopeService in createSingletonServices is what makes those grants land —',
-          'without one nobody, including the Pikku Studio Cloud operator, holds anything.',
+          'without one nobody, including the Pikku Studio operator, holds anything.',
           'Banning additionally needs better-auth wired with `pikkuBan()`.'
         )
       )

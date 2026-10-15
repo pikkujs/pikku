@@ -50,13 +50,13 @@ describe('serializeTypedRPCMap', () => {
       {},
       {},
       new Map([
-        ['registry', { package: '@pikkufabric/addon-registry', remote: true }],
+        ['registry', { package: '@pikkustudio/addon-registry', remote: true }],
       ])
     )
 
     assert.match(
       result,
-      /import type \{ RPCMap as RegistryRPCMap \} from '@pikkufabric\/addon-registry\/\.pikku\/rpc\/pikku-rpc-wirings-map\.remote\.gen\.js'/
+      /import type \{ RPCMap as RegistryRPCMap \} from '@pikkustudio\/addon-registry\/\.pikku\/rpc\/pikku-rpc-wirings-map\.remote\.gen\.js'/
     )
     assert.doesNotMatch(result, /internal\.gen\.js'/)
     assert.match(result, /PrefixKeys<RegistryRPCMap, 'registry'>/)

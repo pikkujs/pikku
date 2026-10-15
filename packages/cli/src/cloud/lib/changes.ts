@@ -22,7 +22,7 @@ export { changesContext }
  * A linked project that cannot reach Pikku Studio Cloud fails; it never falls back to the
  * local file. (An offline queue that syncs later is postponed.)
  */
-async function fabricBackend({
+async function cloudBackend({
   apiUrl,
   projectId: projectIdOverride,
 }: {
@@ -55,7 +55,7 @@ async function fabricBackend({
   return { rpc: { invoke: invoke as ChangesRPC['invoke'] }, projectId }
 }
 
-registerChangesBackend(fabricBackend)
+registerChangesBackend(cloudBackend)
 
 /**
  * `createSandboxChange` is newer than the generated Pikku Studio Cloud client, so the

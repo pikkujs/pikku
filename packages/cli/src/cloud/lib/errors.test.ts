@@ -65,7 +65,7 @@ describe('a cloud precondition refusal is an expected error', () => {
  */
 describe('no cloud command raises a bare Error', () => {
   const here = dirname(fileURLToPath(import.meta.url))
-  const fabricRoot = join(here, '..')
+  const cloudRoot = join(here, '..')
 
   const sourceFiles = (dir: string): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -77,10 +77,10 @@ describe('no cloud command raises a bare Error', () => {
     })
 
   test('every throw carries a class the CLI knows to print alone', () => {
-    const offenders = sourceFiles(join(fabricRoot, 'functions'))
-      .concat(sourceFiles(join(fabricRoot, 'lib')))
+    const offenders = sourceFiles(join(cloudRoot, 'functions'))
+      .concat(sourceFiles(join(cloudRoot, 'lib')))
       .filter((path) => readFileSync(path, 'utf8').includes('throw new Error('))
-      .map((path) => path.slice(fabricRoot.length + 1))
+      .map((path) => path.slice(cloudRoot.length + 1))
 
     assert.deepStrictEqual(
       offenders,

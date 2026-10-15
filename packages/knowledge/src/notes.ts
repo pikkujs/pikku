@@ -51,7 +51,7 @@ export type KnowledgeNote = z.infer<typeof KnowledgeNoteSchema>
  * A note read with a profile's own scalars alongside this one's.
  *
  * OKF permits extra frontmatter, and a profile built on top of this one adds its
- * own keys — Pikku Studio Cloud's `design:`, `screens:` and `route:`. They are still not read
+ * own keys — Pikku Studio's `design:`, `screens:` and `route:`. They are still not read
  * HERE: nothing in this package knows what they mean, and the reader names them
  * at the call. What this type buys is that a profile does not have to fork the
  * parser to keep its own keys, which is the only way the two stay one profile.

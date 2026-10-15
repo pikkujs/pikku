@@ -54,7 +54,7 @@ Pikku Studio Cloud apps use SQLite via Kysely and the libSQL HTTP adapter, not P
 {
   "deploy": {
     "providers": {
-      "cloudflare": "@pikkufabric/deploy-cloudflare"
+      "cloudflare": "@pikkustudio/deploy-cloudflare"
     }
   }
 }
@@ -132,7 +132,7 @@ showcase is Pikku Studio Cloud's decision, not a setting.
 `projectId`, and queues the first deploy; it commits and pushes nothing. A
 custom production domain is set with `pikku cloud domains add`. Production
 always maps to `main`; without a domain it lives on the platform
-`*.pikkufabric.app` hostnames.
+`*.pikkustudio.app` hostnames.
 
 The apps are the `frontends` in `pikku.config.json`,
 the same list `pikku serve`, `pikku app` and native builds read, and

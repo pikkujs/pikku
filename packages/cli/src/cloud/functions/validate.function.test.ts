@@ -186,7 +186,7 @@ async function makeValidProject(root: string) {
   )
   await writeFile(
     join(root, '.gitignore'),
-    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
+    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__cloud_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
 }
@@ -473,9 +473,7 @@ describe('pikku cloud validate', () => {
         assert.strictEqual(finding!.severity, 'warn') // warn — does not block ok
         assert.ok(finding!.message.includes('.opencode'))
         assert.ok(finding!.message.includes('.pikku-runtime'))
-        assert.ok(
-          finding!.message.includes('__fabric_scaffold.vite.config.mjs')
-        )
+        assert.ok(finding!.message.includes('__cloud_scaffold.vite.config.mjs'))
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -487,7 +485,7 @@ describe('pikku cloud validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, '.gitignore'),
-          '.opencode\n.pikku-runtime\n__fabric_scaffold.vite.config.mjs\n',
+          '.opencode\n.pikku-runtime\n__cloud_scaffold.vite.config.mjs\n',
           'utf8'
         )
         const result = await runLiveValidate(tmp)
@@ -508,7 +506,7 @@ describe('pikku cloud validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, '.gitignore'),
-          '.opencode\n.pikku\n.pikku-runtime\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.*\n',
+          '.opencode\n.pikku\n.pikku-runtime\n.reports\n__cloud_scaffold.vite.config.mjs\n*.gen.*\n',
           'utf8'
         )
         const result = await runLiveValidate(tmp)

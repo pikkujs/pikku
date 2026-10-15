@@ -1,6 +1,6 @@
 /**
  * Cross-site session support for apps rendered inside a third-party iframe
- * (the Pikku Studio Cloud sandbox preview: the console is the top-level site, the app is
+ * (the Pikku Studio sandbox preview: the console is the top-level site, the app is
  * another one).
  *
  * A SameSite=Lax cookie is dropped outright in that context, so

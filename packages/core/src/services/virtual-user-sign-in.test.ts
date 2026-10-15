@@ -24,7 +24,7 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
         : {}
       const url = new URL(req.url ?? '/', 'http://stage.invalid')
 
-      if (url.pathname === '/api/auth/sign-in/fabric') {
+      if (url.pathname === '/api/auth/sign-in/cloud') {
         if (body.token !== OPERATOR_TOKEN) {
           res.writeHead(401).end(JSON.stringify({ message: 'bad token' }))
           return
@@ -119,7 +119,7 @@ describe('operator virtual user sign-in', () => {
     const virtualUsers = createHttpVirtualUsers({
       apiUrl: stage.apiUrl.replace(/\/api$/, ''),
       operator: { token: OPERATOR_TOKEN },
-      signInPath: '/api/auth/sign-in/fabric',
+      signInPath: '/api/auth/sign-in/cloud',
       rpcPath: '/api/rpc',
       virtualUsers: { customer: virtualUser('customer@virtualuser.invalid') },
     })

@@ -601,7 +601,7 @@ export async function runValidate(
   // ── .gitignore must ignore generated/runtime artifacts ─────────────────
   // These are regenerated on every dev boot / scaffold / codegen. Committing
   // them lets a stale copy shadow the freshly generated one — a committed
-  // __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev
+  // __cloud_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev
   // server — and pollutes diffs. Tolerate trailing/leading slashes.
   {
     const requiredIgnores = [
@@ -609,7 +609,7 @@ export async function runValidate(
       '.pikku',
       '.pikku-runtime',
       '.reports',
-      '__fabric_scaffold.vite.config.mjs',
+      '__cloud_scaffold.vite.config.mjs',
     ]
     const gitignorePath = join(root, '.gitignore')
     const gitignoreText = await readTextSafe(gitignorePath)
@@ -630,7 +630,7 @@ export async function runValidate(
     if (missing.length > 0) {
       w(
         'gitignore-missing-generated',
-        `.gitignore does not ignore Pikku Studio Cloud generated/runtime artifacts: ${missing.join(', ')} — committing them lets a stale copy shadow the freshly generated one (e.g. a committed __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev server)`,
+        `.gitignore does not ignore Pikku Studio Cloud generated/runtime artifacts: ${missing.join(', ')} — committing them lets a stale copy shadow the freshly generated one (e.g. a committed __cloud_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev server)`,
         gitignorePath,
         lines(
           'Add these entries to .gitignore:',
@@ -1351,7 +1351,7 @@ export async function runValidate(
     // NEXT migration failing on a column that exists everywhere but there.
     //
     // The comparison is against the control plane's record of what each stage
-    // applied (hash included since @pikkufabric 2026-09), not against the
+    // applied (hash included since @pikkustudio 2026-09), not against the
     // stage database, which may be asleep and cannot be woken just to answer
     // a local lint. Every stage of the project is checked, not just the one
     // you are about to push: the case this is for is merging a branch that
@@ -2193,7 +2193,7 @@ export async function runValidate(
   }
 
   // ── packages/theme + packages/components ──────────────────────────────
-  const designDocUrl = 'https://pikkufabric.dev/docs/design'
+  const designDocUrl = 'https://pikkustudio.dev/docs/design'
   const designSeverity = hasTailwindFrontend ? w : info
   const themePkgDir = join(root, 'packages', 'theme')
   if (!existsSync(themePkgDir)) {

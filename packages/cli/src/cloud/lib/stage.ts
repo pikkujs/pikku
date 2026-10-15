@@ -70,7 +70,7 @@ const hostOf = (value: string): string => {
 /**
  * Find the stage a person named however they happened to name it: the branch
  * (`develop`), the address they were looking at when they filed
- * (`https://fabric-develop-….pikkufabric.dev`, with or without the scheme or a
+ * (`https://cloud-develop-….pikkustudio.dev`, with or without the scheme or a
  * path), or its id.
  */
 export async function matchStage(

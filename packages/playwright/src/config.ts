@@ -1,6 +1,6 @@
 /**
  * Browser configuration for scenario steps. Sandbox-first: when
- * SANDBOX_HOSTNAME is set (the Pikku Studio Cloud build sandbox), steps run against the
+ * SANDBOX_HOSTNAME is set (the Pikku Studio build sandbox), steps run against the
  * in-container HTTPS edge so the app's Secure session cookie carries in the
  * browser. Locally, falls back to a dev server. Everything is overridable per
  * environment via env vars.

@@ -111,11 +111,11 @@ describe('signInPathFor', () => {
   // `/api/auth` should not have to name each door separately.
   test('an app that moved its auth mount moves both sign-in paths', () => {
     assert.equal(
-      signInPathFor('/api/auth/sign-in/virtual-user', 'fabric'),
-      '/api/auth/sign-in/fabric'
+      signInPathFor('/api/auth/sign-in/virtual-user', 'cloud'),
+      '/api/auth/sign-in/cloud'
     )
     assert.equal(
-      signInPathFor('/api/auth/sign-in/fabric', 'virtual-user'),
+      signInPathFor('/api/auth/sign-in/cloud', 'virtual-user'),
       '/api/auth/sign-in/virtual-user'
     )
   })
@@ -872,7 +872,7 @@ describe('executeVirtualUserRun', () => {
     await assert.rejects(executeVirtualUserRun(p), /cannot sign in/)
     assert.equal(options.secret, undefined)
     assert.equal(options.operator.token, 'handed-in')
-    assert.equal(options.operator.signInPath, '/api/auth/sign-in/fabric')
+    assert.equal(options.operator.signInPath, '/api/auth/sign-in/cloud')
     // The virtual user door moves with the mount too, for the run that has no token.
     assert.equal(options.signInPath, '/api/auth/sign-in/virtual-user')
   })

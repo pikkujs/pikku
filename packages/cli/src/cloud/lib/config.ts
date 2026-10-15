@@ -10,7 +10,7 @@ import {
   type ProjectSource,
 } from './project-link.js'
 
-export const DEFAULT_API_URL = 'https://api.pikkufabric.com'
+export const DEFAULT_API_URL = 'https://api.pikkustudio.app'
 
 /**
  * `~/.pikkustudio/auth.json` keys auth tokens by api-url so a single user can

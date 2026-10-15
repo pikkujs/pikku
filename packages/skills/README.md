@@ -15,7 +15,7 @@ You do not normally depend on this package directly — the CLI installs from it
 
 ```bash
 npx pikku skills install                  # → .claude/skills/
-npx pikku skills install --core --cloud  # the Pikku Studio Cloud sandbox skill set
+npx pikku skills install --core --cloud  # the Pikku Studio sandbox skill set
 npx pikku skills install --agent pi       # → .pi/skills/
 ```
 

@@ -60,7 +60,7 @@ export const CloudLogs = pikkuSessionlessFunc({
     const projectId = ctx.projectId
 
     const fetchAndPrintNew = async () => {
-      const res = await rpc.invoke('getFabricLogsByStageKind', {
+      const res = await rpc.invoke('getCloudLogsByStageKind', {
         projectId,
         branch,
         level: level ?? undefined,

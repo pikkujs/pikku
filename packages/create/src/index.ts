@@ -173,7 +173,7 @@ const templates = [
   {
     template: 'starter-template',
     description:
-      'The opinionated Pikku Pikku Studio Cloud starter — backend + SDK + frontend scaffolds + Cucumber e2e',
+      'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + Cucumber e2e',
     supports: ['http', 'fullstack'],
   },
 ] as const
@@ -442,7 +442,7 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
 async function run() {
   const version = cliOptions.version || 'main'
   const requestedTemplate =
-    cliOptions.template === 'fabric' ? 'starter-template' : cliOptions.template
+    cliOptions.template === 'cloud' ? 'starter-template' : cliOptions.template
 
   console.log(chalk.hex('#a863ee').bold(logo))
   console.log(
@@ -532,7 +532,7 @@ async function run() {
 
 // Pretty labels for apps the starter ships. Anything missing from this map
 // falls back to the directory name in the picker.
-const fabricAppLabels: Record<string, string> = {
+const cloudAppLabels: Record<string, string> = {
   app: 'React + Vite + Tailwind + shadcn',
 }
 
@@ -583,7 +583,7 @@ async function setupCloud(cliOptions: CliOptions) {
         ? await select({
             message: 'Which frontend would you like to start with?',
             choices: availableApps.map((id) => ({
-              name: fabricAppLabels[id] ?? id,
+              name: cloudAppLabels[id] ?? id,
               value: id,
             })),
           })

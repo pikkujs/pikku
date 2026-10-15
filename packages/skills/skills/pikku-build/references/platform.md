@@ -241,4 +241,4 @@ built.
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
   `pikku-i18n`, `pikku-emails`,
   `pikku-meta`, `pikku-addon`, `pikku-auth`, `pikku-services`
-- Every feature, end to end: https://pikkufabric.com/llm-all-features.txt
+- Every feature, end to end: https://pikkustudio.app/llm-all-features.txt

@@ -715,12 +715,12 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
 
   test('passes when the remote addon is in devDependencies', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const dir = writePkg({}, { '@pikkufabric/addon-registry': '1.0.0' })
+    const dir = writePkg({}, { '@pikkustudio/addon-registry': '1.0.0' })
     try {
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(dir, {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
         })
       )
@@ -732,12 +732,12 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
 
   test('errors when the remote addon is a production dependency', () => {
     const { logger, criticals } = makeCriticalLogger()
-    const dir = writePkg({ '@pikkufabric/addon-registry': '1.0.0' }, {})
+    const dir = writePkg({ '@pikkustudio/addon-registry': '1.0.0' }, {})
     try {
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(dir, {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
         })
       )
@@ -759,7 +759,7 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(dir, {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
         })
       )
@@ -915,13 +915,13 @@ describe('validateRemoteAddonDependencies — a workspace package that wires the
   test('a remote addon is judged against the declaring package’s devDependencies', () => {
     const { logger, criticals } = makeCriticalLogger()
     const ws = makeWorkspace({
-      devDependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+      devDependencies: { '@pikkustudio/addon-registry': '1.0.0' },
     })
     try {
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(ws.root, {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
           file: ws.file,
         })
@@ -935,13 +935,13 @@ describe('validateRemoteAddonDependencies — a workspace package that wires the
   test('a remote addon in the declaring package’s dependencies is flagged there', () => {
     const { logger, criticals } = makeCriticalLogger()
     const ws = makeWorkspace({
-      dependencies: { '@pikkufabric/addon-registry': '1.0.0' },
+      dependencies: { '@pikkustudio/addon-registry': '1.0.0' },
     })
     try {
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(ws.root, {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
           file: ws.file,
         })
@@ -969,11 +969,11 @@ describe('validateRemoteAddonAuth (bound credential/secret must exist)', () => {
       makeRemoteState(
         '/tmp',
         {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
-          authCredentialId: 'fabricRegistryToken',
+          authCredentialId: 'cloudRegistryToken',
         },
-        { credentials: ['fabricRegistryToken'] }
+        { credentials: ['cloudRegistryToken'] }
       )
     )
     assert.deepEqual(criticals, [])
@@ -986,7 +986,7 @@ describe('validateRemoteAddonAuth (bound credential/secret must exist)', () => {
       makeRemoteState(
         '/tmp',
         {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
           authCredentialId: 'ghostToken',
         },
@@ -1005,7 +1005,7 @@ describe('validateRemoteAddonAuth (bound credential/secret must exist)', () => {
       makeRemoteState(
         '/tmp',
         {
-          package: '@pikkufabric/addon-registry',
+          package: '@pikkustudio/addon-registry',
           remote: true,
           authSecretId: 'ghostSecret',
         },

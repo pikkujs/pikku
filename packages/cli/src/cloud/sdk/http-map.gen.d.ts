@@ -11,7 +11,7 @@ import type { WorkflowRun, WorkflowRunStatus } from '.bun/@pikku+core@0.12.106/n
 import type { StreamWorkflowRunInput, GetScenarioArtifactInput } from '.bun/@pikku+addon-console@0.12.52+2ba48ff24cda2800/node_modules/@pikku/addon-console/dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen'
 import type { ListPackagesInput, SearchPackagesInput, GetPackageInput, GetPackageIconInput, ListOpenApisInput, GetOpenApiInput, GetPackageDownloadInput, RequestPublishUrlInput, PublishPackageInput, IngestPackageInput, StartMetaExtractionInput, StartOpenApiEnrichmentInput } from '../../../addon-registry/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
 import type { GetReviewQueueInput, GetReviewFixesInput, CastVerdictInput, ClearVerdictInput } from '../../../addon-review/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
-import type { FlattenedRPCMap } from '@pikkufabric/api-functions/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+import type { FlattenedRPCMap } from '@pikkustudio/api-functions/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
 
 export type AcceptInvitationInput = {
     token: string;
@@ -1139,11 +1139,11 @@ export type ConfigureStageChangesOutput = {
 }
 export type ConfigureStageDeployModeInput = {
     stageId: string;
-    mode: "fabric" | "webhook";
+    mode: "cloud" | "webhook";
     webhookUrl?: string | undefined;
 }
 export type ConfigureStageDeployModeOutput = {
-    deployMode: "fabric" | "webhook";
+    deployMode: "cloud" | "webhook";
     webhookUrl: string | null;
     webhookSecret: string | null;
 }
@@ -1158,7 +1158,7 @@ export type ConsoleAsksForAddonSecretsScenarioOutput = { installed: boolean; }
 export type ConsoleAssistantAnswersAtDeploymentScopeScenarioOutput = { passed: boolean; }
 export type ConsoleAssistantAnswersAtOrgScopeScenarioOutput = { passed: boolean; }
 export type ConsoleAssistantAnswersAtProjectScopeScenarioOutput = { passed: boolean; }
-export type ConsoleAssistantStaysInScopeScenarioInput = { agent: "fabricDeploymentAgent" | "fabricProjectAgent"; ask: string; expect: string; }
+export type ConsoleAssistantStaysInScopeScenarioInput = { agent: "cloudDeploymentAgent" | "cloudProjectAgent"; ask: string; expect: string; }
 export type ConsoleAssistantStaysInScopeScenarioOutput = { passed: boolean; }
 export type CrawlSiteResultInput = {
     jobId: string;
@@ -2318,12 +2318,12 @@ export type ExpectsWebhookSkippedInput = {
 export type ExpectsWebhookSkippedOutput = {
     reason: string;
 }
-export type FabricCliDeploymentsInput = {
+export type CloudCliDeploymentsInput = {
     projectId: string;
     branch?: string | undefined;
     limit?: number | undefined;
 }
-export type FabricCliDeploymentsOutput = {
+export type CloudCliDeploymentsOutput = {
     deployments: {
         deploymentId: string;
         branch: string;
@@ -2336,8 +2336,8 @@ export type FabricCliDeploymentsOutput = {
         createdAt: string;
     }[];
 }
-export type FabricCliProjectsInput = {}
-export type FabricCliProjectsOutput = {
+export type CloudCliProjectsInput = {}
+export type CloudCliProjectsOutput = {
     projects: {
         projectId: string;
         name: string;
@@ -2348,7 +2348,7 @@ export type FabricCliProjectsOutput = {
         createdAt: string;
     }[];
 }
-export type FabricCliReviewClearInput = {
+export type CloudCliReviewClearInput = {
     projectId: string | null;
     targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
     targetId: string;
@@ -2356,10 +2356,10 @@ export type FabricCliReviewClearInput = {
     implementationHash: string | null;
     subject: "code" | "knowledge" | "ui";
 }
-export type FabricCliReviewClearOutput = {
+export type CloudCliReviewClearOutput = {
     cleared: boolean;
 }
-export type FabricCliReviewFixesInput = {
+export type CloudCliReviewFixesInput = {
     projectId: string | null;
     gitSha: string | null;
     subject: "code" | "knowledge" | "ui";
@@ -2367,7 +2367,7 @@ export type FabricCliReviewFixesInput = {
     includeStale: boolean;
     limit: number;
 }
-export type FabricCliReviewFixesOutput = {
+export type CloudCliReviewFixesOutput = {
     fixes: {
         target: {
             projectId: string | null;
@@ -2393,7 +2393,7 @@ export type FabricCliReviewFixesOutput = {
     total: number;
     stale: number;
 }
-export type FabricCliReviewQueueInput = {
+export type CloudCliReviewQueueInput = {
     projectId: string | null;
     gitSha: string | null;
     sinceGitSha: string | null;
@@ -2401,7 +2401,7 @@ export type FabricCliReviewQueueInput = {
     hours?: number | undefined;
     limit: number;
 }
-export type FabricCliReviewQueueOutput = {
+export type CloudCliReviewQueueOutput = {
     candidates: {
         clusterId: string;
         targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
@@ -2461,7 +2461,7 @@ export type FabricCliReviewQueueOutput = {
     total: number;
     judged: number;
 }
-export type FabricCliReviewVerdictInput = {
+export type CloudCliReviewVerdictInput = {
     projectId: string | null;
     targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
     targetId: string;
@@ -2472,7 +2472,7 @@ export type FabricCliReviewVerdictInput = {
     reasons: string[];
     note: string | null;
 }
-export type FabricCliReviewVerdictOutput = {
+export type CloudCliReviewVerdictOutput = {
     castUnderScope: string;
 }
 export type FillsMemberQuotaInput = {
@@ -2845,7 +2845,7 @@ export type GetDeveloperLiteLLMKeyOutput = {
     proxyUrl: string;
     apiKey: string;
 }
-export type GetFabricLogsByStageKindInput = {
+export type GetCloudLogsByStageKindInput = {
     projectId: string;
     branch: string;
     source?: ("workspace" | "deploy") | undefined;
@@ -2854,7 +2854,7 @@ export type GetFabricLogsByStageKindInput = {
     search?: string | undefined;
     traceId?: string | undefined;
 }
-export type GetFabricLogsByStageKindOutput = {
+export type GetCloudLogsByStageKindOutput = {
     logs: {
         timestamp: string;
         level: string;
@@ -2864,7 +2864,7 @@ export type GetFabricLogsByStageKindOutput = {
         traceId?: string | undefined;
     }[];
 }
-export type GetFabricLogsInput = {
+export type GetCloudLogsInput = {
     environmentType: "stage" | "sandbox";
     environmentId: string;
     source?: ("workspace" | "deploy") | undefined;
@@ -2876,7 +2876,7 @@ export type GetFabricLogsInput = {
     tenantUserId?: string | undefined;
     since?: string | undefined;
 }
-export type GetFabricLogsOutput = {
+export type GetCloudLogsOutput = {
     logs: {
         timestamp: string;
         level: string;
@@ -3743,10 +3743,10 @@ export type GetSessionOutput = {
     aiProviders: {
         provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
         enabled: boolean;
-        source: "fabric" | "byok";
-        fabricAvailable: boolean;
+        source: "cloud" | "byok";
+        cloudAvailable: boolean;
     }[];
-    pikkufabricadmin: boolean;
+    pikkustudioadmin: boolean;
 }
 export type GetStageAgentThreadMessagesInput = {
     stageId: string;
@@ -3933,7 +3933,7 @@ export type GetStageDeployModeInput = {
     stageId: string;
 }
 export type GetStageDeployModeOutput = {
-    deployMode: "fabric" | "webhook";
+    deployMode: "cloud" | "webhook";
     webhookUrl: string | null;
     allowSelfHostedDeploy: boolean;
     handoverInFlight: boolean;
@@ -6881,7 +6881,7 @@ export type RecordDeployArtifactInput = {
     pikkuCloudflareVersion?: string | undefined;
     pikkuDeployCloudflareVersion?: string | undefined;
     pikkuAddonConsoleVersion?: string | undefined;
-    pikkufabricDeployCloudflareVersion?: string | undefined;
+    pikkustudioDeployCloudflareVersion?: string | undefined;
     hasServerUnit: boolean;
 }
 export type RecordDeployArtifactOutput = {
@@ -6903,7 +6903,7 @@ export type RecordDeployWebhookResultOutput = {
     ok: true;
 }
 export type RecordedEventsReachTheRollupScenarioOutput = { baseline: number; total: number; }
-export type RecordFabricAnalyticsEventsInput = {
+export type RecordCloudAnalyticsEventsInput = {
     events: {
         at?: number | undefined;
         event: {
@@ -6918,7 +6918,7 @@ export type RecordFabricAnalyticsEventsInput = {
         };
     }[];
 }
-export type RecordFabricAnalyticsEventsOutput = {
+export type RecordCloudAnalyticsEventsOutput = {
     accepted: number;
 }
 export type RecordHarnessRunInput = {
@@ -7755,7 +7755,7 @@ export type SecretSchema_anthropicApiKey = string
 export type SecretSchema_betterAuthSecret = string
 export type SecretSchema_consoleAuthPrivateKey = string
 export type SecretSchema_consoleAuthPublicKey = string
-export type SecretSchema_fabricMasterKeyPrevious = string
+export type SecretSchema_cloudMasterKeyPrevious = string
 export type SecretSchema_gitAdminPassword = string
 export type SecretSchema_githubAppClientSecret = string
 export type SecretSchema_githubAppPrivateKeyPem = string

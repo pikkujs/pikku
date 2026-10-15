@@ -2,15 +2,27 @@
 '@pikku/cli': patch
 '@pikku/skills': patch
 '@pikku/core': patch
+'@pikku/better-auth': patch
+'@pikku/playwright': patch
 '@pikku/addon-console': patch
+'@pikku/inspector': patch
+'@pikku/knowledge': patch
+'@pikku/kysely': patch
+'@pikku/code-edit': patch
+'@pikku/deploy-cloudflare': patch
+'create-pikku': patch
 ---
 
-The `pikku fabric` command group is now `pikku cloud`, and the `@pikku/cli/fabric` export is `@pikku/cli/cloud`. The previous names are removed with no aliases.
+Fabric is gone from the open toolchain. The previous names are removed with no aliases.
 
-The project link lives under the `cloud` key of `pikku.config.json` (`cloud.projectId`, was `fabric.projectId`), and the CLI keeps its local state in `~/.pikkustudio` (`auth.json`, `report-consent.json`, `findings`) instead of `~/.fabric`; run `pikku cloud login` again. The project config file is `pikkustudio.config.json`.
+The CLI group is `pikku cloud …` and the export is `@pikku/cli/cloud`. The project link is the `cloud` key of `pikku.config.json` (`cloud.projectId`), the CLI keeps its local state in `~/.pikkustudio` (run `pikku cloud login` again), and the project config file is `pikkustudio.config.json`.
 
-Every environment variable the CLI and core read drops the `FABRIC_` prefix for `PIKKUSTUDIO_`, with the same suffix: `PIKKUSTUDIO_API_URL`, `PIKKUSTUDIO_PROJECT_ID`, `PIKKUSTUDIO_TOKEN`, `PIKKUSTUDIO_OPERATOR_TOKEN`, `PIKKUSTUDIO_AUTH_PUBLIC_KEY`, `PIKKUSTUDIO_STAGE_ID` and the rest. Rename them wherever you set them.
+Every environment variable drops the `FABRIC_` prefix for `PIKKUSTUDIO_` with the same suffix: `PIKKUSTUDIO_API_URL`, `PIKKUSTUDIO_PROJECT_ID`, `PIKKUSTUDIO_TOKEN`, `PIKKUSTUDIO_OPERATOR_TOKEN`, `PIKKUSTUDIO_AUTH_PUBLIC_KEY`, `PIKKUSTUDIO_STAGE_ID` and the rest. Rename them wherever you set them.
 
-`pikku skills install --fabric` is `--cloud`, the `fabric` install group is `cloud`, and the skills `pikku-fabric`, `pikku-fabric-debug`, `pikku-admin-to-fabric` and `pikku-blueprint-to-fabric` are `pikku-cloud`, `pikku-cloud-debug`, `pikku-admin-to-cloud` and `pikku-blueprint-to-cloud`.
+Wire ids: the operator sign-in route is `/sign-in/cloud`, the plugin and mode literal is `'cloud'`, the Better Auth plugin is `pikkuCloud`, its session field is `pikkustudioadmin`, and the signature header is `x-cloud-sig`. The cloud API calls are `getCloudLogs`, `getCloudLogsByStageKind`, `cloudCliProjects`, `cloudCliDeployments`, `providedByCloud` and `recordCloudAnalyticsEvents`. Addon packages are `@pikkustudio/*`, scaffolded files live under `scaffold/cloud` and `__cloud_*__`, and the API hosts are the `pikkustudio.app` and `pikkustudio.dev` domains.
 
-Unchanged on purpose because they cross a deployed boundary: the `/sign-in/fabric` route, the `fabric` plugin id, the `getFabricLogs*` and `fabricCliProjects` RPC names, `@pikkufabric/*` package names and the `pikkufabric` domains.
+`pikku skills install --fabric` is `--cloud`, the install group is `cloud`, and the skills are `pikku-cloud`, `pikku-cloud-debug`, `pikku-admin-to-cloud` and `pikku-blueprint-to-cloud`.
+
+The stale analytics forwarder copies are removed from the online-shop example and the starter template.
+
+The sealed-box salt stays `pikkufabric/sealed-box/v1`: it is a cryptographic constant that already-sealed secrets depend on.

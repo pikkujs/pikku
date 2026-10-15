@@ -91,12 +91,12 @@ export const VIRTUAL_USER_VARIABLES = {
  */
 export const signInPathFor = (
   configured: string | undefined,
-  plugin: 'virtual-user' | 'fabric'
+  plugin: 'virtual-user' | 'cloud'
 ): string | undefined => {
   if (!configured) {
     return undefined
   }
-  const mount = configured.replace(/\/sign-in\/(virtual-user|fabric)$/, '')
+  const mount = configured.replace(/\/sign-in\/(virtual-user|cloud)$/, '')
   return mount === configured ? configured : `${mount}/sign-in/${plugin}`
 }
 
@@ -650,7 +650,7 @@ export const executeVirtualUserRun = async ({
         ? {
             operator: {
               token,
-              signInPath: signInPathFor(configuredSignInPath, 'fabric'),
+              signInPath: signInPathFor(configuredSignInPath, 'cloud'),
             },
           }
         : { secret }),

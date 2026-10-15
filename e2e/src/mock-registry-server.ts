@@ -3,7 +3,7 @@
  *
  * The console's addon gallery reads its catalogue from
  * `${PIKKUSTUDIO_API_URL}/registry/packages`, which in production is
- * api.pikkufabric.com. Pointing the e2e suite at that means the addons
+ * api.pikkustudio.app. Pointing the e2e suite at that means the addons
  * scenarios assert against a catalogue that changes without anybody touching
  * this repo — a package renamed upstream turns them red, and they cannot run at
  * all without a network. So the suite serves its own catalogue from a

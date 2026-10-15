@@ -4,7 +4,7 @@ import { dirname } from 'node:path'
 /**
  * Resolve the project root (the directory containing pikku.config.json) from
  * the MetaService basePath. For a flat pikku project, dirname(basePath) IS
- * the root. In a monorepo layout (e.g. the Pikku Studio Cloud sandbox, where basePath is
+ * the root. In a monorepo layout (e.g. the Pikku Studio sandbox, where basePath is
  * `packages/functions/.pikku`), pikku.config.json lives further up — walk up
  * until we find it, matching the CLI's own findConfigFile() behavior.
  */

@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 import { defineVariable } from '#pikku/variables'
 
-//~ Text→speech WORKS OUT OF THE BOX on a Pikku Studio Cloud sandbox — no addon, no API key, no
+//~ Text→speech WORKS OUT OF THE BOX on a Pikku Studio sandbox — no addon, no API key, no
 //~ services.ts edit. The proxy routes `kokoro-82m` with `mode: audio_speech`, and the
 //~ platform wires each provider as an object carrying a `speech` method. (An older
 //~ revision said the opposite; it predates both. The guard below stays only for an app
@@ -67,7 +67,7 @@ export const synthesizeSpeech = pikkuFunc({
       throw new Error('agentRunner not configured — AI is unavailable in this stage')
     }
     if (!agentRunner.generateSpeech) {
-      //~ Not reachable on a stock Pikku Studio Cloud sandbox — only if this app replaced the AI
+      //~ Not reachable on a stock Pikku Studio sandbox — only if this app replaced the AI
       //~ wiring. Fail loud and actionable rather than 500.
       throw new Error(
         'Text-to-speech is not enabled: this app’s AI runner has no speech model. ' +

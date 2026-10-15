@@ -1,7 +1,7 @@
 ---
 type: Overview
 title: Knowledge base
-description: What this app is, in the Pikku Studio Cloud profile of the Open Knowledge Format (OKF).
+description: What this app is, in the Pikku Studio profile of the Open Knowledge Format (OKF).
 tags: [meta, okf]
 ---
 
@@ -25,7 +25,7 @@ Knowledge is the context introspection can't surface:
 - **Decisions and their reasons** — _why_ an approach was chosen, trade-offs accepted
 - **Constraints** — external facts (a partner API's quirk, a compliance rule) agreed with the user
 
-## Format — OKF v0.1, Pikku Studio Cloud profile
+## Format — OKF v0.1, Pikku Studio profile
 
 Each note is a markdown file whose **path is its identity**, with YAML frontmatter and a
 markdown body. Frontmatter: `type` is required; `title`, `description`, `tags`, `resource`

@@ -26,7 +26,7 @@ const rpcThatMustNotBeCalled = () =>
 const orgs: Org[] = [
   {
     organizationId: '11111111-1111-4111-8111-111111111111',
-    slug: 'pikkufabric',
+    slug: 'pikkustudio',
     name: 'Pikku Pikku Studio Cloud',
   },
   {
@@ -73,7 +73,7 @@ describe('--organization accepts a slug, a name or an id', () => {
       () => resolveOrganizationId(rpcReturning(orgs), 'acme'),
       (error: unknown) => {
         assert.ok(error instanceof CloudPreconditionError)
-        assert.match(error.message, /pikkufabric, vlandor/)
+        assert.match(error.message, /pikkustudio, vlandor/)
         return true
       }
     )

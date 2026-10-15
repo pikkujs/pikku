@@ -149,7 +149,7 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     console.log('')
     console.log('Run `pikku skills install` to copy them into .claude/skills/')
     console.log(
-      'Run `pikku skills install --core --cloud` to install the Pikku Studio Cloud sandbox skill set.'
+      'Run `pikku skills install --core --cloud` to install the Pikku Studio sandbox skill set.'
     )
     console.log(
       'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'

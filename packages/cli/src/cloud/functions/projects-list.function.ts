@@ -47,7 +47,7 @@ export const CloudProjectsList = pikkuSessionlessFunc({
       )
 
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const { projects } = await rpc.invoke('fabricCliProjects', {})
+    const { projects } = await rpc.invoke('cloudCliProjects', {})
 
     // Every project on the matched remote is marked, not just one: when two
     // share a repo this is the listing that has to show the user both.

@@ -1,6 +1,6 @@
 ---
 name: pikku-changes
-description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkufabric changes", "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-cloud for those.'
+description: 'Work a project''s changes queue — the todo list someone filed by circling things on a deployed stage. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the pikkustudio changes", "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage — use pikku-cloud for those.'
 installGroups: [cloud]
 ---
 

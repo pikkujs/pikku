@@ -270,4 +270,4 @@ Notes are different: they say what the app is now, so they change whenever it do
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.
 
-Pikku Studio Cloud is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `screens/` section. Both are Pikku Studio Cloud's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.
+Pikku Studio is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `screens/` section. Both are Pikku Studio's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.

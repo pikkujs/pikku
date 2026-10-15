@@ -90,9 +90,9 @@ host) and wire it:
 ```ts
 wireRemoteAddon({
   name: 'registry',
-  package: '@pikkufabric/addon-registry', // devDependency
+  package: '@pikkustudio/addon-registry', // devDependency
   serverUrl: (services) => services.variables.get('PIKKUSTUDIO_API_URL'),
-  auth: { credentialId: 'fabricRegistryToken' }, // see below; omit if public
+  auth: { credentialId: 'cloudRegistryToken' }, // see below; omit if public
 })
 
 // fully typed against the addon's `.remote.gen` map:

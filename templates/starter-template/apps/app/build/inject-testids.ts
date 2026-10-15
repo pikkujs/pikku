@@ -254,7 +254,7 @@ export default function injectTestIds(
           anchorUsed = false
           if (!anchors || !state.filename) return
           anchorPath = path.relative(root, state.filename).split(path.sep).join('/')
-          anchorIdentifier = program.scope.generateUidIdentifier('fabricSrc')
+          anchorIdentifier = program.scope.generateUidIdentifier('cloudSrc')
         },
         exit(program) {
           if (!anchorUsed || !anchorIdentifier || !anchorPath) return

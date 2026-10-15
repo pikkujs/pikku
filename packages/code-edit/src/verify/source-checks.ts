@@ -459,7 +459,7 @@ export function staleTableZod(
   return missing
 }
 
-/** Strings the Pikku Studio Cloud Studio lint config allows bare in JSX: separators and ellipses carry no language. */
+/** Strings the Pikku Studio lint config allows bare in JSX: separators and ellipses carry no language. */
 export const ALLOWED_JSX_STRINGS: readonly string[] = ['·', '—', '…']
 
 /** The tsconfig a frontend adds to switch the i18n DOM-types gate (`@pikku/react/i18n-jsx`) on. */

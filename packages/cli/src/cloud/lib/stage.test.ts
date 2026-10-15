@@ -92,13 +92,13 @@ describe('matchStage', () => {
         {
           stageId: 'stage-main',
           branch: 'main',
-          url: 'https://mono.pikkufabric.dev',
+          url: 'https://mono.pikkustudio.dev',
           containerUrl: null,
         },
         {
           stageId: 'stage-dev',
           branch: 'develop',
-          url: 'https://fabric-develop-mono-ldx7tf65.pikkufabric.dev',
+          url: 'https://cloud-develop-mono-ldx7tf65.pikkustudio.dev',
           containerUrl: null,
         },
       ],
@@ -114,9 +114,9 @@ describe('matchStage', () => {
 
   test('by the url it was filed on, path and scheme optional', async () => {
     for (const ref of [
-      'https://fabric-develop-mono-ldx7tf65.pikkufabric.dev',
-      'https://fabric-develop-mono-ldx7tf65.pikkufabric.dev/en/jobs',
-      'fabric-develop-mono-ldx7tf65.pikkufabric.dev',
+      'https://cloud-develop-mono-ldx7tf65.pikkustudio.dev',
+      'https://cloud-develop-mono-ldx7tf65.pikkustudio.dev/en/jobs',
+      'cloud-develop-mono-ldx7tf65.pikkustudio.dev',
     ]) {
       assert.strictEqual((await matchStage(rpc, 'p1', ref)).branch, 'develop')
     }
@@ -132,7 +132,7 @@ describe('matchStage', () => {
   test('an unknown name lists the stages there are', async () => {
     await assert.rejects(
       matchStage(rpc, 'p1', 'staging'),
-      /No stage matches "staging"\. Stages: main \(https:\/\/mono\.pikkufabric\.dev\), develop/
+      /No stage matches "staging"\. Stages: main \(https:\/\/mono\.pikkustudio\.dev\), develop/
     )
   })
 })

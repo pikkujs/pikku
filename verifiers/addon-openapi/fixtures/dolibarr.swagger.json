@@ -1,6 +1,6 @@
 {
  "swagger": "2.0",
- "host": "dolibarr.pikkufabric.cloud",
+ "host": "dolibarr.pikkustudio.cloud",
  "basePath": "/api/index.php",
  "produces": [
   "application/json",

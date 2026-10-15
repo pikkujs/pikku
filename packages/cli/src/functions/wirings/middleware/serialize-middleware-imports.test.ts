@@ -36,7 +36,7 @@ describe('serializeMiddlewareImports global middleware', () => {
     const state = emptyMiddlewareState({
       'global:middleware:0': {
         definitionId: 'telemetryMiddleware',
-        sourceFile: '/project/src/__fabric_telemetry__/telemetry.wiring.ts',
+        sourceFile: '/project/src/__cloud_telemetry__/telemetry.wiring.ts',
         position: 0,
         isFactoryCall: false,
       },
@@ -50,7 +50,7 @@ describe('serializeMiddlewareImports global middleware', () => {
     )
 
     assert.match(output, /Side-effect imports/)
-    assert.match(output, /__fabric_telemetry__\/telemetry\.wiring/)
+    assert.match(output, /__cloud_telemetry__\/telemetry\.wiring/)
   })
 
   // `isFactoryCall` describes the array element — `betterAuthStatelessSession()`

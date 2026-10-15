@@ -63,7 +63,7 @@ export interface HttpVirtualUsersConfig {
   /**
    * Sign-in path under apiUrl, for whichever of the two paths is in use — an
    * app that mounts auth under `/api` moves both. Default: the virtual user plugin's
-   * `/auth/sign-in/virtual-user`, or `/auth/sign-in/fabric` for an operator.
+   * `/auth/sign-in/virtual-user`, or `/auth/sign-in/cloud` for an operator.
    * {@link OperatorSignInOptions.signInPath} overrides it.
    */
   signInPath?: string
@@ -127,7 +127,7 @@ export class HttpVirtualUser implements ScenarioVirtualUser {
         signInPath:
           config.operator.signInPath ??
           (authMount(config.signInPath)
-            ? `${authMount(config.signInPath)}/sign-in/fabric`
+            ? `${authMount(config.signInPath)}/sign-in/cloud`
             : undefined),
       })
     } else if (config.secret) {
