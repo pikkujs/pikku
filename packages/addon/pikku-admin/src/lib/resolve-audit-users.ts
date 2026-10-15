@@ -6,11 +6,11 @@ export type AuditUserProfile = {
   name?: string
   email?: string
   /**
-   * True for a scenario actor — better-auth's `actor` column, which the actor
-   * plugin sets and `CoreUserSession.actor` mirrors. Absent in an app that does
+   * True for a scenario virtual user — better-auth's `virtualUser` column, which the virtual user
+   * plugin sets and `CoreUserSession.virtualUser` mirrors. Absent in an app that does
    * not run scenarios, so absence means "an ordinary user", not "unknown".
    */
-  actor?: boolean
+  virtualUser?: boolean
 }
 
 /** Who each user id on a page belongs to, keyed by that id. */
@@ -29,9 +29,9 @@ export type AuditUserDirectory = Record<string, AuditUserProfile>
  * `admin:audit:read` already grants "every recorded action, and which user took
  * it", so a reader who may see the id may see the name — an opaque id would be
  * the same disclosure, just unreadable. Reading the adapter directly also
- * reaches actor rows, which the admin user list deliberately hides: nobody
- * picks a scenario actor out of a people-picker, but a trail that cannot say an
- * actor did it is worse than one that names them.
+ * reaches virtual user rows, which the admin user list deliberately hides: nobody
+ * picks a scenario virtual user out of a people-picker, but a trail that cannot say an
+ * virtual user did it is worse than one that names them.
  *
  * An id missing from the result is not an error: a deleted account leaves its
  * events behind on purpose, and the caller falls back to showing the id.
@@ -68,7 +68,7 @@ export const resolveAuditUsers = async (
           directory[id] = {
             name: user.name || undefined,
             email: user.email || undefined,
-            actor: user.actor === true ? true : undefined,
+            virtualUser: user.virtualUser === true ? true : undefined,
           }
         }
       } catch (error) {

@@ -35,7 +35,7 @@ interface AuditEventTable {
   queryId: string | null
   userId: string | null
   orgId: string | null
-  actorPikkuUserId: string | null
+  performedByPikkuUserId: string | null
   metadataJson: string | null
 }
 
@@ -78,7 +78,7 @@ async function createAuditEventsTable(
     .addColumn('queryId', 'text')
     .addColumn('userId', 'text')
     .addColumn('orgId', 'text')
-    .addColumn('actorPikkuUserId', 'text')
+    .addColumn('performedByPikkuUserId', 'text')
     .addColumn('metadataJson', 'text')
     .execute()
 }
@@ -115,7 +115,7 @@ class ImmediateAuditService implements AuditService {
         queryId: event.queryId ?? null,
         userId: event.userIdentity?.userId ?? null,
         orgId: event.userIdentity?.orgId ?? null,
-        actorPikkuUserId: event.userIdentity?.pikkuUserId ?? null,
+        performedByPikkuUserId: event.userIdentity?.pikkuUserId ?? null,
         metadataJson: event.metadata ? JSON.stringify(event.metadata) : null,
       })
       .execute()

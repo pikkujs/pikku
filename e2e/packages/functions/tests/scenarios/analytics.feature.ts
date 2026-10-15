@@ -34,29 +34,29 @@ export const analyticsServerEventCarriesItsInvocationScenario = pikkuScenario<
   title: 'An event recorded by a function reaches its destination',
   description: 'Stamped with who was calling and which invocation it came from',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the guest opens the quarterly report',
       'viewQuarterlyReport',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const recorded = await scenario.do(
       'reads the destinations back in a later request',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'the destination saw the event the function recorded',
@@ -88,9 +88,9 @@ export const analyticsAcceptsKeepsAnEventOutScenario = pikkuScenario<
   title: 'A destination only receives the events it accepts',
   description: 'The difference between the two destinations is the policy',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     await scenario.when(
@@ -111,14 +111,14 @@ export const analyticsAcceptsKeepsAnEventOutScenario = pikkuScenario<
       'the guest opens the quarterly report',
       'viewQuarterlyReport',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const recorded = await scenario.do(
       'reads the destinations back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'everything reached the first, only the conversion the second',
@@ -145,9 +145,9 @@ export const analyticsBeaconIsMarkedClientScenario = pikkuScenario<
   title: 'An event relayed from a browser is recorded as the client’s',
   description: 'The ingest takes the event; the identity stays the wire’s',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     const beacon = await scenario.when(
@@ -168,7 +168,7 @@ export const analyticsBeaconIsMarkedClientScenario = pikkuScenario<
       'reads the destination back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'it is the client’s event, not the server’s',
@@ -195,9 +195,9 @@ export const analyticsUndeclaredEventIsRefusedScenario = pikkuScenario<
   title: 'An event nobody declared is refused at the ingest',
   description: 'The declared union is the schema, not documentation',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     const beacon = await scenario.when(
@@ -214,7 +214,7 @@ export const analyticsUndeclaredEventIsRefusedScenario = pikkuScenario<
       'reads the destinations back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'nothing reached a destination',
@@ -237,9 +237,9 @@ export const analyticsConsentGatesTheMintScenario = pikkuScenario<
   title: 'No device id is minted before consent is given',
   description: 'The gate is on the storing, not on the sending',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     const refused = await scenario.when(
@@ -260,7 +260,7 @@ export const analyticsConsentGatesTheMintScenario = pikkuScenario<
       'reads the destination back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'the event still arrived, carrying no device id',
@@ -287,9 +287,9 @@ export const analyticsDeviceIdIsMintedOnceScenario = pikkuScenario<
   title: 'A consenting visitor is minted one device id, and keeps it',
   description: 'A second mint would make one visitor two people',
   tags: ['scenario', 'analytics'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     const first = await scenario.when(

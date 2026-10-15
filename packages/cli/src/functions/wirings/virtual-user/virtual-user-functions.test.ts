@@ -6,7 +6,7 @@ import { pikkuVirtualUserFunctions } from './pikku-command-virtual-user-function
 const leaf = (name: string) => `#pikku/${name}`
 
 const services = (
-  personas: unknown,
+  virtualUsers: unknown,
   scaffold: unknown = { virtualUser: true }
 ) =>
   ({
@@ -18,21 +18,21 @@ const services = (
       virtualUserSchemasFile:
         '/app/src/scaffold/virtual-user/virtual-user.schemas.gen.ts',
       outDir: '/app/.pikku',
-      personasWiringFile: '/app/.pikku/scenarios/pikku-personas.gen.ts',
+      virtualUsersWiringFile: '/app/.pikku/scenarios/pikku-virtual-users.gen.ts',
       packageMappings: {},
     },
-    getInspectorState: async () => ({ personas: { definitions: personas } }),
+    getInspectorState: async () => ({ virtualUsers: { definitions: virtualUsers } }),
   }) as any
 
 describe('serializeVirtualUserFunctions', () => {
   const { functions: out, schemas } = serializeVirtualUserFunctions(
     leaf,
-    '../../../.pikku/workflow/pikku-personas.gen.js'
+    '../../../.pikku/workflow/pikku-virtual-users.gen.js'
   )
 
   test('offers a way to ask what the virtual users have been doing', () => {
     assert.match(out, /export const listVirtualUserRuns = pikkuFunc\(/)
-    assert.match(out, /\)\.list\(\{ persona, limit, offset \}\)/)
+    assert.match(out, /\)\.list\(\{ virtualUserId, limit, offset \}\)/)
   })
 
   // The steps are the bulk of a run, so a list that carried them would make
@@ -50,14 +50,14 @@ describe('serializeVirtualUserFunctions', () => {
     assert.match(stepsFn, /scopes: \['virtualUser:read'\]/)
   })
 
-  test('a persona can be put on a clock rather than triggered by hand', () => {
+  test('a virtual user can be put on a clock rather than triggered by hand', () => {
     assert.match(out, /export const setVirtualUserSchedule = pikkuFunc\(/)
     assert.match(out, /writeVirtualUserSchedule\(\{/)
   })
 
   // Starting a run spends money once, with a caller present to see it. Writing
   // a schedule spends it repeatedly with nobody there.
-  test('deciding a persona keeps running is its own scope', () => {
+  test('deciding a virtual user keeps running is its own scope', () => {
     assert.match(out, /schedule: \{\n\s+description:/)
     const setFn = out.slice(out.indexOf('setVirtualUserSchedule ='))
     assert.match(setFn, /scopes: \['virtualUser:schedule'\]/)
@@ -65,11 +65,11 @@ describe('serializeVirtualUserFunctions', () => {
 
   // A schedule is enabled once and then outlives the declaration it was written
   // from, so both sides have to travel for anyone to see they have parted ways.
-  test('a schedule carries what the persona currently declares', () => {
+  test('a schedule carries what the virtual user currently declares', () => {
     assert.match(schemas, /declared: z\.object\(\{/)
     assert.match(
       out,
-      /serializeVirtualUserSchedule\(schedule, personaConfigs\)/
+      /serializeVirtualUserSchedule\(schedule, virtualUserConfigs\)/
     )
   })
 
@@ -101,7 +101,7 @@ describe('serializeVirtualUserFunctions', () => {
     )
   })
 
-  // The checks are the point — an acted-upon persona has no session, and only
+  // The checks are the point — an acted-upon virtual user has no session, and only
   // one disposition may ever touch production. A helper the tick called instead
   // would be a second copy of them, and would eventually drift.
   test('a scheduled run goes through the same door a person does', () => {
@@ -131,7 +131,7 @@ describe('serializeVirtualUserFunctions', () => {
 
   // A run is capped by a budget; how often runs happen is the schedule. The two
   // were being confused for each other before this existed.
-  test('the cadence is a range, so the persona does not keep an appointment', () => {
+  test('the cadence is a range, so the virtual user does not keep an appointment', () => {
     assert.match(
       schemas,
       /minIntervalMs: z\.number\(\)\.int\(\)\.min\(60_000\)\.optional\(\)/
@@ -199,7 +199,7 @@ describe('serializeVirtualUserFunctions', () => {
   test('a schedule write is told which environment it is in', () => {
     assert.match(
       out,
-      /writeVirtualUserSchedule\(\{[^}]*environments: personaEnvironments,[^}]*config: config/
+      /writeVirtualUserSchedule\(\{[^}]*environments: virtualUserEnvironments,[^}]*config: config/
     )
   })
 
@@ -233,10 +233,10 @@ describe('serializeVirtualUserFunctions', () => {
     assert.doesNotMatch(execute, /expose: true/)
   })
 
-  test('imports the generated personas rather than declaring any', () => {
+  test('imports the generated virtual users rather than declaring any', () => {
     assert.match(
       out,
-      /import \{ createPersonas, personaConfigs, personaEnvironments \} from '\.\.\/\.\.\/\.\.\/\.pikku\/workflow\/pikku-personas\.gen\.js'/
+      /import \{ createVirtualUsers, virtualUserConfigs, virtualUserEnvironments \} from '\.\.\/\.\.\/\.\.\/\.pikku\/workflow\/pikku-virtual-users\.gen\.js'/
     )
   })
 
@@ -283,12 +283,12 @@ describe('pikkuVirtualUserFunctions', () => {
     assert.equal(result, false)
   })
 
-  // Without a persona the generated RPCs could only ever answer "unknown
-  // persona", so codegen refuses rather than shipping them.
-  test('fails when the project declares no personas', async () => {
+  // Without a virtual user the generated RPCs could only ever answer "unknown
+  // virtual user", so codegen refuses rather than shipping them.
+  test('fails when the project declares no virtual users', async () => {
     await assert.rejects(
       (pikkuVirtualUserFunctions as any).func(services({}), undefined, {}),
-      /no personas are declared/
+      /no virtual users are declared/
     )
   })
 
@@ -300,7 +300,7 @@ describe('pikkuVirtualUserFunctions', () => {
         {}
       ),
       (e: Error) => {
-        assert.match(e.message, /definePersonas/)
+        assert.match(e.message, /defineVirtualUsers/)
         assert.match(e.message, /scaffold\.virtualUser/)
         return true
       }

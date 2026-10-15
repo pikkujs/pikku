@@ -71,7 +71,7 @@ import type {
   CoreServices,
   CoreUserSession,
 } from './core.types.js'
-import type { PersonaSignInFactory } from '../services/persona-sign-in.js'
+import type { VirtualUserSignInFactory } from '../services/virtual-user-sign-in.js'
 import type { FunctionsMeta } from '../function/function-meta.types.js'
 import type {
   CorePikkuMiddleware,
@@ -215,8 +215,8 @@ export interface PikkuPackageState {
   permissions: {
     global: (CorePermissionGroup | CorePikkuPermission)[]
   }
-  persona: {
-    signIn: PersonaSignInFactory | null
+  virtualUser: {
+    signIn: VirtualUserSignInFactory | null
   }
   misc: {
     errors: Map<PikkuErrorConstructor, ErrorDetails>

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { readTextSafe } from './shared-checks.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 /**
  * The declarations that must live in a dedicated scenario file.
@@ -31,14 +31,12 @@ const SCENARIO_FILE = /\.(scenario|scenarios|steps)\.tsx?$/
 /**
  * The declarations that make up a virtual user, and where they live.
  *
- * There is no `defineVirtualUsers` to look for — that name was retired in
- * favour of `definePersonas`, because a virtual user is derived rather than
- * authored: the function meta becomes its catalogue, the scenario meta becomes
- * its intents, and the declared personas become its identities. So the thing a
- * project actually writes is the persona list, and that is what has to be
- * findable by filename.
+ * A virtual user is derived rather than authored: the function meta becomes its
+ * catalogue, the scenario meta becomes its intents, and the declared virtual
+ * users become its identities. So the thing a project actually writes is the
+ * virtual user list, and that is what has to be findable by filename.
  */
-const VIRTUAL_USER_DECLARATIONS = ['definePersonas', 'runVirtualUser'] as const
+const VIRTUAL_USER_DECLARATIONS = ['defineVirtualUsers', 'runVirtualUser'] as const
 
 const VIRTUAL_USER_FILE = /\.(virtual-user|vu)\.tsx?$/
 
@@ -141,13 +139,13 @@ export const runScenarioFileChecks = async (
     findings.push({
       id: 'virtual-user-declared-outside-virtual-user-file',
       severity: 'error',
-      message: `${rel} declares ${used.join(', ')} — the personas a virtual user plays must live in a *.virtual-user.ts (or *.vu.ts) file, not mixed into application code`,
+      message: `${rel} declares ${used.join(', ')} — the virtual users it declares must live in a *.virtual-user.ts (or *.vu.ts) file, not mixed into application code`,
       path: file,
       fixHint: [
         'Move the declaration into a dedicated file, e.g.:',
-        `  ${rel.replace(/[^/\\]+$/, 'personas.virtual-user.ts')}`,
+        `  ${rel.replace(/[^/\\]+$/, 'virtual-users.virtual-user.ts')}`,
         'A virtual user is derived from what the project already generates —',
-        'the personas are the only part it authors, so they get their own file.',
+        'the virtual users are the only part it authors, so they get their own file.',
       ].join('\n'),
     })
   }

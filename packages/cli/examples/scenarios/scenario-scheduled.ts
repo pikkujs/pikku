@@ -8,18 +8,18 @@ import { pikkuScenario } from '#pikku/scenarios'
 //~ covered. scenario.expectEventually POLLS an RPC until the effect appears — use
 //~ it for anything that lands asynchronously. Queue jobs run when their enqueue RPC
 //~ is called in a step. Only a real scenario.sleep is genuinely exempt. 3rd arg is
-//~ `{ scenario, actors }` (NOT `workflow`).
+//~ `{ scenario, virtualUsers }` (NOT `workflow`).
 export const dailyDigestScenario = pikkuScenario<void, { ok: boolean }>({
   title: 'Daily digest runs (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.visitor) throw new Error('needs run actors — run via `pikku scenario run <env>`')
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.visitor) throw new Error('needs run virtual users — run via `pikku scenario run <env>`')
     logger.debug('digest starting')
     await scenario.do(
       'create some activity',
       'createDeal',
       { title: 'For the digest', stage: 'lead' },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     //~ Fire the scheduled task now instead of waiting for its cron time.
     await scenario.runScheduledTask('sendDailyDigest')
@@ -29,7 +29,7 @@ export const dailyDigestScenario = pikkuScenario<void, { ok: boolean }>({
       'listDigests',
       {},
       (out: { digests: unknown[] }) => out.digests.length > 0,
-      { actor: actors.visitor, within: 10_000 },
+      { virtualUser: virtualUsers.visitor, within: 10_000 },
     )
     return { ok: true }
   },

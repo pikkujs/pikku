@@ -36,9 +36,9 @@ export const deriveCatalogue = (
     // knowledge: decisions/internals/only-exposed-functions-enter-a-virtual-user-catalogue.md
     if (meta.expose !== true) continue
     // A virtual user is not offered the machinery that runs virtual users. A
-    // persona whose role carries `virtualUser:*` would otherwise be able to
+    // virtual user whose role carries `virtualUser:*` would otherwise be able to
     // start further runs, read every run's findings — an adversarial run's
-    // transcript is working exploits against this same app — and put a persona
+    // transcript is working exploits against this same app — and put a virtual user
     // on a schedule that outlives it. Same reasoning as the scenario-step rule
     // above: the tool is about the run, not about the product being explored.
     if (meta.scopes?.some((scope) => scope.split(':')[0] === 'virtualUser')) {
@@ -72,7 +72,7 @@ export const deriveCatalogue = (
 type IntentStep = {
   stepFunc: string
   phase: ScenarioStepPhase
-  actor?: string
+  virtualUser?: string
 }
 
 /**
@@ -93,20 +93,26 @@ const scenarioSteps = (meta: {
   if (meta.steps?.length) {
     return meta.steps.flatMap((step) =>
       step.type === 'scenarioStep'
-        ? [{ stepFunc: step.stepFunc, phase: step.phase, actor: step.actor }]
+        ? [
+            {
+              stepFunc: step.stepFunc,
+              phase: step.phase,
+              virtualUser: step.virtualUser,
+            },
+          ]
         : []
     )
   }
 
   // knowledge: decisions/internals/virtual-user-step-order-comes-from-insertion-order.md
   return Object.values(meta.nodes ?? {}).flatMap((node) => {
-    const { rpcName, scenarioStepPhase, actor } = (node ?? {}) as {
+    const { rpcName, scenarioStepPhase, virtualUser } = (node ?? {}) as {
       rpcName?: string
       scenarioStepPhase?: ScenarioStepPhase
-      actor?: string
+      virtualUser?: string
     }
     if (!rpcName || !scenarioStepPhase) return []
-    return [{ stepFunc: rpcName, phase: scenarioStepPhase, actor }]
+    return [{ stepFunc: rpcName, phase: scenarioStepPhase, virtualUser }]
   })
 }
 
@@ -143,7 +149,7 @@ export const deriveIntents = (
           phase: step.phase,
           // knowledge: decisions/internals/a-scenario-step-template-is-offered-unfilled.md
           description: template ?? description ?? '',
-          actor: step.actor,
+          virtualUser: step.virtualUser,
         })
       )
     }
@@ -154,7 +160,7 @@ export const deriveIntents = (
       description: meta.description,
       steps: steps.length ? steps : undefined,
       tags: meta.tags?.length ? meta.tags : undefined,
-      personas: meta.actors?.length ? meta.actors : undefined,
+      virtualUsers: meta.virtualUsers?.length ? meta.virtualUsers : undefined,
     })
   }
   return intents

@@ -144,7 +144,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   permissions: {
     global: [],
   },
-  persona: {
+  virtualUser: {
     signIn: null,
   },
   misc: {

@@ -65,7 +65,7 @@ describe('createCookieJar', () => {
     assert.doesNotMatch(seen.cookie, /session=s1/)
   })
 
-  test('keeps each jar to itself, so one actor never inherits another session', async () => {
+  test('keeps each jar to itself, so one virtual user never inherits another session', async () => {
     const { server, apiUrl } = await startTarget()
     after(() => server.close())
 

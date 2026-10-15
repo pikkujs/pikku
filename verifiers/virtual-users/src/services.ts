@@ -3,13 +3,13 @@ import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { QueueService } from '@pikku/core/queue'
 import type {
-  VirtualUserRunStore,
-  VirtualUserScheduleStore,
-} from '@pikku/core/virtual-user'
+  KyselyVirtualUserRunStore,
+  KyselyVirtualUserScheduleStore,
+} from '@pikku/kysely'
 
 export interface VerifierStores {
-  virtualUserRunStore: VirtualUserRunStore
-  virtualUserScheduleStore: VirtualUserScheduleStore
+  virtualUserRunStore: KyselyVirtualUserRunStore
+  virtualUserScheduleStore: KyselyVirtualUserScheduleStore
   queueService: QueueService
 }
 

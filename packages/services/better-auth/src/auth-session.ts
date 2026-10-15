@@ -6,7 +6,7 @@ import type {
 } from '@pikku/core/middleware'
 import type { BetterAuthInstance } from './define-auth.js'
 import { defaultSession } from './default-session.js'
-import { stampActorFlag } from './stamp-actor-flag.js'
+import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
 import {
   resolveImpersonatedSession,
   warnImpersonationUnconfigured,
@@ -193,7 +193,7 @@ export const betterAuthSession = (
           : defaultSession(result)
         await setSession(
           await withResolvedScopes(
-            stampActorFlag(mapped, result.user),
+            stampVirtualUserFlag(mapped, result.user),
             services as CoreServices
           )
         )

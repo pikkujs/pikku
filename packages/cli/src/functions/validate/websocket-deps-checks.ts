@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 /**
  * The packages the Node dev/serve path needs to speak WebSocket. Both are

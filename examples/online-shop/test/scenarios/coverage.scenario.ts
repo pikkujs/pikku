@@ -18,20 +18,20 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
   description:
     'Invokes each callable function once, so an uncallable one fails loudly',
   tags: ['scenario', 'coverage'],
-  func: async ({ logger }, _data, { scenario, actors }) => {
-    if (!actors?.alex) {
+  func: async ({ logger }, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.alex) {
       throw new Error(
-        'needs the `alex` actor (admin) — run via `pikku scenario run <environment>`'
+        'needs the `alex` virtual user (admin) — run via `pikku scenario run <environment>`'
       )
     }
-    const admin = actors.alex
-    const shopper = actors.shopper ?? actors.alex
+    const admin = virtualUsers.alex
+    const shopper = virtualUsers.shopper ?? virtualUsers.alex
 
     const session = await scenario.do(
       'reads the session',
       'getSession',
       {},
-      { actor: admin }
+      { virtualUser: admin }
     )
 
     // A unique suffix per run: this scenario executes once per surface, and the
@@ -47,7 +47,7 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
         slug: `coverage-${stamp}`,
         description: 'Probe',
       },
-      { actor: admin }
+      { virtualUser: admin }
     )
 
     const item = await scenario.do(
@@ -60,37 +60,37 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
         priceCents: 1200,
         stock: 5,
       },
-      { actor: admin }
+      { virtualUser: admin }
     )
 
     await scenario.do(
       'edits it',
       'updateItem',
       { itemId: item.itemId, stock: 9 },
-      { actor: admin }
+      { virtualUser: admin }
     )
 
     await scenario.do('lists categories', 'listCategories', null, {
-      actor: shopper,
+      virtualUser: shopper,
     })
     await scenario.do(
       'checks availability',
       'checkItemAvailability',
       { itemId: item.itemId },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     const basket = await scenario.do(
       'opens a basket',
       'getBasket',
       {},
-      { actor: shopper }
+      { virtualUser: shopper }
     )
     await scenario.do(
       'fills it',
       'addToBasket',
       { basketId: basket.basketId, itemId: item.itemId, quantity: 1 },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     // Through the starter, not the workflow: a workflow invoked over plain RPC
@@ -109,33 +109,33 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
           country: 'GB',
         },
       },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     await scenario.do(
       'lists orders',
       'listOrders',
       { limit: 20, offset: 0 },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     await scenario.do('runs the sales report', 'dailySalesReport', null, {
-      actor: admin,
+      virtualUser: admin,
     })
     await scenario.do('queues an order export', 'startExport', null, {
-      actor: admin,
+      virtualUser: admin,
     })
     await scenario.do(
       'runs the conditional report',
       'conditionalReport',
       null,
-      { actor: admin }
+      { virtualUser: admin }
     )
     await scenario.do(
       'sweeps abandoned baskets',
       'cleanupAbandonedBaskets',
       null,
-      { actor: admin }
+      { virtualUser: admin }
     )
 
     // The scheduled sweep that replaced the setInterval poller. It fires the
@@ -153,7 +153,7 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
           object: { id: 'pi_coverage', metadata: { orderId: 'ord_probe' } },
         },
       },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
 
     // The refund path. `refundWorkflow` had `checkOrderRefundable` and
@@ -164,7 +164,7 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
       'refunds an order',
       'startRefund',
       { orderId: 'ord_probe', reason: 'requested_by_customer' },
-      { actor: actors.priya }
+      { virtualUser: virtualUsers.priya }
     )
 
     // Both versions of the same route. `getItem@v1` and `getItem@v2` are the
@@ -174,21 +174,21 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
       'reads item v1',
       'getItemV1',
       { itemId: 'itm_mug' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
     await scenario.do(
       'reads item v2',
       'getItemV2',
       { itemId: 'itm_mug' },
-      { actor: actors.visitor }
+      { virtualUser: virtualUsers.visitor }
     )
 
     await scenario.do('runs the scheduled sweep', 'sweepLowStock', null, {
-      actor: admin,
+      virtualUser: admin,
     })
 
     await scenario.do('reads the stored profile', 'getProfile', null, {
-      actor: actors.alex,
+      virtualUser: virtualUsers.alex,
     })
 
     // The MCP tools. Annotated unreachable until `pikku dev` was taught to hand
@@ -198,25 +198,25 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
       'calls listCategoriesTool',
       'callsMcpTool',
       { tool: 'listCategoriesTool', args: '{}' },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
     await scenario.then(
       'calls listItemsTool',
       'callsMcpTool',
       { tool: 'listItemsTool', args: '{\"limit\":5}' },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
     await scenario.then(
       'calls getItemTool',
       'callsMcpTool',
       { tool: 'getItemTool', args: '{\"itemId\":\"itm_mug\"}' },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
     await scenario.then(
       'calls getItemForAI',
       'callsMcpTool',
       { tool: 'getItemForAI', args: '{\"itemId\":\"itm_mug\"}' },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
     await scenario.then(
       'calls updateStockTool',
@@ -225,7 +225,7 @@ export const everyFunctionRuns = pikkuScenario<void, { checked: number }>({
         tool: 'updateStockTool',
         args: '{\"itemId\":\"itm_mug\",\"stock\":42}',
       },
-      { actor: actors.alex }
+      { virtualUser: virtualUsers.alex }
     )
 
     logger.info({

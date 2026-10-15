@@ -277,7 +277,7 @@ export type WorkflowsMeta = Record<
      */
     asserts?: boolean
     skip?: string
-    actors?: string[]
+    virtualUsers?: string[]
   }
 >
 
@@ -287,7 +287,7 @@ export interface WorkflowRuntimeMeta {
   source: 'dsl' | 'complex' | 'graph' | 'scenario'
   description?: string
   tags?: string[]
-  actors?: string[]
+  virtualUsers?: string[]
   nodes?: Record<string, any>
   entryNodeIds?: string[]
   graphHash?: string

@@ -24,8 +24,8 @@ import { pikkuFunc } from '#pikku/function'
 //     trace_id       TEXT,
 //     transaction_id TEXT,
 //     query_id       TEXT,
-//     actor_user_id  TEXT,
-//     actor_org_id   TEXT,
+//     performed_by_user_id  TEXT,
+//     performed_by_org_id   TEXT,
 //     tables         TEXT,  -- JSON array of table names touched
 //     changed_cols   TEXT,  -- JSON array of changed column names
 //     event          TEXT,  -- custom event label
@@ -34,7 +34,7 @@ import { pikkuFunc } from '#pikku/function'
 //   );
 //
 //   CREATE INDEX IF NOT EXISTS idx_audit_occurred_at ON audit (occurred_at);
-//   CREATE INDEX IF NOT EXISTS idx_audit_actor       ON audit (actor_user_id) WHERE actor_user_id IS NOT NULL;
+//   CREATE INDEX IF NOT EXISTS idx_audit_performed_by       ON audit (performed_by_user_id) WHERE performed_by_user_id IS NOT NULL;
 //   CREATE INDEX IF NOT EXISTS idx_audit_function    ON audit (function_id)   WHERE function_id  IS NOT NULL;
 //
 // Then run `pikku db migrate` — it applies the migration and regenerates the schema types.
@@ -65,7 +65,7 @@ import { pikkuFunc } from '#pikku/function'
 
 // STEP 2 — turn capture on for the functions worth auditing. `audit: true` is what
 // wraps kysely so every table write inside this function is recorded (old values,
-// changed columns, actor). Put it on MUTATIONS that matter — approvals, deletions,
+// changed columns, who did it). Put it on MUTATIONS that matter — approvals, deletions,
 // permission and money changes — not on every list query.
 export const updateInvoiceStatus = pikkuFunc({
   audit: true,
@@ -110,7 +110,7 @@ export const listAuditEvents = pikkuFunc({
   readonly: true,
   input: z.object({
     limit: z.number().int().min(1).max(200).default(50),
-    actorUserId: z.string().optional(),
+    performedByUserId: z.string().optional(),
   }),
   output: z.object({
     events: z.array(
@@ -118,7 +118,7 @@ export const listAuditEvents = pikkuFunc({
         auditId: z.string(),
         occurredAt: z.string(),
         type: z.string(),
-        actorUserId: z.string().nullable(),
+        performedByUserId: z.string().nullable(),
         tables: z.array(z.string()),
         changedCols: z.array(z.string()),
       }),
@@ -128,10 +128,10 @@ export const listAuditEvents = pikkuFunc({
   func: async ({ kysely }, input) => {
     let query = kysely
       .selectFrom('audit')
-      .select(['auditId', 'occurredAt', 'type', 'actorUserId', 'tables', 'changedCols'])
+      .select(['auditId', 'occurredAt', 'type', 'performedByUserId', 'tables', 'changedCols'])
       .orderBy('occurredAt', 'desc')
       .limit(input.limit)
-    if (input.actorUserId) query = query.where('actorUserId', '=', input.actorUserId)
+    if (input.performedByUserId) query = query.where('performedByUserId', '=', input.performedByUserId)
     const rows = await query.execute()
 
     // `tables` / `changed_cols` are stored as JSON text, so they arrive as strings.
@@ -141,7 +141,7 @@ export const listAuditEvents = pikkuFunc({
         auditId: r.auditId,
         occurredAt: r.occurredAt,
         type: r.type,
-        actorUserId: r.actorUserId,
+        performedByUserId: r.performedByUserId,
         tables: parseList(r.tables),
         changedCols: parseList(r.changedCols),
       })),

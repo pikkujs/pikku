@@ -36,44 +36,44 @@ export const webFlagHidesAndRevealsAPanelScenario = pikkuScenario<
   description:
     'The React client renders what the same wire the function reads answers',
   tags: ['scenario', 'feature-flags', 'browser'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do(
       'the operator kills the report',
       'admin:flagSetEnabled',
       { name: 'quarterlyReports', enabled: false, note: 'e2e web app' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     await scenario.given(
       'the visitor opens the app',
       'opensConsolePage',
       { path: APP, waitFor: { testId: 'app' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'no panel is rendered for a feature that is off',
       'doesNotSeeTestId',
       { testId: 'quarterly-panel' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'the operator switches it on',
       'admin:flagSetEnabled',
       { name: 'quarterlyReports', enabled: true },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.when(
       'the visitor reloads',
       'opensConsolePage',
       { path: APP, waitFor: { testId: 'app' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'the panel is there',
       'seesTestId',
       { testId: 'quarterly-panel' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     return { revealed: true }
@@ -97,18 +97,18 @@ export const webPageViewsReachTheDestinationScenario = pikkuScenario<
   description:
     'The client buffers, sends on its own timer, and keeps one device id',
   tags: ['scenario', 'analytics', 'browser'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.given(
       'the visitor opens the app',
       'opensConsolePage',
       { path: APP, waitFor: { testId: 'app' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.given(
       'and accepts analytics',
       'clicksTestId',
       { testId: 'consent-accept' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     // Reloaded, then emptied, so every event asserted on below was fired by a
     // page that already had consent. Whether the view fired *before* the
@@ -118,30 +118,30 @@ export const webPageViewsReachTheDestinationScenario = pikkuScenario<
       'and comes back with the banner answered',
       'opensConsolePage',
       { path: APP, waitFor: { testId: 'app' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     await scenario.when(
       'they open pricing',
       'clicksTestId',
       { testId: 'nav-pricing' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.when(
       'and the client sends',
       'waitsForAnalyticsFlush',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const recorded = await scenario.do(
       'reads the destination back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'both views arrived, as the client’s own events',
@@ -162,7 +162,7 @@ export const webPageViewsReachTheDestinationScenario = pikkuScenario<
       'the visitor was given a device id',
       'readsBrowserCookie',
       { name: DEVICE_COOKIE },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then('it is there', 'expectsBrowserCookie', {
       read: cookie,
@@ -188,53 +188,52 @@ export const webRefusingConsentSendsNothingScenario = pikkuScenario<
   title: 'A visitor who refuses is neither measured nor identified',
   description: 'The buffer is discarded and no device id is ever written',
   tags: ['scenario', 'analytics', 'browser'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do('empties the destinations', 'resetAnalytics', null, {
-      actor: actors.guest,
+      virtualUser: virtualUsers.guest,
     })
 
     await scenario.given(
       'the visitor opens the app',
       'opensConsolePage',
       { path: APP, waitFor: { testId: 'app' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.when(
       'and refuses analytics',
       'clicksTestId',
       { testId: 'consent-refuse' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.when(
       'then browses on',
       'clicksTestId',
       { testId: 'nav-pricing' },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.when(
       'and the client has every chance to send',
       'waitsForAnalyticsFlush',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const recorded = await scenario.do(
       'reads the destination back',
       'readAnalytics',
       null,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
-    await scenario.then(
-      'nothing was measured',
-      'expectsRecordedEvents',
-      { recorded, all: [] }
-    )
+    await scenario.then('nothing was measured', 'expectsRecordedEvents', {
+      recorded,
+      all: [],
+    })
 
     const cookie = await scenario.then(
       'and nothing was stored on the device',
       'readsBrowserCookie',
       { name: DEVICE_COOKIE },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then('the jar is empty of it', 'expectsBrowserCookie', {
       read: cookie,

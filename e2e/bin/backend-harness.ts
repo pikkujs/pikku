@@ -28,8 +28,8 @@ const findFreePort = (): Promise<number> =>
   })
 
 /**
- * The defaults every e2e entry point runs under. `SCENARIO_ACTOR_SECRET` is
- * the root this app's actor sign-in route derives each persona's credential
+ * The defaults every e2e entry point runs under. `SCENARIO_VIRTUAL_USER_SECRET` is
+ * the root this app's virtual user sign-in route derives each virtual user's credential
  * from — long enough to be key material, or every sign-in is refused before it
  * is compared. `PIKKU_MOCK_LLM`
  * scripts the model instead of calling OpenAI, and `FABRIC_API_URL` points the
@@ -40,8 +40,8 @@ const findFreePort = (): Promise<number> =>
  * Opt out with PIKKU_MOCK_LLM=0 to run the @ai-live tier against a real key.
  */
 export const applyTestEnvDefaults = (): void => {
-  process.env.SCENARIO_ACTOR_SECRET ??=
-    'e2e-actor-secret-long-enough-to-derive-from'
+  process.env.SCENARIO_VIRTUAL_USER_SECRET ??=
+    'e2e-virtual-user-secret-long-enough-to-derive-from'
   process.env.PIKKU_MOCK_LLM ??= '1'
   process.env.FABRIC_API_URL ??= mockRegistryUrl
 }

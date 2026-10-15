@@ -11,11 +11,11 @@ import WebSocket from 'ws'
 
 import { CorePikkuWebsocket } from '@pikku/websocket'
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
-import { deriveActorSecret } from '@pikku/core/services'
+import { deriveVirtualUserSecret } from '@pikku/core/services'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
-import { personaConfigs } from '../../.pikku/scenarios/pikku-personas.gen.js'
+import { virtualUserConfigs } from '../../.pikku/scenarios/pikku-virtual-users.gen.js'
 
 let server: Awaited<ReturnType<typeof startBackend>>
 let apiUrl: string
@@ -26,19 +26,19 @@ let token: string
  * server will run any.
  */
 const signIn = async (email: string, name: string): Promise<string> => {
-  const res = await fetch(`${apiUrl}/api/auth/sign-in/actor`, {
+  const res = await fetch(`${apiUrl}/api/auth/sign-in/virtual-user`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: apiUrl },
     body: JSON.stringify({
       email,
       name,
-      secret: await deriveActorSecret(
-        process.env.SCENARIO_ACTOR_SECRET!,
+      secret: await deriveVirtualUserSecret(
+        process.env.SCENARIO_VIRTUAL_USER_SECRET!,
         email
       ),
     }),
   })
-  assert.ok(res.ok, `actor sign-in failed: ${res.status}`)
+  assert.ok(res.ok, `virtualUser sign-in failed: ${res.status}`)
 
   const bearer = res.headers.get('set-auth-token')
   assert.ok(bearer, 'expected better-auth to issue a bearer token')
@@ -96,7 +96,10 @@ describe('CLI over a channel', () => {
     server = await startBackend()
     await server.waitUntilReady({ timeoutMs: 300_000 })
     apiUrl = server.apiUrl
-    token = await signIn(personaConfigs.admin.email, personaConfigs.admin.name)
+    token = await signIn(
+      virtualUserConfigs.admin.email,
+      virtualUserConfigs.admin.name
+    )
   })
 
   after(async () => {

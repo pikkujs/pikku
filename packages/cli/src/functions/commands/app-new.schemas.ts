@@ -11,7 +11,7 @@ import { z } from 'zod'
 export const PikkuAppNewInput = z.object({
   slug: z.string(),
   serves: z.string().optional(),
-  personas: z.string().optional(),
+  virtualUsers: z.string().optional(),
   template: z.string().optional(),
   primary: z.boolean().optional(),
   install: z.boolean().optional(),

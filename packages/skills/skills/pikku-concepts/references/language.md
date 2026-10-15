@@ -5,11 +5,11 @@ Three different things in a Pikku project have a human language, and they are
 prevent, and it has already shipped in a real product — the failure is at the
 bottom.
 
-| Axis            | What it covers                                                                                                                                                    | What decides it                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Branch names and commit messages.                                                | Nothing. **Always English.** There is no setting.                                                           |
-| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/persona descriptions. | `metaLocale` in `pikku.config.json`. Defaults to `en`.                                                      |
-| **Product UI**  | Every string the app shows a user.                                                                                                                                | `messages/<locale>.json`, with `active.json`'s `defaultLocale` choosing what a first-time visitor opens in. |
+| Axis            | What it covers                                                                                                                                                         | What decides it                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Branch names and commit messages.                                                     | Nothing. **Always English.** There is no setting.                                                           |
+| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/virtual-user descriptions. | `metaLocale` in `pikku.config.json`. Defaults to `en`.                                                      |
+| **Product UI**  | Every string the app shows a user.                                                                                                                                     | `messages/<locale>.json`, with `active.json`'s `defaultLocale` choosing what a first-time visitor opens in. |
 
 ## Identifiers are English, and nothing changes that
 
@@ -19,7 +19,7 @@ all get `getOverview`, `AttentionStripe`, `case`, `event`.
 
 This is not linguistic preference, it is mechanics. Identifiers are the surface
 every other tool binds to: the generated `#pikku/*` clients, `pikku info` and
-`pikku meta`, the RPC map a scenario's `actor.invoke` is typed over, the
+`pikku meta`, the RPC map a scenario's `virtualUser.invoke` is typed over, the
 generated SQL types, every skill and every agent that ever picks the project up.
 A `vorgang` table types as `Vorgang` in Kysely and reads as noise to everyone who
 did not name it, and unlike a string it cannot be translated later — renaming an

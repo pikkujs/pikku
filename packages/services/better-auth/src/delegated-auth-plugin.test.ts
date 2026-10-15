@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
-import { pikkuActor } from './actor-plugin.js'
+import { pikkuVirtualUser } from './virtual-user-plugin.js'
 import {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,
@@ -43,7 +43,7 @@ const makeAuth = (
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      pikkuActor({ secret: undefined }),
+      pikkuVirtualUser({ secret: undefined }),
       pikkuDelegatedAuth({
         scopeService,
         authenticate: async ({ email, password, apiKey }) => {
@@ -216,15 +216,15 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
     assert.equal(db.session!.length, 0)
   })
 
-  test('refuses synthetic actor rows', async () => {
+  test('refuses synthetic virtual user rows', async () => {
     const db: Record<string, any[]> = {
       user: [
         {
           id: 'u-fab',
           email: 'jane@corp.com',
-          name: 'Actor',
+          name: 'VirtualUser',
           emailVerified: true,
-          actor: true,
+          virtualUser: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

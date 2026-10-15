@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import type { ActorSession } from './actor-session.js'
+import type { VirtualUserSession } from './virtual-user-session.js'
 
 /**
  * The "every page loads without errors" sweep — the baseline reliability gate.
@@ -63,7 +63,10 @@ function isAbortedRequest(failedRequest: string): boolean {
   return /(?:ERR_ABORTED|net::ERR_FAILED|aborted)/i.test(failedRequest)
 }
 
-export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
+export async function sweepAllPages(
+  virtualUser: VirtualUserSession,
+  repoRoot: string
+) {
   const routes = staticRoutes(repoRoot)
   const failures: string[] = []
 
@@ -76,10 +79,10 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
     // and fails app RPCs. When the only problems look transient, wait for the
     // server to be ready again and retry; a real error still fails.
     for (let attempt = 0; attempt < 3; attempt++) {
-      actor.resetIssues()
+      virtualUser.resetIssues()
       let status: number | null = null
       try {
-        status = await actor.gotoApp(path)
+        status = await virtualUser.gotoApp(path)
       } catch (err) {
         problems = [
           `navigation threw: ${err instanceof Error ? err.message : String(err)}`,
@@ -92,7 +95,7 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
 
       let pathname = path
       try {
-        pathname = new URL(actor.page.url()).pathname
+        pathname = new URL(virtualUser.page.url()).pathname
       } catch {
         // keep the requested path
       }
@@ -103,7 +106,7 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
         )
       }
 
-      const issues = actor.takeIssues()
+      const issues = virtualUser.takeIssues()
       const failedRequests = issues.failedRequests.filter(
         (r) => !isAbortedRequest(r)
       )
@@ -132,7 +135,7 @@ export async function sweepAllPages(actor: ActorSession, repoRoot: string) {
       const transient =
         aborts > 0 || gatewayErrors.length > 0 || redirectedToLogin
       if (!transient || attempt === 2) break
-      await actor.waitForServerReady()
+      await virtualUser.waitForServerReady()
     }
 
     if (problems.length)

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
  * hook has to carry a type annotation, and every other primitive infers.
  *
  * So the contract here is inference, not registration: written inline through
- * `pikkuScenarioHook`, the wire is typed (its `actors` are reachable, a member
+ * `pikkuScenarioHook`, the wire is typed (its `virtualUsers` are reachable, a member
  * that does not exist is an error) and the result still satisfies `before` /
  * `after` on a scenario config.
  */
@@ -51,7 +51,7 @@ type ScenarioWire<Ctx = unknown> = {
     then: (label: string, step: string, data: unknown) => Promise<unknown>
     context: ScenarioContext<Ctx>
   }
-  actors: { admin: { invoke: (name: string, data: unknown) => Promise<unknown> } }
+  virtualUsers: { admin: { invoke: (name: string, data: unknown) => Promise<unknown> } }
 }
 
 type PikkuFunctionScenario<In = unknown, Out = never, Ctx = Out> = (
@@ -89,8 +89,8 @@ describe('pikkuScenarioHook', () => {
   test('an inline hook needs no annotation and gets a typed wire', () => {
     assert.deepEqual(
       typeErrors(`
-        export const cleansUp = pikkuScenarioHook(async (_services, _data, { actors }) => {
-          await actors.admin.invoke('console:credentialDelete', { name: 'fake-crm' })
+        export const cleansUp = pikkuScenarioHook(async (_services, _data, { virtualUsers }) => {
+          await virtualUsers.admin.invoke('console:credentialDelete', { name: 'fake-crm' })
         })
       `),
       []
@@ -112,8 +112,8 @@ describe('pikkuScenarioHook', () => {
   test('the result satisfies a scenario config hook slot', () => {
     assert.deepEqual(
       typeErrors(`
-        const cleansUp = pikkuScenarioHook(async (_services, _data, { actors }) => {
-          void actors
+        const cleansUp = pikkuScenarioHook(async (_services, _data, { virtualUsers }) => {
+          void virtualUsers
         })
         declare const takesHook: (hook: PikkuScenarioHook) => void
         takesHook(cleansUp)

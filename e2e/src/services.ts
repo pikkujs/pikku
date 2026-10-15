@@ -340,14 +340,14 @@ export const createSingletonServices = pikkuServices(
     })
 
     // The e2e suite has no SMTP relay: under `pikku dev --test` the email
-    // service is a recording fake whose support-actor recipient always fails,
+    // service is a recording fake whose support-virtual-user recipient always fails,
     // so scenarios can assert sends (expectService) and walk the error branch
     // (expectError). Outside test runs the dev-provided service is forwarded.
     const email = isTestRun()
       ? stub<EmailService>('emailService', {
           send: async ({ to }) => {
-            if (to === 'support@actors.local') {
-              throw new Error('smtp relay declined for support actor')
+            if (to === 'support@virtualuser.local') {
+              throw new Error('smtp relay declined for support virtual user')
             }
             return { messageId: 'stubbed-message' }
           },

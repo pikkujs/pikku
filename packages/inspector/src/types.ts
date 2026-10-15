@@ -27,7 +27,7 @@ import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
 import type { FeatureFlagDefinitions } from '@pikku/core/flag'
-import type { PersonaDefinitions } from '@pikku/core/persona'
+import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
 import type { FunctionsMeta } from '@pikku/core/services'
@@ -852,8 +852,8 @@ export interface InspectorState {
     definitions: FeatureFlagDefinitions
     files: Set<string>
   }
-  personas: {
-    definitions: PersonaDefinitions
+  virtualUsers: {
+    definitions: VirtualUserDefinitions
     files: Set<string>
     signInFiles: Set<string>
   }

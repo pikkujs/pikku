@@ -10,7 +10,7 @@ import type { Role } from './scope-service.js'
  *
  * Shared rather than left to each implementation because the rule is a
  * contract, not a policy: a store that lets the console delete `buyer` makes
- * every persona and scenario written against `buyer` silently stop testing
+ * every virtual user and scenario written against `buyer` silently stop testing
  * what it claims to, and nothing fails at the point of the mistake. Two
  * implementations disagreeing about that would be worse than either rule.
  *

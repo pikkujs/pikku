@@ -1,38 +1,38 @@
 import { pikkuScenario, pikkuScenarioHook } from '#pikku/scenarios'
 
 // @snippet start scenarioBasics
-// A scenario is a workflow whose steps run as real users ("actors") over the
+// A scenario is a workflow whose steps run as real users ("virtualUsers") over the
 // real transport — sign-in, auth middleware, permissions and serialization are
 // all exercised end-to-end. The same flow doubles as an e2e test and a
-// staging/production health check. Actors are registered in pikku.config.json.
+// staging/production health check. Virtual users are registered in pikku.config.json.
 export const shopperBuysAnItem = pikkuScenario({
   title: 'Shopper buys an item',
   description: 'Browse the catalogue, fill a basket and pay for an order.',
   tags: ['checkout'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.shopper) {
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.shopper) {
       throw new Error(
-        'shopperBuysAnItem needs the `shopper` actor — run via `pikku scenario run`'
+        'shopperBuysAnItem needs the `shopper` virtual user — run via `pikku scenario run`'
       )
     }
-    const shopper = actors.shopper
+    const shopper = virtualUsers.shopper
 
     // @snippet start scenarioSteps
-    // Each step names what the actor is trying to achieve, the exposed RPC
-    // that achieves it, and who performs it. The call goes through the actor's
+    // Each step names what the virtual user is trying to achieve, the exposed RPC
+    // that achieves it, and who performs it. The call goes through the virtual user's
     // authenticated client — never internal dispatch.
     const basket = await scenario.do(
       'Shopper opens their basket',
       'getBasket',
       {},
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     const catalogue = await scenario.do(
       'Shopper browses the catalogue',
       'listItems',
       { search: 'mug' },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
     if (catalogue.items.length === 0)
       throw new Error('Catalogue has no mugs to buy')
@@ -46,7 +46,7 @@ export const shopperBuysAnItem = pikkuScenario({
         itemId: catalogue.items[0]!.itemId,
         quantity: 1,
       },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
     const order = await scenario.do(
@@ -61,17 +61,17 @@ export const shopperBuysAnItem = pikkuScenario({
           country: 'GB',
         },
       },
-      { actor: shopper }
+      { virtualUser: shopper }
     )
 
-    // Durable polling step: re-invokes the RPC as the actor until the
+    // Durable polling step: re-invokes the RPC as the virtual user until the
     // predicate passes, or `within` elapses and fails the scenario.
     await scenario.expectEventually(
       'Order is paid',
       'getOrder',
       { orderId: order.orderId },
       (o: { status: string }) => o.status === 'paid',
-      { actor: shopper, within: '30s', interval: 500 }
+      { virtualUser: shopper, within: '30s', interval: 500 }
     )
 
     logger.info(
@@ -92,10 +92,10 @@ export const shopperBuysAnItem = pikkuScenario({
  * up in the report as something the shopper did.
  */
 const emptiesTheBasket = pikkuScenarioHook(
-  async (_services, _data, { actors }) => {
-    const basket = await actors.shopper.invoke('getBasket', {})
+  async (_services, _data, { virtualUsers }) => {
+    const basket = await virtualUsers.shopper.invoke('getBasket', {})
     for (const item of basket.items) {
-      await actors.shopper.invoke('removeFromBasket', {
+      await virtualUsers.shopper.invoke('removeFromBasket', {
         basketId: basket.basketId,
         itemId: item.itemId,
       })
@@ -105,21 +105,21 @@ const emptiesTheBasket = pikkuScenarioHook(
 // @snippet end scenarioHook
 
 // @snippet start scenarioConverse
-// Actors can also hold a free-form conversation with one of your AI agents,
-// in persona. The actor drives the agent over the real transport, answers its
+// Virtual users can also hold a free-form conversation with one of your AI agents,
+// in virtual user. The virtual user drives the agent over the real transport, answers its
 // tool-approval requests, and returns a verdict on whether the task was met.
 export const shopperAsksTheAssistant = pikkuScenario({
   before: emptiesTheBasket,
   title: 'Shopper gets help from the assistant',
   description: 'The shop assistant finds a product and adds it to the basket.',
   tags: ['agents'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.shopper) {
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.shopper) {
       throw new Error(
-        'shopperAsksTheAssistant needs the `shopper` actor — run via `pikku scenario run`'
+        'shopperAsksTheAssistant needs the `shopper` virtual user — run via `pikku scenario run`'
       )
     }
-    const shopper = actors.shopper
+    const shopper = virtualUsers.shopper
 
     // @snippet start converseSteps
     const verdict = await scenario.do(
@@ -137,13 +137,13 @@ export const shopperAsksTheAssistant = pikkuScenario({
       throw new Error(`Assistant flow failed: ${verdict.reasoning}`)
     }
 
-    // The verdict is the persona's judgement — follow up with a deterministic
-    // check through the same actor.
+    // The verdict is the virtual user's judgement — follow up with a deterministic
+    // check through the same virtual user.
     const basket = await scenario.do(
       'Basket really has the mug',
       'getBasket',
       {},
-      { actor: shopper }
+      { virtualUser: shopper }
     )
     if (basket.itemCount === 0)
       throw new Error('Assistant claimed success but the basket is empty')

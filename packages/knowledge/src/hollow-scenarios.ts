@@ -13,8 +13,8 @@ import { join } from 'node:path'
 //
 // The trap this walked into first: that shape is NOT hollow by itself. `opensPage` reports
 // where the browser LANDED rather than forcing it, so `is on /app` genuinely asserts that
-// the route guard did not bounce a signed-in actor to `/app/login` — it is precisely the
-// starter template's `signedInActorReachesTheAppScenario`, which is honest work. The two
+// the route guard did not bounce a signed-in virtual user to `/app/login` — it is precisely the
+// starter template's `signedInVirtualUserReachesTheAppScenario`, which is honest work. The two
 // scenarios are structurally identical and differ only in what they CLAIM, so depth is
 // reported here and judged against the plan's claim in `plan-meta.ts`, never alone.
 
@@ -47,7 +47,7 @@ type ScenarioMeta = {
  *
  * - `asserts` — it drives something and checks a fact it could not have assumed.
  * - `reachability-only` — it navigates, then asserts it is on a page it opened. Real proof
- *   that a guard let the actor through, and nothing more. Legitimate for an auth scenario,
+ *   that a guard let the virtual user through, and nothing more. Legitimate for an auth scenario,
  *   a lie when it stands in for a user doing something.
  * - `no-assertion` — it acts and checks nothing. pikku fails this at inspection (PKU680,
  *   critical as of inspector 0.12.52); reported anyway because that severity is a property

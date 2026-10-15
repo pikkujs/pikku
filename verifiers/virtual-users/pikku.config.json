@@ -7,6 +7,6 @@
     "virtualUser": true
   },
   "scenarios": {
-    "emailDomain": "actors.local"
+    "emailDomain": "virtualuser.invalid"
   }
 }

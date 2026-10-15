@@ -110,10 +110,10 @@ let warnedUnconfigured = false
  * `impersonation` is opt-in, and omitting it is silent: the header is read by
  * nobody and the request runs as the real caller. That is exactly what a
  * deployed stage's scenario and virtual-user runs do — they sign in as an
- * operator and name the persona in this header — so an app that
- * never passed the option runs every persona as the operator, a row with no
+ * operator and name the virtual user in this header — so an app that
+ * never passed the option runs every virtual user as the operator, a row with no
  * membership anywhere, and the only symptom is assertions failing against
- * data the persona should have been able to see.
+ * data the virtual user should have been able to see.
  *
  * Once per process: a scenario run sends the header on every request, and the
  * misconfiguration it reports does not change between them.

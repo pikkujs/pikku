@@ -20,7 +20,7 @@ export interface Frontend {
   kind?: string
   dev?: { command: string[]; port: number; healthPath: string }
   serves?: string
-  personas?: string[]
+  virtualUsers?: string[]
   planSlug?: string
 }
 
@@ -85,9 +85,9 @@ export function nextPort(frontends: Record<string, Frontend>): number {
 export function refuseNewApp(
   slug: string,
   serves: string,
-  personas: string[],
+  virtualUsers: string[],
   frontends: Record<string, Frontend>,
-  personaApps: Map<string, string>
+  virtualUserApps: Map<string, string>
 ): string | null {
   if (APP_SHAPED.has(serves)) {
     return (
@@ -120,14 +120,15 @@ export function refuseNewApp(
     return (
       `the "${colleagues[0]}" app already serves ${serves}. People sharing an ` +
       'audience share ONE app and differ by nav and permitted actions — add these ' +
-      `personas to "${colleagues[0]}" instead. A new app is for a group that app ` +
+      `virtualUsers to "${colleagues[0]}" instead. A new app is for a group that app ` +
       'is not for.'
     )
   }
 
   for (const [otherSlug, other] of Object.entries(frontends)) {
-    const taken = personas.filter(
-      (p) => personaApps.get(p) === otherSlug || other.personas?.includes(p)
+    const taken = virtualUsers.filter(
+      (p) =>
+        virtualUserApps.get(p) === otherSlug || other.virtualUsers?.includes(p)
     )
     if (taken.length > 0) {
       return (
@@ -140,11 +141,11 @@ export function refuseNewApp(
   return null
 }
 
-/** Where one persona's `{ … }` body sits in the source, by declaration id. */
-function personaEntries(
+/** Where one virtual user's `{ … }` body sits in the source, by declaration id. */
+function virtualUserEntries(
   source: string
 ): { id: string; open: number; close: number }[] {
-  const call = /definePersonas\s*\(\s*\{/.exec(source)
+  const call = /defineVirtualUsers\s*\(\s*\{/.exec(source)
   if (!call) return []
   const entries: { id: string; open: number; close: number }[] = []
   let i = call.index + call[0].length
@@ -169,18 +170,18 @@ function personaEntries(
   return entries
 }
 
-export const personasSourcePath = (repoDir: string): string =>
-  existsSync(join(repoDir, 'packages', 'functions', 'src', 'personas.ts'))
-    ? join(repoDir, 'packages', 'functions', 'src', 'personas.ts')
-    : join(repoDir, 'src', 'personas.ts')
+export const virtualUsersSourcePath = (repoDir: string): string =>
+  existsSync(join(repoDir, 'packages', 'functions', 'src', 'virtual-users.ts'))
+    ? join(repoDir, 'packages', 'functions', 'src', 'virtual-users.ts')
+    : join(repoDir, 'src', 'virtual-users.ts')
 
-/** Which app each declared persona already signs into. */
-export function personaAppsInSource(repoDir: string): Map<string, string> {
-  const path = personasSourcePath(repoDir)
+/** Which app each declared virtual user already signs into. */
+export function virtualUserAppsInSource(repoDir: string): Map<string, string> {
+  const path = virtualUsersSourcePath(repoDir)
   const apps = new Map<string, string>()
   if (!existsSync(path)) return apps
   const source = readFileSync(path, 'utf8')
-  for (const entry of personaEntries(source)) {
+  for (const entry of virtualUserEntries(source)) {
     const app = /(?:^|[\s,{])app\s*:\s*['"`]([^'"`]+)['"`]/.exec(
       source.slice(entry.open, entry.close)
     )
@@ -189,31 +190,33 @@ export function personaAppsInSource(repoDir: string): Map<string, string> {
   return apps
 }
 
-/** Every persona id `definePersonas({…})` declares. */
-export function personasNamedInSource(repoDir: string): Set<string> {
-  const path = personasSourcePath(repoDir)
+/** Every virtual user id `defineVirtualUsers({…})` declares. */
+export function virtualUsersNamedInSource(repoDir: string): Set<string> {
+  const path = virtualUsersSourcePath(repoDir)
   if (!existsSync(path)) return new Set()
-  return new Set(personaEntries(readFileSync(path, 'utf8')).map((e) => e.id))
+  return new Set(
+    virtualUserEntries(readFileSync(path, 'utf8')).map((e) => e.id)
+  )
 }
 
 /**
- * Record on each named persona that they sign into `app`.
+ * Record on each named virtual user that they sign into `app`.
  *
- * The declaration is where this belongs: `persona.app` is the field the
- * scenario runner already reads to pick an actor's base url, so keeping a
+ * The declaration is where this belongs: `virtualUser.app` is the field the
+ * scenario runner already reads to pick a virtual user's base url, so keeping a
  * second list beside the app leaves the two able to disagree about where a
  * browser step lands.
  */
-export function assignPersonaApp(
+export function assignVirtualUserApp(
   repoDir: string,
-  personaIds: string[],
+  virtualUserIds: string[],
   app: string
 ): boolean {
-  const path = personasSourcePath(repoDir)
+  const path = virtualUsersSourcePath(repoDir)
   if (!existsSync(path)) return false
   const source = readFileSync(path, 'utf8')
-  const wanted = new Set(personaIds)
-  const edits = personaEntries(source)
+  const wanted = new Set(virtualUserIds)
+  const edits = virtualUserEntries(source)
     .filter((entry) => wanted.has(entry.id))
     .reverse()
   if (edits.length === 0) return false

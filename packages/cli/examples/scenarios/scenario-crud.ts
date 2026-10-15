@@ -7,28 +7,28 @@
 import { pikkuScenario } from '#pikku/scenarios'
 
 //~ create → assert it's in the list → update → assert the change → delete →
-//~ assert it's gone. The 3rd arg is `{ scenario, actors }` (NOT `workflow`).
-//~ NO identity id in {data} — the actor's SESSION owns the row; feeding your own
+//~ assert it's gone. The 3rd arg is `{ scenario, virtualUsers }` (NOT `workflow`).
+//~ NO identity id in {data} — the virtual user's SESSION owns the row; feeding your own
 //~ userId/orgId makes write+read agree by construction and hides the real bug.
 export const contactCrudScenario = pikkuScenario<void, { contactId: string }>({
   title: 'Contact CRUD (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.visitor) throw new Error('needs run actors — run via `pikku scenario run <env>`')
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.visitor) throw new Error('needs run virtual users — run via `pikku scenario run <env>`')
     logger.debug('contact crud starting')
     //~ CREATE — no identity id in {data}; the session owns it.
     const created = await scenario.do(
       'create a contact',
       'createContact',
       { name: 'Ada Lovelace', email: 'ada@example.com' },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     //~ READ-BACK — the new row MUST appear, or the write didn't land where the read looks.
     const list = await scenario.do(
       'it shows in the list',
       'listContacts',
       {},
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     if (!list.contacts.some((c) => c.id === created.contact.id)) {
       throw new Error(
@@ -40,13 +40,13 @@ export const contactCrudScenario = pikkuScenario<void, { contactId: string }>({
       'rename the contact',
       'updateContact',
       { id: created.contact.id, name: 'Ada King' },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     const afterEdit = await scenario.do(
       'the rename persisted',
       'getContact',
       { id: created.contact.id },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     if (afterEdit.contact.name !== 'Ada King') {
       throw new Error(
@@ -58,13 +58,13 @@ export const contactCrudScenario = pikkuScenario<void, { contactId: string }>({
       'delete the contact',
       'deleteContact',
       { id: created.contact.id },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     const afterDelete = await scenario.do(
       'it is gone from the list',
       'listContacts',
       {},
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     if (afterDelete.contacts.some((c) => c.id === created.contact.id)) {
       throw new Error(

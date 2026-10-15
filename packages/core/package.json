@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.140",
+  "version": "0.12.141",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -42,7 +42,7 @@
     "./scenario/coverage": "./dist/wirings/workflow/scenario-coverage.js",
     "./workflow/timeline": "./dist/wirings/workflow/run-timeline.js",
     "./workflow/types": "./dist/wirings/workflow/workflow.types.js",
-    "./actor-flow": "./dist/wirings/actor-flow/index.js",
+    "./virtual-user/conversation": "./dist/wirings/virtual-user/conversation/index.js",
     "./virtual-user": "./dist/wirings/virtual-user/index.js",
     "./channel/local": "./dist/wirings/channel/local/index.js",
     "./channel/serverless": "./dist/wirings/channel/serverless/index.js",
@@ -67,7 +67,6 @@
     "./credential": "./dist/wirings/credential/index.js",
     "./scope": "./dist/wirings/scope/index.js",
     "./role": "./dist/wirings/role/index.js",
-    "./persona": "./dist/wirings/persona/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
     "./webhook": "./dist/wirings/webhook/index.js",

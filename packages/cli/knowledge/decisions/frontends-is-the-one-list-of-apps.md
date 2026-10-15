@@ -39,7 +39,7 @@ Now there is one list, in the OSS config:
   it for now, because a standalone build embeds a single frontend.
 - **`native`** (optional) makes it an installable app — see
   [a native app belongs to a frontend](a-native-app-belongs-to-a-frontend.md).
-- `primary`, `deploy`, `kind`, `dev`, `serves`, `personas` keep the meaning
+- `primary`, `deploy`, `kind`, `dev`, `serves`, `virtualUsers` keep the meaning
   Fabric and `pikku app new` already gave them.
 
 **What this rules out:** a `frontends` list in any Fabric-only file.

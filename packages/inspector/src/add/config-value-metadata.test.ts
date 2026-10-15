@@ -184,14 +184,14 @@ describe('config value gating flags', () => {
       [
         "import { defineSecret } from '@pikku/core'",
         "import { z } from 'zod'",
-        'export const ActorSchema = z.string()',
+        'export const VirtualUserSchema = z.string()',
         'export const StripeSchema = z.string()',
         'defineSecret({',
-        "  name: 'scenarioActor',",
-        "  displayName: 'Scenario Actor Secret',",
-        "  secretId: 'SCENARIO_ACTOR_SECRET',",
+        "  name: 'scenarioVirtualUser',",
+        "  displayName: 'Scenario Virtual user Secret',",
+        "  secretId: 'SCENARIO_VIRTUAL_USER_SECRET',",
         '  optional: true,',
-        '  schema: ActorSchema,',
+        '  schema: VirtualUserSchema,',
         '})',
         'defineSecret({',
         "  name: 'stripe',",
@@ -206,7 +206,7 @@ describe('config value gating flags', () => {
     try {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
       const optional = state.secrets.definitions.find(
-        (d) => d.secretId === 'SCENARIO_ACTOR_SECRET'
+        (d) => d.secretId === 'SCENARIO_VIRTUAL_USER_SECRET'
       )
       const required = state.secrets.definitions.find(
         (d) => d.secretId === 'STRIPE_KEY'

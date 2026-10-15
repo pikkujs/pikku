@@ -29,7 +29,7 @@ import {
   validateRemoteAddonAuth,
   validateScopeReferences,
   validateSystemRoleScopes,
-  validatePersonaRoles,
+  validateVirtualUserRoles,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -221,7 +221,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       definitions: [],
       files: new Set(),
     },
-    personas: {
+    virtualUsers: {
       definitions: [],
       files: new Set(),
       signInFiles: new Set(),
@@ -579,7 +579,7 @@ export const inspect = async (
     applyDeclaredScopes(state)
     validateScopeReferences(logger, state)
     validateSystemRoleScopes(logger, state)
-    validatePersonaRoles(logger, state)
+    validateVirtualUserRoles(logger, state)
     logger.endValidationPass?.()
   }
 

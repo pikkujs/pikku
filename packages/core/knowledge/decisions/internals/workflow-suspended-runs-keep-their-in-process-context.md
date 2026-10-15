@@ -11,7 +11,7 @@ tags: workflow
 `completed | failed | cancelled`. `suspended` is deliberately absent: a
 suspended run stops a poll loop but can still be resumed, so anything the
 process holds for it — the run context, an extension's per-run state such as a
-scenario's live actor clients — has to survive. `WORKFLOW_END_STATES`, which
+scenario's live virtual user clients — has to survive. `WORKFLOW_END_STATES`, which
 `awaitRunEnd` uses to stop reading, does include `suspended`, because a poller
 should not wait on a run that needs an external nudge. The two sets are not
 interchangeable.

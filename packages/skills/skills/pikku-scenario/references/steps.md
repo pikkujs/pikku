@@ -16,7 +16,7 @@ Browser bindings have their own file: **`references/browser.md`**.
 
 ## What a step is
 
-`scenario.do` can only name an RPC. A **step** is a named, typed unit of scenario behaviour whose body is an ordinary pikku function — so it can call several RPCs as its actor, assert, or drive a browser.
+`scenario.do` can only name an RPC. A **step** is a named, typed unit of scenario behaviour whose body is an ordinary pikku function — so it can call several RPCs as its virtual user, assert, or drive a browser.
 
 ```typescript
 import { pikkuScenarioStep } from '#pikku/scenarios'
@@ -28,9 +28,9 @@ export const buysAnApple = pikkuScenarioStep<
   name: 'buysAnApple',
   description: 'buys an apple',
   template: 'buys {qty} apples',
-  actor: true,
-  default: async (_services, { qty }, { actor }) => {
-    return await actor.invoke('placeOrder', { qty })
+  virtualUser: true,
+  default: async (_services, { qty }, { virtualUser }) => {
+    return await virtualUser.invoke('placeOrder', { qty })
   },
 })
 ```
@@ -44,7 +44,7 @@ await scenario.given(
   'buys an apple',
   'buysAnApple',
   { qty: 1 },
-  { actor: actors.shopper }
+  { virtualUser: virtualUsers.shopper }
 )
 // reporter renders: Given shopper buys 1 apples   ✓  412ms
 ```
@@ -53,14 +53,14 @@ Rules that bite:
 
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
-- **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
-- **A step that runs as somebody declares `actor: true`**, and the runner injects `wire.actor` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no persona to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse an actor's session. Dispatching a step that declared it without `{ actor: actors.x }` fails before the body runs (`ScenarioActorRequired`); a step that did not declare it has no `actor` on its wire at all.
+- **`virtualUser.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `virtualUser.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
+- **A step that runs as somebody declares `virtualUser: true`**, and the runner injects `wire.virtualUser` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no virtual user to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse a virtual user's session. Dispatching a step that declared it without `{ virtualUser: virtualUsers.x }` fails before the body runs (`ScenarioVirtualUserRequired`); a step that did not declare it has no `virtualUser` on its wire at all.
 - **`env` is optional on the wire**, because most steps need nothing from it. Narrow it with `requireScenarioEnv(scenarioStep)` from `#pikku/scenario` rather than a local guard — it names the step and says what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
 - **`description` documents the step; `template` is what the report renders.** `template`'s `{placeholders}` are filled from the input the step was called with, so one step reads differently for each call — `sees {state} addon {packageName}` reports as "sees available addon @pikku/addon-stripe". Reflect every input field in the template, and type the values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`). A placeholder with no value renders as nothing and the whitespace collapses.
-- **Never write the actor into the prose.** The reporter renders the actor as the sentence's subject, so a step authored as `` `'sam' creates the client` `` run as `{ actor: actors.sam }` reads "Given sam 'sam' creates the client" — and the hardcoded name desyncs the moment the call site changes actor. Write a bare third-person predicate (`creates the {name} client`) and let the actor supply the subject. Prose that opens with its own actor's key — quoted, capitalised or possessive — is `PKU681`; naming someone **else** mid-sentence ("sends nadia an invite") is ordinary prose and is left alone, as is an actor keyed after a role noun used as a noun ("creates the admin client" as `actors.admin`).
-- Prose precedence is `options.description` → the step's `template` → the step's own `description` → the positional step name. Repeated names get `#1`, `#2` ordinals, so a `for` loop over a data set is how you write a Scenario Outline. A loop-generated step name is not statically known, so it is matched back to its declaration by step function instead — which works as long as that function's call sites agree on their phase, actor and prose. Two call sites that disagree make the loop step report under its bare runtime name.
+- **Never write the virtual user into the prose.** The reporter renders the virtual user as the sentence's subject, so a step authored as `` `'sam' creates the client` `` run as `{ virtualUser: virtualUsers.sam }` reads "Given sam 'sam' creates the client" — and the hardcoded name desyncs the moment the call site changes virtual user. Write a bare third-person predicate (`creates the {name} client`) and let the virtual user supply the subject. Prose that opens with its own virtual user's key — quoted, capitalised or possessive — is `PKU681`; naming someone **else** mid-sentence ("sends nadia an invite") is ordinary prose and is left alone, as is a virtual user keyed after a role noun used as a noun ("creates the admin client" as `virtualUsers.admin`).
+- Prose precedence is `options.description` → the step's `template` → the step's own `description` → the positional step name. Repeated names get `#1`, `#2` ordinals, so a `for` loop over a data set is how you write a Scenario Outline. A loop-generated step name is not statically known, so it is matched back to its declaration by step function instead — which works as long as that function's call sites agree on their phase, virtual user and prose. Two call sites that disagree make the loop step report under its bare runtime name.
 
 ## What a step is given
 
@@ -82,7 +82,7 @@ not.
 `guardRpc` whose every member refuses:
 
 > Scenario tried to run 'getOrder' as an internal step. Every workflow.do in a
-> scenario must carry { actor: actors.x } so it executes against 'local'.
+> scenario must carry { virtualUser: virtualUsers.x } so it executes against 'local'.
 
 The same guard covers `rpc.agent.run/stream/resume/approve/interrupt` and
 `startWorkflow`.
@@ -90,10 +90,10 @@ The same guard covers `rpc.agent.run/stream/resume/approve/interrupt` and
 This is the design, not a gap: **everything a step touches of the application
 goes over the wire as somebody.** A test that could reach into the database
 would be testing a different program from the one a person uses. So there are
-exactly three ways in, and they are all through the actor:
+exactly three ways in, and they are all through the virtual user:
 
-- `actor.invoke(name, data)` — typed over the exposed RPC map, carrying the
-  actor's session. Declare `actor: true` and destructure it off the wire.
+- `virtualUser.invoke(name, data)` — typed over the exposed RPC map, carrying the
+  virtual user's session. Declare `virtualUser: true` and destructure it off the wire.
 - `.invokeRaw(name, data, { headers })` — same call, reporting
   `{ status, ok, body }`, for when the refusal is the assertion.
 - a plain `fetch` against `requireScenarioEnv(scenarioStep).apiUrl`, for
@@ -108,9 +108,10 @@ Two consequences follow, and both shape how steps get written:
 - **`agentRunner` is conditional.** It is built only when the project declares
   agents, and `createDevAgentRunner` needs a base URL _and_ a key together
   (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or the LiteLLM pair). With a key alone
-  it returns nothing and `agentRunner` is `undefined`, so `actor.converse`
-  fails before the persona says anything. A suite that would rather own its own
+  it returns nothing and `agentRunner` is `undefined`, so `virtualUser.converse`
+  fails before the virtual user says anything. A suite that would rather own its own
   model can pass an `llm` to `runConversation` instead of relying on this one.
+
 ---
 
 ## Steps describe intent, not actions
@@ -193,7 +194,7 @@ export const buysTheItem = pikkuScenarioStep<
   name: 'buysTheItem',
   description: 'finds one item in the shop and puts it in the basket',
   template: 'buys the {name}',
-  // One intent, one implementation per surface an actor can drive it through.
+  // One intent, one implementation per surface a virtual user can drive it through.
   browser: async (_services, { name }, { browser }) => {
     await ensureOnShop(browser)
     await searchFor(browser, name)
@@ -215,7 +216,7 @@ await scenario.when(
   'buys a milkshake',
   'buysTheItem',
   { name: '£5 strawberry milkshake' },
-  { actor: actors.shopper }
+  { virtualUser: virtualUsers.shopper }
 )
 // reporter renders: When shopper buys the £5 strawberry milkshake  ✓  1.2s
 ```
@@ -254,7 +255,7 @@ const order = await scenario.do(
   'Shopper checks out',
   'createOrder',
   { basketId, shippingAddress },
-  { actor: actors.shopper }
+  { virtualUser: virtualUsers.shopper }
 )
 ```
 
@@ -282,9 +283,9 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
   { status: string }
 >({
   name: 'seesTheOrderConfirmed',
-  // Both bindings run as the persona, so the step declares one and the runner
-  // injects `wire.actor` — non-optional in every binding.
-  actor: true,
+  // Both bindings run as the virtual user, so the step declares one and the runner
+  // injects `wire.virtualUser` — non-optional in every binding.
+  virtualUser: true,
   template: 'sees order {orderId} confirmed',
   // Both run on `--run browser`. Each returns what it observed, and the runner
   // compares them — so this fails when the page disagrees with the database.
@@ -293,9 +294,9 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
       .locate({ testId: 'order-status', where: { 'data-order': orderId } })
       .getAttribute('data-status'),
   }),
-  // Through the actor, not through a `rpc` service — see "What a step is given".
-  default: async (_services, { orderId }, { actor }) => ({
-    status: (await actor.invoke('getOrder', { orderId })).status,
+  // Through the virtualUser, not through a `rpc` service — see "What a step is given".
+  default: async (_services, { orderId }, { virtualUser }) => ({
+    status: (await virtualUser.invoke('getOrder', { orderId })).status,
   }),
 })
 ```
@@ -304,7 +305,7 @@ Three rules follow, and they are the ones that get broken:
 
 - **A browser witness must observe on the page.** One that quietly calls an RPC to check the result is worse than no binding at all — it reports a tick for a surface it never looked at.
 - **Return what you observed, don't just assert.** A witness returning a value lets the runner diff the two. A witness that only throws still works, but it can never disagree with anything, so it proves less. Read structured state with `where` on the test-id selector rather than parsing translated copy.
-- **A step with no binding for the run's surface is counted, not excused.** `--run browser` prints `n/m steps ran on browser` over _every_ step, so an action that quietly fell back to the server lowers the number just as an assertion does. A `then` that fell back is additionally named — `--strict` fails on those, because a sentence saying the actor saw something nobody looked at is a different problem from a shortcut. Not being in the UI _is_ the finding: do not add a browser binding that fakes it.
+- **A step with no binding for the run's surface is counted, not excused.** `--run browser` prints `n/m steps ran on browser` over _every_ step, so an action that quietly fell back to the server lowers the number just as an assertion does. A `then` that fell back is additionally named — `--strict` fails on those, because a sentence saying the virtual user saw something nobody looked at is a different problem from a shortcut. Not being in the UI _is_ the finding: do not add a browser binding that fakes it.
 
 **Always give a `then` a `default` witness.** It is the floor every run can fall back to, and an assertion with no witness the run can execute is fatal (`ScenarioNoWitness`) — not a coverage gap. The distinction is the point: a `then` checked server-side under `--run browser` did happen, it just wasn't seen where the prose claims; one checked nowhere never happened at all, and without the error it would return `undefined` and render as a tick. A browser-only `then` is therefore a step that fails the fast suite, which is rarely what you want.
 
@@ -343,9 +344,9 @@ export const buysAnApple = pikkuScenarioStep<
   name: 'buysAnApple', // identifier — English, always
   description: 'kauft einen Apfel', // prose — follows locale
   template: 'kauft {qty} Äpfel', // prose — follows locale
-  actor: true,
-  default: async (_services, { qty }, { actor }) =>
-    await actor.invoke('placeOrder', { qty }),
+  virtualUser: true,
+  default: async (_services, { qty }, { virtualUser }) =>
+    await virtualUser.invoke('placeOrder', { qty }),
 })
 ```
 
@@ -356,7 +357,7 @@ A product with a non-English UI is not on its own a reason to set `metaLocale` �
 is the app's language, not the team's. Ask, or leave it `en`.
 
 **Where a non-`en` `metaLocale` still shows English, today.** The reporter composes a
-sentence as `<Keyword> <actor> <template>` (`composeStepProse`), and the keyword is
+sentence as `<Keyword> <virtual user> <template>` (`composeStepProse`), and the keyword is
 an English literal. The Console translates the Given/When/Then keywords into its own
 UI language; the CLI reporter does not, so `metaLocale: "de"` gives you German step
 prose inside an English frame — `Given shopper kauft 1 Äpfel`. Write templates that read

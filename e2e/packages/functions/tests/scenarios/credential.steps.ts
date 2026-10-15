@@ -5,9 +5,13 @@
  * These RPCs are deliberately unauthenticated and take the owning `userId` as
  * ordinary data — the suite invents principals (`user-1`, `lazy-user`) that have
  * no user row at all, which is the point: the header shim in `src/middleware.ts`
- * is what is under test, so an actor cannot stand in for them.
+ * is what is under test, so a virtual user cannot stand in for them.
  */
-import { pikkuScenarioStep, postScenarioJson, requireScenarioEnv } from '#pikku/scenario'
+import {
+  pikkuScenarioStep,
+  postScenarioJson,
+  requireScenarioEnv,
+} from '#pikku/scenario'
 
 /**
  * Calls one of the suite's unauthenticated credential RPCs and answers with its

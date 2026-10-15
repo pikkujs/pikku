@@ -11,7 +11,7 @@ const environments = {
   local: {
     apiUrl: 'http://localhost:4077',
     appUrl: 'http://localhost:5001',
-    signInPath: '/auth/sign-in/actor',
+    signInPath: '/auth/sign-in/virtual-user',
     rpcPath: '/rpc',
   },
 }
@@ -49,7 +49,7 @@ describe('resolveEnvironment', () => {
     assert.deepEqual(env, {
       apiUrl: 'https://sandbox-a1b2.example.com/api',
       appUrl: 'https://sandbox-a1b2.example.com',
-      signInPath: '/auth/sign-in/actor',
+      signInPath: '/auth/sign-in/virtual-user',
       rpcPath: '/rpc',
     })
   })
@@ -136,7 +136,7 @@ describe('resolveEnvironment', () => {
     assert.equal(env.appUrl, 'https://preview-a1b2.example.com')
   })
 
-  test('--app-url takes a url per app, so each actor browses their own', () => {
+  test('--app-url takes a url per app, so each virtual user browses their own', () => {
     const env = resolveEnvironment({
       environment: 'local',
       environments,
@@ -151,7 +151,7 @@ describe('resolveEnvironment', () => {
     assert.equal(
       env.appUrl,
       'http://localhost:5001',
-      'the configured fallback stands for a persona naming no app'
+      'the configured fallback stands for a virtual user naming no app'
     )
   })
 

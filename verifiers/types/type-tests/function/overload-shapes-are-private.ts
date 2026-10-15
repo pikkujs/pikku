@@ -17,7 +17,7 @@
  *   - overload-parameter shapes, which only name the `config` argument inside an
  *     overload signature (`PikkuFunctionConfigWithSchema` and friends);
  *   - generated id unions, which nothing derives and nothing consumed
- *     (`PersonaId`, `SecretId`, `VariableId`, `WorkflowNames`, …);
+ *     (`VirtualUserId`, `SecretId`, `VariableId`, `WorkflowNames`, …);
  *   - raw `@pikku/core` types that rode along beside a re-exported factory
  *     (`CoreScopes`, `CoreSystemRoles`, the `*DefinitionsMeta` shapes);
  *   - types referenced by nothing at all (`PikkuListFunction`, deleted outright).
@@ -92,14 +92,14 @@ import type { PikkuSubjectScenarioStepConfigWithSchema } from '#pikku/scenario'
 // @ts-expect-error - WorkflowNames is a generated id union, not API
 import type { WorkflowNames } from '#pikku/workflow/pikku-workflow-wirings.gen.js'
 
-// @ts-expect-error - PersonaId is a generated id union, not API
-import type { PersonaId } from '#pikku/scopes/pikku-personas.gen.js'
-// @ts-expect-error - RunnablePersonaId is a generated id union, not API
-import type { RunnablePersonaId } from '#pikku/scopes/pikku-personas.gen.js'
+// @ts-expect-error - VirtualUserId is a generated id union, not API
+import type { VirtualUserId } from '#pikku/scopes/pikku-virtual-users.gen.js'
+// @ts-expect-error - RunnableVirtualUserId is a generated id union, not API
+import type { RunnableVirtualUserId } from '#pikku/scopes/pikku-virtual-users.gen.js'
 // @ts-expect-error - EnvironmentName is a generated id union, not API
-import type { EnvironmentName } from '#pikku/scopes/pikku-personas.gen.js'
-// @ts-expect-error - TypedPersona is an overload parameter, not API
-import type { TypedPersona } from '#pikku/scopes/pikku-personas.gen.js'
+import type { EnvironmentName } from '#pikku/scopes/pikku-virtual-users.gen.js'
+// @ts-expect-error - TypedVirtualUser is an overload parameter, not API
+import type { TypedVirtualUser } from '#pikku/scopes/pikku-virtual-users.gen.js'
 // @ts-expect-error - SecretId is a generated id union, not API
 import type { SecretId } from '#pikku/secrets/pikku-secrets.gen.js'
 // @ts-expect-error - VariableId is a generated id union, not API
@@ -144,10 +144,10 @@ export type _SubjectScenarioStepConfig = PikkuSubjectScenarioStepConfig
 export type _SubjectScenarioStepConfigWithSchema =
   PikkuSubjectScenarioStepConfigWithSchema
 export type _WorkflowNames = WorkflowNames
-export type _PersonaId = PersonaId
-export type _RunnablePersonaId = RunnablePersonaId
+export type _VirtualUserId = VirtualUserId
+export type _RunnableVirtualUserId = RunnableVirtualUserId
 export type _EnvironmentName = EnvironmentName
-export type _TypedPersona = TypedPersona
+export type _TypedVirtualUser = TypedVirtualUser
 export type _SecretId = SecretId
 export type _VariableId = VariableId
 export type _CoreSystemRoles = CoreSystemRoles

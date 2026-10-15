@@ -24,9 +24,9 @@ export interface ScenarioBaselineOptions {
   /**
    * Tables left alone by both the capture and the restore.
    *
-   * The session tables belong here: an actor signs in once for the whole run,
+   * The session tables belong here: a virtual user signs in once for the whole run,
    * and rolling its session back to a baseline taken before the sign-in logs
-   * every actor out mid-suite.
+   * every virtual user out mid-suite.
    */
   keep?: string[]
 }

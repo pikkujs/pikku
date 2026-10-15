@@ -16,33 +16,33 @@ import { pikkuScenario } from '#pikku/scenarios'
 //~ NOTE: a domain foreign key like `companyId` (WHICH company this contact is in) is
 //~ fine in {data} — that is real relational data. It is NOT the same as an identity
 //~ id (userId/organizationId/tenantId), which must come from the SESSION, never {data}.
-//~ 3rd arg is `{ scenario, actors }` (NOT `workflow`).
+//~ 3rd arg is `{ scenario, virtualUsers }` (NOT `workflow`).
 export const companyContactLinkScenario = pikkuScenario<void, { companyId: string }>({
   title: 'Company → contact link (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, _input, { scenario, actors }) => {
-    if (!actors?.visitor) throw new Error('needs run actors — run via `pikku scenario run <env>`')
+  func: async ({ logger }, _input, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.visitor) throw new Error('needs run virtual users — run via `pikku scenario run <env>`')
     logger.debug('company/contact link starting')
     //~ 1. create the PARENT — capture its REAL id.
     const company = await scenario.do(
       'create a company',
       'createCompany',
       { name: 'Acme Inc' },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     //~ 2. create the CHILD referencing the parent's REAL id (never a literal/fake id).
     const contact = await scenario.do(
       'add a contact to it',
       'createContact',
       { name: 'Grace Hopper', companyId: company.company.id },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     //~ 3. ASSERT the relationship resolves: filtering by the parent returns the child.
     const contacts = await scenario.do(
       'the contact shows under the company',
       'listContacts',
       { companyId: company.company.id },
-      { actor: actors.visitor },
+      { virtualUser: virtualUsers.visitor },
     )
     if (!contacts.contacts.some((c) => c.id === contact.contact.id)) {
       throw new Error(

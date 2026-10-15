@@ -258,7 +258,7 @@ describe('validateSystemRoleScopes', () => {
   })
 
   // The failure this exists to prevent: no function checks `orders:refund`, so
-  // a persona holding the role passes every call and the boundary the role
+  // a virtual user holding the role passes every call and the boundary the role
   // describes is never exercised.
   test('an undeclared scope fails the build and lists what is available', async () => {
     const { criticals } = await inspectSource(

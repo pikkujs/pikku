@@ -1,9 +1,13 @@
 import { betterAuth } from 'better-auth'
 import { magicLink } from 'better-auth/plugins'
-import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor, pikkuBan } from '@pikku/better-auth'
+import {
+  VIRTUAL_USER_SIGN_IN_OPT_IN_ENV,
+  pikkuVirtualUser,
+  pikkuBan,
+} from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 import { sessionCookieCacheMaxAge } from './lib/session-cookie.js'
-import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
+import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -27,28 +31,42 @@ import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
 // sendResetPassword/verification emails. It runs lazily after all services exist,
 // so never re-construct a service here or reach for a dynamic import.
 export const auth = pikkuBetterAuth(
-  async ({ kysely, secrets, variables, emailService, featureFlags, logger }) => {
+  async ({
+    kysely,
+    secrets,
+    variables,
+    emailService,
+    featureFlags,
+    logger,
+  }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
     // is one greppable call. Better Auth wants the raw string, and this is where
     // it stops being a secret in the type system.
-    const BETTER_AUTH_SECRET = (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal()
-    // Optional: the secret alone never opens /api/auth/sign-in/actor. The plugin
+    const BETTER_AUTH_SECRET = (
+      await secrets.getSecret('BETTER_AUTH_SECRET')
+    ).reveal()
+    // Optional: the secret alone never opens /api/auth/sign-in/virtual-user. The plugin
     // gates on `pikku dev`, or on the opt-in below for a stage meant to run
     // scenarios, and warns when a secret is set against a shut gate.
-    const SCENARIO_ACTOR_SECRET = await secrets
-      .getSecret('SCENARIO_ACTOR_SECRET')
+    const SCENARIO_VIRTUAL_USER_SECRET = await secrets
+      .getSecret('SCENARIO_VIRTUAL_USER_SECRET')
       .then((value) => value?.reveal())
       .catch(() => undefined)
     // The scenario opt-in, read through `variables` rather than left to
     // process.env: the host pushes it as a binding on every non-production stage,
     // and a Worker has no populated environment for the plugin to find it in.
-    const ALLOW_ACTOR_SIGN_IN = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
+    const ALLOW_VIRTUAL_USER_SIGN_IN = await variables.get(
+      VIRTUAL_USER_SIGN_IN_OPT_IN_ENV
+    )
 
     // How long the signed session cookie is trusted, in seconds. Declared (with its
     // default and the reasoning) in lib/session-cookie.ts, because the number is a
     // policy decision an operator may want to change per stage.
-    const SESSION_COOKIE_CACHE_MAX_AGE = await sessionCookieCacheMaxAge(variables, logger)
+    const SESSION_COOKIE_CACHE_MAX_AGE = await sessionCookieCacheMaxAge(
+      variables,
+      logger
+    )
 
     return betterAuth({
       secret: BETTER_AUTH_SECRET,
@@ -87,11 +105,13 @@ export const auth = pikkuBetterAuth(
       // apps/app/src/lib/session-refresh.ts re-mints the cookie while the app is
       // open and heals an expired one, so someone using the app is never signed
       // out, and each refresh is the moment a ban lands.
-      session: { cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_MAX_AGE } },
+      session: {
+        cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_MAX_AGE },
+      },
       advanced: { database: { generateId: 'uuid' } },
-      // Scenario actors: synthetic users (user.actor = true, see
+      // Scenario virtual users: synthetic users (user.virtualUser = true, see
       // db/sqlite/0001-better-auth.sql) signed in by pikkuScenario via
-      // POST /api/auth/sign-in/actor { email, secret }. Never signs in real users.
+      // POST /api/auth/sign-in/virtual-user { email, secret }. Never signs in real users.
       //
       // ban(): the enforcement half of better-auth's admin() plugin — the
       // banned/banReason/banExpires columns (see db/sqlite/0001-better-auth.sql) and the
@@ -140,16 +160,16 @@ export const auth = pikkuBetterAuth(
             })
           },
         }),
-        pikkuActor({
-          secret: SCENARIO_ACTOR_SECRET,
-          allowSignIn: ALLOW_ACTOR_SIGN_IN,
-          personaSignIn: {
-            personas: personaList,
+        pikkuVirtualUser({
+          secret: SCENARIO_VIRTUAL_USER_SECRET,
+          allowSignIn: ALLOW_VIRTUAL_USER_SIGN_IN,
+          virtualUserSignIn: {
+            virtualUsers: virtualUserList,
             featureFlags,
           },
         }),
         pikkuBan(),
       ],
     })
-  },
+  }
 )

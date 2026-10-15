@@ -20,8 +20,8 @@ export interface AuthPluginDef {
  * "Pikku Ban", which is the package talking rather than the capability.
  */
 export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
-  actor: { displayName: 'Actor' },
-  pikkuActor: { displayName: 'Actor' },
+  virtualUser: { displayName: 'VirtualUser' },
+  pikkuVirtualUser: { displayName: 'VirtualUser' },
   anonymous: { displayName: 'Anonymous' },
   apiKey: { displayName: 'API Key' },
   ban: { displayName: 'Ban' },

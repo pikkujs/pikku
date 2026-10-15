@@ -6,7 +6,7 @@ import { test, describe } from 'node:test'
 
 import type { ScenarioSurface } from '#pikku/scenario'
 import { createScenarioRunner } from '@pikku/core/scenario'
-import type { ScenarioPersona } from '@pikku/core/services'
+import type { ScenarioVirtualUser } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -44,9 +44,9 @@ async function loadMeta(name: string) {
   throw new Error(`Meta not found for workflow: ${name}`)
 }
 
-const fakeActor = (
+const fakeVirtualUser = (
   name: string
-): ScenarioPersona & { calls: Array<{ rpcName: string; data: any }> } => {
+): ScenarioVirtualUser & { calls: Array<{ rpcName: string; data: any }> } => {
   const calls: Array<{ rpcName: string; data: any }> = []
   const invokeRaw = async (rpcName: string, data: any) => {
     calls.push({ rpcName, data })
@@ -67,14 +67,14 @@ const fakeActor = (
   }
   return {
     name,
-    email: `${name}@actors.local`,
+    email: `${name}@virtualuser.local`,
     calls,
     invokeRaw,
     invoke: async (rpcName: string, data: any) =>
       (await invokeRaw(rpcName, data)).body,
     converse: async () => {
       throw new Error(
-        `[verifier] actor '${name}' has no agent — this verifier only exercises actor RPC steps`
+        `[verifier] virtual user '${name}' has no agent — this verifier only exercises virtual user RPC steps`
       )
     },
     sessionRoles: async () => null,
@@ -89,7 +89,7 @@ describe('pikkuScenario verification', () => {
     const nodes: Record<string, any> = meta.nodes || {}
     assert.ok(
       nodes['customer fetches the order'],
-      `actor step captured, got: ${Object.keys(nodes).join(', ')}`
+      `virtualUser step captured, got: ${Object.keys(nodes).join(', ')}`
     )
     assert.ok(nodes['internal re-read'], 'internal step captured')
 
@@ -101,49 +101,53 @@ describe('pikkuScenario verification', () => {
     )
   })
 
-  test('codegen: definePersonas generates the typed registry, addresses and all', async () => {
-    const gen = await import('../../.pikku/scenarios/pikku-personas.gen.js')
-    assert.deepEqual(Object.keys(gen.personaConfigs).sort(), [
+  test('codegen: defineVirtualUsers generates the typed registry, addresses and all', async () => {
+    const gen =
+      await import('../../.pikku/scenarios/pikku-virtual-users.gen.js')
+    assert.deepEqual(Object.keys(gen.virtualUserConfigs).sort(), [
       'customer',
       'ops',
     ])
-    assert.equal(gen.personaConfigs.customer.jobTitle, 'Customer')
-    // Nobody wrote this down: it is the persona id against
+    assert.equal(gen.virtualUserConfigs.customer.jobTitle, 'Customer')
+    // Nobody wrote this down: it is the virtual user id against
     // `scenarios.emailDomain`, computed once so the seed, a scenario run and a
     // virtual-user run cannot disagree about who they are signing in as.
-    assert.equal(gen.personaConfigs.customer.email, 'customer@actors.local')
+    assert.equal(
+      gen.virtualUserConfigs.customer.email,
+      'customer@virtualuser.local'
+    )
 
-    const actors = gen.createPersonas({
+    const virtualUsers = gen.createVirtualUsers({
       apiUrl: 'http://localhost:9999/api',
       secret: 'unused',
     })
-    assert.equal(actors.customer.name, 'customer')
-    assert.equal(typeof actors.ops.invoke, 'function')
+    assert.equal(virtualUsers.customer.name, 'customer')
+    assert.equal(typeof virtualUsers.ops.invoke, 'function')
   })
 
-  test('codegen: declaring personas declares the actor sign-in secret', async () => {
-    // Nothing in this verifier's source declares SCENARIO_ACTOR_SECRET. It is
-    // the platform's — the scenario service and `pikku persona` read it, no app
-    // code does — so the personas scaffold declares it, the way the auth
+  test('codegen: declaring virtual users declares the virtual user sign-in secret', async () => {
+    // Nothing in this verifier's source declares SCENARIO_VIRTUAL_USER_SECRET. It is
+    // the platform's — the scenario service and `pikku virtual-user` read it, no app
+    // code does — so the virtual users scaffold declares it, the way the auth
     // scaffold declares BETTER_AUTH_SECRET. A project that has to hand-write it
-    // is a project that finds out it is missing at the first actor sign-in.
+    // is a project that finds out it is missing at the first virtual user sign-in.
     const meta = JSON.parse(
       await readFile(
         join(__dirname, '../../.pikku/secrets/pikku-secrets-meta.gen.json'),
         'utf-8'
       )
     )
-    const secret = meta['scenarioActorSecret']
+    const secret = meta['scenarioVirtualUserSecret']
     assert.ok(
       secret,
-      `scenarioActorSecret not in the secrets manifest, got: ${Object.keys(meta).join(', ')}`
+      `scenarioVirtualUserSecret not in the secrets manifest, got: ${Object.keys(meta).join(', ')}`
     )
-    assert.equal(secret.secretId, 'SCENARIO_ACTOR_SECRET')
+    assert.equal(secret.secretId, 'SCENARIO_VIRTUAL_USER_SECRET')
   })
 
-  test('runtime: actor steps route through injected actors, internal steps stay in-process', async () => {
-    const customer = fakeActor('customer')
-    const ops = fakeActor('ops')
+  test('runtime: virtual user steps route through injected virtual users, internal steps stay in-process', async () => {
+    const customer = fakeVirtualUser('customer')
+    const ops = fakeVirtualUser('ops')
 
     const { workflowService } = createScenarioRunner()
     const singletonServices = await createSingletonServices(
@@ -161,7 +165,7 @@ describe('pikkuScenario verification', () => {
       { orderId: 'order-7' },
       { type: 'test' },
       rpc,
-      { actors: { customer, ops } }
+      { virtualUsers: { customer, ops } }
     )
 
     const deadline = Date.now() + 10_000
@@ -180,7 +184,7 @@ describe('pikkuScenario verification', () => {
     assert.deepEqual(
       customer.calls,
       [{ rpcName: 'orderGet', data: { orderId: 'order-7' } }],
-      'customer step went through the actor exactly once'
+      'customer step went through the virtual user exactly once'
     )
     assert.ok(ops.calls.length >= 1, 'expectEventually polled as ops')
     assert.ok(
@@ -198,7 +202,7 @@ const runScenario = async (
   workflowName: string,
   input: unknown,
   surface: ScenarioSurface,
-  actors?: Record<string, ScenarioPersona>
+  virtualUsers?: Record<string, ScenarioVirtualUser>
 ) => {
   resetSurfaceLog()
   const { workflowService, scenarioService } = createScenarioRunner()
@@ -226,7 +230,7 @@ const runScenario = async (
       input,
       { type: 'test' },
       rpc,
-      actors ? { actors } : undefined
+      virtualUsers ? { virtualUsers } : undefined
     ))
   } catch (err) {
     thrown = err
@@ -348,19 +352,19 @@ describe('pikkuScenarioStep surface bindings', () => {
     })
   })
 
-  test('a step that declares an actor is given it on the wire', async () => {
-    const customer = fakeActor('customer')
+  test('a step that declares a virtual user is given it on the wire', async () => {
+    const customer = fakeVirtualUser('customer')
     const { run } = await runScenario(
-      'actorGreetingScenario',
+      'virtualUserGreetingScenario',
       undefined,
       'default',
       { customer }
     )
     assert.equal(run?.status, 'completed', `run failed: ${run?.error}`)
-    assert.deepEqual(run?.output, { actor: 'customer' })
+    assert.deepEqual(run?.output, { virtualUser: 'customer' })
     assert.ok(
-      surfaceLog.includes('greetsAsItsActor:customer'),
-      `the body ran as the persona it was passed, got: ${surfaceLog.join(', ')}`
+      surfaceLog.includes('greetsAsItsVirtualUser:customer'),
+      `the body ran as the virtual user it was passed, got: ${surfaceLog.join(', ')}`
     )
   })
 

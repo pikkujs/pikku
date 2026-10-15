@@ -1,3 +1,13 @@
+## 0.12.105
+
+### Patch Changes
+
+- b04e444: Fix CLI commands that come from an addon package. Auth and permissions set on such a command are now merged into the addon's own function instead of replacing it, and the command's input is shaped by the addon's own schema (for example a comma list becomes an array). The inspector now also resolves `...refCLI('addon:contract')`, spreads and `defineCLICommands` identifiers inside a command's `subcommands`.
+- Updated dependencies [b04e444]
+- Updated dependencies [d3d8a98]
+- Updated dependencies [658da50]
+  - @pikku/core@0.12.141
+
 ## 0.12.104
 
 ### Patch Changes

@@ -10,7 +10,7 @@ import type {
  *
  * A run holds no process across a restart — see {@link VirtualUserRunRecord} —
  * so a deploy mid-run strands the record, and a stranded record would block its
- * persona's schedule for good. Twice the longest duration budget anyone sets in
+ * virtual user's schedule for good. Twice the longest duration budget anyone sets in
  * practice, because the failure this guards against is cheap to recover from
  * and expensive to trigger early: reaping a run that was still working loses
  * its findings.
@@ -33,7 +33,7 @@ export const isDue = (schedule: VirtualUserScheduleRecord, now: Date) =>
   schedule.enabled && schedule.nextRunAt.getTime() <= now.getTime()
 
 /**
- * When this persona should next appear, drawn from its own interval.
+ * When this virtual user should next appear, drawn from its own interval.
  *
  * Uniform between the two bounds. Reversed bounds are read as a range rather
  * than rejected, because a schedule is configuration and a swapped pair is a
@@ -59,8 +59,8 @@ export type VirtualUserSkipReason =
   'in-flight' | 'dispatch-failed' | 'claimed-elsewhere'
 
 export interface VirtualUserTickResult {
-  dispatched: { persona: string; runId: string }[]
-  skipped: { persona: string; reason: VirtualUserSkipReason }[]
+  dispatched: { virtualUserId: string; runId: string }[]
+  skipped: { virtualUserId: string; reason: VirtualUserSkipReason }[]
   /** Runs found stranded at `running` and marked failed. */
   reaped: string[]
 }
@@ -76,14 +76,14 @@ export interface VirtualUserTickParams {
 }
 
 /**
- * Acts on whichever personas are due, once.
+ * Acts on whichever virtual users are due, once.
  *
  * The whole cadence lives in this one call, so what schedules it is the host's
  * choice — a cron wiring, a platform scheduler, or a person clicking a button.
  * Pikku does not start a timer on an app's behalf; a scaffold that did would
  * begin spending model budget the moment a project ran `pikku all`.
  *
- * A persona is skipped, not queued, while its previous run is still going. Two
+ * A virtual user is skipped, not queued, while its previous run is still going. Two
  * copies of the same user acting at once is not a heavier test, it is a
  * different one, and every finding it produces is unreproducible. Two ticks
  * running at once are held to the same rule by the claim, which only lands for
@@ -104,10 +104,10 @@ export const tickVirtualUserSchedules = async ({
   }
 
   for (const schedule of await schedules.due(now)) {
-    const [latest] = await runs.list({ persona: schedule.persona, limit: 1 })
+    const [latest] = await runs.list({ virtualUserId: schedule.virtualUserId, limit: 1 })
     if (latest?.status === 'running') {
       if (now.getTime() - latest.createdAt.getTime() < staleAfterMs) {
-        result.skipped.push({ persona: schedule.persona, reason: 'in-flight' })
+        result.skipped.push({ virtualUserId: schedule.virtualUserId, reason: 'in-flight' })
         continue
       }
       await runs.fail(
@@ -118,7 +118,7 @@ export const tickVirtualUserSchedules = async ({
     }
 
     const due = nextRunAt(schedule, now, random)
-    const acquired = await schedules.claim(schedule.persona, {
+    const acquired = await schedules.claim(schedule.virtualUserId, {
       from: schedule.nextRunAt,
       nextRunAt: due,
       runId: null,
@@ -126,7 +126,7 @@ export const tickVirtualUserSchedules = async ({
     })
     if (!acquired) {
       result.skipped.push({
-        persona: schedule.persona,
+        virtualUserId: schedule.virtualUserId,
         reason: 'claimed-elsewhere',
       })
       continue
@@ -137,19 +137,19 @@ export const tickVirtualUserSchedules = async ({
       runId = await dispatch(schedule)
     } catch {
       result.skipped.push({
-        persona: schedule.persona,
+        virtualUserId: schedule.virtualUserId,
         reason: 'dispatch-failed',
       })
       continue
     }
 
-    await schedules.claim(schedule.persona, {
+    await schedules.claim(schedule.virtualUserId, {
       from: due,
       nextRunAt: due,
       runId,
       at: now,
     })
-    result.dispatched.push({ persona: schedule.persona, runId })
+    result.dispatched.push({ virtualUserId: schedule.virtualUserId, runId })
   }
 
   return result

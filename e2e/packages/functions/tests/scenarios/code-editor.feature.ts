@@ -16,10 +16,10 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
   description:
     'An admin reads and edits a function and an agent through the console RPCs, then restores both',
   tags: ['scenario', 'console', 'code-editor'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.admin) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.admin) {
       throw new Error(
-        'codeEditorScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        'codeEditorScenario needs the admin virtual user — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -27,7 +27,7 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
       'reads editableFunc',
       'readsFunctionSource',
       { functionName: 'editableFunc' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees how editableFunc is declared',
@@ -40,13 +40,19 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
           expose: true,
         },
       },
-      { actor: actors.admin, description: 'sees how editableFunc is declared' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees how editableFunc is declared',
+      }
     )
     await scenario.then(
       'sees the original greeting',
       'expectsText',
       { actual: source.body, contains: 'Hello' },
-      { actor: actors.admin, description: 'sees the original greeting' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the original greeting',
+      }
     )
 
     await scenario.when(
@@ -56,13 +62,13 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         functionName: 'editableFunc',
         changes: { description: 'Updated by e2e test' },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const edited = await scenario.when(
       're-reads editableFunc',
       'readsFunctionSource',
       { functionName: 'editableFunc' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the new description',
@@ -74,7 +80,10 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
           title: 'Editable Function',
         },
       },
-      { actor: actors.admin, description: 'sees the new description' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the new description',
+      }
     )
     await scenario.when(
       'restores the description',
@@ -83,39 +92,45 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         functionName: 'editableFunc',
         changes: { description: ORIGINAL_DESCRIPTION },
       },
-      { actor: actors.admin, description: 'restores the description' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'restores the description',
+      }
     )
 
     await scenario.when(
       'rewrites the greeting',
       'updatesFunctionBody',
       { functionName: 'editableFunc', body: EDITED_BODY },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const rewritten = await scenario.when(
       'reads the rewritten body',
       'readsFunctionBody',
       { functionName: 'editableFunc' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the rewritten greeting',
       'expectsText',
       { actual: rewritten.body, contains: 'Hi there' },
-      { actor: actors.admin, description: 'sees the rewritten greeting' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the rewritten greeting',
+      }
     )
     await scenario.when(
       'restores the greeting',
       'updatesFunctionBody',
       { functionName: 'editableFunc', body: ORIGINAL_BODY },
-      { actor: actors.admin, description: 'restores the greeting' }
+      { virtualUser: virtualUsers.admin, description: 'restores the greeting' }
     )
 
     const agent = await scenario.when(
       'reads todoReadAgent',
       'readsAgentSource',
       { agentKey: 'todoReadAgent' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees how todoReadAgent is configured',
@@ -129,7 +144,7 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         },
       },
       {
-        actor: actors.admin,
+        virtualUser: virtualUsers.admin,
         description: 'sees how todoReadAgent is configured',
       }
     )
@@ -141,13 +156,13 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         agentKey: 'todoReadAgent',
         changes: { instructions: 'Updated instructions for e2e' },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const reinstructed = await scenario.when(
       're-reads todoReadAgent',
       'readsAgentSource',
       { agentKey: 'todoReadAgent' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the new instructions',
@@ -159,7 +174,10 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
           name: 'todo-read-agent',
         },
       },
-      { actor: actors.admin, description: 'sees the new instructions' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the new instructions',
+      }
     )
     await scenario.when(
       'restores the instructions',
@@ -168,7 +186,10 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         agentKey: 'todoReadAgent',
         changes: { instructions: ORIGINAL_INSTRUCTIONS },
       },
-      { actor: actors.admin, description: 'restores the instructions' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'restores the instructions',
+      }
     )
 
     return { edits: 3 }
@@ -183,10 +204,10 @@ export const codeEditorConsoleScenario = pikkuScenario<
   description:
     'An admin opens the console and finds the edit affordance on a local function and a local agent',
   tags: ['scenario', 'console', 'code-editor'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.admin) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.admin) {
       throw new Error(
-        'codeEditorConsoleScenario needs the admin actor — run via `pikku scenario run <environment>`'
+        'codeEditorConsoleScenario needs the admin virtual user — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -194,19 +215,25 @@ export const codeEditorConsoleScenario = pikkuScenario<
       'opens the functions page',
       'opensConsolePage',
       { path: '/console/functions', waitFor: { testId: 'data-table' } },
-      { actor: actors.admin, description: 'opens the functions page' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'opens the functions page',
+      }
     )
     await scenario.when(
       'opens editableFunc',
       'clicksRowContaining',
       { text: 'editableFunc' },
-      { actor: actors.admin, description: 'opens editableFunc' }
+      { virtualUser: virtualUsers.admin, description: 'opens editableFunc' }
     )
     await scenario.then(
       'sees the function edit button',
       'seesEditButton',
       { name: 'Edit in code' },
-      { actor: actors.admin, description: 'sees the function edit button' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the function edit button',
+      }
     )
 
     await scenario.given(
@@ -216,19 +243,22 @@ export const codeEditorConsoleScenario = pikkuScenario<
         path: '/console/agents',
         waitFor: { testId: 'agent-todoReadAgent' },
       },
-      { actor: actors.admin, description: 'opens the agents page' }
+      { virtualUser: virtualUsers.admin, description: 'opens the agents page' }
     )
     await scenario.when(
       'opens todoReadAgent',
       'clicksAgentCard',
       { agentKey: 'todoReadAgent' },
-      { actor: actors.admin, description: 'opens todoReadAgent' }
+      { virtualUser: virtualUsers.admin, description: 'opens todoReadAgent' }
     )
     await scenario.then(
       'sees the agent edit button',
       'seesEditButton',
       { name: 'Edit agent' },
-      { actor: actors.admin, description: 'sees the agent edit button' }
+      {
+        virtualUser: virtualUsers.admin,
+        description: 'sees the agent edit button',
+      }
     )
 
     return { panels: 2 }

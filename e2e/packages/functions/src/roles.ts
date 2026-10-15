@@ -5,8 +5,8 @@ import { defineSystemRole } from '#pikku/scopes'
  *
  * All three exist to draw the seams the console-authorization suites test one
  * assertion at a time, and they are declared here rather than composed in the
- * seed because a persona may only name a system role — a role composed at
- * runtime can be deleted from the console, and a persona pinned to one would go
+ * seed because a virtual user may only name a system role — a role composed at
+ * runtime can be deleted from the console, and a virtual user pinned to one would go
  * on claiming to test something nobody grants any more.
  */
 defineSystemRole({

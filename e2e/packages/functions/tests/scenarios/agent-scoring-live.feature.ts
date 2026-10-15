@@ -42,10 +42,10 @@ export const judgeSeparatesTwoAnswersScenario = pikkuScenario<
   description:
     'The same judge, the same question, two answers — and a gap a constant cannot fake',
   tags: ['scenario', 'agent-scoring-live', 'ai-live'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.admin) {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.admin) {
       throw new Error(
-        'judgeSeparatesTwoAnswersScenario needs the admin actor — grading is an inline RPC and the snapshot lives in the server process'
+        'judgeSeparatesTwoAnswersScenario needs the admin virtual user — grading is an inline RPC and the snapshot lives in the server process'
       )
     }
 
@@ -55,7 +55,7 @@ export const judgeSeparatesTwoAnswersScenario = pikkuScenario<
       'the todo list is reset',
       'todos:resetTodos',
       {},
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     // Separate threads: the second agent must answer the question cold, not
@@ -97,13 +97,13 @@ export const judgeSeparatesTwoAnswersScenario = pikkuScenario<
       'grades the useful answer well',
       helpfulRun.runId!,
       JUDGE,
-      { atLeast: 0.6, actor: actors.admin }
+      { atLeast: 0.6, virtualUser: virtualUsers.admin }
     )
     await scenario.expectScore(
       'grades the useless answer poorly',
       unhelpfulRun.runId!,
       JUDGE,
-      { atLeast: 0, atMost: 0.4, actor: actors.admin }
+      { atLeast: 0, atMost: 0.4, virtualUser: virtualUsers.admin }
     )
 
     return { separated: true }

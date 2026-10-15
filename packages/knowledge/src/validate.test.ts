@@ -139,21 +139,21 @@ describe('runKnowledgeValidate', () => {
   })
 
   test('a section duplicating what the project already declares fails', async () => {
-    // personas live in `definePersonas()`; a note copying one drifts the moment
+    // virtual users live in `defineVirtualUsers()`; a note copying one drifts the moment
     // someone edits the declaration, and the note is the copy that looks
     // authoritative.
     const result = await validate(
       await project({
         ...CLEAN,
-        'knowledge/personas/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/personas/owner.md': '---\ntype: note\n---\nx',
+        'knowledge/virtual-users/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/virtual-users/owner.md': '---\ntype: note\n---\nx',
       })
     )
     assert.deepEqual(ids(result.findings), [
-      'knowledge-forbidden-section-personas',
+      'knowledge-forbidden-section-virtual-users',
     ])
     assert.equal(result.ok, false)
-    assert.match(result.findings[0]!.fixHint, /definePersonas/)
+    assert.match(result.findings[0]!.fixHint, /defineVirtualUsers/)
   })
 
   test('a forbidden section with a sub-section is reported once, not per level', async () => {
@@ -163,14 +163,14 @@ describe('runKnowledgeValidate', () => {
     const result = await validate(
       await project({
         ...CLEAN,
-        'knowledge/personas/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/personas/owner.md': '---\ntype: note\n---\nx',
-        'knowledge/personas/admin/index.md': '---\ntype: overview\n---\nx',
-        'knowledge/personas/admin/root.md': '---\ntype: note\n---\nx',
+        'knowledge/virtual-users/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/virtual-users/owner.md': '---\ntype: note\n---\nx',
+        'knowledge/virtual-users/admin/index.md': '---\ntype: overview\n---\nx',
+        'knowledge/virtual-users/admin/root.md': '---\ntype: note\n---\nx',
       })
     )
     assert.deepEqual(ids(result.findings), [
-      'knowledge-forbidden-section-personas',
+      'knowledge-forbidden-section-virtual-users',
     ])
   })
 

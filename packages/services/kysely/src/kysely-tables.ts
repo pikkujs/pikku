@@ -368,7 +368,7 @@ export interface WebhookReceiptTable {
  */
 export interface VirtualUserRunTable {
   runId: string
-  persona: string
+  virtualUserId: string
   disposition: string
   /**
    * Read back as a string by some drivers — a BIGINT does not always fit a JS
@@ -467,11 +467,11 @@ export interface VirtualUserRunStepTable {
 }
 
 /**
- * One persona's cadence. Nullable timestamps and 0/1 flags for the same driver
+ * One virtual user's cadence. Nullable timestamps and 0/1 flags for the same driver
  * reasons as {@link VirtualUserRunTable}.
  */
 export interface VirtualUserScheduleTable {
-  persona: string
+  virtualUserId: string
   /** 0 or 1: not every driver in this package can bind a boolean. */
   enabled: Generated<number>
   disposition: string

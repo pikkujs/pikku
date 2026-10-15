@@ -32,8 +32,8 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
     )
 
-    const personaSignInFileImports = Array.from(
-      stateBeforeBootstrap.personas?.signInFiles ?? []
+    const virtualUserSignInFileImports = Array.from(
+      stateBeforeBootstrap.virtualUsers?.signInFiles ?? []
     ).map(
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
@@ -92,7 +92,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     const allBootstrapImports = [
       ...localImports,
       ...wireAddonFileImports,
-      ...personaSignInFileImports,
+      ...virtualUserSignInFileImports,
       ...addonImports,
     ]
       .sort((a, b) => {

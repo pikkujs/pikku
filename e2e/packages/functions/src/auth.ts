@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import { bearer } from 'better-auth/plugins'
 import {
-  pikkuActor,
+  pikkuVirtualUser,
   pikkuBan,
   pikkuCredentialOAuth,
   credentialOAuthProviders,
@@ -60,8 +60,8 @@ export const auth = pikkuBetterAuth(
       plugins: [
         pikkuBan(),
         bearer(),
-        pikkuActor({
-          secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
+        pikkuVirtualUser({
+          secret: (await variables.get('SCENARIO_VIRTUAL_USER_SECRET')) ?? '',
         }),
         // Every defineCredential oauth2 declaration becomes a provider here, so
         // linking an account is what makes getCredential(name) resolve.

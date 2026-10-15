@@ -42,7 +42,7 @@ export interface GuideScreenshot {
 /**
  * The recording a scenario filed, when the run kept one.
  *
- * A browser run keeps a video per scenario and per actor, so a two-actor
+ * A browser run keeps a video per scenario and per virtual user, so a two-virtual-user
  * scenario files two. Same shape as a screenshot because a consumer treats it
  * the same way — a key under the run's artifact root that a base is prefixed
  * onto.
@@ -50,7 +50,7 @@ export interface GuideScreenshot {
 export interface GuideVideo {
   id?: string
   /** Whose window it was, when the run recorded more than one. */
-  actor?: string
+  virtualUser?: string
   path: string
 }
 
@@ -463,8 +463,8 @@ const GENERATED_CITATION =
  * in run order and deduplicated by artifact id rather than repeated.
  *
  * Within a scenario the shots taken to be shown lead, then the recording of the
- * whole flow, then the remaining stills. A recording is captioned with its actor
- * only when the scenario filed one per actor — a lone window needs no name. It
+ * whole flow, then the remaining stills. A recording is captioned with its virtual user
+ * only when the scenario filed one per virtual user — a lone window needs no name. It
  * is emitted as an ordinary figure: this module writes no HTML, so what makes a
  * `.webm` a player rather than a broken image is the consumer's renderer, the
  * same way a consumer resolves the base.
@@ -507,11 +507,13 @@ const renderFeature = (
     }
     for (const each of group) {
       const videos = each.videos ?? []
-      const actors = new Set(videos.map((video) => video.actor).filter(Boolean))
+      const virtualUsers = new Set(
+        videos.map((video) => video.virtualUser).filter(Boolean)
+      )
       for (const video of videos) {
         const caption =
-          video.actor && actors.size > 1
-            ? `${each.title} — ${video.actor}`
+          video.virtualUser && virtualUsers.size > 1
+            ? `${each.title} — ${video.virtualUser}`
             : each.title
         add(
           video.id ?? video.path,

@@ -21,11 +21,11 @@ import {
   resolveScenarioBrowserProvider,
 } from './scenario-browser.js'
 import { resolveEnvironment } from './environment.js'
-import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  resolvePersonaCredentials,
-  loadWiredPersonaSignIn,
-} from '../../utils/persona-credentials.js'
+  resolveVirtualUserCredentials,
+  loadWiredVirtualUserSignIn,
+} from '../../utils/virtual-user-credentials.js'
 
 type PlaywrightDriver = typeof PlaywrightModule
 
@@ -89,7 +89,7 @@ export const renderPagesList = (
 
 export const pagesScreenshot = pikkuSessionlessFunc({
   description:
-    'Photograph every page of one frontend on a running server. Pages whose params have no value are skipped; pass --params to fill them, and --as to sign in as a persona first.',
+    'Photograph every page of one frontend on a running server. Pages whose params have no value are skipped; pass --params to fill them, and --as to sign in as a virtual user first.',
   input: PagesScreenshotInput,
   output: PagesScreenshotOutput,
   func: async (
@@ -110,7 +110,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
       )
     })) as PlaywrightDriver
 
-    let session: InstanceType<PlaywrightDriver['ActorSession']>
+    let session: InstanceType<PlaywrightDriver['VirtualUserSession']>
     let close: () => Promise<void>
     if (as) {
       const state = await getInspectorState(true, false, false, true)
@@ -119,14 +119,14 @@ export const pagesScreenshot = pikkuSessionlessFunc({
         environments: config.environments ?? {},
         appUrl: baseUrl,
       })
-      await loadWiredPersonaSignIn(state)
+      await loadWiredVirtualUserSignIn(state)
       const provider = await resolveScenarioBrowserProvider({
         environment,
         apiUrl: env.apiUrl,
         appUrl: baseUrl,
-        ...(await resolvePersonaCredentials(variables, 'page screenshots')),
-        actors: resolvePersonas(
-          state.personas?.definitions ?? [],
+        ...(await resolveVirtualUserCredentials(variables, 'page screenshots')),
+        virtualUsers: resolveVirtualUsers(
+          state.virtualUsers?.definitions ?? [],
           config.scenarios?.emailDomain
         ),
         signInPath: env.signInPath,

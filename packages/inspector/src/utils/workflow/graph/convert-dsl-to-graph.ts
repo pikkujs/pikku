@@ -94,8 +94,8 @@ function convertStepToNode(
         stepName: step.stepName,
         next: nextNodeId,
       }
-      if (step.actor) {
-        node.actor = step.actor
+      if (step.virtualUser) {
+        node.virtualUser = step.virtualUser
       }
       if (step.expectEventually) {
         node.expectEventually = true
@@ -136,8 +136,8 @@ function convertStepToNode(
         scenarioStepPhase: step.phase,
         next: nextNodeId,
       }
-      if (step.actor) {
-        node.actor = step.actor
+      if (step.virtualUser) {
+        node.virtualUser = step.virtualUser
       }
       if (step.inputs) {
         if (step.inputs === 'passthrough') {
@@ -501,7 +501,7 @@ export function convertDslToGraph(
   const entryNodeIds = nodes.length > 0 ? [nodes[0].nodeId] : []
 
   // Determine source type:
-  // - scenario: complex workflow whose steps run as actors (scenario)
+  // - scenario: complex workflow whose steps run as virtual users (scenario)
   // - dsl === true: pure DSL workflow, can be serialized
   // - dsl === false: complex workflow with inline steps, not serializable
   const source = meta.scenario
@@ -518,7 +518,7 @@ export function convertDslToGraph(
     description: meta.description,
     tags: meta.tags,
     skip: meta.skip,
-    actors: meta.actors,
+    virtualUsers: meta.virtualUsers,
     context: meta.context,
     nodes: nodesRecord,
     entryNodeIds,

@@ -20,7 +20,7 @@ import { upsert } from './kysely-upsert.js'
 import { virtualUserScheduleSchema } from './schema/virtual-user-schedule.schema.js'
 
 /**
- * Keeps each persona's cadence in a `virtualUserSchedule` table.
+ * Keeps each virtual user's cadence in a `virtualUserSchedule` table.
  *
  * Wiring this is what turns virtual users from something a person triggers into
  * something that happens: without it, {@link KyselyVirtualUserRunStore} still
@@ -49,9 +49,9 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     // Read-then-write rather than a partial upsert: a schedule is configuration
     // written by a person, and the alternative is two dialects of "leave the
     // columns I did not mention alone".
-    const existing = await this.get(schedule.persona)
+    const existing = await this.get(schedule.virtualUserId)
     const merged: VirtualUserScheduleRecord = {
-      persona: schedule.persona,
+      virtualUserId: schedule.virtualUserId,
       enabled: schedule.enabled ?? existing?.enabled ?? false,
       disposition: schedule.disposition ?? existing?.disposition ?? 'realistic',
       goals: [...(schedule.goals ?? existing?.goals ?? [])],
@@ -75,7 +75,7 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     }
 
     const values = {
-      persona: merged.persona,
+      virtualUserId: merged.virtualUserId,
       enabled: merged.enabled ? 1 : 0,
       disposition: merged.disposition,
       goals: JSON.stringify(merged.goals),
@@ -88,7 +88,7 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     await upsert(
       this.db,
       this.db.insertInto('virtualUserSchedule').values(values),
-      ['persona'],
+      ['virtualUserId'],
       {
         enabled: values.enabled,
         disposition: values.disposition,
@@ -103,12 +103,12 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     return merged
   }
 
-  async get(persona: string): Promise<VirtualUserScheduleRecord | null> {
+  async get(virtualUserId: string): Promise<VirtualUserScheduleRecord | null> {
     await this.init()
     const row = await this.db
       .selectFrom('virtualUserSchedule')
       .selectAll()
-      .where('persona', '=', persona)
+      .where('virtualUserId', '=', virtualUserId)
       .executeTakeFirst()
     return row ? this.toRecord(row) : null
   }
@@ -118,7 +118,7 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     const rows = await this.db
       .selectFrom('virtualUserSchedule')
       .selectAll()
-      .orderBy('persona', 'asc')
+      .orderBy('virtualUserId', 'asc')
       .execute()
     return rows.map((row) => this.toRecord(row))
   }
@@ -136,7 +136,7 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
   }
 
   async claim(
-    persona: string,
+    virtualUserId: string,
     claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }
   ): Promise<boolean> {
     await this.init()
@@ -145,12 +145,12 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
       .set({
         nextRunAt: claim.nextRunAt.toISOString(),
         // A claim with no run id is the one written before dispatch, and must
-        // not blank out which run this persona last managed to start.
+        // not blank out which run this virtual user last managed to start.
         ...(claim.runId
           ? { lastRunId: claim.runId, lastRunAt: claim.at.toISOString() }
           : {}),
       })
-      .where('persona', '=', persona)
+      .where('virtualUserId', '=', virtualUserId)
       // The compare-and-set: whoever writes first moves `nextRunAt`, and every
       // other tick holding the value they read matches nothing.
       .where('nextRunAt', '=', claim.from.toISOString())
@@ -158,11 +158,11 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     return Number(result.numUpdatedRows ?? 0) > 0
   }
 
-  async remove(persona: string): Promise<void> {
+  async remove(virtualUserId: string): Promise<void> {
     await this.init()
     await this.db
       .deleteFrom('virtualUserSchedule')
-      .where('persona', '=', persona)
+      .where('virtualUserId', '=', virtualUserId)
       .execute()
   }
 
@@ -170,7 +170,7 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
     row: Selectable<VirtualUserScheduleTable>
   ): VirtualUserScheduleRecord {
     return {
-      persona: row.persona,
+      virtualUserId: row.virtualUserId,
       enabled: Boolean(row.enabled),
       disposition: row.disposition as VirtualUserDisposition,
       goals: parseJson(row.goals) ?? [],

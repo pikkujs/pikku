@@ -41,9 +41,9 @@ describe('scenarios may only destructure logger/config', () => {
       scenarioFile,
       [
         "import { pikkuScenario } from '@pikku/core/workflow'",
-        'declare const actors: Record<string, any>',
+        'declare const virtualUsers: Record<string, any>',
         'export const badFlow = pikkuScenario(async ({ kysely }: any, _input, { workflow }) => {',
-        "  await workflow.do('Read todos', 'getTodos', {}, { actor: actors.pm })",
+        "  await workflow.do('Read todos', 'getTodos', {}, { virtualUser: virtualUsers.pm })",
         '  return { ok: true }',
         '})',
       ].join('\n')
@@ -76,9 +76,9 @@ describe('scenarios may only destructure logger/config', () => {
       scenarioFile,
       [
         "import { pikkuScenario } from '@pikku/core/workflow'",
-        'declare const actors: Record<string, any>',
+        'declare const virtualUsers: Record<string, any>',
         'export const goodFlow = pikkuScenario(async ({ logger }, _input, { workflow }) => {',
-        "  await workflow.do('Read todos', 'getTodos', {}, { actor: actors.pm })",
+        "  await workflow.do('Read todos', 'getTodos', {}, { virtualUser: virtualUsers.pm })",
         '  return { ok: true }',
         '})',
       ].join('\n')

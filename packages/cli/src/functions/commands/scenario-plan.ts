@@ -192,7 +192,7 @@ export type ScenarioRunIdentity = {
   title?: string
   description?: string
   /** Who the scenario cast, in declaration order. */
-  actors?: string[]
+  virtualUsers?: string[]
   tags?: string[]
 }
 
@@ -214,6 +214,8 @@ export const identifyScenarioResult = (
   ...(identity.featureName ? { feature: identity.featureName } : {}),
   ...(identity.title ? { title: identity.title } : {}),
   ...(identity.description ? { description: identity.description } : {}),
-  ...(identity.actors?.length ? { actors: identity.actors } : {}),
+  ...(identity.virtualUsers?.length
+    ? { virtualUsers: identity.virtualUsers }
+    : {}),
   ...(identity.tags?.length ? { tags: identity.tags } : {}),
 })

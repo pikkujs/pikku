@@ -18,7 +18,7 @@ one as a flag would be worse than failing.
 ```bash
 pikku dev --coverage                                   # V8 precise coverage, in-process
 pikku dev --coverage --test                            # also enable stubs (needed for expectService)
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --coverage
+SCENARIO_VIRTUAL_USER_SECRET=… pikku scenario run local --coverage
 ```
 
 The run resets coverage before each scenario and snapshots after, writing **`<outDir>/coverage/scenario-coverage.json`**:
@@ -33,7 +33,7 @@ The run resets coverage before each scenario and snapshots after, writing **`<ou
 }
 ```
 
-Coverage is best-effort: it disables itself with a warning if the server is not collecting or the first actor cannot invoke, and it needs at least one configured actor. If you get no coverage, check those first.
+Coverage is best-effort: it disables itself with a warning if the server is not collecting or the first virtual user cannot invoke, and it needs at least one configured virtual user. If you get no coverage, check those first.
 
 **There is no AI-prompt output.** The old `--ai-out` flag died with `pikku tests`; nothing replaced it. To find what needs work, read `scenario-coverage.json` yourself and cross-reference `pikku meta functions list` for input/output schemas.
 
@@ -41,7 +41,7 @@ Coverage is best-effort: it disables itself with a warning if the server is not 
 
 1. `pikku scenario run <env> --coverage`, then read `<outDir>/coverage/scenario-coverage.json` to see what is unexercised.
 2. `pikku meta functions list` for those functions' schemas.
-3. Write a `pikkuScenario` that reaches them **through a real user flow** with an actor — not a scenario per function. Scenarios are flows; coverage is a consequence.
+3. Write a `pikkuScenario` that reaches them **through a real user flow** with a virtual user — not a scenario per function. Scenarios are flows; coverage is a consequence.
 4. Re-run to confirm.
 
 ## Unit tests for pure logic

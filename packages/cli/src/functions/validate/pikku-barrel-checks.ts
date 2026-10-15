@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { relative } from 'node:path'
 import { readModuleSpecifiers } from '@pikku/inspector'
 import { collectAppSources } from './app-sources.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 /**
  * The specifiers that reach the retired re-export hub: the bare namespace, and

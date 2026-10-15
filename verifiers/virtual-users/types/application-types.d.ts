@@ -6,7 +6,7 @@ import type {
 } from '@pikku/core/types'
 
 export interface Config extends CoreConfig {
-  /** Read by the virtual-user scaffold when no persona environments are configured. */
+  /** Read by the virtual-user scaffold when no virtual user environments are configured. */
   nodeEnv?: string
 }
 
