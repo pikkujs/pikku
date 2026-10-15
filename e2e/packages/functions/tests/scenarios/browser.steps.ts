@@ -164,33 +164,9 @@ export const doesNotSeeTestId = pikkuScenarioStep<
 })
 
 /**
- * Picks an option on a Mantine `SegmentedControl`.
- *
- * Mantine renders the option's `<input type="radio">` as a *sibling* of its
- * `<label>`, so `label:has(input[value=x])` never matches; the label's `for` is
- * `<uuid>-<value>`, which is both matchable and — unlike the rendered option
- * text — immune to the console's translations.
- */
-export const selectsSegment = pikkuScenarioStep<
-  { value: string },
-  { selected: string }
->({
-  name: 'selectsSegment',
-  description: 'picks an option on a segmented control',
-  template: 'switches to {value}',
-  browser: async (_services, { value }, { browser }) => {
-    await browser.page
-      .locator(`label[for$="-${value}"]:visible`)
-      .first()
-      .click()
-    return { selected: value }
-  },
-})
-
-/**
  * Picks a view on the page header's own switch, which is a `role="tablist"` of
- * buttons rather than a Mantine `SegmentedControl` — a different control with a
- * different DOM, so it gets its own step rather than a selector that guesses.
+ * buttons — its own DOM, so it gets its own step rather than a selector that
+ * guesses.
  *
  * The option is addressed by its value, which is declared in code, and never by
  * its label, which is translated.
@@ -399,30 +375,6 @@ export const expectsControl = pikkuScenarioStep<
       // is only asked when the caller actually asserted on it.
       checked: checked === undefined ? false : await target.isChecked(),
     }
-  },
-})
-
-/**
- * Picks an option on a Mantine `Select`.
- *
- * The control renders a readonly `<input role="combobox">` that opens a portalled
- * listbox, so the option is looked up on the page rather than inside the select.
- * `exact` matters whenever one option's value is a prefix of another's.
- */
-export const selectsOption = pikkuScenarioStep<
-  TestIdSelector & { value: string },
-  { selected: string }
->({
-  name: 'selectsOption',
-  description: 'picks an option on a select',
-  template: 'picks {value}',
-  browser: async (_services, { value, ...selector }, { browser }) => {
-    await browser.locate(selector).first().click()
-    await browser.page
-      .getByRole('option', { name: value, exact: true })
-      .first()
-      .click()
-    return { selected: value }
   },
 })
 

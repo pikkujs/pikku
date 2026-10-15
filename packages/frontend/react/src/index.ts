@@ -26,9 +26,6 @@ export { asI18n, asI18nStub, sep } from './i18n-types.js'
 export { createLocaleStore } from './locale-store.js'
 export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
 
-// Dev-only scenario virtual user sign-in — the logic half of the "Sign in as …"
-// switcher. UI-free, so `@pikku/mantine/dev` (which peer-depends on this
-// package) can build the rendered control on top of it.
 export {
   listDevVirtualUsers,
   signInAsVirtualUser,
