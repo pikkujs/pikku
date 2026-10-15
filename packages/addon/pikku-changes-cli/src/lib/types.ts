@@ -1,4 +1,6 @@
 import type { BoardChange, BoardGroup } from './changes-board.js'
+
+export type { BoardChange, BoardGroup, BoardStatus } from './changes-board.js'
 export type AskChangeQuestionInput = {
   changeId: string
   projectId?: string | undefined
