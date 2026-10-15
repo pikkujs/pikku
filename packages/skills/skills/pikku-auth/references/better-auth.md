@@ -539,10 +539,10 @@ virtual user`. So a statement cannot take over a **real user's** account.
   be used once, so a leaked one is a single short-lived session.
 
 This is the endpoint `pikku scenario` signs its virtual users in through. The frontend
-does not use it: it lists from `/sign-in/virtual-users` and posts a virtual user
-id to `/sign-in/switch-virtual-user`, both served by
+does not use it: it posts a virtual user
+id to `/sign-in/switch-virtual-user`, served by
 `pikkuVirtualUser({ virtualUserSignIn: { virtualUsers } })` with no credential — see
-`pikku-scenario` for the setup and `pikku-react` for `signInAsVirtualUser()`.
+`pikku-scenario` for the setup.
 
 ### Provisioning virtual users
 

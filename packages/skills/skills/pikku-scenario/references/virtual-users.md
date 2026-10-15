@@ -89,11 +89,9 @@ Declared virtual users are not only for automated runs. `signInPath` is Better A
 frontend can sign in as the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-It holds no credential. `listDevVirtualUsers()` reads virtual users from
-`/auth/sign-in/virtual-users` and `signInAsVirtualUser()` (both from `pikku-react`,
-a separate install) signs in by posting only a virtual user id to
-`/auth/sign-in/switch-virtual-user`; the server resolves the address. One server
-piece serves both, in the auth config:
+It holds no credential. A client app that wants one-click sign-in posts only a
+virtual user id to `/auth/sign-in/switch-virtual-user` itself; the server
+resolves the address. One server piece serves both, in the auth config:
 
 ```ts snippet:virtualUserSignIn
 
@@ -102,8 +100,6 @@ piece serves both, in the auth config:
 It is always open under `pikku dev`. A deployed stage needs virtual user
 sign-in opted in and an explicit `virtualUserSignIn.allowed`; production never
 has the opt-in, so it lists nobody and refuses every virtual user sign-in.
-`pikku cloud validate` **requires** any frontend with a login screen to call
-`signInAsVirtualUser()`.
 
 If the list is empty, it is one of two things, and neither errors:
 

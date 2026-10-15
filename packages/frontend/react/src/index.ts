@@ -26,15 +26,6 @@ export { asI18n, asI18nStub, sep } from './i18n-types.js'
 export { createLocaleStore } from './locale-store.js'
 export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
 
-export {
-  listDevVirtualUsers,
-  signInAsVirtualUser,
-} from './dev-virtual-users.js'
-export type {
-  DevVirtualUser,
-  ListDevVirtualUsersOptions,
-  SignInAsVirtualUserOptions,
-} from './dev-virtual-users.js'
 
 // Buffered product-analytics client, typed against the app's own event union.
 // The app owns the union and the endpoint; this package owns the transport.
