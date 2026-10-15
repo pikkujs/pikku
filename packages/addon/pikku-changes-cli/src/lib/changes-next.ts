@@ -164,15 +164,17 @@ export async function waitForNext(
       ? Math.max(options.intervalMs, SAFETY_POLL_MS)
       : options.intervalMs
     try {
-      const list = board(await rpc.invoke('listChanges', {
-        projectId: options.projectId,
-        stageId: options.stageId,
-        route: options.route,
-        status: statuses('ready', 'in_progress'),
-        pickupOnly: false,
-        includeDone: false,
-        limit: 200,
-      }))
+      const list = board(
+        await rpc.invoke('listChanges', {
+          projectId: options.projectId,
+          stageId: options.stageId,
+          route: options.route,
+          status: statuses('ready', 'in_progress'),
+          pickupOnly: false,
+          includeDone: false,
+          limit: 200,
+        })
+      )
       failures = 0
 
       const soonest = soonestClaimable(list, clock.now())

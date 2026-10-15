@@ -96,11 +96,7 @@ describe('waitForNext', () => {
     assert.deepStrictEqual(claimable(list as any, NOW), [])
     const { rpc } = fakeRpc([list])
     const { clock } = fakeClock()
-    const result = await waitForNext(
-      rpc,
-      options({ timeoutMs: 30_000 }),
-      clock
-    )
+    const result = await waitForNext(rpc, options({ timeoutMs: 30_000 }), clock)
     assert.strictEqual(result.outcome, 'timeout')
   })
 

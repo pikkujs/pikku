@@ -125,7 +125,10 @@ describe('local changes queue', () => {
         changeIds: ['1'],
         claimedBy: 'me',
       }),
-      { status: 409, message: '#1 is in the backlog; run `pikku changes ready 1` first' }
+      {
+        status: 409,
+        message: '#1 is in the backlog; run `pikku changes ready 1` first',
+      }
     )
     await assert.rejects(
       rpc.invoke('claimChanges', { projectId: 'local', claimedBy: 'me' }),
@@ -168,7 +171,10 @@ describe('local changes queue', () => {
   test('start, backlog and ready move a change between columns', async () => {
     const rpc = await store()
     await rpc.invoke('createChange', { stageId: 'local', title: 'A' })
-    assert.strictEqual((await move(rpc, 'in_progress')).change.status, 'in_progress')
+    assert.strictEqual(
+      (await move(rpc, 'in_progress')).change.status,
+      'in_progress'
+    )
     assert.strictEqual((await move(rpc, 'backlog')).change.status, 'backlog')
     assert.strictEqual((await move(rpc, 'ready')).change.status, 'ready')
   })
@@ -281,7 +287,11 @@ describe('local changes queue', () => {
     } as any)
     const asks = async () =>
       (await rpc.invoke('listChanges', { projectId: 'local' })).changes.map(
-        (c) => [c.status as string, (c as any).ask?.kind, (c as any).ask?.askedBy]
+        (c) => [
+          c.status as string,
+          (c as any).ask?.kind,
+          (c as any).ask?.askedBy,
+        ]
       )
     assert.deepStrictEqual(await asks(), [
       ['needs_answer', 'question', 'me'],
@@ -292,14 +302,22 @@ describe('local changes queue', () => {
       body: 'Still thinking',
       authorName: 'me',
     } as any)
-    assert.deepStrictEqual((await asks())[0], ['needs_answer', 'question', 'me'])
+    assert.deepStrictEqual((await asks())[0], [
+      'needs_answer',
+      'question',
+      'me',
+    ])
     await rpc.invoke('replyToChange', {
       changeId: '1',
       body: 'Go with A',
       authorName: 'person',
       person: true,
     } as any)
-    assert.deepStrictEqual((await asks())[0], ['in_progress', undefined, undefined])
+    assert.deepStrictEqual((await asks())[0], [
+      'in_progress',
+      undefined,
+      undefined,
+    ])
     const thread = await rpc.invoke('getChange', { changeId: '1' })
     assert.deepStrictEqual(
       thread.thread.map((m) => m.authorKind),

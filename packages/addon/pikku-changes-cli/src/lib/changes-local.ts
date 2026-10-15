@@ -83,7 +83,10 @@ type LocalMap = {
   claimChanges: [ClaimChangesInput, ClaimChangesOutput]
   completeChange: [CompleteChangeInput, CompleteChangeOutput]
   askChangeQuestion: [AskChangeQuestionInput, AskChangeQuestionOutput]
-  replyToChange: [ReplyToChangeInput & { person?: boolean }, ReplyToChangeOutput]
+  replyToChange: [
+    ReplyToChangeInput & { person?: boolean },
+    ReplyToChangeOutput,
+  ]
   attachChangeShot: [AttachChangeShotInput, AttachChangeShotOutput]
 }
 

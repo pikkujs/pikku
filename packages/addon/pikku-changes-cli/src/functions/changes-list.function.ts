@@ -70,28 +70,32 @@ const badge = (
   return isAbandoned(change, groups, now) ? 'abandoned' : null
 }
 
-const line = (groups: Group[], now: number) => (change: BoardChange): void => {
-  const flags = [
-    badge(change, groups, now),
-    change.heldUntil
-      ? dim(`claimable at ${clockTime(change.heldUntil)}`)
-      : change.held
-        ? dim('held')
-        : null,
-    change.route ? safe(change.route) : null,
-  ]
-    .filter(Boolean)
-    .join('  ')
-  console.log(`  #${safe(change.shortId)}  ${safe(change.title)}`)
-  console.log(
-    `      ${flags ? `${flags}  ` : ''}${age(change.createdAt)} ago  ${dim(safe(change.changeId))}`
-  )
-  const named = (change.capture?.elements ?? [])
-    .map((element) => element.testId ?? element.sourceAnchor ?? element.cssPath)
-    .filter((name): name is string => !!name)
-    .map(safe)
-  if (named.length) console.log(dim(`      circled: ${named.join(', ')}`))
-}
+const line =
+  (groups: Group[], now: number) =>
+  (change: BoardChange): void => {
+    const flags = [
+      badge(change, groups, now),
+      change.heldUntil
+        ? dim(`claimable at ${clockTime(change.heldUntil)}`)
+        : change.held
+          ? dim('held')
+          : null,
+      change.route ? safe(change.route) : null,
+    ]
+      .filter(Boolean)
+      .join('  ')
+    console.log(`  #${safe(change.shortId)}  ${safe(change.title)}`)
+    console.log(
+      `      ${flags ? `${flags}  ` : ''}${age(change.createdAt)} ago  ${dim(safe(change.changeId))}`
+    )
+    const named = (change.capture?.elements ?? [])
+      .map(
+        (element) => element.testId ?? element.sourceAnchor ?? element.cssPath
+      )
+      .filter((name): name is string => !!name)
+      .map(safe)
+    if (named.length) console.log(dim(`      circled: ${named.join(', ')}`))
+  }
 
 export const renderChangesList = (
   _s: unknown,

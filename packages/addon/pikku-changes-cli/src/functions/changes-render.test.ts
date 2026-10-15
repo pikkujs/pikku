@@ -299,10 +299,21 @@ describe('changes reply', () => {
       change({ shortId: '4', title: 'D' }),
       change({ shortId: '5', title: 'E' }),
     ])
-    const order = ['backlog (1)', 'ready (2)', 'in progress (1)', 'needs answer (1)']
+    const order = [
+      'backlog (1)',
+      'ready (2)',
+      'in progress (1)',
+      'needs answer (1)',
+    ]
     const at = order.map((heading) => out.indexOf(heading))
-    assert.ok(at.every((i) => i >= 0), out)
-    assert.deepStrictEqual([...at].sort((a, b) => a - b), at)
+    assert.ok(
+      at.every((i) => i >= 0),
+      out
+    )
+    assert.deepStrictEqual(
+      [...at].sort((a, b) => a - b),
+      at
+    )
     assert.match(out, /backlog \(1\)\n  #3  C/)
     assert.doesNotMatch(out, /\bdone \(/)
     assert.match(board([change({ status: 'ready' })]), /backlog \(0\)/)

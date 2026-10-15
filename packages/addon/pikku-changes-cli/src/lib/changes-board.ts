@@ -1,15 +1,7 @@
-import type {
-  ListChangesInput,
-  ListChangesOutput,
-} from './types.js'
+import type { ListChangesInput, ListChangesOutput } from './types.js'
 
 export type BoardStatus =
-  | 'backlog'
-  | 'ready'
-  | 'in_progress'
-  | 'needs_answer'
-  | 'done'
-  | 'dismissed'
+  'backlog' | 'ready' | 'in_progress' | 'needs_answer' | 'done' | 'dismissed'
 
 export const COLUMNS = [
   'backlog',

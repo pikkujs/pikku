@@ -10,10 +10,7 @@ import {
   nonBlank,
 } from '../lib/changes.js'
 import { dim, safe, safeBlock } from '@pikku/cli/addon-support'
-import type {
-  ReplyToChangeInput,
-  ReplyToChangeOutput,
-} from '../lib/types.js'
+import type { ReplyToChangeInput, ReplyToChangeOutput } from '../lib/types.js'
 import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 
 export const ChangesReplyInput = z.object({
