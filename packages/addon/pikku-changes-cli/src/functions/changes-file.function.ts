@@ -50,7 +50,7 @@ export const ChangesFile = pikkuSessionlessFunc({
     )
     if (input.backlog && projectId !== LOCAL_PROJECT_ID)
       throw new CloudPreconditionError(
-        'The backlog is kept in the local changes queue; this project keeps its changes in fabric.'
+        'The backlog is kept in the local changes queue; this project keeps its changes in Pikku Studio Cloud.'
       )
 
     const body = input.bodyFile

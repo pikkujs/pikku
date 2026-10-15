@@ -30,7 +30,7 @@ async function move(
   const local = projectId === LOCAL_PROJECT_ID
   if (!local && to !== 'in_progress')
     throw new CloudPreconditionError(
-      'The backlog is kept in the local changes queue; this project keeps its changes in fabric.'
+      'The backlog is kept in the local changes queue; this project keeps its changes in Pikku Studio Cloud.'
     )
   const invoke = rpc.invoke as unknown as Invoke
   const changes: Moved[] = []
