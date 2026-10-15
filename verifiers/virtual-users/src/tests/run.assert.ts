@@ -116,6 +116,9 @@ const scriptedRunner = () => {
 const dueNow = {
   virtualUserId: 'guest',
   enabled: true,
+  // The default disposition abandons an intent on a random move, which ends the
+  // scripted run before its call; this one never does.
+  disposition: 'accountable' as const,
   goals: ['find out who the app thinks I am'],
   minIntervalMs: HOUR,
   maxIntervalMs: 3 * HOUR,
