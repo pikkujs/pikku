@@ -3,21 +3,21 @@ import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
 import {
-  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
-  verifyVirtualUserSecret,
+  VIRTUAL_USER_IN_PROCESS_ENDPOINT,
+  VirtualUserStatementError,
 } from '@pikku/core/services'
-import type { FeatureFlagSource, Logger } from '@pikku/core/services'
+import type {
+  FeatureFlagSource,
+  Logger,
+  VirtualUserStatementVerifier,
+} from '@pikku/core/services'
 
 import {
   VIRTUAL_USER_NOT_PROVISIONED_MESSAGE,
   VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE,
-  virtualUserSignInAttemptRefusedMessage,
   virtualUserSignInEnabledMessage,
   virtualUserSignInNearMissMessage,
-  virtualUserSignInRefusedMessage,
   resolveVirtualUserSignIn,
-  WEAK_VIRTUAL_USER_ROOT_SECRET_MESSAGE,
-  weakVirtualUserRootSecretMessage,
 } from './virtual-user-sign-in-gate.js'
 import {
   devSwitcherOn,
@@ -28,16 +28,6 @@ import type { DevSignInVirtualUser } from './dev-virtual-users.js'
 
 export interface VirtualUserPluginOptions {
   /**
-   * The ROOT virtual user secret, from which each virtual user's own credential is derived
-   * — it is not itself a valid credential and is never presented to the
-   * endpoint. Missing or empty refuses the endpoint, and only `virtualUser: true`
-   * rows can sign in.
-   */
-  secret:
-    | string
-    | undefined
-    | (() => string | undefined | Promise<string | undefined>)
-  /**
    * The opt-in that enables sign-in outside `pikku dev`, when the caller has
    * already read it. Falls back to `process.env[VIRTUAL_USER_SIGN_IN_OPT_IN_ENV]`.
    *
@@ -47,15 +37,33 @@ export interface VirtualUserPluginOptions {
    * configuration. Only `VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE` opens the gate; any other
    * value is refused and logged as a near miss, exactly as the environment
    * variable is.
+   *
+   * With the gate shut the plugin registers no sign-in endpoint at all.
    */
   allowSignIn?: string
   /**
-   * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/virtual-users
-   * ?app=` lists the virtual users it may offer, and `POST /sign-in/switch-virtual-user { id }`
-   * signs in as one without the caller presenting a credential.
+   * Checks the signed statement an external caller presents. Build it from the
+   * stage's public key: `new JoseVirtualUserStatementVerifier(await
+   * variables.get(VIRTUAL_USER_VERIFY_KEY_VARIABLE))` from `@pikku/jose`.
+   * Without it there is no statement endpoint, and the switcher is open under
+   * `pikku dev` only.
+   */
+  statementVerifier?: VirtualUserStatementVerifier
+  /**
+   * The audience a statement must name. Defaults to the origin of the auth
+   * base URL; set it for an app behind a proxy that rewrites the origin.
+   */
+  audience?: string
+  /**
+   * The declared virtual users. `POST /sign-in/virtual-user { statement }`
+   * resolves the statement's virtual user id against it, and the "Sign in as …"
+   * switcher lists and signs in from it:
+   * `GET /sign-in/virtual-users?app=` lists what it may offer and
+   * `POST /sign-in/switch-virtual-user { id, statement? }` signs in as one.
    *
-   * Open under `pikku dev`; a deployed stage needs `allowSignIn` and the
-   * `devSwitcher` flag in `featureFlags`. `allowed` replaces that check.
+   * The switcher is open under `pikku dev`; a deployed stage needs `allowSignIn`
+   * and the `devSwitcher` flag in `featureFlags` (`allowed` replaces that
+   * check), and every switch there carries a statement.
    */
   virtualUserSignIn?: {
     virtualUsers: ReadonlyArray<DevSignInVirtualUser>
@@ -134,16 +142,21 @@ const storeVirtualUserCredentials = async (
 }
 
 /**
- * Better Auth plugin for scenario virtual users: `POST /sign-in/virtual-user` with
- * `{ email, secret }`, non-virtual-user sign-in refused, rows created only under
- * `pikku dev`.
+ * Better Auth plugin for virtual users. One sign-in closure is the only thing
+ * that creates a virtual user session; three endpoints reach it:
  *
- * The presented secret is the address's own derived credential, not the root:
- * it verifies against the email being signed in as, so it opens that one
- * synthetic account and no other.
+ * - `signInVirtualUserInternal`, `SERVER_ONLY`: not routable over HTTP, called
+ *   through `auth.api` by a run that is already inside the app.
+ * - `POST /sign-in/virtual-user { statement }`: an external caller's signed
+ *   statement, checked against the stage's public key.
+ * - `POST /sign-in/switch-virtual-user { id, statement? }`: the switcher.
+ *
+ * Non-virtual-user rows are refused, and rows are created only under
+ * `pikku dev`. With the gate shut none of the sign-in endpoints is registered:
+ * production has no route to refuse and no handler to reach.
  */
 export const pikkuVirtualUser = (
-  options: VirtualUserPluginOptions
+  options: VirtualUserPluginOptions = {}
 ): BetterAuthPlugin => {
   const logger = options.logger ?? console
   const gate = resolveVirtualUserSignIn(options.allowSignIn)
@@ -153,12 +166,6 @@ export const pikkuVirtualUser = (
   }
   if (gate.enabled) {
     logger.info(virtualUserSignInEnabledMessage(gate.reason))
-  }
-
-  let refusalAnnounced = false
-  if (!gate.enabled && typeof options.secret === 'string' && options.secret) {
-    logger.warn(virtualUserSignInRefusedMessage())
-    refusalAnnounced = true
   }
 
   const virtualUserAllowed = async () =>
@@ -178,7 +185,6 @@ export const pikkuVirtualUser = (
     let user: VirtualUserRow | undefined = existing?.user as
       VirtualUserRow | undefined
     if (user && !user.virtualUser) {
-      // Real user row — the secret must never impersonate real users
       throw new APIError('UNAUTHORIZED', {
         message: 'User is not a virtual user',
       })
@@ -232,6 +238,124 @@ export const pikkuVirtualUser = (
     })
   }
 
+  const verifyStatement = async (ctx: any, statement: string) => {
+    if (!options.statementVerifier) {
+      throw new APIError('UNAUTHORIZED', {
+        message:
+          'This app has no verify key for virtual user statements — set VIRTUAL_USER_VERIFY_KEY and pass a statementVerifier to pikkuVirtualUser',
+      })
+    }
+    const audience =
+      options.audience ?? new URL(ctx.context.baseURL as string).origin
+    try {
+      return await options.statementVerifier.verify(statement, audience)
+    } catch (error) {
+      if (error instanceof VirtualUserStatementError) {
+        throw new APIError('UNAUTHORIZED', { message: error.message })
+      }
+      throw error
+    }
+  }
+
+  const declared = (id: string) =>
+    options.virtualUserSignIn?.virtualUsers.find(
+      (candidate) => candidate.id === id && isSignInable(candidate)
+    )
+
+  const endpoints: NonNullable<BetterAuthPlugin['endpoints']> = {}
+
+  if (gate.enabled) {
+    endpoints[VIRTUAL_USER_IN_PROCESS_ENDPOINT] = createAuthEndpoint(
+      '/sign-in/virtual-user-internal',
+      {
+        method: 'POST',
+        body: z.object({ email: z.string(), name: z.string().optional() }),
+        metadata: { SERVER_ONLY: true },
+      },
+      async (ctx) => signIn(ctx, ctx.body.email.toLowerCase(), ctx.body.name)
+    )
+
+    if (options.statementVerifier && options.virtualUserSignIn) {
+      endpoints.signInWithStatement = createAuthEndpoint(
+        '/sign-in/virtual-user',
+        { method: 'POST', body: z.object({ statement: z.string() }) },
+        async (ctx) => {
+          const { virtualUserId } = await verifyStatement(
+            ctx,
+            ctx.body.statement
+          )
+          const virtualUser = declared(virtualUserId)
+          if (!virtualUser?.email) {
+            throw new APIError('NOT_FOUND', {
+              message: `No virtual user '${virtualUserId}'`,
+            })
+          }
+          return signIn(ctx, virtualUser.email.toLowerCase(), virtualUser.name)
+        }
+      )
+    }
+  }
+
+  if (options.virtualUserSignIn) {
+    endpoints.listVirtualUsers = createAuthEndpoint(
+      '/sign-in/virtual-users',
+      {
+        method: 'GET',
+        query: z.object({ app: z.string().optional() }).optional(),
+      },
+      async (ctx) => {
+        const virtualUserSignIn = options.virtualUserSignIn!
+        const open = gate.enabled && (await virtualUserAllowed())
+        return ctx.json({
+          virtualUsers: open
+            ? listDevVirtualUsers(
+                virtualUserSignIn.virtualUsers,
+                ctx.query?.app
+              )
+            : [],
+        })
+      }
+    )
+    endpoints.signInVirtualUser = createAuthEndpoint(
+      '/sign-in/switch-virtual-user',
+      {
+        method: 'POST',
+        body: z.object({ id: z.string(), statement: z.string().optional() }),
+      },
+      async (ctx) => {
+        if (!gate.enabled || !(await virtualUserAllowed())) {
+          throw new APIError('UNAUTHORIZED', {
+            message: VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE,
+          })
+        }
+        const virtualUser = declared(ctx.body.id)
+        if (!virtualUser?.email) {
+          throw new APIError('NOT_FOUND', {
+            message: `No virtual user '${ctx.body.id}'`,
+          })
+        }
+        if (!gate.mayProvision) {
+          if (!ctx.body.statement) {
+            throw new APIError('UNAUTHORIZED', {
+              message:
+                'Signing in as a virtual user on a stage needs a signed statement',
+            })
+          }
+          const { virtualUserId } = await verifyStatement(
+            ctx,
+            ctx.body.statement
+          )
+          if (virtualUserId !== ctx.body.id) {
+            throw new APIError('UNAUTHORIZED', {
+              message: 'The statement is for a different virtual user',
+            })
+          }
+        }
+        return signIn(ctx, virtualUser.email.toLowerCase(), virtualUser.name)
+      }
+    )
+  }
+
   return {
     id: 'virtualUser',
     /** Declared whether or not the gate is open — `pikku db generate` must never read a different shape in production than in development. */
@@ -247,102 +371,6 @@ export const pikkuVirtualUser = (
         },
       },
     },
-    endpoints: {
-      signInWithEmail: createAuthEndpoint(
-        '/sign-in/virtual-user',
-        {
-          method: 'POST',
-          body: z.object({
-            email: z.string(),
-            name: z.string().optional(),
-            secret: z.string(),
-          }),
-        },
-        async (ctx) => {
-          if (!gate.enabled) {
-            if (!refusalAnnounced) {
-              refusalAnnounced = true
-              logger.warn(virtualUserSignInAttemptRefusedMessage())
-            }
-            throw new APIError('UNAUTHORIZED', {
-              message: VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE,
-            })
-          }
-
-          const root =
-            typeof options.secret === 'function'
-              ? await options.secret()
-              : options.secret
-          if (!root) {
-            throw new APIError('UNAUTHORIZED', {
-              message: 'Virtual user sign-in is not configured',
-            })
-          }
-          if (root.length < VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH) {
-            logger.warn(weakVirtualUserRootSecretMessage())
-            throw new APIError('UNAUTHORIZED', {
-              message: WEAK_VIRTUAL_USER_ROOT_SECRET_MESSAGE,
-            })
-          }
-
-          const email = ctx.body.email.toLowerCase()
-          if (!(await verifyVirtualUserSecret(root, email, ctx.body.secret))) {
-            throw new APIError('UNAUTHORIZED', {
-              message: 'Invalid virtual user secret',
-            })
-          }
-          return signIn(ctx, email, ctx.body.name)
-        }
-      ),
-      ...(options.virtualUserSignIn
-        ? {
-            listVirtualUsers: createAuthEndpoint(
-              '/sign-in/virtual-users',
-              {
-                method: 'GET',
-                query: z.object({ app: z.string().optional() }).optional(),
-              },
-              async (ctx) => {
-                const virtualUserSignIn = options.virtualUserSignIn!
-                const open = gate.enabled && (await virtualUserAllowed())
-                return ctx.json({
-                  virtualUsers: open
-                    ? listDevVirtualUsers(
-                        virtualUserSignIn.virtualUsers,
-                        ctx.query?.app
-                      )
-                    : [],
-                })
-              }
-            ),
-            signInVirtualUser: createAuthEndpoint(
-              '/sign-in/switch-virtual-user',
-              { method: 'POST', body: z.object({ id: z.string() }) },
-              async (ctx) => {
-                const virtualUserSignIn = options.virtualUserSignIn!
-                if (!gate.enabled || !(await virtualUserAllowed())) {
-                  throw new APIError('UNAUTHORIZED', {
-                    message: 'Virtual user sign-in is disabled',
-                  })
-                }
-                const virtualUser = virtualUserSignIn.virtualUsers.find(
-                  (candidate) =>
-                    candidate.id === ctx.body.id && isSignInable(candidate)
-                )
-                if (!virtualUser?.email) {
-                  throw new APIError('NOT_FOUND', {
-                    message: `No virtual user '${ctx.body.id}'`,
-                  })
-                }
-                return signIn(
-                  ctx,
-                  virtualUser.email.toLowerCase(),
-                  virtualUser.name
-                )
-              }
-            ),
-          }
-        : {}),
-    },
+    endpoints,
   }
 }

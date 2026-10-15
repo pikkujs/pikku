@@ -8,9 +8,6 @@ export const VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE =
 export const VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE =
   'Virtual user sign-in is disabled outside `pikku dev`'
 
-export const WEAK_VIRTUAL_USER_ROOT_SECRET_MESSAGE =
-  'Virtual user sign-in is not configured with a strong enough secret'
-
 export const VIRTUAL_USER_NOT_PROVISIONED_MESSAGE =
   'No virtual user account exists for that address — the deployment provisions its virtual users at startup, so check they were declared in this environment'
 
@@ -84,15 +81,7 @@ export const virtualUserSignInEnabledMessage = (
 ): string =>
   reason === 'pikku-dev'
     ? `virtualUser: sign-in enabled because ${DEV_VIRTUAL_USER_SIGN_IN_ENV} is set — this process is \`pikku dev\``
-    : `virtualUser: sign-in enabled outside \`pikku dev\` by ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} — any provisioned virtual user can be signed in as without a password`
-
-export const virtualUserSignInRefusedMessage = (): string =>
-  `virtualUser: a virtual user secret is configured but sign-in stays disabled — ${DEV_VIRTUAL_USER_SIGN_IN_ENV} is unset (so this is not \`pikku dev\`). ` +
-  `Remove the secret from this environment, or, if this stage is meant to run scenarios, set ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV}=${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}.`
-
-export const virtualUserSignInAttemptRefusedMessage = (): string =>
-  `virtualUser: refused a sign-in attempt — virtual user sign-in is disabled outside \`pikku dev\`. ` +
-  `If this stage is meant to run scenarios, set ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV}=${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}.`
+    : `virtualUser: sign-in enabled outside \`pikku dev\` by ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} — a provisioned virtual user can be signed in as by the app's own runs and by whoever holds this stage's signing key`
 
 /**
  * The value itself is never reproduced: an operator who pasted a secret into
@@ -101,12 +90,3 @@ export const virtualUserSignInAttemptRefusedMessage = (): string =>
  */
 export const virtualUserSignInNearMissMessage = (): string =>
   `virtualUser: ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} is set to an unsupported value, which is ignored — the only value that enables virtual user sign-in outside \`pikku dev\` is '${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}'.`
-
-/**
- * Says what is wrong on the server, where the operator can act on it — the
- * caller is told only that sign-in is not configured, since a short root secret
- * is a fact about the deployment and not something a client gets to learn.
- */
-export const weakVirtualUserRootSecretMessage = (): string =>
-  `virtualUser: refused a sign-in — the root virtual user secret is shorter than 32 characters. ` +
-  `Every virtual user's credential is derived from it, so it must be high-entropy key material, not a password.`

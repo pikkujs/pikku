@@ -19,6 +19,9 @@ export const VIRTUAL_USER_VERIFY_KEY_VARIABLE = 'VIRTUAL_USER_VERIFY_KEY'
 /** The variable whoever deploys holds the PRIVATE key in. Never set on a stage. */
 export const VIRTUAL_USER_SIGNING_KEY_VARIABLE = 'VIRTUAL_USER_SIGNING_KEY'
 
+/** The key a run reaches the in-process sign-in under, on `auth.api`. */
+export const VIRTUAL_USER_IN_PROCESS_ENDPOINT = 'signInVirtualUserInternal'
+
 export interface VirtualUserStatementVerifier {
   /**
    * Resolves to the virtual user the statement names. Throws
