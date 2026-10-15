@@ -3161,7 +3161,6 @@
 
     "@pikku/core": ["@pikku/core@workspace:packages/core"],
 
-
     "@pikku/deploy": ["@pikku/deploy@workspace:packages/deploy/deploy-core"],
 
     "@pikku/deploy-azure": ["@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"],
