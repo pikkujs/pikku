@@ -1,7 +1,9 @@
 import { CloudPreconditionError, currentBranch } from '@pikku/cli/addon-support'
 import {
   LOCAL_PROJECT_ID,
+  fromHosted,
   httpStatus,
+  toHostedInput,
   registerChangesBackend,
   type ChangesRPC,
 } from '@pikku/addon-changes-cli/backend'
@@ -40,8 +42,12 @@ export async function cloudChangesBackend({
   const invoke = async (name: string, data: unknown) => {
     try {
       if (name === 'createChange')
-        return await fileChange(cloud, projectId, data as CreateChangeInput)
-      return await cloud.invoke(name as any, data as any)
+        return fromHosted(
+          await fileChange(cloud, projectId, data as CreateChangeInput)
+        )
+      return fromHosted(
+        await cloud.invoke(name as any, toHostedInput(data) as any)
+      )
     } catch (error) {
       if (httpStatus(error) !== undefined) throw error
       throw new CloudPreconditionError(

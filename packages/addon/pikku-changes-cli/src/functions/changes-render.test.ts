@@ -34,7 +34,7 @@ const change = (over: Record<string, unknown> = {}) => ({
   changeId: 'chg_1',
   shortId: '12',
   title: 'Grouped totals',
-  status: 'open',
+  status: 'ready',
   held: false,
   route: '/checkout',
   groupId: null,
@@ -138,13 +138,15 @@ describe('changes list', () => {
       } as never)
     )
 
-  test('a held lease reads as the time it has left', () => {
-    assert.ok(lease(30).includes('claimed by claude-code, 30m left'))
+  test('a card in a live lease reads claimed by, until a clock time', () => {
+    const out = lease(30)
+    assert.match(out, /claimed by claude-code until \d\d:\d\d/)
   })
 
-  test('an expired lease does not read as negative time', () => {
-    assert.ok(!lease(-30).includes('-30m'))
-    assert.ok(lease(-30).includes('0m left'))
+  test('a card whose lease lapsed is not shown as claimed', () => {
+    const out = lease(-30)
+    assert.doesNotMatch(out, /claimed by/)
+    assert.doesNotMatch(out, /abandoned/)
   })
 
   test('neutralizes a filed title and route', () => {
@@ -256,7 +258,7 @@ describe('changes show, held', () => {
     const at = new Date(Date.now() + 20 * 60_000)
     const out = printed(() =>
       renderChangesShow(null, {
-        change: change({ status: 'claimed', heldUntil: at.toISOString() }),
+        change: change({ status: 'ready', heldUntil: at.toISOString() }),
         thread: [],
         stageUrl: null,
       } as never)
@@ -280,21 +282,71 @@ describe('changes reply', () => {
     assert.ok(out.includes('[evidence]'))
   })
 
-  test('lists backlogged changes in their own group, hidden from the rest', () => {
-    const out = printed(() =>
-      renderChangesList(
-        undefined,
-        {
-          changes: [
-            change({ shortId: '1', title: 'Active' }),
-            change({ shortId: '2', title: 'Shelved', backlog: true }),
-          ],
-          groups: [],
-        } as any
-      )
+  const board = (changes: unknown[], groups: unknown[] = []) =>
+    printed(() => renderChangesList(undefined, { changes, groups } as any))
+
+  test('lists the columns left to right with counts, empty ones included', () => {
+    const out = board([
+      change({ shortId: '1', title: 'A', status: 'needs_answer' }),
+      change({ shortId: '2', title: 'B', status: 'in_progress' }),
+      change({ shortId: '3', title: 'C', status: 'backlog' }),
+      change({ shortId: '4', title: 'D' }),
+      change({ shortId: '5', title: 'E' }),
+    ])
+    const order = ['backlog (1)', 'ready (2)', 'in progress (1)', 'needs answer (1)']
+    const at = order.map((heading) => out.indexOf(heading))
+    assert.ok(at.every((i) => i >= 0), out)
+    assert.deepStrictEqual([...at].sort((a, b) => a - b), at)
+    assert.match(out, /backlog \(1\)\n  #3  C/)
+    assert.doesNotMatch(out, /\bdone \(/)
+    assert.match(board([change({ status: 'ready' })]), /backlog \(0\)/)
+  })
+
+  test('done shows as a column only when done changes are listed', () => {
+    const out = board([change({ status: 'done', title: 'Old' })])
+    assert.match(out, /done \(1\)\n  #12  Old/)
+  })
+
+  test('badges a live claim and an abandoned in-progress change', () => {
+    const live = {
+      groupId: 'g1',
+      title: 'G',
+      claimedBy: 'claude-code',
+      claimExpiresAt: new Date(Date.now() + 20 * 60_000).toISOString(),
+    }
+    const lapsed = {
+      groupId: 'g2',
+      title: 'H',
+      claimedBy: 'old',
+      claimExpiresAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    }
+    const out = board(
+      [
+        change({ shortId: '1', status: 'in_progress', groupId: 'g1' }),
+        change({ shortId: '2', status: 'in_progress', groupId: 'g2' }),
+        change({ shortId: '3', status: 'in_progress', groupId: null }),
+        change({ shortId: '4', status: 'ready', groupId: 'g1' }),
+      ],
+      [live, lapsed]
     )
-    assert.match(out, /unclaimed \(1\)\n  #1  Active/)
-    assert.match(out, /backlog \(1\)\n  #2  Shelved/)
-    assert.doesNotMatch(out, /unclaimed \(2\)/)
+    assert.strictEqual(out.match(/claimed by claude-code until/g)?.length, 2)
+    assert.strictEqual(out.match(/abandoned/g)?.length, 2)
+  })
+
+  test('badges what kind of answer a parked change needs', () => {
+    const out = board([
+      change({
+        shortId: '1',
+        status: 'needs_answer',
+        ask: { kind: 'visual', askedBy: 'a', askedAt: new Date() },
+      }),
+      change({
+        shortId: '2',
+        status: 'needs_answer',
+        ask: { kind: 'question', askedBy: 'a', askedAt: new Date() },
+      }),
+    ])
+    assert.match(out, /needs answer · visual/)
+    assert.match(out, /needs answer · question/)
   })
 })

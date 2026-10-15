@@ -49,7 +49,7 @@ export const ChangesFile = pikkuSessionlessFunc({
       input.projectId
     )
     if (input.backlog && projectId !== LOCAL_PROJECT_ID)
-      throw new PreconditionError(
+      throw new CloudPreconditionError(
         'The backlog is kept in the local changes queue; this project keeps its changes in fabric.'
       )
 

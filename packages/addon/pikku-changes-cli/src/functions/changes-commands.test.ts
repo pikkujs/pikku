@@ -148,7 +148,7 @@ describe('changes claim, refused', () => {
           change: {
             changeId: HELD,
             shortId: '3',
-            status: 'open',
+            status: 'ready',
             held: true,
             heldUntil: heldUntil.toISOString(),
           },
@@ -158,7 +158,7 @@ describe('changes claim, refused', () => {
           change: {
             changeId: TAKEN,
             shortId: '4',
-            status: 'claimed',
+            status: 'ready',
             held: false,
             heldUntil: leaseEnds.toISOString(),
           },
@@ -182,7 +182,7 @@ describe('changes claim, refused', () => {
           assert.match(
             error.message,
             new RegExp(
-              `#4: claimed, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
+              `#4: ready, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
             )
           )
           assert.match(error.message, /#99: not found in this project/)

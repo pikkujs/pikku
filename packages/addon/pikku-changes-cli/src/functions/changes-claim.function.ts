@@ -14,6 +14,7 @@ import { git } from '@pikku/cli/addon-support'
 import { basename, dirname, join } from 'node:path'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import type { ClaimChangesOutput } from '../lib/types.js'
+import { statuses } from '../lib/changes-board.js'
 import { configuredPlanJudge, needsPlan } from '../lib/plan-judge.js'
 
 export const ChangesClaimInput = z.object({
@@ -135,10 +136,10 @@ async function declare(
     : (
         await rpc.invoke('listChanges', {
           projectId,
-          status: ['open'],
+          status: statuses('ready'),
           includeDone: false,
         })
-      ).changes.filter((c) => !(c as { backlog?: boolean }).backlog)
+      ).changes
   const verdict = await needsPlan(
     {
       title: input.title ?? changes[0]?.title ?? '',
@@ -187,7 +188,7 @@ async function whyUnclaimable(
     })
   )
   const said = refusal instanceof Error ? refusal.message : ''
-  if (said && lines.every((line) => line.endsWith(': open'))) return said
+  if (said && lines.every((line) => line.endsWith(': ready'))) return said
   return [
     'Nothing in that set can be claimed right now:',
     ...lines,
