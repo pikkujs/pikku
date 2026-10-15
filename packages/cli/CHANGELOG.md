@@ -1,3 +1,49 @@
+## 0.12.187
+
+### Patch Changes
+
+- fdcc821: Fabric is gone from the open toolchain. The previous names are removed with no aliases.
+
+  The CLI group is `pikku cloud …` and the export is `@pikku/cli/cloud`. The project link is the `cloud` key of `pikku.config.json` (`cloud.projectId`), the CLI keeps its local state in `~/.pikkustudio` (run `pikku cloud login` again), and the project config file is `pikkustudio.config.json`.
+
+  Every environment variable drops the `FABRIC_` prefix for `PIKKUSTUDIO_` with the same suffix: `PIKKUSTUDIO_API_URL`, `PIKKUSTUDIO_PROJECT_ID`, `PIKKUSTUDIO_TOKEN`, `PIKKUSTUDIO_OPERATOR_TOKEN`, `PIKKUSTUDIO_AUTH_PUBLIC_KEY`, `PIKKUSTUDIO_STAGE_ID` and the rest. Rename them wherever you set them.
+
+  Wire ids: the operator sign-in route is `/sign-in/cloud`, the plugin and mode literal is `'cloud'`, the Better Auth plugin is `pikkuCloud`, its session field is `pikkustudioadmin`, and the signature header is `x-cloud-sig`. The cloud API calls are `getCloudLogs`, `getCloudLogsByStageKind`, `cloudCliProjects`, `cloudCliDeployments`, `providedByCloud` and `recordCloudAnalyticsEvents`. Addon packages are `@pikkustudio/*`, scaffolded files live under `scaffold/cloud` and `__cloud_*__`, and the API hosts are the `pikkustudio.app` and `pikkustudio.dev` domains.
+
+  `pikku skills install --fabric` is `--cloud`, the install group is `cloud`, and the skills are `pikku-cloud`, `pikku-cloud-debug`, `pikku-admin-to-cloud` and `pikku-blueprint-to-cloud`.
+
+  The stale analytics forwarder copies are removed from the online-shop example and the starter template.
+
+  The sealed-box salt stays `pikkufabric/sealed-box/v1`: it is a cryptographic constant that already-sealed secrets depend on.
+
+- 33b102d: Virtual users now have one name everywhere. The id column of `virtual_user_run` and `virtual_user_schedule` is `virtual_user_id` (a migration renames it in place), the CLI group is `pikku virtual-user …`, and the declarations and imports live under `@pikku/core/virtual-user`. The previous names are removed with no aliases.
+
+  The default virtual user email domain is now `virtualuser.invalid`: apps that rely on the default domain get new accounts at the next provisioning (`pikku virtual-user sync`, deploy, or `pikku dev` start), and the old rows stay unused.
+
+  The sign-in surface carries the same name. The route is `/sign-in/virtual-user`, the environment variables are `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN` and the `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` / `VITE_*` equivalents, the Better Auth plugin is `pikkuVirtualUser`, the scenario step option and wire member are `virtualUser` and `virtualUsers`, and the Better Auth user flag column is `virtual_user`. Rename the environment variables wherever you set them, and add a migration that renames the flag column on the `user` table. Nothing is aliased.
+
+  The conversation runner is now `@pikku/core/virtual-user/conversation`, replacing the old `-flow` subpath. Update the import; the old subpath is gone.
+
+- a084c3b: Virtual users sign themselves in. A scheduled run signs in from inside the app through a server-only Better Auth endpoint, then drives the app over HTTP with the cookie. Outside callers (`pikku dev`, `pikku scenario run`, `pikku virtual-user run` and `rpc`, `pikku pages screenshot --as`, the Playwright provider) present one signed, short-lived, single-use EdDSA statement, which the app checks against `VIRTUAL_USER_VERIFY_KEY`; `pikku dev` generates the key pair, and a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. `@pikku/jose` gains `JoseVirtualUserStatementVerifier` and `@pikku/better-auth` takes `verifyKey`. Removed with no aliases: the operator token and `OperatorSignIn`, derived per-virtual-user secrets, `SCENARIO_VIRTUAL_USER_SECRET`, `PIKKU_VIRTUAL_USER_SECRETS`, `pikku virtual-user secret`, and `wireVirtualUserSignIn`. In production neither sign-in endpoint is registered.
+
+  The scenario cookie jar moved to `services` and `createCookieJar` is exported from `@pikku/core/virtual-user`, which removes the wire-to-wire import cycles; `VirtualUserSignIn.headers` is now optional.
+
+  Migration for apps: pass `verifyKey: await variables.get('VIRTUAL_USER_VERIFY_KEY')` to `pikkuVirtualUser` instead of `secret`, declare that variable as optional, delete any `SCENARIO_VIRTUAL_USER_SECRET` secret and any `wireVirtualUserSignIn` call, and stop passing `secret` or `operator` to `createHttpVirtualUsers`. A stage that must run scenarios still opts in with `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN`.
+
+- Updated dependencies [fdcc821]
+- Updated dependencies [33b102d]
+- Updated dependencies [6a25c70]
+- Updated dependencies [a084c3b]
+  - @pikku/skills@0.12.55
+  - @pikku/core@0.12.142
+  - @pikku/better-auth@0.12.56
+  - @pikku/playwright@0.12.88
+  - @pikku/inspector@0.12.106
+  - @pikku/knowledge@0.12.20
+  - @pikku/kysely@0.13.37
+  - @pikku/code-edit@0.12.7
+  - @pikku/deploy-cloudflare@0.12.21
+
 ## 0.12.186
 
 ### Patch Changes
