@@ -22,8 +22,7 @@ Entry points worth knowing:
 
 - `pikku-build` — building an app end to end (App / Quick / Feature modes),
   including the local `.env` secrets and the dev stack.
-- `pikku-scenario` — scenarios, virtual users, browser steps and the "Sign in as …"
-  switcher.
+- `pikku-scenario` — scenarios, virtual users and browser steps.
 - `pikku-guide` — the user guide `pikku scenario guide` compiles from the
   scenario suite: what a page must say, page markers, capture steps, `.guide.lock`.
 

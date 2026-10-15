@@ -86,39 +86,33 @@ upstream credential: `remove` drops one stored at an earlier sign-in.
 
 Declared virtual users are not only for automated runs. `signInPath` is Better Auth's
 `virtualUser` plugin (see `pikku-auth`, a separate install), which any caller can post to — so the
-frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
+frontend can sign in as the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The switcher holds no credential. It lists virtual users from
-`/auth/sign-in/virtual-users` and signs in by posting only a virtual user id to
-`/auth/sign-in/virtual-user`; the server resolves the address. One server piece
-serves both, in the auth config:
+It holds no credential. `listDevVirtualUsers()` reads virtual users from
+`/auth/sign-in/virtual-users` and `signInAsVirtualUser()` (both from `pikku-react`,
+a separate install) signs in by posting only a virtual user id to
+`/auth/sign-in/switch-virtual-user`; the server resolves the address. One server
+piece serves both, in the auth config:
 
 ```ts snippet:virtualUserSignIn
 
 ```
 
 It is always open under `pikku dev`. A deployed stage needs virtual user
-sign-in opted in **and** its `devSwitcher` feature flag on; production never
+sign-in opted in and an explicit `virtualUserSignIn.allowed`; production never
 has the opt-in, so it lists nobody and refuses every virtual user sign-in.
+`pikku cloud validate` **requires** any frontend with a login screen to call
+`signInAsVirtualUser()`.
 
-Do not hand-roll the switcher: `useDevVirtualUsers()` (`pikku-react`, a separate install) is the logic and
-the starter template's `<DevVirtualUserSwitcher />` is a ready rendering of it.
-`pikku cloud validate` **requires** any frontend with a login screen to ship
-one — without it a reviewer is locked out of their own sandbox.
-When the switcher is missing, it is one of three things, and none of them
-errors:
+If the list is empty, it is one of two things, and neither errors:
 
-- **The list is empty.** On a deployed stage that is the gate
-  doing its job — check the opt-in and the `devSwitcher` flag. Locally, check
-  the virtual users declare an `email` (via `scenarios.emailDomain`) and are not
-  `runnable: false`.
+- **The gate is closed.** On a deployed stage that is the gate doing its job —
+  check the opt-in. Locally, check the virtual users declare an `email` (via
+  `scenarios.emailDomain`) and are not `runnable: false`.
 - **`virtualUserSignIn` is missing, or the frontend calls another API.** A dev
   proxy (`VITE_API_PROXY`, default `http://localhost:3000`) that points at
   another project's API lists that project's virtual users, or none.
-- **It is not mounted on the page you are looking at.** The template mounts it
-  on the login screen. A public homepage that replaces the `/` → `/app`
-  redirect needs its own `<DevVirtualUserSwitcher />` in the public layout.
 
-When the switcher lists virtual users but a click 404s, that virtual user has no `email`
+When the list has virtual users but a sign-in 404s, that virtual user has no `email`
 or is `runnable: false`.

@@ -1624,7 +1624,7 @@ describe('pikku cloud validate', () => {
       return app
     }
 
-    test('login screen without the virtual user switcher → error', async () => {
+    test('login screen without a virtual user sign-in → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1642,56 +1642,10 @@ describe('pikku cloud validate', () => {
         )
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
-        assert.match(finding!.fixHint, /featureFlags/)
+        assert.match(finding!.fixHint, /signInAsVirtualUser/)
         assert.match(finding!.fixHint, /virtualUserSignIn/)
         assert.doesNotMatch(finding!.fixHint, /VITE_DEV_VIRTUAL_USER/)
         assert.strictEqual(result.ok, false)
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
-    test('login screen rendering <DevVirtualUserSwitcher /> → no finding', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await makeFrontend(tmp, {
-          'src/pages/LoginPage.tsx':
-            "import { DevVirtualUserSwitcher } from '@/components/DevVirtualUserSwitcher'\n" +
-            'export const LoginPage = () => <><form /><DevVirtualUserSwitcher /></>\n',
-        })
-        const result = await runValidate(tmp)
-        assert.ok(
-          !result.findings.some(
-            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
-          ),
-          'expected no virtual user quick-login finding'
-        )
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
-    test('custom UI built on useDevVirtualUsers() → no finding', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await makeFrontend(tmp, {
-          // An app that wants its own control rather than the template's
-          // still satisfies the rule, as long as it drives the shared hook.
-          'src/pages/LoginPage.tsx':
-            "import { useDevVirtualUsers } from '@pikku/react'\n" +
-            'export const LoginPage = () => {\n' +
-            '  const { virtualUsers, signInAs } = useDevVirtualUsers({ apiUrl: "/api" })\n' +
-            '  return <>{virtualUsers.map((a) => <button key={a.id} onClick={() => signInAs(a.id)} />)}</>\n}\n',
-        })
-        const result = await runValidate(tmp)
-        assert.ok(
-          !result.findings.some(
-            (f) => f.id === 'app-missing-virtual-user-quick-login-web'
-          ),
-          'useDevVirtualUsers() is a valid quick-login fingerprint'
-        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -1719,7 +1673,7 @@ describe('pikku cloud validate', () => {
       }
     })
 
-    test('a DevVirtualUserSwitcher that is defined but never rendered still errors', async () => {
+    test('a signInAsVirtualUser that is defined but never called still errors', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)

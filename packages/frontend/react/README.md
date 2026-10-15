@@ -31,30 +31,14 @@ const Todos = () => {
 }
 ```
 
-## Dev virtual user sign-in
+## Virtual user sign-in
 
-`useDevVirtualUsers()` powers the "Sign in as …" switcher: one click signs in as a
-declared virtual user with no password, through Better Auth's virtual user
-endpoint. It is UI-free, so you can render it however you like — or use the
-starter template's `<DevVirtualUserSwitcher />`.
-
-```typescript
-import { useDevVirtualUsers } from '@pikku/react'
-
-const { virtualUsers, signInAs, isPending } = useDevVirtualUsers({
-  apiUrl: apiUrl(),
-  app: appSlug,
-  onSignedIn: () => navigate({ to: '/' }),
-})
-```
-
-No credential reaches the bundle. The hook lists virtual users from
-`/auth/sign-in/virtual-users`, and `signInAs(id)` posts only the virtual user id to
-`/auth/sign-in/switch-virtual-user`. The server decides both: pass `virtualUserSignIn` to
-`pikkuVirtualUser` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
-stage opts into virtual user sign-in and turns its `devSwitcher` flag on, and the
-endpoint only signs in users flagged `virtualUser: true`, so it can never impersonate
-a real user.
+`signInAsVirtualUser({ apiUrl, id })` signs in as a declared virtual user with no
+password, through Better Auth's virtual user endpoint, and `listDevVirtualUsers()`
+reads the list from `/auth/sign-in/virtual-users`. No credential reaches the
+bundle: only the virtual user id is posted to `/auth/sign-in/switch-virtual-user`.
+The server decides both: pass `virtualUserSignIn` to `pikkuVirtualUser` from
+`@pikku/better-auth`.
 
 ## Locale store
 

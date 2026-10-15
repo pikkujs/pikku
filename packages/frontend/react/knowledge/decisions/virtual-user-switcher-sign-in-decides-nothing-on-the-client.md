@@ -9,9 +9,9 @@ tags: frontend, react, sign-in, virtual-users
 
 The module doc describes a virtual user as "No address and no credential: sign-in names the virtual user by id and the server resolves the rest" (`packages/frontend/react/src/dev-virtual-users.ts:3-7`).
 
-**Sign-in.** `signInAsVirtualUser` posts `{ id }` to `/auth/sign-in/switch-virtual-user` with `credentials: 'include'` (`dev-virtual-users.ts:32-37`). Its doc says the server decides: `pikkuVirtualUser({ virtualUserSignIn })` refuses unless its gate is open, and only ever signs in rows flagged `virtualUser: true` (`dev-virtual-users.ts:24-26`). A non-OK response only throws, and the hook keeps the message as `error`.
+**Sign-in.** `signInAsVirtualUser` posts `{ id }` to `/auth/sign-in/switch-virtual-user` with `credentials: 'include'` (`dev-virtual-users.ts:32-37`). Its doc says the server decides: `pikkuVirtualUser({ virtualUserSignIn })` refuses unless its gate is open, and only ever signs in rows flagged `virtualUser: true` (`dev-virtual-users.ts:24-26`). A non-OK response only throws,.
 
-**Listing.** `listDevVirtualUsers` returns `[]` when the response is not OK (`dev-virtual-users.ts:59`). The hook's own doc says the list is empty "whenever the server offers none — render nothing" (`dev-virtual-users.ts:72`).
+**Listing.** `listDevVirtualUsers` returns `[]` when the response is not OK (`dev-virtual-users.ts:59`).
 
 **The server side, which holds the decisions** (`packages/services/better-auth/src/virtual-user-plugin.ts`):
 

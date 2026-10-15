@@ -35,7 +35,7 @@ each says when to open it:
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `references/steps.md`            | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                                           |
 | `references/browser.md`          | Browser bindings, and locating by message key in a translated app                                                                   |
-| `references/virtual-users.md`    | Virtual users vs virtual users, `defineVirtualUsers`, upstream credentials for virtual users, and the human "Sign in as …" switcher |
+| `references/virtual-users.md`    | Virtual users vs virtual users, `defineVirtualUsers`, upstream credentials for virtual users, and human sign-in as a virtual user |
 | `references/coverage.md`         | Live coverage, filling it, and unit tests for pure logic                                                                            |
 | `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                                                 |
 
@@ -290,8 +290,7 @@ scenario virtual user per person, and seeds a user row each:
 **`references/virtual-users.md`** covers the parts that bite: one entry is one
 person and one virtual user, emails are derived and never written, `runnable: false`
 for someone only acted upon, `defineVirtualUsers` being read from source rather
-than evaluated, and the same virtual user list powering a human "Sign in as …"
-switcher.
+than evaluated, and the same virtual user list powering a human sign-in.
 
 - **The signing key never goes in `pikku.config.json`.** `pikku dev` creates one under `.pikku-runtime/virtual-user/`; a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. Each run signs a short-lived statement with it. `pikku scenario run` throws without a key.
 

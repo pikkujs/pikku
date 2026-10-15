@@ -29,14 +29,11 @@ export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
 export {
   listDevVirtualUsers,
   signInAsVirtualUser,
-  useDevVirtualUsers,
 } from './dev-virtual-users.js'
 export type {
   DevVirtualUser,
   ListDevVirtualUsersOptions,
   SignInAsVirtualUserOptions,
-  UseDevVirtualUsersOptions,
-  UseDevVirtualUsersResult,
 } from './dev-virtual-users.js'
 
 // Buffered product-analytics client, typed against the app's own event union.

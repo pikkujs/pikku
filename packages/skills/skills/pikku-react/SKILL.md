@@ -4,9 +4,9 @@ description: >-
   Use when a React frontend talks to a Pikku backend — PikkuProvider and createPikku at the app
   root, the generated React Query hooks (usePikkuQuery, usePikkuMutation, usePikkuInfiniteQuery),
   direct usePikkuRPC / usePikkuFetch calls, realtime subscriptions, agent and workflow hooks, and
-  the dev virtual user switcher. TRIGGER when: writing a React component that fetches or mutates backend
+  signInAsVirtualUser. TRIGGER when: writing a React component that fetches or mutates backend
   data, wiring PikkuProvider, paginating, running or tracking a workflow from the client, or
-  asking about useDevVirtualUsers / DevVirtualUserSwitcher / quick login. DO NOT TRIGGER when: working on the
+  asking about signInAsVirtualUser. DO NOT TRIGGER when: working on the
   backend (use pikku-wiring), defining the workflow itself (use pikku-workflow), rendering fetched values such as
   dates (use pikku-tailwind), or writing user-facing copy (use pikku-i18n).
 installGroups: [client]
