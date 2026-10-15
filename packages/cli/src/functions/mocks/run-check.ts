@@ -6,7 +6,7 @@ import { readMocks } from './read.js'
 import {
   callIndex,
   checkStubs,
-  frontendRoots,
+  frontendFiles,
   scanFrontend,
   type StubCheck,
   type StubProblemKind,
@@ -46,6 +46,7 @@ export interface MocksCheckOptions {
   rootDir: string
   outDir: string
   src?: string
+  client?: string
   strict?: boolean
 }
 
@@ -54,13 +55,14 @@ export const runMocksCheck = async (
   options: MocksCheckOptions
 ): Promise<StubCheck> => {
   const { rootDir, outDir } = options
-  const roots = options.src
-    ? options.src.split(',').map((dir) => resolve(rootDir, dir.trim()))
-    : frontendRoots(rootDir)
   const pikkuDir = resolve(rootDir, outDir)
   const surface = readSurface(pikkuDir)
   const rpcMocks = await readMocks(rootDir)
-  const scan = scanFrontend(rootDir, roots)
+  const scan = scanFrontend(
+    rootDir,
+    frontendFiles(rootDir, options.src),
+    options.client
+  )
   const diff = diffMocks(rpcMocks, surface, { calls: callIndex(scan) })
   const status = new Map(diff.rpcs.map((report) => [report.rpc, report.status]))
   const keys = new Set(Object.values(surface.functions).map((fn) => fn.key))

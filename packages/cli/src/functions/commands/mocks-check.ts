@@ -14,6 +14,7 @@ export const mocksCheck = pikkuSessionlessFunc<
       rootDir: config.rootDir,
       outDir: config.outDir,
       src: input?.src,
+      client: config.clientFiles?.reactQueryFile,
       strict: input?.strict,
     }),
 })

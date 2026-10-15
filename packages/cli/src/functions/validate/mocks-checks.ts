@@ -5,29 +5,35 @@ import {
   PROBLEM_REASON,
   runMocksCheck,
 } from '../mocks/run-check.js'
-import { frontendRoots, scanFrontend } from '../mocks/stub-scan.js'
+import { frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
-const outDirOf = (dir: string): string => {
+const configOf = (dir: string): { outDir: string; client?: string } => {
   try {
     const config = JSON.parse(
       readFileSync(join(dir, 'pikku.config.json'), 'utf8')
-    ) as { outDir?: unknown }
-    return typeof config.outDir === 'string' ? config.outDir : '.pikku'
+    ) as { outDir?: unknown; clientFiles?: { reactQueryFile?: unknown } }
+    const client = config.clientFiles?.reactQueryFile
+    return {
+      outDir: typeof config.outDir === 'string' ? config.outDir : '.pikku',
+      client: typeof client === 'string' ? join(dir, client) : undefined,
+    }
   } catch {
-    return '.pikku'
+    return { outDir: '.pikku' }
   }
 }
 
 /** Only a project that uses mocks or stub hooks has anything for this check to say. */
 export const usesMocks = (dir: string): boolean => {
   if (existsSync(join(dir, '.mocks'))) return true
-  const roots = frontendRoots(dir)
-  return roots.length > 0 && scanFrontend(dir, roots).stubCalls.length > 0
+  return (
+    scanFrontend(dir, frontendFiles(dir), configOf(dir).client).stubCalls
+      .length > 0
+  )
 }
 
 export const runMocksChecks = async (dir: string): Promise<Finding[]> => {
-  const outDir = outDirOf(dir)
+  const { outDir, client } = configOf(dir)
   if (!hasBuiltOutput(dir, outDir)) {
     return [
       {
@@ -40,7 +46,7 @@ export const runMocksChecks = async (dir: string): Promise<Finding[]> => {
       },
     ]
   }
-  const check = await runMocksCheck({ rootDir: dir, outDir })
+  const check = await runMocksCheck({ rootDir: dir, outDir, client })
   const findings: Finding[] = []
   for (const call of check.calls) {
     if (!call.problem) continue
