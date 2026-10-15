@@ -156,28 +156,25 @@ describe('TypedSecretService', () => {
     // state, so throwing forces every caller into a `.catch(() => null)` that
     // also swallows a real vault failure.
     const service = new TypedSecretService(createMockSecrets(), {
-      SCENARIO_ACTOR_SECRET: {
-        name: 'scenarioActor',
-        displayName: 'Scenario Actor Secret',
+      SAMPLE_API_SECRET: {
+        name: 'sampleApi',
+        displayName: 'Sample API Secret',
         optional: true,
       },
     })
-    assert.strictEqual(
-      await service.getSecret('SCENARIO_ACTOR_SECRET'),
-      undefined
-    )
+    assert.strictEqual(await service.getSecret('SAMPLE_API_SECRET'), undefined)
   })
 
   test('an optional secret that IS set resolves its value', async () => {
-    const store = new Map([['SCENARIO_ACTOR_SECRET', '"shh"']])
+    const store = new Map([['SAMPLE_API_SECRET', '"shh"']])
     const service = new TypedSecretService(createMockSecrets(store), {
-      SCENARIO_ACTOR_SECRET: {
-        name: 'scenarioActor',
-        displayName: 'Scenario Actor Secret',
+      SAMPLE_API_SECRET: {
+        name: 'sampleApi',
+        displayName: 'Sample API Secret',
         optional: true,
       },
     })
-    assert.strictEqual(await service.getSecret('SCENARIO_ACTOR_SECRET'), 'shh')
+    assert.strictEqual(await service.getSecret('SAMPLE_API_SECRET'), 'shh')
   })
 
   test('a missing secret still throws unless it declared itself optional', async () => {

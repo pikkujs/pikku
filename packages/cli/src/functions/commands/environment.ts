@@ -1,5 +1,5 @@
 /**
- * Resolving `pikku scenario run <environment>` and `pikku persona run
+ * Resolving `pikku scenario run <environment>` and `pikku virtual-user run
  * <environment>` to the URLs the run targets.
  *
  * The configured environment is the base; `--api-url`/`--app-url` override it
@@ -20,18 +20,18 @@ export interface PikkuEnvironment {
   rpcPath?: string
   appUrl?: string
   /**
-   * Where each app is served, keyed by the `app` its personas declare.
+   * Where each app is served, keyed by the `app` its virtual users declare.
    *
    * A product can be more than one frontend — staff in one, customers in
    * another — and the two are usually different paths on one host. A browser
-   * step navigates as its actor, so the actor's app decides which of these it
-   * navigates against, and `appUrl` is the fallback for a persona that names
+   * step navigates as its virtual user, so the virtual user's app decides which of these it
+   * navigates against, and `appUrl` is the fallback for a virtual user that names
    * no app. Without this a run has one base for everybody: whichever app owns
    * it is proved twice and the other never, silently, because both sets of
    * paths resolve against the wrong app and load.
    */
   appUrls?: Record<string, string>
-  /** Real consequences: only an `accountable` persona may run against it. */
+  /** Real consequences: only an `accountable` virtual user may run against it. */
   production?: boolean
 }
 
@@ -92,7 +92,7 @@ const assertAbsoluteUrl = (flag: string, value: string): URL => {
 }
 
 /**
- * Applied once, so actors, step env, the browser driver and the spawned server
+ * Applied once, so virtual users, step env, the browser driver and the spawned server
  * all see the same target. The environment is still looked up by name: the
  * flags override fields on a configured environment, they do not invent one.
  */
@@ -147,7 +147,7 @@ export const resolveEnvironment = ({
  *
  * Comma-separated to match `--flows` and `--tags` rather than taking the flag
  * repeatedly, which the option parser types as a single string. A bare url is
- * the fallback for personas naming no app; a pair binds one app.
+ * the fallback for virtual users naming no app; a pair binds one app.
  */
 export const parseAppUrls = (
   value: string
@@ -172,7 +172,7 @@ export const parseAppUrls = (
 
 /**
  * The environment name `pikku dev` is running as, for anything that gates on
- * `PIKKU_ENV` — persona provisioning above all, which fails closed and so
+ * `PIKKU_ENV` — virtual user provisioning above all, which fails closed and so
  * provisions nothing at all when nobody says where the process is.
  *
  * Local means a configured, non-production environment whose `apiUrl` is a

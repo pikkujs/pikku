@@ -8,7 +8,7 @@ tags: services
 # Scenario steps return drained response records
 
 `ScenarioHttpResponse` and `readScenarioHttpResponse`
-(`packages/core/src/services/scenario-actors-service.ts`) exist because a `fetch`
+(`packages/core/src/services/virtual-users-service.ts`) exist because a `fetch`
 `Response` cannot be a scenario step's return value. A step's result is
 serialised into the workflow run record, and a `Response` body is a stream that
 reads exactly once — by the time anything downstream looks at it, it is either
@@ -23,5 +23,5 @@ the payload was not JSON; its type parameter is a claim the caller makes, not on
 the transport checked.
 
 **What this rules out:** returning `Response` (or anything holding a stream) from
-a scenario step or an actor method, and dropping `serialized` as redundant with
+a scenario step or a virtual user method, and dropping `serialized` as redundant with
 `body` — a non-JSON error body has no other route to the assertion.

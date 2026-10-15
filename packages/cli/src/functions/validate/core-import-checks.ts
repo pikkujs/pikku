@@ -3,7 +3,7 @@ import { join, relative } from 'node:path'
 import { readModuleSpecifiers } from '@pikku/inspector'
 import { collectAppSources } from './app-sources.js'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding, ValidateSeverity } from './persona-checks.js'
+import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
 
 /**
  * The one core subpath an app is meant to name.
@@ -60,7 +60,7 @@ const LEAF_FOR_SUBPATH = new Map<string, string>([
 
 /** The subpaths whose app-facing half lives behind the scenario entry. */
 const SCENARIO_SUBPATHS = new Set([
-  '@pikku/core/persona',
+  '@pikku/core/virtual-user',
   '@pikku/core/scenario',
 ])
 
@@ -96,7 +96,7 @@ const severityFor = (
 /**
  * `#pikku` is the app developer's public API; `@pikku/core` is the ecosystem's.
  *
- * The alias is generated against this project's own functions, personas and
+ * The alias is generated against this project's own functions, virtual users and
  * scopes, so the name it hands over arrives already typed —
  * `wireQueueWorker` from `#pikku/queue` takes `QueueWiring<In, Out>` where the
  * core export takes `any`. Reaching past the alias into core is reaching for

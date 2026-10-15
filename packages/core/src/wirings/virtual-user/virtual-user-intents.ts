@@ -170,16 +170,16 @@ export class IntentStack {
 }
 
 /**
- * The intents a persona may be given: those whose source names them, plus every
+ * The intents a virtual user may be given: those whose source names them, plus every
  * source that names nobody.
  *
  * This is a free lookup rather than new authoring — scenario meta already
- * records which personas each scenario runs as.
+ * records which virtual users each scenario runs as.
  */
-export const intentsForPersona = (
+export const intentsForVirtualUser = (
   sources: readonly IntentSource[],
-  personaId: string
+  virtualUserId: string
 ): IntentSource[] =>
   sources.filter(
-    (source) => !source.personas?.length || source.personas.includes(personaId)
+    (source) => !source.virtualUsers?.length || source.virtualUsers.includes(virtualUserId)
   )

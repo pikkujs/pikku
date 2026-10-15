@@ -1,4 +1,4 @@
-// Column annotations. `fabric db` is a coworker, not a codegen: it fills in the derived
+// Column annotations. `cloud db` is a coworker, not a codegen: it fills in the derived
 // `kind` for your typed columns here — but this file is yours to edit too.
 //
 // Give a column a SEMANTIC type in your migration and it is typed + coerced
@@ -13,6 +13,6 @@
 // strings for a typed column, and never fight the generated type with casts.
 //
 // Add your own security/classification annotations by hand (the data-classification
-// flow) and `fabric db` steps aside — once this file carries manual fields it won't
+// flow) and `cloud db` steps aside — once this file carries manual fields it won't
 // overwrite them.
 export const classifications = {}

@@ -45,7 +45,7 @@ function fakeHttpRequest(headers: Record<string, string>) {
   return {
     header: (name: string) => headers[name.toLowerCase()],
     headers: () => headers,
-    path: () => '/api/auth/sign-in/actor',
+    path: () => '/api/auth/sign-in/virtual-user',
     query: () => ({}),
     method: () => 'POST',
     arrayBuffer: async () => new ArrayBuffer(0),

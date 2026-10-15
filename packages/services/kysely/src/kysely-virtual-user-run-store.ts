@@ -71,7 +71,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
       .insertInto('virtualUserRun')
       .values({
         runId,
-        persona: run.persona,
+        virtualUserId: run.virtualUserId,
         disposition: run.disposition,
         // Text on every engine (see the schema), so the seed round-trips
         // through drivers that hand a BIGINT back as a string.
@@ -133,14 +133,14 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
   }
 
   async list(options?: {
-    persona?: string
+    virtualUserId?: string
     limit?: number
     offset?: number
   }): Promise<VirtualUserRunRecord[]> {
     await this.init()
     let query = this.db.selectFrom('virtualUserRun').selectAll()
-    if (options?.persona) {
-      query = query.where('persona', '=', options.persona)
+    if (options?.virtualUserId) {
+      query = query.where('virtualUserId', '=', options.virtualUserId)
     }
     const rows = await query
       .orderBy('createdAt', 'desc')
@@ -216,7 +216,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
   private toRecord(row: Selectable<VirtualUserRunTable>): VirtualUserRunRecord {
     return {
       runId: row.runId,
-      persona: row.persona,
+      virtualUserId: row.virtualUserId,
       disposition: row.disposition as VirtualUserDisposition,
       seed: Number(row.seed),
       status: row.status,

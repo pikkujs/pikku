@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { readJsonSafe, readTextSafe } from './shared-checks.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 const lines = (...parts: string[]): string => parts.join('\n')
 

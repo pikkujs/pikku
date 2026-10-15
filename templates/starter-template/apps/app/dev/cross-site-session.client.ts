@@ -1,6 +1,6 @@
 import { apiUrl } from '@/lib/env'
 
-// Session relay for the Fabric console's preview iframe. Injected into the
+// Session relay for the Pikku Studio console's preview iframe. Injected into the
 // client module graph by cross-site-session.plugin.ts on `vite dev` ONLY —
 // nothing here is reachable from app source, so `vite build` never sees it.
 //
@@ -125,7 +125,7 @@ function serializeJar(): string {
 /**
  * Patch `fetch` so every API call carries the relayed cookies and picks up any
  * the server sets. Patching the global rather than each caller is deliberate:
- * Better Auth's client, the pikku SDK and the raw `fetch` in signInAsPersona all
+ * Better Auth's client, the pikku SDK and the raw `fetch` in signInAsVirtualUser all
  * have to agree on the session, and only one of them is ours to change.
  */
 export function installCrossSiteSession(): void {

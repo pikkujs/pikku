@@ -23,10 +23,10 @@ export type ResolvedAuditConfig = {
 /**
  * Who an event happened under.
  *
- * A user, not an "actor": in pikku an actor is a synthetic person a scenario
- * drives, flagged `actor` on the user row, and the overwhelming majority of
- * audited events are caused by ordinary customers. Naming this `actor` made the
- * synthetic case unsayable — `actor.actor === true` — and implied every
+ * A user, not an "virtualUser": in pikku a virtual user is a synthetic person a scenario
+ * drives, flagged `virtualUser` on the user row, and the overwhelming majority of
+ * audited events are caused by ordinary customers. Naming this `virtualUser` made the
+ * synthetic case unsayable — `virtualUser.virtualUser === true` — and implied every
  * recorded action was a test.
  *
  * `pikkuUserId` is the identity pikku resolves for every wire, so it is the one

@@ -631,7 +631,7 @@ test('a browser scenario that only proves the page loads is called out', () => {
 })
 
 // The same shape, honestly used. A permission scenario's whole claim is that the guard let
-// this actor through (or bounced them), which is exactly what landing somewhere proves —
+// this virtual user through (or bounced them), which is exactly what landing somewhere proves —
 // judging it by the browser rule would fail the starter template's own auth scenario.
 test('the identical shape is fine when the plan only claimed a permission', () => {
   const dir = project({

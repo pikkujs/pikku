@@ -3,17 +3,17 @@ name: pikku-report
 description: >-
   Use when pikku itself cost you time — wrong generated types, a check that passes when it should
   not, output that is quietly wrong, a skill that misled you — or when the user asks you to report
-  a framework bug or file a finding. Owns `pikku fabric report` (a finding is about pikku, not the
+  a framework bug or file a finding. Owns `pikku cloud report` (a finding is about pikku, not the
   app), the product-vs-harness kinds, the workaround-first ladder, and asking the user at hand-over
   whether to send what was filed. TRIGGER when: the framework fought you, codegen produced
   something broken, a skill told you to run something that does not exist, the user says "report
   this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug
   is in the app you are building (fix it there), you are debugging a deployed stage (use
-  pikku-fabric), or you are tempted to patch pikku's source (never do that from an app).
+  pikku-cloud), or you are tempted to patch pikku's source (never do that from an app).
 installGroups: [core]
 ---
 
-# Report a finding to Fabric
+# Report a finding to Pikku Studio Cloud
 
 A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
@@ -21,7 +21,7 @@ silence where a check should have complained.
 
 File each one the moment it happens. Nothing leaves the machine until the user
 says so at hand-over, and nothing is written to the repository. The command is
-spelled `pikku fabric report` — there is no top-level report command.
+spelled `pikku cloud report` — there is no top-level report command.
 
 ## Report at the moment it happens
 
@@ -75,7 +75,7 @@ follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
 leaves the body alone.
 
 ```bash
-pikku fabric report --stdin <<'EOF'
+pikku cloud report --stdin <<'EOF'
 {
   "title": "<one-line title>",
   "kind": "product",
@@ -88,7 +88,7 @@ pikku fabric report --stdin <<'EOF'
 EOF
 ```
 
-The same fields exist as flags for a finding short enough to type; `pikku fabric
+The same fields exist as flags for a finding short enough to type; `pikku cloud
 report --help` lists them. Whichever path you use, the rules below are checked
 before anything is sent:
 
@@ -116,7 +116,7 @@ The last thing in the hand-over — after the app runs, and is deployed if they
 chose to — is:
 
 ```bash
-pikku fabric report
+pikku cloud report
 ```
 
 With no finding, it lists what this build filed. What happens next depends on
@@ -130,12 +130,12 @@ what the user said before, which the CLI keeps on their machine:
   **Never**. Then run it again with their answer:
 
   ```bash
-  pikku fabric report --consent yes|no|always|never
+  pikku cloud report --consent yes|no|always|never
   ```
 
   Yes sends and No discards what is held now; Always and Never are saved and the
   question is not asked again. If nobody answers, leave them held and say that
-  `pikku fabric report` sends them later.
+  `pikku cloud report` sends them later.
 
 Findings are anonymous: no account, no project. The receipt printed when you
 filed each one is exactly what leaves the machine. A send that fails keeps what

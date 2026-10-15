@@ -1,20 +1,23 @@
-import { pikkuState } from '../../pikku-state.js'
+import {
+  inProcessSignIn,
+  type InProcessAuth,
+} from '../../services/virtual-user-sign-in.js'
 import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import type { HttpPersonasConfig } from '../../services/http-personas.js'
+import type { HttpVirtualUsersConfig } from '../../services/http-virtual-users.js'
 import type {
-  ResolvedPersona,
-  ScenarioPersonas,
-} from '../../services/personas-service.js'
+  ResolvedVirtualUser,
+  ScenarioVirtualUsers,
+} from '../../services/virtual-users-service.js'
 import { readEnvVariable } from '../../env.js'
 import { BadRequestError, ForbiddenError } from '../../errors/errors.js'
 import { prepareVirtualUserRun } from './prepare-virtual-user-run.js'
 import { runVirtualUser as runVirtualUserEngine } from './run-virtual-user.js'
-import { personaVirtualUserTarget } from './virtual-user-target.js'
+import { virtualUserTarget } from './virtual-user-target.js'
 import type { SchemaMap } from './virtual-user-derive.js'
-import type { PersonaEnvironment } from '../persona/persona-environments.js'
+import type { VirtualUserEnvironment } from '../virtual-user/virtual-user-environments.js'
 import type {
   StepRecord,
   VirtualUserDisposition,
@@ -40,12 +43,12 @@ import type { VirtualUserTickResult } from './virtual-user-schedule.js'
  * once rather than in every generated copy of it.
  *
  * What an application does supply arrives as a parameter — its declared
- * personas, its `createPersonas`, its config — because those are the only
+ * virtual users, its `createVirtualUsers`, its config — because those are the only
  * things codegen knows that this cannot.
  */
 
-/** Persona id → the declaration, which is what `personaConfigs` is. */
-export type ScaffoldPersonas = Record<string, ResolvedPersona>
+/** Virtual user id → the declaration, which is what `virtualUserConfigs` is. */
+export type ScaffoldVirtualUsers = Record<string, ResolvedVirtualUser>
 
 /**
  * The variables a scaffolded run reads.
@@ -61,67 +64,36 @@ export const VIRTUAL_USER_VARIABLES = {
    * somewhere it only assumed was itself.
    */
   apiUrl: 'VIRTUAL_USER_API_URL',
-  secret: 'SCENARIO_ACTOR_SECRET',
   model: 'VIRTUAL_USER_MODEL',
   /**
-   * The same two variables a scenario run reads, because a virtual user signs
-   * in and calls through exactly the doors a scenario does. An app that mounts
-   * auth somewhere other than the root — `/api/auth` is the common one — has no
-   * other way to say so, and without them the run signs in against a 404 and
-   * spends its whole budget thinking about why nothing works.
+   * Where the app serves its exposed RPCs, as a scenario run reads it. An app
+   * that mounts them somewhere other than `/rpc` has no other way to say so.
    */
-  signInPath: 'SCENARIO_SIGN_IN_PATH',
   rpcPath: 'SCENARIO_RPC_PATH',
-  /**
-   * The deployed way in. A Fabric operator token is asymmetric — a stage can
-   * verify one and can never mint one — so unlike the actor secret it is safe
-   * for a run against a real environment. Read from the environment only as the
-   * fallback for a run nobody handed a token to, which is what a schedule is.
-   */
-  operatorToken: 'FABRIC_OPERATOR_TOKEN',
 } as const
 
 /**
- * Which door under the auth mount, given the credential in hand.
+ * The declared virtual user behind an id, refused unless it is one a run may be.
  *
- * Both are better-auth plugins mounted side by side, so `SCENARIO_SIGN_IN_PATH`
- * names the mount and the last segment is ours to pick — an app that moved auth
- * to `/api/auth` says so once and both paths follow. A path that names neither
- * plugin is left alone, since it was configured deliberately.
- */
-export const signInPathFor = (
-  configured: string | undefined,
-  plugin: 'actor' | 'fabric'
-): string | undefined => {
-  if (!configured) {
-    return undefined
-  }
-  const mount = configured.replace(/\/sign-in\/(actor|fabric)$/, '')
-  return mount === configured ? configured : `${mount}/sign-in/${plugin}`
-}
-
-/**
- * The declared persona behind an id, refused unless it is one a run may be.
- *
- * An acted-upon persona has no session of its own, and running one would race
+ * An acted-upon virtual user has no session of its own, and running one would race
  * whatever scenario acts on it.
  */
-export const runnablePersona = (
-  personas: ScaffoldPersonas,
-  personaId: string
-): ResolvedPersona => {
-  const persona = personas[personaId]
-  if (!persona) {
+export const runnableVirtualUser = (
+  virtualUsers: ScaffoldVirtualUsers,
+  virtualUserId: string
+): ResolvedVirtualUser => {
+  const virtualUser = virtualUsers[virtualUserId]
+  if (!virtualUser) {
     throw new BadRequestError(
-      `Unknown persona "${personaId}" — declare it with definePersonas()`
+      `Unknown virtual user "${virtualUserId}" — declare it with defineVirtualUsers()`
     )
   }
-  if (!persona.runnable) {
+  if (!virtualUser.runnable) {
     throw new BadRequestError(
-      `Persona "${personaId}" is declared as acted upon, never run`
+      `VirtualUser "${virtualUserId}" is declared as acted upon, never run`
     )
   }
-  return persona
+  return virtualUser
 }
 
 const MISSING_RUN_STORE =
@@ -158,18 +130,18 @@ export const requireVirtualUserScheduleStore = (
 /** What a caller asked for, before the declaration fills in what it left out. */
 export interface StartVirtualUserRunParams {
   store: VirtualUserRunStore | undefined
-  personas: ScaffoldPersonas
+  virtualUsers: ScaffoldVirtualUsers
   /**
    * The app's config, read only for `nodeEnv` — structural because an
    * application's Config is its own interface and need not declare it at all.
    * The fallback signal, used only by a project that configures no environments.
    */
   config: { nodeEnv?: string } | undefined
-  /** `environments` from pikku.config.json, as generated beside the personas. */
-  environments?: Readonly<Record<string, PersonaEnvironment>>
+  /** `environments` from pikku.config.json, as generated beside the virtual users. */
+  environments?: Readonly<Record<string, VirtualUserEnvironment>>
   /** Which of them this process is. Defaults to `PIKKU_ENV`. */
   environment?: string
-  persona: string
+  virtualUserId: string
   disposition?: string
   seed?: number
   goals?: string[]
@@ -181,7 +153,7 @@ export interface StartVirtualUserRunParams {
 /** The recorded run, and the values the dispatch has to carry unchanged. */
 export interface StartedVirtualUserRun {
   runId: string
-  persona: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   goals: string[]
@@ -196,7 +168,7 @@ export interface StartedVirtualUserRun {
  * `NODE_ENV=production` there too — keying on it refuses every disposition on
  * the one environment they exist to be used on. `PIKKU_ENV` names which of the
  * configured environments this is, which is the question actually being asked,
- * and it is the same signal `personaEnvironmentRefusal` already checks at
+ * and it is the same signal `virtualUserEnvironmentRefusal` already checks at
  * sign-in.
  *
  * Unresolved is treated as production: an environment nobody can name is one
@@ -206,7 +178,7 @@ export interface StartedVirtualUserRun {
  */
 const isProductionRun = (
   config: { nodeEnv?: string } | undefined,
-  environments: Readonly<Record<string, PersonaEnvironment>> | undefined,
+  environments: Readonly<Record<string, VirtualUserEnvironment>> | undefined,
   environment: string | undefined
 ): boolean => {
   if (!environments || Object.keys(environments).length === 0) {
@@ -218,14 +190,14 @@ const isProductionRun = (
 // A virtual user is a probe, and probing is not a thing to do to real
 // customers' data, whatever the disposition.
 const refuseInProduction = (
-  personaId: string,
+  virtualUserId: string,
   config: { nodeEnv?: string } | undefined,
-  environments: Readonly<Record<string, PersonaEnvironment>> | undefined,
+  environments: Readonly<Record<string, VirtualUserEnvironment>> | undefined,
   environment: string | undefined
 ) => {
   if (isProductionRun(config, environments, environment)) {
     throw new ForbiddenError(
-      `Virtual users do not run against production; "${personaId}" cannot run here`
+      `Virtual users do not run against production; "${virtualUserId}" cannot run here`
     )
   }
 }
@@ -239,11 +211,11 @@ const refuseInProduction = (
  */
 export const startVirtualUserRun = async ({
   store,
-  personas,
+  virtualUsers,
   config,
   environments,
   environment = readEnvVariable('PIKKU_ENV'),
-  persona: personaId,
+  virtualUserId,
   disposition: requested,
   seed: requestedSeed,
   goals,
@@ -251,13 +223,13 @@ export const startVirtualUserRun = async ({
   startedBy,
 }: StartVirtualUserRunParams): Promise<StartedVirtualUserRun> => {
   const runStore = requireVirtualUserRunStore(store)
-  const persona = runnablePersona(personas, personaId)
+  const virtualUser = runnableVirtualUser(virtualUsers, virtualUserId)
 
   const disposition = (requested ??
-    persona.disposition ??
+    virtualUser.disposition ??
     'realistic') as VirtualUserDisposition
 
-  refuseInProduction(personaId, config, environments, environment)
+  refuseInProduction(virtualUserId, config, environments, environment)
 
   // Seeded here rather than inside the engine so the record carries the seed
   // even if the run dies before returning — an unreproducible crash costs the
@@ -267,7 +239,7 @@ export const startVirtualUserRun = async ({
   const resolvedMemory = memory ?? {}
 
   const runId = await runStore.start({
-    persona: persona.id,
+    virtualUserId: virtualUser.id,
     disposition,
     seed,
     goals: resolvedGoals,
@@ -277,7 +249,7 @@ export const startVirtualUserRun = async ({
 
   return {
     runId,
-    persona: persona.id,
+    virtualUserId: virtualUser.id,
     disposition,
     seed,
     goals: resolvedGoals,
@@ -294,7 +266,7 @@ export const startVirtualUserRun = async ({
  */
 export const serializeVirtualUserRun = (run: VirtualUserRunRecord) => ({
   runId: run.runId,
-  persona: run.persona,
+  virtualUserId: run.virtualUserId,
   disposition: run.disposition,
   seed: run.seed,
   status: run.status,
@@ -347,11 +319,11 @@ export const serializeVirtualUserSteps = (steps: readonly StepRecord[]) =>
  */
 export const serializeVirtualUserSchedule = (
   schedule: VirtualUserScheduleRecord,
-  personas: ScaffoldPersonas
+  virtualUsers: ScaffoldVirtualUsers
 ) => {
-  const persona = personas[schedule.persona]
+  const virtualUser = virtualUsers[schedule.virtualUserId]
   return {
-    persona: schedule.persona,
+    virtualUserId: schedule.virtualUserId,
     enabled: schedule.enabled,
     disposition: schedule.disposition,
     goals: schedule.goals,
@@ -371,17 +343,17 @@ export const serializeVirtualUserSchedule = (
     lastRunId: schedule.lastRunId,
     lastRunAt: schedule.lastRunAt ? schedule.lastRunAt.toISOString() : null,
     declared: {
-      disposition: (persona?.disposition ??
+      disposition: (virtualUser?.disposition ??
         'realistic') as VirtualUserDisposition,
-      goals: persona?.goals ?? [],
+      goals: virtualUser?.goals ?? [],
     },
   }
 }
 
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
-  personas: ScaffoldPersonas
-  persona: string
+  virtualUsers: ScaffoldVirtualUsers
+  virtualUserId: string
   enabled?: boolean
   disposition?: string
   goals?: string[]
@@ -395,15 +367,15 @@ export interface WriteVirtualUserScheduleParams {
   nextRunAt?: string
   /** The same three signals `startVirtualUserRun` reads to decide production. */
   config?: { nodeEnv?: string }
-  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environments?: Readonly<Record<string, VirtualUserEnvironment>>
   environment?: string
 }
 
 /**
- * Writes a persona's cadence.
+ * Writes a virtual user's cadence.
  *
  * Applies the same rules `startVirtualUserRun` enforces, at the point the row is
- * written rather than every hour afterwards: an acted-upon persona has no
+ * written rather than every hour afterwards: an acted-upon virtual user has no
  * session, and production refuses every run, so either is a tick that can only
  * ever fail to start, with nobody watching.
  *
@@ -413,8 +385,8 @@ export interface WriteVirtualUserScheduleParams {
  */
 export const writeVirtualUserSchedule = async ({
   store,
-  personas,
-  persona,
+  virtualUsers,
+  virtualUserId,
   enabled,
   disposition,
   goals,
@@ -427,18 +399,18 @@ export const writeVirtualUserSchedule = async ({
   environment = readEnvVariable('PIKKU_ENV'),
 }: WriteVirtualUserScheduleParams): Promise<VirtualUserScheduleRecord> => {
   const scheduleStore = requireVirtualUserScheduleStore(store)
-  const declared = runnablePersona(personas, persona)
+  const declared = runnableVirtualUser(virtualUsers, virtualUserId)
   const current =
     enabled === undefined || disposition === undefined
-      ? await scheduleStore.get(persona)
+      ? await scheduleStore.get(virtualUserId)
       : null
   const created =
     disposition === undefined && !current ? declared.disposition : undefined
   if (enabled ?? current?.enabled) {
-    refuseInProduction(persona, config, environments, environment)
+    refuseInProduction(virtualUserId, config, environments, environment)
   }
   return scheduleStore.set({
-    persona,
+    virtualUserId,
     enabled,
     disposition: (disposition ?? created) as VirtualUserDisposition | undefined,
     goals,
@@ -462,7 +434,7 @@ export const writeVirtualUserSchedule = async ({
 export const virtualUserScheduleRunInput = (
   schedule: VirtualUserScheduleRecord
 ) => ({
-  persona: schedule.persona,
+  virtualUserId: schedule.virtualUserId,
   disposition: schedule.disposition as VirtualUserDisposition,
   goals: schedule.goals,
   budget: schedule.budget
@@ -481,22 +453,24 @@ export const virtualUserScheduleRunInput = (
  * What a tick did.
  *
  * Logged rather than returned: the caller is a cron, and a run this started is
- * otherwise the only trace that a persona is still out there working.
+ * otherwise the only trace that a virtual user is still out there working.
  */
 export const logVirtualUserTick = (
   logger: Logger,
   result: VirtualUserTickResult
 ): void => {
-  for (const { persona, runId } of result.dispatched) {
-    logger.info(`Virtual user ${persona} started run ${runId} on schedule`)
+  for (const { virtualUserId, runId } of result.dispatched) {
+    logger.info(
+      `Virtual user ${virtualUserId} started run ${runId} on schedule`
+    )
   }
   for (const runId of result.reaped) {
     logger.warn(
-      `Virtual user run ${runId} was abandoned — marked failed so its persona can run again`
+      `Virtual user run ${runId} was abandoned — marked failed so its virtual user can run again`
     )
   }
-  for (const { persona, reason } of result.skipped) {
-    logger.info(`Virtual user ${persona} skipped this tick: ${reason}`)
+  for (const { virtualUserId, reason } of result.skipped) {
+    logger.info(`Virtual user ${virtualUserId} skipped this tick: ${reason}`)
   }
 }
 
@@ -506,13 +480,13 @@ export interface ExecuteVirtualUserRunParams {
   agentRunner: AgentRunnerService | undefined
   variables: VariablesService
   logger: Logger
-  personas: ScaffoldPersonas
-  /** The app's generated `createPersonas`, which knows its own persona ids. */
-  createPersonas: (
-    options: Omit<HttpPersonasConfig, 'personas'>
-  ) => ScenarioPersonas
+  virtualUsers: ScaffoldVirtualUsers
+  /** The app's generated `createVirtualUsers`, which knows its own virtual user ids. */
+  createVirtualUsers: (
+    options: Omit<HttpVirtualUsersConfig, 'virtualUsers'>
+  ) => ScenarioVirtualUsers
   runId: string
-  persona: string
+  virtualUserId: string
   disposition: string
   goals: string[]
   memory: Record<string, string>
@@ -522,14 +496,15 @@ export interface ExecuteVirtualUserRunParams {
     mutations?: number
     durationMs?: number
   }
-  operatorToken?: string
+  /** The app's auth instance, which a run signs in through without a credential. */
+  auth: InProcessAuth | undefined
 }
 
 /**
  * The run itself.
  *
  * Everything it needs is derived through `metaService` and the generated
- * personas — the same public surface any consumer has. Nothing reaches into
+ * virtual users — the same public surface any consumer has. Nothing reaches into
  * pikku's internals, because an app could not, and a feature built on what only
  * the framework can see would not be this feature.
  */
@@ -539,16 +514,16 @@ export const executeVirtualUserRun = async ({
   agentRunner,
   variables,
   logger,
-  personas,
-  createPersonas,
+  virtualUsers,
+  createVirtualUsers,
   runId,
-  persona: personaId,
+  virtualUserId,
   disposition,
   goals,
   memory,
   seed,
   budget,
-  operatorToken,
+  auth,
 }: ExecuteVirtualUserRunParams): Promise<{ findings: number }> => {
   const store = requireVirtualUserRunStore(runStore)
   try {
@@ -566,27 +541,14 @@ export const executeVirtualUserRun = async ({
     const apiUrl = await variables.get(VIRTUAL_USER_VARIABLES.apiUrl)
     if (!apiUrl) {
       throw new Error(
-        `${VIRTUAL_USER_VARIABLES.apiUrl} is not set — a virtual user has no address to sign in at.`
+        `${VIRTUAL_USER_VARIABLES.apiUrl} is not set, so the virtual user has no address to drive. ` +
+          `Set it to the URL this app is reached at, including any HTTP prefix (for example https://my-app.example.com/api). \`pikku dev\` sets it for you.`
       )
     }
 
-    // An operator token wins wherever one is available: it is asymmetric, and
-    // it does not need the target to hold a shared secret at all. The actor
-    // secret is the local-only fallback, because only `pikku dev` serves the
-    // endpoint that accepts it.
-    const wired = pikkuState(null, 'persona', 'signIn') !== null
-    const token = wired
-      ? undefined
-      : (operatorToken ??
-        (await variables.get(VIRTUAL_USER_VARIABLES.operatorToken)))
-    const secret =
-      wired || token
-        ? undefined
-        : await variables.get(VIRTUAL_USER_VARIABLES.secret)
-    if (!wired && !token && !secret) {
+    if (!auth) {
       throw new Error(
-        `Neither an operator token nor ${VIRTUAL_USER_VARIABLES.secret} is available — there is nobody for the virtual user to be. ` +
-          `Hand a Fabric operator token in with the run against a deployed stage, or export ${VIRTUAL_USER_VARIABLES.secret} against a local \`pikku dev\` target.`
+        'The app has no auth service, so the virtual user has no way to sign in. Register better-auth (with the pikkuVirtualUser plugin) as the auth singleton service.'
       )
     }
 
@@ -611,13 +573,13 @@ export const executeVirtualUserRun = async ({
     ]
     const schemas = (await metaService.getSchemas(schemaNames)) as SchemaMap
 
-    const persona = personas[personaId]
-    if (!persona) {
-      throw new Error(`Persona "${personaId}" is no longer declared`)
+    const virtualUser = virtualUsers[virtualUserId]
+    if (!virtualUser) {
+      throw new Error(`VirtualUser "${virtualUserId}" is no longer declared`)
     }
 
     const { catalogue, intents, agents } = prepareVirtualUserRun({
-      persona,
+      virtualUser,
       functionsMeta,
       schemas,
       workflowsMeta: await metaService.getWorkflowMeta(),
@@ -625,36 +587,21 @@ export const executeVirtualUserRun = async ({
       agentsMeta: await metaService.getAgentsMeta(),
     })
 
-    const configuredSignInPath =
-      (await variables.get(VIRTUAL_USER_VARIABLES.signInPath)) ?? undefined
-    const signedIn = createPersonas({
+    const signedIn = createVirtualUsers({
       apiUrl,
-      ...(wired
-        ? {}
-        : token
-          ? {
-              operator: {
-                token,
-                signInPath: signInPathFor(configuredSignInPath, 'fabric'),
-              },
-            }
-          : { secret }),
-      variables,
+      signIn: inProcessSignIn(auth),
       model,
-      signInPath: wired
-        ? configuredSignInPath
-        : signInPathFor(configuredSignInPath, 'actor'),
       rpcPath:
         (await variables.get(VIRTUAL_USER_VARIABLES.rpcPath)) ?? undefined,
     })
-    const target = signedIn[personaId]
+    const target = signedIn[virtualUserId]
     if (!target) {
-      throw new Error(`Persona "${personaId}" cannot sign in`)
+      throw new Error(`VirtualUser "${virtualUserId}" cannot sign in`)
     }
 
     const result = await runVirtualUserEngine({
-      persona,
-      personaId,
+      virtualUser,
+      virtualUserId,
       disposition: disposition as VirtualUserDisposition,
       catalogue,
       intents,
@@ -662,11 +609,11 @@ export const executeVirtualUserRun = async ({
       memory,
       seed,
       agents,
-      target: personaVirtualUserTarget(target, {
+      target: virtualUserTarget(target, {
         model,
         agents: agents.map((agent) => agent.name),
       }),
-      // `AgentRunnerService.run` IS the engine's `ActorLLM` — same params, same
+      // `AgentRunnerService.run` IS the engine's `VirtualUserLLM` — same params, same
       // result — so a virtual user thinks through the same runner every agent in
       // the app does, provider quirks and all.
       llm: (params) => agentRunner.run(params),
@@ -693,7 +640,9 @@ export const executeVirtualUserRun = async ({
     // record is the only place that distinction survives — leaving it at
     // 'running' forever is what `fail` exists to prevent.
     const message = error instanceof Error ? error.message : String(error)
-    logger.error(`Virtual user run ${runId} (${personaId}) failed: ${message}`)
+    logger.error(
+      `Virtual user run ${runId} (${virtualUserId}) failed: ${message}`
+    )
     await store.fail(runId, message)
     throw error
   }

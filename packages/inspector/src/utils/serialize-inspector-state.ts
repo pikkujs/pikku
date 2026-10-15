@@ -239,10 +239,9 @@ export interface SerializableInspectorState {
     definitions: InspectorState['featureFlags']['definitions']
     files: string[]
   }
-  personas: {
-    definitions: InspectorState['personas']['definitions']
+  virtualUsers: {
+    definitions: InspectorState['virtualUsers']['definitions']
     files: string[]
-    signInFiles?: string[]
   }
   variables: {
     definitions: InspectorState['variables']['definitions']
@@ -485,10 +484,9 @@ export function serializeInspectorState(
       definitions: state.featureFlags.definitions,
       files: Array.from(state.featureFlags.files),
     },
-    personas: {
-      definitions: state.personas.definitions,
-      files: Array.from(state.personas.files),
-      signInFiles: Array.from(state.personas.signInFiles),
+    virtualUsers: {
+      definitions: state.virtualUsers.definitions,
+      files: Array.from(state.virtualUsers.files),
     },
     variables: {
       definitions: state.variables.definitions,
@@ -711,10 +709,9 @@ export function deserializeInspectorState(
       definitions: data.featureFlags?.definitions || [],
       files: new Set(data.featureFlags?.files || []),
     },
-    personas: {
-      definitions: data.personas?.definitions || [],
-      files: new Set(data.personas?.files || []),
-      signInFiles: new Set(data.personas?.signInFiles || []),
+    virtualUsers: {
+      definitions: data.virtualUsers?.definitions || [],
+      files: new Set(data.virtualUsers?.files || []),
     },
     variables: {
       definitions: data.variables?.definitions || [],

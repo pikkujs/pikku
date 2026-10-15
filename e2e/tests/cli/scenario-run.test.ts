@@ -94,7 +94,7 @@ describe('pikku scenario run', () => {
 
   after(() => stop?.())
 
-  test('a passing scenario drives signed-in actors and exits zero', async () => {
+  test('a passing scenario drives signed-in virtual users and exits zero', async () => {
     assertAllPassed(await runScenario('orderSupportScenario'))
   })
 
@@ -118,7 +118,7 @@ describe('pikku scenario run', () => {
     )
   })
 
-  test('stubbed service calls and per-actor fault injection hold', async () => {
+  test('stubbed service calls and per-virtual-user fault injection hold', async () => {
     assertAllPassed(await runScenario('notificationScenario'))
   })
 
@@ -128,17 +128,17 @@ describe('pikku scenario run', () => {
     assert.match(
       run.output,
       /^\s*When\s+admin \(the Console administrator\) reads a function definition in the console\s+✓/m,
-      `expected the first mention to name the actor and their role:\n${run.output}`
+      `expected the first mention to name the virtual user and their role:\n${run.output}`
     )
     assert.match(
       run.output,
       /^\s*Then\s+admin sees how editableFunc is declared\s+✓/m,
-      `expected a phase change to name the actor again, without the role:\n${run.output}`
+      `expected a phase change to name the virtual user again, without the role:\n${run.output}`
     )
     assert.match(
       run.output,
       /^\s*And\s+sees the original greeting\s+✓/m,
-      `expected a repeated phase and actor to drop both:\n${run.output}`
+      `expected a repeated phase and virtual user to drop both:\n${run.output}`
     )
   })
 
@@ -167,12 +167,12 @@ describe('pikku scenario run', () => {
    *
    * `@pikku/playwright` unit-tests the naming and the ffmpeg fallback, but
    * nothing there proves `--screenshots` survives the trip from the CLI flag
-   * through the driver to the actor session and onto disk. That is only
+   * through the driver to the virtual user session and onto disk. That is only
    * answerable by running it.
    *
    * The assertion is exact rather than "some png exists": every part of the
    * filename is derived — the index from call order, the stem from the
-   * description the scenario passes, the suffix from the actor — so a run that
+   * description the scenario passes, the suffix from the virtual user — so a run that
    * captured the right number of images under the wrong names is a regression,
    * not a variation. The run directory is a uuid, so it is read back from the
    * line the CLI prints rather than guessed.

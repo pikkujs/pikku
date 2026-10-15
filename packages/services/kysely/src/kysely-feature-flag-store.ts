@@ -179,14 +179,14 @@ export class KyselyFeatureFlagStore
   async setEnabled(
     key: string,
     enabled: boolean,
-    actor?: string,
+    virtualUser?: string,
     note?: string
   ): Promise<void> {
     await this.db
       .updateTable('pikkuFeatureFlags')
       .set({
         enabled,
-        updatedBy: actor ?? null,
+        updatedBy: virtualUser ?? null,
         note: note ?? null,
         updatedAt: new Date(),
       })
@@ -198,7 +198,7 @@ export class KyselyFeatureFlagStore
   async setRollout(
     key: string,
     percent: number | null,
-    actor?: string
+    virtualUser?: string
   ): Promise<void> {
     if (percent !== null && (percent < 0 || percent > 100)) {
       throw new Error(
@@ -209,7 +209,7 @@ export class KyselyFeatureFlagStore
       .updateTable('pikkuFeatureFlags')
       .set({
         rolloutPercent: percent === null ? null : Math.round(percent),
-        updatedBy: actor ?? null,
+        updatedBy: virtualUser ?? null,
         updatedAt: new Date(),
       })
       .where('name', '=', key)
@@ -221,7 +221,7 @@ export class KyselyFeatureFlagStore
     key: string,
     subject: FlagSubject,
     enabled: boolean,
-    actor?: string
+    virtualUser?: string
   ): Promise<void> {
     const subjectId = subjectIdOf(subject)
     if (!subjectId) {
@@ -239,7 +239,7 @@ export class KyselyFeatureFlagStore
         subjectId,
         subjectKind: subject.organizationId ? 'organization' : 'user',
         enabled,
-        grantedBy: actor ?? null,
+        grantedBy: virtualUser ?? null,
         grantedAt: new Date(),
       }),
       ['flag', 'subjectId'],

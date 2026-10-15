@@ -9,8 +9,8 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { fabricCommands } from './fabric/fabric-commands.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { cloudCommands } from './cloud/cloud-commands.js'
+import { changesCommands } from './cloud/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -116,12 +116,11 @@ import {
   scenarioGuide,
 } from './functions/commands/scenario.js'
 import {
-  personaList,
-  personaRun,
-  personaSecret,
-} from './functions/commands/persona.js'
-import { personaSync } from './functions/commands/persona-sync.js'
-import { personaRpc } from './functions/commands/persona-rpc.js'
+  virtualUserList,
+  virtualUserRun,
+} from './functions/commands/virtual-user.js'
+import { virtualUserSync } from './functions/commands/virtual-user-sync.js'
+import { virtualUserRpc } from './functions/commands/virtual-user-rpc.js'
 import {
   renderScenarioCoverage,
   scenarioCoverage,
@@ -1260,7 +1259,7 @@ wireCLI({
         run: pikkuCLICommand({
           func: scenarioRun,
           description:
-            'Run scenarios against a configured environment (environments in pikku.config.json). Actor secret comes from SCENARIO_ACTOR_SECRET.',
+            'Run scenarios against a configured environment (environments in pikku.config.json). Virtual users sign in with a statement signed by the key `pikku dev` created, or by VIRTUAL_USER_SIGNING_KEY for a deployed stage.',
           parameters: '<environment>',
           options: {
             flows: {
@@ -1286,7 +1285,7 @@ wireCLI({
             },
             run: {
               description:
-                "Which surface every actor drives the system through: 'browser' (as a human), 'cli' (over the websocket), or 'default' (server-side, the fast path)",
+                "Which surface every virtual user drives the system through: 'browser' (as a human), 'cli' (over the websocket), or 'default' (server-side, the fast path)",
               default: 'default',
             },
             strict: {
@@ -1326,7 +1325,7 @@ wireCLI({
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose personas sign into different apps — comma-separated, and a bare url is the fallback",
+                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
             },
           },
         }),
@@ -1379,98 +1378,103 @@ wireCLI({
       },
     },
     ui: {
-      description: "Design the app's screens: themes, brand assets and page screenshots",
+      description:
+        "Design the app's screens: themes, brand assets and page screenshots",
       subcommands: {
-      theme: {
-        description: "The app's themes, in packages/theme",
-        subcommands: {
-          list: pikkuCLICommand({
-            func: pikkuThemeList,
-            description:
-              'List the themes, the active one, and the presets and structures a theme can start from',
-          }),
-          apply: pikkuCLICommand({
-            func: pikkuThemeApply,
-            description:
-              'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
-            options: {
-              preset: {
-                description: 'Preset id to start from (see `pikku ui theme list`)',
+        theme: {
+          description: "The app's themes, in packages/theme",
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuThemeList,
+              description:
+                'List the themes, the active one, and the presets and structures a theme can start from',
+            }),
+            apply: pikkuCLICommand({
+              func: pikkuThemeApply,
+              description:
+                'Write a theme from a preset with any colours, fonts, structure, page and ink over it, make it active, and re-brand emails/theme.json',
+              options: {
+                preset: {
+                  description:
+                    'Preset id to start from (see `pikku ui theme list`)',
+                },
+                structure: {
+                  description:
+                    'Structure id for depth: shadows, radius, density',
+                },
+                primary: { description: 'Primary colour, as hex' },
+                secondary: { description: 'Secondary colour, as hex' },
+                accent: { description: 'Accent colour, as hex' },
+                fontHeading: {
+                  description: 'Heading font, a Google Fonts family',
+                },
+                fontBody: { description: 'Body font, a Google Fonts family' },
+                page: { description: 'Light-mode page colour, as hex' },
+                ink: { description: 'Light-mode text colour, as hex' },
               },
-              structure: {
-                description: 'Structure id for depth: shadows, radius, density',
-              },
-              primary: { description: 'Primary colour, as hex' },
-              secondary: { description: 'Secondary colour, as hex' },
-              accent: { description: 'Accent colour, as hex' },
-              fontHeading: { description: 'Heading font, a Google Fonts family' },
-              fontBody: { description: 'Body font, a Google Fonts family' },
-              page: { description: 'Light-mode page colour, as hex' },
-              ink: { description: 'Light-mode text colour, as hex' },
-            },
-          }),
+            }),
+          },
         },
-      },
-      pages: {
-        description:
-          "The frontends' pages, read from their TanStack Router route files",
-        subcommands: {
-          list: pikkuCLICommand({
-            func: pagesList,
-            render: renderPagesList,
-            description:
-              'List every page: app, route path, route file and params',
-            options: {
-              app: {
-                description:
-                  'Only this frontend, by its directory (e.g. apps/app)',
-                type: 'string',
+        pages: {
+          description:
+            "The frontends' pages, read from their TanStack Router route files",
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pagesList,
+              render: renderPagesList,
+              description:
+                'List every page: app, route path, route file and params',
+              options: {
+                app: {
+                  description:
+                    'Only this frontend, by its directory (e.g. apps/app)',
+                  type: 'string',
+                },
               },
-            },
-          }),
-          screenshot: pikkuCLICommand({
-            func: pagesScreenshot,
-            render: renderPagesScreenshot,
-            description:
-              "Photograph one frontend's pages on a running server, signed out or as a persona",
-            options: {
-              baseUrl: {
-                description:
-                  'Where the frontend is served, e.g. http://localhost:7104',
-                type: 'string',
+            }),
+            screenshot: pikkuCLICommand({
+              func: pagesScreenshot,
+              render: renderPagesScreenshot,
+              description:
+                "Photograph one frontend's pages on a running server, signed out or as a virtual user",
+              options: {
+                baseUrl: {
+                  description:
+                    'Where the frontend is served, e.g. http://localhost:7104',
+                  type: 'string',
+                },
+                app: {
+                  description: 'The frontend, when there is more than one',
+                  type: 'string',
+                },
+                out: {
+                  description:
+                    'Directory for the PNGs. Defaults to <outDir>/pages/screenshots/<app>',
+                  type: 'string',
+                },
+                params: {
+                  description:
+                    'Values for route params, as name=value,name=value. $lang and $locale default to en',
+                  type: 'string',
+                },
+                as: {
+                  description:
+                    'Sign in as this virtual user first, the way scenario virtual users do',
+                  type: 'string',
+                },
+                environment: {
+                  description:
+                    'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
+                  type: 'string',
+                },
+                viewport: {
+                  description: 'Capture the viewport only, not the whole page',
+                  type: 'boolean',
+                },
               },
-              app: {
-                description: 'The frontend, when there is more than one',
-                type: 'string',
-              },
-              out: {
-                description:
-                  'Directory for the PNGs. Defaults to <outDir>/pages/screenshots/<app>',
-                type: 'string',
-              },
-              params: {
-                description:
-                  'Values for route params, as name=value,name=value. $lang and $locale default to en',
-                type: 'string',
-              },
-              as: {
-                description:
-                  'Sign in as this persona first, the way scenario actors do',
-                type: 'string',
-              },
-              environment: {
-                description:
-                  'Environment in pikku.config.json whose apiUrl --as signs in against. Defaults to local',
-                type: 'string',
-              },
-              viewport: {
-                description: 'Capture the viewport only, not the whole page',
-                type: 'boolean',
-              },
-            },
-          }),
+            }),
+          },
         },
-      },
       },
     },
     addons: {
@@ -1528,15 +1532,15 @@ wireCLI({
         }),
       },
     },
-    persona: {
+    'virtual-user': {
       description:
         'The people this app is for, and running one against a real stage',
       subcommands: {
         run: pikkuCLICommand({
-          func: personaRun,
+          func: virtualUserRun,
           description:
-            'Sign in as a declared persona and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. The sign-in secret comes from SCENARIO_ACTOR_SECRET.',
-          parameters: '<environment> <persona>',
+            'Sign in as a declared virtual user and work the API in character against a configured environment. Not a test runner: it asserts nothing and reports what came back that should not have. It signs in with the key `pikku dev` created, or VIRTUAL_USER_SIGNING_KEY for a deployed stage.',
+          parameters: '<environment> <virtualUserId>',
           options: {
             disposition: {
               description:
@@ -1545,7 +1549,7 @@ wireCLI({
             },
             goals: {
               description:
-                "Comma-separated goals in your own words, run alongside the persona's own and the ones derived from scenarios",
+                "Comma-separated goals in your own words, run alongside the virtual user's own and the ones derived from scenarios",
             },
             steps: {
               description: 'Model turns before it stops (default 40)',
@@ -1583,30 +1587,24 @@ wireCLI({
           },
         }),
         sync: pikkuCLICommand({
-          func: personaSync,
+          func: virtualUserSync,
           description:
-            "Report which personas an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated personas to pikkuFabric from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({
-          func: personaList,
+          func: virtualUserList,
           description:
-            'List the declared personas — who each one is, what they may do, and what they are trying to get done',
-        }),
-        secret: pikkuCLICommand({
-          func: personaSecret,
-          description:
-            'Mint the actor credential for a persona from SCENARIO_ACTOR_SECRET, bound to their address. Hand these to a run as PIKKU_PERSONA_SECRETS instead of the root, which is entitled to every persona. Names none, mints all.',
-          parameters: '[personas...]',
+            'List the declared virtual users — who each one is, what they may do, and what they are trying to get done',
         }),
         rpc: pikkuCLICommand({
-          func: personaRpc,
+          func: virtualUserRpc,
           description:
-            'Call one RPC on a running server signed in as a persona, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a persona that is not permitted',
+            'Call one RPC on a running server signed in as a virtual user, and say why when it fails: not declared, a stale dev server, a failed sign-in, or a virtual user that is not permitted',
           parameters: '<rpc>',
           options: {
             as: {
-              description: 'The persona to sign in as',
+              description: 'The virtual user to sign in as',
               type: 'string',
             },
             data: {
@@ -1626,10 +1624,10 @@ wireCLI({
         }),
       },
     },
-    fabric: {
+    cloud: {
       description:
-        'PikkuFabric commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: fabricCommands,
+        'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
+      subcommands: cloudCommands,
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
@@ -1741,9 +1739,9 @@ wireCLI({
               description:
                 'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
             },
-            personas: {
+            virtualUsers: {
               description:
-                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+                'Comma-separated virtual user ids that sign into it; each must be in defineVirtualUsers({…})',
             },
             template: {
               description:
@@ -2108,9 +2106,9 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [core]',
               default: false,
             },
-            fabric: {
+            cloud: {
               description:
-                'Install skills whose frontmatter includes installGroups: [fabric]',
+                'Install skills whose frontmatter includes installGroups: [cloud]',
               default: false,
             },
             client: {

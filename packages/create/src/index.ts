@@ -38,7 +38,7 @@ import fs, { unlinkSync, writeFileSync } from 'fs'
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
-const DEFAULT_FABRIC_APP = 'app'
+const DEFAULT_PIKKUSTUDIO_APP = 'app'
 
 const packageManagers = ['npm', 'yarn', 'pnpm', 'bun'] as const
 
@@ -173,7 +173,7 @@ const templates = [
   {
     template: 'starter-template',
     description:
-      'The opinionated Pikku Fabric starter — backend + SDK + frontend scaffolds + Cucumber e2e',
+      'The opinionated Pikku Studio starter — backend + SDK + frontend scaffolds + Cucumber e2e',
     supports: ['http', 'fullstack'],
   },
 ] as const
@@ -207,7 +207,7 @@ program
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--stackblitz', 'Add StackBlitz configuration')
   .option('--variations', 'Show all template variations')
-  .option('--frontend <frontend>', 'Frontend app to keep for fabric')
+  .option('--frontend <frontend>', 'Frontend app to keep for cloud')
   .parse(process.argv)
 
 const cliOptions = program.opts()
@@ -442,7 +442,7 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
 async function run() {
   const version = cliOptions.version || 'main'
   const requestedTemplate =
-    cliOptions.template === 'fabric' ? 'starter-template' : cliOptions.template
+    cliOptions.template === 'cloud' ? 'starter-template' : cliOptions.template
 
   console.log(chalk.hex('#a863ee').bold(logo))
   console.log(
@@ -524,7 +524,7 @@ async function run() {
   if (template === 'nextjs-full') {
     await setupRepo(selectedOptions, 'nextjs-app-starter')
   } else if (template === 'starter-template') {
-    await setupFabric(selectedOptions)
+    await setupCloud(selectedOptions)
   } else {
     await setupTemplate(selectedOptions)
   }
@@ -532,11 +532,11 @@ async function run() {
 
 // Pretty labels for apps the starter ships. Anything missing from this map
 // falls back to the directory name in the picker.
-const fabricAppLabels: Record<string, string> = {
+const cloudAppLabels: Record<string, string> = {
   app: 'React + Vite + Tailwind + shadcn',
 }
 
-async function setupFabric(cliOptions: CliOptions) {
+async function setupCloud(cliOptions: CliOptions) {
   // Clone the starter first so the picker reflects whatever apps the
   // template *actually* ships — avoids drift between this CLI and the
   // template repo when new scaffolds are added.
@@ -583,12 +583,12 @@ async function setupFabric(cliOptions: CliOptions) {
         ? await select({
             message: 'Which frontend would you like to start with?',
             choices: availableApps.map((id) => ({
-              name: fabricAppLabels[id] ?? id,
+              name: cloudAppLabels[id] ?? id,
               value: id,
             })),
           })
-        : availableApps.includes(DEFAULT_FABRIC_APP)
-          ? DEFAULT_FABRIC_APP
+        : availableApps.includes(DEFAULT_PIKKUSTUDIO_APP)
+          ? DEFAULT_PIKKUSTUDIO_APP
           : availableApps[0]
 
   // Safe from path traversal: ids come from a directory listing inside

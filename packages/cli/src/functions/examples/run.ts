@@ -5,7 +5,7 @@ import {
   entityNames,
   extractExampleApi,
   extractTeaching,
-  renameActorsInCode,
+  renameVirtualUsersInCode,
   renameEntityInCode,
   renameEntityInPath,
   requiredChain,
@@ -19,7 +19,7 @@ import {
   entityWriteCoverage,
   generatedTables,
   nearestTable,
-  personaCast,
+  virtualUserCast,
   registeredRpcs,
   resolveAppBase,
 } from './project.js'
@@ -81,9 +81,9 @@ export function runExamplesShow(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = personaCast(project.srcDirectories)
+  const cast = virtualUserCast(project.srcDirectories)
   const applyRename = (body: string) =>
-    renameActorsInCode(
+    renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
       cast
     )
@@ -219,9 +219,9 @@ export function runExamplesAdd(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = personaCast(project.srcDirectories)
+  const cast = virtualUserCast(project.srcDirectories)
   const renameCode = (body: string) =>
-    renameActorsInCode(
+    renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
       cast
     )

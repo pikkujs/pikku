@@ -6,11 +6,11 @@ import { formatCLIError, wantsStackTrace } from './format-cli-error.js'
 describe('formatCLIError', () => {
   test('prints an expected error as its message alone', () => {
     const error = new PikkuError(
-      "Persona 'guest' missing guest. Refusing to run."
+      "Virtual user 'guest' missing guest. Refusing to run."
     )
     assert.strictEqual(
       formatCLIError(error),
-      "Persona 'guest' missing guest. Refusing to run."
+      "Virtual user 'guest' missing guest. Refusing to run."
     )
   })
 
@@ -44,14 +44,14 @@ describe('formatCLIError', () => {
       status: 502,
       statusText: 'Bad Gateway',
       response: {
-        url: 'https://api.pikkufabric.com/rpc/getDeploymentStatus',
+        url: 'https://api.pikkustudio.app/rpc/getDeploymentStatus',
         headers: { forbidden: 'do not print me' },
         body: 'a stream',
       },
     })
     assert.strictEqual(
       formatCLIError(error),
-      '502 Bad Gateway from https://api.pikkufabric.com/rpc/getDeploymentStatus'
+      '502 Bad Gateway from https://api.pikkustudio.app/rpc/getDeploymentStatus'
     )
   })
 
@@ -59,12 +59,12 @@ describe('formatCLIError', () => {
     const error = Object.assign(new Error('Deployment not found'), {
       status: 404,
       statusText: 'Not Found',
-      response: { url: 'https://api.pikkufabric.com/rpc/getDeploymentStatus' },
+      response: { url: 'https://api.pikkustudio.app/rpc/getDeploymentStatus' },
     })
     assert.strictEqual(
       formatCLIError(error),
       'Deployment not found\n' +
-        '  404 Not Found from https://api.pikkufabric.com/rpc/getDeploymentStatus'
+        '  404 Not Found from https://api.pikkustudio.app/rpc/getDeploymentStatus'
     )
   })
 

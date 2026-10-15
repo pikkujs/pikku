@@ -61,7 +61,7 @@ describe('serializeWorkflowTypes', () => {
       'pikkuScenarioHook',
       'pikkuFeature',
       'TypedScenario',
-      'TypedPersonas',
+      'TypedVirtualUsers',
     ]) {
       assert.doesNotMatch(
         result,

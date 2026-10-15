@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import { bearer } from 'better-auth/plugins'
 import {
-  pikkuActor,
+  pikkuVirtualUser,
   pikkuBan,
   pikkuCredentialOAuth,
   credentialOAuthProviders,
@@ -11,6 +11,7 @@ import {
 } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
 import { pikkuBetterAuth } from '#pikku/auth'
+import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /**
  * Better Auth configuration for the e2e suite. Exercises email+password
@@ -60,8 +61,9 @@ export const auth = pikkuBetterAuth(
       plugins: [
         pikkuBan(),
         bearer(),
-        pikkuActor({
-          secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
+        pikkuVirtualUser({
+          verifyKey: await variables.get('VIRTUAL_USER_VERIFY_KEY'),
+          virtualUserSignIn: { virtualUsers: virtualUserList },
         }),
         // Every defineCredential oauth2 declaration becomes a provider here, so
         // linking an account is what makes getCredential(name) resolve.

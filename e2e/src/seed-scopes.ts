@@ -4,7 +4,7 @@ import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
 import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
 import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
-import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
+import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /** Role granting the console's own scope-admin capabilities. */
 export const CONSOLE_ADMIN_ROLE = 'console-admin'
@@ -59,15 +59,15 @@ const userIdByEmail = async (
  *   so that staff stays what the scopes-console-permissions suite needs it to
  *   be: an admin holding no scope role, and therefore refused by the
  *   self-hosting scope RPCs. `guest@e2e.test` gets none of it.
- * - The personas carry their own `roles`, and this applies whatever they
+ * - The virtual users carry their own `roles`, and this applies whatever they
  *   declare. Pikku never applies them itself: which scope store exists is the
  *   app's business, which is why the loop runs after the sync above. Their user
- *   rows are created by `seedScenarioActors`, which must therefore run before
+ *   rows are created by `seedScenarioVirtualUsers`, which must therefore run before
  *   this.
  * - Those declarations mirror the fixture users of the same name, so a scenario
  *   expresses "an admin without a scope role", "a caller holding reports:read"
- *   and "a caller holding nothing" through the persona registry rather than by
- *   signing in with a fixture password. The `admin` persona mirrors
+ *   and "a caller holding nothing" through the virtual user registry rather than by
+ *   signing in with a fixture password. The `admin` virtual user mirrors
  *   `admin@e2e.test` exactly — `platform-admin` to reach the console, plus `console-admin` to drive the scope-admin RPCs and
  *   `audit-reader` to read the trail, neither of which the `admin` root
  *   reaches. `target` declares nothing.
@@ -104,15 +104,15 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addUserToRole(staffId, PLATFORM_ADMIN_ROLE)
 
   const granted: string[] = []
-  for (const persona of personaList) {
-    if (persona.roles.length === 0) {
+  for (const virtualUser of virtualUserList) {
+    if (virtualUser.roles.length === 0) {
       continue
     }
-    const personaId = await userIdByEmail(services, persona.email)
-    for (const role of persona.roles) {
-      await scopeService.addUserToRole(personaId, role)
+    const virtualUserId = await userIdByEmail(services, virtualUser.email)
+    for (const role of virtualUser.roles) {
+      await scopeService.addUserToRole(virtualUserId, role)
     }
-    granted.push(`${persona.email} -> ${persona.roles.join(' + ')}`)
+    granted.push(`${virtualUser.email} -> ${virtualUser.roles.join(' + ')}`)
   }
 
   services.logger.info(

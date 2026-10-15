@@ -30,7 +30,7 @@ unit: there is no in-process promise to leave running, and `executeVirtualUserRu
 — sessionless, unexposed, wired to nothing — is not a function any unit can be
 reached at. The RPC resolves to nothing, the rejection is swallowed by the
 `catch` that exists to stop it taking the process down, and the run parks at
-`running` with zero steps and no error anywhere. That is what a fabric stage did.
+`running` with zero steps and no error anywhere. That is what a cloud stage did.
 
 So the queue is not bought for durability. It is bought because **a trigger is
 what makes a function deployable**: `wireQueueWorker` puts `executeVirtualUserRun`
@@ -56,7 +56,7 @@ wants the same exploration.
 
 Where that rule is actually applied is
 [the schedule tick](a-virtual-user-cadence-is-a-row-not-a-timer.md), which has
-to: a record stuck at `running` would otherwise block its persona's cadence
+to: a record stuck at `running` would otherwise block its virtual user's cadence
 forever.
 
 **What this rules out:** dispatching the run through `startWorkflow`; awaiting

@@ -6,8 +6,8 @@ import { defineSystemRole } from '#pikku/scopes/pikku-scope-types.gen.js'
  * These are *system* roles: they ship with the shop, and the console may grant
  * them but cannot rename, re-scope or delete them. Roles an operator composes
  * in the console are a different thing and are not declared here — which is
- * also why a persona may only name a system role. A composed role can be
- * deleted, and a persona pinned to one would go on claiming to test something
+ * also why a virtual user may only name a system role. A composed role can be
+ * deleted, and a virtual user pinned to one would go on claiming to test something
  * nobody grants any more.
  *
  * Removing a role from this file does not revoke it. The row stays, marked

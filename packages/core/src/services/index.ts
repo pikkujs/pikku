@@ -67,11 +67,11 @@ export type {
   CopyFileArgs,
 } from './content-service.js'
 export type {
-  ScenarioPersona,
-  ResolvedPersona,
-  ScenarioPersonas,
-} from './personas-service.js'
-// knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
+  ScenarioVirtualUser,
+  ResolvedVirtualUser,
+  ScenarioVirtualUsers,
+} from './virtual-users-service.js'
+// knowledge: decisions/internals/the-virtual-user-runtime-is-exported-from-the-virtual-user-entry-point.md
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailAttachment,
@@ -103,13 +103,15 @@ export {
   type WebhookServiceConfig,
 } from './webhook-service.js'
 export {
-  ACTOR_ROOT_SECRET_MIN_LENGTH,
-  ACTOR_SECRET_INFO,
-  ACTOR_SECRET_NAME,
-  actorSecretSubject,
-  deriveActorSecret,
-  verifyActorSecret,
-} from './persona-actor-secret.js'
+  VIRTUAL_USER_IN_PROCESS_ENDPOINT,
+  VIRTUAL_USER_STATEMENT_ALGORITHM,
+  VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS,
+  VIRTUAL_USER_STATEMENT_TTL_SECONDS,
+  VIRTUAL_USER_SIGNING_KEY_VARIABLE,
+  VIRTUAL_USER_VERIFY_KEY_VARIABLE,
+  VirtualUserStatementError,
+  type VirtualUserStatementVerifier,
+} from './virtual-user-statement.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

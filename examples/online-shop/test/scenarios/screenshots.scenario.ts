@@ -190,10 +190,10 @@ export const capturesEveryPageScenario = pikkuScenario<
   description:
     'Screenshots the app as a signed-in user, at desktop and phone widths',
   tags: ['scenario', 'screenshots'],
-  func: async ({ logger }, _data, { scenario, actors }) => {
-    if (!actors?.visitor) {
+  func: async ({ logger }, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.visitor) {
       throw new Error(
-        'needs the `visitor` actor — run via `pikku scenario run <environment>`'
+        'needs the `visitor` virtual user — run via `pikku scenario run <environment>`'
       )
     }
 
@@ -212,7 +212,7 @@ export const capturesEveryPageScenario = pikkuScenario<
           height: capture.height,
           scheme: capture.scheme,
         },
-        { actor: actors.visitor }
+        { virtualUser: virtualUsers.visitor }
       )
       files.push(shot.file)
       const problems = [

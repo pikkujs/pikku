@@ -7,7 +7,7 @@ export const notifyShopper = pikkuSessionlessFunc<
   expose: true,
   func: async ({ emailService }, { orderId, recipient }) => {
     const result = await emailService?.send({
-      to: recipient ?? 'shopper@actors.local',
+      to: recipient ?? 'shopper@virtualuser.local',
       subject: `Order ${orderId} update`,
       text: 'Your order has shipped.',
     })

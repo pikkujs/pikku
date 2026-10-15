@@ -2,10 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
   "tsconfig": "tsconfig.json",
-  "srcDirectories": [
-    "packages/functions/src",
-    "packages/functions/test"
-  ],
+  "srcDirectories": ["packages/functions/src", "packages/functions/test"],
   "outDir": "packages/functions/.pikku",
   "emailTemplatesDir": "emails",
   "clientFiles": {
@@ -46,25 +43,25 @@
     "virtualUser": true
   },
   "scenarios": {
-    "emailDomain": "actors.local"
+    "emailDomain": "virtualuser.local"
   },
   "environments": {
     "local": {
       "apiUrl": "http://localhost:3000",
       "appUrl": "http://localhost:7104",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "sandbox": {
       "apiUrl": "http://localhost:4000",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "coverage": {
       "apiUrl": "http://localhost:4010",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "stage": {
       "apiUrl": "https://replaced-by-the-deployer/api",
-      "signInPath": "/auth/sign-in/actor"
+      "signInPath": "/auth/sign-in/virtual-user"
     }
   },
   "frontends": {
@@ -73,9 +70,13 @@
       "primary": true,
       "deploy": true,
       "kind": "ssr",
-      "dev": { "command": ["bun", "run", "dev"], "port": 7104, "healthPath": "/" },
+      "dev": {
+        "command": ["bun", "run", "dev"],
+        "port": 7104,
+        "healthPath": "/"
+      },
       "serves": "visitor",
-      "personas": ["visitor"]
+      "virtualUsers": ["visitor"]
     }
   }
 }

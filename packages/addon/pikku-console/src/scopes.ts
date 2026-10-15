@@ -109,11 +109,11 @@ defineScope({
                   'Read what the virtual users found and every turn they took',
               },
               run: {
-                description: 'Turn a persona loose on this application',
+                description: 'Turn a virtual user loose on this application',
               },
               schedule: {
                 description:
-                  'Decide which personas keep using this application on their own',
+                  'Decide which virtual users keep using this application on their own',
               },
             },
           },
@@ -177,7 +177,7 @@ defineScope({
           },
           changes: {
             description:
-              'Changes to make to the app — local, or filed by Fabric against the deployed app',
+              'Changes to make to the app — local, or filed by Pikku Studio Cloud against the deployed app',
             scopes: {
               read: { description: 'Read the changes queue' },
               write: { description: 'File, move, answer and complete changes' },

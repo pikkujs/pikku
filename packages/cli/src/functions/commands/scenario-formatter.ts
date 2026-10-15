@@ -91,7 +91,7 @@ export const buildStepLadder = (steps: ScenarioStepRow[]): string[] => {
   })
 }
 
-/** The ladder introduces an actor where the row offers an introduction. */
+/** The ladder introduces a virtual user where the row offers an introduction. */
 const ladderSentence = (step: ScenarioStepRow) =>
   step.sentenceWithRole ?? step.sentence
 
@@ -124,7 +124,7 @@ export const formatScenarioFailure = (
 
   for (const browser of failure.browser ?? []) {
     lines.push(
-      `    browser (${browser.actor})${browser.url ? `: ${browser.url}` : ''}`
+      `    browser (${browser.virtualUser})${browser.url ? `: ${browser.url}` : ''}`
     )
     const detail = (label: string, values: string[]) => {
       for (const value of values) {

@@ -11,10 +11,10 @@ import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
-  assignPersonaApp,
+  assignVirtualUserApp,
   nextPort,
-  personaAppsInSource,
-  personasNamedInSource,
+  virtualUserAppsInSource,
+  virtualUsersNamedInSource,
   refuseNewApp,
   retargetApp,
   validateSlug,
@@ -79,13 +79,13 @@ export const pikkuAppNew = pikkuSessionlessFunc({
           'for in their own word — staff, customer, supplier, patient.'
       )
 
-    const personas = (input.personas ?? '')
+    const virtualUsers = (input.virtualUsers ?? '')
       .split(',')
       .map((p) => p.trim())
       .filter(Boolean)
-    if (personas.length === 0)
+    if (virtualUsers.length === 0)
       return refuse(
-        'an app needs personas: pass --personas <ids> naming who signs into it. An app ' +
+        'an app needs virtual users: pass --virtual-users <ids> naming who signs into it. An app ' +
           'is built around who signs into it, so it is not created for people who do ' +
           'not exist yet.'
       )
@@ -139,26 +139,26 @@ export const pikkuAppNew = pikkuSessionlessFunc({
     const refusal = refuseNewApp(
       slug,
       serves,
-      personas,
+      virtualUsers,
       frontends,
-      personaAppsInSource(repoDir)
+      virtualUserAppsInSource(repoDir)
     )
     if (refusal) return refuse(refusal)
 
-    const declared = personasNamedInSource(repoDir)
+    const declared = virtualUsersNamedInSource(repoDir)
     const unknown =
-      declared.size > 0 ? personas.filter((p) => !declared.has(p)) : []
+      declared.size > 0 ? virtualUsers.filter((p) => !declared.has(p)) : []
     if (unknown.length > 0)
       return refuse(
-        `no definePersonas() call declares: ${unknown.join(', ')}. Add them to the ` +
-          'definePersonas({…}) object beside your functions, then run this again.'
+        `no defineVirtualUsers() call declares: ${unknown.join(', ')}. Add them to the ` +
+          'defineVirtualUsers({…}) object beside your functions, then run this again.'
       )
 
     const isFirstFrontend = Object.keys(frontends).length === 0
     const port = nextPort(frontends)
     const primary = input.primary ?? isFirstFrontend
 
-    assignPersonaApp(repoDir, personas, slug)
+    assignVirtualUserApp(repoDir, virtualUsers, slug)
 
     mkdirSync(dirname(appDir), { recursive: true })
     const template = input.template ?? DEFAULT_TEMPLATE

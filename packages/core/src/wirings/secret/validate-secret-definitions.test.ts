@@ -211,9 +211,9 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
     const result = validateAndBuildSecretDefinitionsMeta(
       [
         {
-          name: 'scenarioActor',
-          displayName: 'Scenario Actor Secret',
-          secretId: 'SCENARIO_ACTOR_SECRET',
+          name: 'sampleApi',
+          displayName: 'Sample API Secret',
+          secretId: 'SAMPLE_API_SECRET',
           optional: true,
           sourceFile: 'a.ts',
         },
@@ -226,7 +226,7 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
       ] as any,
       new Map()
     )
-    assert.strictEqual(result['scenarioActor']!.optional, true)
+    assert.strictEqual(result['sampleApi']!.optional, true)
     assert.strictEqual(result['stripe']!.optional, undefined)
   })
 })

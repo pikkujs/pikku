@@ -28,7 +28,7 @@ nearest to hand, on every screen, in every app. Not because it lacks taste, but
 because there is nothing to be wrong against. A direction fixes that: state one,
 in words, before any screen exists.
 
-Say what this product *is* — its register, its reference points, what it feels
+Say what this product _is_ — its register, its reference points, what it feels
 like to use, what it is deliberately not. "A warm, food-forward thing you use
 standing at an open fridge door, closer to a recipe card than to a dashboard, and
 never clinical" is a direction. "Clean and modern" is not — it rules nothing out,
@@ -46,13 +46,13 @@ chosen — it has been defaulted to in words instead of in components.
 
 Being ambitious is easier against a list of specific things to not be. Generated
 interfaces cluster hard, and these are the attractors — not because any is ugly,
-but because arriving at one *by default* means no choice was made:
+but because arriving at one _by default_ means no choice was made:
 
 - **Stock component-library defaults.** The strongest pull, and the hardest to see: a component
   library's untouched defaults do not look broken, they look finished. Blue
   accent, grey borders, one radius on everything, `Card` + stacked text
   down every page. An app can be entirely this and never trip a critique, because
-  nothing on any screen is *wrong*.
+  nothing on any screen is _wrong_.
 - Warm cream ground with a serif display face and a terracotta accent.
 - Near-black with one acid-green or vermilion pop.
 - A purple-to-blue gradient header on white.
@@ -98,7 +98,7 @@ material behind the content, what overlaps what — is plain HTML and your own
 CSS, arranged however the layout decision demands; that half is free, and it is
 where the design actually happens. The COMPONENTS — anything a person would
 point at and call a control, and that the app will adopt as itself: buttons,
-inputs, selects, tables, badges, menus, modals — are drawn as *shadcn's*, at the
+inputs, selects, tables, badges, menus, modals — are drawn as _shadcn's_, at the
 metrics shadcn actually uses: its control heights, its input shapes, its table
 and menu behaviour. The test is the one the build will apply too: is this thing
 the SHAPE OF THE PAGE, or a COMPONENT someone would point at?
@@ -138,8 +138,8 @@ stating:
   mock was wrong. Update it, and say you did. Do not let the app and the mock
   drift and then quietly prefer the app.
 - The knowledge graph still owns the domain — objects, roles, rules. The mock
-  owns what the screens look like. When they disagree about a *fact*, knowledge
-  wins; when they disagree about a *layout*, the mock wins.
+  owns what the screens look like. When they disagree about a _fact_, knowledge
+  wins; when they disagree about a _layout_, the mock wins.
 
 **Building it is then a transcription, not a translation.** Because the theme
 already exists and the mock was drawn from it, the screen is shadcn components
@@ -204,9 +204,10 @@ the thing that made it is always yes. Use evidence.
   Then drive it over CDP from a script: `Page.navigate`,
   `Emulation.setDeviceMetricsOverride` for the two widths,
   `Page.captureScreenshot`, write the PNG, and open it. Sign in the way a person
-  does — click the dev actor switcher on the login page — rather than reaching
+  does — click the dev virtual user switcher on the login page — rather than reaching
   for the secret the client uses; the UI path is shorter and it also proves the
   login screen works. Keep the script; you will run it at every changeset.
+
 - **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
   screenshots. It is external, it does not flatter, and it scores execution
   against interaction heuristics. But it audits how well you executed the design
@@ -240,7 +241,7 @@ inventory, and it produces the wall of identical boxes further down this file.
 list.** A product has objects of its own, and the ones that carry its meaning are
 the ones no generic kit ships:
 
-- the thing the product is *about*, rendered as itself — a funding meter, a
+- the thing the product is _about_, rendered as itself — a funding meter, a
   streak, a seat map, a run's status over time. If a decision note says the
   progress toward a goal is the primary object, then a component that draws that
   progress has to exist, or the note is describing an app you did not build.
@@ -255,7 +256,7 @@ Adding them is not hand-rolling, and they are the difference between an app that
 uses a design system and an app that looks like one.
 
 The tell that you skipped this: your `components/` directory maps one-to-one onto
-your data model and contains nothing that names a *quality* of the product.
+your data model and contains nothing that names a _quality_ of the product.
 
 ## Design is a gate on the changeset, not a phase at the end
 
@@ -281,7 +282,7 @@ repaint is a rewrite.
 ### The seed is part of the gate
 
 A screenshot is only evidence if the screen has something on it. Before the gate
-runs, the dev seed must populate what each screen *is for* — not one row, and not
+runs, the dev seed must populate what each screen _is for_ — not one row, and not
 an empty state.
 
 This is a real and quiet failure: a list app whose seed has no list, a countdown
@@ -292,7 +293,7 @@ designing and is not what the changeset is about.
 Seed enough to be judged against: several rows, not three identical ones, and a
 deliberate spread of the cases the screen has to hold — a long title that wraps,
 a missing optional field, a picture and no picture, one item in each state the
-screen can show. Anything derived from *today* — a countdown, "3 days ago", an
+screen can show. Anything derived from _today_ — a countdown, "3 days ago", an
 expiry — is seeded as an interval from `now`, never as a fixed date: fixed dates
 are correct on the afternoon they are written and meaningless a month later.
 
@@ -365,5 +366,5 @@ first one.
   accent is not — the surest sign the neutrals were inherited rather than
   chosen. The theming reference (see SKILL.md) covers it.
 - It looks like the last app you built.
-- It looks like stock shadcn. Not *built with* shadcn, which it is and should be —
+- It looks like stock shadcn. Not _built with_ shadcn, which it is and should be —
   but indistinguishable from a component gallery with the brand hue swapped in.

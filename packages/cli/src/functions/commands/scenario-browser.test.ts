@@ -79,7 +79,7 @@ describe('scenarioBrowserLifecycle', () => {
           labels.push(label)
           return [
             {
-              actor: 'admin',
+              virtualUser: 'admin',
               url: 'https://app.test/console',
               consoleErrors: ['boom'],
               pageErrors: [],
@@ -134,8 +134,7 @@ describe('resolveScenarioBrowserProvider', () => {
     environment: 'local',
     apiUrl: 'http://localhost:4077',
     appUrl: 'http://localhost:4077/console',
-    secret: 'top-secret',
-    actors: { admin: { email: 'admin@test' } },
+    virtualUsers: { admin: { email: 'admin@test' } },
     capture: {
       dir: '/project/.pikku/scenario-runs',
       runId: 'run-1',
@@ -178,7 +177,7 @@ describe('resolveScenarioBrowserProvider', () => {
     assert.equal(seen.config.appUrl, 'https://sandbox-a1b2.example.com')
   })
 
-  test('the app urls reach the driver, so each actor browses their own', async () => {
+  test('the app urls reach the driver, so each virtual user browses their own', async () => {
     const d = driver()
     await resolveScenarioBrowserProvider({
       ...options({
@@ -186,7 +185,7 @@ describe('resolveScenarioBrowserProvider', () => {
           workshop: 'http://localhost:4077/',
           storefront: 'http://localhost:4077/_frontend/storefront/',
         },
-        actors: {
+        virtualUsers: {
           mechanic: { email: 'mechanic@test', app: 'workshop' },
           customer: { email: 'customer@test', app: 'storefront' },
         },
@@ -205,7 +204,7 @@ describe('resolveScenarioBrowserProvider', () => {
       resolveScenarioBrowserProvider({
         ...options({
           appUrls: { workshop: 'http://localhost:4077/' },
-          actors: {
+          virtualUsers: {
             mechanic: { email: 'mechanic@test', app: 'workshop' },
             customer: { email: 'customer@test', app: 'storefront' },
           },
@@ -220,7 +219,7 @@ describe('resolveScenarioBrowserProvider', () => {
     const d = driver()
     await resolveScenarioBrowserProvider({
       ...options({
-        actors: { mechanic: { email: 'mechanic@test', app: 'workshop' } },
+        virtualUsers: { mechanic: { email: 'mechanic@test', app: 'workshop' } },
       }),
       importDriver: d.importDriver,
     } as any)
@@ -350,7 +349,7 @@ describe('resolveScenarioBrowserProvider', () => {
     )
   })
 
-  test('the driver is built with the run’s capture options and its own actors', async () => {
+  test('the driver is built with the run’s capture options and its own virtual users', async () => {
     const { built, importDriver } = driver()
 
     await resolveScenarioBrowserProvider({
@@ -364,8 +363,7 @@ describe('resolveScenarioBrowserProvider', () => {
       runId: 'run-1',
       video: 'failed',
     })
-    assert.equal(built[0].secret, 'top-secret')
-    assert.deepEqual(built[0].actors, { admin: { email: 'admin@test' } })
+    assert.deepEqual(built[0].virtualUsers, { admin: { email: 'admin@test' } })
     assert.equal(built[0].config.appUrl, 'http://localhost:4077/console')
   })
 })

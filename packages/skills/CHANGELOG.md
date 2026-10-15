@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.54
+
+### Patch Changes
+
+- e71857d: `@pikku/mantine` and the `pikku-mantine` skill are removed. Theming guidance, the accessibility, i18n and RTL rules, and the blueprint rebuild values now describe Tailwind and shadcn, `pikku validate` checks the `packages/theme` contract instead of the Mantine theme package, and `create-pikku` defaults to the starter template's `app` frontend. `@pikku/react-layout-panel` is removed; its shell and dock live in the pikkujs/shadcn-registry repo as a shadcn item.
+- 176ce98: New skills `pikku-ui` (screens are designed by a subagent with the project's design rules and impeccable), `pikku-convert-screen` and `pikku-theme` (documents `pikku ui theme list|apply`), and a mocks reference under `pikku-build`.
+
 ## 0.12.53
 
 ### Patch Changes

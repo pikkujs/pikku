@@ -16,7 +16,7 @@
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 
-//~ Speech-to-text WORKS OUT OF THE BOX on a Fabric sandbox — no addon, no API key, no
+//~ Speech-to-text WORKS OUT OF THE BOX on Pikku Studio Cloud (elsewhere configure a provider) — no addon, no API key, no
 //~ services.ts edit. Use this scaffold directly; do not ask the user to choose a
 //~ transcription provider, and do not reach for `@pikku/addon-mistral` instead.
 //~
@@ -76,7 +76,7 @@ export const transcribeAudio = pikkuFunc({
       throw new Error('agentRunner not configured — AI is unavailable in this stage')
     }
     if (!agentRunner.transcribe) {
-      //~ Not reachable on a stock Fabric sandbox — only if this app replaced the AI
+      //~ Not reachable on a stock Pikku Studio sandbox — only if this app replaced the AI
       //~ wiring. Fail loud and actionable rather than 500.
       throw new Error(
         'Speech-to-text is not enabled: this app’s AI runner has no transcription model. ' +

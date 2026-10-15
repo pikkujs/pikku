@@ -9,7 +9,7 @@ import {
   createConfig,
   createSingletonServices,
 } from './services.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { changesCommands } from './cloud/changes-commands.js'
 
 const created: string[] = []
 let restoreCwd: string | undefined
@@ -68,8 +68,8 @@ describe('CONFIG_FREE_COMMANDS', () => {
     assert.ok(CONFIG_FREE_COMMANDS.has('changes'))
   })
 
-  test('fabric login runs before there is a project to be inside', () => {
-    assert.ok(CONFIG_FREE_COMMANDS.has('fabric.login'))
+  test('cloud login runs before there is a project to be inside', () => {
+    assert.ok(CONFIG_FREE_COMMANDS.has('cloud.login'))
   })
 })
 

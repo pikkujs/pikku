@@ -60,8 +60,8 @@ type PikkuFunctionConfig<
 
 ${featureTypes()}
 
-declare const voidScenario: PikkuFunctionConfig<void, { ok: boolean }, 'scenario' | 'actors', PikkuFunctionScenario<void, { ok: boolean }>>
-declare const namedScenario: PikkuFunctionConfig<{ name: string }, { ok: boolean }, 'scenario' | 'actors', PikkuFunctionScenario<{ name: string }, { ok: boolean }>>
+declare const voidScenario: PikkuFunctionConfig<void, { ok: boolean }, 'scenario' | 'virtualUsers', PikkuFunctionScenario<void, { ok: boolean }>>
+declare const namedScenario: PikkuFunctionConfig<{ name: string }, { ok: boolean }, 'scenario' | 'virtualUsers', PikkuFunctionScenario<{ name: string }, { ok: boolean }>>
 `
 
 const typeErrors = (body: string): string[] => {

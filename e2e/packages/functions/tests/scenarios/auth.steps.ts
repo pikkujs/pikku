@@ -1,9 +1,9 @@
 /**
  * Sign-in against Better Auth's own email endpoint.
  *
- * An actor cannot answer "can this person still sign in?": it authenticates
- * through the actor plugin with `SCENARIO_ACTOR_SECRET`, which a step has no
- * sanctioned way to read, and its session is established once and reused. The
+ * A virtual user cannot answer "can this person still sign in?": it authenticates
+ * through the virtual user plugin with a signed statement, which a step has no
+ * sanctioned way to produce, and its session is established once and reused. The
  * user-management suite needs the opposite — a fresh credential check whose
  * refusal is the assertion — so these steps drive the real endpoint with an
  * email and password and report what it answered.
@@ -12,7 +12,12 @@
  * JSON, and nothing downstream needs the session: what is being proven is that
  * the credentials were accepted or refused.
  */
-import { pikkuScenarioStep, postScenarioJson, requireScenarioEnv, type ScenarioHttpResponse } from '#pikku/scenario'
+import {
+  pikkuScenarioStep,
+  postScenarioJson,
+  requireScenarioEnv,
+  type ScenarioHttpResponse,
+} from '#pikku/scenario'
 
 export const attemptsSignIn = pikkuScenarioStep<
   { email: string; password: string },

@@ -1,7 +1,7 @@
 /**
  * Registry pack/install round-trip verifier (shadcn / yarn-workspace model).
  *
- * Mirrors `pikku fabric addon publish` (npm pack) and `pikku fabric addon add`
+ * Mirrors `pikku cloud addon publish` (npm pack) and `pikku cloud addon add`
  * (copy source into addons/<name>, register a yarn workspace, record
  * provenance). The addon lands in the consumer's own tree — editable,
  * shadcn-style — and a node_modules symlink (exactly what `yarn install` makes
@@ -86,7 +86,7 @@ console.log(`  addon files: ${readdirSync(installDir).join(', ')}`)
 
 // 3b. yarn-workspace link: symlink node_modules/<pkg> → addons/<name> (the exact
 //     symlink `yarn install` creates for a workspace member), and record install
-//     provenance the way `pikku fabric addon add` does. Must happen before
+//     provenance the way `pikku cloud addon add` does. Must happen before
 //     `pikku all` so the inspector resolves the addon's functions meta.
 const linkPath = join(consumerDir, 'node_modules', ...ADDON_PKG.split('/'))
 rmSync(linkPath, { recursive: true, force: true })

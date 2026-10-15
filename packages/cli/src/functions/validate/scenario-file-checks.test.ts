@@ -24,7 +24,7 @@ const ids = (findings: { id: string }[]): string[] => findings.map((f) => f.id)
 const SCENARIO = "pikkuScenario('signs in', {})\n"
 const STEP = "pikkuScenarioStep('clicks', { browser: async () => {} })\n"
 const FEATURE = "pikkuFeature('billing', {})\n"
-const PERSONAS = "definePersonas({ founder: { name: 'Anna' } })\n"
+const VIRTUAL_USERS = "defineVirtualUsers({ founder: { name: 'Anna' } })\n"
 
 describe('scenario and virtual-user file placement', () => {
   test('a scenario in a *.scenarios.ts file is fine', async () => {
@@ -96,10 +96,10 @@ describe('scenario and virtual-user file placement', () => {
     }
   })
 
-  test('personas outside a *.virtual-user.ts file are an error', async () => {
+  test('virtual users outside a *.virtual-user.ts file are an error', async () => {
     const tmp = await makeTmp()
     try {
-      await write(tmp, 'scenarios/personas.ts', PERSONAS)
+      await write(tmp, 'scenarios/virtual-users.ts', VIRTUAL_USERS)
       const findings = await runScenarioFileChecks(tmp, srcDirs)
       assert.deepStrictEqual(ids(findings), [
         'virtual-user-declared-outside-virtual-user-file',
@@ -113,7 +113,7 @@ describe('scenario and virtual-user file placement', () => {
   test('*.virtual-user.ts and *.vu.ts both satisfy the rule', async () => {
     const tmp = await makeTmp()
     try {
-      await write(tmp, 'scenarios/personas.virtual-user.ts', PERSONAS)
+      await write(tmp, 'scenarios/virtual-users.virtual-user.ts', VIRTUAL_USERS)
       await write(tmp, 'scenarios/load.vu.ts', 'await runVirtualUser({})\n')
       assert.deepStrictEqual(ids(await runScenarioFileChecks(tmp, srcDirs)), [])
     } finally {
@@ -121,10 +121,10 @@ describe('scenario and virtual-user file placement', () => {
     }
   })
 
-  test('a scenario file is still not allowed to hold the personas', async () => {
+  test('a scenario file is still not allowed to hold the virtual users', async () => {
     const tmp = await makeTmp()
     try {
-      await write(tmp, 'scenarios/auth.scenarios.ts', SCENARIO + PERSONAS)
+      await write(tmp, 'scenarios/auth.scenarios.ts', SCENARIO + VIRTUAL_USERS)
       assert.deepStrictEqual(ids(await runScenarioFileChecks(tmp, srcDirs)), [
         'virtual-user-declared-outside-virtual-user-file',
       ])

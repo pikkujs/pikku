@@ -46,9 +46,12 @@ describe('testIdSelector', () => {
     assert.equal(
       testIdSelector({
         testId: 'scenario-cast-member',
-        where: { 'data-persona-key': 'shopper', 'data-connected': 'false' },
+        where: {
+          'data-virtual-user-key': 'shopper',
+          'data-connected': 'false',
+        },
       }),
-      '[data-testid="scenario-cast-member"][data-persona-key="shopper"][data-connected="false"]'
+      '[data-testid="scenario-cast-member"][data-virtual-user-key="shopper"][data-connected="false"]'
     )
   })
 })
@@ -76,9 +79,9 @@ describe('locateTestId', () => {
     const scope = fakeScope()
     const target = locateTestId(scope as unknown as Page, {
       testId: 'user-row',
-      containing: 'shopper@actors.local',
+      containing: 'shopper@virtualuser.local',
     }) as unknown as FakeLocator
-    assert.deepEqual(target.filters, [{ hasText: 'shopper@actors.local' }])
+    assert.deepEqual(target.filters, [{ hasText: 'shopper@virtualuser.local' }])
   })
 
   test('scopes the lookup to the element named by `within`', () => {
@@ -106,10 +109,12 @@ describe('locateTestId', () => {
     }
     locateTestId(recording as unknown as Page, {
       testId: 'row-action',
-      within: { testId: 'user-row', containing: 'shopper@actors.local' },
+      within: { testId: 'user-row', containing: 'shopper@virtualuser.local' },
     })
     // The scope is filtered before the target is looked up inside it, so the
     // action resolves within the one row rather than every row.
-    assert.deepEqual(scopes[0]?.filters, [{ hasText: 'shopper@actors.local' }])
+    assert.deepEqual(scopes[0]?.filters, [
+      { hasText: 'shopper@virtualuser.local' },
+    ])
   })
 })

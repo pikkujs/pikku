@@ -20,12 +20,12 @@ export const impersonationScopedCallerRunsAsTargetScenario = pikkuScenario<
   title: 'A caller holding the scope runs as the target',
   description: 'The header is honoured and whoAmI echoes the target',
   tags: ['scenario', 'impersonation'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     const call = await scenario.when(
       'the admin calls whoAmI as the guest',
@@ -34,13 +34,13 @@ export const impersonationScopedCallerRunsAsTargetScenario = pikkuScenario<
         rpcName: 'whoAmI',
         headers: { [IMPERSONATE_HEADER]: guest.userId },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the run report the guest',
       'expectsRpcResponse',
       { call, status: 200, contains: [guest.userId] },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { impersonated: true }
   },
@@ -53,18 +53,18 @@ export const impersonationForgedHeaderIsIgnoredScenario = pikkuScenario<
   title: 'A caller without the scope cannot escalate by forging the header',
   description: 'The header is ignored and the caller keeps running as itself',
   tags: ['scenario', 'impersonation'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const admin = await scenario.given(
       'the admin reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     const call = await scenario.when(
       'the guest forges the header',
@@ -73,7 +73,7 @@ export const impersonationForgedHeaderIsIgnoredScenario = pikkuScenario<
         rpcName: 'whoAmI',
         headers: { [IMPERSONATE_HEADER]: admin.userId },
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees the run still report the guest',
@@ -84,7 +84,7 @@ export const impersonationForgedHeaderIsIgnoredScenario = pikkuScenario<
         contains: [guest.userId],
         doesNotContain: [admin.userId],
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { escalated: false }
   },
@@ -102,69 +102,69 @@ export const impersonationScopeIsTheGateScenario = pikkuScenario<
   title: 'Granting admin:impersonate opens the gate, revoking it closes it',
   description: 'The gate follows the scope, not the person',
   tags: ['scenario', 'impersonation'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const admin = await scenario.given(
       'the admin reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const before = await scenario.when(
       'the guest forges the header',
       'invokesRpcRaw',
       { rpcName: 'whoAmI', headers: { [IMPERSONATE_HEADER]: admin.userId } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it ignored',
       'expectsRpcResponse',
       { call: before, status: 200, contains: [guest.userId] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'grants admin:impersonate to the guest',
       'admin:scopeAddScopeToUser',
       { userId: guest.userId, scope: SCOPE },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const granted = await scenario.when(
       'the guest impersonates the admin',
       'invokesRpcRaw',
       { rpcName: 'whoAmI', headers: { [IMPERSONATE_HEADER]: admin.userId } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees the run report the admin',
       'expectsRpcResponse',
       { call: granted, status: 200, contains: [admin.userId] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'revokes the scope',
       'admin:scopeRemoveScopeFromUser',
       { userId: guest.userId, scope: SCOPE },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const revoked = await scenario.when(
       'the guest tries once more',
       'invokesRpcRaw',
       { rpcName: 'whoAmI', headers: { [IMPERSONATE_HEADER]: admin.userId } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it ignored again',
       'expectsRpcResponse',
       { call: revoked, status: 200, contains: [guest.userId] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { restored: true }
   },

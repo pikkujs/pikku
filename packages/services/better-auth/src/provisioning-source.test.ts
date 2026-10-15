@@ -3,10 +3,8 @@ import { afterEach, beforeEach, describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
-import { deriveActorSecret } from '@pikku/core/services'
-
-import { pikkuActor } from './actor-plugin.js'
-import { DEV_ACTOR_SIGN_IN_ENV } from './actor-sign-in-gate.js'
+import { pikkuVirtualUser } from './virtual-user-plugin.js'
+import { DEV_VIRTUAL_USER_SIGN_IN_ENV } from './virtual-user-sign-in-gate.js'
 import {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,
@@ -23,7 +21,7 @@ import {
  * `internalAdapter.createUser(user, source)` routes `source` through
  * `assertValidUserInfoSource` and on into the app's `user.validateUserInfo`
  * hook, which is the only place an app can refuse a JIT-provisioned account —
- * "no delegated users from this upstream", "actors only outside production".
+ * "no delegated users from this upstream", "virtual users only outside production".
  * A hook that cannot tell which plugin is asking cannot make that call, and a
  * plugin that passes no source at all is refused outright, so the second
  * argument is load-bearing rather than decorative.
@@ -52,8 +50,6 @@ const emptyDb = (): Record<string, any[]> => ({
   verification: [],
 })
 
-const ROOT = 'flow-secret-flow-secret-flow-secret'
-
 const post = (
   auth: ReturnType<typeof betterAuth>,
   path: string,
@@ -74,13 +70,13 @@ const post = (
 
 describe('every plugin tells better-auth who is provisioning the user', () => {
   beforeEach(() => {
-    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+    process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV] = 'true'
   })
   afterEach(() => {
-    delete process.env[DEV_ACTOR_SIGN_IN_ENV]
+    delete process.env[DEV_VIRTUAL_USER_SIGN_IN_ENV]
   })
 
-  test('an actor is provisioned as `actor`', async () => {
+  test('a virtual user is provisioned as `virtualUser`', async () => {
     const db = emptyDb()
     const recorder = sourceRecorder()
     const auth = betterAuth({
@@ -89,17 +85,16 @@ describe('every plugin tells better-auth who is provisioning the user', () => {
       database: memoryAdapter(db),
       emailAndPassword: { enabled: true },
       user: recorder.user,
-      plugins: [pikkuActor({ secret: ROOT })],
+      plugins: [pikkuVirtualUser()],
     })
 
-    const res = await post(auth, '/sign-in/actor', {
-      email: 'customer@actors.local',
-      name: 'Customer',
-      secret: await deriveActorSecret(ROOT, 'customer@actors.local'),
+    const res: Response = await (auth.api as any).signInVirtualUserInternal({
+      body: { email: 'customer@virtualuser.local', name: 'Customer' },
+      asResponse: true,
     })
 
     assert.equal(res.status, 200, await res.text())
-    assert.deepEqual(recorder.methods, ['actor'])
+    assert.deepEqual(recorder.methods, ['virtualUser'])
   })
 
   test('a delegated user is provisioned as the delegated provider', async () => {

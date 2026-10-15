@@ -205,7 +205,7 @@ It is a **summary, not the note** — the argument continues in prose underneath
 | `table:`    | a table name                                       | the generated db schema                                                                    |
 | `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                                  |
 | `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
-| `persona:`  | a persona name                                     | `definePersonas()`                                                                         |
+| `virtualUser:`  | a virtual user name                                     | `defineVirtualUsers()`                                                                         |
 
 Ids are case-sensitive: `createEntry` is not `createentry`.
 
@@ -219,7 +219,7 @@ These are all things that exist somewhere better, so a note is always the copy t
 
 | Do not write                        | Because it lives in                                        |
 | ----------------------------------- | ---------------------------------------------------------- |
-| a `personas/` section               | `definePersonas()` in the project's own code               |
+| a `virtual users/` section               | `defineVirtualUsers()` in the project's own code               |
 | a `scenarios/` section              | the `scenarios` of the plan for the changeset that builds it |
 | a `permissions/` section            | a decision note under `decisions/security/`                |
 | a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |
@@ -270,4 +270,4 @@ Notes are different: they say what the app is now, so they change whenever it do
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.
 
-Fabric is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `screens/` section. Both are Fabric's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.
+Pikku Studio is the one that exists. It adds `decisions/design/` — rules about how the app looks and behaves — and a `screens/` section. Both are Pikku Studio's to validate; `pikku knowledge validate` passes them through untouched. Everything else in this skill is the same in both.

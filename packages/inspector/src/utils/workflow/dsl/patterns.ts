@@ -120,11 +120,11 @@ export function isWorkflowExpectEventuallyCall(
 }
 
 /**
- * Extract the actor NAME from a step options object literal:
- * `{ actor: actors.x }` → 'x' (also `actors['x']`). Undefined when absent
+ * Extract the virtual user NAME from a step options object literal:
+ * `{ virtualUser: virtualUsers.x }` → 'x' (also `virtualUsers['x']`). Undefined when absent
  * or not statically resolvable.
  */
-export function extractActorFromOptions(
+export function extractVirtualUserFromOptions(
   optionsArg: ts.Expression | undefined
 ): string | undefined {
   if (!optionsArg || !ts.isObjectLiteralExpression(optionsArg)) return
@@ -132,7 +132,7 @@ export function extractActorFromOptions(
     if (
       ts.isPropertyAssignment(prop) &&
       ts.isIdentifier(prop.name) &&
-      prop.name.text === 'actor'
+      prop.name.text === 'virtualUser'
     ) {
       const init = prop.initializer
       if (ts.isPropertyAccessExpression(init)) {

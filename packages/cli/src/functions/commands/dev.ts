@@ -61,7 +61,10 @@ import {
   writeDevAddress,
 } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
-import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
+import {
+  enableDevVirtualUserSignIn,
+  setDevVirtualUserApiUrl,
+} from '../../server/virtual-user-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 import { addGlobalMiddleware } from '@pikku/core/middleware'
 import { startRunTelemetry } from '../../utils/run-telemetry.js'
@@ -94,7 +97,10 @@ export const dev = pikkuSessionlessFunc<
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )
-    enableDevActorSignIn(logger)
+    enableDevVirtualUserSignIn(
+      logger,
+      config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
+    )
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({
       rootDir: config.rootDir,
@@ -374,6 +380,10 @@ export const dev = pikkuSessionlessFunc<
     // Written from the bound port, so anything that has to find this server later
     // reads where it actually is rather than where it was asked to be.
     writeDevAddress(resolvedRuntimeDir, `http://${hostname}:${boundPort}`)
+    setDevVirtualUserApiUrl(
+      `http://${hostname}:${boundPort}`,
+      config.environments?.[process.env.PIKKU_ENV ?? '']?.apiUrl
+    )
     process.once('exit', () => clearDevAddress(resolvedRuntimeDir))
 
     let watcher: FSWatcher | undefined

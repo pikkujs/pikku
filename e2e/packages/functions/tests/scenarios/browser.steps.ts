@@ -164,33 +164,9 @@ export const doesNotSeeTestId = pikkuScenarioStep<
 })
 
 /**
- * Picks an option on a Mantine `SegmentedControl`.
- *
- * Mantine renders the option's `<input type="radio">` as a *sibling* of its
- * `<label>`, so `label:has(input[value=x])` never matches; the label's `for` is
- * `<uuid>-<value>`, which is both matchable and — unlike the rendered option
- * text — immune to the console's translations.
- */
-export const selectsSegment = pikkuScenarioStep<
-  { value: string },
-  { selected: string }
->({
-  name: 'selectsSegment',
-  description: 'picks an option on a segmented control',
-  template: 'switches to {value}',
-  browser: async (_services, { value }, { browser }) => {
-    await browser.page
-      .locator(`label[for$="-${value}"]:visible`)
-      .first()
-      .click()
-    return { selected: value }
-  },
-})
-
-/**
  * Picks a view on the page header's own switch, which is a `role="tablist"` of
- * buttons rather than a Mantine `SegmentedControl` — a different control with a
- * different DOM, so it gets its own step rather than a selector that guesses.
+ * buttons — its own DOM, so it gets its own step rather than a selector that
+ * guesses.
  *
  * The option is addressed by its value, which is declared in code, and never by
  * its label, which is translated.
@@ -281,10 +257,10 @@ export const doesNotSeeTableRow = pikkuScenarioStep<
 })
 
 /**
- * Reads the personas a scenario shows it is cast with.
+ * Reads the virtual users a scenario shows it is cast with.
  *
  * The cast renders as avatars with no accessible name, so each member carries
- * the persona key as a data attribute — reading that is what keeps this
+ * the virtual user key as a data attribute — reading that is what keeps this
  * assertion about who is in the cast rather than about how an avatar happens to
  * look.
  */
@@ -293,7 +269,7 @@ export const readsFlowCast = pikkuScenarioStep<
   { cast: string[] }
 >({
   name: 'readsFlowCast',
-  description: 'reads the personas cast in a scenario',
+  description: 'reads the virtual users cast in a scenario',
   template: 'reads the cast of {flow}',
   browser: async (_services, { flow }, { browser }) => {
     const card = browser.page.locator(
@@ -303,10 +279,12 @@ export const readsFlowCast = pikkuScenarioStep<
     return {
       cast: await card
         .first()
-        .locator('[data-testid="ladder-actor"]')
+        .locator('[data-testid="ladder-virtual-user"]')
         .evaluateAll((nodes) => [
           ...new Set(
-            nodes.map((node) => node.getAttribute('data-persona-key') ?? '')
+            nodes.map(
+              (node) => node.getAttribute('data-virtual-user-key') ?? ''
+            )
           ),
         ]),
     }
@@ -314,17 +292,17 @@ export const readsFlowCast = pikkuScenarioStep<
 })
 
 export const expectsFlowCast = pikkuScenarioStep<
-  { read: { cast: string[] }; personas: string[] },
+  { read: { cast: string[] }; virtualUsers: string[] },
   { cast: number }
 >({
   name: 'expectsFlowCast',
-  description: 'expects a scenario to be cast with the given personas',
-  template: 'expects the cast to be {personas}',
-  default: async (_services, { read, personas }) => {
-    for (const persona of personas) {
-      if (!read.cast.includes(persona)) {
+  description: 'expects a scenario to be cast with the given virtual users',
+  template: 'expects the cast to be {virtual users}',
+  default: async (_services, { read, virtualUsers }) => {
+    for (const virtualUser of virtualUsers) {
+      if (!read.cast.includes(virtualUser)) {
         throw new Error(
-          `Expected ${persona} in the cast, got ${read.cast.join(', ') || 'nobody'}`
+          `Expected ${virtualUser} in the cast, got ${read.cast.join(', ') || 'nobody'}`
         )
       }
     }
@@ -397,30 +375,6 @@ export const expectsControl = pikkuScenarioStep<
       // is only asked when the caller actually asserted on it.
       checked: checked === undefined ? false : await target.isChecked(),
     }
-  },
-})
-
-/**
- * Picks an option on a Mantine `Select`.
- *
- * The control renders a readonly `<input role="combobox">` that opens a portalled
- * listbox, so the option is looked up on the page rather than inside the select.
- * `exact` matters whenever one option's value is a prefix of another's.
- */
-export const selectsOption = pikkuScenarioStep<
-  TestIdSelector & { value: string },
-  { selected: string }
->({
-  name: 'selectsOption',
-  description: 'picks an option on a select',
-  template: 'picks {value}',
-  browser: async (_services, { value, ...selector }, { browser }) => {
-    await browser.locate(selector).first().click()
-    await browser.page
-      .getByRole('option', { name: value, exact: true })
-      .first()
-      .click()
-    return { selected: value }
   },
 })
 

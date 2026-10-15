@@ -37,19 +37,19 @@ export const clicks = pikkuScenarioStep({
   input: ClicksInput,
   output: ClicksOutput,
   browser: async (_services, input, { browser }) => {
-    const actor = session(browser)
-    await readyToBeUsed(actor)
+    const virtualUser = session(browser)
+    await readyToBeUsed(virtualUser)
     try {
-      await actor.locate(selectorFor(input)).click()
+      await virtualUser.locate(selectorFor(input)).click()
     } catch (error) {
       throw new Error(
         `Could not click \`${input.testId}\`${input.within ? ` within \`${input.within}\`` : ''}. ` +
-          `${await addressesOnScreen(actor)} ` +
+          `${await addressesOnScreen(virtualUser)} ` +
           `If several matched, the key is on more than one control at once — scope it with ` +
           `\`within\` (a component's kebab-cased name) or \`containing\` (text in its row). ` +
-          `Underlying: ${underlying(error)}`,
+          `Underlying: ${underlying(error)}`
       )
     }
-    return { testId: input.testId, pathname: currentPath(actor) }
+    return { testId: input.testId, pathname: currentPath(virtualUser) }
   },
 })

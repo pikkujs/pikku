@@ -3,7 +3,7 @@ name: pikku-build
 description: >-
   Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
   or a showcase that exercises every surface), adding a feature to an app that already exists, and
-  the one-off cleanup right after a template is cloned. Covers the knowledge base, personas and
+  the one-off cleanup right after a template is cloned. Covers the knowledge base, virtual users and
   roles, filing the work as changes, the scenario that proves each one, theming, multi-app
   layouts and deploying. TRIGGER when: the user asks for an app to be built on
   Pikku, a freshly scaffolded project needs turning into a product, the user asks to add a feature
@@ -12,7 +12,7 @@ description: >-
   (use pikku-concepts), wants one specific surface explained rather than built (use that surface's
   skill), only needs the technical plan for one claimed changeset (use pikku-architect), or is
   working items off a deployed stage's changes queue (use pikku-changes).
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
+allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku cloud report *), Bash(npx --no pikku cloud report *)
 argument-hint: '[feature description]'
 installGroups: [core]
 agent:
@@ -45,7 +45,7 @@ agent:
 | A screen needs data no function returns yet                                    | `references/mocks.md`                                                                         |
 | Adding a second frontend (app §4), at the changeset that needs it              | `references/multi-app.md`                                                                     |
 | Shipping an app as a desktop or Android app                                    | `references/native-app.md`                                                                    |
-| Deploying, and the Fabric-readiness contract (app §9)                          | `references/ship.md`                                                                          |
+| Deploying, and the Pikku Studio Cloud-readiness contract (app §9)                          | `references/ship.md`                                                                          |
 | The request is built on an OpenAPI spec (auth mode, sign-in or connect screen) | `references/openapi.md`                                                                       |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
@@ -155,11 +155,11 @@ generated functions through `ref()`.
 
 Whenever pikku or a skill costs you time — a command that failed on a fresh
 tree, a skill that described a flag the CLI does not have, generated code you
-had to fix by hand — file it then with `pikku fabric report --stdin`. The
+had to fix by hand — file it then with `pikku cloud report --stdin`. The
 `pikku-report` skill has the fields. Leave out secrets, tokens and customer data.
 
 Findings are held until hand-over. The last thing in the hand-over, after the
-app runs (and is deployed, if they chose to), is `pikku fabric report`: if it
+app runs (and is deployed, if they chose to), is `pikku cloud report`: if it
 lists findings and asks, ask the user — Yes, No, Always or Never — and run it
 again with `--consent <answer>`. If it says reporting is off, do not ask.
 
@@ -171,8 +171,8 @@ build makes or changes something the console can show, give the
 `http://localhost:<port>/console/...` link instead of describing it.
 
 Until the app is deployed that is the local open-source console, on the port
-`pikku dev` printed. Once it is on Fabric, link the Fabric console for the stage
-you are talking about instead; the `pikku-fabric` skill says which.
+`pikku dev` printed. Once it is on Pikku Studio Cloud, link the Pikku Studio Cloud console for the stage
+you are talking about instead; the `pikku-cloud` skill says which.
 
 | Level              | Links                       | Code in the conversation |
 | ------------------ | --------------------------- | ------------------------ |
@@ -188,7 +188,7 @@ words and link to where they can see it.
 | Shows                 | Path                                                                       |
 | --------------------- | -------------------------------------------------------------------------- |
 | Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                  |
-| Personas              | `/console/personas`, `/console/virtual-users?persona=<id>`                 |
+| Virtual users              | `/console/virtual-users`, `/console/virtual-users?virtual user=<id>`                 |
 | Roles and permissions | `/console/roles`, `/console/scopes` (only with `@pikku/addon-admin` wired) |
 | Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>`  |
 | Workflows             | `/console/workflow?id=<id>`                                                |

@@ -6,7 +6,10 @@ import { glob } from 'tinyglobby'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
-import { createHttpPersonas } from '@pikku/core/persona'
+import {
+  createHttpVirtualUsers,
+  statementSignIn,
+} from '@pikku/core/virtual-user'
 import {
   PikkuScenarioService,
   resolveFeatureScenarios,
@@ -36,11 +39,11 @@ import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
-import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
-  resolvePersonaCredentials,
-  loadWiredPersonaSignIn,
-} from '../../utils/persona-credentials.js'
+  resolveStatementMint,
+  runtimeDirOf,
+} from '../../utils/virtual-user-signer.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import {
   checkGuideCoverage,
@@ -195,7 +198,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     }
     const state = await getInspectorState(true, false, false, true)
 
-    // Resolved once, so actors, step env, the browser driver and any spawned
+    // Resolved once, so virtual users, step env, the browser driver and any spawned
     // server all target the same place — including when the target only exists
     // at run time and arrives through --api-url/--app-url.
     const env = resolveEnvironment({
@@ -296,23 +299,26 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
-    await loadWiredPersonaSignIn(state)
-    const credentials = await resolvePersonaCredentials(
-      variables,
-      'scenario actors'
-    )
-    // Every declared persona, with its address filled in. Resolved once: the
-    // HTTP personas and the Playwright provider below must see the same
-    // registry, and codegen resolved the same way to type `PersonaName`.
-    const scenarioActors = resolvePersonas(
-      state.personas?.definitions ?? [],
+    const mint = await resolveStatementMint(variables, {
+      apiUrl: env.apiUrl,
+      runtimeDir: runtimeDirOf(config),
+      what: 'scenario virtual users',
+    })
+    // Every declared virtual user, with its address filled in. Resolved once: the
+    // HTTP virtual users and the Playwright provider below must see the same
+    // registry, and codegen resolved the same way to type `VirtualUserName`.
+    const scenarioVirtualUsers = resolveVirtualUsers(
+      state.virtualUsers?.definitions ?? [],
       config.scenarios?.emailDomain
     )
-    const actors = createHttpPersonas({
+    const virtualUsers = createHttpVirtualUsers({
       apiUrl: env.apiUrl,
-      ...credentials,
-      variables,
-      personas: scenarioActors,
+      signIn: statementSignIn({
+        apiUrl: env.apiUrl,
+        signInPath: env.signInPath,
+        mint,
+      }),
+      virtualUsers: scenarioVirtualUsers,
       signInPath: env.signInPath,
       sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
@@ -390,9 +396,9 @@ export const scenarioRun = pikkuSessionlessFunc<
     scenarioService.setRunSurface(runSurface, strict)
 
     // Scenario steps run here, not on the target — everything they touch of the
-    // app goes over HTTP through an actor, which is what `guardRpc` below
-    // enforces. `actor.converse` is the exception, and the reason this is not
-    // just the three services above: the persona's own turns are LLM calls made
+    // app goes over HTTP through a virtual user, which is what `guardRpc` below
+    // enforces. `virtualUser.converse` is the exception, and the reason this is not
+    // just the three services above: the virtual user's own turns are LLM calls made
     // in this process, and without a runner every conversing scenario fails
     // before it says anything. Built the same way `pikku dev` builds its own,
     // and only when the project declares agents, so a project with no agents
@@ -414,7 +420,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     const refuseInternal = (rpcName: string): never => {
       throw new Error(
         `Scenario tried to run '${rpcName}' as an internal step. Every workflow.do ` +
-          `in a scenario must carry { actor: actors.x } so it executes against ` +
+          `in a scenario must carry { virtualUser: virtualUsers.x } so it executes against ` +
           `'${environment}' (${env.apiUrl}), not local services.`
       )
     }
@@ -476,8 +482,8 @@ export const scenarioRun = pikkuSessionlessFunc<
               apiUrl: env.apiUrl,
               appUrl: env.appUrl,
               appUrls: env.appUrls,
-              ...credentials,
-              actors: scenarioActors,
+              mint,
+              virtualUsers: scenarioVirtualUsers,
               signInPath: env.signInPath,
               capture,
               browserScenarios: [...browserStepsByFlow.keys()],
@@ -577,14 +583,14 @@ export const scenarioRun = pikkuSessionlessFunc<
         flowName: string
       ) => {
         // Taken from the run rather than derived from the ladder: the video
-        // clock starts when an actor's window opens, which is somewhere after
+        // clock starts when a virtual user's window opens, which is somewhere after
         // step one, and every step that never touched a browser burns scenario
         // time while the recording sits still.
         const videoOffsets = scenarioService.takeStepVideoOffsets(runId)
         const prose = collectScenarioStepProse(
           state.workflows?.meta?.[flowName],
           functionsMeta,
-          state.personas?.definitions ?? []
+          state.virtualUsers?.definitions ?? []
         )
         const steps = (await service.getRunSteps(runId)).map((step) => ({
           stepName: step.stepName,
@@ -605,18 +611,20 @@ export const scenarioRun = pikkuSessionlessFunc<
         }
       }
 
-      const coverageActor = coverage ? Object.values(actors)[0] : undefined
-      let coverageActive = Boolean(coverageActor)
-      if (coverage && !coverageActor) {
+      const coverageVirtualUser = coverage
+        ? Object.values(virtualUsers)[0]
+        : undefined
+      let coverageActive = Boolean(coverageVirtualUser)
+      if (coverage && !coverageVirtualUser) {
         logger.warn(
-          '--coverage requires at least one configured actor — skipping coverage.'
+          '--coverage requires at least one configured virtual user — skipping coverage.'
         )
       }
       const scenarioCoverage: Record<string, unknown> = {}
       const invokeCoverage = async (rpcName: string): Promise<any> => {
-        if (!coverageActive || !coverageActor) return null
+        if (!coverageActive || !coverageVirtualUser) return null
         try {
-          return await coverageActor.invoke(rpcName, null)
+          return await coverageVirtualUser.invoke(rpcName, null)
         } catch (e: any) {
           coverageActive = false
           logger.warn(
@@ -643,7 +651,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         context: Record<string, unknown>
       ) => {
         await hook(singletonServices as any, undefined, {
-          actors,
+          virtualUsers,
           scenario: { context },
         } as any)
       }
@@ -664,7 +672,7 @@ export const scenarioRun = pikkuSessionlessFunc<
               tags?: string[]
               title?: string
               description?: string
-              actors?: string[]
+              virtualUsers?: string[]
             }
           | undefined
         return {
@@ -673,7 +681,7 @@ export const scenarioRun = pikkuSessionlessFunc<
           featureName: group?.featureName,
           title: meta?.title,
           description: meta?.description,
-          actors: meta?.actors,
+          virtualUsers: meta?.virtualUsers,
           tags: meta?.tags,
         }
       }
@@ -726,7 +734,7 @@ export const scenarioRun = pikkuSessionlessFunc<
           }
         }
         try {
-          await coverageActor?.invoke('pikkuScenarioResetStubs', null)
+          await coverageVirtualUser?.invoke('pikkuScenarioResetStubs', null)
         } catch {}
         let runId: string | undefined
         let runError: { stack?: string; expected?: boolean } | undefined
@@ -739,7 +747,7 @@ export const scenarioRun = pikkuSessionlessFunc<
             data,
             { type: 'cli' },
             guardRpc,
-            { actors, onRunCreated: (id) => (runId = id) }
+            { virtualUsers, onRunCreated: (id) => (runId = id) }
           ))
           const run = await workflowService.getRun(runId)
           if (run?.status === 'completed') {
@@ -1101,7 +1109,9 @@ export const scenarioGuide = pikkuSessionlessFunc<
                   .filter((artifact) => artifact.kind === 'video')
                   .map((artifact) => ({
                     ...(artifact.id ? { id: artifact.id } : {}),
-                    ...(artifact.actor ? { actor: artifact.actor } : {}),
+                    ...(artifact.virtualUser
+                      ? { virtualUser: artifact.virtualUser }
+                      : {}),
                     path: artifact.path,
                   })),
               }
@@ -1151,7 +1161,7 @@ export const scenarioGuide = pikkuSessionlessFunc<
       logger.warn(
         `${join(docs, path)} cites '${featureId}'${
           scenario ? ` scenario '${scenario}'` : ''
-        }, whose run filed no screenshot — the block renders empty. Take one with \`actor.screenshot(...)\` in a scenario the feature owns.`
+        }, whose run filed no screenshot — the block renders empty. Take one with \`virtualUser.screenshot(...)\` in a scenario the feature owns.`
       )
     }
     for (const { path, featureId, locked, current } of coverage.stale) {

@@ -2,7 +2,7 @@
 --
 -- A café supplier's catalogue, because that is what this template says it is in
 -- three separate places: `home__title` ("Everything the café needs"), the
--- `shopper` persona ("Buys for a small café"), and the agent scenario's task
+-- `shopper` virtual user ("Buys for a small café"), and the agent scenario's task
 -- ("Find a coffee mug in the shop"). A seed of garden forks would leave the
 -- copy telling one story and the data another.
 --

@@ -6,7 +6,7 @@ import type { VirtualUserDisposition } from './virtual-user.types.js'
  * behaviour the dials cannot express on their own.
  */
 export interface DispositionProfile {
-  /** Appended to the persona instructions. Behaviour, never identity. */
+  /** Appended to the virtual user instructions. Behaviour, never identity. */
   instructions: string
   /**
    * Relative weights for the scheduler's four moves. `continue` dominating is

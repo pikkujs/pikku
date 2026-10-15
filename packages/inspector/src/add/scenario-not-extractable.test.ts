@@ -36,7 +36,7 @@ const STEPS = [
 const source = (wrapper: string, body: string[]) =>
   [
     `import { ${wrapper} } from '@pikku/core/workflow'`,
-    'declare const actors: Record<string, any>',
+    'declare const virtualUsers: Record<string, any>',
     `export const shopFlow = ${wrapper}(async (_services, _input, { scenario, workflow }: any) => {`,
     ...body.map((line) => `  ${line}`),
     '  return { ok: true }',
@@ -74,7 +74,7 @@ describe('a scenario that cannot be extracted', () => {
   test('a top-level try/catch is a PKU679 critical, not a silent zero-step scenario', async () => {
     const { state, criticals, cleanup } = await run('pikkuScenario', [
       'try {',
-      "  await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "  await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
       '} catch {}',
     ])
     try {
@@ -94,7 +94,7 @@ describe('a scenario that cannot be extracted', () => {
 
   test('an extractable scenario raises no PKU679', async () => {
     const { criticals, cleanup } = await run('pikkuScenario', [
-      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { virtualUser: virtualUsers.shopper })",
     ])
     try {
       assert.equal(

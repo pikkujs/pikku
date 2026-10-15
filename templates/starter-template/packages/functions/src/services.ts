@@ -33,14 +33,14 @@ export const createSingletonServices = pikkuServices(async (config, existingServ
     new GeneratedTemplateEmailService({
       delegate: new LocalEmailService(),
     })
-  // The durable audit sink. In a deployed stage fabric injects the platform's
+  // The durable audit sink. In a deployed stage cloud injects the platform's
   // audit service; locally it falls back to a no-op so nothing is persisted.
   const audit = existingServices?.audit ?? new NoopAuditService()
   // kysely is injected by pikku dev (node:sqlite) or the CF Worker workflow (libsql).
-  // The template never constructs its own dialect — dialects are fabric/runtime
+  // The template never constructs its own dialect — dialects are cloud/runtime
   // concerns — so it must always be provided by the runtime.
   if (!existingServices?.kysely) {
-    throw new Error('kysely service was not injected by the runtime (pikku dev / fabric)')
+    throw new Error('kysely service was not injected by the runtime (pikku dev / cloud)')
   }
   const kysely: Kysely<DB> = existingServices.kysely
 

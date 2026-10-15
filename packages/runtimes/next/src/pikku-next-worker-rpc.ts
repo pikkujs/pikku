@@ -28,7 +28,7 @@ const buildRequest = (
  * Worker-RPC variant of `PikkuNextJS`. Same public surface — but instead of
  * loading function code in-process, it dispatches every request through a
  * `Fetcher` (e.g. a Cloudflare service binding, a local HTTP client, or a
- * fabric-namespaced dispatcher). Function code is never bundled into the
+ * cloud-namespaced dispatcher). Function code is never bundled into the
  * SSR worker.
  */
 export class PikkuNextJSWorkerRPC {

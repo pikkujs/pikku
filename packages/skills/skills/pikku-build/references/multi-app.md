@@ -21,7 +21,7 @@ The split you are acting on should already be recorded, but this is the reasonin
 behind it — and the place people get it wrong is the third case at the bottom.
 
 **A group that comes in through its own front door gets its own app.** A role
-*inside* an app is not that: it changes which nav items and which buttons a person
+_inside_ an app is not that: it changes which nav items and which buttons a person
 sees, and lives in `useNavItems()` and the `permissions` on the function, not in a
 route subtree.
 
@@ -31,7 +31,7 @@ across the counter with an account of their own gets their own — the customer,
 tenant, the patient. One app is a real answer and often the right one.
 
 **The asymmetry that forces a split is sign-up.** Where staff accounts are created
-*for* people and customers create their own, the two need different sign-up, different
+_for_ people and customers create their own, the two need different sign-up, different
 onboarding and different session shape, and bending one app around both costs more
 than the second app does. Do not collapse two audiences into one app to save a build.
 
@@ -41,7 +41,7 @@ Never invent a person the notes do not name in order to reach two.
 
 Some people use the product with no account at all — ordering from a menu, booking a
 table, opening an invitation. They are not a third case, and **they do not get their
-own frontend**: an app is built around the personas who sign into it. What they get is
+own frontend**: an app is built around the virtual users who sign into it. What they get is
 the public route space every app already has.
 
 - **`/app/*` is the signed-in application.** One `beforeLoad` on `/app` bounces a
@@ -67,19 +67,19 @@ and someone else's record: if the invoices nav item is hidden but `listAllInvoic
 has no `permissions`, the app is wide open and the nav is decoration.
 
 Worth a scenario each, because they are two different claims: that a mechanic cannot
-*see* the invoices nav item, and that their call to an invoices RPC is *refused*. The
+_see_ the invoices nav item, and that their call to an invoices RPC is _refused_. The
 second is the one that catches a `permissions` field nobody wired.
 
 ## The second app
 
 ```bash
-pikku app new admin --serves staff --personas manager,mechanic
+pikku app new admin --serves staff --virtual-users manager,mechanic
 ```
 
 One command does every step this section used to list by hand: it fetches
 `pikkujs/starter-template`'s `apps/app`, re-points its `package.json` at the
 new name, its own dev/preview port and its own `--tsBuildInfoFile`, stamps
-`app: '<slug>'` onto each named persona in `definePersonas({…})`, adds the
+`app: '<slug>'` onto each named virtual user in `defineVirtualUsers({…})`, adds the
 `frontends` entry to `pikku.config.json`, and re-runs `bun install`. `pikku app
 list` shows every app afterwards.
 
@@ -108,12 +108,12 @@ second app nobody needed, so the command will not create one when:
 - **An existing app already serves that audience.** People sharing an audience
   share ONE app and differ by nav and permitted actions. A new app is for a
   group the first app is not for.
-- **A named persona already signs into another app.** A person signs into one
+- **A named virtual user already signs into another app.** A person signs into one
   app; move them out first if they really belong here.
 - **The slug is what the plan calls an app that already exists.** The plan's
   FIRST app is the one the project starts with — only the apps after it get
   created.
-- **A persona is not in `definePersonas({…})`.** The app is built around who
+- **A virtual user is not in `defineVirtualUsers({…})`.** The app is built around who
   signs into it, so it is not created for people who do not exist yet.
 
 It also repairs its own half-states: a run that died between writing the
@@ -133,9 +133,9 @@ Packaging it as a desktop or Android app is a separate step, on the same
 
 ### Scenarios across the two apps
 
-`pikku app new` stamps `app: '<slug>'` onto each persona it is given, and that
-field — not the `personas` array on the `frontends` entry — is what
-`@pikku/playwright` resolves a persona's base url from at sign-in. A persona
+`pikku app new` stamps `app: '<slug>'` onto each virtual user it is given, and that
+field — not the `virtualUsers` array on the `frontends` entry — is what
+`@pikku/playwright` resolves a virtual user's base url from at sign-in. A virtual user
 with no `app` lands on the fallback frontend, which is the other app's screens
 with the right session on them.
 
@@ -152,15 +152,15 @@ single `appUrl` fallback, and the CLI takes `--app-url <app>=<url>,<app>=<url>`:
 
 Three things follow, and each one has cost a run:
 
-- **An actor is bound to ONE app for the whole run.** The resolution happens once,
-  at sign-in. A staff persona cannot be walked through the customer app to check
-  something is absent from it — drive that assertion with a persona who lives
+- **A virtual user is bound to ONE app for the whole run.** The resolution happens once,
+  at sign-in. A staff virtual user cannot be walked through the customer app to check
+  something is absent from it — drive that assertion with a virtual user who lives
   there, and say in the scenario's docblock why the witness is who it is. This
   binds a SIGNED-OUT scenario too, and that is where it bites: 'a visitor with no
-  session cannot open the admin desk' driven by a customer-app persona points the
+  session cannot open the admin desk' driven by a customer-app virtual user points the
   browser at a router with no such route at all, so what the assertion measures is
   a 404, not the guard — and on an app with a catch-all redirect to login it
-  passes while proving nothing. Pick the actor by which app owns the ROUTE, not by
+  passes while proving nothing. Pick the virtual user by which app owns the ROUTE, not by
   who should be refused, and drop their session instead.
 - **Every frontend needs its API proxy pointed at the API you are actually
   running.** `vite.config.ts` reads a variable (`VITE_API_PROXY`) with a default

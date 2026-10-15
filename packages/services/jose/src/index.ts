@@ -3,3 +3,4 @@
  * @module @pikku/jose
  */
 export * from './jose-jwt-service.js'
+export * from './jose-virtual-user-statement-verifier.js'

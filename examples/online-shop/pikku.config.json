@@ -2,10 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": [
-    "./src",
-    "./test"
-  ],
+  "srcDirectories": ["./src", "./test"],
   "outDir": "./.pikku",
   "emailTemplatesDir": "./emails",
   "clientFiles": {
@@ -43,20 +40,20 @@
     "analytics": true
   },
   "scenarios": {
-    "emailDomain": "actors.local",
+    "emailDomain": "virtualuser.local",
     "environments": {
       "local": {
         "apiUrl": "http://localhost:4011",
         "appUrl": "http://localhost:7211",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       },
       "sandbox": {
         "apiUrl": "http://localhost:4000",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       },
       "coverage": {
         "apiUrl": "http://localhost:4010",
-        "signInPath": "/api/auth/sign-in/actor"
+        "signInPath": "/api/auth/sign-in/virtual-user"
       }
     }
   },
@@ -64,15 +61,15 @@
     "local": {
       "apiUrl": "http://localhost:4011",
       "appUrl": "http://localhost:7211",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "sandbox": {
       "apiUrl": "http://localhost:4000",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     },
     "coverage": {
       "apiUrl": "http://localhost:4010",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     }
   },
   "allow": {

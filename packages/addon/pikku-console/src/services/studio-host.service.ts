@@ -4,13 +4,13 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { generateWishDeck } from './wish-deck.js'
 import {
-  getFabricRPC,
+  getCloudRPC,
   resolveApiContext,
-  type FabricRPC,
+  type CloudRPC,
   type ListChangesOutput,
-} from '@pikku/cli/fabric'
+} from '@pikku/cli/cloud'
 
-export type StudioMode = 'local' | 'fabric'
+export type StudioMode = 'local' | 'cloud'
 
 export type ChangeStatus =
   | 'open'
@@ -173,12 +173,12 @@ export class LocalChangesStore implements ChangesStore {
   }
 }
 
-type FabricChange = Pick<
+type CloudChange = Pick<
   ListChangesOutput['changes'][number],
   'changeId' | 'shortId' | 'title' | 'body' | 'status' | 'source' | 'route' | 'createdAt'
 >
 
-const fromFabric = (c: FabricChange): StudioChange => ({
+const fromCloud = (c: CloudChange): StudioChange => ({
   changeId: c.changeId,
   shortId: c.shortId,
   title: c.title,
@@ -189,9 +189,9 @@ const fromFabric = (c: FabricChange): StudioChange => ({
   createdAt: new Date(c.createdAt).toISOString(),
 })
 
-export class FabricChangesStore implements ChangesStore {
+export class CloudChangesStore implements ChangesStore {
   constructor(
-    private rpc: FabricRPC,
+    private rpc: CloudRPC,
     private projectId: string
   ) {}
 
@@ -201,7 +201,7 @@ export class FabricChangesStore implements ChangesStore {
       status,
       includeDone: status?.includes('done'),
     })
-    return changes.map(fromFabric)
+    return changes.map(fromCloud)
   }
 
   async get(changeId: string) {
@@ -209,16 +209,16 @@ export class FabricChangesStore implements ChangesStore {
       changeId,
       projectId: this.projectId,
     })
-    return change ? fromFabric(change) : null
+    return change ? fromCloud(change) : null
   }
 
   async create(): Promise<StudioChange> {
-    throw new Error('Changes on a linked project are filed from its stage in Fabric')
+    throw new Error('Changes on a linked project are filed from its stage in Pikku Studio Cloud')
   }
 
   async setStatus(changeId: string, status: 'open' | 'in_progress' | 'dismissed') {
     const { change } = await this.rpc.invoke('setChangeStatus', { changeId, status })
-    return fromFabric(change)
+    return fromCloud(change)
   }
 
   async complete(changeId: string, note?: string) {
@@ -227,7 +227,7 @@ export class FabricChangesStore implements ChangesStore {
       projectId: this.projectId,
       note,
     })
-    return fromFabric(change)
+    return fromCloud(change)
   }
 
   async reply(changeId: string, body: string, authorName: string) {
@@ -343,11 +343,11 @@ export class LocalWishStore implements WishStore {
   }
 }
 
-export class FabricWishStore implements WishStore {
+export class CloudWishStore implements WishStore {
   private sourceDigest: string | null = null
 
   constructor(
-    private rpc: FabricRPC,
+    private rpc: CloudRPC,
     private projectId: string
   ) {}
 
@@ -397,7 +397,7 @@ const localModels = async (): Promise<ModelAccess | null> => {
   }
 }
 
-const fabricModels = (rpc: FabricRPC) => async (): Promise<ModelAccess | null> => ({
+const cloudModels = (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
   ...(await rpc.invoke('getDeveloperLiteLLMKey', {})),
   model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
 })
@@ -410,19 +410,19 @@ export async function resolveStudioHost(projectRoot: string): Promise<StudioHost
   }
   const ctx = await resolveApiContext({ startDir: projectRoot }).catch(() => null)
   if (ctx?.token && ctx.projectId) {
-    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     return {
-      mode: 'fabric',
+      mode: 'cloud',
       projectId: ctx.projectId,
-      changes: new FabricChangesStore(rpc, ctx.projectId),
-      wishes: new FabricWishStore(rpc, ctx.projectId),
-      models: fabricModels(rpc),
+      changes: new CloudChangesStore(rpc, ctx.projectId),
+      wishes: new CloudWishStore(rpc, ctx.projectId),
+      models: cloudModels(rpc),
       ...projectApi,
     }
   }
   const models =
-    process.env.PIKKU_STUDIO_AI === 'fabric' && ctx?.token
-      ? fabricModels(getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }))
+    process.env.PIKKU_STUDIO_AI === 'cloud' && ctx?.token
+      ? cloudModels(getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token }))
       : localModels
   return {
     mode: 'local',

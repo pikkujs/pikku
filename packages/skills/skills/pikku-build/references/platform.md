@@ -11,9 +11,9 @@
 - Reference
 
 **This file is a delta: it adds to the app workflow, which stays the base and is
-followed in full.** Everything there applies: knowledge base first, personas and roles,
+followed in full.** Everything there applies: knowledge base first, virtual users and roles,
 changes grouped into changesets, planned then built one at a time, scenarios, design pass, deploy
-gates, Fabric-readiness. This file adds the surfaces that turn an app into a
+gates, Pikku Studio Cloud-readiness. This file adds the surfaces that turn an app into a
 demonstration of the platform, and says where each one slots into that workflow.
 
 Do not blend the two into one plan —
@@ -86,7 +86,7 @@ on a human or a timer and must survive a restart.
   gap in the middle? If every operation completes in one request, you do not need
   workflows and forcing one is noise.
 - **Prove it:** a scenario that starts the workflow, advances it as a second
-  persona, and asserts the end state. `pikku-react` covers driving it
+  virtual user, and asserts the end state. `pikku-react` covers driving it
   from the UI.
 - Three workflows ship with the template. Read them before writing yours.
 
@@ -133,7 +133,7 @@ generated typed client.
 - **Motivation test:** two people looking at the same thing at the same time, or
   a long operation whose progress matters.
 - **Prove it:** a browser scenario is the only honest proof — assert the second
-  persona's screen changed without a reload.
+  virtual user's screen changed without a reload.
 
 ### MCP — `pikku-wiring`
 
@@ -241,4 +241,4 @@ built.
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
   `pikku-i18n`, `pikku-emails`,
   `pikku-meta`, `pikku-addon`, `pikku-auth`, `pikku-services`
-- Every feature, end to end: https://pikkufabric.com/llm-all-features.txt
+- Every feature, end to end: https://pikkustudio.app/llm-all-features.txt

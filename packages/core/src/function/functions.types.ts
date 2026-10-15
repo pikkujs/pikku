@@ -257,8 +257,8 @@ export type CorePikkuFunctionConfig<
    * and report how much of the flow each surface actually covers.
    */
   surfaces?: ScenarioSurface[]
-  /** Scenario steps only, and set by the definer rather than by hand: this step needs a persona, so the runner injects `wire.actor`. */
-  requiresActor?: boolean
+  /** Scenario steps only, and set by the definer rather than by hand: this step needs a virtual user, so the runner injects `wire.virtualUser`. */
+  requiresVirtualUser?: boolean
   /**
    * Records every call in the audit log. `transactional` durability writes the
    * entry in the same transaction as the work, so the two cannot disagree;

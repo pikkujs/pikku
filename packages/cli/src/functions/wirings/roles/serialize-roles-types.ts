@@ -9,9 +9,9 @@ export interface SerializeRolesOptions {
  * Generates the `SystemRoleName` union and role metadata from
  * `defineSystemRole` declarations.
  *
- * The union is what makes a persona's `roles: ['buyer']` checkable. Custom
+ * The union is what makes a virtual user's `roles: ['buyer']` checkable. Custom
  * roles are deliberately absent: an admin can delete one from the console, so
- * a persona pinned to it would silently stop testing what it claims to — the
+ * a virtual user pinned to it would silently stop testing what it claims to — the
  * failure would be a scatter of 403s rather than a build error.
  */
 export const serializeRolesTypes = ({ definitions }: SerializeRolesOptions) => {

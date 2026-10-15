@@ -101,7 +101,7 @@ export class InMemoryFeatureFlagStore
     key: string,
     subject: FlagSubject,
     enabled: boolean,
-    actor?: string
+    virtualUser?: string
   ) {
     const id = this.requireSubject(subject)
     const held = this.overrides.get(key) ?? new Map<string, FlagOverrideRow>()
@@ -109,7 +109,7 @@ export class InMemoryFeatureFlagStore
       subjectId: id,
       subjectKind: subject.organizationId ? 'organization' : 'user',
       enabled,
-      grantedBy: actor,
+      grantedBy: virtualUser,
       grantedAt: new Date().toISOString(),
     })
     this.overrides.set(key, held)

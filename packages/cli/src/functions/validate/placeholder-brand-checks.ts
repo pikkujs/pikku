@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, join, relative, sep } from 'node:path'
 import { findFrontends } from '@pikku/code-edit/brand'
-import type { ValidateFinding, ValidateSeverity } from './persona-checks.js'
+import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
 
 const PLACEHOLDER_SEVERITY: ValidateSeverity = 'warn'
 
 export const PLACEHOLDER_APP_NAMES = [
-  'Fabric Starter',
+  'Pikku Studio Starter',
   'Pikku Starter',
   'Pikku App',
 ]

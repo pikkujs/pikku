@@ -459,7 +459,7 @@ export function staleTableZod(
   return missing
 }
 
-/** Strings the Fabric Studio lint config allows bare in JSX: separators and ellipses carry no language. */
+/** Strings the Pikku Studio lint config allows bare in JSX: separators and ellipses carry no language. */
 export const ALLOWED_JSX_STRINGS: readonly string[] = ['·', '—', '…']
 
 /** The tsconfig a frontend adds to switch the i18n DOM-types gate (`@pikku/react/i18n-jsx`) on. */
@@ -1009,7 +1009,7 @@ export function readsAsEnglish(text: string): boolean {
   )
     return false
   if (
-    /^(git|npm|npx|pnpm|yarn|bun|node|tsc|pikku|fabric|docker|curl|cd|ls|rm|mkdir|cp|mv|chmod|sh|bash|echo|cat|grep|sed|awk|brew|apt|pip|python3?)\s+-?[\w./@:-]*/.test(
+    /^(git|npm|npx|pnpm|yarn|bun|node|tsc|pikku|cloud|docker|curl|cd|ls|rm|mkdir|cp|mv|chmod|sh|bash|echo|cat|grep|sed|awk|brew|apt|pip|python3?)\s+-?[\w./@:-]*/.test(
       s
     ) &&
     !SENTENCE_END.test(s) &&

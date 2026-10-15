@@ -18,14 +18,14 @@ afterEach(async () => {
 })
 
 const AUTH_TS = `import { betterAuth } from 'better-auth'
-import { pikkuActor, pikkuBan } from '@pikku/better-auth'
+import { pikkuVirtualUser, pikkuBan } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 
 export const auth = pikkuBetterAuth(
   async ({ kysely, secrets, variables, logger }) => {
     return betterAuth({
       plugins: [
-        pikkuActor({
+        pikkuVirtualUser({
           secret: 'x',
         }),
         pikkuBan(),
@@ -75,7 +75,7 @@ describe('wireAuth', () => {
     const { source } = wireAuth(AUTH_TS, install())
     assert.match(
       source,
-      /import \{ pikkuActor, pikkuBan, pikkuDelegatedAuth \} from '@pikku\/better-auth'/
+      /import \{ pikkuVirtualUser, pikkuBan, pikkuDelegatedAuth \} from '@pikku\/better-auth'/
     )
     assert.match(
       source,
@@ -94,15 +94,16 @@ describe('wireAuth', () => {
       /credentialService\.set\('dolibarr', identity\.credential, userId\)/
     )
     assert.ok(
-      source.indexOf('pikkuDelegatedAuth({') < source.indexOf('pikkuActor({')
+      source.indexOf('pikkuDelegatedAuth({') <
+        source.indexOf('pikkuVirtualUser({')
     )
   })
 
-  test('scenario actors carry the upstream credential', () => {
+  test('scenario virtual users carry the upstream credential', () => {
     const { source } = wireAuth(AUTH_TS, install({ mode: 'connect' }))
     assert.match(
       source,
-      /pikkuActor\(\{\s+credentials: \{\s+names: \['dolibarr'\]/
+      /pikkuVirtualUser\(\{\s+credentials: \{\s+names: \['dolibarr'\]/
     )
     assert.ok(!source.includes('pikkuDelegatedAuth'))
   })

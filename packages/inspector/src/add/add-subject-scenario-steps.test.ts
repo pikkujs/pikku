@@ -63,7 +63,7 @@ describe('pikkuPlatformScenarioStep', () => {
       const meta = state.functions.meta['trialHasExpired']
       assert.ok(meta, 'expected a function registered as trialHasExpired')
       assert.equal(meta.scenarioStepKind, 'platform')
-      // Held out of every deployed unit, exactly like a persona step.
+      // Held out of every deployed unit, exactly like a virtual user step.
       assert.equal(meta.scenarioStep, true)
       assert.equal(state.rpc.exposedMeta['trialHasExpired'], undefined)
       assert.equal(state.rpc.internalMeta['trialHasExpired'], undefined)
@@ -93,7 +93,7 @@ describe('pikkuPlatformScenarioStep', () => {
     }
   })
 
-  test('declares one surface, so a browser run never demands an actor for it', async () => {
+  test('declares one surface, so a browser run never demands a virtual user for it', async () => {
     const { state, cleanup } = await run(
       [
         IMPORTS,

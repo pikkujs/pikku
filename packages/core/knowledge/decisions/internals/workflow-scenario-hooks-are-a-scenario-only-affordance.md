@@ -16,7 +16,7 @@ pass by a single external process.
 A hook is not a pikku function: it has no id, no meta and no schema, so it
 cannot go through `runPikkuFunc` and the runner records nothing for it. It gets
 exactly what the scenario body gets — the same wire (which is how it reaches the
-app through `actors`) and singleton services composed with this invocation's
+app through `virtualUsers`) and singleton services composed with this invocation's
 wire services — and nothing else. `ScenarioHookError` keeps the original error
 as `cause`, so the failure that actually happened is never lost behind the label
 saying which phase it happened in.

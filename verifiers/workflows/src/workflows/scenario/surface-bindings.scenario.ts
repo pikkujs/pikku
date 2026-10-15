@@ -46,26 +46,29 @@ export const surfaceDisagreementScenario = pikkuScenario<
 })
 
 /**
- * A step that declared `actor: true`, given one. The other half — a call site
+ * A step that declared `virtualUser: true`, given one. The other half — a call site
  * that forgets — cannot be a fixture here: PKU677 refuses it at codegen, so it
  * never reaches a run. The runner's own refusal is covered by core's unit tests.
  */
-export const actorGreetingScenario = pikkuScenario<void, { actor: string }>({
-  title: 'A step runs as the actor it was given (scenario)',
-  tags: ['scenario', 'actors'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.customer) {
+export const virtualUserGreetingScenario = pikkuScenario<
+  void,
+  { virtualUser: string }
+>({
+  title: 'A step runs as the virtual user it was given (scenario)',
+  tags: ['scenario', 'virtualUsers'],
+  func: async (_services, _data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.customer) {
       throw new Error(
-        'actorGreetingScenario needs a customer actor — pass one via startWorkflow options or `pikku scenario run`'
+        'virtualUserGreetingScenario needs a customer virtual user — pass one via startWorkflow options or `pikku scenario run`'
       )
     }
     const greeting = await scenario.then(
-      'greets as its actor',
-      'greetsAsItsActor',
+      'greets as its virtual user',
+      'greetsAsItsVirtualUser',
       undefined,
-      { actor: actors.customer }
+      { virtualUser: virtualUsers.customer }
     )
-    return { actor: greeting.actor }
+    return { virtualUser: greeting.virtualUser }
   },
 })
 

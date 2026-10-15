@@ -11,11 +11,14 @@ import WebSocket from 'ws'
 
 import { CorePikkuWebsocket } from '@pikku/websocket'
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
-import { deriveActorSecret } from '@pikku/core/services'
+import { resolve } from 'node:path'
+import {
+  readDevSigningKey,
+  signVirtualUserStatement,
+} from '@pikku/cli/utils/virtual-user-signer'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
-import { personaConfigs } from '../../.pikku/scenarios/pikku-personas.gen.js'
 
 let server: Awaited<ReturnType<typeof startBackend>>
 let apiUrl: string
@@ -25,20 +28,23 @@ let token: string
  * The client owns no commands, but still has to prove who it is before the
  * server will run any.
  */
-const signIn = async (email: string, name: string): Promise<string> => {
-  const res = await fetch(`${apiUrl}/api/auth/sign-in/actor`, {
+const signIn = async (id: string): Promise<string> => {
+  const signingKey = readDevSigningKey(
+    resolve(import.meta.dirname, '../../.pikku-runtime')
+  )
+  assert.ok(signingKey, 'pikku dev did not write a virtual user signing key')
+  const res = await fetch(`${apiUrl}/api/auth/sign-in/virtual-user`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: apiUrl },
     body: JSON.stringify({
-      email,
-      name,
-      secret: await deriveActorSecret(
-        process.env.SCENARIO_ACTOR_SECRET!,
-        email
-      ),
+      statement: signVirtualUserStatement({
+        signingKey,
+        virtualUserId: id,
+        audience: new URL(apiUrl).origin,
+      }),
     }),
   })
-  assert.ok(res.ok, `actor sign-in failed: ${res.status}`)
+  assert.ok(res.ok, `virtualUser sign-in failed: ${res.status}`)
 
   const bearer = res.headers.get('set-auth-token')
   assert.ok(bearer, 'expected better-auth to issue a bearer token')
@@ -96,7 +102,7 @@ describe('CLI over a channel', () => {
     server = await startBackend()
     await server.waitUntilReady({ timeoutMs: 300_000 })
     apiUrl = server.apiUrl
-    token = await signIn(personaConfigs.admin.email, personaConfigs.admin.name)
+    token = await signIn('admin')
   })
 
   after(async () => {

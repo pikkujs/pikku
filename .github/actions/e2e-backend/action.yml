@@ -12,9 +12,8 @@ runs:
       shell: bash
       working-directory: e2e
       env:
-        SCENARIO_ACTOR_SECRET: e2e-actor-secret-long-enough-to-derive-from
         PIKKU_MOCK_LLM: '1'
-        FABRIC_API_URL: http://localhost:4096
+        PIKKUSTUDIO_API_URL: http://localhost:4096
         API_URL: http://localhost:4077
       run: |
         nohup npx pikku dev --port 4077 > "$RUNNER_TEMP/e2e-server.log" 2>&1 &

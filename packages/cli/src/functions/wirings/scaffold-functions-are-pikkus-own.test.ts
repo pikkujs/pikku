@@ -40,10 +40,10 @@ const tagsOf = (config: string): string[] => {
 }
 
 const channelCLI = serializeChannelCLI(
-  'fabric',
+  'cloud',
   {
-    name: 'fabric',
-    description: 'fabric',
+    name: 'cloud',
+    description: 'cloud',
     commands: {},
     options: {},
   } as unknown as CLIProgramMeta,
@@ -66,7 +66,7 @@ describe("every function a scaffold generates is tagged as pikku's own", () => {
     ['console', serializeConsoleFunctions(leaf, '#agentTypes').functions],
     [
       'virtual user',
-      serializeVirtualUserFunctions(leaf, '#personas').functions,
+      serializeVirtualUserFunctions(leaf, '#virtualUsers').functions,
     ],
     ['events', serializeEventsScaffold(leaf).functions],
     [

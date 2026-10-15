@@ -175,14 +175,14 @@ export function createCloudflareHandler(
 
   return class PikkuHandler extends WorkerEntrypoint<CloudflareEnv> {
     async fetch(request: Request): Promise<Response> {
-      // `/__pikku/queue-job` is the fabric WfP queue-delivery route. It
+      // `/__pikku/queue-job` is the cloud WfP queue-delivery route. It
       // bypasses `includesFetch` so units with no public HTTP surface still
       // receive queue jobs from the per-stage dispatcher (which can't deliver
       // via real CF Queues — namespace scripts can't bind as queue consumers).
       // Body: { queueName, data, jobId, traceId }. Status codes: 204 = ack,
       // 422 = ack-no-retry (PikkuMissingMetaError, QueueJobDiscardedError),
       // 503 = retry (other thrown errors), 401 = bad/missing dispatch secret.
-      // The fabric dispatcher + pg-boss worker map these onto pg-boss
+      // The cloud dispatcher + pg-boss worker map these onto pg-boss
       // outcomes. Because it runs ahead of every other route it is gated on
       // the PIKKU_DISPATCH_SECRET shared secret and fails closed when unset.
       const reqUrl = new URL(request.url)
@@ -249,7 +249,7 @@ export function createCloudflareHandler(
         }
       }
 
-      // `/__pikku/scheduler-job` is the fabric WfP scheduler-delivery route.
+      // `/__pikku/scheduler-job` is the cloud WfP scheduler-delivery route.
       // Mirrors `/__pikku/queue-job` for schedule-triggered units that have no
       // public HTTP surface. Body: { taskName }. Status codes: 204 = ok,
       // 422 = no-retry, 503 = retry (transient), 401 = bad/missing dispatch

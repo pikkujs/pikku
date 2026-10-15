@@ -1,10 +1,10 @@
 import { pikkuFunc } from '#pikku/addon/function'
 
 /**
- * Turns a persona loose now, rather than waiting for its schedule.
+ * Turns a virtual user loose now, rather than waiting for its schedule.
  *
  * Dispatches the project's own scaffolded `runVirtualUser` rather than starting
- * a run itself: the persona lookup, the acted-upon check and the production
+ * a run itself: the virtual user lookup, the acted-upon check and the production
  * guard live there, and a second copy of them in the console would eventually
  * disagree with the first. The cost is that this needs `scaffold.virtualUser`
  * on, while reading runs does not — so the absence is reported as the missing
@@ -14,12 +14,12 @@ import { pikkuFunc } from '#pikku/addon/function'
  * against the real API, and an adversarial one is trying to break things.
  */
 export const startVirtualUserRun = pikkuFunc<
-  { persona: string; disposition?: string; goals?: string[] },
+  { virtualUserId: string; disposition?: string; goals?: string[] },
   { runId: string }
 >({
   title: 'Start a Virtual User Run',
   description:
-    'Runs a declared persona against this application now. Returns a run id; the result arrives in the run list.',
+    'Runs a declared virtual user against this application now. Returns a run id; the result arrives in the run list.',
   expose: true,
   scopes: ['pikku:console:virtualUsers:run'],
   func: async ({ metaService }, input, { rpc }) => {

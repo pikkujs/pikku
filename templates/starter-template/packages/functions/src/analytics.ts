@@ -7,7 +7,7 @@
  * reaches the browser through `AnalyticsEvent`. `page_viewed` and `signed_up` are
  * PLACEHOLDERS: REPLACE them with the events this app actually cares about.
  *
- * Where events go is not decided here. A deployed stage gets fabric's OpenObserve
+ * Where events go is not decided here. A deployed stage gets cloud's OpenObserve
  * `analyticsService`; locally they are logged.
  *
  * Two rules for what belongs here:

@@ -147,7 +147,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
       await workflow.do('Bootstrap roles', 'pikkuRoles', { bootstrap: true })
       await workflow.do('Bootstrap flags', 'pikkuFlags', { bootstrap: true })
-      await workflow.do('Bootstrap personas', 'pikkuPersonas', {
+      await workflow.do('Bootstrap virtual users', 'pikkuVirtualUsers', {
         bootstrap: true,
       })
       await workflow.do(
@@ -346,7 +346,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do('Roles', 'pikkuRoles', {}),
       workflow.do('Flags', 'pikkuFlags', {}),
-      workflow.do('Personas', 'pikkuPersonas', {}),
+      workflow.do('VirtualUsers', 'pikkuVirtualUsers', {}),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
@@ -363,10 +363,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       })
     }
 
-    // pikkuAuth generates auth-secrets.gen.ts and pikkuPersonas generates
-    // pikku-personas-secrets.gen.ts (both full of defineSecret calls) inside the
-    // Promise.all above, but pikkuSecrets runs concurrently from the inspector
-    // state as it was before either wrote anything. Re-run secret/credential/
+    // pikkuAuth generates auth-secrets.gen.ts (full of defineSecret calls) inside
+    // the Promise.all above, but pikkuSecrets runs concurrently from the
+    // inspector state as it was before it wrote anything. Re-run secret/credential/
     // variable codegen now so those freshly-generated files — just picked up by
     // Re-inspect above — are reflected in pikku-secrets-meta.gen.json. Without
     // this the declaration only lands on a second `pikku` run, and a cold
@@ -384,7 +383,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     const stateAfterScaffold = await getInspectorState()
     if (
       stateAfterScaffold.auth.definition ||
-      stateAfterScaffold.personas.definitions.length > 0
+      stateAfterScaffold.virtualUsers.definitions.length > 0
     ) {
       const [, , , middlewareAfterScaffold] = await Promise.all([
         workflow.do('Secrets (post-scaffold)', 'pikkuSecrets', null),

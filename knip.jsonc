@@ -9,7 +9,7 @@
   // and e2e's addons and drivers are wired at runtime. Turning those on
   // reports ~1100 findings of which almost none are real. `exports` and
   // `types` are covered by the surface scan behind #1233, which can see the
-  // two things knip cannot: the fabric repo as a downstream consumer, and
+  // two things knip cannot: the cloud repo as a downstream consumer, and
   // specifiers the CLI emits inside template literals.
   "include": ["unlisted", "binaries", "duplicates"],
 

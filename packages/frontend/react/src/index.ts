@@ -26,17 +26,18 @@ export { asI18n, asI18nStub, sep } from './i18n-types.js'
 export { createLocaleStore } from './locale-store.js'
 export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
 
-// Dev-only scenario actor sign-in — the logic half of the "Sign in as …"
-// switcher. UI-free, so `@pikku/mantine/dev` (which peer-depends on this
-// package) can build the rendered control on top of it.
-export { listDevActors, signInAsPersona, useDevActors } from './dev-actors.js'
+export {
+  listDevVirtualUsers,
+  signInAsVirtualUser,
+  useDevVirtualUsers,
+} from './dev-virtual-users.js'
 export type {
-  DevActor,
-  ListDevActorsOptions,
-  SignInAsPersonaOptions,
-  UseDevActorsOptions,
-  UseDevActorsResult,
-} from './dev-actors.js'
+  DevVirtualUser,
+  ListDevVirtualUsersOptions,
+  SignInAsVirtualUserOptions,
+  UseDevVirtualUsersOptions,
+  UseDevVirtualUsersResult,
+} from './dev-virtual-users.js'
 
 // Buffered product-analytics client, typed against the app's own event union.
 // The app owns the union and the endpoint; this package owns the transport.

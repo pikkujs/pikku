@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { readJsxLiteralText } from '@pikku/inspector'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 const isBlock = (name: string) =>
   name.endsWith('.tsx') &&

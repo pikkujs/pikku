@@ -201,7 +201,7 @@ describe('split type identity via a linked dependency', () => {
 })
 
 /**
- * Bun's isolated layout, as a fresh fabric scaffold installs it: the workspace
+ * Bun's isolated layout, as a fresh cloud scaffold installs it: the workspace
  * package links `@pikku/cli` into the in-project `.bun` store, and the store
  * entry carries its own `zod` beside it. Nothing here leaves the project, which
  * is why the linked-dependency check never looked at it.

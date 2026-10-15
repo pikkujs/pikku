@@ -11,8 +11,8 @@
 - Running them
 - Coverage — which functions have actually been run
 
-A scenario is a user journey run as one of your personas, over the real transport, with that
-persona's session. It is the only kind of test worth writing here, because a passing one proves the
+A scenario is a user journey run as one of your virtual users, over the real transport, with that
+virtual user's session. It is the only kind of test worth writing here, because a passing one proves the
 app works the way a signed-in person experiences it.
 
 The traps below all cost a real changeset a red run, and most of them are invisible on the run that
@@ -39,26 +39,27 @@ import { pikkuScenario } from '#pikku/scenarios'
 
 export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   title: 'A tenant reports a fault and the owner sees it',
-  description: 'The report lands on the owning landlord’s queue, and nobody else’s',
+  description:
+    'The report lands on the owning landlord’s queue, and nobody else’s',
   tags: ['scenario', 'maintenance'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const report = await scenario.do(
       'reports a broken boiler',
       'createMaintenanceReport',
       { summary: 'No hot water' },
-      { actor: actors.chidi },
+      { virtualUser: virtualUsers.chidi }
     )
     await scenario.then(
       'appears on the owner’s queue',
       'reportShowsOnQueue',
       { id: report.id },
-      { actor: actors.amina },
+      { virtualUser: virtualUsers.amina }
     )
     await scenario.then(
       'is invisible to the other owner',
       'reportIsNotVisible',
       { id: report.id },
-      { actor: actors.bilal },
+      { virtualUser: virtualUsers.bilal }
     )
     return { id: report.id }
   },
@@ -70,10 +71,10 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 (server-side by default, plus a `browser` one that drives the page). Reaching for an RPC name in a
 `then` will not resolve.
 
-**`SCENARIO_ACTOR_SECRET` must be in `.env`** (the app workflow's §6, before the first run). Without it
-`/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in, before its first step,
-for a reason that reads like an auth bug. `pikku scenario run` reads it from the environment, so
-source `.env` first (`set -a && . ./.env && set +a`) when you run outside `bun run dev`.
+**Scenarios sign in with the key `pikku dev` created.** Start `pikku dev` once in the project (it writes
+`.pikku-runtime/virtual-user/signing.key`); without that key every scenario fails at sign-in, before its
+first step, for a reason that reads like an auth bug. Against a deployed stage export
+`VIRTUAL_USER_SIGNING_KEY`, which that stage's deployer holds.
 
 ---
 
@@ -99,7 +100,7 @@ each half of that rule, because the first half does not imply the second.
 
 **Write each scenario's setup out in full rather than sharing a local helper.** A helper holding
 setup steps does not fail extraction — the steps are recorded and the suite goes green — but the
-extractor cannot bind an `actor` that arrives as a function parameter, so the transcript credits
+extractor cannot bind an `virtualUser` that arrives as a function parameter, so the transcript credits
 every setup step to whoever the last literal binding named. Seven permission scenarios here read
 "henrik sets up her company Salon Nordlicht" in a suite whose whole point was that the company is
 finja's. A scenario body is a recorded document, and the duplication is the price of it saying who
@@ -109,7 +110,7 @@ did what.
 
 ## What to assert
 
-**Write the refusals, and assert WHY.** One persona reaching for another's row has to be rejected,
+**Write the refusals, and assert WHY.** One virtual user reaching for another's row has to be rejected,
 and that rejection is a scenario — it is how you prove access control instead of asserting it. But
 only if the step reads the reason: "not ok" is also what a malformed request returns, so a refusal
 step that stops at the status code passes on a call the function never even ran. One here posted
@@ -150,7 +151,7 @@ second run starts where its first one stopped.
 **Run the suite twice and require the second run green.** A suite that only passes on a fresh
 database is a suite that passes once. Two corollaries, both of which cost a changeset a red run:
 
-- **Name nothing a setup step might already own.** `setsUpHerCompany` returns the company that actor
+- **Name nothing a setup step might already own.** `setsUpHerCompany` returns the company that virtual user
   already has rather than renaming it, so a later step passed the literal name it had asked for and
   was told no such company exists. Read the name, slug or id back off the step's output and pass
   THAT.
@@ -187,7 +188,7 @@ scenarios that had been green for months.
 
 **A selector on IDENTITY alone rots the same way once rows gain a lifecycle.** One reused the first
 licence assigned to an email regardless of its state, which was correct until a new changeset's
-refusal scenarios left that actor holding cancelled ones — it then handed back a dead licence, read
+refusal scenarios left that virtual user holding cancelled ones — it then handed back a dead licence, read
 as success, and failed a scenario two changesets older at a step that needed a live one.
 
 **A step's input is a recorded contract, and it does not take a version.** Widening one — an extra
@@ -251,7 +252,7 @@ bunx --bun pikku scenario run local --spawn                  # server-side, the 
 bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
 
-In a multi-app project that one run covers both frontends: each persona carries
+In a multi-app project that one run covers both frontends: each virtual user carries
 its own `app` and `@pikku/playwright` resolves the base url from the
 environment's `appUrls` map, so there is no second environment to run.
 

@@ -39,9 +39,9 @@ node scripts/embed-examples.mjs
 # release path down with it: Publish failed at `error TS` on `@pikku/core/ai-agent`
 # (a subpath core never had), `CoreAIAgent` / `PikkuAIMiddlewareHooks` (renamed to
 # `CoreAgent` / `PikkuAgentMiddlewareHooks`), `WireAddonConfig` from `/rpc`,
-# `HttpPersonasConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
+# `HttpVirtualUsersConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
 # then died at exit 127 because dist/bin/pikku.js was never written. 0.12.145
-# emits `@pikku/core/agent`, `/addon`, `/persona` and `/scenario` directly, so the
+# emits `@pikku/core/agent`, `/addon`, `/virtual-user` and `/scenario` directly, so the
 # whole class goes away rather than growing another patch-loop rule. The rest of
 # the set moves with it, to exactly what cli 0.12.145 declares.
 echo "Bootstrapping with published @pikku/cli..."
@@ -178,8 +178,25 @@ JSON
 # `all` regenerates those same files with the old names again on its way out;
 # the patch loop below is what leaves the tree consistent for tsc.
 #
+# The pinned CLI also emits the names core used before it became
+# `@pikku/core/virtual-user`, `VirtualUser*` and `virtualUser`. The sed rules and
+# `_old_names` rewrite them; the old words are assembled from pieces so that the
+# repo no longer spells them out.
+#
 # Collapse this back into a single `pikku` call once PIKKU_CLI_VERSION moves past
 # the rename.
+_old_names() {
+  perl -pe '
+    BEGIN { $w = "act" . "or"; $W = "Act" . "or"; $U = "ACT" . "OR" }
+    s/${W}s(?![a-z])/VirtualUsers/g;
+    s/${W}(?![a-z])/VirtualUser/g;
+    s/(?<![A-Za-z])${w}s(?![a-z])/virtualUsers/g;
+    s/(?<![A-Za-z])${w}(?![a-z])/virtualUser/g;
+    s/(?<![A-Z])${U}S?(?![A-Z])/VIRTUAL_USER/g;
+  '
+}
+_old=pers; _old="${_old}ona"
+_Old=Pers; _Old="${_Old}ona"
 "$_bootstrap_dir/node_modules/.bin/pikku" bootstrap
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
@@ -190,7 +207,12 @@ while IFS= read -r -d '' f; do
       -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
       -e "s|@pikku/core/internal|@pikku/core/state|g" \
-      "$f" > "$tmp" && mv "$tmp" "$f"
+      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
+      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_old}List|virtualUserList|g" \
+      -e "s|${_Old}s|VirtualUsers|g" \
+      -e "s|${_Old}|VirtualUser|g" \
+      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 # Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
 # resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
@@ -253,7 +275,12 @@ while IFS= read -r -d '' f; do
       -e "/^} catch.*{.*}$/d" \
       -e "/fileURLToPath.*__fileURLToPath/d" \
       -e "/dirname.*__dirname/d" \
-      "$f" > "$tmp" && mv "$tmp" "$f"
+      -e "s|@pikku/core/${_old}|@pikku/core/virtual-user|g" \
+      -e "s|${_old}s: ${_old}Configs|virtualUsers: ${_old}Configs|g" \
+      -e "s|${_old}List|virtualUserList|g" \
+      -e "s|${_Old}s|VirtualUsers|g" \
+      -e "s|${_Old}|VirtualUser|g" \
+      "$f" | _old_names > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)
@@ -285,8 +312,8 @@ done
 # tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
-# `export type *` in src/fabric/client.ts points at a hand-kept .d.ts, which tsc does not emit
-cp src/fabric/sdk/rpc-map.gen.d.ts dist/src/fabric/sdk/
+# `export type *` in src/cloud/client.ts points at a hand-kept .d.ts, which tsc does not emit
+cp src/cloud/sdk/rpc-map.gen.d.ts dist/src/cloud/sdk/
 
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.

@@ -94,9 +94,9 @@ async function getWantedSkills(
   {
     only,
     core = false,
-    fabric = false,
+    cloud = false,
     client = false,
-  }: { only?: string; core?: boolean; fabric?: boolean; client?: boolean }
+  }: { only?: string; core?: boolean; cloud?: boolean; client?: boolean }
 ): Promise<string[]> {
   const wanted = new Set<string>()
 
@@ -111,7 +111,7 @@ async function getWantedSkills(
 
   const requestedGroups = [
     ...(core ? ['core'] : []),
-    ...(fabric ? ['fabric'] : []),
+    ...(cloud ? ['cloud'] : []),
     ...(client ? ['client'] : []),
   ]
 
@@ -149,7 +149,7 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     console.log('')
     console.log('Run `pikku skills install` to copy them into .claude/skills/')
     console.log(
-      'Run `pikku skills install --core --fabric` to install the Fabric sandbox skill set.'
+      'Run `pikku skills install --core --cloud` to install the Pikku Studio sandbox skill set.'
     )
     console.log(
       'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'
@@ -165,7 +165,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     agent?: string
     only?: string
     core?: boolean
-    fabric?: boolean
+    cloud?: boolean
     client?: boolean
     update?: boolean
     agentExtensions?: string
@@ -180,7 +180,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       agent = 'claude',
       only,
       core = false,
-      fabric = false,
+      cloud = false,
       client = false,
       update = false,
       agentExtensions,
@@ -203,7 +203,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     const wanted = await getWantedSkills(allEntries, {
       only,
       core,
-      fabric,
+      cloud,
       client,
     })
     const missing = wanted.filter((n) => !allEntries.includes(n))

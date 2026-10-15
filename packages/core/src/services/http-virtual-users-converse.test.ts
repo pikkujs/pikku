@@ -1,0 +1,275 @@
+import { describe, test, after } from 'node:test'
+import assert from 'node:assert/strict'
+import { createServer, type Server } from 'node:http'
+
+import { createHttpVirtualUsers } from './http-virtual-users.js'
+import { statementSignIn } from './virtual-user-sign-in.js'
+import { pikkuState, resetPikkuState } from '../pikku-state.js'
+import type { AgentStepResult } from './agent-runner-service.js'
+
+/**
+ * Minimal target app exposing the agent HTTP surface: virtual user sign-in, the agent
+ * run route (suspends once for approval, then completes), and the batch approve
+ * route (records the decisions). `authRequired` toggles whether the agent
+ * routes reject unauthenticated calls with 401 (to exercise lazy sign-in).
+ */
+const startAgentTarget = async () => {
+  let agentRuns = 0
+  let logins = 0
+  let authRequired = false
+  let approvalsSeen: unknown[] = []
+  let firstAgentRequestAuthed: boolean | null = null
+  const server: Server = createServer((req, res) => {
+    const chunks: Buffer[] = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => {
+      const body = chunks.length
+        ? JSON.parse(Buffer.concat(chunks).toString())
+        : {}
+      const json = (obj: unknown) =>
+        res
+          .writeHead(200, { 'content-type': 'application/json' })
+          .end(JSON.stringify(obj))
+
+      if (req.url === '/api/auth/sign-in/virtual-user') {
+        logins++
+        res.setHeader('set-cookie', ['session=s1; Path=/; HttpOnly'])
+        json({ ok: true })
+        return
+      }
+
+      const isAgentRoute = req.url?.startsWith('/api/rpc/agent/')
+      if (isAgentRoute && firstAgentRequestAuthed === null) {
+        firstAgentRequestAuthed = (req.headers.cookie ?? '').includes(
+          'session='
+        )
+      }
+      if (
+        isAgentRoute &&
+        authRequired &&
+        !(req.headers.cookie ?? '').includes('session=')
+      ) {
+        res.writeHead(401).end()
+        return
+      }
+
+      if (req.url === '/api/rpc/agent/todoBot/approve') {
+        approvalsSeen.push(body.approvals)
+        json({ runId: body.runId, text: 'Created it.', status: 'completed' })
+        return
+      }
+      // The SSE route, because that is the one a virtual user's turn goes to — the
+      // plain route buffers the whole run and dies on undici's headers timeout.
+      if (req.url === '/api/rpc/agent/todoBot/stream') {
+        agentRuns++
+        const runId = `run-${agentRuns}`
+        const events: unknown[] =
+          agentRuns === 1
+            ? [
+                { type: 'RUN_STARTED', runId },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'Let me ' },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'do that.' },
+                {
+                  type: 'approval-request',
+                  runId,
+                  toolCallId: 'tc1',
+                  toolName: 'createTodo',
+                  args: { title: 'x' },
+                },
+                { type: 'done' },
+              ]
+            : [
+                { type: 'RUN_STARTED', runId },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'All set.' },
+                { type: 'RUN_FINISHED', runId },
+                { type: 'done' },
+              ]
+        res.writeHead(200, { 'content-type': 'text/event-stream' })
+        for (const event of events) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`)
+        }
+        res.end()
+        return
+      }
+      res.writeHead(404).end()
+    })
+  })
+  await new Promise<void>((resolve) => server.listen(0, resolve))
+  const { port } = server.address() as { port: number }
+  return {
+    server,
+    apiUrl: `http://127.0.0.1:${port}/api`,
+    loginCount: () => logins,
+    approvalsSeen: () => approvalsSeen,
+    /** Whether the very first agent call carried a session, not merely that one was minted. */
+    firstAgentRequestAuthed: () => firstAgentRequestAuthed,
+    reset: (opts?: { authRequired?: boolean }) => {
+      agentRuns = 0
+      logins = 0
+      approvalsSeen = []
+      firstAgentRequestAuthed = null
+      authRequired = opts?.authRequired ?? false
+    },
+  }
+}
+
+/** Virtual user LLM scripted by the outputSchema it's asked for. */
+const scriptedRunner = () => {
+  let turn = 0
+  const turns = [
+    { message: 'please make a todo', done: false },
+    { message: 'thanks', done: true },
+  ]
+  return {
+    run: async (params: {
+      outputSchema?: unknown
+    }): Promise<AgentStepResult> => {
+      const props =
+        (params.outputSchema as { properties?: Record<string, unknown> })
+          ?.properties ?? {}
+      const object =
+        'message' in props
+          ? (turns[turn++] ?? turns[turns.length - 1])
+          : 'decisions' in props
+            ? { decisions: [{ toolCallId: 'tc1', approved: true }] }
+            : { passed: true, reasoning: 'a todo was created' }
+      return {
+        text: '',
+        object,
+        toolCalls: [],
+        toolResults: [],
+        usage: { inputTokens: 0, outputTokens: 0 },
+        finishReason: 'stop',
+      }
+    },
+  }
+}
+
+const wireRunner = () => {
+  resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', {
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
+    agentRunner: scriptedRunner(),
+  } as any)
+}
+
+describe('HttpVirtualUser.converse', async () => {
+  const target = await startAgentTarget()
+  after(() => {
+    target.server.close()
+    resetPikkuState()
+  })
+
+  test('converses over HTTP, approves in-virtual-user, returns a verdict', async () => {
+    wireRunner()
+    target.reset()
+
+    const virtualUsers = createHttpVirtualUsers({
+      apiUrl: target.apiUrl,
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
+      model: 'test/test-model',
+      virtualUsers: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@virtualuser.invalid',
+          personality: 'concise',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    const verdict = await virtualUsers.pm!.converse({
+      agent: 'todoBot',
+      task: 'Get a todo created for the launch',
+      evaluate: 'A todo about the launch now exists',
+    })
+
+    assert.equal(verdict.passed, true)
+    assert.match(verdict.reasoning, /todo/i)
+    // The target's approval was answered in-virtual-user (approved) over HTTP.
+    assert.deepEqual(target.approvalsSeen(), [
+      [{ toolCallId: 'tc1', approved: true }],
+    ])
+    // Signed in even though the agent route is public: a thread minted under a
+    // fresh anonymous id per request belongs to nobody, so turn two comes back
+    // as somebody else's. A virtual user is a real account either way — and it is
+    // the *first* call that has to carry the session, which a login count
+    // alone would not show.
+    assert.equal(target.loginCount(), 1)
+    assert.equal(target.firstAgentRequestAuthed(), true)
+  })
+
+  test('signs in lazily and retries once when an agent route returns 401', async () => {
+    wireRunner()
+    target.reset({ authRequired: true })
+
+    const virtualUsers = createHttpVirtualUsers({
+      apiUrl: target.apiUrl,
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
+      model: 'test/test-model',
+      virtualUsers: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@virtualuser.invalid',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    const verdict = await virtualUsers.pm!.converse({
+      agent: 'todoBot',
+      task: 'make a todo',
+      evaluate: 'a todo exists',
+    })
+
+    assert.equal(verdict.passed, true)
+    // 401 on the first (unauthenticated) call → one sign-in, then cached.
+    assert.equal(target.loginCount(), 1)
+  })
+
+  test('throws when no AI provider is configured', async () => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+    } as any)
+
+    const virtualUsers = createHttpVirtualUsers({
+      apiUrl: target.apiUrl,
+      signIn: statementSignIn({ apiUrl: target.apiUrl, mint: () => 'stmt' }),
+      model: 'test/test-model',
+      virtualUsers: {
+        pm: {
+          id: 'pm',
+          name: 'Priya',
+          email: 'pm@virtualuser.invalid',
+          roles: [],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    await assert.rejects(
+      virtualUsers.pm!.converse({ agent: 'todoBot', task: 't', evaluate: 'e' })
+    )
+  })
+})

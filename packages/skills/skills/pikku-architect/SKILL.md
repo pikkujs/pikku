@@ -285,7 +285,7 @@ one, and is worth opening for any question you cannot answer with a flat yes.
 2. **Does pass 1 slice, and does the model fit inside it?** Not "pass 1: the data model, pass 2: the
    API" — and `model` holds only the tables pass 1 or 2 actually migrates, because the model slot has
    no passes and a later table is a PROBLEM from the first day.
-3. **Can each scenario actually be performed?** Name the persona; assert what the person got rather
+3. **Can each scenario actually be performed?** Name the virtual user; assert what the person got rather
    than that the code ran; write totals as deltas against a database nobody resets; check that every
    input the prose describes is a field somebody planned.
 4. **Does something produce every state and field the plan reads?** For each clause of a description,

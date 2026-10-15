@@ -1,5 +1,12 @@
 # @pikku/code-edit
 
+## 0.12.6
+
+### Patch Changes
+
+- 43e4e8e: `pikku ui theme list|apply` puts the app's themes in the CLI, and the generated theme header names `pikku ui theme apply`.
+- 862a4f5: `pikku validate` now warns when an app still carries a starter template's name (the `app__name` wordmark, the tab title, the emails' sender name). The check moved out of `@pikku/code-edit/brand`: `BrandWorkspace.placeholders()`, `placeholderBrands`, `productBrand`, `isPlaceholderName`, the `PLACEHOLDER_*` constants and the `PlaceholderBrand` and `BrandApp` types are gone. Stock-image search (Unsplash) and site crawling (Cloudflare) are removed: `BrandWorkspace.stockImages()` and `BrandWorkspace.crawl()`, the `unsplashAccessKey`, `cloudflare` and `fetch` options, `StockImagesResult`, `CrawlResult`, `CloudflareCredentials`, `StockImageOrientation`, `searchUnsplash`, `crawlSite`, `CloudflareCrawler` and `extractImages`. The console addon no longer exposes the `getPlaceholderBrands`, `fetchStockImages` and `crawlSite` functions, and stops reading `UNSPLASH_ACCESS_KEY`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` for brand use.
+
 ## 0.12.5
 
 ### Patch Changes

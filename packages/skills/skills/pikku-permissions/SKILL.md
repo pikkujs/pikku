@@ -3,7 +3,7 @@ name: pikku-permissions
 description: >-
   Use when deciding WHO may call a function: resource ownership, role gates, admin-only actions, or any "only their own rows" rule. Covers the `permissions` field, `pikkuPermission`, `pikkuAuth`, scopes and `defineScope`, `addGlobalPermission`, the three gates, `permissionsInBody`, and where ownership belongs versus where it does not.
   TRIGGER when: writing or reviewing any function that touches a row a user owns, gating an action on a role, building the permissions half of a contract in build PHASE 2, about to write an `if` in a function body that decides whether the caller is allowed, or hitting `MissingScopeError`.
-  DO NOT TRIGGER when: the question is how a caller proves who they are, such as sign-in, sessions, tokens, API keys or seeding a persona (use pikku-auth), or how to shape a paginated list (use pikku-list-query).
+  DO NOT TRIGGER when: the question is how a caller proves who they are, such as sign-in, sessions, tokens, API keys or seeding a virtual user (use pikku-auth), or how to shape a paginated list (use pikku-list-query).
 installGroups: [core]
 ---
 

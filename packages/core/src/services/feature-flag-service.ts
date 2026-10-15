@@ -103,18 +103,22 @@ export interface FeatureFlagStore extends FeatureFlagSource {
   setEnabled(
     key: string,
     enabled: boolean,
-    actor?: string,
+    virtualUser?: string,
     note?: string
   ): Promise<void>
 
   /** `percent` is 0–100, or null to remove the rollout constraint. */
-  setRollout(key: string, percent: number | null, actor?: string): Promise<void>
+  setRollout(
+    key: string,
+    percent: number | null,
+    virtualUser?: string
+  ): Promise<void>
 
   setOverride(
     key: string,
     subject: FlagSubject,
     enabled: boolean,
-    actor?: string
+    virtualUser?: string
   ): Promise<void>
 
   clearOverride(key: string, subject: FlagSubject): Promise<void>

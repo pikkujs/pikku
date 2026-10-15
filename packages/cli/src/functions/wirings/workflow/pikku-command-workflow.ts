@@ -4,8 +4,8 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeScenarioTypes } from './serialize-scenario-types.js'
-import { serializePersonas } from './serialize-personas.js'
-import { resolvePersonas } from '../../../utils/resolve-personas.js'
+import { serializeVirtualUsers } from './serialize-virtual-users.js'
+import { resolveVirtualUsers } from '../../../utils/resolve-virtual-users.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
@@ -266,7 +266,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         ),
         getFileImportRelativePath(
           config.scenarioTypesFile,
-          config.personasWiringFile,
+          config.virtualUsersWiringFile,
           packageMappings
         )
       )
@@ -286,28 +286,28 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
-    // Written even when nobody declared a persona, so `TypedPersonas` is always
+    // Written even when nobody declared a virtual user, so `TypedVirtualUsers` is always
     // a resolvable import for the generated function types.
-    const personas = resolvePersonas(
-      visitState.personas.definitions,
+    const virtualUsers = resolveVirtualUsers(
+      visitState.virtualUsers.definitions,
       config.scenarios?.emailDomain
     )
     {
       const agentMapImportPath = getFileImportRelativePath(
-        config.personasWiringFile,
+        config.virtualUsersWiringFile,
         config.agentMapDeclarationFile,
         packageMappings
       )
       const exposedRpcMapImportPath = getFileImportRelativePath(
-        config.personasWiringFile,
+        config.virtualUsersWiringFile,
         config.rpcMapDeclarationFile,
         packageMappings
       )
       await writeFileInDir(
         logger,
-        config.personasWiringFile,
-        serializePersonas(
-          personas,
+        config.virtualUsersWiringFile,
+        serializeVirtualUsers(
+          virtualUsers,
           agentMapImportPath,
           exposedRpcMapImportPath,
           config.environments ?? {}
@@ -316,15 +316,15 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       // Same reason as the scenario meta above: a project generated before this
       // moved to `scenarios/` still has a copy under `workflow/`, and tsc
       // compiles every file in the output tree whether anything imports it.
-      await rm(join(dirname(workflowTypesFile), 'pikku-personas.gen.ts'), {
+      await rm(join(dirname(workflowTypesFile), 'pikku-virtual-users.gen.ts'), {
         force: true,
       })
-      // Fixed path getPersonasMeta() reads; kept out of workflow/meta, which
+      // Fixed path getVirtualUsersMeta() reads; kept out of workflow/meta, which
       // getWorkflowMeta() globs as workflows.
       await writeFileInDir(
         logger,
-        join(config.outDir, 'workflow', 'personas.gen.json'),
-        JSON.stringify(personas, null, 2)
+        join(config.outDir, 'workflow', 'virtual-users.gen.json'),
+        JSON.stringify(virtualUsers, null, 2)
       )
     }
 

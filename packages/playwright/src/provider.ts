@@ -1,27 +1,17 @@
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
-import {
-  LocalVariablesService,
-  type ResolvedPersona,
-} from '@pikku/core/services'
-import {
-  authMount,
-  deriveActorSecret,
-  establishOperatorSession,
-  IMPERSONATE_USER_ID_HEADER,
-  type ActorSecretResolver,
-  type OperatorSignInOptions,
-  createCookieJar,
-  getWiredPersonaSignIn,
-  type ScenarioCookieJar,
-} from '@pikku/core/persona'
+import type { ResolvedVirtualUser } from '@pikku/core/services'
+import type { VirtualUserStatementMint } from '@pikku/core/virtual-user'
 import type {
   ScenarioArtifact,
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/scenario'
-import { ActorSession, type CaptureContext } from './actor-session.js'
+import {
+  VirtualUserSession,
+  type CaptureContext,
+} from './virtual-user-session.js'
 import {
   compressVideos,
   hasFfmpeg,
@@ -35,57 +25,45 @@ import { browserConfigFromEnv, type BrowserConfig } from './config.js'
 /**
  * Where Playwright drops its own recordings before retention files them.
  *
- * Its filenames are generated and carry no actor or scenario, so nothing is
+ * Its filenames are generated and carry no virtual user or scenario, so nothing is
  * meant to read this directory — it is emptied as the run ends.
  */
 const VIDEO_STAGING_DIR = '.video-raw'
 
-/** What the actor sign-in endpoint is posted, for one actor. */
-export interface ActorSignInRequest {
+/** What the virtual user sign-in endpoint is posted, for one virtual user. */
+export interface VirtualUserSignInRequest {
   email: string
   name: string
-  /** Absent on a deployed stage, which has no actor secret to post. */
-  secret?: string
 }
 
-/** Where the actor sign-in endpoint lives, and which origin it is called from. */
-export interface ActorSignInTarget {
+/** Where the virtual user sign-in endpoint lives, and which origin it is called from. */
+export interface VirtualUserSignInTarget {
   apiUrl: string
   appUrl: string
   signInPath: string
 }
 
 /**
- * Establish the actor's session inside its own browser context. Overridable so
+ * Establish the virtual user's session inside its own browser context. Overridable so
  * a project on a different auth plugin can plant its own cookie.
  */
-export type ActorSignIn = (
+export type BrowserVirtualUserSignIn = (
   context: BrowserContext,
-  request: ActorSignInRequest,
-  target: ActorSignInTarget
+  request: VirtualUserSignInRequest,
+  target: VirtualUserSignInTarget
 ) => Promise<void>
 
 export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
   /**
-   * The ROOT actor secret — the same SCENARIO_ACTOR_SECRET the HTTP actors
-   * use — from which each persona's own credential is derived and bound to
-   * their address. Pass an {@link ActorSecretResolver} to browse as personas
-   * whose credentials were minted elsewhere, without holding the root.
-   *
-   * The local-development credential; a deployed stage passes
-   * {@link PlaywrightScenarioBrowserProviderOptions.operator} instead.
+   * Signs the statement the stage's sign-in endpoint takes, one per login. Needed
+   * by the default sign-in; a project that passes its own `signIn` can leave it
+   * out.
    */
-  secret?: string | ActorSecretResolver
-  /**
-   * Fabric operator credentials, for browsing a DEPLOYED stage as a persona.
-   * Same handshake the HTTP personas use, so a browser step and an RPC step in
-   * one scenario still act as one user.
-   */
-  operator?: OperatorSignInOptions
-  /** Actor name → the persona filling it, resolved from `definePersonas()`. */
-  actors: Record<string, ResolvedPersona>
-  /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
+  mint?: VirtualUserStatementMint
+  /** Virtual user name → the virtual user filling it, resolved from `defineVirtualUsers()`. */
+  virtualUsers: Record<string, ResolvedVirtualUser>
+  /** Sign-in path under apiUrl. Default: the virtual user plugin's `/auth/sign-in/virtual-user`. */
   signInPath?: string
   /**
    * Artifacts for this run — screenshots taken by name, and a video per
@@ -95,59 +73,25 @@ export interface PlaywrightScenarioBrowserProviderOptions {
    */
   capture?: CaptureOptions
   connectBrowser?: () => Promise<BrowserConnection>
-  signIn?: ActorSignIn
+  signIn?: BrowserVirtualUserSignIn
 }
 
 /**
- * Hands scenario steps a browser, one isolated context per actor.
+ * Hands scenario steps a browser, one isolated context per virtual user.
  *
- * The context signs in through the SAME actor path the HTTP actors use
- * (`signInPath` + the actor secret) rather than a persona email/password, so
- * `wire.browser` and `wire.scenarioStep.actor` are the same identity — a
+ * The context signs in through the SAME virtual user path the HTTP virtual users use
+ * (`signInPath` + a signed statement) rather than a virtual user email/password, so
+ * `wire.browser` and `wire.scenarioStep.virtualUser` are the same identity — a
  * browser step and an RPC step in one scenario act as one user.
  */
-/**
- * Send the impersonation header to the product's own origins and nowhere else.
- *
- * `setExtraHTTPHeaders` would be one line, but it stamps every request the
- * context makes — analytics, fonts, any third-party subresource a page pulls —
- * and telling an unrelated host which user this run is acting as is not
- * something a test should do. Routing is the origin-aware alternative, and
- * `fallback` rather than `continue` so a project's own route handlers still see
- * the request.
- */
-const impersonateOn = (
-  context: BrowserContext,
-  userId: string,
-  origins: string[]
-): Promise<void> =>
-  headersOn(context, { [IMPERSONATE_USER_ID_HEADER]: userId }, origins)
-
-const headersOn = async (
-  context: BrowserContext,
-  headers: Record<string, string>,
-  origins: string[]
-): Promise<void> => {
-  const trusted = new Set(origins.map((url) => new URL(url).origin))
-  await context.route('**/*', async (route) => {
-    const request = route.request()
-    if (!trusted.has(new URL(request.url()).origin)) {
-      return route.fallback()
-    }
-    return route.fallback({
-      headers: { ...request.headers(), ...headers },
-    })
-  })
-}
-
 export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvider {
   private readonly config: BrowserConfig
-  private sessions = new Map<string, Promise<ActorSession>>()
+  private sessions = new Map<string, Promise<VirtualUserSession>>()
   private connection?: Promise<BrowserConnection>
   /**
    * The capture state for the scenario currently running, handed to every
    * session by reference so the scenario name and the capture count are shared
-   * rather than copied per actor.
+   * rather than copied per virtual user.
    */
   private captureContext?: CaptureContext
   /**
@@ -159,7 +103,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    */
   private outcome?: 'passed' | 'failed'
   /**
-   * Where each actor's current recording should hold, as raw offsets. Moved
+   * Where each virtual user's current recording should hold, as raw offsets. Moved
    * onto the filed video when its context closes, and applied by the encode.
    */
   private videoMarks = new Map<string, number[]>()
@@ -179,7 +123,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     if (options.capture) {
       // Built once and handed to every session by reference, so the scenario
       // name, the capture count and the ledger are shared rather than copied
-      // per actor — a two-actor scenario numbers its images in the order they
+      // per virtual user — a two-virtual-user scenario numbers its images in the order they
       // were taken, not once per window.
       this.captureContext = {
         dir: options.capture.dir,
@@ -221,24 +165,24 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   }
 
   /**
-   * When this actor's recording started — the moment their context was opened
+   * When this virtual user's recording started — the moment their context was opened
    * with `recordVideo`, which is when Playwright starts the file. Absent for a
-   * run that records nothing and for an actor with no window open.
+   * run that records nothing and for a virtual user with no window open.
    */
-  videoStartedAt(actorName: string): number | undefined {
-    return this.captureContext?.videoStartedAt.get(actorName)
+  videoStartedAt(virtualUserName: string): number | undefined {
+    return this.captureContext?.videoStartedAt.get(virtualUserName)
   }
 
   /**
-   * Mark a browser step starting in this actor's recording, and answer where
+   * Mark a browser step starting in this virtual user's recording, and answer where
    * it will fall in the encoded video.
    *
    * The encode freezes the frame at each mark for `videoStepHoldMs`, so every
    * earlier mark pushes this one later by one hold. The run itself never
    * waits. Without an encode there are no holds and the offset is the raw one.
    */
-  markVideoStep(actorName: string): number | undefined {
-    const startedAt = this.videoStartedAt(actorName)
+  markVideoStep(virtualUserName: string): number | undefined {
+    const startedAt = this.videoStartedAt(virtualUserName)
     if (startedAt === undefined) {
       return undefined
     }
@@ -247,35 +191,37 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     if (!this.encodesVideo || hold <= 0) {
       return raw
     }
-    const marks = this.videoMarks.get(actorName) ?? []
-    this.videoMarks.set(actorName, [...marks, raw])
+    const marks = this.videoMarks.get(virtualUserName) ?? []
+    this.videoMarks.set(virtualUserName, [...marks, raw])
     return raw + marks.length * hold
   }
 
-  async sessionFor(actorName: string): Promise<ActorSession> {
-    const existing = this.sessions.get(actorName)
+  async sessionFor(virtualUserName: string): Promise<VirtualUserSession> {
+    const existing = this.sessions.get(virtualUserName)
     if (existing) {
       return existing
     }
-    const actorConfig = this.options.actors[actorName]
-    if (!actorConfig) {
+    const virtualUserConfig = this.options.virtualUsers[virtualUserName]
+    if (!virtualUserConfig) {
       throw new Error(
-        `[scenario] browser actor '${actorName}' has no persona — add it to a definePersonas({ ... }) call`
+        `[scenario] browser virtual user '${virtualUserName}' has no virtual user — add it to a defineVirtualUsers({ ... }) call`
       )
     }
     // Cache the promise, not the resolved session, so two steps racing for the
-    // same actor share one window instead of opening two.
-    const opening = this.openSession(actorName, actorConfig).catch((err) => {
-      this.sessions.delete(actorName)
-      throw err
-    })
-    this.sessions.set(actorName, opening)
+    // same virtual user share one window instead of opening two.
+    const opening = this.openSession(virtualUserName, virtualUserConfig).catch(
+      (err) => {
+        this.sessions.delete(virtualUserName)
+        throw err
+      }
+    )
+    this.sessions.set(virtualUserName, opening)
     return opening
   }
 
   /**
-   * Close every actor's context, keeping the browser. The next `sessionFor`
-   * opens a fresh context and re-runs the actor sign-in, so a scenario starts
+   * Close every virtual user's context, keeping the browser. The next `sessionFor`
+   * opens a fresh context and re-runs the virtual user sign-in, so a scenario starts
    * with no cookies, no storage and no pages from the one before it.
    */
   async reset(): Promise<void> {
@@ -299,10 +245,10 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       await resolved.close().catch(() => {})
       await this.retainVideo(
         video,
-        resolved.actor,
+        resolved.virtualUser,
         scenario,
         keep,
-        marks.get(resolved.actor) ?? []
+        marks.get(resolved.virtualUser) ?? []
       )
     }
   }
@@ -313,11 +259,11 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    *
    * Filing happens here rather than at record time because Playwright names
    * the file itself and only finalises it on close, so a recording is
-   * attributable to an actor and a scenario for exactly this one moment.
+   * attributable to a virtual user and a scenario for exactly this one moment.
    */
   private async retainVideo(
     video: Video | undefined,
-    actor: string,
+    virtualUser: string,
     scenario: string | undefined,
     keep: boolean,
     marks: number[]
@@ -331,7 +277,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
         // The same slug the screenshots use, so a scenario's video and its
         // images land in one folder rather than two near-identical ones.
         const label = scenario ?? 'scenario'
-        const path = `${slug(label)}/${slug(actor)}.webm`
+        const path = `${slug(label)}/${slug(virtualUser)}.webm`
         await mkdir(join(capture.dir, capture.runId, slug(label)), {
           recursive: true,
         })
@@ -341,7 +287,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
           scenario: label,
           kind: 'video',
           path,
-          actor,
+          virtualUser,
         })
       }
       // Either way the staged recording goes: it has been copied where it
@@ -363,13 +309,13 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   async captureFailure(label: string): Promise<ScenarioBrowserFailure[]> {
     const failures: ScenarioBrowserFailure[] = []
-    for (const [actorName, pending] of this.sessions) {
+    for (const [virtualUserName, pending] of this.sessions) {
       const session = await pending.catch(() => undefined)
       if (!session) {
         continue
       }
       const failure: ScenarioBrowserFailure = {
-        actor: actorName,
+        virtualUser: virtualUserName,
         ...session.takeIssues(),
       }
       // Every read below can throw on a window the browser already tore down,
@@ -384,7 +330,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
           // The failing scenario's own folder, beside its screenshots and its
           // video: one run is one directory, and one scenario within it is
           // everything that scenario produced.
-          const path = `${slug(label)}/failure-${slug(actorName)}.png`
+          const path = `${slug(label)}/failure-${slug(virtualUserName)}.png`
           const file = join(capture.dir, capture.runId, path)
           await mkdir(join(capture.dir, capture.runId, slug(label)), {
             recursive: true,
@@ -395,7 +341,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
             scenario: label,
             kind: 'failure',
             path,
-            actor: actorName,
+            virtualUser: virtualUserName,
           })
         } catch {}
       }
@@ -473,12 +419,12 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   }
 
   private async openSession(
-    actorName: string,
-    actorConfig: ResolvedPersona
-  ): Promise<ActorSession> {
+    virtualUserName: string,
+    virtualUserConfig: ResolvedVirtualUser
+  ): Promise<VirtualUserSession> {
     const { browser } = await this.browser()
-    const config = this.configFor(actorConfig)
-    const session = new ActorSession(actorName, config)
+    const config = this.configFor(virtualUserConfig)
+    const session = new VirtualUserSession(virtualUserName, config)
     const capture = this.options.capture
     const recording = Boolean(capture && capture.video !== 'off')
     await session.open(
@@ -493,28 +439,21 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
         // Stamped once the context exists rather than before the call: the file
         // starts with the context, and the sign-in that follows is already part
         // of the footage.
-        this.captureContext.videoStartedAt.set(actorName, Date.now())
+        this.captureContext.videoStartedAt.set(virtualUserName, Date.now())
         this.encodesVideo = capture!.compress !== false && (await hasFfmpeg())
       }
     }
-    const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
-    const secret =
-      typeof this.options.secret === 'function'
-        ? await this.options.secret(actorConfig)
-        : this.options.secret
-          ? await deriveActorSecret(this.options.secret, actorConfig.email)
-          : undefined
+    const signIn = this.options.signIn ?? this.defaultSignIn(virtualUserConfig)
     await signIn(
       session.context,
       {
-        email: actorConfig.email,
-        name: actorConfig.name ?? actorName,
-        secret,
+        email: virtualUserConfig.email,
+        name: virtualUserConfig.name ?? virtualUserName,
       },
       {
         apiUrl: config.apiUrl,
         appUrl: config.appUrl,
-        signInPath: this.options.signInPath ?? '/auth/sign-in/actor',
+        signInPath: this.options.signInPath ?? '/auth/sign-in/virtual-user',
       }
     )
     return session
@@ -522,76 +461,56 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
 
   /**
    * How a context gets its session when the project has not supplied its own
-   * `signIn`. The operator path wins when both credentials are present, for the
-   * same reason it does on the HTTP side: it is the stronger of the two.
+   * `signIn`: a signed statement posted to the stage, whose cookies land in the
+   * context.
    */
-  private defaultSignIn(persona: ResolvedPersona): ActorSignIn {
-    const wired = getWiredPersonaSignIn()
-    if (wired) {
-      return async (context, _request, target) => {
-        const plugin = wired({
-          apiUrl: target.apiUrl,
-          signInPath: this.options.signInPath,
-          variables: new LocalVariablesService(),
-        })
-        const held = new Map<string, string>()
-        const base = createCookieJar(target.appUrl)
-        const jar: ScenarioCookieJar = {
-          ...base,
-          fetch: async (input, init) => {
-            const response = await base.fetch(input, init)
-            for (const raw of response.headers.getSetCookie?.() ?? []) {
-              const [pair = ''] = raw.split(';')
-              const eq = pair.indexOf('=')
-              const name = pair.slice(0, eq).trim()
-              if (eq > 0 && pair.slice(eq + 1)) {
-                held.set(name, raw)
-              } else {
-                held.delete(name)
-              }
-            }
-            return response
-          },
-        }
-        await plugin.login(jar, persona)
-        await context.addCookies(
-          [...held.values()].map((raw) => parseCookie(raw, target.appUrl))
+  private defaultSignIn(
+    virtualUser: ResolvedVirtualUser
+  ): BrowserVirtualUserSignIn {
+    return async (context, request, target) => {
+      const mint = this.options.mint
+      if (!mint) {
+        throw new Error(
+          `[scenario] browser virtual user sign-in for '${request.email}' has nothing to sign with. ` +
+            'Pass `mint` (the CLI does), or a `signIn` of your own.'
         )
-        const headers = plugin.headers?.() ?? {}
-        if (Object.keys(headers).length > 0) {
-          await headersOn(context, headers, [target.apiUrl, target.appUrl])
-        }
       }
-    }
-    const operator = this.options.operator
-    if (!operator) {
-      return defaultActorSignIn
-    }
-    return async (context, _request, target) => {
-      const mount = authMount(this.options.signInPath)
-      const { setCookies, userId } = await establishOperatorSession(
-        fetch,
-        target.apiUrl,
-        persona,
-        {
-          ...operator,
-          signInPath:
-            operator.signInPath ??
-            (mount ? `${mount}/sign-in/fabric` : undefined),
+      const res = await fetch(`${target.apiUrl}${target.signInPath}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: new URL(target.appUrl).origin,
         },
-        { origin: new URL(target.appUrl).origin }
-      )
+        body: JSON.stringify({ statement: await mint(virtualUser) }),
+      })
+      if (res.status === 404) {
+        throw new Error(
+          `[scenario] ${target.apiUrl}${target.signInPath} does not exist, so '${request.email}' cannot sign in. ` +
+            'The stage has no VIRTUAL_USER_VERIFY_KEY set, or does not serve virtual user sign-in at all (production never does).'
+        )
+      }
+      if (!res.ok) {
+        const body = (await res.text().catch(() => '')).slice(0, 300)
+        throw new Error(
+          `[scenario] browser virtual user sign-in failed for '${request.email}' (${res.status}): ${body}`
+        )
+      }
+      const setCookies = res.headers.getSetCookie?.() ?? []
+      if (setCookies.length === 0) {
+        throw new Error(
+          `[scenario] browser virtual user sign-in for '${request.email}' returned no session cookie`
+        )
+      }
       await context.addCookies(
-        setCookies.map((raw: string) => parseCookie(raw, target.appUrl))
+        setCookies.map((raw) => parseCookie(raw, target.appUrl))
       )
-      await impersonateOn(context, userId, [target.apiUrl, target.appUrl])
     }
   }
 
   /**
-   * The config this actor browses with — their own app's base url.
+   * The config this virtual user browses with — their own app's base url.
    *
-   * A person signs into one app, so the persona's `app` is the whole answer: it
+   * A person signs into one app, so the virtual user's `app` is the whole answer: it
    * decides what `/dashboard` means for them, and which origin their session
    * cookie is planted on. Everything downstream (`url()`, `gotoApp`, the
    * sign-in Origin header, `parseCookie`) reads it off the session's config, so
@@ -600,8 +519,10 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * An unnamed app, or one no url was given for, falls back to the single
    * `appUrl` — which is the whole story for the common one-app project.
    */
-  private configFor(persona: ResolvedPersona): BrowserConfig {
-    const appUrl = persona.app ? this.config.appUrls?.[persona.app] : undefined
+  private configFor(virtualUser: ResolvedVirtualUser): BrowserConfig {
+    const appUrl = virtualUser.app
+      ? this.config.appUrls?.[virtualUser.app]
+      : undefined
     return appUrl ? { ...this.config, appUrl } : this.config
   }
 
@@ -618,36 +539,6 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     }
     return this.connection
   }
-}
-
-/**
- * Sign in via the Better Auth actor plugin and land its Set-Cookie headers in
- * this actor's browser context, so page navigations carry the session.
- */
-const defaultActorSignIn: ActorSignIn = async (context, request, target) => {
-  const res = await fetch(`${target.apiUrl}${target.signInPath}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      origin: new URL(target.appUrl).origin,
-    },
-    body: JSON.stringify(request),
-  })
-  if (!res.ok) {
-    const body = (await res.text().catch(() => '')).slice(0, 300)
-    throw new Error(
-      `[scenario] browser actor sign-in failed for '${request.email}' (${res.status}): ${body}`
-    )
-  }
-  const setCookies = res.headers.getSetCookie?.() ?? []
-  if (setCookies.length === 0) {
-    throw new Error(
-      `[scenario] browser actor sign-in for '${request.email}' returned no session cookie`
-    )
-  }
-  await context.addCookies(
-    setCookies.map((raw) => parseCookie(raw, target.appUrl))
-  )
 }
 
 function parseCookie(

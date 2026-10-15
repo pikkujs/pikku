@@ -153,8 +153,8 @@ export interface PikkuCLICoreOutputFiles {
   // Scenarios — kept out of the app bootstrap so a deployed server never
   // imports a step body (and whatever a step imports).
   scenarioTypesFile: string
-  /** The actors a scenario drives — distinct from `scopes/pikku-personas.gen.ts`, which declares them. */
-  personasWiringFile: string
+  /** The virtual users a scenario drives — distinct from `scopes/pikku-virtual-users.gen.ts`, which declares them. */
+  virtualUsersWiringFile: string
   scenarioStepsFile: string
   scenarioStepsMetaFile: string
   scenarioStepsMetaJsonFile: string
@@ -305,11 +305,11 @@ export interface PikkuCLICoreOutputFiles {
   // Host: scopes each ui addon's role is capped to, as plain data for the server
   addonRolesFile: string
 
-  // Personas (PersonaId union + typed definePersonas)
-  personasFile: string
+  // Virtual users (VirtualUserId union + typed defineVirtualUsers)
+  virtualUsersFile: string
 
-  // Personas metadata JSON
-  personasMetaJsonFile: string
+  // Virtual users metadata JSON
+  virtualUsersMetaJsonFile: string
 
   // Variables
   variableTypesFile: string
@@ -376,16 +376,16 @@ export type PikkuFrontendInput = {
    */
   dist?: string
   primary?: boolean
-  /** Whether Fabric deploys it. */
+  /** Whether Pikku Studio Cloud deploys it. */
   deploy?: boolean
   kind?: 'spa' | 'ssr' | 'static'
   dev?: { command: string[]; port: number; healthPath: string }
   /** Who the app is for, in their own word. */
   serves?: string
-  personas?: string[]
+  virtualUsers?: string[]
   /**
    * A value for each dynamic route segment (`$postId` → `postId`), so a tool
-   * that visits every route — Fabric's route coverage — can build a real URL.
+   * that visits every route — Pikku Studio Cloud's route coverage — can build a real URL.
    */
   routeParams?: Record<string, string>
   planSlug?: string
@@ -452,7 +452,7 @@ export type PikkuCLIInput = {
    * The language the project's **meta** is authored in — the human-readable
    * prose that lives inside the code rather than in a message catalogue:
    * `description` on functions and steps, `name`/`title` on features and
-   * scenarios, step `template` strings, role and persona descriptions.
+   * scenarios, step `template` strings, role and virtual user descriptions.
    * A BCP-47 tag; defaults to `en`.
    *
    * It exists for the Pikku Console. That meta is the one part of a project
@@ -547,12 +547,12 @@ export type PikkuCLIInput = {
     ignore?: string[]
   }
 
-  /** Settings for deploying this project on Pikku Fabric. */
-  fabric?: {
+  /** Settings for deploying this project on Pikku Pikku Studio Cloud. */
+  cloud?: {
     /**
-     * The Fabric project this checkout belongs to. Optional: without it the
+     * The Pikku Studio Cloud project this checkout belongs to. Optional: without it the
      * CLI finds the project from the git remote and writes the id here,
-     * uncommitted. `FABRIC_PROJECT_ID` overrides it.
+     * uncommitted. `PIKKUSTUDIO_PROJECT_ID` overrides it.
      */
     projectId?: string
   }
@@ -722,16 +722,16 @@ export type PikkuCLIInput = {
 
   /**
    * The targets a run can point at, by name. Not under `scenarios` — a scenario
-   * suite is one thing that runs against an environment, and a persona is
+   * suite is one thing that runs against an environment, and a virtual user is
    * another, so an environment belongs to neither of them.
    *
-   * The actor secret comes from SCENARIO_ACTOR_SECRET, never from here.
+   * The virtual user signing key comes from VIRTUAL_USER_SIGNING_KEY or `pikku dev`, never from here.
    */
   environments?: Record<
     string,
     {
       apiUrl: string
-      /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
+      /** Virtual user sign-in path under apiUrl. Default: /auth/sign-in/virtual-user */
       signInPath?: string
       /**
        * Where the session and its roles are read back. Default: `get-session`
@@ -744,7 +744,7 @@ export type PikkuCLIInput = {
       appUrl?: string
       /**
        * This environment carries real consequences, so only an `accountable`
-       * persona may run against it.
+       * virtual user may run against it.
        *
        * A flag rather than a reserved name: projects call it `prod`, `live` or
        * `eu-prod`, and more than one environment can be production.
@@ -755,9 +755,9 @@ export type PikkuCLIInput = {
 
   scenarios?: {
     /**
-     * The mail domain a persona's address is built on — `susan@…`.
+     * The mail domain a virtual user's address is built on — `susan@…`.
      *
-     * Real and deliverable, not a `.local` dead end: a persona that cannot read
+     * Real and deliverable, not a `.local` dead end: a virtual user that cannot read
      * its own mail cannot finish sign-up, a magic link, an invite or a password
      * reset, which is most of what is worth exercising. Defaults to a domain
      * nobody can own, so an app that never sends mail runs fine and one that
@@ -771,7 +771,7 @@ export type PikkuCLIInput = {
      */
     browserDriver?: string
     /**
-     * The model a persona thinks with — for `actor.converse(...)` and for
+     * The model a virtual user thinks with — for `virtualUser.converse(...)` and for
      * `pikku virtual-user run`. Its own turns, its approval decisions and its
      * closing verdict. Not the model under test: that one belongs to the agent
      * being conversed with, and the whole point of the exercise is that the two
@@ -800,9 +800,9 @@ export type PikkuCLIInput = {
       /**
        * Tables the rollback leaves alone.
        *
-       * Session and account tables belong here: an actor signs in once for the
+       * Session and account tables belong here: a virtual user signs in once for the
        * whole suite, and rolling its session back to a copy taken before that
-       * sign-in logs every actor out mid-run.
+       * sign-in logs every virtual user out mid-run.
        */
       keep?: string[]
     }
@@ -860,8 +860,8 @@ export type PikkuCLIInput = {
     scenarios?: PikkuScaffoldFeature
     /**
      * Start a virtual user against this application over RPC and read back what
-     * it found — the same run `pikku persona run` does from a terminal, kept in
-     * a `VirtualUserRunStore`. Requires at least one declared persona, since a
+     * it found — the same run `pikku virtual-user run` does from a terminal, kept in
+     * a `VirtualUserRunStore`. Requires at least one declared virtual user, since a
      * virtual user runs AS one; codegen fails if there are none.
      */
     virtualUser?: PikkuScaffoldFeature
@@ -884,7 +884,7 @@ export type PikkuCLIInput = {
   }
 
   /**
-   * Community-registry addons installed via `pikku fabric addon add`. The
+   * Community-registry addons installed via `pikku cloud addon add`. The
    * source is copied into the project shadcn-style; each lands in
    * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
    * `wireAddon({ package })` resolves it by name. `addonDir` defaults to

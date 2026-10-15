@@ -284,7 +284,7 @@ compensated. The error arrives as `wire.graph.recoveringFrom`
 object (`{ success: false, reason }`) instead.
 
 Full step options: `description`, `retries`, `retryDelay`, `compensate: false`
-(plus `actor`, which is scenario-only — see `pikku-scenario`).
+(plus `virtualUser`, which is scenario-only — see `pikku-scenario`).
 
 ### Parallel fan-out
 

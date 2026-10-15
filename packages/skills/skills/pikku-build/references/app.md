@@ -9,7 +9,7 @@
 - PHASE 1 — What the app is
 - 2. Write the knowledge graph — before any code
 - PHASE 2 — Who it is for, and what it is made of
-- 3. Declare the people — personas and roles
+- 3. Declare the people — virtual users and roles
 - 4. Declare the apps — one API, several frontends
 - PHASE 3 — The plan
 - 5. File the work as changes
@@ -19,23 +19,23 @@
 - 6a. Close the changeset against its plan, not against your memory
 - 7. Prove it — scenarios
 - 8. Make it look like someone designed it
-- 9. Ship it, and stay Fabric-ready
+- 9. Ship it, and stay Pikku Studio Cloud-ready
 - Reference
 
 You have a scaffolded project with skills installed. This skill owns everything
-from here: no Fabric account, no card, no hosted build — while keeping the
-project shaped so `pikku fabric init` later adopts it with zero rework.
+from here: no Pikku Studio Cloud account, no card, no hosted build — while keeping the
+project shaped so `pikku cloud init` later adopts it with zero rework.
 
 **Four phases, and you do not skip ahead:**
 
 1. Write the knowledge graph — what the app IS, before any code
-2. Declare the people and the apps — personas, roles, frontends
+2. Declare the people and the apps — virtual users, roles, frontends
 3. File the work as changes — grouped into changesets, in dependency order
 4. Build them one changeset at a time — each proven by a scenario before it merges
 
 The sections below follow those phases in order, and are meant to be worked
 through rather than searched: §0 bootstrap, §1-§1a the last questions and the
-three languages, §2 the knowledge graph, §3-§4 personas and apps, §5-§5a the
+three languages, §2 the knowledge graph, §3-§4 virtual users and apps, §5-§5a the
 changes and each changeset's technical plan, §6-§6a building and closing one,
 §7-§7a proving it, §8 design, §9 ship. Four of them have their own reference —
 scenarios, design, multi-app and ship, each listed in SKILL.md — to read at the
@@ -68,7 +68,7 @@ One command, run once, now — not later when you start building. It wires the
 `#pikku` import alias the generated code depends on. On a fresh scaffold `.pikku/`
 is empty, so **every command that touches codegen fails until this has run** —
 including ones you would reasonably reach for while still planning, like
-`pikku persona list`. Those failures look alarming (`Cannot find module
+`pikku virtual-user list`. Those failures look alarming (`Cannot find module
 '#pikku/workflow/pikku-workflow-types.gen.js'`, `Schema generation failed for 16
 schemas`) and they are nothing but this missing step.
 
@@ -81,7 +81,7 @@ Ask **three to five** questions that actually change the schema or the screens,
 in one message. Then stop; do not interview the user.
 
 - **Who uses it — who are the distinct kinds of people?** Ask this however small
-  the app is. The answer becomes §3's personas and roles, and you build only the
+  the app is. The answer becomes §3's virtual users and roles, and you build only the
   roles they name.
 - **What are the two or three core objects?**
 - **What is the main thing someone does on their first visit?** This answer
@@ -121,11 +121,11 @@ A brief saying "the entire UI is German" is about **one** of these. Getting this
 wrong has already shipped a project that can never add a second language, so
 settle all three explicitly before you write code.
 
-| Axis            | What it covers                                                                                                                 | Where it goes                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                              | Nowhere — **always English**, no setting, not negotiable                             |
-| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions | `metaLocale` in `pikku.config.json`, default `en`                                    |
-| **Product UI**  | Every string the app shows a user                                                                                              | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
+| Axis            | What it covers                                                                                                                      | Where it goes                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                                   | Nowhere — **always English**, no setting, not negotiable                             |
+| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and virtual user descriptions | `metaLocale` in `pikku.config.json`, default `en`                                    |
+| **Product UI**  | Every string the app shows a user                                                                                                   | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
 
 **Identifiers are English.** The product's market does not change this and
 neither does `metaLocale`. Identifiers are the surface the generated `#pikku/*`
@@ -160,7 +160,7 @@ A German medical portal, correctly:
 ```jsonc
 // project.inlang/settings.json
 { "baseLocale": "en", "locales": ["en", "de"] }
-// apps/app/src/i18n/active.json   (or: fabric i18n --default-locale de)
+// apps/app/src/i18n/active.json   (or: cloud i18n --default-locale de)
 { "defaultLocale": "de" }
 // pikku.config.json
 { "metaLocale": "de" }
@@ -228,14 +228,14 @@ bunx --bun pikku knowledge validate
 
 ## PHASE 2 — Who it is for, and what it is made of
 
-## 3. Declare the people — personas and roles
+## 3. Declare the people — virtual users and roles
 
 The answer to "who uses it" becomes code, in one file:
-`packages/functions/src/personas.ts`. It ships with a single `visitor`; add the
+`packages/functions/src/virtual-users.ts`. It ships with a single `visitor`; add the
 people the user named, and the roles they imply.
 
 ```typescript
-import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
+import { defineVirtualUsers } from '#pikku/scopes/pikku-virtual-users.gen.js'
 import { defineSystemRole } from '#pikku/scopes'
 
 defineSystemRole({
@@ -251,7 +251,7 @@ defineSystemRole({
   },
 })
 
-definePersonas({
+defineVirtualUsers({
   visitor: {
     name: 'Visitor',
     jobTitle: 'Synthetic health-check user',
@@ -282,18 +282,18 @@ definePersonas({
 })
 ```
 
-- **Keep `visitor`.** The shipped scenarios name `actors.visitor`, and PKU677
-  requires a browser step's actor to be a literal `actors.<name>`. Removing it
-  stops `actors.visitor` type-checking, which fails `pikku all`, and nothing you
+- **Keep `visitor`.** The shipped scenarios name `virtualUsers.visitor`, and PKU677
+  requires a browser step's virtual user to be a literal `virtualUsers.<name>`. Removing it
+  stops `virtualUsers.visitor` type-checking, which fails `pikku all`, and nothing you
   write after that registers.
-- **One `definePersonas` call for the whole project.** Codegen builds the
-  `PersonaId` union from it, materialises one scenario actor per person, and
+- **One `defineVirtualUsers` call for the whole project.** Codegen builds the
+  `VirtualUserId` union from it, materialises one scenario virtual user per person, and
   seeds a user row each. A second call site is a second answer to "who uses this
   app".
 - **`roles` is typechecked against `defineSystemRole`.** An undeclared role is a
   build error rather than a runtime surprise.
-- **Never write an email address.** Each is derived from the persona id and
-  `scenarios.emailDomain` in `pikku.config.json` — `visitor@actors.local`.
+- **Never write an email address.** Each is derived from the virtual user id and
+  `scenarios.emailDomain` in `pikku.config.json` — `visitor@virtualuser.local`.
   Hand-writing one is how a run signs in as somebody who was never created.
 - **Declare a second person of the same kind** whenever the rule is ownership
   (`bilal` above). "You see yours, not theirs" is not testable with one owner,
@@ -305,14 +305,14 @@ definePersonas({
   in the function's `permissions` field (§6), never in the body. Read the
   `pikku-auth` skill.
 
-`pikku persona list` shows who is declared and `pikku roles audit` reports roles
+`pikku virtual-user list` shows who is declared and `pikku roles audit` reports roles
 the database still holds that code no longer declares — both need §0's bootstrap
 to have run, and both are worth a look once it has.
 
 **One warning about the scaffold's own notes:** `knowledge/index.md` may claim
-the people live in `pikku.config.json`, put there by a persona command.
-That is stale. In this template they live in `personas.ts` as above, and
-`pikku.config.json` carries no personas key at all — only `scenarios.emailDomain`.
+the people live in `pikku.config.json`, put there by a virtual user command.
+That is stale. In this template they live in `virtual-users.ts` as above, and
+`pikku.config.json` carries no virtual users key at all — only `scenarios.emailDomain`.
 Trust the file you can read over the note describing it.
 
 ## 4. Declare the apps — one API, several frontends
@@ -374,7 +374,7 @@ What a change is:
 - **One commit's worth.** "The owner sees this month's arrears" is a change,
   or a few. "Add the database schema" is not; it is a step inside one.
 - **It ends in something a person can do**, in a browser, signed in as a named
-  persona. If you cannot say what they see when it is done, that is a
+  virtual user. If you cannot say what they see when it is done, that is a
   `questions/` note, not a change.
 
 If §1's screen mock was made — approved, or drawn because nobody answered —
@@ -454,7 +454,7 @@ while the plan is short.
    configuration and belongs in a migration, not here.
    Do this generously and do it now: an empty app demos badly and critiques
    badly, and you cannot judge a screen's hierarchy, overflow, or truncation
-   against zero rows. Seed rows each persona sees differently — with an ownership
+   against zero rows. Seed rows each virtual user sees differently — with an ownership
    rule that means seeding rows for the _second_ owner too.
 3. **Functions.** One `pikkuFunc` per `*.function.ts`. Mark it `expose: true` and
    Pikku generates the typed RPC client and the React Query hooks the UI calls;
@@ -539,26 +539,25 @@ Rules that are not optional:
   (`evening`, `class_meeting`) and keep the word in the UI copy.
 - The template's `/` redirects to `/app`, so the login screen — and its "Sign in
   as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
-  public homepage and that stops being true: mount `<DevActorSwitcher />` in the
+  public homepage and that stops being true: mount `<DevVirtualUserSwitcher />` in the
   public layout as well, or a reviewer lands on a site with no way in.
 
-Before the first run, make sure `.env` at the project root holds the two
-secrets the local stack needs. `bun run dev` appends whichever is missing, but
-check anyway — a project scaffolded from an older template, or a `.env` copied
-in from elsewhere, can lack one, and neither failure names the variable:
+Before the first run, make sure `.env` at the project root holds the secret
+the local stack needs. `bun run dev` appends it if missing, but check anyway —
+a project scaffolded from an older template, or a `.env` copied in from
+elsewhere, can lack it, and the failure does not name the variable:
 
 - `BETTER_AUTH_SECRET` — without it the first sign-up is a 500.
-- `SCENARIO_ACTOR_SECRET` — without it `/api/auth/sign-in/actor` is disabled:
-  every scenario fails at sign-in before its first step, and the "Sign in as …"
-  switcher renders nothing.
+
+Virtual user sign-in needs nothing in `.env`: `pikku dev` creates its own key
+pair and hands the app the public half.
 
 ```sh
 grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
 ```
 
 `.env` is gitignored and local only — never commit it. A deployed stage gets its
-secrets from the platform (`pikku fabric secrets`), not from this file.
+secrets from the platform (`pikku cloud secrets`), not from this file.
 
 Then run it:
 
@@ -571,12 +570,12 @@ frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
 
 **Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
-yourself.** The "Sign in as …" switcher asks the API for its personas at
+yourself.** The "Sign in as …" switcher asks the API for its virtual users at
 runtime, so the frontend needs nothing baked in — but it does need to reach
 _your_ API. If you start the frontend on its own (say :3000 is taken by another
 project), point `VITE_API_PROXY` at your API: the dev proxy defaults to
 `http://localhost:3000`, so beside another project's server the switcher lists
-_its_ personas, or none, which reads like a missing switcher rather than the
+_its_ virtual users, or none, which reads like a missing switcher rather than the
 wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
@@ -661,8 +660,8 @@ only when there is nothing to hang a check on.
 
 ## 7. Prove it — scenarios
 
-A scenario is a user journey run as one of your personas, over the real
-transport, with that persona's session. It is the only kind of test worth writing
+A scenario is a user journey run as one of your virtual users, over the real
+transport, with that virtual user's session. It is the only kind of test worth writing
 here, because a passing one proves the app works the way a signed-in person
 experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
 green — and every scenario a changeset's plan names becomes one more.
@@ -674,7 +673,7 @@ proves nothing:
 
 - the shape of a scenario, and `do` vs `given`/`when`/`then`
 - what survives DSL extraction — a `then` in `return` position asserts nothing,
-  and a shared setup helper credits its steps to the wrong actor
+  and a shared setup helper credits its steps to the wrong virtual user
 - what to assert — refusals must read the REASON, totals must be deltas, and the
   assertion nobody writes is the row count
 - living without a state reset: the suite must be green on its SECOND run
@@ -688,7 +687,7 @@ bunx --bun pikku scenario run local --spawn                  # server-side, the 
 bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
 
-In a multi-app project that one run covers both frontends: each persona carries
+In a multi-app project that one run covers both frontends: each virtual user carries
 its own `app` and `@pikku/playwright` resolves the base url from the
 environment's `appUrls` map, so there is no second environment to run.
 
@@ -738,7 +737,7 @@ Three separate jobs, and conflating them is why open-source builds come out
 looking like the template:
 
 - **Direction** — deciding what it should look like. **No open-source tool does
-  this.** Fabric has `fabric-theme`; you have §1's answer and 8a below.
+  this.** Pikku Studio Cloud has `cloud-theme`; you have §1's answer and 8a below.
 - **Execution** — whether the screens actually realise that direction, or
   default to whatever component was nearest. No theme does this, and it is where
   "works but looks like nobody decided anything" comes from.
@@ -831,12 +830,12 @@ seven copies deep. Run `pikku db reset` and restart the dev server before you
 screenshot anything — a screen judged against that data gets designed for a
 problem it does not have.
 
-## 9. Ship it, and stay Fabric-ready
+## 9. Ship it, and stay Pikku Studio Cloud-ready
 
 When the queue is empty, `pikku knowledge gaps` lists nothing and the scenarios are green, read
 the ship reference (see SKILL.md). It carries the open-source deploy paths (`--provider
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
-API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
+API, the pre-release gate to run, and the contract that keeps `pikku cloud init`
 a one-command import later rather than a migration.
 
 The app is not handed over without its user guide. The scenarios you wrote are
@@ -864,8 +863,8 @@ says when to open each one:
 - design — committing to a design direction, and how to tell whether the
   screens realise it. Read BEFORE the first screen (§6), not at §8
 - theming — authoring the theme (§8a)
-- ship — deploying, and the Fabric-readiness contract (§9)
+- ship — deploying, and the Pikku Studio Cloud-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
-  `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
+  `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-cloud` (§9)
 - Project conventions written by the template: `AGENTS.md`
 - Doing less than this: the quick reference. Doing more: the platform reference (both in SKILL.md).

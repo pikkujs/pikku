@@ -4,7 +4,7 @@
  * These replace the cucumber glue in tests/steps/addons.steps.ts. That glue
  * still waits for a `table` the page stopped rendering when the addons gallery
  * became cards, so it fails before its first assertion; these steps target the
- * gallery as it is, through `data-testid` rather than i18n copy or Mantine
+ * gallery as it is, through `data-testid` rather than i18n copy or component
  * internals. The page itself is reached with the shared `opensConsolePage`
  * step, so everything here acts on a surface that page already rendered.
  */
@@ -95,9 +95,9 @@ export const countsAddonCards = pikkuScenarioStep<
  *
  * The card is addressed by the package it renders, which is the addon's
  * identity as declared in the catalogue. The drawer is confirmed open by the
- * instance-name field rather than by the drawer element: Mantine's `Drawer`
- * root stays attached and zero-sized whether it is open or shut, so waiting on
- * it would pass before anything had opened.
+ * instance-name field rather than by the drawer element: the drawer root
+ * stays attached and zero-sized whether it is open or shut, so waiting on it
+ * would pass before anything had opened.
  */
 export const opensAddonDrawer = pikkuScenarioStep<
   { packageName: string },

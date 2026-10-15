@@ -12,10 +12,10 @@
  * `admin:<function>`. `user-admin-console.feature.ts` drives the same RPCs
  * through a browser.
  *
- * The `admin` actor holds the umbrella `admin` scope, which covers every
- * `admin:users:*` leaf by pikku's parent-grant rule. The `guest` actor holds
+ * The `admin` virtual user holds the umbrella `admin` scope, which covers every
+ * `admin:users:*` leaf by pikku's parent-grant rule. The `guest` virtual user holds
  * only `report-viewer`. The subject is the seeded `target@e2e.test` person
- * rather than the `target` actor, because the ban has to be proven against a
+ * rather than the `target` virtual user, because the ban has to be proven against a
  * real password sign-in — which is a thing only a person has.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
@@ -41,24 +41,24 @@ export const userAdminUnscopedCannotBanScenario = pikkuScenario<
   title: 'A caller without the scope cannot ban',
   description: 'The refusal names admin:users:ban',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest bans the target',
       'invokesRpcRaw',
       { rpcName: BAN, data: { userId: target.userId, banned: true } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call, status: 403, contains: ['MissingScopeError', 'admin:users:ban'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 403 }
   },
@@ -71,24 +71,24 @@ export const userAdminUnscopedCannotDeleteScenario = pikkuScenario<
   title: 'A caller without the scope cannot delete',
   description: 'The refusal names admin:users:remove',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest deletes the target',
       'invokesRpcRaw',
       { rpcName: REMOVE, data: { userId: target.userId } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call, status: 403, contains: ['admin:users:remove'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 403 }
   },
@@ -101,24 +101,24 @@ export const userAdminUnscopedCannotRevokeSessionsScenario = pikkuScenario<
   title: 'A caller without the scope cannot revoke sessions',
   description: 'The refusal names admin:users:sessions',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest signs the target out everywhere',
       'invokesRpcRaw',
       { rpcName: SESSIONS, data: { userId: target.userId } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call, status: 403, contains: ['admin:users:sessions'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 403 }
   },
@@ -131,12 +131,12 @@ export const userAdminUnscopedCannotSetPasswordScenario = pikkuScenario<
   title: 'A caller without the scope cannot set a password',
   description: 'The refusal names admin:users:password',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest sets the password of the target',
@@ -145,13 +145,13 @@ export const userAdminUnscopedCannotSetPasswordScenario = pikkuScenario<
         rpcName: PASSWORD,
         data: { userId: target.userId, newPassword: 'guest-set-password' },
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call, status: 403, contains: ['admin:users:password'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 403 }
   },
@@ -169,12 +169,12 @@ export const userAdminScopedBanBlocksSignInScenario = pikkuScenario<
   title: 'A scoped caller bans a user, blocking sign-in, then lifts it',
   description: 'The ban reaches better-auth and a real sign-in is refused',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const banned = await scenario.when(
@@ -184,13 +184,13 @@ export const userAdminScopedBanBlocksSignInScenario = pikkuScenario<
         rpcName: BAN,
         data: { userId: target.userId, banned: true, reason: 'e2e' },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the ban accepted',
       'expectsRpcResponse',
       { call: banned, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const blocked = await scenario.when(
       'the target tries to sign in',
@@ -206,13 +206,13 @@ export const userAdminScopedBanBlocksSignInScenario = pikkuScenario<
       'the admin unbans the target',
       'invokesRpcRaw',
       { rpcName: BAN, data: { userId: target.userId, banned: false } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the ban lifted',
       'expectsRpcResponse',
       { call: lifted, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const allowed = await scenario.when(
       'the target tries again',
@@ -234,24 +234,24 @@ export const userAdminScopedRevokesSessionsScenario = pikkuScenario<
   title: 'A scoped caller signs a user out everywhere',
   description: 'The session revocation reaches better-auth',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the admin signs the target out everywhere',
       'invokesRpcRaw',
       { rpcName: SESSIONS, data: { userId: target.userId } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it accepted',
       'expectsRpcResponse',
       { call, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { status: 200 }
   },
@@ -268,43 +268,43 @@ export const userAdminListScopeDoesNotConferBanScenario = pikkuScenario<
   title: 'Holding only the list scope does not confer ban',
   description: 'admin:users:list is not a licence to ban',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const target = await scenario.given(
       'the admin resolves the target',
       'readsUserIdByEmail',
       { email: TARGET_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'grants admin:users:list to the guest',
       'admin:scopeAddScopeToUser',
       { userId: guest.userId, scope: 'admin:users:list' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const call = await scenario.when(
       'the guest bans the target',
       'invokesRpcRaw',
       { rpcName: BAN, data: { userId: target.userId, banned: true } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call, status: 403, contains: ['admin:users:ban'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.do(
       'revokes the scope',
       'admin:scopeRemoveScopeFromUser',
       { userId: guest.userId, scope: 'admin:users:list' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { restored: true }
   },
@@ -323,38 +323,38 @@ export const userAdminListScopeDoesNotConferRolesScenario = pikkuScenario<
   title: 'Holding only the list scope does not confer roles',
   description: 'admin:users:list lists the directory, it does not read scopes',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const guest = await scenario.given(
       'the guest reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.do(
       'grants admin:users:list to the guest',
       'admin:scopeAddScopeToUser',
       { userId: guest.userId, scope: 'admin:users:list' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const listing = await scenario.when(
       'the guest lists the directory',
       'invokesRpcRaw',
       { rpcName: LIST, data: { limit: 5 } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it served, counted',
       'expectsRpcResponse',
       { call: listing, status: 200, contains: ['"total"'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     const withRoles = await scenario.when(
       'the guest asks the same listing for roles',
       'invokesRpcRaw',
       { rpcName: LIST, data: { limit: 5, includeRoles: true } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
@@ -364,14 +364,14 @@ export const userAdminListScopeDoesNotConferRolesScenario = pikkuScenario<
         status: 403,
         contains: ['MissingScopeError', 'admin:scopes:read'],
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.do(
       'revokes the scope',
       'admin:scopeRemoveScopeFromUser',
       { userId: guest.userId, scope: 'admin:users:list' },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     return { restored: true }
   },
@@ -384,7 +384,7 @@ export const userAdminUnscopedCannotCreateScenario = pikkuScenario<
   title: 'A caller without the scope cannot create a user',
   description: 'The refusal names admin:users:create',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(
       'the guest creates a user',
       'invokesRpcRaw',
@@ -392,7 +392,7 @@ export const userAdminUnscopedCannotCreateScenario = pikkuScenario<
         rpcName: CREATE,
         data: { email: 'never-created@e2e.test', password: 'never-created' },
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'sees it refused',
@@ -402,7 +402,7 @@ export const userAdminUnscopedCannotCreateScenario = pikkuScenario<
         status: 403,
         contains: ['admin:users:create'],
       },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 403 }
   },
@@ -427,7 +427,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
   description:
     'Create, sign in, rotate the password, revoke sessions and delete, through @pikku/addon-admin',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const created = await scenario.when(
       'the admin creates a user',
       'invokesRpcRaw',
@@ -435,13 +435,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
         rpcName: CREATE,
         data: { email: NEW_USER.email, password: NEW_USER.password },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it accepted',
       'expectsRpcResponse',
       { call: created, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     // Resolving through the directory proves two things at once: the row landed,
@@ -450,7 +450,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin resolves the new user',
       'readsUserIdByEmail',
       { email: NEW_USER.email },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     // A user created without a credential account exists but can never sign in,
@@ -472,13 +472,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
         rpcName: CREATE,
         data: { email: NEW_USER.email, password: NEW_USER.password },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the duplicate refused',
       'expectsRpcResponse',
       { call: duplicate, contains: ['already exists'] },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const banned = await scenario.when(
@@ -488,13 +488,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
         rpcName: BAN,
         data: { userId: target.userId, banned: true, reason: 'e2e' },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the ban accepted',
       'expectsRpcResponse',
       { call: banned, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const blocked = await scenario.when(
       'the banned user tries to sign in',
@@ -510,13 +510,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin lifts the ban',
       'invokesRpcRaw',
       { rpcName: BAN, data: { userId: target.userId, banned: false } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the ban lifted',
       'expectsRpcResponse',
       { call: lifted, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const rotation = await scenario.when(
@@ -526,13 +526,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
         rpcName: PASSWORD,
         data: { userId: target.userId, newPassword: NEW_USER.rotated },
       },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the rotation accepted',
       'expectsRpcResponse',
       { call: rotation, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     // Both halves matter: a rotation that added a second credential account
     // instead of updating the first leaves the old password working.
@@ -559,13 +559,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin signs the user out everywhere',
       'invokesRpcRaw',
       { rpcName: SESSIONS, data: { userId: target.userId } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it accepted',
       'expectsRpcResponse',
       { call: revoked, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     // Revoking sessions is not a ban — the account survives it.
     const afterRevoke = await scenario.when(
@@ -582,13 +582,13 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin deletes the user',
       'invokesRpcRaw',
       { rpcName: REMOVE, data: { userId: target.userId } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it accepted',
       'expectsRpcResponse',
       { call: removed, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     const afterDelete = await scenario.when(
       'the deleted user tries to sign in',
@@ -619,38 +619,38 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
   title: 'An administrator cannot ban or delete themselves',
   description: 'The self-guards survived the move off better-auth admin()',
   tags: ['scenario', 'user-admin'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const me = await scenario.given(
       'the admin reads its own id',
-      'readsActorUserId',
+      'readsVirtualUserUserId',
       undefined,
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const selfBan = await scenario.when(
       'the admin bans itself',
       'invokesRpcRaw',
       { rpcName: BAN, data: { userId: me.userId, banned: true } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call: selfBan, contains: ['cannot ban yourself'] },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     const selfDelete = await scenario.when(
       'the admin deletes itself',
       'invokesRpcRaw',
       { rpcName: REMOVE, data: { userId: me.userId } },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees it refused',
       'expectsRpcResponse',
       { call: selfDelete, contains: ['cannot delete yourself'] },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     // The refusals must have been refusals, not a delete that half-happened.
@@ -660,13 +660,13 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
       'the admin reads the directory',
       'invokesRpcRaw',
       { rpcName: LIST, data: {} },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
     await scenario.then(
       'sees the call accepted',
       'expectsRpcResponse',
       { call: stillThere, status: 200 },
-      { actor: actors.admin }
+      { virtualUser: virtualUsers.admin }
     )
 
     return { refused: true }

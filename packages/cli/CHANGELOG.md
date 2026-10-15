@@ -1,3 +1,31 @@
+## 0.12.186
+
+### Patch Changes
+
+- b41f2cc: `pikku changes file` in a project linked to Fabric picks the stage itself: the one on the checked-out branch, else the project's only stage, and `--stage-id` still wins. A sandbox, which may not list stages, files through `createSandboxChange`, so the change lands on its own branch. Before this, a linked `file` sent the placeholder stage `local` to Fabric and failed.
+- f099b47: `pikku dev` and `pikku serve` no longer build a TypeScript program inside the long-lived server process. Codegen and inspection run in a child `pikku` process that writes the inspector state with `--stateOutput`, and the server reads that file, so the program's memory goes back to the OS when the child exits. On the starter template this takes `dev` from about 520-600 MB to about 130 MB and `serve` from about 520 MB to about 120 MB. `pikku dev` also no longer repeats the whole codegen pass when the watcher becomes ready, unless a source file changed while it was starting.
+- 658da50: `pikku dev` and `pikku serve` read secrets from a vault when `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` are set, and use the local secret store only when they are not. It is one or the other: with a vault configured, a key the vault does not hold is missing.
+- 43e4e8e: `pikku ui theme list|apply` puts the app's themes in the CLI, and the generated theme header names `pikku ui theme apply`.
+- ddfd4e8: `pikku ui pages list|screenshot` lists a frontend's pages and photographs them. `@pikku/playwright` exports `openPageSession`, `screenshotPages` and `screenshotName`.
+- e71857d: `@pikku/mantine` and the `pikku-mantine` skill are removed. Theming guidance, the accessibility, i18n and RTL rules, and the blueprint rebuild values now describe Tailwind and shadcn, `pikku validate` checks the `packages/theme` contract instead of the Mantine theme package, and `create-pikku` defaults to the starter template's `app` frontend. `@pikku/react-layout-panel` is removed; its shell and dock live in the pikkujs/shadcn-registry repo as a shadcn item.
+- 862a4f5: `pikku validate` now warns when an app still carries a starter template's name (the `app__name` wordmark, the tab title, the emails' sender name). The check moved out of `@pikku/code-edit/brand`: `BrandWorkspace.placeholders()`, `placeholderBrands`, `productBrand`, `isPlaceholderName`, the `PLACEHOLDER_*` constants and the `PlaceholderBrand` and `BrandApp` types are gone. Stock-image search (Unsplash) and site crawling (Cloudflare) are removed: `BrandWorkspace.stockImages()` and `BrandWorkspace.crawl()`, the `unsplashAccessKey`, `cloudflare` and `fetch` options, `StockImagesResult`, `CrawlResult`, `CloudflareCredentials`, `StockImageOrientation`, `searchUnsplash`, `crawlSite`, `CloudflareCrawler` and `extractImages`. The console addon no longer exposes the `getPlaceholderBrands`, `fetchStockImages` and `crawlSite` functions, and stops reading `UNSPLASH_ACCESS_KEY`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` for brand use.
+- Updated dependencies [b04e444]
+- Updated dependencies [d3d8a98]
+- Updated dependencies [43e4e8e]
+- Updated dependencies [ddfd4e8]
+- Updated dependencies [5b04314]
+- Updated dependencies [e71857d]
+- Updated dependencies [658da50]
+- Updated dependencies [176ce98]
+- Updated dependencies [862a4f5]
+  - @pikku/core@0.12.141
+  - @pikku/inspector@0.12.105
+  - @pikku/node-http-server@0.12.20
+  - @pikku/bun-server@0.12.14
+  - @pikku/code-edit@0.12.6
+  - @pikku/playwright@0.12.87
+  - @pikku/skills@0.12.54
+
 ## 0.12.185
 
 ### Patch Changes

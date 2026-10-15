@@ -5,16 +5,11 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-
-import { deriveActorSecret, wirePersonaSignIn } from '@pikku/core/persona'
-import { resetPikkuState } from '@pikku/core/state'
+import { createServer } from 'node:http'
 
 import { PlaywrightScenarioBrowserProvider } from './provider.js'
 import { hasFfmpeg } from './capture.js'
 import type { BrowserConfig } from './config.js'
-
-/** Long enough to be key material, which every derived credential needs. */
-const ROOT = 'a-root-secret-long-enough-to-derive'
 
 const config = (overrides: Partial<BrowserConfig> = {}): BrowserConfig =>
   ({
@@ -104,12 +99,11 @@ const fakeBrowser = () => {
 }
 
 describe('PlaywrightScenarioBrowserProvider', () => {
-  test('the same actor name resolves to the same session', async () => {
+  test('the same virtual user name resolves to the same session', async () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     })
@@ -117,16 +111,19 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const first = await provider.sessionFor('shopper')
     const second = await provider.sessionFor('shopper')
 
-    assert.equal(first, second, 'an actor keeps one window across its steps')
+    assert.equal(
+      first,
+      second,
+      'a virtual user keeps one window across its steps'
+    )
     assert.equal(contexts.length, 1, 'and one browser context')
   })
 
-  test('distinct actors get distinct sessions and contexts', async () => {
+  test('distinct virtual users get distinct sessions and contexts', async () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
       },
@@ -138,17 +135,20 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const admin = await provider.sessionFor('admin')
 
     assert.notEqual(shopper, admin)
-    assert.equal(shopper.actor, 'shopper')
-    assert.equal(admin.actor, 'admin')
-    assert.equal(contexts.length, 2, 'two actors, two isolated cookie jars')
+    assert.equal(shopper.virtualUser, 'shopper')
+    assert.equal(admin.virtualUser, 'admin')
+    assert.equal(
+      contexts.length,
+      2,
+      'two virtual users, two isolated cookie jars'
+    )
   })
 
-  test('concurrent requests for one actor still open a single context', async () => {
+  test('concurrent requests for one virtual user still open a single context', async () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     })
@@ -162,7 +162,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(contexts.length, 1)
   })
 
-  test('an actor browses the app their persona signs into', async () => {
+  test('a virtual user browses the app their virtual user signs into', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config({
@@ -171,8 +171,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
           storefront: 'https://app.test/_frontend/storefront',
         },
       }),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         mechanic: { email: 'mechanic@test', app: 'workshop' },
         customer: { email: 'customer@test', app: 'storefront' },
       },
@@ -191,14 +190,13 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     )
   })
 
-  test('a persona naming no app browses the single appUrl', async () => {
+  test('a virtual user naming no app browses the single appUrl', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config({
         appUrls: { storefront: 'https://app.test/_frontend/storefront' },
       }),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     } as any)
@@ -208,29 +206,27 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(shopper.url('/jobs'), 'https://app.test/jobs')
   })
 
-  test('an unregistered actor is a clear error, not a silent anonymous window', async () => {
+  test('an unregistered virtual user is a clear error, not a silent anonymous window', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     })
 
     await assert.rejects(
       provider.sessionFor('ghost'),
-      /browser actor 'ghost' has no persona/
+      /browser virtual user 'ghost' has no virtual user/
     )
   })
 
-  test('the browser signs in with that actor own derived credential', async () => {
+  test('the browser signs in once per virtual user, with a name and an address', async () => {
     const { browser } = fakeBrowser()
-    const signIns: Array<{ email: string; name: string; secret: string }> = []
+    const signIns: Array<{ email: string; name: string }> = []
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test', name: 'Shopper' } },
+      virtualUsers: { shopper: { email: 'shopper@test', name: 'Shopper' } },
       connectBrowser: async () => ({ browser }),
       signIn: async (_context, request) => {
         signIns.push(request)
@@ -240,47 +236,57 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     await provider.sessionFor('shopper')
     await provider.sessionFor('shopper')
 
-    assert.deepEqual(signIns, [
-      {
-        email: 'shopper@test',
-        name: 'Shopper',
-        secret: await deriveActorSecret(ROOT, 'shopper@test'),
-      },
-    ])
-    assert.notEqual(signIns[0]!.secret, ROOT, 'the root is never presented')
+    assert.deepEqual(signIns, [{ email: 'shopper@test', name: 'Shopper' }])
   })
 
-  test('a wired persona sign-in signs the browser in, with no secret presented', async () => {
+  test('the default sign-in posts a freshly signed statement and plants the cookie', async () => {
+    const bodies: unknown[] = []
+    const server = createServer((req, res) => {
+      const chunks: Buffer[] = []
+      req.on('data', (c) => chunks.push(c))
+      req.on('end', () => {
+        bodies.push(JSON.parse(Buffer.concat(chunks).toString()))
+        res.setHeader('set-cookie', 'session=abc; Path=/; HttpOnly')
+        res.writeHead(200).end('{}')
+      })
+    })
+    await new Promise<void>((resolve) => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
     const { browser } = fakeBrowser()
-    const logins: string[] = []
-    const cookies: string[] = []
-    wirePersonaSignIn(() => ({
-      login: async (jar, persona) => {
-        const res = await jar.fetch('http://api.test/login', {
-          method: 'POST',
-        })
-        cookies.push(res.headers.getSetCookie().join())
-        logins.push(persona.email)
-      },
-    }))
-    const realFetch = globalThis.fetch
-    globalThis.fetch = (async () =>
-      new Response('{}', {
-        headers: { 'set-cookie': 'sid=1; Path=/' },
-      })) as typeof fetch
+    const planted: unknown[] = []
+    const realNewContext = browser.newContext
+    browser.newContext = async (options: unknown) => {
+      const context = await realNewContext(options)
+      context.addCookies = async (cookies: unknown) =>
+        void planted.push(cookies)
+      return context
+    }
     try {
       const provider = new PlaywrightScenarioBrowserProvider({
-        config: config(),
-        actors: { shopper: { email: 'shopper@test', name: 'Shopper' } },
+        config: config({
+          apiUrl: `http://127.0.0.1:${port}`,
+          appUrl: 'http://127.0.0.1:3000',
+        }),
+        virtualUsers: { shopper: { email: 'shopper@test' } },
+        mint: (virtualUser) => `statement-for:${virtualUser.email}`,
         connectBrowser: async () => ({ browser }),
       })
       await provider.sessionFor('shopper')
     } finally {
-      globalThis.fetch = realFetch
-      resetPikkuState()
+      server.close()
     }
-    assert.deepEqual(logins, ['shopper@test'])
-    assert.deepEqual(cookies, ['sid=1; Path=/'])
+    assert.deepEqual(bodies, [{ statement: 'statement-for:shopper@test' }])
+    assert.equal(planted.length, 1)
+  })
+
+  test('the default sign-in without a way to sign says what is missing', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      virtualUsers: { shopper: { email: 'shopper@test' } },
+      connectBrowser: async () => ({ browser }),
+    })
+    await assert.rejects(provider.sessionFor('shopper'), /nothing to sign with/)
   })
 
   test('close releases the browser exactly once and reopens on next use', async () => {
@@ -288,8 +294,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     let released = 0
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
       },
@@ -309,9 +314,9 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
     assert.equal(released, 1, 'a second close must not double-release')
 
-    // After close, an actor gets a fresh session rather than a dead handle.
+    // After close, a virtual user gets a fresh session rather than a dead handle.
     const revived = await provider.sessionFor('shopper')
-    assert.equal(revived.actor, 'shopper')
+    assert.equal(revived.virtualUser, 'shopper')
   })
 
   test('a browser the caller connected to is never closed by the provider', async () => {
@@ -322,8 +327,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     }
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       // No `release` — a shared/remote browser (CDP) belongs to whoever opened it.
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -335,13 +339,12 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(browserClosed, 0)
   })
 
-  test('reset closes every actor context, so the next scenario starts signed out', async () => {
+  test('reset closes every virtual user context, so the next scenario starts signed out', async () => {
     const { browser, contexts } = fakeBrowser()
     const signIns: string[] = []
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
       },
@@ -358,7 +361,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.deepEqual(
       contexts.map((c) => c.closed),
       [true, true],
-      'both actors lose their cookie jar, storage and pages'
+      'both virtual users lose their cookie jar, storage and pages'
     )
 
     const after = await provider.sessionFor('shopper')
@@ -367,7 +370,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.deepEqual(
       signIns,
       ['shopper@test', 'admin@test', 'shopper@test'],
-      'a reset actor signs in again rather than inheriting a stale cookie'
+      'a reset virtual user signs in again rather than inheriting a stale cookie'
     )
   })
 
@@ -377,8 +380,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     let released = 0
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { shopper: { email: 'shopper@test' } },
+      virtualUsers: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => {
         connects++
         return {
@@ -404,12 +406,11 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(released, 1, 'only close releases it')
   })
 
-  test('captureFailure reports each open actor window, with its page issues', async () => {
+  test('captureFailure reports each open virtual user window, with its page issues', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
       },
@@ -418,15 +419,15 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     })
 
     const admin = await provider.sessionFor('admin')
-    // What ActorSession collects during a navigation, and today discards.
+    // What VirtualUserSession collects during a navigation, and today discards.
     ;(admin as any).issues.consoleErrors.push('TypeError: x is not a function')
     ;(admin as any).issues.apiErrors.push('500 /api/rpc/console:readSource')
 
     const failures = await provider.captureFailure('codeEditorScenario')
 
-    assert.equal(failures.length, 1, 'only actors with an open window')
+    assert.equal(failures.length, 1, 'only virtual users with an open window')
     const [failure] = failures
-    assert.equal(failure!.actor, 'admin')
+    assert.equal(failure!.virtualUser, 'admin')
     assert.equal(failure!.url, 'https://app.test/console/functions')
     assert.deepEqual(failure!.consoleErrors, ['TypeError: x is not a function'])
     assert.deepEqual(failure!.apiErrors, ['500 /api/rpc/console:readSource'])
@@ -437,13 +438,12 @@ describe('PlaywrightScenarioBrowserProvider', () => {
    * a tree of its own: "this run's output" has to be one folder, or reviewing a
    * failure means opening two.
    */
-  test('captureFailure files a screenshot per actor under the failing scenario', async () => {
+  test('captureFailure files a screenshot per virtual user under the failing scenario', async () => {
     const { browser, screenshots } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1' },
@@ -466,8 +466,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1' },
@@ -480,7 +479,11 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
     const [failure] = await provider.captureFailure('someScenario')
 
-    assert.equal(failure!.actor, 'admin', 'the actor is still reported')
+    assert.equal(
+      failure!.virtualUser,
+      'admin',
+      'the virtual user is still reported'
+    )
     assert.equal(failure!.screenshot, undefined, 'just without an image')
     await rm(dir, { recursive: true, force: true })
   })
@@ -489,8 +492,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     })
@@ -500,17 +502,16 @@ describe('PlaywrightScenarioBrowserProvider', () => {
 
   /**
    * The number leading a capture's filename is there so a directory listing
-   * reads in the order the run happened. A scenario with two actors is where
+   * reads in the order the run happened. A scenario with two virtual users is where
    * that claim is testable: counted per session both windows start at 01, and
    * the listing describes an order that never occurred.
    */
-  test('actors in one scenario share a single capture sequence', async () => {
+  test('virtual users in one scenario share a single capture sequence', async () => {
     const { browser } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         admin: { email: 'admin@test' },
         shopper: { email: 'shopper@test' },
       },
@@ -545,8 +546,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', screenshots: true },
@@ -578,8 +578,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', screenshots: false, video: 'failed' },
@@ -606,8 +605,7 @@ describe('PlaywrightScenarioBrowserProvider video retention', () => {
   ) =>
     new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', video, compress: false },
@@ -651,7 +649,7 @@ describe('PlaywrightScenarioBrowserProvider video retention', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
-  test('a scenario that failed keeps its recording, filed under scenario and actor', async () => {
+  test('a scenario that failed keeps its recording, filed under scenario and virtual user', async () => {
     const { browser, videos } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
     const provider = providerWith('failed', dir, browser)
@@ -745,8 +743,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
     })
@@ -757,13 +754,12 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     assert.deepEqual(provider.artifacts(), [])
   })
 
-  test('named screenshots are reported with their caption, actor and scenario', async () => {
+  test('named screenshots are reported with their caption, virtual user and scenario', async () => {
     const { browser } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         admin: { email: 'admin@test' },
         shopper: { email: 'shopper@test' },
       },
@@ -782,7 +778,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         kind: 'screenshot',
         path: 'checkout-two-people/01-opens-the-order-admin.png',
         id: 'checkout-two-people/opens-the-order-admin',
-        actor: 'admin',
+        virtualUser: 'admin',
         name: 'opens the order',
       },
       {
@@ -790,7 +786,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         kind: 'screenshot',
         path: 'checkout-two-people/02-sees-it-arrive-shopper.png',
         id: 'checkout-two-people/sees-it-arrive-shopper',
-        actor: 'shopper',
+        virtualUser: 'shopper',
         name: 'sees it arrive',
       },
     ])
@@ -807,8 +803,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
@@ -831,8 +826,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
@@ -855,8 +849,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', video: 'off' },
@@ -870,7 +863,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'code editor › edits',
         kind: 'failure',
         path: 'code-editor-edits/failure-admin.png',
-        actor: 'admin',
+        virtualUser: 'admin',
       },
     ])
     await rm(dir, { recursive: true, force: true })
@@ -881,8 +874,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', video: 'failed', compress: false },
@@ -903,7 +895,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'First',
         kind: 'video',
         path: 'first/admin.webm',
-        actor: 'admin',
+        virtualUser: 'admin',
       },
     ])
     await rm(dir, { recursive: true, force: true })
@@ -942,8 +934,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     // encode — the fake browser's saveAs only records the path it was given.
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', video: 'all' },
@@ -978,8 +969,7 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
   ) =>
     new PlaywrightScenarioBrowserProvider({
       config: config(overrides),
-      secret: ROOT,
-      actors: {
+      virtualUsers: {
         admin: { email: 'admin@test' },
         shopper: { email: 'shopper@test' },
       },
@@ -988,7 +978,7 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
       capture: { dir, runId: 'run-1', video, compress: false },
     })
 
-  test('an actor recording carries the moment their window opened', async () => {
+  test('a virtual user recording carries the moment their window opened', async () => {
     const { browser } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
     const provider = providerWith('all', dir, browser)
@@ -1003,7 +993,7 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
-  test('each actor keeps their own clock, because each has their own file', async () => {
+  test('each virtual user keeps their own clock, because each has their own file', async () => {
     const { browser } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
     const provider = providerWith('all', dir, browser)
@@ -1017,7 +1007,7 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
     assert.equal(
       provider.videoStartedAt('nobody'),
       undefined,
-      'an actor with no window has no clock'
+      'a virtual user with no window has no clock'
     )
     await rm(dir, { recursive: true, force: true })
   })
@@ -1061,8 +1051,7 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config({ videoStepHoldMs: 2_000 }),
-      secret: ROOT,
-      actors: { admin: { email: 'admin@test' } },
+      virtualUsers: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
       capture: { dir, runId: 'run-1', video: 'all' },

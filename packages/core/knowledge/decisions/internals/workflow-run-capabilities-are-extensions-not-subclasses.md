@@ -18,7 +18,7 @@ The reason it is not a subclass is bundle size: a bundler drops an unused
 _module_ but never an unused class member. Anything declared on
 `PikkuWorkflowService` ships in every server built on Pikku, along with
 everything it imports. `PikkuScenarioService` (`pikku-scenario-service.ts`) is
-the one implementation today — steps, actors, lifecycle hooks, the browser
+the one implementation today — steps, virtual users, lifecycle hooks, the browser
 provider and the assertion wire members — and scenarios only ever run from
 `pikku scenario run`, so the whole surface stays behind an import that only the
 runner makes. It is not a workflow service in its own right because a scenario
@@ -33,7 +33,7 @@ installed rather than inherited. It pairs the extension with
 single external process driving a deployed app over its real transport: there
 is nothing to persist and no second worker to resume it.
 
-**What this rules out:** moving scenario steps, actors, hooks or the browser
+**What this rules out:** moving scenario steps, virtual users, hooks or the browser
 provider onto `PikkuWorkflowService`, making `PikkuScenarioService` extend it,
 or widening `WorkflowRunEngine` into "just pass the service" — each one puts the
 scenario runtime, and its transitive imports, into every deployed Pikku server.

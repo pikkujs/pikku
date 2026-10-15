@@ -1,4 +1,4 @@
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 export type RuleLevel = 'off' | 'warn' | 'error'
 

@@ -1,4 +1,4 @@
-import { ActorSession, type PageIssues } from './actor-session.js'
+import { VirtualUserSession, type PageIssues } from './virtual-user-session.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
 
@@ -13,7 +13,7 @@ export interface PageScreenshot {
 
 export interface ScreenshotPagesOptions {
   paths: string[]
-  session: ActorSession
+  session: VirtualUserSession
   fullPage?: boolean
 }
 
@@ -57,9 +57,9 @@ export async function openPageSession(
     config?: BrowserConfig
     connectBrowser?: () => Promise<BrowserConnection>
   } = {}
-): Promise<{ session: ActorSession; close: () => Promise<void> }> {
+): Promise<{ session: VirtualUserSession; close: () => Promise<void> }> {
   const { browser, release } = await connectBrowser()
-  const session = new ActorSession('anonymous', { ...config, appUrl })
+  const session = new VirtualUserSession('anonymous', { ...config, appUrl })
   try {
     await session.open(browser)
   } catch (err) {

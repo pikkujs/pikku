@@ -3,7 +3,7 @@ import { PikkuRPC } from '@project/functions-sdk/pikku/pikku-rpc.gen'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestHeader, getRequestUrl } from '@tanstack/react-start/server'
 import { apiUrl } from './env'
-import { dispatchFetch } from './fabric-dispatch'
+import { dispatchFetch } from './cloud-dispatch'
 
 /**
  * A PikkuRPC client for code that runs OUTSIDE React — route `beforeLoad` gates, mostly.

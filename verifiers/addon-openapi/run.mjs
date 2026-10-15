@@ -119,7 +119,7 @@ const corpus = [
       '--display-name',
       'Dolibarr',
     ],
-    baseUrl: 'https://dolibarr.pikkufabric.cloud/api/index.php',
+    baseUrl: 'https://dolibarr.pikkustudio.cloud/api/index.php',
     unknownOutputs: ['usersRetrieveInfo'],
     delegated: true,
   },
