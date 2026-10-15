@@ -51,7 +51,7 @@ export const ExtractedFields = z.object({
 //~ so `openai/gpt-5.6-luna` (cheap, fine for extraction), `openai/gemini-pro-latest` or
 //~ `anthropic/claude-opus-4-8`; a bare alias fails. ⚠️ A reasoning model like `deepseek/*`
 //~ may REJECT JSON-schema structured output through the proxy — stay on an OpenAI/Anthropic
-//~ route whenever you declare an `output`. No API key to set up: Pikku Studio injects the AI
+//~ route whenever you declare an `output`. On Pikku Studio Cloud there is no API key to set up: it injects the AI
 //~ credentials. This declaration is the ONE place the model is named — do not add a
 //~ defineVariable for it and do not pass a `model` at the call site: the generated type
 //~ for `rpc.agent.run` accepts only `{ message, threadId, resourceId }`.

@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 import { defineVariable } from '#pikku/variables'
 
-//~ Text→speech WORKS OUT OF THE BOX on a Pikku Studio sandbox — no addon, no API key, no
+//~ Text→speech WORKS OUT OF THE BOX on Pikku Studio Cloud (elsewhere configure a provider) — no addon, no API key, no
 //~ services.ts edit. The proxy routes `kokoro-82m` with `mode: audio_speech`, and the
 //~ platform wires each provider as an object carrying a `speech` method. (An older
 //~ revision said the opposite; it predates both. The guard below stays only for an app

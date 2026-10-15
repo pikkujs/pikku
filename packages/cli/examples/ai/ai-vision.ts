@@ -38,7 +38,7 @@ export const AnalyzeImageOutput = z.object({
 //~ Destructuring `agentRunner` (the same VercelAgentRunner that powers pikkuAgent)
 //~ is what tags this unit with the `ai-model` capability so the AI SDK stays bundled —
 //~ a plain function that never touches it gets the SDK stubbed at build time. It is an
-//~ OPTIONAL core service, so guard it. No API key to set up — Pikku Studio injects AI creds.
+//~ OPTIONAL core service, so guard it. On Pikku Studio Cloud there is no API key to set up, it injects AI creds; elsewhere set your provider key.
 export const analyzeImage = pikkuFunc({
   expose: true,
   auth: true,

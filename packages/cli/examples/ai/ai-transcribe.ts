@@ -16,7 +16,7 @@
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 
-//~ Speech-to-text WORKS OUT OF THE BOX on a Pikku Studio sandbox — no addon, no API key, no
+//~ Speech-to-text WORKS OUT OF THE BOX on Pikku Studio Cloud (elsewhere configure a provider) — no addon, no API key, no
 //~ services.ts edit. Use this scaffold directly; do not ask the user to choose a
 //~ transcription provider, and do not reach for `@pikku/addon-mistral` instead.
 //~
