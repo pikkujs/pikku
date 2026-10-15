@@ -1,0 +1,61 @@
+{
+  "name": "@pikku/addon-cloud-cli",
+  "version": "0.12.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/addon/pikku-cloud-cli"
+  },
+  "description": "The pikku cloud command group, contributed to the pikku CLI as an addon",
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./dist/.pikku/*.js",
+    "#pikku/*": [
+      "./dist/.pikku/*/index.js",
+      "./dist/.pikku/*"
+    ]
+  },
+  "exports": {
+    "./contracts": {
+      "types": "./dist/src/contracts.d.ts",
+      "import": "./dist/src/contracts.js"
+    },
+    "./renderers": {
+      "types": "./dist/src/renderers.d.ts",
+      "import": "./dist/src/renderers.js"
+    },
+    "./client": {
+      "types": "./dist/src/client.d.ts",
+      "import": "./dist/src/client.js"
+    },
+    "./.pikku/*": "./dist/.pikku/addon/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/addon/pikku-metadata.gen.json",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "pikku all",
+    "build": "tsc && pikku dist && mkdir -p dist/src/sdk && cp src/sdk/rpc-map.gen.d.ts dist/src/sdk/",
+    "pikku": "pikku all",
+    "test": "bun test --parallel src"
+  },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.141",
+    "zod": "^4",
+    "@pikku/cli": "^0.12.186"
+  },
+  "dependencies": {
+    "@pikku/fetch": "^0.12.12"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "zod": "^4"
+  },
+  "license": "MIT"
+}

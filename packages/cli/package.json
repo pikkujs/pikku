@@ -38,6 +38,7 @@
     "@electric-sql/pglite-pgvector": "0.0.9",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
+    "@pikku/addon-cloud-cli": "^0.12.0",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/better-auth": "^0.12.55",
     "@pikku/bun-server": "^0.12.14",
@@ -115,10 +116,15 @@
     "./server/server-ready": "./dist/src/server/server-ready.js",
     "./utils/virtual-user-signer": "./dist/src/utils/virtual-user-signer.js",
     "./surface.json": "./surface.json",
-    "./cloud": {
-      "types": "./dist/src/cloud/client.d.ts",
-      "import": "./dist/src/cloud/client.js",
-      "default": "./dist/src/cloud/client.js"
+    "./addon-support/validate": {
+      "types": "./dist/src/addon-support-validate.d.ts",
+      "import": "./dist/src/addon-support-validate.js",
+      "default": "./dist/src/addon-support-validate.js"
+    },
+    "./addon-support": {
+      "types": "./dist/src/addon-support.d.ts",
+      "import": "./dist/src/addon-support.js",
+      "default": "./dist/src/addon-support.js"
     }
   },
   "peerDependenciesMeta": {

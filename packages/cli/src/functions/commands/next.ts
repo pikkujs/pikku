@@ -6,22 +6,22 @@ import { join } from 'node:path'
 import type { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { changesContext } from '../../changes/context.js'
-import { claimable } from '../../cloud/lib/changes-next.js'
-import { CloudPreconditionError } from '../../cloud/lib/errors.js'
-import { openKnowledgeGaps } from '../../cloud/lib/knowledge-gaps.js'
-import { planOnBranch } from '../../cloud/lib/plan-gate.js'
-import { takeBump, type PikkuBump } from '../../cloud/lib/pikku-bump.js'
-import { localStorePath } from '../../cloud/lib/changes-local.js'
-import { runnable } from '../../cloud/lib/change-order.js'
-import { nextSpecialist, specialistOf } from '../../cloud/lib/specialists.js'
-import { predictSkills } from '../../cloud/lib/predict-skills.js'
+import { claimable } from '../../changes/changes-next.js'
+import { PreconditionError } from '../../utils/precondition-error.js'
+import { openKnowledgeGaps } from '../../changes/knowledge-gaps.js'
+import { planOnBranch } from '../../changes/plan-gate.js'
+import { takeBump, type PikkuBump } from '../../changes/pikku-bump.js'
+import { localStorePath } from '../../changes/changes-local.js'
+import { predictSkills } from '../../changes/predict-skills.js'
+import { runnable } from '../../changes/change-order.js'
+import { nextSpecialist, specialistOf } from '../../changes/specialists.js'
 import { knowledgeLine } from '@pikku/knowledge'
 import {
   finishedChangesets,
   mergeChangeset,
   syncWithUpstream,
   type MergeOutcome,
-} from '../../cloud/lib/changeset-merge.js'
+} from '../../changes/changeset-merge.js'
 import { currentBranch, git } from '../../utils/git.js'
 import { NextInput, NextOutput } from './next.schemas.js'
 
@@ -54,7 +54,7 @@ export const next = pikkuSessionlessFunc({
       if (!current.agent) return { ...current, merged }
       const code = await launch(input.exec, current, input.harnessArg ?? [])
       if (code !== 0)
-        throw new CloudPreconditionError(
+        throw new PreconditionError(
           `The ${current.agent} agent exited with ${code}.`
         )
       if ((await currentBranch()) !== home) await git(['switch', home])
@@ -317,7 +317,7 @@ async function launch(
 ): Promise<number> {
   const skill = join(SKILL_DIRS[harness], current.skill!, 'SKILL.md')
   if (!existsSync(skill))
-    throw new CloudPreconditionError(
+    throw new PreconditionError(
       `${skill} is missing. Run \`pikku skills install --core --agent ${harness}\` first.`
     )
   const work = join(await mkdtemp(join(tmpdir(), 'pikku-next-')), 'work.md')

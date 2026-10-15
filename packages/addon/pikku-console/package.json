@@ -58,6 +58,7 @@
     "oauth2-mock-server": "^9.1.0"
   },
   "dependencies": {
+    "@pikku/addon-cloud-cli": "^0.12.0",
     "@pikku/code-edit": "^0.12.6",
     "@pikku/knowledge": "^0.12.18",
     "json-schema": "^0.4.0",

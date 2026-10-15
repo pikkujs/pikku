@@ -9,8 +9,9 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { cloudCommands } from './cloud/cloud-commands.js'
-import { changesCommands } from './cloud/changes-commands.js'
+import { wireAddon } from '../.pikku/addon/index.js'
+import { refCLI } from '../.pikku/function/index.js'
+import { changesCommands } from './functions/changes/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -216,6 +217,8 @@ import {
   pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
+
+wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli' })
 
 wireCLI({
   program: 'pikku',
@@ -1225,7 +1228,23 @@ wireCLI({
       func: validate,
       render: renderValidate,
       description:
-        'Run every check that applies to this project — app structure, and the published file set of any addon it contains',
+        'Run every check that applies to this project — app structure, deploy readiness, and the published file set of any addon it contains',
+      options: {
+        skipTypecheck: {
+          description:
+            'Skip the frontend type-check stage (structural checks only)',
+          default: false,
+        },
+        skipDeployChecks: {
+          description:
+            'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)',
+          default: false,
+        },
+        migrationsBase: {
+          description:
+            'Git ref whose migrations are frozen: a migration file on it may not be modified, deleted or renamed (default origin/main, or $PIKKU_MIGRATIONS_BASE)',
+        },
+      },
     }),
     verify: pikkuCLICommand({
       func: pikkuVerify,
@@ -1627,7 +1646,7 @@ wireCLI({
     cloud: {
       description:
         'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: cloudCommands,
+      subcommands: { ...refCLI('cloud:cloudCommands') },
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,

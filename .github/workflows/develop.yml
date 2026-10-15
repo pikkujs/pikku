@@ -122,7 +122,7 @@ jobs:
           echo "NATS did not become ready" >&2
           docker logs pikku-nats >&2 || true
           exit 1
-      - run: bun run --filter @pikku/cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
+      - run: bun run --filter @pikku/cli --filter @pikku/addon-cloud-cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
 
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
+      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/addon-cloud-cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
 
   e2e:
     name: E2E Standard

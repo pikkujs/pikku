@@ -1,13 +1,13 @@
 ---
 type: decision
-title: pikku cloud validate requires a dev virtual user quick login on any app with a login screen
+title: pikku validate requires a dev virtual user quick login on any app with a login screen
 description: The validator errors when an app has a login file but no one-click virtual user sign-in control matching the known patterns
 tags: cli, validate, dev, auth
 ---
 
-# pikku cloud validate requires a dev virtual user quick login on any app with a login screen
+# pikku validate requires a dev virtual user quick login on any app with a login screen
 
-The validator in `packages/cli/src/cloud/functions/validate.function.ts` checks each frontend app. The comment says
+The validator in `packages/cli/src/functions/validate/project-checks.ts` checks each frontend app. The comment says
 a frontend that ships a login screen must also ship the dev-only virtual user switcher, so a reviewer can view the app
 as each scenario virtual user without a password. It fires only when a login surface exists (`validate.function.ts:1856-1861`).
 

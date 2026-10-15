@@ -2,8 +2,12 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { added, changed, dim, removed } from '../../cloud/lib/output.js'
-import { runValidate } from './validate-registry.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
+import {
+  runValidate,
+  type ProjectChecksHook,
+  type ValidateOptions,
+} from './validate-registry.js'
 
 export { readJsonSafe, readTextSafe } from './shared-checks.js'
 
@@ -17,7 +21,26 @@ export const FindingSchema = z.object({
 
 export type Finding = z.infer<typeof FindingSchema>
 
-export const ValidateInput = z.object({})
+export const ValidateInput = z.object({
+  skipTypecheck: z
+    .boolean()
+    .optional()
+    .describe(
+      'Skip the frontend type-check stage (structural checks only, much faster)'
+    ),
+  skipDeployChecks: z
+    .boolean()
+    .optional()
+    .describe(
+      'Skip the deploy-readiness checks (hosting conventions: bun-only package manager, themes, migrations layout, frontends)'
+    ),
+  migrationsBase: z
+    .string()
+    .optional()
+    .describe(
+      'Git ref whose migrations are frozen (default origin/main, or $PIKKU_MIGRATIONS_BASE)'
+    ),
+})
 
 export const ValidateOutput = z.object({
   ok: z.boolean(),
@@ -63,11 +86,35 @@ export async function findProjectRoot(startDir: string): Promise<string> {
 }
 
 export async function runProjectValidate(
-  startDir = process.cwd()
+  startDir = process.cwd(),
+  options: ValidateOptions = {}
 ): Promise<z.infer<typeof ValidateOutput>> {
   const root = await findProjectRoot(startDir)
-  return runValidate(root)
+  return runValidate(root, options)
 }
+
+export const PROJECT_CHECKS_SKIPPED = 'project-checks-skipped'
+
+export const guardProjectChecks =
+  (hook: ProjectChecksHook): ProjectChecksHook =>
+  async (request) => {
+    try {
+      return await hook(request)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      return [
+        {
+          id: PROJECT_CHECKS_SKIPPED,
+          severity: request.deployTarget ? 'error' : 'info',
+          message: `the project-aware checks did not run (${reason.split('\n')[0]})`,
+          path: request.root,
+          fixHint: request.deployTarget
+            ? 'A deploy does not go ahead unchecked. Fix the cause above and retry.'
+            : 'Only the offline checks ran. Sign in and link the project to include the checks that compare it with its deployed stages.',
+        },
+      ]
+    }
+  }
 
 /** "2 addons, 1 app project" — what the run actually looked at. */
 function describeRan(ran: z.infer<typeof ValidateOutput>['ran']): string {

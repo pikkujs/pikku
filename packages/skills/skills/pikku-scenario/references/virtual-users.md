@@ -104,7 +104,7 @@ has the opt-in, so it lists nobody and refuses every virtual user sign-in.
 
 Do not hand-roll the switcher: `useDevVirtualUsers()` (`pikku-react`, a separate install) is the logic and
 the starter template's `<DevVirtualUserSwitcher />` is a ready rendering of it.
-`pikku cloud validate` **requires** any frontend with a login screen to ship
+`pikku validate` **requires** any frontend with a login screen to ship
 one — without it a reviewer is locked out of their own sandbox.
 When the switcher is missing, it is one of three things, and none of them
 errors:

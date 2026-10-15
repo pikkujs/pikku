@@ -3,7 +3,7 @@ import {
   localChangesRPC,
   localStorePath,
   type ChangesRPC,
-} from '../cloud/lib/changes-local.js'
+} from './changes-local.js'
 
 export type { ChangesRPC }
 
