@@ -7,7 +7,7 @@ tags: [inspector, openapi, auth]
 
 # Should the OpenAPI document apply an ApiKey-or-Bearer security default to every operation, including auth false routes?
 
-`serializeOpenAPIJSON` in `packages/inspector/src/utils/serialize-openapi-json.ts` writes two security
+`generateOpenAPISpec` in `packages/inspector/src/utils/serialize-openapi-json.ts` writes two security
 schemes, `ApiKeyAuth` (an `x-api-key` header) and `BearerAuth`, unless the caller supplies its own
 (lines 254-264). It then writes a top-level `security` array with one entry for each scheme
 (lines 266-273), unless the caller supplies one.

@@ -10,7 +10,7 @@ tags: core, roles, scopes, guards
 `packages/core/src/services/system-role-guard.ts` is the shared guard that a
 `ScopeService` implementation must apply before it mutates a role. The doc
 comment says the rule is "a contract, not a policy", because a store that lets
-the console delete a declared role makes persona and scenario checks stop testing
+the console delete a declared role makes virtual user and scenario checks stop testing
 what they claim to (`system-role-guard.ts:7-15`).
 
 - `assertRoleIsMutable` throws `SystemRoleImmutableError` when the name is a

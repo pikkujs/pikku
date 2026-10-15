@@ -1,17 +1,17 @@
 ---
 type: decision
 title: Report consent is a per-person 0600 file, and PIKKU_REPORT overrides it
-description: The fabric report consent answer lives in one JSON file under the home directory written with mode 0600, and the PIKKU_REPORT environment variable overrides it for CI
-tags: cli, fabric, report, consent
+description: The cloud report consent answer lives in one JSON file under the home directory written with mode 0600, and the PIKKU_REPORT environment variable overrides it for CI
+tags: cli, cloud, report, consent
 ---
 
 # Report consent is a per-person 0600 file, and PIKKU_REPORT overrides it
 
-`packages/cli/src/fabric/lib/report.ts` keeps the answer about sending findings on the person's
+`packages/cli/src/cloud/lib/report.ts` keeps the answer about sending findings on the person's
 machine. The comment says consent belongs to the person, so it is not stored in a committed
 project config (`report.ts:25-28`).
 
-The file is `FABRIC_REPORT_CONSENT_FILE` or `~/.fabric/report-consent.json`
+The file is `PIKKUSTUDIO_REPORT_CONSENT_FILE` or `~/.pikkustudio/report-consent.json`
 (`report.ts:17-22`). `PIKKU_REPORT` set to `always` or `never` is returned before the file is
 read, and the comment says it exists for CI and sandboxes where no one can answer
 (`report.ts:29-31`). A missing or unreadable file returns `null`, which means ask

@@ -27,4 +27,4 @@ The same filter drops any entry the session's scopes do not cover
 
 **What this rules out:** a virtual user calling an approval-gated RPC unless the
 run explicitly allows it, and a permission function being used to decide what a
-persona can see.
+virtual user can see.

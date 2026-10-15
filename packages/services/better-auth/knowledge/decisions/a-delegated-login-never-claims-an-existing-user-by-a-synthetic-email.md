@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A delegated login never claims an existing user by a synthetic email
-description: Upstream login may attach to an existing user row only when the upstream itself returned that email, and never to an actor row or to a user already bound to another upstream identity
+description: Upstream login may attach to an existing user row only when the upstream itself returned that email, and never to a virtual user row or to a user already bound to another upstream identity
 tags: better-auth, delegated-auth, accounts
 ---
 
@@ -21,7 +21,7 @@ The lookup order is fixed:
    doc on `UpstreamIdentity` says an email made up from the login, or a login typed
    as an email, "never claims an existing user row." Only an email the upstream
    itself returned can attach.
-3. **Actor row.** Always refused. The message is "User cannot sign in with upstream
+3. **Virtual user row.** Always refused (`virtualUser === true`). The message is "User cannot sign in with upstream
    credentials."
 4. **Already bound to a different upstream user.** Refused.
 5. **Otherwise** a new user is created, email-verified, and linked.
@@ -29,5 +29,5 @@ The lookup order is fixed:
 Omitting `syntheticEmail` counts as synthetic, which is the safer default.
 
 **What this rules out:** attaching a made-up email to a real account, attaching an
-upstream identity to an actor row, and binding one local user to two upstream
+upstream identity to a virtual user row, and binding one local user to two upstream
 identities.

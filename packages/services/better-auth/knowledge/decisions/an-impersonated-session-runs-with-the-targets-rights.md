@@ -18,7 +18,7 @@ against the admin's scopes, and that is the only place they count.
 
 The session that comes back is shaped differently from a normal one. With no
 `mapSession`, the impersonated session is just `{ userId: target }`
-(`resolveImpersonatedSession`), so it does not get the `orgId` or `actor` fields
+(`resolveImpersonatedSession`), so it does not get the `orgId` or `virtualUser` fields
 a normal session would. Whether that is intended is recorded in
 [questions](../../../../core/knowledge/questions/what-an-impersonated-session-carries.md).
 

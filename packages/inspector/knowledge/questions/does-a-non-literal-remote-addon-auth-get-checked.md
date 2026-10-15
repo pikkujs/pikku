@@ -20,7 +20,7 @@ Nothing in the inspector reads `hasAuth`. Its only other mentions are the type a
 `packages/inspector/src/types.ts:749` and serialization at
 `packages/inspector/src/utils/serialize-inspector-state.ts:172`. The post-process
 checks run only when an id is set: the credential id at
-`packages/inspector/src/utils/post-process.ts:773` and the secret id at line 779.
+`packages/inspector/src/utils/post-process.ts:841` and the secret id at line 847.
 
 Question: should a non-literal `auth` be treated as a binding the consumer has to
 satisfy, or as public? The code currently does neither and logs nothing.

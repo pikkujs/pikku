@@ -1,13 +1,13 @@
 ---
 type: decision
 title: Findings are held locally and sent only after an explicit yes or always
-description: The fabric report function holds each finding, sends only when the answer is yes or always, and asks the user on a terminal or prints a request when there is none
-tags: cli, fabric, report, consent
+description: The cloud report function holds each finding, sends only when the answer is yes or always, and asks the user on a terminal or prints a request when there is none
+tags: cli, cloud, report, consent
 ---
 
 # Findings are held locally and sent only after an explicit yes or always
 
-`packages/cli/src/fabric/functions/report.function.ts` decides what happens to a finding.
+`packages/cli/src/cloud/functions/report.function.ts` decides what happens to a finding.
 
 A saved `never` stops the run when no `--consent` answer is given (`report.function.ts:108-112`).
 An answer passed with `--consent` is saved when it is `always` or `never` and differs from the

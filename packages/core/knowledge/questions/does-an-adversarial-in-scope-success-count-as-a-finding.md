@@ -1,7 +1,7 @@
 ---
 type: question
 title: Does an adversarial user's in-scope success count as a finding?
-description: The disposition doc says a 2xx is a finding for an inverted oracle, but the engine only flags successes outside the persona's scopes, and in-scope 2xx depends on the app's classifier
+description: The disposition doc says a 2xx is a finding for an inverted oracle, but the engine only flags successes outside the virtual user's scopes, and in-scope 2xx depends on the app's classifier
 tags: core, virtual-user, authorization
 ---
 
@@ -15,8 +15,8 @@ to the app's classifier".
 In `run-virtual-user.ts` the flag does one thing: at line 302 it drops the
 scope narrowing, so an adversarial user is offered the whole catalogue. The
 finding that fires on a 2xx is the `unexpected-success` check around lines
-627-640. It requires `response.ok` and a scope the persona does not hold. A 2xx
-on an endpoint the persona is entitled to produces no engine finding. Only the
+627-645. It requires `response.ok` and a scope the virtual user does not hold. A
+2xx on an endpoint the virtual user is entitled to produces no engine finding. Only the
 app's `classify` hook can flag it, and that is the ownership check the comment
 describes.
 

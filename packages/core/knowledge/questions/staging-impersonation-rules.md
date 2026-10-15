@@ -7,11 +7,12 @@ tags: auth, services
 
 # What rules govern impersonation on staging and live?
 
-Wanted: a signed-in admin on a deployed environment can impersonate a persona,
+Wanted: a signed-in admin on a deployed environment can impersonate a virtual user,
 using the header on the normal cookie session. The code already applies
 impersonation on that path (`auth-session.ts`, the human branch).
 
 Not yet agreed:
+
 - **Per-environment switch.** On for staging; off for production. The request
   is that it is off unless turned on for that environment.
 - **Read-only by default.** Writes made while impersonating change real data.

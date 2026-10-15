@@ -2,12 +2,12 @@
 type: decision
 title: A git remote is compared as host and path with credentials dropped
 description: normalizeRepoUrl reduces an ssh or https remote to lowercase host and path, so embedded credentials never take part in matching a repo to a project
-tags: cli, fabric, git, link
+tags: cli, cloud, git, link
 ---
 
 # A git remote is compared as host and path with credentials dropped
 
-`normalizeRepoUrl` in `packages/cli/src/fabric/lib/project-link.ts` reduces a remote to one comparable form. Its doc
+`normalizeRepoUrl` in `packages/cli/src/cloud/lib/project-link.ts` reduces a remote to one comparable form. Its doc
 comment says one form covers ssh or https, with or without credentials, with or without a `.git` suffix
 (`project-link.ts:35-39`).
 

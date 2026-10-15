@@ -12,7 +12,7 @@ tags: better-auth, impersonation, logging
 `impersonation` option is set. `betterAuthStoreSession` does not.
 
 Without the warning, a store-backed app that forgets the option runs every
-scenario persona as the operator and fails only on assertions. The code gives
+scenario virtual user as the signed-in caller and fails only on assertions. The code gives
 no reason for the difference.
 
 Open: is the store middleware's silence an omission, or was it left out because

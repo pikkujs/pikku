@@ -1,13 +1,13 @@
 ---
 type: decision
 title: The change-events stream sends the bearer token and stops retrying on 401 and 403
-description: subscribeToChanges sends the Fabric token on each connection and treats 401, 403, 404, 405 and 501 as permanent, falling back to polling
-tags: cli, fabric, events
+description: subscribeToChanges sends the Pikku Studio Cloud token on each connection and treats 401, 403, 404, 405 and 501 as permanent, falling back to polling
+tags: cli, cloud, events
 ---
 
 # The change-events stream sends the bearer token and stops retrying on 401 and 403
 
-`subscribeToChanges` in `packages/cli/src/fabric/lib/changes-events.ts` opens an SSE stream
+`subscribeToChanges` in `packages/cli/src/cloud/lib/changes-events.ts` opens an SSE stream
 for `changes:<projectId>` and sends `Authorization: Bearer <token>` on each attempt
 (`changes-events.ts:94-96`).
 

@@ -17,7 +17,7 @@ same name twice."
 The rule is per name, not per request. Cookies the caller did not name still go
 out from the jar. The jar's `Set-Cookie` handling, which replaces a reissued
 cookie rather than sending both, is covered by
-[Scenario sessions are isolated per actor and reset between scenarios](workflow-scenario-sessions-are-isolated-per-actor-and-per-scenario.md).
+[Scenario sessions are isolated per virtual user and reset between scenarios](workflow-scenario-sessions-are-isolated-per-virtual-user-and-per-scenario.md).
 
 **What this rules out:** sending two values of one cookie name in a request, and
 letting the jar's held session override a session the caller has chosen to send.

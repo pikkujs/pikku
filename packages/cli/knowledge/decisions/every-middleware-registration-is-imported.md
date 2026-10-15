@@ -8,8 +8,8 @@ tags: cli, middleware, codegen, auth
 # Every middleware registration under a group is imported, not only the primary one
 
 `serializeMiddlewareImports` in `packages/cli/src/functions/wirings/middleware/serialize-middleware-imports.ts`
-gathers factories for each group by iterating `registrationsOf(groupMeta)` (`serialize-middleware-imports.ts:42-47`,
-`serialize-middleware-imports.ts:17`).
+gathers factories through `collectFactories`, which iterates `registrationsOf(groupMeta)` for each group
+(`serialize-middleware-imports.ts:17`).
 
 `registrationsOf` returns the primary registration plus `additionalRegistrations` (`serialize-middleware-imports.ts:42-47`).
 The comment says a group is keyed by its pattern, and more than one file may register for it. Emitting only

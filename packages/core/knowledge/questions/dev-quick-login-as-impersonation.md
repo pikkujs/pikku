@@ -16,9 +16,10 @@ The proposal is that quick login should just be impersonation. Impersonation
 (`resolveImpersonatedSession`) only applies on top of an existing session, and
 the caller must hold `admin:impersonate`. Quick login has no session before it
 runs, so making it impersonation needs one of:
+
 - an unauthenticated dev-only route that accepts a user id, which is a new
   bypass of the check that impersonation exists to keep, or
-- quick login keeps minting the dev admin session, and personas are impersonated
-  from there.
+- quick login keeps minting the dev admin session, and virtual users are
+  impersonated from there.
 
-The second keeps one mechanism for personas. Undecided.
+The second keeps one mechanism for virtual users. Undecided.

@@ -13,6 +13,6 @@ The core rule is that scopes are checked by `runPikkuFunc` before permissions, a
 
 `isThreadOwner` returns `true` for a session holding the `admin` root before it loads the thread (`packages/addon/pikku-console/src/functions/is-thread-owner.permission.ts:18-19`). Otherwise it loads the thread, returns `false` when it is missing (`:21-22`), and returns `canAccessThread(thread.resourceId, session)` (`:23`).
 
-Whether that admin bypass should apply to single-thread reads is an open question in `../questions/should-an-admin-root-skip-the-thread-ownership-check.md`.
+Whether that admin bypass should apply to single-thread reads is an [open question](../questions/should-an-admin-root-skip-the-thread-ownership-check.md).
 
 **What this rules out:** deleting a thread on the `agents:manage` scope alone, and removing `isThreadOwner` from this function.

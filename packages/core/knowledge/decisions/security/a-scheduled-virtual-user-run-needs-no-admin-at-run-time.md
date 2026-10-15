@@ -14,10 +14,14 @@ signed in or on any admin's credential.
 An admin clicking "run" or creating a schedule is the authorization step. Once
 the schedule exists, the run is started by the app's own scheduler and performs
 the test as a provisioned test account (see
-[actor-flagged users only](actor-sign-in-only-works-for-actor-flagged-users.md)).
+[virtual-user-flagged users only](virtual-user-sign-in-only-works-for-virtual-user-flagged-users.md)).
+
+The run presents no credential at all. `executeVirtualUserRun`
+(`packages/core/src/wirings/virtual-user/virtual-user-scaffold.ts`) builds its
+virtual users with `signIn: inProcessSignIn(auth)`, which calls the app's
+server-only sign-in endpoint through `auth.api`
+(`packages/core/src/services/virtual-user-sign-in.ts`). The code asking is the
+app, so there is no key for an admin to hold or refresh.
 
 **What this rules out:** a run that borrows an admin's session or key, and a run
 that depends on a person to refresh a credential.
-
-**Not decided here:** what credential the run presents. See
-[the scheduled-run credential](../../questions/scheduled-run-credential-is-undecided.md).

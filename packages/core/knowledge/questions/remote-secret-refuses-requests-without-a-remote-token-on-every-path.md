@@ -20,11 +20,10 @@ only use `/remote/rpc` paths with the secret set, so they do not show whether
 this is meant.
 
 Mounting, checked: in this repo nothing in a template or example mounts
-`pikkuRemoteAuthMiddleware`. The fabric app's generated surface
-(`/Users/yasser/git/fabric/fabric/surface.pikku.json`) mounts it as wire middleware
-on one route only, `POST /remote/rpc/:rpcName`, not globally. So for fabric the
-question above does not arise, because the middleware never sees its ordinary
-routes. The question stands for any app that mounts the middleware globally, which
+`pikkuRemoteAuthMiddleware`. The Pikku Studio Cloud app, which lives outside this
+repo, mounts it as wire middleware on one route only, `POST /remote/rpc/:rpcName`,
+not globally. So for that app the question above does not arise, because the
+middleware never sees its ordinary routes. The question stands for any app that mounts the middleware globally, which
 this repo does not show.
 
 What is asked: should a deployment that sets `PIKKU_REMOTE_SECRET` refuse its

@@ -9,6 +9,6 @@ description: Rules chosen in playwright, and what each one rules out
 A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
-- [A browser scenario actor is filled by a persona, and the persona's app picks the URL](browser-actors-are-filled-by-personas.md) — Each browser actor name resolves to a persona from definePersonas, and that persona's app decides which app URL the session browses
-- [Each actor opens its own browser context](each-actor-opens-its-own-browser-context.md) — A new ActorSession gets a fresh Playwright BrowserContext, so one actor's cookies and session never reach another
+- [A browser scenario name resolves to a declared virtual user, and that virtual user's app picks the URL](a-browser-virtual-user-browses-its-own-apps-url.md) — Each browser session name resolves to a virtual user from defineVirtualUsers, and that virtual user's app decides which app URL the session browses
+- [Each virtual user opens its own browser context](each-virtual-user-opens-its-own-browser-context.md) — A new VirtualUserSession gets a fresh Playwright BrowserContext, so one virtual user's cookies and session never reach another
 <!-- /pikku:knowledge-index -->

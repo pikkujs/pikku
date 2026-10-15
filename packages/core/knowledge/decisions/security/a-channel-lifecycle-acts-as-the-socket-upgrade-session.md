@@ -7,9 +7,9 @@ tags: core, channel, sessions, lifecycle
 
 # A channel lifecycle acts as the session the socket upgrade established
 
-`runChannelLifecycle` in `packages/core/src/wirings/channel/channel-common.ts` takes an optional `userSession`. The comment says it is established while the socket upgrades, so `onConnect` can tell who connected (`channel-common.ts:43-47`). The same function also serves `connect` and `disconnect` (`channel-common.ts:38`).
+`runChannelLifecycleWithMiddleware` in `packages/core/src/wirings/channel/channel-common.ts` takes an optional `userSession`. The comment says it is established while the socket upgrades, so `onConnect` can tell who connected (`channel-common.ts:43-47`). The same function also serves `connect` and `disconnect` (`channel-common.ts:38`).
 
-The wire for the lifecycle is built from that session when one exists (`channel-common.ts:78`). The lifecycle function then runs through `runPikkuFunc` with `sessionService: userSession` (`channel-common.ts:84-90`). So the lifecycle reads and writes the same session the upgrade produced, for both connect and disconnect.
+The wire for the lifecycle is built from that session when one exists (`channel-common.ts:78`). The lifecycle function then runs through `runPikkuFunc` with `sessionService: userSession` (`channel-common.ts:84-93`). So the lifecycle reads and writes the same session the upgrade produced, for both connect and disconnect.
 
 The related decision that records when the user id is stored is [a channel's user id is persisted only after onConnect middleware has run](../internals/channel-user-id-is-persisted-after-onconnect-middleware-runs.md).
 

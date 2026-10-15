@@ -2,12 +2,12 @@
 type: decision
 title: The plan judge is an external HTTP endpoint that receives the changeset and a bearer token
 description: Changesets that need a judgement are sent to the URL in PIKKU_PLAN_JUDGE_URL with the token from PIKKU_PLAN_JUDGE_TOKEN, and a failing judge is read as needing a plan
-tags: cli, fabric, plans, judge
+tags: cli, cloud, plans, judge
 ---
 
 # The plan judge is an external HTTP endpoint that receives the changeset and a bearer token
 
-`packages/cli/src/fabric/lib/plan-judge.ts` asks whether a changeset needs a technical plan.
+`packages/cli/src/cloud/lib/plan-judge.ts` asks whether a changeset needs a technical plan.
 
 The question text is at `plan-judge.ts:25-26`. It asks for a plan when a change adds or changes who
 may do something, adds a record kind, changes what is stored, or spans several screens or functions.

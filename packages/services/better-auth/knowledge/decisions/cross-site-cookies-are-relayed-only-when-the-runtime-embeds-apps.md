@@ -7,14 +7,14 @@ tags: better-auth, cookies, cross-site, security
 
 # Cross-site cookies are relayed only when the runtime embeds apps
 
-An app rendered inside a third-party iframe (the Fabric sandbox preview) gets its
+An app rendered inside a third-party iframe (the Pikku Studio sandbox preview) gets its
 `SameSite=Lax` cookies dropped. `AUTH_COOKIE_CROSS_SITE` (`cross-site-cookies.ts`)
 turns that on, but only for an embedding host that sets it.
 
 When it is on:
 
 - Every better-auth `Set-Cookie` is rewritten to `SameSite=None; Secure;
-  Partitioned` (`toCrossSite`). The auth handler also echoes the rewritten values
+Partitioned` (`toCrossSite`). The auth handler also echoes the rewritten values
   in `x-pikku-cross-site-set-cookie`, as encoded JSON, so a client can keep them.
   Its response is marked `cache-control: no-store`.
 - Incoming requests may carry the relayed pairs in `x-pikku-cross-site-cookie`.

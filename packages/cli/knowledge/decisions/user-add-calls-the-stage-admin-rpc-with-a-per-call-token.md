@@ -1,13 +1,13 @@
 ---
 type: decision
 title: CLI user add creates end users on a deployed stage with a per-call operator token
-description: fabric user add mints a short-lived operator token for the stage and posts admin:createUser to the stage's /api/rpc endpoint directly, without a broker
-tags: cli, fabric, users, auth
+description: pikku cloud user add mints a short-lived operator token for the stage and posts admin:createUser to the stage's /api/rpc endpoint directly, without a broker
+tags: cli, cloud, users, auth
 ---
 
 # CLI user add creates end users on a deployed stage with a per-call operator token
 
-`FabricUserAdd` in `packages/cli/src/fabric/functions/user-add.function.ts` requires a token and a
+`CloudUserAdd` in `packages/cli/src/cloud/functions/user-add.function.ts` requires a token and a
 linked project (`user-add.function.ts:51-59`). The comment says the stage operator token is minted per
 call so nothing durable holds a stage credential (`user-add.function.ts:81-82`). It calls
 `createStageOperatorToken` and gets back the token and the stage's app URL (`user-add.function.ts:83-85`).
