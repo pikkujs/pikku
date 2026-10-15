@@ -217,8 +217,8 @@ susan:  { /* … */ account: {} },                        // email + password
 yasser: { /* … */ account: {}, linkedAccounts: { google: {} } },
 ```
 
-`account: {}` is genuinely empty in the normal case: the address is computed and the virtual user
-credential derives from `SCENARIO_VIRTUAL_USER_SECRET` and that address, so there is nothing left
+`account: {}` is genuinely empty in the normal case: the address is computed and sign-in is
+proven by a signed statement naming the virtual user, so there is nothing left
 to write down. It
 fills up only for a provider login — `account: { provider: 'google' }`.
 
