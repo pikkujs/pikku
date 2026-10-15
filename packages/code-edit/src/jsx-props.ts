@@ -63,6 +63,63 @@ export function readJsxProps(
   return props
 }
 
+const STYLE_TOKEN = /^\[([a-z-]+):(.+)\]!$/
+
+const kebab = (prop: string) => prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+
+function restyle(classes: string, styles: Record<string, string | null>): string {
+  const props = new Set(Object.keys(styles).map(kebab))
+  const kept = classes.split(/\s+/).filter((token) => {
+    const match = STYLE_TOKEN.exec(token)
+    return token !== '' && !(match && props.has(match[1]!))
+  })
+  const added = Object.entries(styles)
+    .filter((entry): entry is [string, string] => entry[1] !== null && entry[1].trim() !== '')
+    .map(([prop, value]) => `[${kebab(prop)}:${value.trim().replace(/\s+/g, '_')}]!`)
+  return [...kept, ...added].join(' ')
+}
+
+const onlyStyleTokens = (text: string) =>
+  text.trim() !== '' && text.trim().split(/\s+/).every((t) => STYLE_TOKEN.test(t))
+
+const quoted = (text: string) => `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+
+export class JsxStyleError extends Error {}
+
+export function writeJsxStyle(
+  source: string,
+  line: number,
+  col: number,
+  styles: Record<string, string | null>
+): string {
+  const file = parse(source)
+  const element = findOpeningElement(file, line, col)
+  if (!element) return source
+  const attr = element.attributes.properties.find(
+    (a): a is ts.JsxAttribute =>
+      ts.isJsxAttribute(a) && ts.isIdentifier(a.name) && a.name.text === 'className'
+  )
+  const value = attr ? literalValue(attr) : ''
+  if (typeof value === 'string') {
+    const next = restyle(value, styles)
+    return next === value ? source : writeJsxProp(source, line, col, 'className', next || null)
+  }
+  const expr = attr?.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : undefined
+  if (!expr || !ts.isCallExpression(expr) || !ts.isIdentifier(expr.expression) || expr.expression.text !== 'cn')
+    throw new JsxStyleError('This element builds its className in a way that cannot be edited safely')
+  const args = expr.arguments
+  const last = args[args.length - 1]
+  if (last && ts.isStringLiteralLike(last) && onlyStyleTokens(last.text)) {
+    const next = restyle(last.text, styles)
+    if (next) return source.slice(0, last.getStart(file)) + quoted(next) + source.slice(last.end)
+    const prev = args[args.length - 2]
+    return prev ? source.slice(0, prev.end) + source.slice(last.end) : source.slice(0, last.getStart(file)) + source.slice(last.end)
+  }
+  const added = restyle('', styles)
+  if (!added) return source
+  return source.slice(0, args.end) + `${args.length ? ', ' : ''}${quoted(added)}` + source.slice(args.end)
+}
+
 /** Sets, replaces or (with null) removes one literal prop; returns the source unchanged when no element starts there. */
 export function writeJsxProp(
   source: string,

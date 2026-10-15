@@ -86,10 +86,9 @@ export const agentPermissionsAuthGatedToolIsOfferedToPasserScenario =
 /**
  * The two runs need a thread each.
  *
- * The cucumber version put both on one thread, so the outsider's run was
- * refused outright with `Not authorized to access this thread` — and its
- * assertion, `expect(calls[0]?.toolNames ?? []).not.toContain('gatedTool')`,
- * passed vacuously over the empty list. It was green while testing nothing.
+ * Sharing one thread refuses the outsider's run outright with
+ * `Not authorized to access this thread`, and an assertion over the empty call
+ * list would pass vacuously.
  * A menu cached across callers would be cached per agent, not per thread, so
  * one thread each exercises the claim the title makes; thread ownership itself
  * is what the agent-ownership scenarios are for.
@@ -150,9 +149,8 @@ export const agentPermissionsFilteringIsPerRunScenario = pikkuScenario<
 })
 
 /**
- * The cucumber version of this signed in as the seeded guest before calling,
- * so it never actually tested a sessionless caller. This one sends no identity
- * headers and no cookie at all, which is what the title always claimed.
+ * This sends no identity headers and no cookie at all, so it tests a
+ * sessionless caller rather than the seeded guest.
  */
 export const agentPermissionsSessionlessCallerScenario = pikkuScenario<
   void,

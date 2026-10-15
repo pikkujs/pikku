@@ -133,6 +133,27 @@ export class DesignService {
       await writeFile(this.sourcePath(path), updated, 'utf-8')
   }
 
+  async writeJsxStyle(
+    path: string,
+    line: number,
+    col: number,
+    styles: Record<string, string | null>
+  ): Promise<void> {
+    const { readJsxProps, writeJsxStyle, JsxStyleError } = await this.jsx()
+    const source = await this.readSource(path)
+    if (!readJsxProps(source, line, col))
+      throw new NotFoundError(`No JSX element at ${path}:${line}:${col}`)
+    let updated: string
+    try {
+      updated = writeJsxStyle(source, line, col, styles)
+    } catch (error) {
+      if (error instanceof JsxStyleError) throw new BadRequestError(error.message)
+      throw error
+    }
+    if (updated !== source)
+      await writeFile(this.sourcePath(path), updated, 'utf-8')
+  }
+
   private async jsx(): Promise<typeof CodeEdit> {
     const codeEditPath = ['@pikku', 'code-edit'].join('/')
     return import(codeEditPath)

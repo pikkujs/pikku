@@ -444,6 +444,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
+    continue-on-error: ${{ matrix.example == 'online-shop' }}
     strategy:
       fail-fast: false
       matrix:

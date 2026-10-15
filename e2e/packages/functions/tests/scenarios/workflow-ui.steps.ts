@@ -2,9 +2,9 @@
  * Opening a specific workflow run on the console canvas.
  *
  * The run to open is identified by the id the scenario already started, so the
- * page is never asked to guess which run it is looking at — the cucumber
- * version fetched "the latest run for this workflow", which quietly followed
- * whichever run a concurrently-running scenario had left behind.
+ * page is never asked to guess which run it is looking at rather than
+ * "the latest run for this workflow", which could follow a run a concurrent
+ * scenario left behind.
  */
 import { pikkuScenarioStep } from '#pikku/scenario'
 

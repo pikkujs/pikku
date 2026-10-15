@@ -3,7 +3,7 @@
  *
  * Every one takes the run result as explicit data rather than reaching back
  * into a shared world — which is what removes the five verbatim copies of
- * `callsFor(this.agentMessage!)` the cucumber glue carried.
+ * `callsFor(this.agentMessage!)` shared-world glue would carry.
  *
  * Naming: `expects*` compares values the scenario already holds and never
  * touches a DOM; `sees*` is reserved for browser-backed steps.
@@ -17,7 +17,7 @@ import type { MockLlmCall } from './agent-transport.js'
  *
  * A refusal is not always a non-2xx — an agent permission that rejects before
  * the run starts answers 200 with an `errorId` — so both signals count, exactly
- * as the cucumber step did.
+ * as the run itself reports it.
  */
 export const expectsRunOutcome = pikkuScenarioStep<
   { run: { status: number; ok: boolean; error?: string }; refused: boolean },
@@ -145,8 +145,8 @@ export const expectsOfferedTools = pikkuScenarioStep<
 /**
  * The shape of one model call, other than its tools.
  *
- * One step rather than the five cucumber definitions it replaces, because each
- * of those did the same `callsFor(...)` lookup and then read a single field.
+ * One step rather than five, because each would do the same `callsFor(...)`
+ * lookup and then read a single field.
  */
 export const expectsModelCall = pikkuScenarioStep<
   {
@@ -600,8 +600,7 @@ export const expectsModelCallMatching = pikkuScenarioStep<
  * The two voice assertions are existence and absence across every call the run
  * made, not properties of a call at a known index — the transcript replaces the
  * user message, so there is no stable index to read. Scoped to this run's calls
- * rather than the process-global log, which is strictly narrower than the
- * cucumber step it replaces.
+ * rather than the process-global log.
  */
 export const expectsCallLog = pikkuScenarioStep<
   { calls: MockLlmCall[]; includes?: string; excludes?: string },
