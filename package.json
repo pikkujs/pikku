@@ -34,7 +34,6 @@
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",
-    "pre-push": "bun run pre-commit",
     "tsc": "bun run --filter '*' tsc",
     "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
