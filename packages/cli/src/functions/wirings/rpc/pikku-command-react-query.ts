@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { dirname, join } from 'node:path'
 import { addonMockSources } from '../../mocks/addon-mocks.js'
-import { serializeMocksModule } from './serialize-mocks-module.js'
+import { mocksToGlob, serializeMocksModule } from './serialize-mocks-module.js'
 import { serializeReactQueryHooks } from './serialize-react-query-hooks.js'
 import { readStubMocks } from './read-stub-mocks.js'
 
@@ -59,17 +59,21 @@ export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
     )
     await writeFileInDir(logger, reactQueryFile, content)
 
-    const mocksFile = join(dirname(reactQueryFile), 'mocks.gen.ts')
-    await writeFileInDir(
-      logger,
-      mocksFile,
-      serializeMocksModule(
+    const mocks = mocksToGlob(join(config.rootDir, '.mocks'), addons)
+    if (mocks) {
+      const mocksFile = join(dirname(reactQueryFile), 'mocks.gen.ts')
+      await writeFileInDir(
+        logger,
         mocksFile,
-        getFileImportRelativePath(mocksFile, reactQueryFile, packageMappings),
-        join(config.rootDir, '.mocks'),
-        addons
+        serializeMocksModule(
+          mocksFile,
+          getFileImportRelativePath(mocksFile, reactQueryFile, packageMappings),
+          join(config.rootDir, '.mocks'),
+          mocks.addons,
+          mocks.app
+        )
       )
-    )
+    }
   },
   middleware: [
     logCommandInfoAndTime({

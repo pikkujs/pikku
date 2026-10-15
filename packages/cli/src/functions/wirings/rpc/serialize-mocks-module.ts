@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { dirname, relative, sep } from 'node:path'
 
 const globBase = (fromFile: string, dir: string) => {
@@ -14,15 +15,25 @@ const source = (fromFile: string, dir: string, namespace?: string) => {
     },`
 }
 
+export const mocksToGlob = <Addon extends { dir: string }>(
+  appMocksDir: string,
+  addons: Addon[]
+): { app: boolean; addons: Addon[] } | undefined => {
+  const app = existsSync(appMocksDir)
+  const withMocks = addons.filter((addon) => existsSync(addon.dir))
+  return app || withMocks.length ? { app, addons: withMocks } : undefined
+}
+
 export const serializeMocksModule = (
   mocksFile: string,
   reactQueryImport: string,
   appMocksDir: string,
-  addons: { namespace: string; dir: string }[]
+  addons: { namespace: string; dir: string }[],
+  app = true
 ) => `import { registerMocks } from '${reactQueryImport}'
 
 export const registerPikkuMocks = () =>
   registerMocks([
-${[source(mocksFile, appMocksDir), ...addons.map((addon) => source(mocksFile, addon.dir, addon.namespace))].join('\n')}
+${[...(app ? [source(mocksFile, appMocksDir)] : []), ...addons.map((addon) => source(mocksFile, addon.dir, addon.namespace))].join('\n')}
   ])
 `
