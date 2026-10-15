@@ -44,3 +44,6 @@ and quiet rather than to delete it.
 
 Related: [[an-unref-d-timer-cannot-be-awaited-under-node-test]], the other
 source of nondeterminism found in the same pass.
+
+Where the cause is observable, prefer asserting it outright:
+[[a-latency-budget-is-asserted-by-its-cause]].
