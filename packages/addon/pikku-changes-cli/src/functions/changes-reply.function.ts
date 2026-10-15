@@ -57,7 +57,7 @@ export const ChangesReply = pikkuSessionlessFunc({
 
     const { rpc, projectId } = await changesContext(input.apiUrl)
     if (input.person && projectId !== LOCAL_PROJECT_ID)
-      throw new PreconditionError(
+      throw new CloudPreconditionError(
         'A person answers a hosted project from the console; --person is for the local changes queue.'
       )
     const reply: ReplyToChangeInput & { person?: boolean } = {
