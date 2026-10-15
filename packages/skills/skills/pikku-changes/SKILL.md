@@ -61,6 +61,25 @@ group's lease, done — and when a held or leased item is **claimable at** (a lo
 cannot be taken. For held items, run `wait --claim` rather than retrying. The lease is 30 minutes
 (`--lease-minutes`); an abandoned claim returns to the queue by itself.
 
+## The board
+
+Every change sits in one column: backlog, ready, in progress, needs answer, done.
+`list` prints them left to right with counts (`--include-done` adds done). A claim is
+not a column: it lives on the changeset's lease, so a change still in progress whose
+lease lapsed shows as `abandoned`, and `next` and `wait` pick it up again.
+
+`claim`, `wait` and `next` never take a backlog change; `claim` on one is refused
+with a 409. Move it first, and only when the person asked for it to be worked:
+
+```bash
+pikku changes ready 5        # backlog → ready
+pikku changes backlog 5      # shelve it again
+pikku changes start 3 4      # ready → in progress, the work has begun
+```
+
+The backlog lives in the local queue only; a project whose changes are in Pikku
+Studio Cloud refuses `backlog`, `ready` and `file --backlog`.
+
 ## Changesets
 
 Group related items into changesets and claim each one as a group, saying which tables it touches —

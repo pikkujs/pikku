@@ -37,6 +37,14 @@ import {
   renderChangesDone,
 } from './functions/changes-done.function.js'
 import {
+  ChangesBacklog,
+  ChangesReady,
+  ChangesStart,
+  renderChangesBacklog,
+  renderChangesReady,
+  renderChangesStart,
+} from './functions/changes-move.function.js'
+import {
   ChangesMerge,
   renderChangesMerge,
 } from './functions/changes-merge.function.js'
@@ -164,6 +172,11 @@ export const changesCommands = defineCLICommands({
         description:
           'Changes that must be done before this one runs, repeatable — 2, #2 or the uuid',
       },
+      backlog: {
+        description:
+          'Track it without anyone picking it up — claim, next and wait skip it until `pikku changes ready`',
+        type: 'boolean',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
@@ -268,6 +281,11 @@ export const changesCommands = defineCLICommands({
           'image/png, image/jpeg or image/webp (inferred from --image)',
       },
       authorName: { description: 'Who is replying, e.g. claude-code' },
+      person: {
+        description:
+          'Post it as the person answering, not as an agent: a parked (needs answer) change goes back to in progress. Local queue only',
+        type: 'boolean',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
@@ -332,6 +350,35 @@ export const changesCommands = defineCLICommands({
         description: 'What was done, for whoever reads the thread later',
       },
       authorName: { description: 'Who did it, e.g. claude-code' },
+      apiUrl: { description: 'Override the API URL for this call' },
+    },
+  }),
+  start: pikkuCLICommand({
+    func: ChangesStart,
+    render: renderChangesStart,
+    parameters: '<changeIds...>',
+    description:
+      'Mark ready changes in progress: the work has begun. A change left in progress whose lease lapsed is picked up again by next',
+    options: {
+      apiUrl: { description: 'Override the API URL for this call' },
+    },
+  }),
+  backlog: pikkuCLICommand({
+    func: ChangesBacklog,
+    render: renderChangesBacklog,
+    parameters: '<changeIds...>',
+    description:
+      'Move changes to the backlog: still listed and tracked, never claimed or picked up by next and wait',
+    options: {
+      apiUrl: { description: 'Override the API URL for this call' },
+    },
+  }),
+  ready: pikkuCLICommand({
+    func: ChangesReady,
+    render: renderChangesReady,
+    parameters: '<changeIds...>',
+    description: 'Move backlog changes to ready so they can be picked up',
+    options: {
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),

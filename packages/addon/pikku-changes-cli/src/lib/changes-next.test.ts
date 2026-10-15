@@ -5,6 +5,7 @@ import {
   HELD_MARGIN_MS,
   MAX_CONSECUTIVE_FAILURES,
   SAFETY_POLL_MS,
+  claimable,
   waitForNext,
   type NextOptions,
 } from './changes-next.js'
@@ -17,7 +18,7 @@ const change = (overrides: Record<string, unknown> = {}) => ({
   changeId: 'chg_1',
   shortId: '1',
   title: 'Make the total stand out',
-  status: 'open',
+  status: 'ready',
   groupId: null,
   route: '/checkout',
   held: false,
@@ -90,6 +91,15 @@ const httpError = (status: number, message = 'nope') =>
 const empty = { changes: [], groups: [] }
 
 describe('waitForNext', () => {
+  test('never returns a backlogged change and keeps waiting', async () => {
+    const list = { changes: [change({ status: 'backlog' })], groups: [] }
+    assert.deepStrictEqual(claimable(list as any, NOW), [])
+    const { rpc } = fakeRpc([list])
+    const { clock } = fakeClock()
+    const result = await waitForNext(rpc, options({ timeoutMs: 30_000 }), clock)
+    assert.strictEqual(result.outcome, 'timeout')
+  })
+
   test('returns straight away when something is claimable', async () => {
     const { rpc, calls } = fakeRpc([{ changes: [change()], groups: [] }])
     const { clock, sleeps } = fakeClock()
@@ -114,7 +124,7 @@ describe('waitForNext', () => {
     assert.strictEqual(list.pickupOnly, false)
     assert.strictEqual(list.stageId, 'stage_dev')
     assert.strictEqual(list.route, '/checkout')
-    assert.deepStrictEqual(list.status, ['open', 'claimed'])
+    assert.deepStrictEqual(list.status, ['ready', 'in_progress'])
   })
 
   test('waits out the grace window instead of returning a held item', async () => {
@@ -144,7 +154,7 @@ describe('waitForNext', () => {
     const heldUntil = new Date(NOW + 10 * 60_000).toISOString()
     const { rpc } = fakeRpc([
       {
-        changes: [change({ status: 'claimed', groupId: 'grp_1', heldUntil })],
+        changes: [change({ status: 'ready', groupId: 'grp_1', heldUntil })],
         groups: [group()],
       },
       { changes: [change()], groups: [] },
@@ -158,8 +168,8 @@ describe('waitForNext', () => {
     const { rpc } = fakeRpc([
       {
         changes: [
-          change({ status: 'claimed', groupId: 'grp_1' }),
-          change({ changeId: 'chg_2', status: 'claimed', groupId: 'grp_2' }),
+          change({ status: 'ready', groupId: 'grp_1' }),
+          change({ changeId: 'chg_2', status: 'ready', groupId: 'grp_2' }),
         ],
         groups: [
           group(),
@@ -178,7 +188,7 @@ describe('waitForNext', () => {
   test('picks up a claimed item whose lease has lapsed', async () => {
     const { rpc } = fakeRpc([
       {
-        changes: [change({ status: 'claimed', groupId: 'grp_1' })],
+        changes: [change({ status: 'ready', groupId: 'grp_1' })],
         groups: [
           group({ claimExpiresAt: new Date(NOW - 60_000).toISOString() }),
         ],
@@ -186,6 +196,41 @@ describe('waitForNext', () => {
     ])
     const result = await waitForNext(rpc, options(), fakeClock().clock)
     assert.strictEqual(result.changes.length, 1)
+  })
+
+  test('an in-progress change is claimable only once its lease has lapsed', async () => {
+    const live = {
+      changes: [change({ status: 'in_progress', groupId: 'grp_1' })],
+      groups: [group()],
+    }
+    assert.deepStrictEqual(claimable(live as any, NOW), [])
+    const lapsed = {
+      changes: [change({ status: 'in_progress', groupId: 'grp_1' })],
+      groups: [group({ claimExpiresAt: new Date(NOW - 60_000).toISOString() })],
+    }
+    assert.strictEqual(claimable(lapsed as any, NOW).length, 1)
+    const orphan = {
+      changes: [change({ status: 'in_progress', groupId: null })],
+      groups: [],
+    }
+    assert.strictEqual(claimable(orphan as any, NOW).length, 1)
+  })
+
+  test('next surfaces an abandoned in-progress change', async () => {
+    const { rpc } = fakeRpc([
+      {
+        changes: [change({ status: 'in_progress', groupId: 'grp_1' })],
+        groups: [
+          group({ claimExpiresAt: new Date(NOW - 60_000).toISOString() }),
+        ],
+      },
+    ])
+    const result = await waitForNext(rpc, options(), fakeClock().clock)
+    assert.strictEqual(result.outcome, 'ready')
+    assert.deepStrictEqual(
+      result.changes.map((c) => c.changeId),
+      ['chg_1']
+    )
   })
 
   test('times out with nothing, never sleeping past the deadline', async () => {
@@ -208,7 +253,7 @@ describe('waitForNext', () => {
   test('--claim takes what it found as one group', async () => {
     const claimed = {
       group: group({ claimedBy: 'claude-code' }),
-      changes: [change({ status: 'claimed', groupId: 'grp_1' })],
+      changes: [change({ status: 'ready', groupId: 'grp_1' })],
     }
     const { rpc, calls } = fakeRpc(
       [{ changes: [change(), change({ changeId: 'chg_2' })], groups: [] }],
@@ -265,11 +310,7 @@ describe('waitForNext', () => {
         options({ claimedBy: 'claude-code' }),
         fakeClock().clock
       )
-      assert.deepStrictEqual(calls[0]!.data.status, [
-        'open',
-        'claimed',
-        'in_progress',
-      ])
+      assert.deepStrictEqual(calls[0]!.data.status, ['ready', 'in_progress'])
       assert.deepStrictEqual(
         result.answered.map((c) => c.changeId),
         ['chg_1']

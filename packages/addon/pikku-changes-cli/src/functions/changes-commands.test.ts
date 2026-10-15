@@ -80,6 +80,8 @@ const { ChangesShot } = await import('./changes-shot.function.js')
 const { ChangesFile } = await import('./changes-file.function.js')
 const { ChangesReply } = await import('./changes-reply.function.js')
 const { ChangesShow } = await import('./changes-show.function.js')
+const { ChangesBacklog, ChangesReady, ChangesStart } =
+  await import('./changes-move.function.js')
 const { clockTime } = changesLib
 
 const sent = async (run: () => Promise<unknown>) => {
@@ -148,7 +150,7 @@ describe('changes claim, refused', () => {
           change: {
             changeId: HELD,
             shortId: '3',
-            status: 'open',
+            status: 'ready',
             held: true,
             heldUntil: heldUntil.toISOString(),
           },
@@ -158,7 +160,7 @@ describe('changes claim, refused', () => {
           change: {
             changeId: TAKEN,
             shortId: '4',
-            status: 'claimed',
+            status: 'ready',
             held: false,
             heldUntil: leaseEnds.toISOString(),
           },
@@ -182,7 +184,7 @@ describe('changes claim, refused', () => {
           assert.match(
             error.message,
             new RegExp(
-              `#4: claimed, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
+              `#4: ready, inside another group's lease — claimable at ${clockTime(leaseEnds)}`
             )
           )
           assert.match(error.message, /#99: not found in this project/)
@@ -545,5 +547,52 @@ describe('changes reply', () => {
       )
     )
     assert.strictEqual(data.body, 'Blocked on X.')
+  })
+})
+
+describe('changes backlog, ready and start on a hosted project', () => {
+  test('backlog is refused before anything reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      ChangesBacklog.func({} as any, { changeIds: ['3'] } as any),
+      /The backlog is kept in the local changes queue/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('ready is refused before anything reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      ChangesReady.func({} as any, { changeIds: ['3'] } as any),
+      /The backlog is kept in the local changes queue/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('file --backlog is refused before anything reaches the api', async () => {
+    invoked.length = 0
+    await assert.rejects(
+      ChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: 'Later', backlog: true } as any
+      ),
+      /The backlog is kept in the local changes queue/
+    )
+    assert.strictEqual(invoked.length, 0)
+  })
+
+  test('start sends the hosted in_progress update', async () => {
+    respond = () => ({
+      change: { shortId: '3', title: 'Begin', status: 'in_progress' },
+    })
+    try {
+      const { name, data } = await sent(() =>
+        ChangesStart.func({} as any, { changeIds: ['3'] } as any)
+      )
+      assert.strictEqual(name, 'updateChange')
+      assert.deepStrictEqual(data, { changeId: '3', status: 'in_progress' })
+    } finally {
+      respond = () => ({ ok: true })
+    }
   })
 })

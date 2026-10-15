@@ -4,11 +4,18 @@ import {
   age,
   changesContext,
   clockTime,
-  remaining,
   requireProjectId,
 } from '../lib/changes.js'
 import { dim, safe, statusColor } from '@pikku/cli/addon-support'
-import type { ListChangesOutput } from '../lib/types.js'
+import {
+  COLUMNS,
+  COLUMN_LABELS,
+  claimOf,
+  isAbandoned,
+  type BoardChange,
+  type BoardGroup,
+  type BoardStatus,
+} from '../lib/changes-board.js'
 
 export const ChangesListInput = z.object({
   apiUrl: z.string().optional(),
@@ -47,68 +54,65 @@ export const ChangesList = pikkuSessionlessFunc({
   },
 })
 
-type Change = ListChangesOutput['changes'][number]
-type Group = ListChangesOutput['groups'][number]
+type Group = BoardGroup
 
-const line = (change: Change): void => {
-  const flags = [
-    statusColor(change.status),
-    change.heldUntil
-      ? dim(`claimable at ${clockTime(change.heldUntil)}`)
-      : change.held
-        ? dim('held')
-        : null,
-    change.route ? safe(change.route) : null,
-  ]
-    .filter(Boolean)
-    .join('  ')
-  console.log(`  #${safe(change.shortId)}  ${safe(change.title)}`)
-  console.log(
-    `      ${flags}  ${age(change.createdAt)} ago  ${dim(safe(change.changeId))}`
-  )
-  const named = (change.capture?.elements ?? [])
-    .map((element) => element.testId ?? element.sourceAnchor ?? element.cssPath)
-    .filter((name): name is string => !!name)
-    .map(safe)
-  if (named.length) console.log(dim(`      circled: ${named.join(', ')}`))
+const badge = (
+  change: BoardChange,
+  groups: Group[],
+  now: number
+): string | null => {
+  const asked = (change as { ask?: { kind: string } }).ask
+  if (change.status === 'needs_answer' && asked)
+    return `needs answer · ${safe(asked.kind)}`
+  const claim = claimOf(change, groups, now)
+  if (claim)
+    return `claimed by ${safe(claim.claimedBy)} until ${clockTime(claim.until)}`
+  return isAbandoned(change, groups, now) ? 'abandoned' : null
 }
+
+const line =
+  (groups: Group[], now: number) =>
+  (change: BoardChange): void => {
+    const flags = [
+      badge(change, groups, now),
+      change.heldUntil
+        ? dim(`claimable at ${clockTime(change.heldUntil)}`)
+        : change.held
+          ? dim('held')
+          : null,
+      change.route ? safe(change.route) : null,
+    ]
+      .filter(Boolean)
+      .join('  ')
+    console.log(`  #${safe(change.shortId)}  ${safe(change.title)}`)
+    console.log(
+      `      ${flags ? `${flags}  ` : ''}${age(change.createdAt)} ago  ${dim(safe(change.changeId))}`
+    )
+    const named = (change.capture?.elements ?? [])
+      .map(
+        (element) => element.testId ?? element.sourceAnchor ?? element.cssPath
+      )
+      .filter((name): name is string => !!name)
+      .map(safe)
+    if (named.length) console.log(dim(`      circled: ${named.join(', ')}`))
+  }
 
 export const renderChangesList = (
   _s: unknown,
-  { changes, groups }: { changes: Change[]; groups: Group[] }
+  { changes, groups }: { changes: BoardChange[]; groups: Group[] }
 ): void => {
   if (!changes.length) {
     console.log(dim('  Nothing open.'))
     return
   }
-
-  const listed = new Set(groups.map((group) => group.groupId))
-  const ungrouped = changes.filter((change) => !change.groupId)
-  const grouped = changes.filter((change) => change.groupId)
-
-  if (ungrouped.length) {
-    console.log(`unclaimed (${ungrouped.length})`)
-    ungrouped.forEach(line)
-  }
-
-  for (const group of groups) {
-    const members = grouped.filter((change) => change.groupId === group.groupId)
-    if (!members.length) continue
-    const lease =
-      group.claimedBy && group.claimExpiresAt
-        ? `claimed by ${safe(group.claimedBy)}, ${remaining(group.claimExpiresAt)} left`
-        : 'unclaimed'
-    console.log('')
-    console.log(
-      `${safe(group.title)}  ${dim(`(${lease})  ${safe(group.groupId)}`)}`
-    )
-    members.forEach(line)
-  }
-
-  const orphaned = grouped.filter((change) => !listed.has(change.groupId!))
-  if (orphaned.length) {
-    console.log('')
-    console.log(dim('grouped, group not listed'))
-    orphaned.forEach(line)
-  }
+  const now = Date.now()
+  const columns: BoardStatus[] = changes.some((c) => c.status === 'done')
+    ? [...COLUMNS, 'done']
+    : [...COLUMNS]
+  columns.forEach((status, index) => {
+    const cards = changes.filter((change) => change.status === status)
+    if (index) console.log('')
+    console.log(`${COLUMN_LABELS[status]} (${cards.length})`)
+    cards.forEach(line(groups, now))
+  })
 }

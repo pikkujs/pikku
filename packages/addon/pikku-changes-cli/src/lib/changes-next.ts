@@ -1,15 +1,21 @@
 import type { ChangesRPC } from './changes-local.js'
-import type {
-  ClaimChangesOutput,
-  ListChangesOutput,
-  NextResult,
-} from './types.js'
+import type { ClaimChangesOutput, NextResult } from './types.js'
+import {
+  board,
+  liveLease,
+  pickableStatus,
+  statuses,
+  type BoardChange,
+  type BoardGroup,
+  type BoardList,
+} from './changes-board.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { httpStatus } from './http-status.js'
 import type { ChangeEvents } from './change-events.js'
 
-type Change = ListChangesOutput['changes'][number]
-type Group = ListChangesOutput['groups'][number]
+type Change = BoardChange
+type Group = BoardGroup
+type ClaimedChange = ClaimChangesOutput['changes'][number]
 
 export interface NextOptions {
   projectId: string
@@ -40,32 +46,28 @@ export const SAFETY_POLL_MS = 3 * 60_000
 /** Past `heldUntil`, so the next read finds the item claimable rather than just short. */
 export const HELD_MARGIN_MS = 1_000
 
-const liveLease = (group: Group | undefined, now: number): boolean =>
-  !!group?.claimedBy &&
-  !!group.claimExpiresAt &&
-  new Date(group.claimExpiresAt).getTime() > now
-
 /**
- * What `claimChanges` would accept right now: open or claimed, out of the
- * grace window, and not inside somebody's live lease — including our own,
- * since an item we are holding and chose to leave is not new work.
+ * What `claimChanges` would accept right now: ready, or in progress with no
+ * live lease (abandoned), out of the grace window, and not inside somebody's
+ * live lease — including our own, since an item we are holding and chose to
+ * leave is not new work.
  */
 export function claimable(
-  { changes, groups }: ListChangesOutput,
+  { changes, groups }: BoardList,
   now: number
 ): Change[] {
   const byId = new Map(groups.map((group) => [group.groupId, group]))
   return changes.filter(
     (change) =>
       !change.held &&
-      (change.status === 'open' || change.status === 'claimed') &&
+      pickableStatus(change.status) &&
       !liveLease(change.groupId ? byId.get(change.groupId) : undefined, now)
   )
 }
 
 /** Items back from `needs_answer` in a group this claimant holds. */
 export function awaitingReview(
-  { changes, groups }: ListChangesOutput,
+  { changes, groups }: BoardList,
   claimedBy: string | undefined
 ): Change[] {
   if (!claimedBy) return []
@@ -88,12 +90,12 @@ export function awaitingReview(
  * `heldUntil` leaves it undefined, and this answers null.
  */
 export function soonestClaimable(
-  { changes }: ListChangesOutput,
+  { changes }: BoardList,
   now: number
 ): number | null {
   let soonest: number | null = null
   for (const change of changes) {
-    if (change.status !== 'open' && change.status !== 'claimed') continue
+    if (!pickableStatus(change.status)) continue
     if (!change.heldUntil) continue
     const at = new Date(change.heldUntil).getTime()
     if (at > now && (soonest === null || at < soonest)) soonest = at
@@ -162,17 +164,17 @@ export async function waitForNext(
       ? Math.max(options.intervalMs, SAFETY_POLL_MS)
       : options.intervalMs
     try {
-      const list = await rpc.invoke('listChanges', {
-        projectId: options.projectId,
-        stageId: options.stageId,
-        route: options.route,
-        status: options.claimedBy
-          ? ['open', 'claimed', 'in_progress']
-          : ['open', 'claimed'],
-        pickupOnly: false,
-        includeDone: false,
-        limit: 200,
-      })
+      const list = board(
+        await rpc.invoke('listChanges', {
+          projectId: options.projectId,
+          stageId: options.stageId,
+          route: options.route,
+          status: statuses('ready', 'in_progress'),
+          pickupOnly: false,
+          includeDone: false,
+          limit: 200,
+        })
+      )
       failures = 0
 
       const soonest = soonestClaimable(list, clock.now())
