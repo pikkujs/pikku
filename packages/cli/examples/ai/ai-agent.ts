@@ -46,9 +46,9 @@
 //~ `agentName="todoAssistant"` in the chat page. NEVER a kebab-case `name` that
 //~ differs from the export — that is exactly what breaks the assistant.
 //~
-//~ `model` MUST be provider-prefixed — Fabric routes everything through one LiteLLM
-//~ proxy, so use `openai/gpt-5.6-luna` (a bare alias fails). No API key to set up:
-//~ Fabric injects the AI credentials for the sandbox automatically.
+//~ `model` MUST be provider-prefixed — Pikku Studio routes everything through one LiteLLM
+//~ proxy, so use `openai/gpt-5.6-luna` (a bare alias fails). On Pikku Studio Cloud there is no API key to set up:
+//~ it injects the AI credentials for the sandbox automatically. Elsewhere, set your provider key.
 //~ `goal` is the system prompt. `tools` is the list of pikkuFuncs it may call — add
 //~ EVERY tool the assistant should be able to call, each with its import.
 

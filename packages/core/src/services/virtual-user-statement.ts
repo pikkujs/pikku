@@ -13,7 +13,7 @@ export const VIRTUAL_USER_STATEMENT_TTL_SECONDS = 180
 /** The longest a verifier accepts, whatever `exp` claims. */
 export const VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS = 300
 
-/** The variable a stage carries its PUBLIC key in. Not `PIKKU_`/`FABRIC_`: a stage rejects those. */
+/** The variable a stage carries its PUBLIC key in. Not `PIKKU_`/`PIKKUSTUDIO_`: a stage rejects those. */
 export const VIRTUAL_USER_VERIFY_KEY_VARIABLE = 'VIRTUAL_USER_VERIFY_KEY'
 
 /** The variable whoever deploys holds the PRIVATE key in. Never set on a stage. */

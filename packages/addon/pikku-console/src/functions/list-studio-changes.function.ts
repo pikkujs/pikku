@@ -12,7 +12,7 @@ export const listStudioChanges = pikkuFunc<
 >({
   title: 'List Changes',
   description:
-    'The changes queue: local to this project, or the ones Fabric filed against the deployed app when the project is linked.',
+    'The changes queue: local to this project, or the ones Pikku Studio Cloud filed against the deployed app when the project is linked.',
   expose: true,
   scopes: ['pikku:console:changes:read'],
   func: async ({ studioHost }, { status }) => {

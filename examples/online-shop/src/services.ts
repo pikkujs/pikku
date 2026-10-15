@@ -12,8 +12,6 @@ import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { fanOutAnalytics, LoggerAnalyticsService } from '#pikku/analytics'
-import { fabricAnalyticsService } from './analytics/analytics-service.js'
 import { shopAnalyticsIdentity } from './analytics/identity.js'
 import type { Kysely } from 'kysely'
 import { GeneratedTemplateEmailService } from './lib/email-service.js'
@@ -35,15 +33,15 @@ export const createSingletonServices = pikkuServices(
       new GeneratedTemplateEmailService({
         delegate: new LocalEmailService(),
       })
-    // The durable audit sink. In a deployed stage fabric injects the platform's
+    // The durable audit sink. In a deployed stage cloud injects the platform's
     // audit service; locally it falls back to a no-op so nothing is persisted.
     const audit = existingServices?.audit ?? new NoopAuditService()
     // kysely is injected by pikku dev (node:sqlite) or the CF Worker workflow (libsql).
-    // The template never constructs its own dialect — dialects are fabric/runtime
+    // The template never constructs its own dialect — dialects are cloud/runtime
     // concerns — so it must always be provided by the runtime.
     if (!existingServices?.kysely) {
       throw new Error(
-        'kysely service was not injected by the runtime (pikku dev / fabric)'
+        'kysely service was not injected by the runtime (pikku dev / cloud)'
       )
     }
     const kysely: Kysely<DB> = existingServices.kysely
@@ -58,20 +56,6 @@ export const createSingletonServices = pikkuServices(
     // wire services; wire your own `credentialService` here if you need one.
     const credentialService = existingServices?.credentialService
 
-    // Both destinations, because they answer different questions: the logger is
-    // what makes an event visible while the app is being built, and fabric's
-    // forwarder no-ops entirely outside a deployed stage. Wired here rather than
-    // left to the default, which is the logger alone.
-    const analyticsService =
-      existingServices?.analyticsService ??
-      fanOutAnalytics([
-        new LoggerAnalyticsService(logger),
-        fabricAnalyticsService({
-          variables,
-          queueService: existingServices?.queueService,
-        }),
-      ])
-
     return {
       ...(existingServices ?? {}),
       config,
@@ -84,7 +68,6 @@ export const createSingletonServices = pikkuServices(
       emailService,
       audit,
       kysely,
-      analyticsService,
       analyticsIdentity: shopAnalyticsIdentity,
       // Constructed once here rather than read per call: the payment provider's
       // credentials belong to service construction, and functions cannot reach

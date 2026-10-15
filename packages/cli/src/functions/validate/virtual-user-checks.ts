@@ -133,7 +133,7 @@ const hasVirtualUserSignIn = async (
 /**
  * The people this project can run as, and whether it can run as them.
  *
- * Shared by `pikku validate` and `pikku fabric validate` — the two
+ * Shared by `pikku validate` and `pikku cloud validate` — the two
  * validators are separate implementations, and a check that only one of them
  * makes is a check half the projects never see.
  *

@@ -2,7 +2,7 @@ import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { AddonService } from './addon.service.js'
 
-const FABRIC = 'https://fabric.example'
+const CLOUD_API = 'https://cloud.example'
 
 describe('AddonService', () => {
   let calls: string[]
@@ -45,14 +45,14 @@ describe('AddonService', () => {
     }) as typeof globalThis.fetch
   }
 
-  test('readAddonsMeta queries the fabric registry packages endpoint', async () => {
+  test('readAddonsMeta queries the cloud registry packages endpoint', async () => {
     mockFetch({ packages: [{ id: 'a' }], total: 12, nextCursor: 50 })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readAddonsMeta()
     assert.equal(calls.length, 1)
     assert.ok(
-      calls[0].startsWith(`${FABRIC}/registry/packages`),
-      `expected fabric /registry/packages, got ${calls[0]}`
+      calls[0].startsWith(`${CLOUD_API}/registry/packages`),
+      `expected cloud /registry/packages, got ${calls[0]}`
     )
     assert.deepEqual(result, {
       packages: [{ id: 'a' }],
@@ -63,7 +63,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta defaults the page size and omits an absent cursor', async () => {
     mockFetch({ packages: [] })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readAddonsMeta()
     const params = new URL(calls[0]).searchParams
     assert.equal(params.get('limit'), '50')
@@ -75,7 +75,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta forwards the cursor and limit it is given', async () => {
     mockFetch({ packages: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readAddonsMeta({ cursor: 250, limit: 250 })
     const params = new URL(calls[0]).searchParams
     assert.equal(params.get('cursor'), '250')
@@ -84,7 +84,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta forwards search, category, sort and official to the registry', async () => {
     mockFetch({ packages: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readAddonsMeta({
       search: 'slack',
       category: 'messaging',
@@ -102,7 +102,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta omits the filters it was not given', async () => {
     mockFetch({ packages: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readAddonsMeta({ official: false })
     const params = new URL(calls[0]).searchParams
     assert.equal(params.get('query'), null)
@@ -114,7 +114,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta sends an empty names list rather than dropping it', async () => {
     mockFetch({ packages: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readAddonsMeta({ names: '' })
     const params = new URL(calls[0]).searchParams
     // Dropping it would make "Installed" with nothing installed fall back to
@@ -124,7 +124,7 @@ describe('AddonService', () => {
 
   test('readAddonsMeta forwards a populated names list', async () => {
     mockFetch({ packages: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readAddonsMeta({ names: '@pikku/addon-slack,@acme/addon-x' })
     const params = new URL(calls[0]).searchParams
     assert.equal(params.get('names'), '@pikku/addon-slack,@acme/addon-x')
@@ -132,21 +132,21 @@ describe('AddonService', () => {
 
   test('readAddonCategories queries the catalogue-wide categories endpoint', async () => {
     mockFetch({ messaging: 12, storage: 3 })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readAddonCategories()
-    assert.equal(calls[0], `${FABRIC}/registry/packages/categories`)
+    assert.equal(calls[0], `${CLOUD_API}/registry/packages/categories`)
     assert.deepEqual(result, { messaging: 12, storage: 3 })
   })
 
   test('readAddonCategories degrades to no counts on an empty 204 body', async () => {
     mockNoContent()
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     assert.deepEqual(await service.readAddonCategories(), {})
   })
 
   test('readAddonCategories throws when the registry errors', async () => {
     mockFetch({}, false)
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await assert.rejects(
       () => service.readAddonCategories(),
       /Registry returned 500/
@@ -155,42 +155,42 @@ describe('AddonService', () => {
 
   test('readOpenapiCategories queries the catalogue-wide categories endpoint', async () => {
     mockFetch({ payments: 7 })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readOpenapiCategories()
-    assert.equal(calls[0], `${FABRIC}/registry/openapis/categories`)
+    assert.equal(calls[0], `${CLOUD_API}/registry/openapis/categories`)
     assert.deepEqual(result, { payments: 7 })
   })
 
   test('readOpenapiCategories degrades to no counts on an empty 204 body', async () => {
     mockNoContent()
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     assert.deepEqual(await service.readOpenapiCategories(), {})
   })
 
   test('readOpenapiCategories throws when the registry errors', async () => {
     mockFetch({}, false)
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await assert.rejects(
       () => service.readOpenapiCategories(),
       /Registry returned 500/
     )
   })
 
-  test('readAddon queries the fabric registry package-by-id endpoint', async () => {
+  test('readAddon queries the cloud registry package-by-id endpoint', async () => {
     mockFetch({ id: 'pkg-1', name: '@x/y' })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readAddon('pkg-1')
     assert.equal(calls.length, 1)
     assert.ok(
-      calls[0].startsWith(`${FABRIC}/registry/packages/pkg-1`),
-      `expected fabric /registry/packages/:id, got ${calls[0]}`
+      calls[0].startsWith(`${CLOUD_API}/registry/packages/pkg-1`),
+      `expected cloud /registry/packages/:id, got ${calls[0]}`
     )
     assert.deepEqual(result, { id: 'pkg-1', name: '@x/y' })
   })
 
-  test('readOpenapis queries the fabric registry openapis endpoint', async () => {
+  test('readOpenapis queries the cloud registry openapis endpoint', async () => {
     mockFetch({ apis: [{ name: 'stripe' }], total: 1, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readOpenapis({
       limit: 50,
       offset: 0,
@@ -198,8 +198,8 @@ describe('AddonService', () => {
     })
     assert.equal(calls.length, 1)
     assert.ok(
-      calls[0].startsWith(`${FABRIC}/registry/openapis`),
-      `expected fabric /registry/openapis, got ${calls[0]}`
+      calls[0].startsWith(`${CLOUD_API}/registry/openapis`),
+      `expected cloud /registry/openapis, got ${calls[0]}`
     )
     assert.ok(
       calls[0].includes('query=stripe'),
@@ -214,7 +214,7 @@ describe('AddonService', () => {
 
   test('readOpenapis forwards the category and paging window', async () => {
     mockFetch({ apis: [], total: 0, nextCursor: null })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     await service.readOpenapis({
       limit: 50,
       offset: 100,
@@ -227,14 +227,14 @@ describe('AddonService', () => {
     assert.equal(params.get('query'), null)
   })
 
-  test('readOpenapiDetail queries the fabric registry openapi-by-name endpoint', async () => {
+  test('readOpenapiDetail queries the cloud registry openapi-by-name endpoint', async () => {
     mockFetch({ name: 'stripe', title: 'Stripe' })
-    const service = new AddonService(FABRIC)
+    const service = new AddonService(CLOUD_API)
     const result = await service.readOpenapiDetail('stripe')
     assert.equal(calls.length, 1)
     assert.ok(
-      calls[0].startsWith(`${FABRIC}/registry/openapis/stripe`),
-      `expected fabric /registry/openapis/:name, got ${calls[0]}`
+      calls[0].startsWith(`${CLOUD_API}/registry/openapis/stripe`),
+      `expected cloud /registry/openapis/:name, got ${calls[0]}`
     )
     assert.deepEqual(result, { name: 'stripe', title: 'Stripe' })
   })

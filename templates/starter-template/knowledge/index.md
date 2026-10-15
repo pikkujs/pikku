@@ -1,7 +1,7 @@
 ---
 type: Overview
 title: Knowledge base
-description: What this app is, in the Fabric profile of the Open Knowledge Format (OKF).
+description: What this app is, in the Pikku Studio profile of the Open Knowledge Format (OKF).
 tags: [meta, okf]
 ---
 
@@ -25,7 +25,7 @@ Knowledge is the context introspection can't surface:
 - **Decisions and their reasons** — _why_ an approach was chosen, trade-offs accepted
 - **Constraints** — external facts (a partner API's quirk, a compliance rule) agreed with the user
 
-## Format — OKF v0.1, Fabric profile
+## Format — OKF v0.1, Pikku Studio profile
 
 Each note is a markdown file whose **path is its identity**, with YAML frontmatter and a
 markdown body. Frontmatter: `type` is required; `title`, `description`, `tags`, `resource`
@@ -77,7 +77,7 @@ in the code, discoverable with `pikku meta`.
 
 `questions/` holds what you asked and never got an answer to; a question that gets answered
 becomes a decision note linking back to it. `wishlist/` holds what the user wants one day,
-one wish per note — `fabric project wishlist` is where they come from — and is the one
+one wish per note — `cloud project wishlist` is where they come from — and is the one
 section a build never starts from.
 
 `plans/` holds the technical plan of each changeset that needed one — the tables,
@@ -86,7 +86,7 @@ once it merges.
 
 There is no `virtual users/`: the people are declared in the app's own source with pikku's
 `defineVirtualUsers`, by the build session, because they are the same virtual users pikku
-materialises scenario virtual users from. `fabric virtual user` only reads back what the code declared.
+materialises scenario virtual users from. `cloud virtual user` only reads back what the code declared.
 There is no `scenarios/` or `permissions/` either — a changeset's plan names its scenarios,
 and the rules live in the code.
 

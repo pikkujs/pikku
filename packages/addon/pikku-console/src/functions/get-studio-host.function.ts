@@ -7,7 +7,7 @@ export const getStudioHost = pikkuFunc<
 >({
   title: 'Get Studio Host',
   description:
-    'Whether this project is local or linked to Fabric, which decides where changes, wishes and models come from.',
+    'Whether this project is local or linked to Pikku Studio Cloud, which decides where changes, wishes and models come from.',
   expose: true,
   scopes: ['pikku:console:changes:read'],
   func: async ({ studioHost }) => ({

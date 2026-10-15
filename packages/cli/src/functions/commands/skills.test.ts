@@ -156,11 +156,8 @@ describe('pikku skills install', () => {
 
   test('--agent pi honours group filters', async () => {
     const dir = await inTemp()
-    await run({ agent: 'pi', fabric: true })
-    assert.deepEqual(
-      await installed(dir, 'pi'),
-      await skillsWithGroup('fabric')
-    )
+    await run({ agent: 'pi', cloud: true })
+    assert.deepEqual(await installed(dir, 'pi'), await skillsWithGroup('cloud'))
   })
 
   test('--core installs the core-tagged skills, not the whole corpus', async () => {
@@ -178,27 +175,27 @@ describe('pikku skills install', () => {
     )
   })
 
-  test('--fabric installs the fabric-tagged skills, not the whole corpus', async () => {
+  test('--cloud installs the cloud-tagged skills, not the whole corpus', async () => {
     const dir = await inTemp()
-    await run({ fabric: true })
+    await run({ cloud: true })
 
-    const fabric = await skillsWithGroup('fabric')
+    const cloud = await skillsWithGroup('cloud')
     const all = await listSkillNames()
-    assert.deepEqual(await installed(dir), fabric)
+    assert.deepEqual(await installed(dir), cloud)
     assert.ok(
-      fabric.length < all.length,
-      'expected --fabric to be a strict subset'
+      cloud.length < all.length,
+      'expected --cloud to be a strict subset'
     )
   })
 
-  test('--core and --fabric together install the union of both groups', async () => {
+  test('--core and --cloud together install the union of both groups', async () => {
     const dir = await inTemp()
-    await run({ core: true, fabric: true })
+    await run({ core: true, cloud: true })
 
     const union = [
       ...new Set([
         ...(await skillsWithGroup('core')),
-        ...(await skillsWithGroup('fabric')),
+        ...(await skillsWithGroup('cloud')),
       ]),
     ].sort()
     assert.deepEqual(await installed(dir), union)

@@ -15,7 +15,7 @@ type BorderPosition = 'left' | 'right' | 'top'
 type HighlightType = 'focused' | 'referenced' | null
 
 // Workflow run-status colors are exposed as CSS variables so a host theme
-// (e.g. fabric) can override them, while the `var(..., fallback)` keeps the
+// (e.g. cloud) can override them, while the `var(..., fallback)` keeps the
 // default palette working without importing any extra stylesheet.
 const runStatusColors: Record<string, string> = {
   succeeded: 'var(--pikku-status-succeeded, oklch(0.8 0.15 150))',

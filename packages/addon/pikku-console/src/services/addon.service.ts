@@ -96,7 +96,7 @@ export interface AddonMetaQuery {
 }
 
 export class AddonService {
-  constructor(private fabricApiUrl: string) {}
+  constructor(private cloudApiUrl: string) {}
 
   async readAddonsMeta(query: AddonMetaQuery = {}): Promise<AddonMetaPage> {
     const params = new URLSearchParams()
@@ -113,7 +113,7 @@ export class AddonService {
     if (query.names != null) params.set('names', query.names)
 
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/packages?${params}`
+      `${this.cloudApiUrl}/registry/packages?${params}`
     )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
@@ -129,7 +129,7 @@ export class AddonService {
   /** Catalogue-wide category counts, for the gallery's category rail. */
   async readAddonCategories(): Promise<Record<string, number>> {
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/packages/categories`
+      `${this.cloudApiUrl}/registry/packages/categories`
     )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
@@ -144,7 +144,7 @@ export class AddonService {
 
   async readAddon(id: string): Promise<AddonDetail | null> {
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/packages/${encodeURIComponent(id)}`
+      `${this.cloudApiUrl}/registry/packages/${encodeURIComponent(id)}`
     )
     if (!response.ok) return null
     const text = await response.text()
@@ -152,7 +152,7 @@ export class AddonService {
     return JSON.parse(text)
   }
 
-  /** Browse the fabric registry's OpenAPI catalogue (apis.guru + published). */
+  /** Browse the cloud registry's OpenAPI catalogue (apis.guru + published). */
   async readOpenapis(opts: {
     limit: number
     offset: number
@@ -166,7 +166,7 @@ export class AddonService {
     if (opts.search) params.set('query', opts.search)
     if (opts.category) params.set('category', opts.category)
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/openapis?${params.toString()}`
+      `${this.cloudApiUrl}/registry/openapis?${params.toString()}`
     )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
@@ -177,7 +177,7 @@ export class AddonService {
   /** Catalogue-wide category counts for the OpenAPI gallery's category rail. */
   async readOpenapiCategories(): Promise<Record<string, number>> {
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/openapis/categories`
+      `${this.cloudApiUrl}/registry/openapis/categories`
     )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
@@ -193,7 +193,7 @@ export class AddonService {
   /** Fetch one OpenAPI catalogue entry by name (returns null when absent). */
   async readOpenapiDetail(name: string): Promise<OpenApiDetail | null> {
     const response = await fetch(
-      `${this.fabricApiUrl}/registry/openapis/${encodeURIComponent(name)}`
+      `${this.cloudApiUrl}/registry/openapis/${encodeURIComponent(name)}`
     )
     if (!response.ok) return null
     const text = await response.text()

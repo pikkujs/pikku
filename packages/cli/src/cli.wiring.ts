@@ -9,8 +9,8 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { fabricCommands } from './fabric/fabric-commands.js'
-import { changesCommands } from './fabric/changes-commands.js'
+import { cloudCommands } from './cloud/cloud-commands.js'
+import { changesCommands } from './cloud/changes-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -1589,7 +1589,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: virtualUserSync,
           description:
-            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuFabric from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({
@@ -1624,10 +1624,10 @@ wireCLI({
         }),
       },
     },
-    fabric: {
+    cloud: {
       description:
-        'PikkuFabric commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: fabricCommands,
+        'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
+      subcommands: cloudCommands,
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
@@ -2106,9 +2106,9 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [core]',
               default: false,
             },
-            fabric: {
+            cloud: {
               description:
-                'Install skills whose frontmatter includes installGroups: [fabric]',
+                'Install skills whose frontmatter includes installGroups: [cloud]',
               default: false,
             },
             client: {

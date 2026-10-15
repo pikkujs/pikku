@@ -135,7 +135,7 @@ export const assertStringLiteralProperty = (
  * that anything written as an expression comes through raw: a `description`
  * split across lines as `'Fetch the thing ' + 'from upstream'` reaches
  * `infra.json` with the quotes and the `+` still in it, and is rendered that
- * way in the fabric console.
+ * way in the cloud console.
  *
  * Deliberately checker-free, unlike `extractStringLiteral`. Every value this
  * resolves is a literal in the same expression, so no symbol resolution is

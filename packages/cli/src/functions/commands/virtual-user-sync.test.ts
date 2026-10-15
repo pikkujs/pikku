@@ -115,7 +115,7 @@ describe('pikku virtual-user sync', () => {
   test('points at the plugin rather than claiming to have written anything', async () => {
     await run({ environment: 'local' })
 
-    assert.match(logs.join('\n'), /pikkuFabric/)
+    assert.match(logs.join('\n'), /pikkuCloud/)
   })
 
   test('refuses an environment that is not configured', async () => {

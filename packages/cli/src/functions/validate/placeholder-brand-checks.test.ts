@@ -64,7 +64,7 @@ const wheres = (repo: string) =>
 describe('validate and placeholder brand', () => {
   test('the template as it ships is placeholder everywhere', () => {
     const { repo } = project({
-      appName: 'Fabric Starter',
+      appName: 'Pikku Studio Starter',
       title: 'Pikku App',
       emailName: 'Pikku Starter',
     })
@@ -102,7 +102,7 @@ describe('validate and placeholder brand', () => {
   test('a project with no emails or routes reports only what it has', () => {
     const repo = mkdtempSync(join(tmpdir(), 'brand-'))
     roots.push(repo)
-    addApp(repo, 'app', 'Fabric Starter')
+    addApp(repo, 'app', 'Pikku Studio Starter')
     assert.strictEqual(runPlaceholderBrandChecks(repo).length, 1)
   })
 

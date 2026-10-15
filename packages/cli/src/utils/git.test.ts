@@ -14,7 +14,7 @@ const makeTmp = () => mkdtemp(join(tmpdir(), 'pikku-git-probe-'))
  * children inherit it. GIT_DIR outranks the process's directory, so a probe
  * given an unrelated `cwd` answers about the hook's repository instead — the
  * probes report a repo that is not the one being asked about, and
- * `fabric validate` run from a pre-push hook fails on files it never looked at.
+ * `cloud validate` run from a pre-push hook fails on files it never looked at.
  */
 describe.skip('git probes ignore an inherited GIT_DIR', () => {
   const realGitDir = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {

@@ -5,7 +5,7 @@
 //
 // Add a language: drop `messages/<lang>.json` next to `en.json`, add the code to
 // `project.inlang/settings.json` `locales`, and recompile — or just run
-// `fabric i18n --add-locale <lang>`, which does both. Content is reachable via
+// `cloud i18n --add-locale <lang>`, which does both. Content is reachable via
 // the `/<lang>` URL prefix (e.g. `/de`); the base locale (`en`) needs none.
 import { useSyncExternalStore } from 'react'
 import { locales, baseLocale, overwriteGetLocale } from '../paraglide/runtime.js'
@@ -17,7 +17,7 @@ export type Locale = (typeof locales)[number]
 /**
  * The locale a first-time visitor opens the app in — the language the app speaks
  * to its own users, picked when the project was created and written into
- * `active.json` by `fabric i18n --default-locale <code>`.
+ * `active.json` by `cloud i18n --default-locale <code>`.
  *
  * Deliberately not Paraglide's `baseLocale`: that one names the message SOURCE
  * (`messages/en.json`), the catalog every other locale is cloned from and

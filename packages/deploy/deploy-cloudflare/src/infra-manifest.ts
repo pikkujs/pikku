@@ -156,7 +156,7 @@ export function generateInfraManifest(
     // Workflow-state binding: the producer (role==='workflow', hosts the DO
     // class) self-binds; consumers (other units that destructure
     // workflowService) cross-script-bind to the producer via @unit:<name>.
-    // Cross-script form prevents fabric's deployer from re-declaring the
+    // Cross-script form prevents cloud's deployer from re-declaring the
     // class on every consumer (CF 10070: "Cannot apply new-class migration
     // to class … that is not exported by script").
     if (capabilities.has('workflow-state')) {

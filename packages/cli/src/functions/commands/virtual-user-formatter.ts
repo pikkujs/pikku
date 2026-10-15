@@ -7,7 +7,7 @@
  * is context for reading them.
  *
  * Kept a pure function over plain data for the same reason the scenario
- * reporter is: a second formatter (JSON for fabric, JUnit for CI) is then one
+ * reporter is: a second formatter (JSON for cloud, JUnit for CI) is then one
  * function rather than an unpicking of the runner.
  */
 import type {

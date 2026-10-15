@@ -242,7 +242,7 @@ describe('the advertised origin is the one the client reached', () => {
     // A chain appends, so the client's own view is first and the hops that
     // carried it follow. Reading the last entry would advertise the proxy.
     'x-forwarded-proto': 'https, http',
-    'x-forwarded-host': 'fabric.example.com, internal.lan:8080',
+    'x-forwarded-host': 'cloud.example.com, internal.lan:8080',
   }
 
   test('the challenge points at the forwarded origin, not the internal one', async () => {
@@ -254,7 +254,7 @@ describe('the advertised origin is the one the client reached', () => {
     assert.equal(response.status, 401)
     assert.match(
       response.headers.get('WWW-Authenticate') ?? '',
-      /resource_metadata="https:\/\/fabric\.example\.com\/\.well-known\/oauth-protected-resource\/mcp"/
+      /resource_metadata="https:\/\/cloud\.example\.com\/\.well-known\/oauth-protected-resource\/mcp"/
     )
 
     await server.stop()
@@ -273,7 +273,7 @@ describe('the advertised origin is the one the client reached', () => {
 
     assert.equal(response.status, 200)
     const body = (await response.json()) as { resource: string }
-    assert.equal(body.resource, 'https://fabric.example.com/mcp')
+    assert.equal(body.resource, 'https://cloud.example.com/mcp')
 
     await server.stop()
   })

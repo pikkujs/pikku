@@ -29,16 +29,16 @@ const findFreePort = (): Promise<number> =>
 
 /**
  * The defaults every e2e entry point runs under. `PIKKU_MOCK_LLM`
- * scripts the model instead of calling OpenAI, and `FABRIC_API_URL` points the
+ * scripts the model instead of calling OpenAI, and `PIKKUSTUDIO_API_URL` points the
  * console's addon gallery at the catalogue this repo checks in rather than the
- * live Fabric registry — both are this project's choices, not the
+ * live Pikku Studio Cloud registry — both are this project's choices, not the
  * framework's, which is why they stay here.
  *
  * Opt out with PIKKU_MOCK_LLM=0 to run the @ai-live tier against a real key.
  */
 export const applyTestEnvDefaults = (): void => {
   process.env.PIKKU_MOCK_LLM ??= '1'
-  process.env.FABRIC_API_URL ??= mockRegistryUrl
+  process.env.PIKKUSTUDIO_API_URL ??= mockRegistryUrl
 }
 
 /**
@@ -70,7 +70,7 @@ export const startBackend = async (
   if (!process.env.MOCK_REGISTRY_PORT) {
     const registryPort = await findFreePort()
     process.env.MOCK_REGISTRY_PORT = String(registryPort)
-    process.env.FABRIC_API_URL = `http://localhost:${registryPort}`
+    process.env.PIKKUSTUDIO_API_URL = `http://localhost:${registryPort}`
   }
 
   const server = await spawnDevServer({

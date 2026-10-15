@@ -23,7 +23,7 @@ const lines = () => {
 }
 
 describe('run telemetry', () => {
-  test('writes process samples and Fabric-shaped invocation records next to the runs', async () => {
+  test('writes process samples and Pikku Studio Cloud-shaped invocation records next to the runs', async () => {
     const telemetry = startRunTelemetry({ rootDir: root, command: 'dev' })
     const wire = {
       traceId: 't-1',
