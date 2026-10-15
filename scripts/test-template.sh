@@ -252,7 +252,7 @@ console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries wi
 console.log('Pinned ' + Object.keys(peerOverrides).length + ' shared peer deps to the monorepo copy');
 "
 
-    log_info "Ensuring TypeScript declarations exist for @pikku/* file: deps..."
+    log_info "Checking the @pikku/* file: deps are built..."
     for pkg_path in $(node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -261,9 +261,9 @@ Object.entries(all)
   .filter(([n,v]) => n.startsWith('@pikku/') && typeof v === 'string' && v.startsWith('file:'))
   .forEach(([n,v]) => console.log(v.replace('file:', '')));
 " 2>/dev/null); do
-        if [ -d "$pkg_path" ] && [ ! -f "$pkg_path/dist/index.d.ts" ]; then
-            log_info "Rebuilding $pkg_path (dist/index.d.ts missing)..."
-            (cd "$pkg_path" && bun run build 2>/dev/null) || log_warning "Build failed for $pkg_path"
+        if [ -d "$pkg_path" ] && [ ! -d "$pkg_path/dist" ]; then
+            log_error "$pkg_path has no dist. Build the monorepo first (bun run build:packages && bun run build:addons)."
+            exit 1
         fi
     done
 
