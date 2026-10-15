@@ -179,7 +179,9 @@ export async function runAddonPackageChecks(
   // with nothing behind it means the build has not run — and validating the
   // published file set of a package that has not been built proves nothing.
   const absent = (pkg.files ?? []).filter(
-    (entry) => !existsSync(join(pkgDir, packedRoot(entry)))
+    (entry) =>
+      packedRoot(entry) !== '.mocks' &&
+      !existsSync(join(pkgDir, packedRoot(entry)))
   )
   if (absent.length > 0) {
     findings.push({
@@ -191,6 +193,19 @@ export async function runAddonPackageChecks(
         'Run the package build first, then validate. In CI, `build && pikku validate` is the order that checks what actually publishes.',
     })
     return findings
+  }
+
+  if (
+    existsSync(join(pkgDir, '.mocks')) &&
+    !isPacked(join(pkgDir, '.mocks'), pkgDir, pkg.files)
+  ) {
+    findings.push({
+      id: 'addon-mocks-not-packed',
+      severity: 'error',
+      message: `${pkg.name ?? 'This addon'} has mocks in .mocks/, but "files" does not publish them — an app that installs it gets no default mocks for its functions`,
+      path: join(pkgDir, '.mocks'),
+      fixHint: 'Add ".mocks" to "files" in package.json.',
+    })
   }
 
   // The entry points are the package's promise about what can be reached from

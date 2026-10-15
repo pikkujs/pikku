@@ -271,6 +271,40 @@ describe('addon packaging', () => {
     }
   })
 
+  test('mocks the addon ships must be in "files"', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(tmp, '.mocks/list/healthy.json', '[]')
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [
+        'addon-mocks-not-packed',
+      ])
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({ ...PKG, files: [...PKG.files, '.mocks'] })
+      )
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('listing .mocks with no mocks yet is not an unbuilt package', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeBuiltAddon(tmp)
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({ ...PKG, files: [...PKG.files, '.mocks'] })
+      )
+      assert.deepStrictEqual(ids(await runAddonPackageChecks(tmp)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('an unbuilt package says so rather than passing silently', async () => {
     const tmp = await makeTmp()
     try {

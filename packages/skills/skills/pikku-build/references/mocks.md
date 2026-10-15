@@ -8,6 +8,12 @@ Read this when a screen needs data no function returns yet, or returns in a diff
 - Mocks are files, not code: `.mocks/<rpc.name>/<scenario>.json` is exactly what the RPC answers, and `<scenario>.meta.json` beside it holds `label`, `description`, `state` (healthy, empty, error or slow), `default`, `delayMs` and `status`. Exactly one scenario per RPC has `default: true`. Add an empty and an error scenario for every list and every mutation.
 - `usePikkuQueryStub('rpc:name')` and `usePikkuMutationStub('rpc:name')` always answer from the mock, and their output type is inferred from the mock files. Use a stub only when the function's types are not enough: no function exists, or the shape the screen needs differs from the function's output. If the mock already fits the function, use `usePikkuQuery`.
 
+The app loads its mocks with `registerPikkuMocks()` from the generated `mocks.gen.ts` beside `api.gen.ts`, called when `import.meta.env.DEV || import.meta.env.VITE_MOCK`. It covers the app's `.mocks/` and every wired addon's, so never glob `.mocks` or `node_modules` by hand.
+
+## Addon mocks
+
+An addon ships default mocks in its own package as `.mocks/<function>/<scenario>.json`, named without a namespace, and lists `.mocks` in `files`. An app that wires the addon as `studio` gets them as `studio:<function>`. The app's `.mocks/studio.<function>/` adds scenarios; one with the same name replaces the addon's, and a `default: true` in the app wins over the addon's default. Put mocks for an addon's functions in the addon, and only the app's own variations in the app.
+
 With `VITE_MOCK` set the plain hooks answer from the default mock too, so every state of every screen can be looked at without a backend.
 
 ## Publishing

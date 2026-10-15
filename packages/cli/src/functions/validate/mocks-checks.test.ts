@@ -114,4 +114,99 @@ describe('validate and mocks', () => {
       await rm(root, { recursive: true, force: true })
     }
   })
+
+  describe('calls into wired addons', () => {
+    const addonsMeta = JSON.stringify({
+      studio: {
+        package: '@scope/addon-studio',
+        functions: { listSetups: {}, getSetup: { expose: true } },
+      },
+      far: { package: '@scope/addon-far', remote: true },
+    })
+
+    const errorsFor = async (rpc: string, meta: string | null) => {
+      const root = await project({
+        '.mocks/x.y/healthy.json': '{}',
+        ...(meta === null
+          ? {}
+          : { '.pikku/addon/pikku-addons-meta.gen.json': meta }),
+        'apps/web/src/screen.tsx': `export const S = () => usePikkuQuery('${rpc}')\n`,
+      })
+      try {
+        return (await runMocksChecks(root))
+          .filter((f) => f.severity === 'error')
+          .map((f) => f.id)
+      } finally {
+        await rm(root, { recursive: true, force: true })
+      }
+    }
+
+    test('a plain call to a listed addon function passes', async () => {
+      assert.deepStrictEqual(
+        await errorsFor('studio:listSetups', addonsMeta),
+        []
+      )
+    })
+
+    test('an unknown function in a wired namespace still fails', async () => {
+      assert.deepStrictEqual(await errorsFor('studio:nothing', addonsMeta), [
+        'mocks-no-function',
+      ])
+    })
+
+    test('any function under a remote namespace passes', async () => {
+      assert.deepStrictEqual(await errorsFor('far:anything', addonsMeta), [])
+    })
+
+    test('without the addons meta file an addon call fails as before', async () => {
+      assert.deepStrictEqual(await errorsFor('studio:listSetups', null), [
+        'mocks-no-function',
+      ])
+    })
+  })
+
+  describe('mocks an addon ships', () => {
+    const withAddon = (extra: Record<string, string>) =>
+      project({
+        '.mocks/x.y/healthy.json': '{}',
+        '.pikku/addon/pikku-addons-meta.gen.json': JSON.stringify({
+          studio: { package: '@scope/addon-studio', functions: {} },
+        }),
+        '.pikku/scopes/pikku-flags-meta.gen.json': '{"setups":{}}',
+        'node_modules/@scope/addon-studio/package.json': '{}',
+        'apps/web/src/screen.tsx':
+          "export const S = () => usePikkuQueryStub('studio:listSetups', { featureFlag: 'setups' })\n",
+        ...extra,
+      })
+
+    test('a stub backed only by an addon mock passes', async () => {
+      const root = await withAddon({
+        'node_modules/@scope/addon-studio/.mocks/listSetups/gym.json': '[]',
+        'node_modules/@scope/addon-studio/.mocks/listSetups/gym.meta.json':
+          '{"default":true}',
+      })
+      try {
+        assert.deepStrictEqual(
+          (await runMocksChecks(root)).filter((f) => f.severity === 'error'),
+          []
+        )
+      } finally {
+        await rm(root, { recursive: true, force: true })
+      }
+    })
+
+    test('without the addon mock the stub has no mock', async () => {
+      const root = await withAddon({})
+      try {
+        assert.deepStrictEqual(
+          (await runMocksChecks(root))
+            .filter((f) => f.severity === 'error')
+            .map((f) => f.id),
+          ['mocks-no-mock']
+        )
+      } finally {
+        await rm(root, { recursive: true, force: true })
+      }
+    })
+  })
 })

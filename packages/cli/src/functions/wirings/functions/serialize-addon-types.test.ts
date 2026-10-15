@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import {
   serializeAddonInstallTypes,
+  serializeAddonsMeta,
   serializeAddonTypes,
 } from './serialize-addon-types.js'
 import { leafEntries } from './pikku-command-leaf-indexes.js'
@@ -130,5 +131,30 @@ describe('installing an addon reaches core through its own subpath', () => {
     assert.ok(content.includes('pikkuAddonServices'))
     assert.ok(!content.includes('wireAddon'))
     assert.ok(!content.includes('wireRemoteAddon'))
+  })
+})
+
+describe('serializeAddonsMeta', () => {
+  test("lists a local addon's functions and marks a remote one", () => {
+    const meta = JSON.parse(
+      serializeAddonsMeta(
+        new Map([
+          ['studio', { package: '@scope/addon-studio' }],
+          ['far', { package: '@scope/addon-far', remote: true }],
+          ['empty', { package: '@scope/addon-empty' }],
+        ]),
+        {
+          studio: { listSetups: {}, getSetup: { expose: true } },
+        }
+      )
+    )
+    assert.deepStrictEqual(meta, {
+      studio: {
+        package: '@scope/addon-studio',
+        functions: { listSetups: {}, getSetup: { expose: true } },
+      },
+      far: { package: '@scope/addon-far', remote: true },
+      empty: { package: '@scope/addon-empty', functions: {} },
+    })
   })
 })

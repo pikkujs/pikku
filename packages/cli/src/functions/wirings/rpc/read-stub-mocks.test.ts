@@ -15,7 +15,10 @@ describe('inferMockType', () => {
   })
 
   test('differing kinds are or-ed together', () => {
-    assert.strictEqual(inferMockType([{ a: 1 }, { a: null }]), '{ "a": null | number }')
+    assert.strictEqual(
+      inferMockType([{ a: 1 }, { a: null }]),
+      '{ "a": null | number }'
+    )
   })
 })
 
@@ -26,10 +29,15 @@ describe('readStubMocks', () => {
     mkdirSync(dir)
     writeFileSync(join(dir, 'healthy.json'), '[{"id":1}]')
     writeFileSync(join(dir, 'broken.json'), '{"message":"nope"}')
-    writeFileSync(join(dir, 'broken.meta.json'), '{"state":"error","status":500}')
+    writeFileSync(
+      join(dir, 'broken.meta.json'),
+      '{"state":"error","status":500}'
+    )
     const stubs = await readStubMocks(root)
     rmSync(root, { recursive: true, force: true })
-    assert.deepStrictEqual(stubs, [{ name: 'reminders:list', outputType: 'Array<{ "id": number }>' }])
+    assert.deepStrictEqual(stubs, [
+      { name: 'reminders:list', outputType: 'Array<{ "id": number }>' },
+    ])
   })
 
   test('an RPC with only error mocks is a codegen error, not a silent drop', async () => {
@@ -39,7 +47,10 @@ describe('readStubMocks', () => {
     writeFileSync(join(dir, 'down.json'), '{"message":"nope"}')
     writeFileSync(join(dir, 'down.meta.json'), '{"state":"error","status":500}')
     const failure = readStubMocks(root)
-    await assert.rejects(failure, /\.mocks\/reminders\.list has only error mocks.*healthy/)
+    await assert.rejects(
+      failure,
+      /\.mocks\/reminders\.list has only error mocks.*healthy/
+    )
     rmSync(root, { recursive: true, force: true })
   })
 
@@ -53,5 +64,52 @@ describe('readStubMocks', () => {
 
   test('no .mocks dir is no stubs', async () => {
     assert.deepStrictEqual(await readStubMocks('/nonexistent-mocks-dir'), [])
+  })
+})
+
+describe('readStubMocks with addon mocks', () => {
+  test("an addon's mocks type a stub under the wired namespace, and the app adds scenarios", async () => {
+    const root = mkdtempSync(join(tmpdir(), 'mocks-'))
+    const addon = join(root, 'addon', '.mocks', 'listSetups')
+    const app = join(root, 'app', 'studio.listSetups')
+    mkdirSync(addon, { recursive: true })
+    mkdirSync(app, { recursive: true })
+    writeFileSync(join(addon, 'gym.json'), '[{"id":"a"}]')
+    writeFileSync(join(app, 'spa.json'), '[{"id":"b","note":"x"}]')
+    const stubs = await readStubMocks(join(root, 'app'), [
+      {
+        namespace: 'studio',
+        package: '@scope/addon',
+        dir: join(root, 'addon', '.mocks'),
+      },
+    ])
+    rmSync(root, { recursive: true, force: true })
+    assert.deepStrictEqual(stubs, [
+      {
+        name: 'studio:listSetups',
+        outputType: 'Array<{ "id": string; "note"?: string }>',
+      },
+    ])
+  })
+
+  test("an app scenario with the addon's name replaces it", async () => {
+    const root = mkdtempSync(join(tmpdir(), 'mocks-'))
+    const addon = join(root, 'addon', 'listSetups')
+    const app = join(root, 'app', 'studio.listSetups')
+    mkdirSync(addon, { recursive: true })
+    mkdirSync(app, { recursive: true })
+    writeFileSync(join(addon, 'gym.json'), '"old"')
+    writeFileSync(join(app, 'gym.json'), '1')
+    const stubs = await readStubMocks(join(root, 'app'), [
+      {
+        namespace: 'studio',
+        package: '@scope/addon',
+        dir: join(root, 'addon'),
+      },
+    ])
+    rmSync(root, { recursive: true, force: true })
+    assert.deepStrictEqual(stubs, [
+      { name: 'studio:listSetups', outputType: 'number' },
+    ])
   })
 })

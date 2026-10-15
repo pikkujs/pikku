@@ -10,7 +10,8 @@ import {
   inferContract,
 } from './contract.js'
 import { diffMocks, type SurfaceView } from './diff.js'
-import { readMocks } from './read.js'
+import { mergeMocks, readMocks } from './read.js'
+import { findPackageDir, projectAddonMockSources } from './addon-mocks.js'
 import {
   callIndex,
   checkStubs,
@@ -283,6 +284,129 @@ describe('readMocks', () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+})
+
+describe('addon mocks', () => {
+  const project = () => {
+    const root = mkdtempSync(join(tmpdir(), 'addon-mocks-'))
+    const write = (rel: string, text: string) => {
+      mkdirSync(join(root, rel, '..'), { recursive: true })
+      writeFileSync(join(root, rel), text)
+    }
+    write(
+      '.pikku/addon/pikku-addons-meta.gen.json',
+      JSON.stringify({
+        studio: { package: '@scope/addon-studio', functions: {} },
+        far: { package: '@scope/addon-far', remote: true },
+        gone: { package: '@scope/not-installed', functions: {} },
+      })
+    )
+    write('node_modules/@scope/addon-studio/package.json', '{}')
+    write('node_modules/@scope/addon-far/package.json', '{}')
+    write(
+      'node_modules/@scope/addon-studio/.mocks/listSetups/gym.json',
+      '["addon gym"]'
+    )
+    write(
+      'node_modules/@scope/addon-studio/.mocks/listSetups/gym.meta.json',
+      '{"default":true}'
+    )
+    write('node_modules/@scope/addon-studio/.mocks/listSetups/none.json', '[]')
+    return { root, write }
+  }
+
+  test('finds an installed package by walking up node_modules', () => {
+    const { root } = project()
+    try {
+      mkdirSync(join(root, 'packages', 'functions'), { recursive: true })
+      assert.ok(
+        findPackageDir('@scope/addon-studio', [
+          join(root, 'packages', 'functions'),
+        ])!.endsWith(join('@scope', 'addon-studio'))
+      )
+      assert.strictEqual(findPackageDir('@scope/nope', [root]), undefined)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("an addon's mocks load under the namespace the app wires; remote and missing addons have none", async () => {
+    const { root } = project()
+    try {
+      const sources = projectAddonMockSources(root, '.pikku')
+      assert.deepStrictEqual(
+        sources.map((s) => [s.namespace, s.package]),
+        [['studio', '@scope/addon-studio']]
+      )
+      const [rpc] = await readMocks(root, sources)
+      assert.strictEqual(rpc!.rpc, 'studio:listSetups')
+      assert.deepStrictEqual(
+        rpc!.mocks.map((m) => [m.name, m.from, m.meta?.default]),
+        [
+          ['gym', '@scope/addon-studio', true],
+          ['none', '@scope/addon-studio', undefined],
+        ]
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test('the app adds scenarios, replaces one with the same name, and its default wins', async () => {
+    const { root, write } = project()
+    try {
+      write('.mocks/studio.listSetups/none.json', '["app none"]')
+      write('.mocks/studio.listSetups/spa.json', '["app spa"]')
+      write('.mocks/studio.listSetups/spa.meta.json', '{"default":true}')
+      const [rpc] = await readMocks(
+        root,
+        projectAddonMockSources(root, '.pikku')
+      )
+      assert.deepStrictEqual(
+        rpc!.mocks.map((m) => [m.name, m.from, m.meta?.default, m.data]),
+        [
+          ['gym', '@scope/addon-studio', false, ['addon gym']],
+          ['none', undefined, undefined, ['app none']],
+          ['spa', undefined, true, ['app spa']],
+        ]
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test('an addon mock nothing calls is not reported unused, an app one is', () => {
+    const merged = mergeMocks(
+      [
+        {
+          rpc: 'studio:a',
+          mocks: [
+            { name: 'x', from: '@s/a', hasData: true, data: 1, problems: [] },
+          ],
+        },
+      ],
+      [
+        {
+          rpc: 'studio:b',
+          mocks: [{ name: 'x', hasData: true, data: 1, problems: [] }],
+        },
+      ]
+    )
+    const diff = diffMocks(
+      merged,
+      { functions: {}, schemas: {} },
+      {
+        calls: { plain: new Set(), stub: new Set(), unresolved: 0 } as never,
+      }
+    )
+    assert.deepStrictEqual(
+      diff.rpcs.map((r) => [r.rpc, r.status]),
+      [
+        ['studio:a', 'added'],
+        ['studio:b', 'removed'],
+      ]
+    )
   })
 })
 
