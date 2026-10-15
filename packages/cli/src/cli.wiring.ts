@@ -9,7 +9,6 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { cloudCommands } from './cloud/cloud-commands.js'
 import { wireAddon } from '../.pikku/addon/index.js'
 import { refCLI } from '../.pikku/function/index.js'
 import { all } from './functions/commands/all.js'
@@ -219,6 +218,7 @@ import {
 import { defaultCLIRenderer } from './services.js'
 
 wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
+wireAddon({ name: 'cloud', package: '@pikku/addon-cloud-cli' })
 
 wireCLI({
   program: 'pikku',
@@ -1646,7 +1646,7 @@ wireCLI({
     cloud: {
       description:
         'Pikku Studio Cloud commands (login, link, deploy, domains, secrets, logs, …)',
-      subcommands: cloudCommands,
+      subcommands: { ...refCLI('cloud:cloudCommands') },
     },
     fetch: pikkuCLICommand({
       func: pikkuFetch,

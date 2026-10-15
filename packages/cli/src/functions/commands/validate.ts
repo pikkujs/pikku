@@ -6,7 +6,6 @@ import {
   renderValidate,
   runProjectValidate,
 } from '../validate/validate.js'
-import { projectChecks } from '../../cloud/lib/project-checks.js'
 
 export const validate = pikkuSessionlessFunc({
   description:
@@ -15,13 +14,16 @@ export const validate = pikkuSessionlessFunc({
   output: ValidateOutput,
   func: async (
     _services,
-    { skipTypecheck, skipDeployChecks, migrationsBase }
+    { skipTypecheck, skipDeployChecks, migrationsBase },
+    { rpc }
   ) =>
     runProjectValidate(process.cwd(), {
       skipTypecheck,
       skipDeployChecks,
       migrationsBase,
-      projectChecks: guardProjectChecks(projectChecks),
+      projectChecks: guardProjectChecks((request) =>
+        (rpc.invoke as any)('cloud:CloudProjectChecks', request)
+      ),
     }),
 })
 

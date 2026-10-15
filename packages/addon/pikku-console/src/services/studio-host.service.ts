@@ -8,17 +8,12 @@ import {
   resolveApiContext,
   type CloudRPC,
   type ListChangesOutput,
-} from '@pikku/cli/cloud'
+} from '@pikku/addon-cloud-cli/client'
 
 export type StudioMode = 'local' | 'cloud'
 
 export type ChangeStatus =
-  | 'open'
-  | 'claimed'
-  | 'needs_answer'
-  | 'in_progress'
-  | 'done'
-  | 'dismissed'
+  'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
 
 export interface StudioChange {
   changeId: string
@@ -48,8 +43,15 @@ export interface StudioWish {
 export interface ChangesStore {
   list(status?: ChangeStatus[]): Promise<StudioChange[]>
   get(changeId: string): Promise<StudioChange | null>
-  create(input: { title: string; body?: string; route?: string }): Promise<StudioChange>
-  setStatus(changeId: string, status: 'open' | 'in_progress' | 'dismissed'): Promise<StudioChange>
+  create(input: {
+    title: string
+    body?: string
+    route?: string
+  }): Promise<StudioChange>
+  setStatus(
+    changeId: string,
+    status: 'open' | 'in_progress' | 'dismissed'
+  ): Promise<StudioChange>
   complete(changeId: string, note?: string): Promise<StudioChange>
   reply(changeId: string, body: string, authorName: string): Promise<void>
 }
@@ -175,7 +177,14 @@ export class LocalChangesStore implements ChangesStore {
 
 type CloudChange = Pick<
   ListChangesOutput['changes'][number],
-  'changeId' | 'shortId' | 'title' | 'body' | 'status' | 'source' | 'route' | 'createdAt'
+  | 'changeId'
+  | 'shortId'
+  | 'title'
+  | 'body'
+  | 'status'
+  | 'source'
+  | 'route'
+  | 'createdAt'
 >
 
 const fromCloud = (c: CloudChange): StudioChange => ({
@@ -213,11 +222,19 @@ export class CloudChangesStore implements ChangesStore {
   }
 
   async create(): Promise<StudioChange> {
-    throw new Error('Changes on a linked project are filed from its stage in Pikku Studio Cloud')
+    throw new Error(
+      'Changes on a linked project are filed from its stage in Pikku Studio Cloud'
+    )
   }
 
-  async setStatus(changeId: string, status: 'open' | 'in_progress' | 'dismissed') {
-    const { change } = await this.rpc.invoke('setChangeStatus', { changeId, status })
+  async setStatus(
+    changeId: string,
+    status: 'open' | 'in_progress' | 'dismissed'
+  ) {
+    const { change } = await this.rpc.invoke('setChangeStatus', {
+      changeId,
+      status,
+    })
     return fromCloud(change)
   }
 
@@ -302,7 +319,10 @@ export class LocalWishStore implements WishStore {
     }
     const access = await this.models()
     if (!access) {
-      const reason = process.env.PIKKU_STUDIO_AI === 'subscription' ? 'subscription' : 'no-model'
+      const reason =
+        process.env.PIKKU_STUDIO_AI === 'subscription'
+          ? 'subscription'
+          : 'no-model'
       return { wishes: [], status: 'unavailable', reason }
     }
     if (file.error) {
@@ -321,9 +341,14 @@ export class LocalWishStore implements WishStore {
     try {
       const deck = await generateWishDeck(access, source, [])
       const project = await this.project.read()
-      if (!project.name && deck.name) await this.project.update({ name: deck.name })
+      if (!project.name && deck.name)
+        await this.project.update({ name: deck.name })
       await this.save(
-        deck.aspirations.map(({ title, line }) => ({ title, line, reaction: null }))
+        deck.aspirations.map(({ title, line }) => ({
+          title,
+          line,
+          reaction: null,
+        }))
       )
     } catch (e) {
       await writeJson(this.path, { wishes: [], error: (e as Error).message })
@@ -359,7 +384,8 @@ export class CloudWishStore implements WishStore {
         projectId: this.projectId,
         sourceDigest: this.sourceDigest,
       })
-      if (aspirations.length) return { wishes: toWishes(aspirations), status: 'ready' }
+      if (aspirations.length)
+        return { wishes: toWishes(aspirations), status: 'ready' }
       return { wishes: [], status: 'generating' }
     }
     const { aspirations, sourceDigest, status } = await this.rpc.invoke(
@@ -380,9 +406,13 @@ export class CloudWishStore implements WishStore {
 }
 
 const localModels = async (): Promise<ModelAccess | null> => {
-  if (process.env.PIKKU_STUDIO_AI === 'key' && process.env.PIKKU_STUDIO_AI_KEY) {
+  if (
+    process.env.PIKKU_STUDIO_AI === 'key' &&
+    process.env.PIKKU_STUDIO_AI_KEY
+  ) {
     return {
-      proxyUrl: process.env.PIKKU_STUDIO_AI_BASE_URL ?? 'https://api.openai.com/v1',
+      proxyUrl:
+        process.env.PIKKU_STUDIO_AI_BASE_URL ?? 'https://api.openai.com/v1',
       apiKey: process.env.PIKKU_STUDIO_AI_KEY,
       model: process.env.PIKKU_STUDIO_MODEL ?? 'gpt-4.1-mini',
     }
@@ -397,18 +427,23 @@ const localModels = async (): Promise<ModelAccess | null> => {
   }
 }
 
-const cloudModels = (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
-  ...(await rpc.invoke('getDeveloperLiteLLMKey', {})),
-  model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
-})
+const cloudModels =
+  (rpc: CloudRPC) => async (): Promise<ModelAccess | null> => ({
+    ...(await rpc.invoke('getDeveloperLiteLLMKey', {})),
+    model: process.env.PIKKU_STUDIO_MODEL ?? 'gemini-flash-lite-latest',
+  })
 
-export async function resolveStudioHost(projectRoot: string): Promise<StudioHost> {
+export async function resolveStudioHost(
+  projectRoot: string
+): Promise<StudioHost> {
   const project = new LocalProjectFile(projectRoot)
   const projectApi = {
     project: () => project.read(),
     updateProject: (patch: Partial<StudioProject>) => project.update(patch),
   }
-  const ctx = await resolveApiContext({ startDir: projectRoot }).catch(() => null)
+  const ctx = await resolveApiContext({ startDir: projectRoot }).catch(
+    () => null
+  )
   if (ctx?.token && ctx.projectId) {
     const rpc = getCloudRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     return {
