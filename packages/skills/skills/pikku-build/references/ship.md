@@ -165,13 +165,13 @@ Everything above is open source. This is the contract that keeps
 
 - **`frontends` in `pikku.config.json` describes reality.** Every app has an
   entry with the right `cwd`, `kind` and `dev` (`command`, `port`); exactly one
-  is `primary`; `serves` and `personas` name real personas from the personas
-  section.
+  is `primary`; `serves` and `virtualUsers` name real virtual users declared in
+  `defineVirtualUsers`.
 - **`fabric.projectId` in `pikku.config.json` is optional.** Leave it out unless you
   have the real id; the CLI writes it after finding the project from the git
   remote. Do not invent a value.
-- **One `definePersonas` call**, every persona reachable through exactly one
-  frontend. Fabric materialises these as its virtual users; a persona nobody
+- **One `defineVirtualUsers` call**, every virtual user reachable through exactly one
+  frontend. Fabric materialises these as its users; a virtual user nobody
   serves imports as a person with no way in.
 - **`knowledge/` passes `validate`, and `pikku knowledge gaps` lists nothing.** This is
   the part Fabric itself reads and continues from.

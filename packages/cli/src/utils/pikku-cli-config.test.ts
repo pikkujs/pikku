@@ -152,8 +152,8 @@ describe('getPikkuCLIConfig', () => {
 
     assert.deepStrictEqual(config.db, { engine: 'postgres', pgVersion: 18 })
     assert.equal(
-      config.personasWiringFile,
-      join(root, '.pikku', 'scenarios', 'pikku-personas.gen.ts')
+      config.virtualUsersWiringFile,
+      join(root, '.pikku', 'scenarios', 'pikku-virtual-users.gen.ts')
     )
   })
 

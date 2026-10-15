@@ -87,17 +87,17 @@ export type FunctionRuntimeMeta = {
    */
   scenarioStepSurfaces?: ScenarioSurface[]
   /**
-   * Scenario steps only: this step runs as a persona, so every call site must
-   * pass one and the runner injects it as `wire.actor`.
+   * Scenario steps only: this step runs as a virtual user, so every call site must
+   * pass one and the runner injects it as `wire.virtualUser`.
    *
-   * Declared by `actor: true`, or implied by a `browser` binding — a window is
+   * Declared by `virtualUser: true`, or implied by a `browser` binding — a window is
    * opened as somebody. Absent on a step with nobody to be: an assertion over
    * what an earlier step returned, or one posting credentials precisely because
-   * it must not reuse an actor's session.
+   * it must not reuse a virtual user's session.
    */
-  scenarioStepRequiresActor?: boolean
+  scenarioStepRequiresVirtualUser?: boolean
   /**
-   * Scenario steps only: who acts. Absent means `persona` — the ordinary step,
+   * Scenario steps only: who acts. Absent means `virtualUser` — the ordinary step,
    * and the only kind that existed before the other two.
    *
    * A `platform` or `addon` step is the app or a third-party system acting, and

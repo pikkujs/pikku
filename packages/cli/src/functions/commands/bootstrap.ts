@@ -7,11 +7,11 @@ export const bootstrap = pikkuVoidFunc({
 
     // Before function types: they import ScopeId from the scopes codegen.
     await rpc.invoke('pikkuScopes', { bootstrap: true })
-    // Before function types too: personas import SystemRoleName.
+    // Before function types too: virtual users import SystemRoleName.
     await rpc.invoke('pikkuRoles', { bootstrap: true })
     // And before them too: they import FeatureFlagName from the flags codegen.
     await rpc.invoke('pikkuFlags', { bootstrap: true })
-    await rpc.invoke('pikkuPersonas', { bootstrap: true })
+    await rpc.invoke('pikkuVirtualUsers', { bootstrap: true })
     await rpc.invoke('pikkuFunctionTypesSplit', { bootstrap: true })
     // Stub auth.types.ts (if better-auth is used) so the pikkuBetterAuth
     // re-export resolves before any user file is imported.

@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, the optional `fabric.projectId` in `pikku.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-virtual-user-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -265,27 +265,27 @@ Run `pikku all` after modifying functions, wirings, or schemas, then `tsc --noEm
 
 Breaking changes are reported by the version check in step 1.
 
-### `app-missing-actor-quick-login-<app>`
+### `app-missing-virtual-user-quick-login-<app>`
 
 The `fabric validate` finding people most often misread. It fires when an app has
-a **login screen** but no dev actor switcher, and it is not a style nit: a sandbox
+a **login screen** but no dev virtual user switcher, and it is not a style nit: a sandbox
 reviewer has no seed password, so without the control they are locked out of the
 app they were asked to look at.
 
-Satisfy it with the starter template's `<DevActorSwitcher />`, or with your
-own UI built on `useDevActors()` or `signInAsPersona()` from `@pikku/react` —
+Satisfy it with the starter template's `<DevVirtualUserSwitcher />`, or with your
+own UI built on `useDevVirtualUsers()` or `signInAsVirtualUser()` from `@pikku/react` —
 validate accepts any of those call sites as evidence, so custom rendering
-passes. Either way the server needs `personaSignIn` on `pikkuActor`; see
+passes. Either way the server needs `virtualUserSignIn` on `pikkuVirtualUser`; see
 **pikku-scenario** for it and **pikku-react** for the props.
 
 The validator also accepts the shapes that predate the package — a hand-rolled
-`signInAsActor()` or a literal `POST /auth/sign-in/actor` — so an older app does
+`signInAsVirtualUser()` or a literal `POST /auth/sign-in/virtual-user` — so an older app does
 not fail the build. **Treat that as a grace period, not the target: migrate those
-to `<DevActorSwitcher />`.** They put a per-persona credential in the frontend
-bundle, which the persona endpoint exists to avoid.
+to `<DevVirtualUserSwitcher />`.** They put a per-virtual-user credential in the frontend
+bundle, which the virtual user endpoint exists to avoid.
 
 Do **not** satisfy it with Better Auth's `/dev/quick-login`. That is a different
-endpoint with a different purpose — one fixed admin, not the declared personas —
+endpoint with a different purpose — one fixed admin, not the declared virtual users —
 and it does not clear this rule.
 
 ## Hard rules
@@ -327,5 +327,5 @@ iteration, and a failure that reproduces locally is a local debugging problem.
 When it only happens deployed, read `references/debugging.md`: start from
 `errors` rather than `logs` (they are already filtered and carry the traceId),
 follow one trace end to end before forming a theory, and confirm the fix against
-the same stage. A deploy that *failed* is a build or config problem and belongs
+the same stage. A deploy that _failed_ is a build or config problem and belongs
 above, not there.

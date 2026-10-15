@@ -3,7 +3,7 @@ name: pikku-build
 description: >-
   Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
   or a showcase that exercises every surface), adding a feature to an app that already exists, and
-  the one-off cleanup right after a template is cloned. Covers the knowledge base, personas and
+  the one-off cleanup right after a template is cloned. Covers the knowledge base, virtual users and
   roles, filing the work as changes, the scenario that proves each one, theming, multi-app
   layouts and deploying. TRIGGER when: the user asks for an app to be built on
   Pikku, a freshly scaffolded project needs turning into a product, the user asks to add a feature
@@ -188,7 +188,7 @@ words and link to where they can see it.
 | Shows                 | Path                                                                       |
 | --------------------- | -------------------------------------------------------------------------- |
 | Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                  |
-| Personas              | `/console/personas`, `/console/virtual-users?persona=<id>`                 |
+| Virtual users              | `/console/virtual-users`, `/console/virtual-users?virtual user=<id>`                 |
 | Roles and permissions | `/console/roles`, `/console/scopes` (only with `@pikku/addon-admin` wired) |
 | Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>`  |
 | Workflows             | `/console/workflow?id=<id>`                                                |

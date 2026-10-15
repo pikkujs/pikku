@@ -31,12 +31,12 @@ matches a family of ids, `containing` picks the match holding a piece of text,
 and `within` scopes the lookup to one row or section. Core defines the shape;
 the driver resolves it against a real page.
 
-The same dependency discipline applies at runtime: `resolveScenarioActors` in
-`pikku-scenario-service.ts` imports the HTTP actor client lazily, so even a
-runner bundle only pays for the AI persona conversation loop when a scenario
-actually signs an actor in.
+The same dependency discipline applies at runtime: `resolveScenarioVirtualUsers` in
+`pikku-scenario-service.ts` imports the HTTP virtual user client lazily, so even a
+runner bundle only pays for the AI virtual user conversation loop when a scenario
+actually signs a virtual user in.
 
 **What this rules out:** importing playwright (or any driver) from core,
 tightening `reset`/`captureFailure` to required, letting `captureFailure` throw,
-reducing `TestIdSelector` to a plain string, or making the actor-client import
+reducing `TestIdSelector` to a plain string, or making the virtual-user-client import
 static.

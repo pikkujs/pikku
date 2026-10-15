@@ -23,7 +23,7 @@ export interface CaptureOptions {
   /**
    * Which scenarios keep their recording. Defaults to `failed`.
    *
-   * Recording costs ~0.1-0.5s per actor context, nearly all of it finalising
+   * Recording costs ~0.1-0.5s per virtual user context, nearly all of it finalising
    * the file on close, so the default is to record always and keep the footage
    * for the runs somebody is going to watch. Encoding is the expensive part and
    * only the kept videos pay it.

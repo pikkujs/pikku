@@ -17,7 +17,7 @@
     "workflow": true
   },
   "scenarios": {
-    "emailDomain": "actors.local"
+    "emailDomain": "virtualuser.local"
   },
   "allow": {
     "complexWorkflows": true

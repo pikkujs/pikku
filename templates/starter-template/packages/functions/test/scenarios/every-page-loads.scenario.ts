@@ -11,31 +11,34 @@
  * build. Behaviour scenarios that create, edit or delete belong in their own
  * feature, untagged `smoke`, so the fast gate stays fast and deterministic.
  *
- * `actors.visitor` below is the template's PLACEHOLDER persona. When you replace it
+ * `virtualUsers.visitor` below is the template's PLACEHOLDER virtual user. When you replace it
  * with this app's real roles (see AGENTS.md), swap both references here for your
  * primary role — this scenario must name one literally, because PKU677 requires a
- * browser step's actor to be a literal `actors.<name>`.
+ * browser step's virtual user to be a literal `virtualUsers.<name>`.
  */
 import { pikkuScenario } from '#pikku/scenarios'
 
-export const everyPageLoadsScenario = pikkuScenario<void, { routes: string[] }>({
-  title: 'Every page loads cleanly when signed in',
-  description: 'The baseline reliability gate — no page errors for a signed-in user',
-  tags: ['scenario', 'pages', 'smoke'],
-  func: async (_services, _data, { scenario, actors }) => {
-    if (!actors?.visitor) {
-      throw new Error(
-        'everyPageLoadsScenario needs the visitor actor — run via `pikku scenario run <environment>`',
+export const everyPageLoadsScenario = pikkuScenario<void, { routes: string[] }>(
+  {
+    title: 'Every page loads cleanly when signed in',
+    description:
+      'The baseline reliability gate — no page errors for a signed-in user',
+    tags: ['scenario', 'pages', 'smoke'],
+    func: async (_services, _data, { scenario, virtualUsers }) => {
+      if (!virtualUsers?.visitor) {
+        throw new Error(
+          'everyPageLoadsScenario needs the visitor virtual user — run via `pikku scenario run <environment>`'
+        )
+      }
+      // `repoRoot` is passed even though the schema defaults it: a step's input
+      // type is the schema's OUTPUT, so a defaulted field is still required here.
+      const swept = await scenario.then(
+        'every page loads without errors',
+        'sweepsAllPages',
+        { repoRoot: '.' },
+        { virtualUser: virtualUsers.visitor }
       )
-    }
-    // `repoRoot` is passed even though the schema defaults it: a step's input
-    // type is the schema's OUTPUT, so a defaulted field is still required here.
-    const swept = await scenario.then(
-      'every page loads without errors',
-      'sweepsAllPages',
-      { repoRoot: '.' },
-      { actor: actors.visitor },
-    )
-    return { routes: swept.routes }
-  },
-})
+      return { routes: swept.routes }
+    },
+  }
+)

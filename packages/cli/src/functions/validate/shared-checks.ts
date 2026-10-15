@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runKnowledgeValidate } from '@pikku/knowledge'
 import { runBootstrapChecks } from './bootstrap-checks.js'
-import { runPersonaChecks, type ValidateFinding } from './persona-checks.js'
+import { runVirtualUserChecks, type ValidateFinding } from './virtual-user-checks.js'
 import { runAuthPluginChecks } from './auth-plugin-checks.js'
 import { runScenarioFileChecks } from './scenario-file-checks.js'
 import {
@@ -1060,8 +1060,8 @@ export async function runSharedProjectChecks(
     })
   )
 
-  // ── personas, scenario files and the knowledge base ────────────────────
-  findings.push(...(await runPersonaChecks(root, pikkuConfig)))
+  // ── virtual users, scenario files and the knowledge base ────────────────────
+  findings.push(...(await runVirtualUserChecks(root, pikkuConfig)))
   findings.push(...(await runAuthPluginChecks(root, pikkuConfig)))
 
   const srcDirectories = Array.isArray(pikkuConfig?.srcDirectories)

@@ -4,11 +4,11 @@
  * These are plain helpers, not steps — the steps in `agent-run.steps.ts` and
  * `agent-assert.steps.ts` are the only things a scenario names.
  *
- * Why raw fetch rather than a scenario actor: these scenarios exercise
+ * Why raw fetch rather than a scenario virtual user: these scenarios exercise
  * `setSessionFromHeader` in `e2e/src/middleware.ts`, which reads `x-user-id` /
  * `x-org-id` after the better-auth middleware and overwrites the session. The
  * principals they need (`outsider`, `mallory`, `permitted-user`, `orgless-user`)
- * have no seeded account at all, so there is no actor to be. Identity is
+ * have no seeded account at all, so there is no virtual user to be. Identity is
  * therefore step *data* here, and only here.
  */
 import { postScenarioJson, type ScenarioHttpResponse } from '#pikku/scenario'

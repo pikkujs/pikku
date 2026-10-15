@@ -22,7 +22,7 @@ const NOW = new Date('2026-01-01T12:00:00.000Z')
 const schedule = (
   over: Partial<VirtualUserScheduleRecord> = {}
 ): VirtualUserScheduleRecord => ({
-  persona: 'guest',
+  virtualUserId: 'guest',
   enabled: true,
   disposition: 'realistic',
   goals: [],
@@ -39,7 +39,7 @@ const run = (
   over: Partial<VirtualUserRunRecord> = {}
 ): VirtualUserRunRecord => ({
   runId: 'run-1',
-  persona: 'guest',
+  virtualUserId: 'guest',
   disposition: 'realistic',
   seed: 1,
   status: 'completed',
@@ -61,7 +61,7 @@ const stores = (
   runs: VirtualUserRunRecord[]
 ) => {
   const claims: {
-    persona: string
+    virtualUserId: string
     from: Date
     nextRunAt: Date
     runId: string | null
@@ -74,8 +74,8 @@ const stores = (
       schedules.filter((s) => isDue(s, now)).map((s) => ({ ...s })),
     // The row is the lock, so the fake enforces the same compare-and-set the
     // stores do: a claim lands only while the row still holds what was read.
-    claim: async (persona, claim) => {
-      const row = schedules.find((s) => s.persona === persona)
+    claim: async (virtualUserId, claim) => {
+      const row = schedules.find((s) => s.virtualUserId === virtualUserId)
       if (!row || row.nextRunAt.getTime() !== claim.from.getTime()) {
         return false
       }
@@ -84,13 +84,13 @@ const stores = (
         row.lastRunId = claim.runId
         row.lastRunAt = claim.at
       }
-      claims.push({ persona, ...claim })
+      claims.push({ virtualUserId, ...claim })
       return true
     },
   } as unknown as VirtualUserScheduleStore
   const runStore = {
-    list: async ({ persona } = {}) =>
-      runs.filter((r) => !persona || r.persona === persona),
+    list: async ({ virtualUserId } = {}) =>
+      runs.filter((r) => !virtualUserId || r.virtualUserId === virtualUserId),
     fail: async (runId: string, error: string) => {
       failed.push({ runId, error })
     },
@@ -99,7 +99,7 @@ const stores = (
 }
 
 describe('virtual user schedule', () => {
-  test('a disabled persona is never due, however overdue it looks', () => {
+  test('a disabled virtual user is never due, however overdue it looks', () => {
     const row = schedule({
       enabled: false,
       nextRunAt: new Date(NOW.getTime() - 1000 * HOUR),
@@ -107,7 +107,7 @@ describe('virtual user schedule', () => {
     assert.equal(isDue(row, NOW), false)
   })
 
-  test('the next run lands somewhere inside the persona interval, not on the hour', () => {
+  test('the next run lands somewhere inside the virtual user interval, not on the hour', () => {
     const row = schedule({ minIntervalMs: HOUR, maxIntervalMs: 5 * HOUR })
     const draws = [0, 0.25, 0.5, 0.99].map(
       (value) => nextRunAt(row, NOW, () => value).getTime() - NOW.getTime()
@@ -129,15 +129,15 @@ describe('virtual user schedule', () => {
     assert.equal(gap, HOUR)
   })
 
-  test('a due persona is dispatched and pushed out before the run starts', async () => {
+  test('a due virtual user is dispatched and pushed out before the run starts', async () => {
     const { scheduleStore, runStore, claims } = stores([schedule()], [])
     const order: string[] = []
     const result = await tickVirtualUserSchedules({
       schedules: {
         ...scheduleStore,
-        claim: async (persona, claim) => {
+        claim: async (virtualUserId, claim) => {
           order.push('claim')
-          return await scheduleStore.claim(persona, claim)
+          return await scheduleStore.claim(virtualUserId, claim)
         },
       } as VirtualUserScheduleStore,
       runs: runStore,
@@ -150,14 +150,14 @@ describe('virtual user schedule', () => {
     })
 
     assert.deepEqual(result.dispatched, [
-      { persona: 'guest', runId: 'run-new' },
+      { virtualUserId: 'guest', runId: 'run-new' },
     ])
     assert.deepEqual(order, ['claim', 'dispatch', 'claim'])
     assert.ok(claims[0]!.nextRunAt.getTime() > NOW.getTime())
     assert.equal(claims.at(-1)!.runId, 'run-new')
   })
 
-  test('a persona already acting is left alone rather than doubled up', async () => {
+  test('a virtual user already acting is left alone rather than doubled up', async () => {
     const { scheduleStore, runStore, claims } = stores(
       [schedule()],
       [run({ status: 'running', createdAt: new Date(NOW.getTime() - 60_000) })]
@@ -175,7 +175,7 @@ describe('virtual user schedule', () => {
 
     assert.equal(dispatched, 0)
     assert.deepEqual(result.skipped, [
-      { persona: 'guest', reason: 'in-flight' },
+      { virtualUserId: 'guest', reason: 'in-flight' },
     ])
     assert.deepEqual(claims, [])
   })
@@ -201,11 +201,11 @@ describe('virtual user schedule', () => {
     assert.equal(failed.length, 1)
     assert.match(failed[0]!.error, /still running/)
     assert.deepEqual(result.dispatched, [
-      { persona: 'guest', runId: 'run-new' },
+      { virtualUserId: 'guest', runId: 'run-new' },
     ])
   })
 
-  test('a persona that will not start waits its interval instead of spinning', async () => {
+  test('a virtual user that will not start waits its interval instead of spinning', async () => {
     const { scheduleStore, runStore, claims } = stores([schedule()], [])
     const result = await tickVirtualUserSchedules({
       schedules: scheduleStore,
@@ -218,13 +218,13 @@ describe('virtual user schedule', () => {
 
     assert.deepEqual(result.dispatched, [])
     assert.deepEqual(result.skipped, [
-      { persona: 'guest', reason: 'dispatch-failed' },
+      { virtualUserId: 'guest', reason: 'dispatch-failed' },
     ])
     assert.equal(claims.length, 1)
     assert.ok(claims[0]!.nextRunAt.getTime() >= NOW.getTime() + HOUR)
   })
 
-  test('two ticks racing over one persona produce a single run', async () => {
+  test('two ticks racing over one virtual user produce a single run', async () => {
     const row = schedule()
     const { scheduleStore, runStore } = stores([row], [])
     const dispatched: string[] = []
@@ -234,9 +234,9 @@ describe('virtual user schedule', () => {
         runs: runStore,
         now: NOW,
         random: () => 0.5,
-        dispatch: async ({ persona }) => {
+        dispatch: async ({ virtualUserId }) => {
           const runId = `run-${dispatched.length + 1}`
-          dispatched.push(persona)
+          dispatched.push(virtualUserId)
           return runId
         },
       })
@@ -251,30 +251,30 @@ describe('virtual user schedule', () => {
     assert.equal(won.dispatched.length, 1)
     assert.deepEqual(lost.dispatched, [])
     assert.deepEqual(lost.skipped, [
-      { persona: 'guest', reason: 'claimed-elsewhere' },
+      { virtualUserId: 'guest', reason: 'claimed-elsewhere' },
     ])
   })
 
-  test('one persona failing does not stop the others from running', async () => {
+  test('one virtual user failing does not stop the others from running', async () => {
     const { scheduleStore, runStore } = stores(
-      [schedule({ persona: 'guest' }), schedule({ persona: 'admin' })],
+      [schedule({ virtualUserId: 'guest' }), schedule({ virtualUserId: 'admin' })],
       []
     )
     const result = await tickVirtualUserSchedules({
       schedules: scheduleStore,
       runs: runStore,
       now: NOW,
-      dispatch: async ({ persona }) => {
-        if (persona === 'guest') throw new Error('no target')
+      dispatch: async ({ virtualUserId }) => {
+        if (virtualUserId === 'guest') throw new Error('no target')
         return 'run-admin'
       },
     })
 
     assert.deepEqual(result.dispatched, [
-      { persona: 'admin', runId: 'run-admin' },
+      { virtualUserId: 'admin', runId: 'run-admin' },
     ])
     assert.deepEqual(result.skipped, [
-      { persona: 'guest', reason: 'dispatch-failed' },
+      { virtualUserId: 'guest', reason: 'dispatch-failed' },
     ])
   })
 })

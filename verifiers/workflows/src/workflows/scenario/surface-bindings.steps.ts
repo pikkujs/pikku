@@ -31,17 +31,20 @@ export const submitsTheOrder = pikkuScenarioStep<
 })
 
 /**
- * A step that runs as somebody. `actor: true` is what puts the actor on the
+ * A step that runs as somebody. `virtualUser: true` is what puts the virtual user on the
  * wire — non-optional, with nothing to unwrap — and what makes a call site that
  * omits one fail before this body runs.
  */
-export const greetsAsItsActor = pikkuScenarioStep<void, { actor: string }>({
-  name: 'greetsAsItsActor',
-  description: 'reports which persona it is running as',
-  actor: true,
-  default: async (_services, _data, { actor }) => {
-    surfaceLog.push(`greetsAsItsActor:${actor.name}`)
-    return { actor: actor.name }
+export const greetsAsItsVirtualUser = pikkuScenarioStep<
+  void,
+  { virtualUser: string }
+>({
+  name: 'greetsAsItsVirtualUser',
+  description: 'reports which virtual user it is running as',
+  virtualUser: true,
+  default: async (_services, _data, { virtualUser }) => {
+    surfaceLog.push(`greetsAsItsVirtualUser:${virtualUser.name}`)
+    return { virtualUser: virtualUser.name }
   },
 })
 

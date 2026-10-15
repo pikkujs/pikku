@@ -1956,17 +1956,17 @@ test('db generate quotes the table and column of a postgres ALTER, so a reserved
   })
   const resolved = resolveDb({}, root, root)!
 
-  const dir = join(root, 'node_modules', 'addon-actor')
+  const dir = join(root, 'node_modules', 'addon-virtual-user')
   mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
   writeFileSync(
     join(dir, 'package.json'),
-    JSON.stringify({ name: 'addon-actor', version: '1.0.0' })
+    JSON.stringify({ name: 'addon-virtual-user', version: '1.0.0' })
   )
   writeFileSync(
     join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
     JSON.stringify({
       postgres: {
-        sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, actor BOOLEAN DEFAULT FALSE);',
+        sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, virtual user BOOLEAN DEFAULT FALSE);',
         tables: {
           user: [
             {
@@ -1977,7 +1977,7 @@ test('db generate quotes the table and column of a postgres ALTER, so a reserved
               defaultValue: null,
             },
             {
-              name: 'actor',
+              name: 'virtualUser',
               type: 'boolean',
               notNull: false,
               pk: false,
@@ -1994,15 +1994,15 @@ test('db generate quotes the table and column of a postgres ALTER, so a reserved
     root,
     ['src'],
     { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-actor' }]
+    [{ package: 'addon-virtual-user' }]
   )
 
-  const migration = written.find((w) => w.source === 'addon-actor')
+  const migration = written.find((w) => w.source === 'addon-virtual-user')
   assert.ok(migration, 'the missing column was written')
   const body = readFileSync(migration.file, 'utf8')
   assert.match(
     body,
-    /ALTER TABLE "user" ADD COLUMN "actor" boolean DEFAULT false;/
+    /ALTER TABLE "user" ADD COLUMN "virtualUser" boolean DEFAULT false;/
   )
   assert.doesNotMatch(body, /ALTER TABLE user /)
 })

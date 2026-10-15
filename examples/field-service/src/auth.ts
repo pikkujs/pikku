@@ -1,11 +1,11 @@
 import { betterAuth } from 'better-auth'
 import {
-  ACTOR_SIGN_IN_OPT_IN_ENV,
-  pikkuActor,
+  VIRTUAL_USER_SIGN_IN_OPT_IN_ENV,
+  pikkuVirtualUser,
   pikkuBan,
 } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
-import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
+import { virtualUserList } from '#pikku/scenarios/pikku-virtual-users.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -38,17 +38,19 @@ export const auth = pikkuBetterAuth(
     const BETTER_AUTH_SECRET = (
       await secrets.getSecret('BETTER_AUTH_SECRET')
     ).reveal()
-    // Genuinely optional: unset simply disables /api/auth/sign-in/actor (scenarios
-    // off for this deployment) — the actor plugin refuses all sign-ins
+    // Genuinely optional: unset simply disables /api/auth/sign-in/virtual-user (scenarios
+    // off for this deployment) — the virtual user plugin refuses all sign-ins
     // without it.
-    const SCENARIO_ACTOR_SECRET = await secrets
-      .getSecret('SCENARIO_ACTOR_SECRET')
+    const SCENARIO_VIRTUAL_USER_SECRET = await secrets
+      .getSecret('SCENARIO_VIRTUAL_USER_SECRET')
       .then((value) => value?.reveal())
       .catch(() => undefined)
     // The opt-in that lets a deployed stage run scenarios. Read through
     // `variables` rather than left to `process.env`, because a Worker receives
     // it as a binding and has no populated environment to find it in.
-    const ALLOW_ACTOR_SIGN_IN = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
+    const ALLOW_VIRTUAL_USER_SIGN_IN = await variables.get(
+      VIRTUAL_USER_SIGN_IN_OPT_IN_ENV
+    )
 
     return betterAuth({
       secret: BETTER_AUTH_SECRET,
@@ -74,9 +76,9 @@ export const auth = pikkuBetterAuth(
       // units verify the signed cookie instead of bundling better-auth. pikku #737.
       session: { cookieCache: { enabled: true } },
       advanced: { database: { generateId: 'uuid' } },
-      // Scenario actors: synthetic users (user.actor = true, see
-      // db/sqlite/0002-user-actor.sql) signed in by pikkuScenario via
-      // POST /api/auth/sign-in/actor { email, secret }. Never signs in real users.
+      // Scenario virtual users: synthetic users (user.virtualUser = true, see
+      // db/sqlite/0001-better-auth.sql) signed in by pikkuScenario via
+      // POST /api/auth/sign-in/virtual-user { email, secret }. Never signs in real users.
       //
       // pikkuBan(): adds the banned/banExpires/banReason columns (see
       // db/sqlite/0003-admin.sql) and the session hook that refuses a banned
@@ -85,18 +87,18 @@ export const auth = pikkuBetterAuth(
       // and everything else it offered — list, create, ban, remove, revoke
       // sessions, set password — is scoped RPCs in @pikku/addon-admin.
       plugins: [
-        // @snippet start personaSignIn
-        pikkuActor({
-          secret: SCENARIO_ACTOR_SECRET,
-          allowSignIn: ALLOW_ACTOR_SIGN_IN,
-          // The "Sign in as …" switcher: GET /api/auth/sign-in/personas lists,
-          // POST /api/auth/sign-in/persona { id } signs in. No credential.
-          personaSignIn: {
-            personas: personaList,
+        // @snippet start virtualUserSignIn
+        pikkuVirtualUser({
+          secret: SCENARIO_VIRTUAL_USER_SECRET,
+          allowSignIn: ALLOW_VIRTUAL_USER_SIGN_IN,
+          // The "Sign in as …" switcher: GET /api/auth/sign-in/virtual-users lists,
+          // POST /api/auth/sign-in/virtual-user { id } signs in. No credential.
+          virtualUserSignIn: {
+            virtualUsers: virtualUserList,
             featureFlags,
           },
         }),
-        // @snippet end personaSignIn
+        // @snippet end virtualUserSignIn
         pikkuBan(),
       ],
     })

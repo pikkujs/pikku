@@ -19,10 +19,10 @@ export const everyPageLoadsScenario = pikkuScenario<void, { routes: string[] }>(
     description:
       'The baseline reliability gate — no page errors for a signed-in user',
     tags: ['scenario', 'pages', 'smoke'],
-    func: async (_services, _data, { scenario, actors }) => {
-      if (!actors?.visitor) {
+    func: async (_services, _data, { scenario, virtualUsers }) => {
+      if (!virtualUsers?.visitor) {
         throw new Error(
-          'everyPageLoadsScenario needs the visitor actor — run via `pikku scenario run <environment>`'
+          'everyPageLoadsScenario needs the visitor virtual user — run via `pikku scenario run <environment>`'
         )
       }
       // `repoRoot` is passed even though the schema defaults it: a step's input
@@ -36,7 +36,7 @@ export const everyPageLoadsScenario = pikkuScenario<void, { routes: string[] }>(
         'every page loads without errors',
         'sweepsAllPages',
         { repoRoot: '../..' },
-        { actor: actors.visitor }
+        { virtualUser: virtualUsers.visitor }
       )
       return { routes: swept.routes }
     },

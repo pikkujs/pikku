@@ -41,9 +41,8 @@ const ALLOWED: Record<string, string[]> = {
   trigger: ['rpc'],
   // A workflow step is dispatched to a queue, invoked over rpc, or slept on.
   workflow: ['queue', 'rpc', 'scheduler'],
-  // A virtual user drives a scenario, which is a workflow, as a persona.
+  // A virtual user drives a scenario, which is a workflow.
   'virtual-user': ['role', 'workflow'],
-  persona: ['virtual-user'],
 }
 
 const sourceFiles = (directory: string): string[] =>

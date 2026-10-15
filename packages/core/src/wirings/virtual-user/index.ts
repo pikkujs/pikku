@@ -1,7 +1,7 @@
 /**
  * Virtual user module exports.
  *
- * A virtual user is an LLM playing a persona that signs into a *running* stage
+ * A virtual user is an LLM that signs into a *running* stage
  * and works its API in character — non-deterministically, with a budget, and
  * with oracles watching what comes back. It is not a test runner: nothing here
  * asserts an expected outcome, because the point is the outcomes nobody thought
@@ -9,11 +9,11 @@
  *
  * Everything it needs is derived from what a pikku project already generates —
  * the function meta becomes the catalogue, the scenario meta becomes the
- * intents, the declared personas become the identities — so adopting it is
+ * intents, the declared virtual users become the identities — so adopting it is
  * configuration rather than authoring.
  *
  * The engine is transport-agnostic: the virtual user drives an
- * {@link VirtualUserTarget}, which in production is an `HttpPersona`
+ * {@link VirtualUserTarget}, which in production is an `HttpVirtualUser`
  * signed in as a real user against staging or production.
  */
 export type {
@@ -33,7 +33,7 @@ export {
   type RunVirtualUserParams,
 } from './run-virtual-user.js'
 export {
-  personaScopes,
+  virtualUserScopes,
   prepareVirtualUserRun,
   type VirtualUserPreparation,
 } from './prepare-virtual-user-run.js'
@@ -75,22 +75,22 @@ export {
   type AgentReachability,
   type ReachableAgent,
 } from './virtual-user-agents.js'
-export { IntentStack, intentsForPersona } from './virtual-user-intents.js'
+export { IntentStack, intentsForVirtualUser } from './virtual-user-intents.js'
 export {
   deriveCatalogue,
   deriveIntents,
   type SchemaMap,
 } from './virtual-user-derive.js'
 export {
-  personaVirtualUserTarget,
-  type PersonaTargetOptions,
+  virtualUserTarget,
+  type VirtualUserTargetOptions,
 } from './virtual-user-target.js'
 export {
   executeVirtualUserRun,
   logVirtualUserTick,
   requireVirtualUserRunStore,
   requireVirtualUserScheduleStore,
-  runnablePersona,
+  runnableVirtualUser,
   serializeVirtualUserRun,
   serializeVirtualUserSchedule,
   serializeVirtualUserSteps,
@@ -100,8 +100,83 @@ export {
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
   type ExecuteVirtualUserRunParams,
-  type ScaffoldPersonas,
+  type ScaffoldVirtualUsers,
   type StartedVirtualUserRun,
   type StartVirtualUserRunParams,
   type WriteVirtualUserScheduleParams,
 } from './virtual-user-scaffold.js'
+export { defineVirtualUsers } from './define-virtual-users.js'
+export {
+  isRunnableVirtualUser,
+  roleMismatchMessage,
+  runnableVirtualUsers,
+  validateAndBuildVirtualUsersMeta,
+  verifyVirtualUserRoles,
+} from './validate-virtual-users.js'
+export type { RoleVerification } from './validate-virtual-users.js'
+export {
+  virtualUserEnvironmentErrors,
+  virtualUserEnvironmentRefusal,
+} from './virtual-user-environments.js'
+export type {
+  VirtualUserEnvironment,
+  VirtualUserEnvironmentSubject,
+} from './virtual-user-environments.js'
+export { virtualUserEmail, virtualUserEmails } from './virtual-user-email.js'
+export {
+  APP_SCOPE_ROOT,
+  appScopeId,
+  buildAppScopeDefinition,
+} from './virtual-user-app-scopes.js'
+export type {
+  MailboxAllowlist,
+  VirtualUserMailbox,
+  ReceivedEmail,
+} from './virtual-user-mailbox.js'
+export type {
+  CoreVirtualUser,
+  CoreVirtualUsers,
+  VirtualUserAccountMeta,
+  VirtualUserDefinitions,
+  VirtualUserMeta,
+  VirtualUsersMeta,
+} from './virtual-user-declaration.types.js'
+
+/**
+ * Signing in as a virtual user and talking to a stage over HTTP.
+ *
+ * Deliberately reached through this entry point rather than `@pikku/core/services`.
+ * `HttpVirtualUser` pulls in the conversation runner and, through it, the
+ * agent runner — none of which a production server has any use for. Exporting it
+ * from the services barrel put that chain in the module graph of every app that
+ * imports services, which only a bundler could remove and an unbundled Node or
+ * Lambda deploy would load outright.
+ */
+export {
+  HttpVirtualUser,
+  createHttpVirtualUsers,
+  type HttpVirtualUsersConfig,
+} from '../../services/http-virtual-users.js'
+export {
+  VirtualUserSecretSignIn,
+  OperatorSignIn,
+  establishOperatorSession,
+  IMPERSONATE_USER_ID_HEADER,
+  type VirtualUserSecretResolver,
+  type VirtualUserSignIn,
+  type OperatorSignInOptions,
+  type OperatorSessionResult,
+  authMount,
+} from '../../services/virtual-user-sign-in.js'
+export {
+  VIRTUAL_USER_ROOT_SECRET_MIN_LENGTH,
+  VIRTUAL_USER_SECRET_INFO,
+  VIRTUAL_USER_SECRET_NAME,
+  virtualUserSecretSubject,
+  deriveVirtualUserSecret,
+  verifyVirtualUserSecret,
+} from '../../services/virtual-user-secret.js'
+export {
+  postScenarioJson,
+  readScenarioHttpResponse,
+} from '../../services/virtual-users-service.js'

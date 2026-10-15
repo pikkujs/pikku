@@ -1,0 +1,42 @@
+---
+type: decision
+title: A virtual user credential is derived per virtual user
+description: What a caller presents to the virtual user endpoint is HKDF-derived from the root secret and the address it signs in as, so one credential opens one virtual user
+tags: services
+---
+
+# A virtual user credential is derived per virtual user
+
+`SCENARIO_VIRTUAL_USER_SECRET` is a root, not a password. What a caller presents to
+`/auth/sign-in/virtual-user` is `deriveVirtualUserSecret(root, email)`
+(`packages/core/src/services/virtual-user-secret.ts`) — an HKDF-expanded
+HMAC-SHA256 over the lowercased address, on the same key-material primitives
+everything else in core signs with. The endpoint does not store or look anything
+up: it re-derives the expected value for whichever address is being signed in as
+and compares. A credential minted for one virtual user is refused for every other.
+
+The root itself is not accepted as a credential, and a root shorter than 32
+characters refuses the endpoint outright rather than deriving weak credentials
+from it. The server-side warning names the problem; what the client is told does
+not.
+
+Derivation rather than a per-virtual-user secrets table because there is then nothing
+to store, provision, or keep in sync — the target already holds the root, and
+rotating it invalidates every credential at once.
+
+This is what lets a holder be handed less than everything:
+
+- The browser switcher gets no credential at all. It used to be handed
+  `VITE_DEV_VIRTUAL_USER_SECRETS`, one per virtual user; it now names a virtual user by id at
+  `/sign-in/virtual-user`, which the server gates with the virtual user opt-in and the
+  `devSwitcher` flag, so a bundle holds nothing worth taking.
+- A run can be given `PIKKU_VIRTUAL_USER_SECRETS` (`id=secret,…`, minted with
+  `pikku virtual-user secret`) instead of the root, and then it can sign in as those
+  virtual users and no others. Asking for one outside the list throws naming the
+  virtual user rather than falling back to the root.
+
+**What this rules out:** accepting the root as a credential at the endpoint,
+putting the root in any client bundle, and comparing a presented credential
+against a stored one. It also rules out per-virtual-user secrets that are generated
+randomly and written down — the derivation is the reason there is nothing to
+provision.

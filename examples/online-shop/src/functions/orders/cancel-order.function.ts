@@ -89,7 +89,7 @@ export const cancelOrder = pikkuFunc({
       entityType: 'order',
       entityId: orderId,
       action: 'cancelled',
-      actorId: session.userId,
+      performedById: session.userId,
     })
   },
 })

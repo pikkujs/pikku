@@ -12,7 +12,7 @@ import { composeStepProse } from '@pikku/core/scenario'
 import type { ScenarioSurface, ScenarioStepPhase } from '@pikku/core/scenario'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { FunctionsMeta } from '@pikku/core/services'
-import type { PersonaDefinitions } from '@pikku/core/persona'
+import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
@@ -24,7 +24,7 @@ export interface ScenarioStepProse {
   phase: ScenarioStepPhase
   description: string
   template?: string
-  actor?: string
+  virtualUser?: string
 }
 
 export interface ScenarioStepOutcome {
@@ -43,7 +43,7 @@ export interface ScenarioStepOutcome {
   input?: unknown
   /** The step function that ran it, as recorded on the run. */
   stepFunc?: string
-  /** Where the step fell in each recorded actor's video, as the run stamped it. */
+  /** Where the step fell in each recorded virtual user's video, as the run stamped it. */
   video?: ScenarioStepVideoOffset[]
 }
 
@@ -64,11 +64,11 @@ export interface ScenarioProse {
    */
   byStepFunc: Map<string, ScenarioStepProse>
   /**
-   * What each actor is, keyed by the persona key a step records. A persona's
+   * What each virtual user is, keyed by the virtual user key a step records. A virtual user's
    * job title is what a reader wants — "the founder" — and its first role is
-   * the fallback for a persona that declares no title.
+   * the fallback for a virtual user that declares no title.
    */
-  roleByActor: Map<string, string>
+  roleByVirtualUser: Map<string, string>
 }
 
 /**
@@ -107,7 +107,7 @@ function* walkScenarioSteps(steps: unknown): Generator<any> {
 export const collectScenarioStepProse = (
   workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
   functionsMeta: FunctionsMeta,
-  personas: PersonaDefinitions = []
+  virtualUsers: VirtualUserDefinitions = []
 ): ScenarioProse => {
   const byStepName = new Map<string, ScenarioStepProse>()
   const byStepFunc = new Map<string, ScenarioStepProse>()
@@ -123,7 +123,7 @@ export const collectScenarioStepProse = (
       template: step.options?.description
         ? undefined
         : stepMeta?.scenarioStepTemplate,
-      actor: step.actor,
+      virtualUser: step.virtualUser,
     }
     byStepName.set(step.stepName, parts)
 
@@ -137,19 +137,25 @@ export const collectScenarioStepProse = (
   for (const stepFunc of ambiguous) {
     byStepFunc.delete(stepFunc)
   }
-  return { byStepName, byStepFunc, roleByActor: rolesByActor(personas) }
+  return {
+    byStepName,
+    byStepFunc,
+    roleByVirtualUser: rolesByVirtualUser(virtualUsers),
+  }
 }
 
 /**
- * Only a job title introduces an actor. `roles` is authorisation — "reviewer"
- * is a grant, not a description of who someone is — so a persona that declares
+ * Only a job title introduces a virtual user. `roles` is authorisation — "reviewer"
+ * is a grant, not a description of who someone is — so a virtual user that declares
  * no title gets no introduction rather than one assembled out of its grants.
  */
-const rolesByActor = (personas: PersonaDefinitions): Map<string, string> => {
+const rolesByVirtualUser = (
+  virtualUsers: VirtualUserDefinitions
+): Map<string, string> => {
   const roles = new Map<string, string>()
-  for (const persona of personas) {
-    if (persona.jobTitle) {
-      roles.set(persona.id, persona.jobTitle)
+  for (const virtualUser of virtualUsers) {
+    if (virtualUser.jobTitle) {
+      roles.set(virtualUser.id, virtualUser.jobTitle)
     }
   }
   return roles
@@ -159,7 +165,7 @@ const sameProse = (a: ScenarioStepProse, b: ScenarioStepProse) =>
   a.phase === b.phase &&
   a.description === b.description &&
   a.template === b.template &&
-  a.actor === b.actor
+  a.virtualUser === b.virtualUser
 
 /** The step functions in this scenario that declare a `browser` binding. */
 export const scenarioBrowserSteps = (
@@ -218,7 +224,7 @@ export const scenarioStepsWithoutBinding = (
  * denominator.
  *
  * Assertions still get named separately. A `given` or `when` driven server-side
- * took a shortcut; a `then` driven server-side is a sentence claiming the actor
+ * took a shortcut; a `then` driven server-side is a sentence claiming the virtual user
  * saw something nobody looked at. Same effect on the ratio, different kind of
  * problem, so `--strict` gates on the latter only.
  */
@@ -277,9 +283,9 @@ const stepProse = (
 
 /** How a step follows the one recorded before it. */
 interface StepContinuation {
-  actorRole?: string
+  virtualUserRole?: string
   continuesPhase?: boolean
-  continuesActor?: boolean
+  continuesVirtualUser?: boolean
 }
 
 const stepSentence = (
@@ -307,18 +313,23 @@ export const scenarioStepRows = (
   let previous: ScenarioStepProse | undefined
   return steps.map((step) => {
     const parts = stepProse(step, prose)
-    const actor = parts?.actor
-    const role = actor ? prose.roleByActor.get(actor) : undefined
-    // Only the step that first names an actor carries their role, so a run
+    const virtualUser = parts?.virtualUser
+    const role = virtualUser
+      ? prose.roleByVirtualUser.get(virtualUser)
+      : undefined
+    // Only the step that first names a virtual user carries their role, so a run
     // that is one person doing eight things says who they are once.
     const firstMention =
-      actor !== undefined && role !== undefined && !introduced.has(actor)
+      virtualUser !== undefined &&
+      role !== undefined &&
+      !introduced.has(virtualUser)
     const continuation: StepContinuation = {
       continuesPhase: previous !== undefined && previous.phase === parts?.phase,
-      continuesActor: previous !== undefined && previous.actor === actor,
+      continuesVirtualUser:
+        previous !== undefined && previous.virtualUser === virtualUser,
     }
-    if (actor) {
-      introduced.add(actor)
+    if (virtualUser) {
+      introduced.add(virtualUser)
     }
     previous = parts
     return {
@@ -327,7 +338,7 @@ export const scenarioStepRows = (
         ? {
             sentenceWithRole: stepSentence(step, prose, {
               ...continuation,
-              actorRole: role,
+              virtualUserRole: role,
             }),
           }
         : {}),

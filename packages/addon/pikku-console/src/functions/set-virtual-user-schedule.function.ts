@@ -1,10 +1,10 @@
 import { pikkuFunc } from '#pikku/addon/function'
 
 /**
- * Changes how often a persona uses the application on its own.
+ * Changes how often a virtual user uses the application on its own.
  *
  * Dispatches the project's own scaffolded `setVirtualUserSchedule` rather than
- * writing the row here: that function refuses an undeclared persona and one
+ * writing the row here: that function refuses an undeclared virtual user and one
  * declared as acted upon, and a second copy of those rules in the console would
  * eventually disagree with the first. So reading a cadence needs only the
  * store, while changing one needs the scaffold — and the absence is reported as
@@ -16,7 +16,7 @@ import { pikkuFunc } from '#pikku/addon/function'
  */
 export const setVirtualUserSchedule = pikkuFunc<
   {
-    persona: string
+    virtualUserId: string
     enabled?: boolean
     disposition?: string
     goals?: string[]
@@ -27,7 +27,7 @@ export const setVirtualUserSchedule = pikkuFunc<
 >({
   title: 'Set a Virtual User Schedule',
   description:
-    'Says how often a declared persona should use this application on its own. Every field left out keeps what it already had.',
+    'Says how often a declared virtual user should use this application on its own. Every field left out keeps what it already had.',
   expose: true,
   scopes: ['pikku:console:virtualUsers:schedule'],
   func: async ({ metaService }, input, { rpc }) => {

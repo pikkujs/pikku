@@ -4,7 +4,7 @@ import type { CoreSystemRoles } from './role.types.js'
  * No-op function for declaring system roles.
  * This exists purely for TypeScript type checking and will be tree-shaken.
  * The CLI extracts metadata via AST parsing and generates a `SystemRoleName`
- * union, so a persona naming an undeclared role fails the build.
+ * union, so a virtual user naming an undeclared role fails the build.
  *
  * A system role is a role that ships with the product: the console may grant
  * it, but cannot rename, re-scope or delete it. Roles an admin composes in the

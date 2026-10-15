@@ -13,8 +13,8 @@ import { scenarioDepths, type ScenarioDepth } from './hollow-scenarios.js'
  * A planned scenario that exists but cannot prove its own claim.
  *
  * Only `browser`-level claims are judged, and only against `reachability-only`. A
- * `permission` scenario proving a guard let an actor through is doing exactly its job with
- * that shape — the starter template's `signedInActorReachesTheAppScenario` is one, and
+ * `permission` scenario proving a guard let a virtual user through is doing exactly its job with
+ * that shape — the starter template's `signedInVirtualUserReachesTheAppScenario` is one, and
  * failing it would be wrong. A `browser` scenario says a PERSON did something on screen, so
  * navigating to a page and confirming the router left you there does not answer it.
  *
@@ -79,7 +79,7 @@ export function shallowScenarioProblems(plan: Plan, meta: PikkuMeta): string[] {
  * source tree.
  *
  * Codegen already inventories eight of the nine things a plan declares — functions,
- * wires, scopes, roles, workflows, agents, personas and features — keyed by the same
+ * wires, scopes, roles, workflows, agents, virtual users and features — keyed by the same
  * ids the plan uses. So "did the engineer build `updateEntry`" is a set membership
  * test against a JSON file the drive already regenerates every turn, not a glob over
  * the tree and not a scenario run. Scenario PASS/FAIL still needs a run; existence

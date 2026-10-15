@@ -3,7 +3,7 @@
  * did: what the cookie jar holds, and when the analytics client has had time
  * to send.
  *
- * Cookies are read off the actor's own context rather than through
+ * Cookies are read off the virtual user's own context rather than through
  * `document.cookie`, because the ids under test are written `httpOnly` — a
  * page that could read them would be failing the thing being asserted.
  */

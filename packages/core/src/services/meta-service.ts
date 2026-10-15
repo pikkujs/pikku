@@ -15,7 +15,7 @@ import type {
 } from '../wirings/mcp/mcp.types.js'
 import type { WorkflowsMeta } from '../wirings/workflow/workflow.types.js'
 import type { FeaturesMeta } from '../wirings/workflow/scenario.types.js'
-import type { ResolvedPersona } from './personas-service.js'
+import type { ResolvedVirtualUser } from './virtual-users-service.js'
 import type { SystemRoleDefinitionsMeta } from '../wirings/role/role.types.js'
 import type { FeatureFlagDefinitionsMeta } from '../wirings/flag/flag.types.js'
 import type { ScopeDefinitionsMeta } from '../wirings/scope/scope.types.js'
@@ -178,12 +178,12 @@ export interface MetaService {
   getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
-  getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
+  getVirtualUsersMeta(): Promise<Record<string, ResolvedVirtualUser>>
   /**
    * The roles declared with `defineSystemRole`, keyed by name.
    *
-   * A persona declares roles; a function checks scopes. Anything showing what a
-   * persona can reach — the console's persona page, a run's catalogue — needs
+   * A virtual user declares roles; a function checks scopes. Anything showing what a
+   * virtual user can reach — the console's virtual user page, a run's catalogue — needs
    * this to get from one to the other, and needs it to be the same expansion the
    * seed granted from rather than a second one.
    */
@@ -244,7 +244,7 @@ export class LocalMetaService implements MetaService {
   private gatewayMetaCache: GatewaysMeta | null = null
   private rpcMetaCache: RPCMetaRecord | null = null
   private workflowMetaCache: WorkflowsMeta | null = null
-  private personasMetaCache: Record<string, ResolvedPersona> | null = null
+  private virtualUsersMetaCache: Record<string, ResolvedVirtualUser> | null = null
   private systemRolesMetaCache: SystemRoleDefinitionsMeta | null = null
   private scopesMetaCache: ScopeDefinitionsMeta | null = null
   private featureFlagsMetaCache: FeatureFlagDefinitionsMeta | null = null
@@ -349,7 +349,7 @@ export class LocalMetaService implements MetaService {
     this.gatewayMetaCache = null
     this.rpcMetaCache = null
     this.workflowMetaCache = null
-    this.personasMetaCache = null
+    this.virtualUsersMetaCache = null
     this.systemRolesMetaCache = null
     this.scopesMetaCache = null
     this.featureFlagsMetaCache = null
@@ -532,12 +532,12 @@ export class LocalMetaService implements MetaService {
     }
   }
 
-  async getPersonasMeta(): Promise<Record<string, ResolvedPersona>> {
-    if (this.personasMetaCache) return this.personasMetaCache
+  async getVirtualUsersMeta(): Promise<Record<string, ResolvedVirtualUser>> {
+    if (this.virtualUsersMetaCache) return this.virtualUsersMetaCache
 
-    const content = await this.readFile('workflow/personas.gen.json')
-    this.personasMetaCache = content ? JSON.parse(content) : {}
-    return this.personasMetaCache!
+    const content = await this.readFile('workflow/virtual-users.gen.json')
+    this.virtualUsersMetaCache = content ? JSON.parse(content) : {}
+    return this.virtualUsersMetaCache!
   }
 
   async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta> {

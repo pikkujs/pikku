@@ -30,7 +30,7 @@ export type ResourceOrphan = z.infer<typeof ResourceOrphanSchema>
  * An orphan is a capability nobody wrote down, so the kinds worth reporting are
  * the ones that ARE capabilities. A wire (`http`, `queue`, `cron`, `channel`) is
  * a way to reach a function that is already reported, and a `schema`, `scope`,
- * `addon` or `persona` is machinery rather than something a note would be about
+ * `addon` or `virtualUser` is machinery rather than something a note would be about
  * — reporting those turns a useful signal into a list nobody reads.
  */
 export const ORPHAN_PREFIXES: readonly ResourcePrefix[] = [

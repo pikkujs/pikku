@@ -51,7 +51,7 @@
     "local": {
       "apiUrl": "http://localhost:4077",
       "appUrl": "http://localhost:4077",
-      "signInPath": "/api/auth/sign-in/actor"
+      "signInPath": "/api/auth/sign-in/virtual-user"
     }
   },
   "models": {
@@ -60,7 +60,7 @@
     "cheap": "openai/gpt-5.6-luna"
   },
   "scenarios": {
-    "emailDomain": "actors.local",
+    "emailDomain": "virtualuser.local",
     "model": "openai/gpt-5.6-luna"
   },
   "allow": {
@@ -74,11 +74,7 @@
       "native": {
         "identifier": "dev.pikku.e2e",
         "productName": "Pikku E2E",
-        "platforms": [
-          "desktop",
-          "android",
-          "ios"
-        ],
+        "platforms": ["desktop", "android", "ios"],
         "plugins": []
       }
     }

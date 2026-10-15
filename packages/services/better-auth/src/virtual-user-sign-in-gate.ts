@@ -1,0 +1,112 @@
+export const DEV_VIRTUAL_USER_SIGN_IN_ENV = 'PIKKU_DEV_VIRTUAL_USER_SIGN_IN'
+
+export const VIRTUAL_USER_SIGN_IN_OPT_IN_ENV =
+  'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN'
+export const VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE =
+  'passwordless-virtual-user-sign-in'
+
+export const VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE =
+  'Virtual user sign-in is disabled outside `pikku dev`'
+
+export const WEAK_VIRTUAL_USER_ROOT_SECRET_MESSAGE =
+  'Virtual user sign-in is not configured with a strong enough secret'
+
+export const VIRTUAL_USER_NOT_PROVISIONED_MESSAGE =
+  'No virtual user account exists for that address — the deployment provisions its virtual users at startup, so check they were declared in this environment'
+
+export type VirtualUserSignInReason =
+  'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
+
+export interface VirtualUserSignInGate {
+  enabled: boolean
+  reason: VirtualUserSignInReason
+  /**
+   * Whether an unknown address may be turned into a virtual user row. `pikku dev`
+   * alone: a stage that runs scenarios signs in as the virtual users the deployment
+   * provisioned when it started, and never mints new identities.
+   */
+  mayProvision: boolean
+  /**
+   * Whether the opt-in variable is set to something other than the value that
+   * works. The value is deliberately not carried: it reaches a log line, and an
+   * operator may have pasted a secret into it.
+   */
+  nearMissOptIn: boolean
+}
+
+/**
+ * Resolves the gate, optionally from a value the caller already has.
+ *
+ * `optIn` exists because `process.env` is not where every runtime keeps its
+ * configuration. A Cloudflare Worker receives the opt-in as a binding, which
+ * reaches user code through the variables service and never appears on
+ * `process.env` unless the deployment opts into `nodejs_compat_populate_process_env`
+ * — so a gate that reads only the environment is shut on precisely the stages
+ * that deploy there. Passing the resolved value in keeps the decision in one
+ * place while letting the caller say where it read it from.
+ */
+export const resolveVirtualUserSignIn = (
+  optIn?: string
+): VirtualUserSignInGate => {
+  const env = typeof process === 'undefined' ? undefined : process.env
+  const resolvedOptIn = optIn ?? env?.[VIRTUAL_USER_SIGN_IN_OPT_IN_ENV]
+  const nearMissOptIn =
+    resolvedOptIn !== undefined &&
+    resolvedOptIn !== VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE
+  const isDev = env?.[DEV_VIRTUAL_USER_SIGN_IN_ENV] === 'true'
+
+  if (resolvedOptIn === VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE) {
+    return {
+      enabled: true,
+      reason: 'allow-outside-dev-env',
+      mayProvision: isDev,
+      nearMissOptIn,
+    }
+  }
+  if (isDev) {
+    return {
+      enabled: true,
+      reason: 'pikku-dev',
+      mayProvision: true,
+      nearMissOptIn,
+    }
+  }
+  return {
+    enabled: false,
+    reason: 'disabled',
+    mayProvision: false,
+    nearMissOptIn,
+  }
+}
+
+export const virtualUserSignInEnabledMessage = (
+  reason: VirtualUserSignInReason
+): string =>
+  reason === 'pikku-dev'
+    ? `virtualUser: sign-in enabled because ${DEV_VIRTUAL_USER_SIGN_IN_ENV} is set — this process is \`pikku dev\``
+    : `virtualUser: sign-in enabled outside \`pikku dev\` by ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} — any provisioned virtual user can be signed in as without a password`
+
+export const virtualUserSignInRefusedMessage = (): string =>
+  `virtualUser: a virtual user secret is configured but sign-in stays disabled — ${DEV_VIRTUAL_USER_SIGN_IN_ENV} is unset (so this is not \`pikku dev\`). ` +
+  `Remove the secret from this environment, or, if this stage is meant to run scenarios, set ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV}=${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}.`
+
+export const virtualUserSignInAttemptRefusedMessage = (): string =>
+  `virtualUser: refused a sign-in attempt — virtual user sign-in is disabled outside \`pikku dev\`. ` +
+  `If this stage is meant to run scenarios, set ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV}=${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}.`
+
+/**
+ * The value itself is never reproduced: an operator who pasted a secret into
+ * the variable by mistake would otherwise have it retained by every log sink
+ * that saw this warning.
+ */
+export const virtualUserSignInNearMissMessage = (): string =>
+  `virtualUser: ${VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} is set to an unsupported value, which is ignored — the only value that enables virtual user sign-in outside \`pikku dev\` is '${VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE}'.`
+
+/**
+ * Says what is wrong on the server, where the operator can act on it — the
+ * caller is told only that sign-in is not configured, since a short root secret
+ * is a fact about the deployment and not something a client gets to learn.
+ */
+export const weakVirtualUserRootSecretMessage = (): string =>
+  `virtualUser: refused a sign-in — the root virtual user secret is shorter than 32 characters. ` +
+  `Every virtual user's credential is derived from it, so it must be high-entropy key material, not a password.`

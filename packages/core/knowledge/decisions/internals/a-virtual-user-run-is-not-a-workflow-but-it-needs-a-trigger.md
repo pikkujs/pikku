@@ -56,7 +56,7 @@ wants the same exploration.
 
 Where that rule is actually applied is
 [the schedule tick](a-virtual-user-cadence-is-a-row-not-a-timer.md), which has
-to: a record stuck at `running` would otherwise block its persona's cadence
+to: a record stuck at `running` would otherwise block its virtual user's cadence
 forever.
 
 **What this rules out:** dispatching the run through `startWorkflow`; awaiting

@@ -4,29 +4,29 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeScopesTypes } from './serialize-scopes-types.js'
 import { serializeScopesClient } from './serialize-scopes-client.js'
 import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
-import { APP_SCOPE_ROOT, buildAppScopeDefinition } from '@pikku/core/persona'
-import type { PersonaDefinitions } from '@pikku/core/persona'
+import { APP_SCOPE_ROOT, buildAppScopeDefinition } from '@pikku/core/virtual-user'
+import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 
 /**
- * The declared scopes, plus the `app` tree derived from the personas.
+ * The declared scopes, plus the `app` tree derived from the virtual users.
  *
  * Appended here rather than in the inspector because it is not a declaration
- * the AST can find: it is the personas' `app` field read as a scope, and this
+ * the AST can find: it is the virtual users' `app` field read as a scope, and this
  * is the one place the two states are both in hand.
  */
 export const withAppScopes = (
   scopes: ScopeDefinitions,
-  personas: PersonaDefinitions
+  virtualUsers: VirtualUserDefinitions
 ): ScopeDefinitions => {
   const declared = scopes.find((scope) => scope.name === APP_SCOPE_ROOT)
   if (declared) {
     throw new Error(
-      `'${APP_SCOPE_ROOT}' is reserved: it is derived from the apps your personas name, and ${declared.sourceFile ?? 'a defineScope call'} declares it too. Rename that scope root — two trees answering to one name make a grant ambiguous.`
+      `'${APP_SCOPE_ROOT}' is reserved: it is derived from the apps your virtual users name, and ${declared.sourceFile ?? 'a defineScope call'} declares it too. Rename that scope root — two trees answering to one name make a grant ambiguous.`
     )
   }
 
-  const appScopes = buildAppScopeDefinition(personas)
+  const appScopes = buildAppScopeDefinition(virtualUsers)
   return appScopes ? [...scopes, appScopes] : scopes
 }
 
@@ -70,7 +70,7 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
     const definitions = withAddonOrigin(
-      withAppScopes(state.scopes.definitions, state.personas.definitions),
+      withAppScopes(state.scopes.definitions, state.virtualUsers.definitions),
       config.addonName,
       config.addon
     )

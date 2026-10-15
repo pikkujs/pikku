@@ -1,16 +1,16 @@
 import { hasScopes } from '../../scopes.js'
 
 /**
- * Which of the product's agents a persona can actually talk to.
+ * Which of the product's agents a virtual user can actually talk to.
  *
- * An agent is not something a persona declares. It is something a persona
+ * An agent is not something a virtual user declares. It is something a virtual user
  * *reaches*, under exactly the rule an RPC is reached by: `CoreAgent.scopes`
- * is checked against the session, so a persona holding the scopes an agent
+ * is checked against the session, so a virtual user holding the scopes an agent
  * requires finds it in front of them, and one that does not, does not.
  *
- * That is the whole reason a persona has no `agent:` field. Naming one would
+ * That is the whole reason a virtual user has no `agent:` field. Naming one would
  * add no capability the roles do not already confer, and would narrow the
- * persona to a single brain when the interesting behaviour is the choice
+ * virtual user to a single brain when the interesting behaviour is the choice
  * between calling the API directly and handing the work to a specialist.
  */
 
@@ -33,12 +33,12 @@ export interface ReachableAgent {
  * That key is the export's own name, which is what `addAgent` stores and what
  * `resolveAgent` looks up. The `name` an agent declares in its config is a
  * display label and is frequently something else entirely — offering that one
- * hands the persona a name the server cannot resolve, and the run dies on a
+ * hands the virtual user a name the server cannot resolve, and the run dies on a
  * 500 the moment it takes the offer.
  *
  * Like {@link reachableCatalogue}, this narrows *what is offered* and never
  * what is enforced: the server decides who may talk to what, and an agent
- * answering a persona this filter would have withheld is a finding rather than
+ * answering a virtual user this filter would have withheld is a finding rather than
  * a bug here.
  *
  * An agent declaring no scopes is offered to everybody, on the same terms as a

@@ -917,12 +917,15 @@ const _getPikkuCLIConfig = async (
         'pikku-scenario-types.gen.ts'
       )
     }
-    // The actors a scenario drives. Sat under `workflow/` beside a different
-    // file of the same name — `scopes/pikku-personas.gen.ts` declares personas,
+    // The virtual users a scenario drives. Sat under `workflow/` beside a different
+    // file of the same name — `scopes/pikku-virtual-users.gen.ts` declares virtual users,
     // this one types them at runtime — which made the pair impossible to tell
     // apart by import path.
-    if (!result.personasWiringFile) {
-      result.personasWiringFile = join(scenarioDir, 'pikku-personas.gen.ts')
+    if (!result.virtualUsersWiringFile) {
+      result.virtualUsersWiringFile = join(
+        scenarioDir,
+        'pikku-virtual-users.gen.ts'
+      )
     }
     if (!result.scenarioStepsFile) {
       result.scenarioStepsFile = join(
@@ -1236,10 +1239,7 @@ const _getPikkuCLIConfig = async (
       )
     }
     if (!result.screensFile) {
-      result.screensFile = join(
-        screensDir,
-        'pikku-screens.gen.ts'
-      )
+      result.screensFile = join(screensDir, 'pikku-screens.gen.ts')
     }
     if (!result.installedAddonsFile) {
       result.installedAddonsFile = join(
@@ -1251,15 +1251,15 @@ const _getPikkuCLIConfig = async (
       result.addonRolesFile = join(screensDir, 'pikku-addon-roles.gen.ts')
     }
 
-    // Personas. Beside the roles they are checked against, for the same reason
+    // Virtual users. Beside the roles they are checked against, for the same reason
     // roles sit beside their scopes.
-    if (!result.personasFile) {
-      result.personasFile = join(scopesDir, 'pikku-personas.gen.ts')
+    if (!result.virtualUsersFile) {
+      result.virtualUsersFile = join(scopesDir, 'pikku-virtual-users.gen.ts')
     }
-    if (!result.personasMetaJsonFile) {
-      result.personasMetaJsonFile = join(
+    if (!result.virtualUsersMetaJsonFile) {
+      result.virtualUsersMetaJsonFile = join(
         scopesDir,
-        'pikku-personas-meta.gen.json'
+        'pikku-virtual-users-meta.gen.json'
       )
     }
 

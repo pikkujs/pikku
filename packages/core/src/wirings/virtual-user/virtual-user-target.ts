@@ -1,17 +1,17 @@
-import type { ScenarioPersona } from '../../services/personas-service.js'
+import type { ScenarioVirtualUser } from '../../services/virtual-users-service.js'
 import type { VirtualUserTarget } from './virtual-user.types.js'
 
-export interface PersonaTargetOptions {
-  /** Model the persona uses for its side of a conversation with an agent. */
+export interface VirtualUserTargetOptions {
+  /** Model the virtual user uses for its side of a conversation with an agent. */
   model?: string
   /** Agents this user may talk to. Omit to leave `talkTo` unavailable. */
   agents?: readonly string[]
 }
 
 /**
- * Drive a virtual user through a signed-in persona.
+ * Drive a virtual user's run through its signed-in session.
  *
- * This is the only place the engine meets the network. A persona already signs
+ * This is the only place the engine meets the network. A virtual user already signs
  * in as a real user over the app's own auth, keeps its cookies, re-logs-in when
  * a session expires mid-run and reports a status as data rather than throwing —
  * everything a user imitating a user needs, and none of it worth building twice.
@@ -20,11 +20,11 @@ export interface PersonaTargetOptions {
  * error, it is the system saying no, which is information it should be allowed
  * to act on.
  */
-export const personaVirtualUserTarget = (
-  persona: ScenarioPersona,
-  { model, agents }: PersonaTargetOptions = {}
+export const virtualUserTarget = (
+  virtualUser: ScenarioVirtualUser,
+  { model, agents }: VirtualUserTargetOptions = {}
 ): VirtualUserTarget => ({
-  call: (rpcName, args) => persona.invokeRaw(rpcName, args),
+  call: (rpcName, args) => virtualUser.invokeRaw(rpcName, args),
   talkTo: agents?.length
     ? async (agent, task) => {
         if (!agents.includes(agent)) {
@@ -34,7 +34,7 @@ export const personaVirtualUserTarget = (
             transcript: [],
           }
         }
-        return persona.converse({
+        return virtualUser.converse({
           agent,
           task,
           // A user asking for something judges the answer by whether they got

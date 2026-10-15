@@ -13,7 +13,7 @@ import { runScaffoldDuplicateChecks } from "./scaffold-duplicate-checks.js";
 import { runSharedProjectChecks } from "./shared-checks.js";
 import { runTypeIdentityChecks } from "./type-identity-checks.js";
 import { runWorkspaceExportsChecks } from "./workspace-exports-checks.js";
-import type { ValidateFinding as Finding } from "./persona-checks.js";
+import type { ValidateFinding as Finding } from "./virtual-user-checks.js";
 
 export type ValidateTarget = {
   /** Absolute directory the check runs against. */

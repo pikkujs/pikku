@@ -32,11 +32,11 @@ describe('app-new schemas', () => {
   test('the schemas are the command contract', () => {
     assert.deepEqual(Object.keys(PikkuAppNewInput.shape).sort(), [
       'install',
-      'personas',
       'primary',
       'serves',
       'slug',
       'template',
+      'virtualUsers',
     ])
     assert.deepEqual(Object.keys(PikkuAppNewOutputSchema.shape).sort(), [
       'path',

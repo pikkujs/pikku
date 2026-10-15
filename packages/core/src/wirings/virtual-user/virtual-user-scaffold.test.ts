@@ -4,7 +4,7 @@ import {
   executeVirtualUserRun,
   logVirtualUserTick,
   requireVirtualUserRunStore,
-  runnablePersona,
+  runnableVirtualUser,
   serializeVirtualUserRun,
   serializeVirtualUserSchedule,
   serializeVirtualUserSteps,
@@ -12,7 +12,7 @@ import {
   startVirtualUserRun,
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
-  type ScaffoldPersonas,
+  type ScaffoldVirtualUsers,
 } from './virtual-user-scaffold.js'
 import type {
   VirtualUserRunRecord,
@@ -31,11 +31,11 @@ import { getErrorResponse } from '../../errors/error-handler.js'
  * running the code rather than by reading it.
  */
 
-const personas = {
+const virtualUsers = {
   susan: {
     id: 'susan',
     name: 'Susan',
-    email: 'susan@actors.local',
+    email: 'susan@virtualuser.local',
     roles: [],
     goals: ['Get the weekly order in'],
     tags: [],
@@ -45,13 +45,13 @@ const personas = {
   observed: {
     id: 'observed',
     name: 'Observed',
-    email: 'observed@actors.local',
+    email: 'observed@virtualuser.local',
     roles: [],
     goals: [],
     tags: [],
     runnable: false,
   },
-} as unknown as ScaffoldPersonas
+} as unknown as ScaffoldVirtualUsers
 
 const runStore = () => {
   const started: any[] = []
@@ -111,37 +111,40 @@ describe('signInPathFor', () => {
   // `/api/auth` should not have to name each door separately.
   test('an app that moved its auth mount moves both sign-in paths', () => {
     assert.equal(
-      signInPathFor('/api/auth/sign-in/actor', 'fabric'),
+      signInPathFor('/api/auth/sign-in/virtual-user', 'fabric'),
       '/api/auth/sign-in/fabric'
     )
     assert.equal(
-      signInPathFor('/api/auth/sign-in/fabric', 'actor'),
-      '/api/auth/sign-in/actor'
+      signInPathFor('/api/auth/sign-in/fabric', 'virtual-user'),
+      '/api/auth/sign-in/virtual-user'
     )
   })
 
   test('a path naming neither plugin was configured deliberately', () => {
-    assert.equal(signInPathFor('/custom/login', 'actor'), '/custom/login')
-  })
-
-  test('nothing configured stays nothing, so the default applies', () => {
-    assert.equal(signInPathFor(undefined, 'actor'), undefined)
-  })
-})
-
-describe('runnablePersona', () => {
-  test('an undeclared persona is named, with what declares one', () => {
-    assert.throws(
-      () => runnablePersona(personas, 'nobody'),
-      /Unknown persona "nobody" — declare it with definePersonas\(\)/
+    assert.equal(
+      signInPathFor('/custom/login', 'virtual-user'),
+      '/custom/login'
     )
   })
 
-  // An acted-upon persona has no session of its own, and running one races the
-  // scenario that acts on it.
-  test('refuses a persona that is declared as acted upon', () => {
+  test('nothing configured stays nothing, so the default applies', () => {
+    assert.equal(signInPathFor(undefined, 'virtual-user'), undefined)
+  })
+})
+
+describe('runnableVirtualUser', () => {
+  test('an undeclared virtual user is named, with what declares one', () => {
     assert.throws(
-      () => runnablePersona(personas, 'observed'),
+      () => runnableVirtualUser(virtualUsers, 'nobody'),
+      /Unknown virtual user "nobody" — declare it with defineVirtualUsers\(\)/
+    )
+  })
+
+  // An acted-upon virtual user has no session of its own, and running one races the
+  // scenario that acts on it.
+  test('refuses a virtual user that is declared as acted upon', () => {
+    assert.throws(
+      () => runnableVirtualUser(virtualUsers, 'observed'),
       /declared as acted upon, never run/
     )
   })
@@ -160,13 +163,16 @@ describe('refusals reach the caller', () => {
     assert.fail('expected a refusal')
   }
 
-  test('an undeclared persona is a 400', async () => {
-    assert.equal(await statusOf(() => runnablePersona(personas, 'nobody')), 400)
+  test('an undeclared virtual user is a 400', async () => {
+    assert.equal(
+      await statusOf(() => runnableVirtualUser(virtualUsers, 'nobody')),
+      400
+    )
   })
 
-  test('an acted-upon persona is a 400', async () => {
+  test('an acted-upon virtual user is a 400', async () => {
     assert.equal(
-      await statusOf(() => runnablePersona(personas, 'observed')),
+      await statusOf(() => runnableVirtualUser(virtualUsers, 'observed')),
       400
     )
   })
@@ -177,11 +183,11 @@ describe('refusals reach the caller', () => {
       await statusOf(() =>
         startVirtualUserRun({
           store,
-          personas,
+          virtualUsers,
           config: { nodeEnv: 'development' },
           environments: { production: { production: true } },
           environment: 'production',
-          persona: 'susan',
+          virtualUserId: 'susan',
           disposition: 'newcomer',
         })
       ),
@@ -211,14 +217,14 @@ describe('startVirtualUserRun', () => {
     const { store, started } = runStore()
     const run = await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: undefined,
-      persona: 'susan',
+      virtualUserId: 'susan',
       startedBy: 'user-1',
     })
     assert.equal(run.runId, 'run-1')
     assert.equal(started.length, 1)
-    assert.equal(started[0].persona, 'susan')
+    assert.equal(started[0].virtualUserId, 'susan')
     assert.equal(started[0].startedBy, 'user-1')
   })
 
@@ -228,9 +234,9 @@ describe('startVirtualUserRun', () => {
     const { store, started } = runStore()
     const run = await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: undefined,
-      persona: 'susan',
+      virtualUserId: 'susan',
     })
     assert.equal(typeof started[0].seed, 'number')
     assert.equal(started[0].seed, run.seed)
@@ -240,21 +246,21 @@ describe('startVirtualUserRun', () => {
     const { store, started } = runStore()
     await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: undefined,
-      persona: 'susan',
+      virtualUserId: 'susan',
       seed: 42,
     })
     assert.equal(started[0].seed, 42)
   })
 
-  test('the disposition falls back to what the persona declares', async () => {
+  test('the disposition falls back to what the virtual user declares', async () => {
     const { store, started } = runStore()
     await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: undefined,
-      persona: 'susan',
+      virtualUserId: 'susan',
     })
     assert.equal(started[0].disposition, 'realistic')
   })
@@ -264,9 +270,9 @@ describe('startVirtualUserRun', () => {
     await assert.rejects(
       startVirtualUserRun({
         store,
-        personas,
+        virtualUsers,
         config: { nodeEnv: 'production' },
-        persona: 'susan',
+        virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
       /Only the 'accountable' disposition may run against production/
@@ -275,14 +281,14 @@ describe('startVirtualUserRun', () => {
   })
 
   // Checked against the effective disposition, so an override cannot smuggle
-  // one past a persona that declares the safe one.
+  // one past a virtual user that declares the safe one.
   test('the accountable disposition is allowed through in production', async () => {
     const { store, started } = runStore()
     await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: { nodeEnv: 'production' },
-      persona: 'susan',
+      virtualUserId: 'susan',
       disposition: 'accountable',
     })
     assert.equal(started[0].disposition, 'accountable')
@@ -295,11 +301,11 @@ describe('startVirtualUserRun', () => {
     const { store, started } = runStore()
     await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: { nodeEnv: 'production' },
       environments: { staging: {}, production: { production: true } },
       environment: 'staging',
-      persona: 'susan',
+      virtualUserId: 'susan',
       disposition: 'adversarial',
     })
     assert.equal(started[0].disposition, 'adversarial')
@@ -310,11 +316,11 @@ describe('startVirtualUserRun', () => {
     await assert.rejects(
       startVirtualUserRun({
         store,
-        personas,
+        virtualUsers,
         config: { nodeEnv: 'development' },
         environments: { staging: {}, production: { production: true } },
         environment: 'production',
-        persona: 'susan',
+        virtualUserId: 'susan',
         disposition: 'adversarial',
       }),
       /Only the 'accountable' disposition may run against production/
@@ -333,10 +339,10 @@ describe('startVirtualUserRun', () => {
       await assert.rejects(
         startVirtualUserRun({
           store,
-          personas,
+          virtualUsers,
           config: { nodeEnv: 'development' },
           environments: { staging: {}, production: { production: true } },
-          persona: 'susan',
+          virtualUserId: 'susan',
           disposition: 'adversarial',
         }),
         /Only the 'accountable' disposition may run against production/
@@ -347,14 +353,14 @@ describe('startVirtualUserRun', () => {
     assert.equal(started.length, 0)
   })
 
-  test('refuses a persona that is declared as acted upon', async () => {
+  test('refuses a virtual user that is declared as acted upon', async () => {
     const { store, started } = runStore()
     await assert.rejects(
       startVirtualUserRun({
         store,
-        personas,
+        virtualUsers,
         config: undefined,
-        persona: 'observed',
+        virtualUserId: 'observed',
       }),
       /declared as acted upon, never run/
     )
@@ -368,17 +374,17 @@ describe('startVirtualUserRun', () => {
     const { store, started } = runStore()
     await startVirtualUserRun({
       store,
-      personas,
+      virtualUsers,
       config: undefined,
-      persona: 'susan',
+      virtualUserId: 'susan',
     })
     assert.deepEqual(Object.keys(started[0]).sort(), [
       'disposition',
       'goals',
       'memory',
-      'persona',
       'seed',
       'startedBy',
+      'virtualUserId',
     ])
   })
 })
@@ -386,7 +392,7 @@ describe('startVirtualUserRun', () => {
 const record = (): VirtualUserRunRecord =>
   ({
     runId: 'run-1',
-    persona: 'susan',
+    virtualUserId: 'susan',
     disposition: 'realistic',
     seed: 7,
     status: 'complete',
@@ -471,7 +477,7 @@ describe('serializeVirtualUserSteps', () => {
 
 const schedule = (): VirtualUserScheduleRecord =>
   ({
-    persona: 'susan',
+    virtualUserId: 'susan',
     enabled: true,
     disposition: 'adversarial',
     goals: ['Break checkout'],
@@ -486,8 +492,8 @@ const schedule = (): VirtualUserScheduleRecord =>
 describe('serializeVirtualUserSchedule', () => {
   // A schedule is enabled once and then outlives the declaration it was written
   // from, so both sides have to travel for anyone to see they have parted ways.
-  test('a schedule carries what the persona currently declares', () => {
-    const wire = serializeVirtualUserSchedule(schedule(), personas)
+  test('a schedule carries what the virtual user currently declares', () => {
+    const wire = serializeVirtualUserSchedule(schedule(), virtualUsers)
     assert.equal(wire.disposition, 'adversarial')
     assert.equal(wire.declared.disposition, 'realistic')
     assert.deepEqual(wire.declared.goals, ['Get the weekly order in'])
@@ -496,12 +502,12 @@ describe('serializeVirtualUserSchedule', () => {
   // Which fields differ is a question about how to render two values, and the
   // answer belongs where they are rendered.
   test('the difference is left for the client to work out', () => {
-    const wire = serializeVirtualUserSchedule(schedule(), personas)
+    const wire = serializeVirtualUserSchedule(schedule(), virtualUsers)
     assert.equal('drifted' in wire, false)
   })
 
   test('the budget crosses as durationMs, which is what every call here takes', () => {
-    const wire = serializeVirtualUserSchedule(schedule(), personas)
+    const wire = serializeVirtualUserSchedule(schedule(), virtualUsers)
     assert.equal(wire.budget!.durationMs, 600_000)
   })
 
@@ -513,15 +519,15 @@ describe('serializeVirtualUserSchedule', () => {
         ...schedule(),
         budget: { steps: 1, mutations: 1, duration: '30m' },
       } as unknown as VirtualUserScheduleRecord,
-      personas
+      virtualUsers
     )
     assert.equal(wire.budget!.durationMs, undefined)
   })
 
-  test('a persona nobody declares any more still renders', () => {
+  test('a virtual user nobody declares any more still renders', () => {
     const wire = serializeVirtualUserSchedule(
-      { ...schedule(), persona: 'gone' } as VirtualUserScheduleRecord,
-      personas
+      { ...schedule(), virtualUserId: 'gone' } as VirtualUserScheduleRecord,
+      virtualUsers
     )
     assert.equal(wire.declared.disposition, 'realistic')
     assert.deepEqual(wire.declared.goals, [])
@@ -551,8 +557,8 @@ describe('writeVirtualUserSchedule', () => {
     await assert.rejects(
       writeVirtualUserSchedule({
         store: undefined,
-        personas,
-        persona: 'susan',
+        virtualUsers,
+        virtualUserId: 'susan',
       }),
       /KyselyVirtualUserScheduleStore/
     )
@@ -560,10 +566,14 @@ describe('writeVirtualUserSchedule', () => {
 
   // The same rule a run enforces, applied at the point the row is written
   // rather than every hour afterwards.
-  test('refuses a cadence for a persona that is only ever acted upon', async () => {
+  test('refuses a cadence for a virtual user that is only ever acted upon', async () => {
     const { store, writes } = scheduleStore()
     await assert.rejects(
-      writeVirtualUserSchedule({ store, personas, persona: 'observed' }),
+      writeVirtualUserSchedule({
+        store,
+        virtualUsers,
+        virtualUserId: 'observed',
+      }),
       /declared as acted upon, never run/
     )
     assert.equal(writes.length, 0)
@@ -582,8 +592,8 @@ describe('writeVirtualUserSchedule', () => {
     await assert.rejects(
       writeVirtualUserSchedule({
         store,
-        personas,
-        persona: 'susan',
+        virtualUsers,
+        virtualUserId: 'susan',
         enabled: true,
         ...production,
       }),
@@ -601,8 +611,8 @@ describe('writeVirtualUserSchedule', () => {
     await assert.rejects(
       writeVirtualUserSchedule({
         store,
-        personas,
-        persona: 'susan',
+        virtualUsers,
+        virtualUserId: 'susan',
         enabled: true,
         ...production,
       }),
@@ -616,8 +626,8 @@ describe('writeVirtualUserSchedule', () => {
     await assert.rejects(
       writeVirtualUserSchedule({
         store,
-        personas,
-        persona: 'susan',
+        virtualUsers,
+        virtualUserId: 'susan',
         disposition: 'careless',
         ...production,
       }),
@@ -630,8 +640,8 @@ describe('writeVirtualUserSchedule', () => {
     const { store, writes } = scheduleStore()
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       enabled: true,
       disposition: 'accountable',
       ...production,
@@ -639,16 +649,16 @@ describe('writeVirtualUserSchedule', () => {
     assert.equal(writes.length, 1)
   })
 
-  // A new row takes the persona's declared disposition, so the one checked is
+  // A new row takes the virtual user's declared disposition, so the one checked is
   // the one every tick will run with.
   test('a new cadence is written with the disposition that was checked', async () => {
     const { store, writes } = scheduleStore()
     await writeVirtualUserSchedule({
       store,
-      personas: {
-        susan: { ...personas.susan, disposition: 'accountable' },
-      } as unknown as ScaffoldPersonas,
-      persona: 'susan',
+      virtualUsers: {
+        susan: { ...virtualUsers.susan, disposition: 'accountable' },
+      } as unknown as ScaffoldVirtualUsers,
+      virtualUserId: 'susan',
       enabled: true,
       ...production,
     })
@@ -661,16 +671,16 @@ describe('writeVirtualUserSchedule', () => {
     const { store, writes } = scheduleStore(schedule())
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       enabled: false,
       ...production,
     })
     const off = scheduleStore({ ...schedule(), enabled: false })
     await writeVirtualUserSchedule({
       store: off.store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       disposition: 'careless',
       ...production,
     })
@@ -682,8 +692,8 @@ describe('writeVirtualUserSchedule', () => {
     const { store, writes } = scheduleStore()
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       enabled: true,
       disposition: 'adversarial',
       environments: { staging: {}, production: { production: true } },
@@ -696,8 +706,8 @@ describe('writeVirtualUserSchedule', () => {
     const { store, writes } = scheduleStore()
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       budget: { steps: 3, durationMs: 1_000 },
     })
     assert.deepEqual(writes[0].budget, {
@@ -711,12 +721,16 @@ describe('writeVirtualUserSchedule', () => {
   // to survive the mapping.
   test('an absent budget is left alone and a null one is cleared', async () => {
     const { store, writes } = scheduleStore()
-    await writeVirtualUserSchedule({ store, personas, persona: 'susan' })
+    await writeVirtualUserSchedule({
+      store,
+      virtualUsers,
+      virtualUserId: 'susan',
+    })
     assert.equal(writes[0].budget, undefined)
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       budget: null,
     })
     assert.equal(writes[1].budget, null)
@@ -726,8 +740,8 @@ describe('writeVirtualUserSchedule', () => {
     const { store, writes } = scheduleStore()
     await writeVirtualUserSchedule({
       store,
-      personas,
-      persona: 'susan',
+      virtualUsers,
+      virtualUserId: 'susan',
       nextRunAt: '2026-03-01T00:00:00.000Z',
     })
     assert.ok(writes[0].nextRunAt instanceof Date)
@@ -741,7 +755,7 @@ describe('virtualUserScheduleRunInput', () => {
   test('a due schedule becomes the input runVirtualUser accepts', () => {
     const input = virtualUserScheduleRunInput(schedule())
     assert.deepEqual(input, {
-      persona: 'susan',
+      virtualUserId: 'susan',
       disposition: 'adversarial',
       goals: ['Break checkout'],
       budget: { steps: 20, mutations: 5, durationMs: 600_000 },
@@ -759,13 +773,13 @@ describe('virtualUserScheduleRunInput', () => {
 
 describe('logVirtualUserTick', () => {
   // The caller is a cron, so a run this started is otherwise the only trace
-  // that a persona is still out there working.
+  // that a virtual user is still out there working.
   test('everything a tick did is written down, since nobody is watching', () => {
     const { logger, lines } = silentLogger()
     logVirtualUserTick(logger, {
-      dispatched: [{ persona: 'susan', runId: 'run-9' }],
+      dispatched: [{ virtualUserId: 'susan', runId: 'run-9' }],
       reaped: ['run-8'],
-      skipped: [{ persona: 'observed', reason: 'not due' }],
+      skipped: [{ virtualUserId: 'observed', reason: 'not due' }],
     } as any)
     assert.equal(lines.length, 3)
     assert.match(lines[0]!, /^info Virtual user susan started run run-9/)
@@ -788,10 +802,10 @@ describe('executeVirtualUserRun', () => {
         agentRunner: { run: async () => ({}) } as any,
         variables: variables({}),
         logger,
-        personas,
-        createPersonas: () => ({}) as any,
+        virtualUsers,
+        createVirtualUsers: () => ({}) as any,
         runId: 'run-1',
-        persona: 'susan',
+        virtualUserId: 'susan',
         disposition: 'realistic',
         goals: [],
         memory: {},
@@ -821,7 +835,7 @@ describe('executeVirtualUserRun', () => {
     })
     await assert.rejects(
       executeVirtualUserRun(p),
-      /Neither an operator token nor SCENARIO_ACTOR_SECRET is available/
+      /Neither an operator token nor SCENARIO_VIRTUAL_USER_SECRET is available/
     )
   })
 
@@ -829,7 +843,7 @@ describe('executeVirtualUserRun', () => {
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
       }),
     })
     await assert.rejects(
@@ -838,19 +852,19 @@ describe('executeVirtualUserRun', () => {
     )
   })
 
-  // Asymmetric, so the stage can verify one and can never mint one. The actor
+  // Asymmetric, so the stage can verify one and can never mint one. The virtual user
   // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
-  test('an operator token wins over the actor secret wherever both exist', async () => {
+  test('an operator token wins over the virtual user secret wherever both exist', async () => {
     let options: any
     const { params: p } = params({
       operatorToken: 'handed-in',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
-        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/actor',
+        SCENARIO_SIGN_IN_PATH: '/api/auth/sign-in/virtual-user',
       }),
-      createPersonas: (given: any) => {
+      createVirtualUsers: (given: any) => {
         options = given
         return {}
       },
@@ -859,8 +873,8 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.secret, undefined)
     assert.equal(options.operator.token, 'handed-in')
     assert.equal(options.operator.signInPath, '/api/auth/sign-in/fabric')
-    // The actor door moves with the mount too, for the run that has no token.
-    assert.equal(options.signInPath, '/api/auth/sign-in/actor')
+    // The virtual user door moves with the mount too, for the run that has no token.
+    assert.equal(options.signInPath, '/api/auth/sign-in/virtual-user')
   })
 
   test('a run nobody handed a token to falls back to the environment', async () => {
@@ -871,7 +885,7 @@ describe('executeVirtualUserRun', () => {
         FABRIC_OPERATOR_TOKEN: 'from-the-environment',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
-      createPersonas: (given: any) => {
+      createVirtualUsers: (given: any) => {
         options = given
         return {}
       },
@@ -880,15 +894,15 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.operator.token, 'from-the-environment')
   })
 
-  test('with no token at all the actor secret is what signs in', async () => {
+  test('with no token at all the virtual user secret is what signs in', async () => {
     let options: any
     const { params: p } = params({
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
-      createPersonas: (given: any) => {
+      createVirtualUsers: (given: any) => {
         options = given
         return {}
       },
@@ -898,23 +912,23 @@ describe('executeVirtualUserRun', () => {
     assert.equal(options.operator, undefined)
   })
 
-  test('a persona nobody declares any more is refused before signing in', async () => {
+  test('a virtual user nobody declares any more is refused before signing in', async () => {
     let called = false
     const { params: p } = params({
-      persona: 'gone',
+      virtualUserId: 'gone',
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
-      createPersonas: () => {
+      createVirtualUsers: () => {
         called = true
         return {}
       },
     })
     await assert.rejects(
       executeVirtualUserRun(p),
-      /Persona "gone" is no longer declared/
+      /VirtualUser "gone" is no longer declared/
     )
     assert.equal(called, false)
   })
@@ -951,7 +965,7 @@ describe('executeVirtualUserRun', () => {
       },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
     })
@@ -976,13 +990,13 @@ describe('executeVirtualUserRun', () => {
       budget: { steps: 0 },
       variables: variables({
         VIRTUAL_USER_API_URL: 'http://localhost:4000',
-        SCENARIO_ACTOR_SECRET: 'shh',
+        SCENARIO_VIRTUAL_USER_SECRET: 'shh',
         VIRTUAL_USER_MODEL: 'a-model',
       }),
-      createPersonas: () => ({
+      createVirtualUsers: () => ({
         susan: {
           name: 'susan',
-          email: 'susan@actors.local',
+          email: 'susan@virtualuser.local',
           invokeRaw: async () => ({ status: 200, body: {} }),
           converse: async () => ({
             passed: true,

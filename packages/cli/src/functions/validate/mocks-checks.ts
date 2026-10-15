@@ -6,7 +6,7 @@ import {
   runMocksCheck,
 } from '../mocks/run-check.js'
 import { frontendRoots, scanFrontend } from '../mocks/stub-scan.js'
-import type { ValidateFinding as Finding } from './persona-checks.js'
+import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
 const outDirOf = (dir: string): string => {
   try {

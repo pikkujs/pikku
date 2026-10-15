@@ -2,8 +2,8 @@
  * Steps whose grammatical subject is not a person.
  *
  * "The shop ships the order" and "Stripe's webhook arrives" are both things
- * that happen to a scenario rather than things an actor does, and writing them
- * as persona steps with the actor left off would put somebody in a sentence
+ * that happen to a scenario rather than things a virtual user does, and writing them
+ * as virtual user steps with the virtual user left off would put somebody in a sentence
  * that has none.
  */
 import {

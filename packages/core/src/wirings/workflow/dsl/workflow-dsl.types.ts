@@ -7,7 +7,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { SerializedError } from '../../../errors/serialized-error.js'
 import type { WorkflowRun } from '../workflow.types.js'
-import type { ScenarioPersona } from '../../../services/personas-service.js'
+import type { ScenarioVirtualUser } from '../../../services/virtual-users-service.js'
 import type {
   ScenarioStepOptions,
   ScenarioStepPhase,
@@ -31,12 +31,12 @@ export interface WorkflowStepOptions {
    */
   compensate?: false
   /**
-   * Run this step as an actor (scenarios). The RPC is sent through the
-   * actor's authenticated client over the REAL transport — never dispatched
+   * Run this step as a virtual user (scenarios). The RPC is sent through the
+   * virtual user's authenticated client over the REAL transport — never dispatched
    * internally — so auth middleware and permissions are exercised end-to-end.
    * The step is recorded durably like any RPC step.
    */
-  actor?: ScenarioPersona
+  virtualUser?: ScenarioVirtualUser
   // Future: timeout, failFast, priority
 }
 
@@ -265,8 +265,8 @@ export interface RpcStepMeta {
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
   options?: WorkflowStepOptions
-  /** Scenario actor name this step runs as ({ actor: actors.x }) */
-  actor?: string
+  /** Scenario virtual user name this step runs as ({ virtualUser: virtualUsers.x }) */
+  virtualUser?: string
   /** True for workflow.expectEventually polling steps */
   expectEventually?: boolean
 }
@@ -293,8 +293,8 @@ export interface ScenarioStepMeta {
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
   options?: WorkflowStepOptions
-  /** Scenario actor name this step runs as ({ actor: actors.x }) */
-  actor?: string
+  /** Scenario virtual user name this step runs as ({ virtualUser: virtualUsers.x }) */
+  virtualUser?: string
   /** Mirrors the surfaces the step function declares a binding for */
   surfaces?: ScenarioSurface[]
 }
@@ -661,7 +661,7 @@ export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   context: ScenarioContext<Out>
 
   /**
-   * Durable polling step: invoke `rpcName` (as an actor when `options.actor`
+   * Durable polling step: invoke `rpcName` (as a virtual user when `options.virtualUser`
    * is set) until `predicate` passes or `options.within` elapses.
    */
   expectEventually: <TOutput = any, TInput = any>(

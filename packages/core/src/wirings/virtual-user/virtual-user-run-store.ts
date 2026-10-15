@@ -23,7 +23,7 @@ import type {
  */
 export interface VirtualUserRunRecord {
   runId: string
-  persona: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   /** What makes a run replayable at all — a finding without it is an anecdote. */
   seed: number
@@ -67,7 +67,7 @@ export interface VirtualUserRunRecord {
 
 /** What a run is created with — everything else is filled in by the outcome. */
 export interface VirtualUserRunStart {
-  persona: string
+  virtualUserId: string
   disposition: VirtualUserDisposition
   seed: number
   goals?: readonly string[]
@@ -111,9 +111,9 @@ export interface VirtualUserRunStore {
   /** Marks a run `failed`. The run itself broke; it has no findings. */
   fail(runId: string, error: string): Promise<void>
   get(runId: string): Promise<VirtualUserRunRecord | null>
-  /** Newest first. `persona` narrows to one persona's history. */
+  /** Newest first. `virtualUserId` narrows to one virtual user's history. */
   list(options?: {
-    persona?: string
+    virtualUserId?: string
     limit?: number
     offset?: number
   }): Promise<VirtualUserRunRecord[]>

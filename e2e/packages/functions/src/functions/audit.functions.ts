@@ -3,7 +3,7 @@ import { pikkuFunc } from '#pikku/function'
 /**
  * Records one audit event, so the audit suite has a trail produced by the real
  * path — `audit: true` on the function, `auditLog.write()` in its body, the
- * runner filling in actor/function/trace, the sink persisting it — rather than
+ * runner filling in virtual user/function/trace, the sink persisting it — rather than
  * by rows inserted behind the runtime's back.
  *
  * Exposed so a scenario can call it as an RPC. `type` is an input because two

@@ -246,7 +246,7 @@ Per **pikku-fabric**: no auth checks in function bodies. If a policy resists exp
 
 ## Stage 5 — Scenarios from the blueprint's tests
 
-`workflows[].scenarios[]` entries carry `fromTest` — they were excavated from the legacy suite, which means **they are the legacy app's executable spec**, already in given/when/outcome shape. They map directly onto **pikku-scenario** actors and flows, and `product.json.actors` gives you the actor list.
+`workflows[].scenarios[]` entries carry `fromTest` — they were excavated from the legacy suite, which means **they are the legacy app's executable spec**, already in given/when/outcome shape. They map directly onto **pikku-scenario** virtual users and flows, and `product.json.virtualUsers` gives you the virtual user list.
 
 This is the highest-leverage stage in the rebuild and the easiest to skip. A scenario ported from a legacy test is the only artifact that can tell you the new app _behaves_ like the old one — parity of function names proves nothing.
 
@@ -283,12 +283,12 @@ Only when `frontend*.json` is present. Target: TanStack Start + Tailwind + shadc
 
 `frontend-components[].rebuild` is the only field that matters for planning:
 
-| `rebuild`             | What to do                                                                |
-| --------------------- | ------------------------------------------------------------------------- |
+| `rebuild`             | What to do                                                               |
+| --------------------- | ------------------------------------------------------------------------ |
 | `library-standard`    | Use the shadcn component. Do not port.                                   |
 | `library-composition` | Compose from shadcn primitives. Do not port.                             |
 | `custom-style`        | Normalize to shadcn + theme tokens. The divergence is the thing to drop. |
-| **`custom-logic`**    | **Port the behaviour.** Read `customLogic` and `dependencies`.            |
+| **`custom-logic`**    | **Port the behaviour.** Read `customLogic` and `dependencies`.           |
 
 The first three are the bulk and they're cheap — they're a re-expression, not a migration. **`custom-logic` is the actual project**: the bespoke chart, the virtualized table, the map surface, the rich editor, the drag interaction. Each has real behaviour that must survive, and `customLogic` says what it is.
 

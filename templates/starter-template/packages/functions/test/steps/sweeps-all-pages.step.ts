@@ -35,9 +35,9 @@ export const sweepsAllPages = pikkuScenarioStep({
   input: SweepsAllPagesInput,
   output: SweepsAllPagesOutput,
   browser: async (_services, { repoRoot }, { browser }) => {
-    const actor = session(browser)
-    await actor.waitForServerReady()
-    await sweepAllPages(actor, repoRoot)
+    const virtualUser = session(browser)
+    await virtualUser.waitForServerReady()
+    await sweepAllPages(virtualUser, repoRoot)
     return { routes: staticRoutes(repoRoot) }
   },
 })

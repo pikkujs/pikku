@@ -9,11 +9,11 @@
  * log beside the sentence, so the reply *is* the whole interface, and the only
  * thing that can contradict it is the store.
  *
- * So the shape here is deliberate: an LLM actor drives a real conversation and
+ * So the shape here is deliberate: an LLM virtual user drives a real conversation and
  * returns its own verdict, and then the store is asked separately. The verdict
  * is a model grading a model and catches the conversation going off the rails;
  * the store assertions are deterministic and catch the two failures above,
- * which the verdict alone cannot — a persuaded actor and an unchanged database
+ * which the verdict alone cannot — a persuaded virtual user and an unchanged database
  * is exactly the bug.
  *
  * Note what is *not* asserted: which tools ran. That was the first instinct and
@@ -38,14 +38,14 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
 >({
   title: 'The voice assistant marks a todo done, and the store agrees',
   description:
-    'An actor asks for a todo to be added and completed; the store is checked independently',
+    'A virtual user asks for a todo to be added and completed; the store is checked independently',
   tags: ['scenario', 'voice-assistant-converse', 'ai-live'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.do(
       'the todo list is reset',
       'todos:resetTodos',
       {},
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     const verdict = await scenario.when(
@@ -59,14 +59,14 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
         task: `Ask the assistant to add a todo titled exactly "${TITLE}". Once it confirms, ask it to mark "${TITLE}" as done. When it asks permission to run a tool, allow it.`,
         evaluate: `A todo titled "${TITLE}" was added, and then marked as done.`,
       },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     await scenario.then(
-      'the actor concludes the task succeeded',
-      'expectsActorVerdict',
+      'the virtual user concludes the task succeeded',
+      'expectsVirtualUserVerdict',
       { verdict, passed: true },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
     // The assertion the transcript cannot make. Absent means it was deleted
     // instead of completed; present-but-open means nothing was called at all.
@@ -74,7 +74,7 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
       'the store holds the todo, completed',
       'expectsTodoCompleted',
       { title: TITLE },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
     // Nothing asked for this one to be touched. A destructive tool reached for
     // by mistake lands somewhere, and it is not always on the todo named.
@@ -82,7 +82,7 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
       'the todo nobody mentioned is still there',
       'expectsTodoTitled',
       { title: BYSTANDER },
-      { actor: actors.shopper }
+      { virtualUser: virtualUsers.shopper }
     )
 
     return { passed: true }
@@ -92,7 +92,7 @@ export const voiceAssistantCompletesTodoScenario = pikkuScenario<
 export const voiceAssistantConverseFeature = pikkuFeature({
   name: 'The voice assistant is judged by the store, not by its own sentence',
   description:
-    'A persona-driven conversation with the voice agent, checked against the records it claims to have changed',
+    'A virtual-user-driven conversation with the voice agent, checked against the records it claims to have changed',
   tags: ['voice-assistant-converse', 'ai-live'],
   scenarios: [voiceAssistantCompletesTodoScenario],
 })

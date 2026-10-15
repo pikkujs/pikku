@@ -34,7 +34,7 @@ console.log(admin.length + ' of ' + c.length + ' commands live in the admin')
 On a real Rails app (Applause, 39 ActiveAdmin resources, 5,545 lines of DSL) the
 answer was **82 of 187 — 44%**, plus 71 of 223 API surfaces. The admin was not a
 side panel over the customer-facing app. It was nearly **half the application's
-write surface**, and a large share of those commands existed *nowhere else*:
+write surface**, and a large share of those commands existed _nowhere else_:
 issue a refund, retrigger a payment, queue a sync, impersonate a user, mark a
 blade returned, reassign a company. There is no customer screen for any of them.
 
@@ -68,23 +68,23 @@ grep -rhoE "^\s{0,4}(index|show|form|filter|scope|action_item|member_action|coll
 grep -rhoE "(member_action|collection_action) :[a-z_]+" app/admin/*.rb | sort -u
 ```
 
-| Legacy | Also called | Becomes in Fabric |
-|---|---|---|
-| `ActiveAdmin.register X` / `class XAdmin` | resource, ModelAdmin, Nova Resource | one TanStack route + one screen |
-| `index do … column :x` | `list_display`, `columns()` | a shadcn `Table`/data table, columns from the query's return type |
-| `filter :x` | `list_filter`, `searchable` | typed input fields on the list query |
-| `scope :active` | `get_queryset` variants, `Nova::Filters` | a named variant of the list query — NOT a new function per scope |
-| `form do f.input …` | `fields()`, `fieldsets` | a shadcn form; inputs from the command's zod input schema |
-| `permit_params` | `fields`, `$fillable` | you already have this: it is the command's input schema. Cross-check, don't re-derive. |
-| `member_action :foo` | custom action, `Nova::Actions` | **a `pikkuFunc`** — almost always already in `commands.json` |
-| `collection_action :foo` | bulk action | a `pikkuFunc` taking a set |
-| `batch_action` | admin action | a `pikkuFunc` taking ids[] |
-| `csv do … end` | export | a readonly func returning rows; render client-side |
-| `panel`/`sidebar` | inlines, `relations` | a section on the show screen, fed by a related query |
-| `action_item` | — | a button. It is not a capability; find the action it calls. |
+| Legacy                                    | Also called                              | Becomes in Fabric                                                                      |
+| ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ActiveAdmin.register X` / `class XAdmin` | resource, ModelAdmin, Nova Resource      | one TanStack route + one screen                                                        |
+| `index do … column :x`                    | `list_display`, `columns()`              | a shadcn `Table`/data table, columns from the query's return type                      |
+| `filter :x`                               | `list_filter`, `searchable`              | typed input fields on the list query                                                   |
+| `scope :active`                           | `get_queryset` variants, `Nova::Filters` | a named variant of the list query — NOT a new function per scope                       |
+| `form do f.input …`                       | `fields()`, `fieldsets`                  | a shadcn form; inputs from the command's zod input schema                              |
+| `permit_params`                           | `fields`, `$fillable`                    | you already have this: it is the command's input schema. Cross-check, don't re-derive. |
+| `member_action :foo`                      | custom action, `Nova::Actions`           | **a `pikkuFunc`** — almost always already in `commands.json`                           |
+| `collection_action :foo`                  | bulk action                              | a `pikkuFunc` taking a set                                                             |
+| `batch_action`                            | admin action                             | a `pikkuFunc` taking ids[]                                                             |
+| `csv do … end`                            | export                                   | a readonly func returning rows; render client-side                                     |
+| `panel`/`sidebar`                         | inlines, `relations`                     | a section on the show screen, fed by a related query                                   |
+| `action_item`                             | —                                        | a button. It is not a capability; find the action it calls.                            |
 
 **`action_item` vs `member_action` is the distinction that matters.** An
-`action_item` is a *button*; a `member_action` is a *capability*. Legacy files
+`action_item` is a _button_; a `member_action` is a _capability_. Legacy files
 pair them, and a fast reader counts the buttons. Count the capabilities.
 
 ## Stage 2 — Map actions to blueprint commands (do this before any UI)
@@ -101,14 +101,14 @@ For each `member_action`/`collection_action`, find its command in
 3. **Not found** — stop. Either the archaeology missed a command (fix
    `.knowledge/`, do not paper over it here) or the action is dead code. Both are
    findings. Do not quietly invent a command to fill the gap: a command with no
-   blueprint entry has no evidence, no policy and no actor, and you will not
+   blueprint entry has no evidence, no policy and no virtual user, and you will not
    notice which.
 
-Two legacy shapes to expect and *not* reproduce:
+Two legacy shapes to expect and _not_ reproduce:
 
 - **`*_form` + `*` action pairs** (`create_stripe_refund_form` +
   `create_stripe_refund`, `issue_payment_form` + `issue_payment`). The `_form` half
-  is a GET that renders a modal — it is a *screen*, not a capability. It collapses
+  is a GET that renders a modal — it is a _screen_, not a capability. It collapses
   into the screen; only the second half is a `pikkuFunc`. Porting both doubles your
   command count with phantoms.
 - **A `member_action` that only redirects** to another action. That is routing.
@@ -123,7 +123,7 @@ Two legacy shapes to expect and *not* reproduce:
   Porting it faithfully would ship a prominent button for a capability the business
   does not use through this app, and quietly move refunds into a surface nobody has
   ever tested. Whether it should now exist is a **product decision**, not a port.
-  Check the guard is on the *mutating* half too: if the form is blocked and the POST
+  Check the guard is on the _mutating_ half too: if the form is blocked and the POST
   is not, you have found a hole rather than a dead feature.
 
 ## Stage 3 — Permissions (the part legacy skipped)
@@ -141,7 +141,7 @@ impersonation and editing an FAQ all guarded identically.
   If the blueprint offers no rule, that is a `decisionsNeeded` entry — ask, do not
   invent.
 - **Impersonation:** Better Auth's `impersonateUser`/`stopImpersonating` replace the
-  hand-rolled version. If the legacy audit table recorded only the *start* of an
+  hand-rolled version. If the legacy audit table recorded only the _start_ of an
   impersonation (no `ended_at`, no session id), do not port it — the Fabric audit
   table already answers "what did they do while impersonating", which was the whole
   question it failed to answer.
@@ -179,16 +179,16 @@ Per resource, the parity report records:
 
 ## Red Flags
 
-| Thought | Reality |
-|---|---|
-| "The admin is just CRUD, scaffold it last" | Run the count. It was 44% of commands on a real app, and those commands exist nowhere else. |
-| "I'll read the DSL and write the commands" | The blueprint already has them, with evidence, actors and policies. Map; don't re-derive. |
-| "One function per scope" | A scope is a filter argument. The DSL needed a method because it has no parameters. |
-| "`action_item` count = capability count" | Buttons aren't capabilities. Count `member_action`/`collection_action`. |
-| "Port `create_stripe_refund_form` too" | It is a GET that renders a modal. It is a screen. Only the non-`_form` half is a command. |
-| "Admins are admins; one permission is fine" | That is the legacy bug. Refunds and FAQ edits are not the same risk. |
-| "The admin action isn't in commands.json, I'll add it" | Stop. Either the archaeology missed it (fix the blueprint) or it is dead. Both are findings. |
-| "I'll restyle the admin, it's internal" | An admin off the product's theme is how a design system forks. |
+| Thought                                                | Reality                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| "The admin is just CRUD, scaffold it last"             | Run the count. It was 44% of commands on a real app, and those commands exist nowhere else.      |
+| "I'll read the DSL and write the commands"             | The blueprint already has them, with evidence, virtual users and policies. Map; don't re-derive. |
+| "One function per scope"                               | A scope is a filter argument. The DSL needed a method because it has no parameters.              |
+| "`action_item` count = capability count"               | Buttons aren't capabilities. Count `member_action`/`collection_action`.                          |
+| "Port `create_stripe_refund_form` too"                 | It is a GET that renders a modal. It is a screen. Only the non-`_form` half is a command.        |
+| "Admins are admins; one permission is fine"            | That is the legacy bug. Refunds and FAQ edits are not the same risk.                             |
+| "The admin action isn't in commands.json, I'll add it" | Stop. Either the archaeology missed it (fix the blueprint) or it is dead. Both are findings.     |
+| "I'll restyle the admin, it's internal"                | An admin off the product's theme is how a design system forks.                                   |
 
 ## Related skills
 

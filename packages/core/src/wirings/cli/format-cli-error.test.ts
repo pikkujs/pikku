@@ -6,11 +6,11 @@ import { formatCLIError, wantsStackTrace } from './format-cli-error.js'
 describe('formatCLIError', () => {
   test('prints an expected error as its message alone', () => {
     const error = new PikkuError(
-      "Persona 'guest' missing guest. Refusing to run."
+      "Virtual user 'guest' missing guest. Refusing to run."
     )
     assert.strictEqual(
       formatCLIError(error),
-      "Persona 'guest' missing guest. Refusing to run."
+      "Virtual user 'guest' missing guest. Refusing to run."
     )
   })
 

@@ -5,7 +5,7 @@
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
 
-import type { ScenarioHttpResponse } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/services/personas-service'
+import type { ScenarioHttpResponse } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/services/virtual-users-service'
 import type { AgentMessage, AgentRunRow, AgentThread } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/wirings/agent/agent.types'
 import type { WorkflowRun, WorkflowRunStatus } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/wirings/workflow/workflow.types'
 import type { StreamWorkflowRunInput, GetScenarioArtifactInput } from '.bun/@pikku+addon-console@0.12.52+2ba48ff24cda2800/node_modules/@pikku/addon-console/dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen'
@@ -27,33 +27,33 @@ export type AcknowledgeStageSealingKeyInput = {
 export type AcknowledgeStageSealingKeyOutput = {
     keyId: string;
 }
-export type ActorBootsSandboxInput = {
+export type VirtualUserBootsSandboxInput = {
     projectId: string;
     sizeSlug: string;
     branch: string;
     timeoutMs: number;
 }
-export type ActorBootsSandboxOutput = {
+export type VirtualUserBootsSandboxOutput = {
     sandboxId: string;
     sandboxSlug: string;
     hostname: string;
 }
-export type ActorProvisionsProjectInput = {
+export type VirtualUserProvisionsProjectInput = {
     name: string;
     tier: "free" | "pro" | "team";
     templateSlug: string;
 }
-export type ActorProvisionsProjectOutput = {
+export type VirtualUserProvisionsProjectOutput = {
     organizationId: string;
     orgSlug: string;
     projectId: string;
     projectSlug: string;
 }
-export type ActorTearsDownInput = {
+export type VirtualUserTearsDownInput = {
     projectId: string;
     sandboxId: string;
 }
-export type ActorTearsDownOutput = {
+export type VirtualUserTearsDownOutput = {
     sandboxDeleted: boolean;
     projectDeleted: boolean;
 }
@@ -2003,7 +2003,7 @@ export type EvaluateSecurityGateOutput = {
 }
 export type ExecuteVirtualUserRunInput = {
     runId: string;
-    persona: string;
+    virtualUserId: string;
     disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
     goals: string[];
     memory: {
@@ -3705,7 +3705,7 @@ export type GetScenarioRunOutput = {
             stack?: string | undefined;
             expected?: boolean | undefined;
             browser?: {
-                actor: string;
+                virtualUser: string;
                 url?: string | undefined;
                 screenshot?: string | undefined;
                 consoleErrors: string[];
@@ -3721,7 +3721,7 @@ export type GetScenarioRunOutput = {
             scenario: string;
             kind: "screenshot" | "failure" | "video";
             path: string;
-            actor?: string | undefined;
+            virtualUser?: string | undefined;
             name?: string | undefined;
         }[] | undefined;
     }[];
@@ -3786,7 +3786,7 @@ export type GetStageAllMetaOutput = {
     };
     mcpMeta: unknown[];
     workflows: unknown;
-    personas: unknown;
+    virtualUsers: unknown;
     systemRoles: unknown;
     features: unknown;
     triggerMeta: {
@@ -3816,7 +3816,7 @@ export type GetStageAuditFiltersOutput = {
         userId: string;
         name?: string | undefined;
         email?: string | undefined;
-        actor?: boolean | undefined;
+        virtualUser?: boolean | undefined;
     }[];
     types: string[];
 }
@@ -3854,7 +3854,7 @@ export type GetStageAuditsOutput = {
         [key: string]: {
             name?: string | undefined;
             email?: string | undefined;
-            actor?: boolean | undefined;
+            virtualUser?: boolean | undefined;
         };
     };
     nextCursor: number | null;
@@ -4347,7 +4347,7 @@ export type GetVirtualUserRunInput = {
 }
 export type GetVirtualUserRunOutput = {
     runId: string;
-    persona: string;
+    virtualUserId: string;
     disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
     seed: number;
     status: "running" | "completed" | "failed";
@@ -5773,9 +5773,9 @@ export type ListTicketsOutput = {
         lastUpdatedAt: string;
     }[];
 }
-export type ListVirtualUserPersonasInput = {}
-export type ListVirtualUserPersonasOutput = {
-    personas: {
+export type ListVirtualUsersInput = {}
+export type ListVirtualUsersOutput = {
+    virtualUsers: {
         id: string;
         name: string;
         jobTitle: string | null;
@@ -5795,14 +5795,14 @@ export type ListVirtualUserRunCostsOutput = {
     }[];
 }
 export type ListVirtualUserRunsInput = {
-    persona?: string | undefined;
+    virtualUserId?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }
 export type ListVirtualUserRunsOutput = {
     runs: {
         runId: string;
-        persona: string;
+        virtualUserId: string;
         disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
         seed: number;
         status: "running" | "completed" | "failed";
@@ -5838,7 +5838,7 @@ export type ListVirtualUserRunsOutput = {
 }
 export type ListVirtualUserSchedulesOutput = {
     schedules: {
-        persona: string;
+        virtualUserId: string;
         enabled: boolean;
         disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
         goals: string[];
@@ -6348,7 +6348,7 @@ export type PublishScenarioRunInput = {
                 stack?: string | undefined;
                 expected?: boolean | undefined;
                 browser?: {
-                    actor: string;
+                    virtualUser: string;
                     url?: string | undefined;
                     screenshot?: string | undefined;
                     consoleErrors: string[];
@@ -6364,7 +6364,7 @@ export type PublishScenarioRunInput = {
                 scenario: string;
                 kind: "screenshot" | "failure" | "video";
                 path: string;
-                actor?: string | undefined;
+                virtualUser?: string | undefined;
                 name?: string | undefined;
             }[] | undefined;
         }[];
@@ -6566,7 +6566,7 @@ export type RecordAIUsageEventInput = ({
     stageId?: string | undefined;
     sandboxId?: string | undefined;
     userId?: string | undefined;
-    actorType: "user" | "agent" | "system";
+    performedByType: "user" | "agent" | "system";
     featureSurface?: string | undefined;
     agentId?: string | undefined;
     workflowId?: string | undefined;
@@ -6627,7 +6627,7 @@ export type RecordAIUsageEventInput = ({
         stageId?: string | undefined;
         sandboxId?: string | undefined;
         userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
+        performedByType: "user" | "agent" | "system";
         featureSurface?: string | undefined;
         agentId?: string | undefined;
         workflowId?: string | undefined;
@@ -6689,7 +6689,7 @@ export type RecordAIUsageEventInput = ({
         stageId?: string | undefined;
         sandboxId?: string | undefined;
         userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
+        performedByType: "user" | "agent" | "system";
         featureSurface?: string | undefined;
         agentId?: string | undefined;
         workflowId?: string | undefined;
@@ -6749,7 +6749,7 @@ export type RecordAIUsageEventInput = ({
         stageId?: string | undefined;
         sandboxId?: string | undefined;
         userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
+        performedByType: "user" | "agent" | "system";
         featureSurface?: string | undefined;
         agentId?: string | undefined;
         workflowId?: string | undefined;
@@ -6810,7 +6810,7 @@ export type RecordAIUsageEventInput = ({
     stageId?: string | undefined;
     sandboxId?: string | undefined;
     userId?: string | undefined;
-    actorType: "user" | "agent" | "system";
+    performedByType: "user" | "agent" | "system";
     featureSurface?: string | undefined;
     agentId?: string | undefined;
     workflowId?: string | undefined;
@@ -7630,7 +7630,7 @@ export type RunStuckProjectWatchdogDiagnosticOutput = {
 export type RuntimeRolloutWorkflowInput = { deploymentId: string; stageId: string; namespace: string; imageRef: string; secretDelivery: "vault" | "env"; projectId: string; stageShortId: string; stageType: "production" | "environment" | "preview"; orgShortId: string; projectShortId: string; branch: string; hostname: string; }
 export type RuntimeRolloutWorkflowOutput = { success: boolean; instanceIds: string[]; killedOld: number; }
 export type RunVirtualUserInput = {
-    persona: string;
+    virtualUserId: string;
     goals?: string[] | undefined;
     memory?: {
         [key: string]: string;
@@ -7774,7 +7774,7 @@ export type SecretSchema_harnessStripeApiKey = string
 export type SecretSchema_neonApiKey = string
 export type SecretSchema_openAiApiKey = string
 export type SecretSchema_resendApiKey = string
-export type SecretSchema_scenarioActorSecret = string
+export type SecretSchema_scenarioVirtualUserSecret = string
 export type SecretSchema_stripeSecretKey = string
 export type SecretSchema_stripeWebhookSecret = string
 export type SecretSchema_tursoApiToken = string
@@ -7990,7 +7990,7 @@ export type SetStageSealingKeyOutput = {
     keyId: string;
 }
 export type SetVirtualUserScheduleInput = {
-    persona: string;
+    virtualUserId: string;
     enabled?: boolean | undefined;
     disposition?: ("realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable") | undefined;
     goals?: string[] | undefined;
@@ -8004,7 +8004,7 @@ export type SetVirtualUserScheduleInput = {
     nextRunAt?: string | undefined;
 }
 export type SetVirtualUserScheduleOutput = {
-    persona: string;
+    virtualUserId: string;
     enabled: boolean;
     disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
     goals: string[];

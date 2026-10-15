@@ -12,25 +12,25 @@ import type {
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/scenario'
-import type { ResolvedPersona } from '@pikku/core/services'
+import type { ResolvedVirtualUser } from '@pikku/core/services'
 import type {
-  ActorSecretResolver,
+  VirtualUserSecretResolver,
   OperatorSignInOptions,
-} from '@pikku/core/persona'
+} from '@pikku/core/virtual-user'
 
 /** The default driver, used when a project names no other. */
 export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
 
 export interface ScenarioBrowserDriverOptions {
   /**
-   * The root actor secret, for a local `pikku dev` target — each persona's
+   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
    * credential is derived from it. A resolver instead when this run was handed
-   * credentials for only some personas.
+   * credentials for only some virtual users.
    */
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
-  actors: Record<string, ResolvedPersona>
+  virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   capture?: ScenarioCaptureOptions
   config: unknown
@@ -90,17 +90,17 @@ export interface ResolveScenarioBrowserProviderOptions {
   environment: string
   apiUrl: string
   appUrl?: string
-  /** Base url per app, for a product whose personas sign into more than one. */
+  /** Base url per app, for a product whose virtual users sign into more than one. */
   appUrls?: Record<string, string>
   /**
-   * The root actor secret, for a local `pikku dev` target — each persona's
+   * The root virtual user secret, for a local `pikku dev` target — each virtual user's
    * credential is derived from it. A resolver instead when this run was handed
-   * credentials for only some personas.
+   * credentials for only some virtual users.
    */
-  secret?: string | ActorSecretResolver
+  secret?: string | VirtualUserSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
-  actors: Record<string, ResolvedPersona>
+  virtualUsers: Record<string, ResolvedVirtualUser>
   signInPath?: string
   /**
    * Artifacts for this run — named screenshots, failure screenshots, and a
@@ -146,7 +146,7 @@ export const resolveScenarioBrowserProvider = async ({
   appUrls,
   secret,
   operator,
-  actors,
+  virtualUsers,
   signInPath,
   capture,
   browserScenarios,
@@ -174,26 +174,26 @@ export const resolveScenarioBrowserProvider = async ({
     )
   }
 
-  // An actor whose app has no url would browse the fallback: the wrong app's
+  // A virtual user whose app has no url would browse the fallback: the wrong app's
   // pages, loading fine, asserting nothing about the app the scenario meant.
   // Cheaper to refuse now than to read a green run that proved one app twice.
   const unmapped = [
     ...new Set(
-      Object.values(actors)
-        .map((persona) => persona.app)
+      Object.values(virtualUsers)
+        .map((virtualUser) => virtualUser.app)
         .filter((app): app is string => !!app && !config.appUrls?.[app])
     ),
   ]
   if (unmapped.length > 0 && Object.keys(config.appUrls ?? {}).length > 0) {
     throw new Error(
-      `No app url for ${unmapped.map((app) => `'${app}'`).join(', ')}, which ${unmapped.length > 1 ? 'personas sign' : 'a persona signs'} into. ` +
+      `No app url for ${unmapped.map((app) => `'${app}'`).join(', ')}, which ${unmapped.length > 1 ? 'virtual users sign' : 'a virtual user signs'} into. ` +
         `Pass --app-url ${unmapped[0]}=<url> (repeatable, comma-separated) or add it to environments.${environment}.appUrls in pikku.config.json.`
     )
   }
   const options: ScenarioBrowserDriverOptions = {
     secret,
     operator,
-    actors,
+    virtualUsers,
     signInPath,
     capture,
     config,

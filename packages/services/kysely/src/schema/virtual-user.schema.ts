@@ -10,9 +10,9 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  * put an empty table in every database. `KyselyVirtualUserRunStore.init()`
  * applies it, so it arrives exactly when the thing that fills it does.
  *
- * `persona` is text rather than a foreign key: personas are declared in code
- * with `definePersonas()`, not rows, and a run has to outlive the deletion of
- * the persona it ran as.
+ * `virtualUserId` is text rather than a foreign key: virtual users are declared in code
+ * with `defineVirtualUsers()`, not rows, and a run has to outlive the deletion of
+ * the virtual user it ran as.
  *
  * The JSON columns are text on every engine, like the audit table's, because
  * the store serialises them itself — a project on SQLite and one on Postgres
@@ -27,7 +27,7 @@ export const virtualUserSchema: PikkuSchema = {
       db.schema
         .createTable('virtualUserRun')
         .addColumn('runId', 'varchar(36)', (col) => col.primaryKey())
-        .addColumn('persona', 'varchar(255)', (col) => col.notNull())
+        .addColumn('virtualUserId', 'varchar(255)', (col) => col.notNull())
         .addColumn('disposition', 'varchar(50)', (col) => col.notNull())
         .addColumn('seed', 'bigint', (col) => col.notNull())
         // running | completed | failed. Not derived from `finishedAt` being
@@ -62,8 +62,8 @@ export const virtualUserSchema: PikkuSchema = {
         )
         .addColumn('finishedAt', 'timestamp'),
 
-    // The two reads: the run list newest-first, and one persona's history when
-    // a finding needs comparing against what that persona found before.
+    // The two reads: the run list newest-first, and one virtual user's history when
+    // a finding needs comparing against what that virtual user found before.
     (db, _types, ctx) =>
       db.schema
         .createIndex('idx_virtual_user_run_created')
@@ -72,13 +72,13 @@ export const virtualUserSchema: PikkuSchema = {
 
     (db, _types, ctx) =>
       db.schema
-        .createIndex('idx_virtual_user_run_persona')
+        .createIndex('idx_virtual_user_run_virtual_user_id')
         .on('virtualUserRun')
-        .columns(['persona', 'createdAt']),
+        .columns(['virtualUserId', 'createdAt']),
 
     // One row per turn, kept out of `virtualUserRun` so that listing runs does
     // not drag a budget's worth of transcript along with it. No foreign key
-    // onto the run for the same reason `persona` is not one: this table is
+    // onto the run for the same reason `virtualUserId` is not one: this table is
     // created by the store at boot on whatever engine the project uses, and a
     // cascade that half the engines enforce differently is worse than the read
     // rule that a step with no run is orphaned.

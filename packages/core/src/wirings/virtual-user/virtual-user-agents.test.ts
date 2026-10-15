@@ -16,14 +16,14 @@ const AGENTS = {
 }
 
 describe('reachableAgents', () => {
-  test('offers every agent when the persona holds no scopes to filter by', () => {
+  test('offers every agent when the virtual user holds no scopes to filter by', () => {
     assert.deepEqual(
       reachableAgents(AGENTS).map((a) => a.name),
       ['router-agent', 'social-poster', 'refund-agent']
     )
   })
 
-  test('an agent gating itself with scopes is offered only to a persona holding them', () => {
+  test('an agent gating itself with scopes is offered only to a virtual user holding them', () => {
     assert.deepEqual(
       reachableAgents(AGENTS, ['content:write']).map((a) => a.name),
       ['router-agent', 'social-poster']

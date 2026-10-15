@@ -2,8 +2,8 @@
  * The shared RPC vocabulary for the server-only scenarios.
  *
  * Most of Wave 2 needs no step at all — `scenario.do(name, 'rpcName', data,
- * { actor })` already invokes an exposed RPC over the real transport as an
- * actor, typed. These exist for the cases that one cannot express:
+ * { virtualUser })` already invokes an exposed RPC over the real transport as an
+ * virtual user, typed. These exist for the cases that one cannot express:
  *
  * - a call whose STATUS is the assertion. `invoke` throws on a non-2xx and
  *   truncates the body that names which scope was missing, so a refusal has to
@@ -26,11 +26,11 @@ export const invokesRpcRaw = pikkuScenarioStep<
   ScenarioHttpResponse
 >({
   name: 'invokesRpcRaw',
-  actor: true,
+  virtualUser: true,
   description: 'invokes an RPC and reports what the transport answered',
   template: 'invokes {rpcName}',
-  default: async (_services, { rpcName, data, headers }, { actor }) => {
-    const response = await actor.invokeRaw(
+  default: async (_services, { rpcName, data, headers }, { virtualUser }) => {
+    const response = await virtualUser.invokeRaw(
       rpcName as never,
       (data ?? null) as never,
       headers ? { headers } : undefined
@@ -87,7 +87,7 @@ export const expectsRpcResponse = pikkuScenarioStep<
  * directory the console itself reads.
  *
  * Only works for people: `admin:listUsers` filters out rows flagged
- * `actor: true`, so an ACTOR's own id comes from `readsActorUserId` instead.
+ * `virtualUser: true`, so a virtual user's own id comes from `readsVirtualUserUserId` instead.
  * The caller needs `admin:users:list`.
  */
 export const readsUserIdByEmail = pikkuScenarioStep<
@@ -95,11 +95,11 @@ export const readsUserIdByEmail = pikkuScenarioStep<
   { userId: string }
 >({
   name: 'readsUserIdByEmail',
-  actor: true,
+  virtualUser: true,
   description: 'resolves a seeded user id from an email via the directory',
   template: 'resolves {email}',
-  default: async (_services, { email }, { actor }) => {
-    const directory = (await actor.invoke(
+  default: async (_services, { email }, { virtualUser }) => {
+    const directory = (await virtualUser.invoke(
       'admin:listUsers' as never,
       {
         limit: 100,
@@ -118,27 +118,34 @@ export const readsUserIdByEmail = pikkuScenarioStep<
 })
 
 /**
- * Asks the server which user the acting actor actually is.
+ * Asks the server which user the acting virtual user actually is.
  *
  * Better Auth owns the user table, so ids are only knowable at runtime, and an
  * impersonation header or a direct scope grant is keyed by id. The directory
  * cannot answer this: `admin:listUsers` deliberately filters out rows
- * flagged `actor: true`, because a scenario actor is not a person a human picks
+ * flagged `virtualUser: true`, because a scenario virtual user is not a person a human picks
  * from. Asking the session itself is both the supported route and the honest
  * one — it reports the identity the request really ran under.
  */
-export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
-  name: 'readsActorUserId',
-  actor: true,
-  description: 'reads the user id of the acting actor from its own session',
+export const readsVirtualUserUserId = pikkuScenarioStep<
+  void,
+  { userId: string }
+>({
+  name: 'readsVirtualUserUserId',
+  virtualUser: true,
+  description:
+    'reads the user id of the acting virtual user from its own session',
   template: 'reads its own user id',
-  default: async (_services, _data, { actor }) => {
-    const session = (await actor.invoke('whoAmI' as never, null as never)) as {
+  default: async (_services, _data, { virtualUser }) => {
+    const session = (await virtualUser.invoke(
+      'whoAmI' as never,
+      null as never
+    )) as {
       userId?: string
     }
     if (!session.userId) {
       throw new Error(
-        `The session reported no user id: ${describeValue(session)}. The actor is signed out.`
+        `The session reported no user id: ${describeValue(session)}. The virtual user is signed out.`
       )
     }
     return { userId: session.userId }

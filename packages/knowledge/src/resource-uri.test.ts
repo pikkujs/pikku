@@ -91,7 +91,7 @@ describe('collectKnownResources', () => {
       '.pikku/channel/pikku-channels-meta.gen.json': { ch: {} },
       '.pikku/db/pikku-db-schema.gen.json': { tables: [{ name: 't' }] },
       'package.json': { dependencies: { '@pikku/addon-stripe': '1' } },
-      '.pikku/scopes/pikku-personas-meta.gen.json': { owner: { id: 'owner' } },
+      '.pikku/scopes/pikku-virtual-users-meta.gen.json': { owner: { id: 'owner' } },
       '.pikku-runtime/content/private/attachments/menu.pdf': {},
     })
     assert.deepEqual(
@@ -250,15 +250,15 @@ describe('collectKnownResources', () => {
     assert.ok(scopes.has('admin'))
   })
 
-  test('takes personas from the generated meta, not from the config', async (t) => {
+  test('takes virtual users from the generated meta, not from the config', async (t) => {
     const root = await project(t, {
-      '.pikku/scopes/pikku-personas-meta.gen.json': {
+      '.pikku/scopes/pikku-virtual-users-meta.gen.json': {
         owner: { id: 'owner', name: 'Owner' },
         guest: { id: 'guest', name: 'Guest' },
       },
     })
     assert.deepEqual(
-      [...(await known(root)).get('persona')!],
+      [...(await known(root)).get('virtualUser')!],
       ['owner', 'guest']
     )
   })

@@ -13,24 +13,24 @@ export const addonExposeListOpensScenario = pikkuScenario<
   description:
     'getTodo was never declared exposed by the addon; the expose list opens it',
   tags: ['scenario', 'addon-expose'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.given(
       'resets the todos to their seed',
       'invokesRpcRaw',
       { rpcName: 'todos:resetTodos', data: {} },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     const call = await scenario.when(
       'reads the first todo',
       'invokesRpcRaw',
       { rpcName: 'todos:getTodo', data: { id: '1' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'gets the todo back',
       'expectsRpcResponse',
       { call, status: 200, contains: ['"id":"1"'] },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { reached: true }
   },
@@ -43,18 +43,18 @@ export const addonExposeListClosesScenario = pikkuScenario<
   title: 'An addon function the wiring does not list is not found over RPC',
   description: 'deleteTodo is neither declared nor listed, so /rpc answers 404',
   tags: ['scenario', 'addon-expose'],
-  func: async (_services, _data, { scenario, actors }) => {
+  func: async (_services, _data, { scenario, virtualUsers }) => {
     const call = await scenario.when(
       'tries to delete a todo',
       'invokesRpcRaw',
       { rpcName: 'todos:deleteTodo', data: { id: '1' } },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
       'is told there is no such function',
       'expectsRpcResponse',
       { call, status: 404 },
-      { actor: actors.guest }
+      { virtualUser: virtualUsers.guest }
     )
     return { status: 404 }
   },

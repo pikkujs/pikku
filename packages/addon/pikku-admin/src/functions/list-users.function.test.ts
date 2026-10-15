@@ -10,7 +10,7 @@ type Clause = { field: string; operator?: string; value: any }
  * Only the operators the function is allowed to use. Anything else throws
  * rather than guessing, which is what pins the query away from `ne` on a
  * nullable marker column — the shape that empties the directory on a host
- * whose migration left `actor` NULL.
+ * whose migration left `virtualUser` NULL.
  */
 const matches = (row: Row, where: Clause[]) =>
   where.every((clause) => {
@@ -37,7 +37,7 @@ type FakeOptions = {
 
 const fakeAuth = (
   rows: Row[],
-  { declared = ['actor'], additionalFields = {} }: FakeOptions = {}
+  { declared = ['virtualUser'], additionalFields = {} }: FakeOptions = {}
 ) =>
   (async () => ({
     $context: Promise.resolve({
@@ -85,10 +85,10 @@ const call = (
 ) => (listUsers as any).func(services, data, { session })
 
 describe('admin listUsers — who is in the directory', () => {
-  test('leaves out actors, .internal service accounts and the platform principal', async () => {
+  test('leaves out virtual users, .internal service accounts and the platform principal', async () => {
     const auth = fakeAuth([
       person('alice', 3),
-      person('bot', 2, { actor: true }),
+      person('bot', 2, { virtualUser: true }),
       person('operator', 1, { email: 'operator-1@host.internal' }),
       person('pikku-platform', 0),
     ])
@@ -121,7 +121,7 @@ describe('admin listUsers — who is in the directory', () => {
 describe('admin listUsers — paging', () => {
   const directory = [
     person('a', 5),
-    person('bot', 4, { actor: true }),
+    person('bot', 4, { virtualUser: true }),
     person('b', 3),
     person('c', 2),
     person('d', 1),

@@ -1,6 +1,5 @@
 # Pikku React
 
-
 What is here:
 
 - [What ships](#what-ships)
@@ -174,8 +173,8 @@ helpers live in **pikku-wiring**.
 | Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                                  |
 | Run one named workflow              | `usePikkuWorkflow('name')` → `.start/.run/.status` |
 | Talk to one named AI agent          | `usePikkuAgent('name')` → `.run/.stream/.approve`  |
-| Longer-running workflow UX          | `references/workflows.md`               |
-| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-wiring**)      |
+| Longer-running workflow UX          | `references/workflows.md`                          |
+| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-wiring**)        |
 
 The first three live in your generated `api.gen.ts` (see the
 `references/react-query.md`). This reference covers the rest.
@@ -240,35 +239,36 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
-### Dev actor sign-in (`useDevActors`)
+### Dev virtual user sign-in (`useDevVirtualUsers`)
 
 The dev-only "Sign in as …" control: one click signs in as a declared scenario
-persona with no password, so the app can be reviewed as each kind of user.
+virtual user with no password, so the app can be reviewed as each kind of user.
 `pikku fabric validate` **requires** any frontend with a login screen to ship one
-(`app-missing-actor-quick-login-<app>`) — without it a reviewer is locked out of
+(`app-missing-virtual-user-quick-login-<app>`) — without it a reviewer is locked out of
 their own sandbox.
 
 ```tsx
-import { useDevActors } from '@pikku/react'
+import { useDevVirtualUsers } from '@pikku/react'
 
-const { actors, signInAs, pendingId, isPending, error } = useDevActors({
-  apiUrl: apiUrl(),
-  app: appSlug,
-  onSignedIn: () => navigate({ to: '/' }),
-})
+const { virtualUsers, signInAs, pendingId, isPending, error } =
+  useDevVirtualUsers({
+    apiUrl: apiUrl(),
+    app: appSlug,
+    onSignedIn: () => navigate({ to: '/' }),
+  })
 ```
 
 - **It is UI-free**, so render it however you like. For the default rendering use
-  the starter template's `<DevActorSwitcher />` (`components/dev/DevActorSwitcher.tsx`).
-- **No credential reaches the bundle.** It lists from `/auth/sign-in/personas`
-  and `signInAs(id)` posts only the persona id to `/auth/sign-in/persona`. The
+  the starter template's `<DevVirtualUserSwitcher />` (`components/dev/DevVirtualUserSwitcher.tsx`).
+- **No credential reaches the bundle.** It lists from `/auth/sign-in/virtual-users`
+  and `signInAs(id)` posts only the virtual user id to `/auth/sign-in/switch-virtual-user`. The
   server decides who is offered and who may sign in, and offers nobody in
-  production — see **pikku-scenario** for `personaSignIn`.
+  production — see **pikku-scenario** for `virtualUserSignIn`.
 - **It takes `onSignedIn` rather than a router**, since every app lands
   somewhere different.
-- `listDevActors()` and `signInAsPersona()` are exported too, for a non-React
+- `listDevVirtualUsers()` and `signInAsVirtualUser()` are exported too, for a non-React
   caller. The endpoint only
-  signs in rows flagged `actor: true`, so it can never impersonate a real user —
+  signs in rows flagged `virtualUser: true`, so it can never impersonate a real user —
   see **pikku-auth**.
 
 Do not hand-write the list-and-sign-in pair per app; that copy-paste is exactly

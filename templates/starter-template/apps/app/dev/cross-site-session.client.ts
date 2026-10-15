@@ -125,7 +125,7 @@ function serializeJar(): string {
 /**
  * Patch `fetch` so every API call carries the relayed cookies and picks up any
  * the server sets. Patching the global rather than each caller is deliberate:
- * Better Auth's client, the pikku SDK and the raw `fetch` in signInAsPersona all
+ * Better Auth's client, the pikku SDK and the raw `fetch` in signInAsVirtualUser all
  * have to agree on the session, and only one of them is ours to change.
  */
 export function installCrossSiteSession(): void {

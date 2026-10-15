@@ -8,9 +8,9 @@ export interface VirtualUserGenOutput {
  * read one back, and the sessionless function that does the work.
  *
  * Scaffolded rather than shipped in an addon because the whole feature is
- * derived from what the project already generates — its personas, its function
+ * derived from what the project already generates — its virtual users, its function
  * meta, its scenarios — so there is nothing to configure and nothing to author.
- * `pikku persona run` does the same thing from a terminal; this is the same run
+ * `pikku virtual-user run` does the same thing from a terminal; this is the same run
  * started over RPC, from CI or from a console, with the result kept.
  *
  * A virtual user is still NOT a workflow: it explores, so no two attempts take
@@ -31,7 +31,7 @@ export interface VirtualUserGenOutput {
  */
 export const serializeVirtualUserFunctions = (
   leaf: (name: string) => string,
-  pathToPersonas: string
+  pathToVirtualUsers: string
 ): VirtualUserGenOutput => {
   const schemas = `/**
  * Auto-generated virtual user schemas
@@ -61,11 +61,11 @@ export const Budget = z.object({
 })
 
 export const RunVirtualUserInput = z.object({
-  /** A persona id from \`definePersonas()\`. */
-  persona: z.string().min(1),
+  /** A virtual user id from \`defineVirtualUsers()\`. */
+  virtualUserId: z.string().min(1),
   /**
    * Situational goals in the caller's own words, run alongside the intents
-   * derived from the app's scenarios. Appended to what the persona durably
+   * derived from the app's scenarios. Appended to what the virtual user durably
    * wants, never a replacement — a run that replaces their goals is not them.
    */
   goals: z.array(z.string().min(1)).max(20).optional(),
@@ -75,7 +75,7 @@ export const RunVirtualUserInput = z.object({
    * the product does about that is the thing being tested.
    */
   memory: z.record(z.string(), z.string()).optional(),
-  /** Overrides the persona's declared disposition for this run only. */
+  /** Overrides the virtual user's declared disposition for this run only. */
   disposition: Disposition.optional(),
   budget: Budget.optional(),
   /** Fixed seed, so a run replays into the same finding. */
@@ -154,7 +154,7 @@ export const Step = z.object({
  */
 const virtualUserRunFields = {
   runId: z.string(),
-  persona: z.string(),
+  virtualUserId: z.string(),
   disposition: Disposition,
   seed: z.number(),
   status: z.enum(['running', 'completed', 'failed']),
@@ -173,8 +173,8 @@ const virtualUserRunFields = {
 export const GetVirtualUserRunOutput = z.object(virtualUserRunFields)
 
 export const ListVirtualUserRunsInput = z.object({
-  /** Narrows to one persona's history. */
-  persona: z.string().min(1).optional(),
+  /** Narrows to one virtual user's history. */
+  virtualUserId: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
 })
@@ -195,14 +195,14 @@ export const GetVirtualUserRunStepsOutput = z.object({
 })
 
 /**
- * One persona's standing instruction to keep using the app.
+ * One virtual user's standing instruction to keep using the app.
  *
  * The interval is a range rather than a number: a user who arrives at exactly
  * 09:00 every day exercises one cache state and one cron neighbourhood, and a
  * real one does not keep an appointment.
  */
 export const SetVirtualUserScheduleInput = z.object({
-  persona: z.string().min(1),
+  virtualUserId: z.string().min(1),
   /** Off until something says otherwise — a schedule costs money on every tick. */
   enabled: z.boolean().optional(),
   disposition: Disposition.optional(),
@@ -210,13 +210,13 @@ export const SetVirtualUserScheduleInput = z.object({
   budget: Budget.nullable().optional(),
   minIntervalMs: z.number().int().min(60_000).optional(),
   maxIntervalMs: z.number().int().min(60_000).optional(),
-  /** ISO. Omitted on a new schedule means the persona is due at once. */
+  /** ISO. Omitted on a new schedule means the virtual user is due at once. */
   nextRunAt: z.string().optional(),
 })
 
 /** Not exported for the same reason the run fields are not. */
 const virtualUserScheduleFields = {
-  persona: z.string(),
+  virtualUserId: z.string(),
   enabled: z.boolean(),
   disposition: Disposition,
   goals: z.array(z.string()),
@@ -227,11 +227,11 @@ const virtualUserScheduleFields = {
   lastRunId: z.string().nullable(),
   lastRunAt: z.string().nullable(),
   /**
-   * What \`definePersonas()\` says about this persona now, alongside what the
+   * What \`defineVirtualUsers()\` says about this virtual user now, alongside what the
    * row is actually running.
    *
    * A schedule is turned on once and then outlives the declaration it was
-   * written from: someone edits \`personas.ts\`, redeploys, and the row keeps
+   * written from: someone edits \`virtual-users.ts\`, redeploys, and the row keeps
    * running last month's goals with nothing anywhere to say so. Both sides
    * cross the wire so that difference is readable rather than inferred.
    */
@@ -250,7 +250,7 @@ export const ListVirtualUserSchedulesOutput = z.object({
 /** The internal dispatch payload — everything the run was resolved down to. */
 export const ExecuteVirtualUserRunInput = z.object({
   runId: z.string(),
-  persona: z.string(),
+  virtualUserId: z.string(),
   disposition: Disposition,
   goals: z.array(z.string()),
   memory: z.record(z.string(), z.string()),
@@ -291,7 +291,7 @@ import {
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
 } from '@pikku/core/virtual-user'
-import { createPersonas, personaConfigs, personaEnvironments } from '${pathToPersonas}'
+import { createVirtualUsers, virtualUserConfigs, virtualUserEnvironments } from '${pathToVirtualUsers}'
 import {
   ExecuteVirtualUserRunInput,
   ExecuteVirtualUserRunOutput,
@@ -319,12 +319,12 @@ import {
 defineScope({
   virtualUser: {
     displayName: 'Virtual Users',
-    description: 'Run personas against this application and read what they found',
+    description: 'Run virtual users against this application and read what they found',
     scopes: {
       run: { description: 'Start a virtual user run' },
       read: { description: "Read a run's findings" },
       schedule: {
-        description: 'Decide that a persona keeps running on its own',
+        description: 'Decide that a virtual user keeps running on its own',
       },
     },
   },
@@ -334,7 +334,7 @@ export const runVirtualUser = pikkuFunc({
   tags: ['pikku'],
   title: 'Run a Virtual User',
   description:
-    'Turns a declared persona loose on this application and records what it finds. Returns immediately with a run id; read the result back with getVirtualUserRun.',
+    'Turns a declared virtual user loose on this application and records what it finds. Returns immediately with a run id; read the result back with getVirtualUserRun.',
   expose: true,
   scopes: ['virtualUser:run'],
   input: RunVirtualUserInput,
@@ -344,17 +344,17 @@ export const runVirtualUser = pikkuFunc({
     input,
     { session, rpc }
   ) => {
-    const { runId, persona, disposition, goals, memory, seed } =
+    const { runId, virtualUserId, disposition, goals, memory, seed } =
       await startVirtualUserRun({
         store: virtualUserRunStore,
-        personas: personaConfigs,
+        virtualUsers: virtualUserConfigs,
         // Which of the configured environments this process is decides whether
         // a run is against production. \`config\` is only the fallback for a
         // project that configures none, and is cast because an application's
         // Config is its own interface and need not declare nodeEnv at all.
-        environments: personaEnvironments,
+        environments: virtualUserEnvironments,
         config: config as { nodeEnv?: string } | undefined,
-        persona: input.persona,
+        virtualUserId: input.virtualUserId,
         disposition: input.disposition,
         seed: input.seed,
         goals: input.goals,
@@ -364,7 +364,7 @@ export const runVirtualUser = pikkuFunc({
 
     const job = {
       runId,
-      persona,
+      virtualUserId,
       disposition,
       goals,
       memory,
@@ -424,16 +424,16 @@ export const listVirtualUserRuns = pikkuFunc({
   tags: ['pikku'],
   title: 'List Virtual User Runs',
   description:
-    "Reads back what the virtual users have been doing, newest first. Narrow with \`persona\` for one user's history.",
+    "Reads back what the virtual users have been doing, newest first. Narrow with \`virtualUserId\` for one user's history.",
   expose: true,
   scopes: ['virtualUser:read'],
   input: ListVirtualUserRunsInput,
   output: ListVirtualUserRunsOutput,
-  func: async ({ virtualUserRunStore }, { persona, limit, offset }) => {
+  func: async ({ virtualUserRunStore }, { virtualUserId, limit, offset }) => {
     const runs = await requireVirtualUserRunStore(
       virtualUserRunStore,
       true
-    ).list({ persona, limit, offset })
+    ).list({ virtualUserId, limit, offset })
     return { runs: runs.map(serializeVirtualUserRun) }
   },
 })
@@ -463,7 +463,7 @@ export const setVirtualUserSchedule = pikkuFunc({
   tags: ['pikku'],
   title: 'Put a Virtual User on a Clock',
   description:
-    'Says how often a persona should use the application on its own. Off until enabled, and every field left out keeps what it already had.',
+    'Says how often a virtual user should use the application on its own. Off until enabled, and every field left out keeps what it already had.',
   expose: true,
   // Its own scope, and the most powerful one here: starting a run spends money
   // once with a caller present to see it, while writing a schedule spends it
@@ -474,12 +474,12 @@ export const setVirtualUserSchedule = pikkuFunc({
   func: async ({ virtualUserScheduleStore, config }, input) => {
     const schedule = await writeVirtualUserSchedule({
       store: virtualUserScheduleStore,
-      personas: personaConfigs,
-      environments: personaEnvironments,
+      virtualUsers: virtualUserConfigs,
+      environments: virtualUserEnvironments,
       config: config as { nodeEnv?: string } | undefined,
       ...input,
     })
-    return serializeVirtualUserSchedule(schedule, personaConfigs)
+    return serializeVirtualUserSchedule(schedule, virtualUserConfigs)
   },
 })
 
@@ -487,7 +487,7 @@ export const listVirtualUserSchedules = pikkuFunc({
   tags: ['pikku'],
   title: 'List Virtual User Schedules',
   description:
-    'Which personas are on a clock, how often they run, and when each is next due.',
+    'Which virtual users are on a clock, how often they run, and when each is next due.',
   expose: true,
   scopes: ['virtualUser:read'],
   output: ListVirtualUserSchedulesOutput,
@@ -498,7 +498,7 @@ export const listVirtualUserSchedules = pikkuFunc({
     const schedules = await virtualUserScheduleStore.list()
     return {
       schedules: schedules.map((schedule) =>
-        serializeVirtualUserSchedule(schedule, personaConfigs)
+        serializeVirtualUserSchedule(schedule, virtualUserConfigs)
       ),
     }
   },
@@ -535,7 +535,7 @@ export const virtualUserPlatformSession = pikkuMiddleware(
 )
 
 /**
- * Acts on whichever personas are due, once.
+ * Acts on whichever virtual users are due, once.
  *
  * Not exposed, and not wired to anything: pikku does not start a timer on an
  * application's behalf. A scaffolded scheduled task would begin spending model
@@ -554,7 +554,7 @@ export const virtualUserPlatformSession = pikkuMiddleware(
  * The middleware is not decoration: the tick starts a run through
  * \`runVirtualUser\`, the same gated entry point a person calls, so without a
  * session carrying \`virtualUser:run\` every dispatch is refused. Going through
- * that front door rather than a shared helper is the point — the persona
+ * that front door rather than a shared helper is the point — the virtual user
  * checks, the production-disposition rule and the record all live in one place,
  * and a second copy of them would eventually disagree with the first.
  *
@@ -605,8 +605,8 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
       agentRunner,
       variables,
       logger,
-      personas: personaConfigs,
-      createPersonas,
+      virtualUsers: virtualUserConfigs,
+      createVirtualUsers,
       ...input,
     }),
 })

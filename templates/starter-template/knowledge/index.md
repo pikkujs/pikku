@@ -84,9 +84,9 @@ section a build never starts from.
 functions, screens and scenarios it owes — committed on the changeset's branch and closed
 once it merges.
 
-There is no `personas/`: the people are declared in the app's own source with pikku's
-`definePersonas`, by the build session, because they are the same personas pikku
-materialises scenario actors from. `fabric persona` only reads back what the code declared.
+There is no `virtual users/`: the people are declared in the app's own source with pikku's
+`defineVirtualUsers`, by the build session, because they are the same virtual users pikku
+materialises scenario virtual users from. `fabric virtual user` only reads back what the code declared.
 There is no `scenarios/` or `permissions/` either — a changeset's plan names its scenarios,
 and the rules live in the code.
 

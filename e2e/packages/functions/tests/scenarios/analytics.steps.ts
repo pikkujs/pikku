@@ -1,9 +1,9 @@
 /**
- * The two generated wires that no persona can reach.
+ * The two generated wires that no virtual user can reach.
  *
  * `POST /analytics` and `GET /feature-flags` are both declared `auth: false` —
  * an anonymous visitor is most of what analytics measures, and a signed-out
- * page still renders. A persona always carries its session, so a step that
+ * page still renders. A virtual user always carries its session, so a step that
  * asserts what an anonymous caller gets has to send the request itself.
  *
  * Set-Cookie is read off the response rather than through a cookie jar,

@@ -107,7 +107,7 @@ export const collectSnippets = async (
 /**
  * A fence that names a region instead of carrying code:
  *
- * ```ts snippet:definePersonas
+ * ```ts snippet:defineVirtualUsers
  * ```
  *
  * The language is optional and kept. Marked fences are replaced whole — both

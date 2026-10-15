@@ -24,9 +24,9 @@ export const RESOURCE_PREFIXES = [
   // it, which codegen writes into the function meta, and by the roles that
   // confer it in `defineSystemRole()`. Both are declarations, so both resolve.
   'scope',
-  // A persona from `definePersonas()`. A note naming a persona nobody declared
+  // A virtual user from `defineVirtualUsers()`. A note naming a virtual user nobody declared
   // is exactly the drift this check exists to catch.
-  'persona',
+  'virtualUser',
   // A file kept in the project's content service, as `bucket/key`. Checked
   // against the local content directory, so it resolves wherever the files were
   // written by the dev server.
@@ -289,19 +289,19 @@ export const collectKnownResources = async (
   put('addon', await addonIds(root))
   put('content', await walk(join(root, '.pikku-runtime', 'content', 'private')))
 
-  // Both come out of codegen rather than pikku.config.json: personas and roles
+  // Both come out of codegen rather than pikku.config.json: virtual users and roles
   // are declared in code, and the meta sidecars are what every other consumer
   // reads them from.
   const roles = await readJson(
     join(outDir, 'scopes', 'pikku-roles-meta.gen.json')
   )
-  const personas = await readJson(
-    join(outDir, 'scopes', 'pikku-personas-meta.gen.json')
+  const virtualUsers = await readJson(
+    join(outDir, 'scopes', 'pikku-virtual-users-meta.gen.json')
   )
   put('scope', scopeIds(functions, roles))
   put(
-    'persona',
-    personas && typeof personas === 'object' ? Object.keys(personas) : []
+    'virtualUser',
+    virtualUsers && typeof virtualUsers === 'object' ? Object.keys(virtualUsers) : []
   )
 
   return known

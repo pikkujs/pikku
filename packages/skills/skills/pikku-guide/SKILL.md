@@ -20,11 +20,11 @@ A guide is the app explained to the people who use it, with the scenario suite
 as its evidence. The suite proves what the product does and photographs it
 doing it; the pages say what that means for the reader and how to do it.
 
-| Input | Comes from | Owned by |
-|---|---|---|
-| Structure | `pikkuFeature` meta — which features exist, and that every one is cited | the suite |
-| Evidence | the latest passing run under `.pikku/scenario-runs/` — recordings and screenshots | the run |
-| Prose | markdown pages under `docs/` (or `--docs <dir>`) — **every word the reader reads** | you |
+| Input     | Comes from                                                                         | Owned by  |
+| --------- | ---------------------------------------------------------------------------------- | --------- |
+| Structure | `pikkuFeature` meta — which features exist, and that every one is cited            | the suite |
+| Evidence  | the latest passing run under `.pikku/scenario-runs/` — recordings and screenshots  | the run   |
+| Prose     | markdown pages under `docs/` (or `--docs <dir>`) — **every word the reader reads** | you       |
 
 **The run contributes pictures, never words.** Step sentences, scenario
 descriptions and feature names are written to prove a test; none of them
@@ -108,7 +108,7 @@ mechanical, and skipping it is how sections end up with no figure or with a
 figure of something else.
 
 1. **Inventory.** List every `pikkuFeature` and, under each, its scenarios with
-   their actor and the screen each one ends on. Read the scenario files, not
+   their virtual user and the screen each one ends on. Read the scenario files, not
    just the names.
 2. **Outline.** Group the scenarios into reader jobs (pages) and tasks
    (sections). A section is usually one scenario; two scenarios that show the
@@ -161,10 +161,10 @@ covers, or mark it `document: false`.
 
 Two strings from the suite reach the page as captions:
 
-| Figure | Caption |
-|---|---|
-| Screenshot | the `name` it was taken under |
-| Recording | the scenario's `title` (plus ` — ` and the actor, when there are several) |
+| Figure     | Caption                                                                        |
+| ---------- | ------------------------------------------------------------------------------ |
+| Screenshot | the `name` it was taken under                                                  |
+| Recording  | the scenario's `title` (plus `—` and the virtual user, when there are several) |
 
 Write both as a reader-facing caption in the app's language: "Die Buchung mit
 Status, Eckdaten und Reitern", "the course list, with places left on each
@@ -179,6 +179,7 @@ Every scenario a section cites should take one showcase screenshot of the state
 the section describes. Add the capture step once:
 
 ```ts snippet:guideCaptureStep
+
 ```
 
 - Without `path` it photographs the screen the flow is on. Call it **after the
@@ -194,11 +195,11 @@ the section describes. Add the capture step once:
 
 ### The camera sees your seed data
 
-Every figure shows whatever the scenario's personas and seed rows contain, so
+Every figure shows whatever the scenario's virtual users and seed rows contain, so
 they are part of the documentation:
 
-- A persona's display name is in the header of every shot. "Scenario Admin" or
-  "test-user-3" is on every page of the guide; give personas plausible names
+- A virtual user's display name is in the header of every shot. "Scenario Admin" or
+  "test-user-3" is on every page of the guide; give virtual users plausible names
   and roles.
 - Seed rows are the example data a reader sees: in the app's language, the
   shape real data takes — no lorem ipsum, no English description inside a
@@ -208,14 +209,14 @@ they are part of the documentation:
 ### Traps that make a figure missing or wrong
 
 - **RPC-only scenarios file no screenshot.** The command warns `whose run filed
-  no screenshot — the block renders empty`. Add a browser capture, or do not
+no screenshot — the block renders empty`. Add a browser capture, or do not
   cite that scenario.
 - **A capture loop must iterate a named const.** `for (const s of [ … ])` with
   an inline array literal cannot be extracted (PKU679) and the scenario is
   silently empty. `const screens = [ … ] as const`, then `for (const s of screens)`.
 - **A capture before an assertion moves the page from under it.** Capture last,
   or re-navigate.
-- **A redirect photographs the wrong screen.** A first-time actor bounced to
+- **A redirect photographs the wrong screen.** A first-time virtual user bounced to
   onboarding, a consent dialog, a login — the shot is named "the map" and shows
   something else. Finish the redirecting flow in the scenario first, and look
   at the image.
@@ -284,8 +285,8 @@ the second is clean. Commit the lock; never hand-edit or hand-merge it.
       language: why and when, numbered steps naming controls as they read,
       what you see, what goes wrong.
 - [ ] Captions (screenshot names, scenario titles) are reader copy — no routes,
-      sizes, test ids or actor names.
-- [ ] Personas and seed data on camera look like real use, in the app's
+      sizes, test ids or virtual user names.
+- [ ] Virtual users and seed data on camera look like real use, in the app's
       language.
 - [ ] Every feature is cited or `document: false`; no `--allow-undocumented`.
 - [ ] Built from a full, passing `--run browser --screenshots` run; no "block

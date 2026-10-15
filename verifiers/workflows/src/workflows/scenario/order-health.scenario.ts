@@ -6,10 +6,10 @@ export const orderHealthScenario = pikkuScenario<
 >({
   title: 'Order health (scenario)',
   tags: ['scenario', 'ecommerce'],
-  func: async ({ logger }, data, { scenario, actors }) => {
-    if (!actors?.customer || !actors?.ops) {
+  func: async ({ logger }, data, { scenario, virtualUsers }) => {
+    if (!virtualUsers?.customer || !virtualUsers?.ops) {
       throw new Error(
-        'orderHealthScenario needs run actors (customer + ops) — pass them via startWorkflow options or `pikku scenario run`'
+        'orderHealthScenario needs run virtual users (customer + ops) — pass them via startWorkflow options or `pikku scenario run`'
       )
     }
     logger.debug(`order-health flow starting for ${data.orderId}`)
@@ -18,7 +18,7 @@ export const orderHealthScenario = pikkuScenario<
       'customer fetches the order',
       'orderGet',
       { orderId: data.orderId },
-      { actor: actors.customer }
+      { virtualUser: virtualUsers.customer }
     )
 
     const internal = await scenario.do('internal re-read', 'orderGet', {
@@ -31,7 +31,7 @@ export const orderHealthScenario = pikkuScenario<
       { orderId: data.orderId },
       (out: { status: string }) =>
         typeof out.status === 'string' && out.status.length > 0,
-      { actor: actors.ops, within: '5s', interval: 25 }
+      { virtualUser: virtualUsers.ops, within: '5s', interval: 25 }
     )
 
     return { status: settled.status, sameOrder: order.id === internal.id }

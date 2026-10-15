@@ -3,7 +3,7 @@ import { lstat, readdir, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { ErrorCode } from '@pikku/inspector'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding } from './persona-checks.js'
+import type { ValidateFinding } from './virtual-user-checks.js'
 
 /**
  * Packages whose TYPE identity matters, not just their runtime identity.

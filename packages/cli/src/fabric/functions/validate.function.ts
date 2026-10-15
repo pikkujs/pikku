@@ -159,29 +159,29 @@ const SINGLETON_SENSITIVE_PKGS = [
 ]
 
 // A file whose name says "this is the login surface". Used to decide whether an
-// app needs the actor quick-login control — an app with no login screen has
+// app needs the virtual user quick-login control — an app with no login screen has
 // nothing to attach it to. Matched against the path relative to the app root, so
 // it covers src/pages/LoginPage.tsx as well as Next's app/login/page.tsx.
 const LOGIN_FILE_PATTERN =
   /(?:^|\/)[\w[\]-]*(?:login|sign-?in)[\w[\]-]*(?:\/|\.)/i
 
-// Fingerprints of the dev-only "Sign in as …" quick login (the actor switcher):
-// one click signs in as a declared scenario persona, no password. Any one of
-// these means the app actually wires actor sign-in — the component's own
+// Fingerprints of the dev-only "Sign in as …" quick login (the virtual user switcher):
+// one click signs in as a declared scenario virtual user, no password. Any one of
+// these means the app actually wires virtual user sign-in — the component's own
 // definition is excluded, since defining it without rendering it locks the
 // reviewer out just as thoroughly.
 //
-// Canonical implementation is the starter template's `<DevActorSwitcher>`
-// (built on `useDevActors` from `@pikku/react`), rendered from the login screen:
-// it lists and signs in personas by id through `pikkuActor({ personaSignIn })`. A local component calling `signInAsPersona()`, and
-// the older credential-based `signInAsActor()` → POST /auth/sign-in/actor, still
+// Canonical implementation is the starter template's `<DevVirtualUserSwitcher>`
+// (built on `useDevVirtualUsers` from `@pikku/react`), rendered from the login screen:
+// it lists and signs in virtual users by id through `pikkuVirtualUser({ virtualUserSignIn })`. A local component calling `signInAsVirtualUser()`, and
+// the older credential-based `signInAsVirtualUser()` → POST /auth/sign-in/virtual-user, still
 // pass, so apps that predate the package keep working.
-const ACTOR_QUICK_LOGIN_PATTERNS = [
-  /<\s*DevActorSwitcher\b/,
-  /(?<!function\s)\bsignInAsActor\s*\(/,
-  /(?<!function\s)\bsignInAsPersona\s*\(/,
-  /(?<!function\s)\buseDevActors\s*\(/,
-  /\/auth\/sign-in\/(?:actor|persona)/,
+const VIRTUAL_USER_QUICK_LOGIN_PATTERNS = [
+  /<\s*DevVirtualUserSwitcher\b/,
+  /(?<!function\s)\bsignInAsVirtualUser\s*\(/,
+  /(?<!function\s)\bsignInAsVirtualUser\s*\(/,
+  /(?<!function\s)\buseDevVirtualUsers\s*\(/,
+  /\/auth\/sign-in\/virtual-user/,
 ]
 
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
@@ -1477,7 +1477,7 @@ export async function runValidate(
               '- traceId',
               '- transactionId',
               '- queryId',
-              '- actor',
+              '- virtual user',
               '- input',
               '- metadata',
               'At minimum, create the table so Fabric audit writes are not silently dropped.'
@@ -1853,9 +1853,9 @@ export async function runValidate(
           )
         }
 
-        // ── one-click actor sign-in (the "Sign in as …" quick login) ────────
+        // ── one-click virtual user sign-in (the "Sign in as …" quick login) ────────
         // Any frontend that ships a login screen must also ship the dev-only
-        // actor switcher, so the app can be reviewed as each scenario persona
+        // virtual user switcher, so the app can be reviewed as each scenario virtual user
         // without knowing a password. Without it the reviewer is locked out of
         // their own sandbox. Only fires when a login surface exists — an app
         // with no auth has nothing to attach the control to.
@@ -1876,33 +1876,33 @@ export async function runValidate(
           if (!text) continue
           const rel = file.slice(appPath.length + 1).replace(/\\/g, '/')
           if (LOGIN_FILE_PATTERN.test(rel)) loginFiles.push(rel)
-          if (ACTOR_QUICK_LOGIN_PATTERNS.some((p) => p.test(text))) {
+          if (VIRTUAL_USER_QUICK_LOGIN_PATTERNS.some((p) => p.test(text))) {
             hasQuickLogin = true
           }
         }
 
         if (loginFiles.length > 0 && !hasQuickLogin) {
           e(
-            `app-missing-actor-quick-login-${name}`,
-            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click actor sign-in — nobody can view the app as a scenario persona without a password`,
+            `app-missing-virtual-user-quick-login-${name}`,
+            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click virtual user sign-in — nobody can view the app as a scenario virtual user without a password`,
             join(appPath, loginFiles[0]!),
             lines(
-              'Render the "Sign in as …" switcher from the login screen (copy DevActorSwitcher from templates/starter-template/apps/app/src/components/dev).',
+              'Render the "Sign in as …" switcher from the login screen (copy DevVirtualUserSwitcher from templates/starter-template/apps/app/src/components/dev).',
               `In ${loginFiles[0]}:`,
-              "  import { DevActorSwitcher } from '@/components/dev/DevActorSwitcher'",
-              '  <DevActorSwitcher',
+              "  import { DevVirtualUserSwitcher } from '@/components/dev/DevVirtualUserSwitcher'",
+              '  <DevVirtualUserSwitcher',
               '    apiUrl={apiUrl()}',
               '    app={appSlug}',
               "    onSignedIn={() => navigate({ to: '/' })}",
               '  />',
-              'On the server, pikkuActor from @pikku/better-auth serves the list and',
+              'On the server, pikkuVirtualUser from @pikku/better-auth serves the list and',
               'the sign-in:',
-              '  pikkuActor({ allowSignIn: optIn,',
-              '    personaSignIn: { personas: personaList, featureFlags } })',
-              'No credential reaches the bundle: the switcher signs in by persona id.',
-              'It shows under `pikku dev`; a deployed stage shows it only when actor',
+              '  pikkuVirtualUser({ allowSignIn: optIn,',
+              '    virtualUserSignIn: { virtualUsers: virtualUserList, featureFlags } })',
+              'No credential reaches the bundle: the switcher signs in by virtual user id.',
+              'It shows under `pikku dev`; a deployed stage shows it only when virtual user',
               'sign-in is opted in and its devSwitcher flag is on.',
-              'For custom UI, build on useDevActors() from @pikku/react instead.'
+              'For custom UI, build on useDevVirtualUsers() from @pikku/react instead.'
             )
           )
         }

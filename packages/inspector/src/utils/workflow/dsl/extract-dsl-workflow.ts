@@ -30,7 +30,7 @@ import {
   isScenarioExpectationCall,
   getScenarioStepPhase,
   DYNAMIC_SCENARIO_STEP_TARGET,
-  extractActorFromOptions,
+  extractVirtualUserFromOptions,
   isWorkflowSleepCall,
   isWorkflowSuspendCall,
   isWorkflowMilestoneCall,
@@ -787,7 +787,7 @@ function extractRpcStep(
       outputVar,
       inputs,
       options,
-      actor: extractActorFromOptions(optionsArg),
+      virtualUser: extractVirtualUserFromOptions(optionsArg),
       expectEventually: expectEventually || undefined,
     }
   } catch (error) {
@@ -850,7 +850,7 @@ function extractScenarioStep(
       outputVar,
       inputs,
       options,
-      actor: extractActorFromOptions(optionsArg),
+      virtualUser: extractVirtualUserFromOptions(optionsArg),
     }
   } catch (error) {
     context.errors.push({

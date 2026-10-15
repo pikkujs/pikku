@@ -10,7 +10,6 @@
 - [AuditEvent shape](#auditevent-shape)
 - [Do / Don't](#do-dont)
 
-
 ## Mental model — two layers
 
 - **`audit` (singleton `AuditService`)** — the durable **sink**. Write-only: `audit(event)` + optional `write(batch)`. Defaults to `NoopAuditService` (discards). Swap in a real sink to persist (see Sinks).
@@ -188,7 +187,7 @@ type AuditEvent = {
 
 `auditLog.write()` takes `Omit<AuditEvent, 'occurredAt'>` — you only supply `type`, `source`, and `metadata` (and `userIdentity` if overriding the session default).
 
-`userIdentity` is filled from the wire's session plus its `pikkuUserId`, and is left off entirely when all three are absent — which is what makes a cron or system invocation land with a null actor rather than an empty object.
+`userIdentity` is filled from the wire's session plus its `pikkuUserId`, and is left off entirely when all three are absent — which is what makes a cron or system invocation land with a null virtual user rather than an empty object.
 
 ## Do / Don't
 

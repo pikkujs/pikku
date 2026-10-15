@@ -6,7 +6,7 @@
  * about the workflow RUN — its id, the status the console reads back — which
  * only `/workflow/:name/{start,status}` reports, so the step has to speak HTTP
  * itself. `requireScenarioEnv` is where it learns which server to speak to: the
- * same environment the actors were signed into, never a hardcoded localhost.
+ * same environment the virtual users were signed into, never a hardcoded localhost.
  */
 import {
   createCookieJar,
@@ -96,7 +96,7 @@ export const awaitsCheckout = pikkuScenarioStep<
 
 // @snippet start scenarioCookieJar
 /**
- * Signing up is the one flow an actor cannot perform, because an actor is
+ * Signing up is the one flow a virtual user cannot perform, because a virtual user is
  * already signed in before the first step runs. The jar is what makes it
  * possible from a bare `fetch`: it keeps the Set-Cookie the sign-up returned
  * and replays it on the next call, so the session survives the hop the way a

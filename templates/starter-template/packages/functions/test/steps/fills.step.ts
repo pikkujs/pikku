@@ -29,17 +29,17 @@ export const fills = pikkuScenarioStep({
   input: FillsInput,
   output: FillsOutput,
   browser: async (_services, input, { browser }) => {
-    const actor = session(browser)
-    await readyToBeUsed(actor)
+    const virtualUser = session(browser)
+    await readyToBeUsed(virtualUser)
     try {
-      await actor.locate(selectorFor(input)).fill(input.value)
+      await virtualUser.locate(selectorFor(input)).fill(input.value)
     } catch (error) {
       throw new Error(
         `Could not fill \`${input.testId}\`${input.within ? ` within \`${input.within}\`` : ''}. ` +
-          `${await addressesOnScreen(actor)} ` +
+          `${await addressesOnScreen(virtualUser)} ` +
           `A field is addressed by its i18n message key, so this fails when the key differs ` +
           `from the scenario's or the field has no label to derive one from. ` +
-          `Underlying: ${underlying(error)}`,
+          `Underlying: ${underlying(error)}`
       )
     }
     return { testId: input.testId, value: input.value }

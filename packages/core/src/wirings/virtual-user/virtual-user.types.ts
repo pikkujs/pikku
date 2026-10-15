@@ -1,10 +1,10 @@
-import type { ScenarioHttpResponse } from '../../services/personas-service.js'
-import type { ActorFlowVerdict } from '../actor-flow/actor-flow.types.js'
+import type { ScenarioHttpResponse } from '../../services/virtual-users-service.js'
+import type { ConversationVerdict } from './conversation/conversation.types.js'
 
 /**
  * How a virtual user behaves, mechanically. A disposition changes the loop, the
  * input generation, the memory and the oracle — anything that only changes how
- * the user *talks* is persona prose (`ResolvedPersona.personality`) and does
+ * the user *talks* is virtual user prose (`ResolvedVirtualUser.personality`) and does
  * not belong here.
  *
  * - `realistic` — schema-first, goal-directed, plausible values (default).
@@ -18,7 +18,7 @@ import type { ActorFlowVerdict } from '../actor-flow/actor-flow.types.js'
  * `accountable` sits opposite `adversarial` on an *intent* axis — bad faith
  * against good faith — where `careless` and `thorough` are a *care* axis. It is
  * the one disposition whose actions carry consequences: no oracle, no rollback,
- * and every call attributed to the persona in the audit log like anyone else's.
+ * and every call attributed to the virtual user in the audit log like anyone else's.
  */
 export type VirtualUserDisposition =
   | 'realistic'
@@ -91,7 +91,7 @@ export interface ApiCatalogueEntry {
   /**
    * Scopes the session must hold to call this, all of them.
    *
-   * Splits the catalogue in two: what a persona's roles entitle it to reach,
+   * Splits the catalogue in two: what a virtual user's roles entitle it to reach,
    * and what they do not. Scopes rather than permission-function names because
    * a scope is declared and checkable, whereas a permission is arbitrary code
    * whose verdict nobody can predict without running it.
@@ -118,8 +118,8 @@ export interface IntentSource {
   /** Step prose, as a person would be told it. Never rpc names. */
   steps?: readonly string[]
   tags?: readonly string[]
-  /** Persona ids this intent is available to. Empty means everyone. */
-  personas?: readonly string[]
+  /** Virtual user ids this intent is available to. Empty means everyone. */
+  virtualUsers?: readonly string[]
 }
 
 /** Why the engine flagged something. */
@@ -143,14 +143,14 @@ export interface VirtualUserFinding {
 
 /**
  * The transport the virtual user acts through. HTTP in production (an
- * `HttpPersona`), but the engine only sees this contract — which is what
+ * `HttpVirtualUser`), but the engine only sees this contract — which is what
  * lets the whole loop be tested without a network.
  */
 export interface VirtualUserTarget {
   /** Invoke an RPC as this user, reporting the status as data rather than throwing. */
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
-  /** Converse with an AI agent in persona. Omitted by apps that have no agents. */
-  talkTo?(agent: string, task: string): Promise<ActorFlowVerdict>
+  /** Converse with an AI agent in virtual user. Omitted by apps that have no agents. */
+  talkTo?(agent: string, task: string): Promise<ConversationVerdict>
   /** Send a fixture file. Omitted by apps with no upload surface. */
   upload?(file: string): Promise<ScenarioHttpResponse>
 }

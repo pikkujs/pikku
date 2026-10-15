@@ -13,7 +13,7 @@ import type { FunctionsMeta, Logger } from '@pikku/core/services'
 
 /**
  * All three step wrappers. A scenario calls a platform or addon step by name
- * exactly as it calls a persona one — who acts changes what the step may do, not
+ * exactly as it calls a virtual user one — who acts changes what the step may do, not
  * how it is referenced — so all three belong in the map.
  */
 const SCENARIO_STEP_WRAPPERS = new Set([

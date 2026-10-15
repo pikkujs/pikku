@@ -29,8 +29,8 @@ export interface ScenarioArtifact {
   scenario: string
   kind: ScenarioArtifactKind
   path: string
-  /** Whose window it was — a two-actor scenario produces two of everything. */
-  actor?: string
+  /** Whose window it was — a two-virtual-user scenario produces two of everything. */
+  virtualUser?: string
   /** The caption the scenario author took a screenshot under. */
   name?: string
   /**
@@ -45,9 +45,9 @@ export interface ScenarioArtifact {
 }
 
 /**
- * Where a step falls inside one actor's recording.
+ * Where a step falls inside one virtual user's recording.
  *
- * Measured from the moment that actor's browser context opened — which is when
+ * Measured from the moment that virtual user's browser context opened — which is when
  * Playwright starts the file — rather than from the start of the scenario, so
  * it addresses the video's own clock. The two differ by however long the
  * scenario spent before that window existed, plus every non-browser step since,
@@ -55,8 +55,8 @@ export interface ScenarioArtifact {
  * being summed back out of the ladder afterwards.
  */
 export interface ScenarioStepVideoOffset {
-  /** Whose recording this offset is into: one actor, one video file. */
-  actor: string
+  /** Whose recording this offset is into: one virtual user, one video file. */
+  virtualUser: string
   offsetMs: number
 }
 
@@ -64,9 +64,9 @@ export interface ScenarioStepVideoOffset {
 export interface ScenarioStepRow {
   sentence: string
   /**
-   * The same sentence with the actor's role in it — "yasser (the founder)
-   * signs in". Set only on the step that first names each actor, and only
-   * when a persona declares a job title or a role, so a reader who wants the
+   * The same sentence with the virtual user's role in it — "yasser (the founder)
+   * signs in". Set only on the step that first names each virtual user, and only
+   * when a virtual user declares a job title or a role, so a reader who wants the
    * context picks this and one who wants the bare run picks `sentence`.
    */
   sentenceWithRole?: string
@@ -74,11 +74,11 @@ export interface ScenarioStepRow {
   durationMs?: number
   error?: string
   /**
-   * Where this step lands in each actor's video, for the actors whose window
-   * was being recorded when it ran. Absent for a step with no actor, a run
+   * Where this step lands in each virtual user's video, for the virtual users whose window
+   * was being recorded when it ran. Absent for a step with no virtual user, a run
    * without video, and a step that never ran at all.
    *
-   * A list rather than one number because a video belongs to an actor, not to
+   * A list rather than one number because a video belongs to a virtual user, not to
    * the scenario: a step touching two windows falls at a different moment in
    * each, and an offset that does not name its file cannot be seeked to.
    */
@@ -132,7 +132,7 @@ export interface ScenarioResult {
   title?: string
   description?: string
   /** Who the scenario cast, in declaration order. */
-  actors?: string[]
+  virtualUsers?: string[]
   tags?: string[]
   /** Images and footage this scenario produced, filed under the run. */
   artifacts?: ScenarioArtifact[]

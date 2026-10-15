@@ -205,8 +205,8 @@ export const pikkuDelegatedAuth = (
           }
           if (existing) {
             const existingUser = existing.user as AppUser
-            // Never attach a delegated identity to synthetic actor rows.
-            if (existingUser.actor === true) {
+            // Never attach a delegated identity to synthetic virtual user rows.
+            if (existingUser.virtualUser === true) {
               throw new APIError('UNAUTHORIZED', {
                 message: 'User cannot sign in with upstream credentials',
               })

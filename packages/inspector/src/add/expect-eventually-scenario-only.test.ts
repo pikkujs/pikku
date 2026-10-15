@@ -75,9 +75,9 @@ describe('expectEventually is scenario-only', () => {
       wfFile,
       [
         "import { pikkuScenario } from '@pikku/core/workflow'",
-        'declare const actors: Record<string, any>',
+        'declare const virtualUsers: Record<string, any>',
         'export const goodFlow = pikkuScenario(async (_, _input, { workflow }) => {',
-        "  await workflow.expectEventually('Wait', 'getTodos', {}, (todos: any) => todos.length > 0, { actor: actors.pm })",
+        "  await workflow.expectEventually('Wait', 'getTodos', {}, (todos: any) => todos.length > 0, { virtualUser: virtualUsers.pm })",
         '  return { ok: true }',
         '})',
       ].join('\n')

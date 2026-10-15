@@ -97,8 +97,8 @@ describe('serializeFunctionTypes', () => {
         /type CredentialsMap = Record<string, unknown>/
       )
       for (const wire of [
-        /PikkuWire<In, Out, false, Session,.*TypedScenario<ScenarioOut>, TypedPersonas, CredentialsMap>/,
-        /PikkuWire<In, Out, true, Session,.*TypedScenario, TypedPersonas, CredentialsMap>/,
+        /PikkuWire<In, Out, false, Session,.*TypedScenario<ScenarioOut>, TypedVirtualUsers, CredentialsMap>/,
+        /PikkuWire<In, Out, true, Session,.*TypedScenario, TypedVirtualUsers, CredentialsMap>/,
       ]) {
         assert.match(content, wire)
       }
@@ -109,7 +109,7 @@ describe('serializeFunctionTypes', () => {
 
       assert.match(content, /type CredentialsMap = Record<string, unknown>/)
       assert.doesNotMatch(content, /import type \{ CredentialsMap \}/)
-      assert.match(content, /TypedPersonas, CredentialsMap>/)
+      assert.match(content, /TypedVirtualUsers, CredentialsMap>/)
     })
   })
 

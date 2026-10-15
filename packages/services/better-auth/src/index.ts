@@ -26,36 +26,39 @@ export type { AuthGetter } from './admin-users.js'
 export { pikkuBan, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
 export {
-  pikkuActor,
-  actorCredentialEnvKey,
-  parseActorCredential,
-} from './actor-plugin.js'
+  pikkuVirtualUser,
+  virtualUserCredentialEnvKey,
+  parseVirtualUserCredential,
+} from './virtual-user-plugin.js'
 export type {
-  ActorPluginOptions,
-  ActorCredentialsOptions,
-} from './actor-plugin.js'
+  VirtualUserPluginOptions,
+  VirtualUserCredentialsOptions,
+} from './virtual-user-plugin.js'
 export {
-  ACTOR_NOT_PROVISIONED_MESSAGE,
-  ACTOR_SIGN_IN_DISABLED_MESSAGE,
-  ACTOR_SIGN_IN_OPT_IN_ENV,
-  ACTOR_SIGN_IN_OPT_IN_VALUE,
-  DEV_ACTOR_SIGN_IN_ENV,
-  resolveActorSignIn,
-} from './actor-sign-in-gate.js'
+  VIRTUAL_USER_NOT_PROVISIONED_MESSAGE,
+  VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE,
+  VIRTUAL_USER_SIGN_IN_OPT_IN_ENV,
+  VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE,
+  DEV_VIRTUAL_USER_SIGN_IN_ENV,
+  resolveVirtualUserSignIn,
+} from './virtual-user-sign-in-gate.js'
 export type {
-  ActorSignInGate,
-  ActorSignInReason,
-} from './actor-sign-in-gate.js'
-export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-actors.js'
-export type { DevActor, DevActorPersona } from './dev-actors.js'
+  VirtualUserSignInGate,
+  VirtualUserSignInReason,
+} from './virtual-user-sign-in-gate.js'
+export { DEV_SWITCHER_FLAG, devSwitcherOn } from './dev-virtual-users.js'
+export type {
+  DevVirtualUser,
+  DevSignInVirtualUser,
+} from './dev-virtual-users.js'
 
-export { provisionPersonas } from './provision-personas.js'
+export { provisionVirtualUsers } from './provision-virtual-users.js'
 export type {
-  PersonaOrphanPolicy,
-  ProvisionPersonasOptions,
-  ProvisionPersonasResult,
-  ProvisionPersonasServices,
-} from './provision-personas.js'
+  VirtualUserOrphanPolicy,
+  ProvisionVirtualUsersOptions,
+  ProvisionVirtualUsersResult,
+  ProvisionVirtualUsersServices,
+} from './provision-virtual-users.js'
 export {
   pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,

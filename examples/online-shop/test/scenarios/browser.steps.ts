@@ -6,7 +6,7 @@ import { z } from 'zod'
 import {
   staticRoutes,
   sweepAllPages,
-  type ActorSession,
+  type VirtualUserSession,
 } from '@pikku/playwright'
 import { pikkuScenarioStep } from '#pikku/scenarios'
 
@@ -16,7 +16,7 @@ import { pikkuScenarioStep } from '#pikku/scenarios'
  * this file generic — per-domain steps belong in their own `*.steps.ts`
  * alongside the feature that uses them.
  *
- * The runner opens one BrowserContext per actor and signs it in at
+ * The runner opens one BrowserContext per virtual user and signs it in at
  * `signInPath` BEFORE the first step runs, so there is no "log in" step and no
  * signed-out state to drive. A scenario that must start signed out clears the
  * context itself (`browser.context.clearCookies()`), which only makes sense in
@@ -30,7 +30,7 @@ import { pikkuScenarioStep } from '#pikku/scenarios'
  */
 
 /** `wire.browser` is the driver's session; the sweep needs its issue collector. */
-const session = (browser: unknown) => browser as ActorSession
+const session = (browser: unknown) => browser as VirtualUserSession
 
 export const OpensPageInput = z.object({
   /** App-relative path, e.g. `/app`. */
@@ -44,7 +44,7 @@ export const OpensPageOutput = z.object({
 })
 
 /**
- * Open one app page as the step's actor and report where it landed.
+ * Open one app page as the step's virtual user and report where it landed.
  *
  * Returns rather than asserts: a scenario that expects a redirect and one that
  * forbids it both read the same value, and the landed path appears in the run
@@ -53,16 +53,16 @@ export const OpensPageOutput = z.object({
 // @snippet start scenarioStepDefinition
 export const opensPage = pikkuScenarioStep({
   name: 'opensPage',
-  description: 'opens an app page as the signed-in actor',
+  description: 'opens an app page as the signed-in virtual user',
   template: 'opens {path}',
   input: OpensPageInput,
   output: OpensPageOutput,
   browser: async (_services, { path }, { browser }) => {
-    const actor = session(browser)
-    const status = await actor.gotoApp(path)
+    const virtualUser = session(browser)
+    const status = await virtualUser.gotoApp(path)
     let pathname = path
     try {
-      pathname = new URL(actor.page.url()).pathname
+      pathname = new URL(virtualUser.page.url()).pathname
     } catch {
       // A page that never navigated keeps the requested path — the assertion in
       // the scenario is what reports that, not a thrown URL parse error.
@@ -94,7 +94,7 @@ export const seesText = pikkuScenarioStep({
 })
 
 export const RestsOnPathInput = z.object({
-  /** App-relative path the actor should have come to rest on, e.g. `/app`. */
+  /** App-relative path the virtual user should have come to rest on, e.g. `/app`. */
   path: z.string(),
 })
 
@@ -127,8 +127,8 @@ export const restsOnPath = pikkuScenarioStep({
   input: RestsOnPathInput,
   output: RestsOnPathOutput,
   browser: async (_services, { path }, { browser }) => {
-    const actor = session(browser)
-    const pathname = new URL(actor.page.url()).pathname
+    const virtualUser = session(browser)
+    const pathname = new URL(virtualUser.page.url()).pathname
     if (normalisePath(pathname) !== normalisePath(path)) {
       throw new Error(
         `Expected to be on ${path}, but the browser rests on ${pathname}. ` +
@@ -171,9 +171,9 @@ export const sweepsAllPages = pikkuScenarioStep({
   input: SweepsAllPagesInput,
   output: SweepsAllPagesOutput,
   browser: async (_services, { repoRoot }, { browser }) => {
-    const actor = session(browser)
-    await actor.waitForServerReady()
-    await sweepAllPages(actor, repoRoot)
+    const virtualUser = session(browser)
+    await virtualUser.waitForServerReady()
+    await sweepAllPages(virtualUser, repoRoot)
     return { routes: staticRoutes(repoRoot) }
   },
 })
@@ -211,19 +211,19 @@ export const CapturesPageOutput = z.object({
 })
 
 /**
- * Photograph one page as the signed-in actor.
+ * Photograph one page as the signed-in virtual user.
  *
  * Deliberately returns the page's issues alongside the file. A screenshot alone
  * is a picture of a page that may be quietly broken — a failed API call renders
  * as an empty list, which photographs as a design decision. Capturing both
  * means the image and the reason it looks that way arrive together.
  *
- * The driver signs the actor in before the first step, so this reaches
+ * The driver signs the virtual user in before the first step, so this reaches
  * authenticated pages that a bare browser cannot.
  */
 export const capturesPage = pikkuScenarioStep({
   name: 'capturesPage',
-  description: 'screenshots an app page as the signed-in actor',
+  description: 'screenshots an app page as the signed-in virtual user',
   template: 'captures {path} as {name}',
   input: CapturesPageInput,
   output: CapturesPageOutput,
@@ -232,16 +232,16 @@ export const capturesPage = pikkuScenarioStep({
     { path, name, outDir, width, height, scheme },
     { browser }
   ) => {
-    const actor = session(browser)
-    actor.resetIssues()
+    const virtualUser = session(browser)
+    virtualUser.resetIssues()
 
-    await actor.page.setViewportSize({ width, height })
-    await actor.page.addInitScript(
+    await virtualUser.page.setViewportSize({ width, height })
+    await virtualUser.page.addInitScript(
       ([key, value]) =>
         window.localStorage.setItem(key as string, value as string),
       ['app-color-scheme', scheme]
     )
-    const status = await actor.gotoApp(path)
+    const status = await virtualUser.gotoApp(path)
 
     // Wait for the page to stop being a loading state before photographing it.
     //
@@ -251,8 +251,8 @@ export const capturesPage = pikkuScenarioStep({
     // as a page that had not finished loading, so the reviewer critiques the
     // wrong thing. Both waits are best-effort: a page that never goes idle is
     // still worth a picture, and the issue list will say why.
-    await actor.page.waitForLoadState('networkidle').catch(() => {})
-    await actor.page
+    await virtualUser.page.waitForLoadState('networkidle').catch(() => {})
+    await virtualUser.page
       .locator('[data-slot="skeleton"]')
       .first()
       .waitFor({ state: 'detached', timeout: 5_000 })
@@ -263,7 +263,7 @@ export const capturesPage = pikkuScenarioStep({
     // cwd, `packages/functions/home.png` — on top of the copy this step writes
     // below. Called bare it returns the bytes and writes nothing, which leaves
     // exactly one file and this step owning where it goes.
-    const bytes = await actor.screenshot()
+    const bytes = await virtualUser.screenshot()
 
     const dir = resolve(outDir)
     mkdirSync(dir, { recursive: true })
@@ -272,12 +272,12 @@ export const capturesPage = pikkuScenarioStep({
 
     let pathname = path
     try {
-      pathname = new URL(actor.page.url()).pathname
+      pathname = new URL(virtualUser.page.url()).pathname
     } catch {
       // Keep the requested path; the scenario reports the discrepancy.
     }
 
-    const issues = actor.takeIssues()
+    const issues = virtualUser.takeIssues()
 
     // The analytics beacon is fired and then abandoned when the page navigates,
     // so `net::ERR_ABORTED` against it is the design working rather than a
@@ -318,22 +318,22 @@ export const clicks = pikkuScenarioStep({
   input: ClicksInput,
   output: ClicksOutput,
   browser: async (_services, { name }, { browser }) => {
-    const actor = session(browser)
+    const virtualUser = session(browser)
     // `exact: true` is load-bearing. With substring matching, `clicks('Basket')`
     // silently matched the "Add to basket" button — so a journey against an app
     // with no basket screen reported that step as passing and failed two steps
     // later for the wrong reason. A control that does not exist must not be
     // satisfiable by a different control that happens to contain its name.
-    const target = actor.page
+    const target = virtualUser.page
       .getByRole('link', { name, exact: true })
-      .or(actor.page.getByRole('button', { name, exact: true }))
+      .or(virtualUser.page.getByRole('button', { name, exact: true }))
       .first()
     await target.waitFor({ state: 'visible', timeout: 5_000 })
     await target.click()
-    await actor.page.waitForLoadState('networkidle').catch(() => {})
+    await virtualUser.page.waitForLoadState('networkidle').catch(() => {})
     let pathname = ''
     try {
-      pathname = new URL(actor.page.url()).pathname
+      pathname = new URL(virtualUser.page.url()).pathname
     } catch {
       // Keep it empty; the scenario's own assertion reports the discrepancy.
     }
@@ -364,11 +364,13 @@ export const doesNotSeeText = pikkuScenarioStep({
   input: DoesNotSeeTextInput,
   output: DoesNotSeeTextOutput,
   browser: async (_services, { text }, { browser }) => {
-    const actor = session(browser)
+    const virtualUser = session(browser)
     // Settle first: asserting absence against a page still loading passes for
     // the wrong reason, and would keep passing after the leak arrived.
-    await actor.page.waitForLoadState('networkidle').catch(() => {})
-    const count = await actor.page.getByText(text, { exact: false }).count()
+    await virtualUser.page.waitForLoadState('networkidle').catch(() => {})
+    const count = await virtualUser.page
+      .getByText(text, { exact: false })
+      .count()
     if (count > 0) {
       throw new Error(
         `expected "${text}" to be absent, but it is on the page ${count} time(s)`
@@ -410,16 +412,16 @@ export const clicksNear = pikkuScenarioStep({
   input: ClicksNearInput,
   output: ClicksNearOutput,
   browser: async (_services, { near, name }, { browser }) => {
-    const actor = session(browser)
-    const control = actor.page.getByRole('button', { name, exact: true })
-    const container = actor.page
+    const virtualUser = session(browser)
+    const control = virtualUser.page.getByRole('button', { name, exact: true })
+    const container = virtualUser.page
       .locator('[data-slot="card"], tr, li, article')
       .filter({ hasText: near })
       .filter({ has: control })
       .last()
     await container.waitFor({ state: 'visible', timeout: 5_000 })
     await container.getByRole('button', { name, exact: true }).first().click()
-    await actor.page.waitForLoadState('networkidle').catch(() => {})
+    await virtualUser.page.waitForLoadState('networkidle').catch(() => {})
     return { near, name }
   },
 })
@@ -448,10 +450,10 @@ export const typesInto = pikkuScenarioStep({
   input: TypesIntoInput,
   output: TypesIntoOutput,
   browser: async (_services, { label, text }, { browser }) => {
-    const actor = session(browser)
-    const field = actor.page
+    const virtualUser = session(browser)
+    const field = virtualUser.page
       .getByLabel(label, { exact: false })
-      .or(actor.page.getByPlaceholder(label, { exact: false }))
+      .or(virtualUser.page.getByPlaceholder(label, { exact: false }))
       .first()
     await field.waitFor({ state: 'visible', timeout: 5_000 })
     await field.fill(text)
@@ -515,8 +517,8 @@ export const postsTo = pikkuScenarioStep({
     { path, body, maxStatus, minStatus, expectBody },
     { browser }
   ) => {
-    const actor = session(browser)
-    const result = await actor.page.evaluate(
+    const virtualUser = session(browser)
+    const result = await virtualUser.page.evaluate(
       async ([target, payload]) => {
         const response = await fetch(target as string, {
           method: 'POST',
@@ -586,8 +588,8 @@ export const subscribesToChannel = pikkuScenarioStep({
     { route, action, unsubscribeAction },
     { browser }
   ) => {
-    const actor = session(browser)
-    const connected = await actor.page.evaluate(
+    const virtualUser = session(browser)
+    const connected = await virtualUser.page.evaluate(
       async ([path, act, unsub]) => {
         const url = `${location.origin.replace(/^http/, 'ws')}/api${path}`
         return await new Promise<boolean>((resolve) => {
@@ -661,29 +663,29 @@ export const CallsMcpToolOutput = z.object({
  * could talk to. The official SDK does the handshake, the session id and the
  * framing, which is the whole point of testing this surface at all.
  *
- * The caller's identity comes from the actor's browser cookies, forwarded as a
+ * The caller's identity comes from the virtual user's browser cookies, forwarded as a
  * header. Nothing about MCP requires a browser — a deployed agent would send a
- * bearer token or an OAuth credential instead — but the personas' authority
+ * bearer token or an OAuth credential instead — but the virtual users' authority
  * lives in their session, and reusing it proves the property these templates
  * advertise: an agent gets exactly the scopes the person driving it has.
  */
 export const callsMcpTool = pikkuScenarioStep({
   name: 'callsMcpTool',
   description:
-    'calls an MCP tool with a real MCP client, as the signed-in actor',
+    'calls an MCP tool with a real MCP client, as the signed-in virtual user',
   template: 'calls the {tool} MCP tool',
   input: CallsMcpToolInput,
   output: CallsMcpToolOutput,
   browser: async (_services, { tool, args }, { browser }) => {
-    const actor = session(browser)
+    const virtualUser = session(browser)
     // The app origin, so the client goes through the same proxy the browser
     // does and the driver's per-template ports need no repeating here.
-    if (!actor.page.url().startsWith('http')) {
-      await actor.gotoApp('/')
+    if (!virtualUser.page.url().startsWith('http')) {
+      await virtualUser.gotoApp('/')
     }
-    const origin = new URL(actor.page.url()).origin
+    const origin = new URL(virtualUser.page.url()).origin
 
-    const cookies = await actor.page.context().cookies()
+    const cookies = await virtualUser.page.context().cookies()
     const cookieHeader = cookies
       .map((cookie) => `${cookie.name}=${cookie.value}`)
       .join('; ')
