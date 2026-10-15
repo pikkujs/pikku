@@ -122,7 +122,9 @@ async function pick(
       `A changeset is running: ${running.map((g) => g.title).join(', ')}`
     )
   const open = claimable(list, now)
-  const blockers = open.some((c) => (c as { dependsOn?: string[] }).dependsOn?.length)
+  const blockers = open.some(
+    (c) => (c as { dependsOn?: string[] }).dependsOn?.length
+  )
     ? (
         await rpc.invoke('listChanges', {
           projectId,
@@ -132,7 +134,10 @@ async function pick(
         })
       ).changes
     : []
-  const unblocked = runnable(open as Array<(typeof open)[number] & { dependsOn?: string[] }>, blockers)
+  const unblocked = runnable(
+    open as Array<(typeof open)[number] & { dependsOn?: string[] }>,
+    blockers
+  )
   const specialist = nextSpecialist(unblocked)
   const ready = unblocked.filter((c) => specialistOf(c) === specialist)
   if (open.length && !unblocked.length)
@@ -150,7 +155,11 @@ async function pick(
     specialist,
     refs: predictSkills(
       ready.flatMap((c) => [c.title, c.body]),
-      list.groups as Array<{ creates?: string[]; alters?: string[]; needsPlan?: boolean }>
+      list.groups as Array<{
+        creates?: string[]
+        alters?: string[]
+        needsPlan?: boolean
+      }>
     ),
     reason: `${ready.length} open change(s)`,
     merged: [],
@@ -218,7 +227,9 @@ ${gaps
     [
       `- ${g.note} (${g.state}) — \`${knowledgeLine(g)}\``,
       ...g.leftBehind.map((d) => `  - left behind: ${d.item} — ${d.why}`),
-      ...g.missing.map((item) => `  - built by ${g.by.join(', ')}, gone now: ${item}`),
+      ...g.missing.map(
+        (item) => `  - built by ${g.by.join(', ')}, gone now: ${item}`
+      ),
     ].join('\n')
   )
   .join('\n')}
@@ -232,7 +243,10 @@ Read each note and file what it asks for as changes: \`pikku changes file --titl
 })
 
 const replan = (
-  { group, branch }: { group: { title: string; groupId: string }; branch: string },
+  {
+    group,
+    branch,
+  }: { group: { title: string; groupId: string }; branch: string },
   why: string,
   merged: string[]
 ): Route => ({
@@ -304,7 +318,7 @@ async function launch(
   const skill = join(SKILL_DIRS[harness], current.skill!, 'SKILL.md')
   if (!existsSync(skill))
     throw new CloudPreconditionError(
-      `${skill} is missing. Run \`pikku skills install --core --cloud --agent ${harness}\` first.`
+      `${skill} is missing. Run \`pikku skills install --core --agent ${harness}\` first.`
     )
   const work = join(await mkdtemp(join(tmpdir(), 'pikku-next-')), 'work.md')
   const refs = current.refs.length

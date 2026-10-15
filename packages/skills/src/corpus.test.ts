@@ -17,25 +17,16 @@ import {
 assert.ok(skillsDir, 'expected a skills/ directory beside this package')
 const root = skillsDir
 
-const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'cloud'])
+const KNOWN_INSTALL_GROUPS = new Set(['core', 'client'])
 
 /**
- * Pikku Studio Cloud group membership is deliberate and small, so it is pinned here rather
- * than derived from the corpus — deriving it would make the assertion vacuous
- * (dropping a tag would shrink both sides and still pass). Adding a skill to
- * the Pikku Studio Cloud set means updating this list on purpose.
- *
- * The criterion is what the skill is *about*, not who happens to use it. A
- * Pikku Studio Cloud sandbox relies on better-auth, Kysely and the agent runner, but those
- * are general Pikku capabilities — tagging them here says Pikku Studio Cloud depends on
- * them, which is a fact about Pikku Studio Cloud's stack rather than about the skill. That
- * conflation grew the group to a catch-all twice; if a Pikku Studio Cloud install needs a
- * general skill, name it in Pikku Studio Cloud's own install rather than tagging it here.
+ * Pikku Studio Cloud is one deployment target among several, so the OSS corpus
+ * ships no Cloud skills and has no `cloud` install group. These were moved out
+ * and must not migrate back in.
  */
-const PIKKUSTUDIO_SKILLS = [
+const REMOVED_CLOUD_SKILLS = [
   'pikku-admin-to-cloud',
   'pikku-blueprint-to-cloud',
-  'pikku-changes',
   'pikku-cloud',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
@@ -210,30 +201,28 @@ describe('bundled skills corpus', () => {
     }
   })
 
-  test('the cloud group holds exactly the intended skills', async () => {
-    const tagged: string[] = []
-    for (const skill of await readSkills()) {
-      if (installGroupsOf(skill).includes('cloud')) tagged.push(skill.name)
+  test('no Cloud skill or cloud install group ships in the corpus', async () => {
+    const skills = await readSkills()
+    const names = skills.map((skill) => skill.name)
+    for (const removed of REMOVED_CLOUD_SKILLS) {
+      assert.ok(!names.includes(removed), `${removed} must not ship in OSS`)
     }
-    assert.deepEqual(
-      tagged.sort(),
-      [...PIKKUSTUDIO_SKILLS].sort(),
-      'cloud group membership changed — update PIKKUSTUDIO_SKILLS if this is intended'
-    )
+    const tagged = skills
+      .filter((skill) => installGroupsOf(skill).includes('cloud'))
+      .map((skill) => skill.name)
+    assert.deepEqual(tagged, [], 'no skill belongs to a cloud install group')
   })
 
-  test('no skill outside pikku-cloud teaches a bare `cloud` command', async () => {
+  test('no skill teaches a bare `cloud` command', async () => {
     // The corpus is the OSS one: a reader running these skills has the `pikku`
     // CLI and no `cloud` binary, so `cloud verify` is a command that does not
-    // exist on their machine. Pikku Studio Cloud's own overlay skills keep those; what must
-    // not happen is one migrating back in as a skill moves out of Pikku Studio Cloud.
+    // exist on their machine. Pikku Studio Cloud's own skills keep those; what
+    // must not happen is one migrating back in.
     //
     // `pikku cloud <verb>` is the real OSS command and stays, as does
-    // the `cloud-theme` tool named as Pikku Studio Cloud's, and
     // prose about the platform — only a bare `cloud ` + verb is a hit.
     const offenders: string[] = []
     for (const skill of await readSkills()) {
-      if (PIKKUSTUDIO_SKILLS.includes(skill.name)) continue
       const docs: Array<[string, string]> = [['SKILL.md', skill.body]]
       const refs = join(skill.dir, 'references')
       if (existsSync(refs))

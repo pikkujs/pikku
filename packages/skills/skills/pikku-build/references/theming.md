@@ -11,8 +11,8 @@ Read this at the design step, once you have a direction to turn into a theme —
 whether the user described one in words, handed you a reference, or ran their own
 design step whose output you are implementing.
 
-Nothing in the open-source toolchain authors a theme for you. Pikku Studio Cloud has the
-`cloud-theme` tool; without it, hand-authoring is the route, and it is a small
+Nothing in the open-source toolchain authors a theme for you. A hosting
+platform may offer a theme tool; without it, hand-authoring is the route, and it is a small
 job done in JSON.
 
 ## Where the look lives

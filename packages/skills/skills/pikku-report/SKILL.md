@@ -8,8 +8,8 @@ description: >-
   whether to send what was filed. TRIGGER when: the framework fought you, codegen produced
   something broken, a skill told you to run something that does not exist, the user says "report
   this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug
-  is in the app you are building (fix it there), you are debugging a deployed stage (use
-  pikku-cloud), or you are tempted to patch pikku's source (never do that from an app).
+  is in the app you are building (fix it there), you are debugging a deployed stage,
+  or you are tempted to patch pikku's source (never do that from an app).
 installGroups: [core]
 ---
 

@@ -45,7 +45,7 @@ agent:
 | A screen needs data no function returns yet                                    | `references/mocks.md`                                                                         |
 | Adding a second frontend (app §4), at the changeset that needs it              | `references/multi-app.md`                                                                     |
 | Shipping an app as a desktop or Android app                                    | `references/native-app.md`                                                                    |
-| Deploying, and the Pikku Studio Cloud-readiness contract (app §9)                          | `references/ship.md`                                                                          |
+| Deploying, and the deploy-readiness contract (app §9)                          | `references/ship.md`                                                                          |
 | The request is built on an OpenAPI spec (auth mode, sign-in or connect screen) | `references/openapi.md`                                                                       |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
@@ -155,11 +155,11 @@ generated functions through `ref()`.
 
 Whenever pikku or a skill costs you time — a command that failed on a fresh
 tree, a skill that described a flag the CLI does not have, generated code you
-had to fix by hand — file it then with `pikku cloud report --stdin`. The
-`pikku-report` skill has the fields. Leave out secrets, tokens and customer data.
+had to fix by hand — file it then, the way the
+`pikku-report` skill describes. That skill has the fields. Leave out secrets, tokens and customer data.
 
 Findings are held until hand-over. The last thing in the hand-over, after the
-app runs (and is deployed, if they chose to), is `pikku cloud report`: if it
+app runs (and is deployed, if they chose to), is the `pikku-report` send step: if it
 lists findings and asks, ask the user — Yes, No, Always or Never — and run it
 again with `--consent <answer>`. If it says reporting is off, do not ask.
 
@@ -171,8 +171,8 @@ build makes or changes something the console can show, give the
 `http://localhost:<port>/console/...` link instead of describing it.
 
 Until the app is deployed that is the local open-source console, on the port
-`pikku dev` printed. Once it is on Pikku Studio Cloud, link the Pikku Studio Cloud console for the stage
-you are talking about instead; the `pikku-cloud` skill says which.
+`pikku dev` printed. Once it is deployed, link the hosted console for the stage
+you are talking about instead.
 
 | Level              | Links                       | Code in the conversation |
 | ------------------ | --------------------------- | ------------------------ |
