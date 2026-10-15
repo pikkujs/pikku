@@ -1,6 +1,6 @@
 # Audit Wire Service
 
-`createInvocationAudit` creates a per-request `InvocationAuditLog` that buffers audit events in memory and flushes them as a batch when the function-runner calls `closeWireServices` at the end of the request. If `singletonServices.audit` is not configured (local dev without Pikku Studio Cloud), it returns a no-op `DisabledInvocationAudit` — no crash, events are silently dropped.
+`createInvocationAudit` creates a per-request `InvocationAuditLog` that buffers audit events in memory and flushes them as a batch when the function-runner calls `closeWireServices` at the end of the request. If `singletonServices.audit` is not configured (local dev without a hosting platform), it returns a no-op `DisabledInvocationAudit` — no crash, events are silently dropped.
 
 Pair with `createAuditedKysely` to auto-capture every Kysely query as an audit event.
 
@@ -38,4 +38,4 @@ const deleteUser = pikkuFunc({
 
 `closeWireServices` (called automatically by the function-runner) invokes `audit.close()` → `singletonServices.audit.write(batch)` → platform-specific flush (e.g. CF Queue, libsql INSERT). No manual flushing needed.
 
-> **Pikku Studio Cloud note:** Pikku Studio Cloud provisions the audit queue and consumer worker automatically. The audit table schema is in `db/sqlite/0003-audit.sql` (starter-template). Run `pikku cloud validate` to confirm the migration is in place.
+> **Note:** a hosting platform may provision the audit queue and consumer worker for you. The audit table schema is in `db/sqlite/0003-audit.sql` (starter-template). Run `pikku validate` to confirm the migration is in place.

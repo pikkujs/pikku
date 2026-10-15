@@ -156,8 +156,8 @@ describe('pikku skills install', () => {
 
   test('--agent pi honours group filters', async () => {
     const dir = await inTemp()
-    await run({ agent: 'pi', cloud: true })
-    assert.deepEqual(await installed(dir, 'pi'), await skillsWithGroup('cloud'))
+    await run({ agent: 'pi', core: true })
+    assert.deepEqual(await installed(dir, 'pi'), await skillsWithGroup('core'))
   })
 
   test('--core installs the core-tagged skills, not the whole corpus', async () => {
@@ -175,27 +175,14 @@ describe('pikku skills install', () => {
     )
   })
 
-  test('--cloud installs the cloud-tagged skills, not the whole corpus', async () => {
+  test('--core and --client together install the union of both groups', async () => {
     const dir = await inTemp()
-    await run({ cloud: true })
-
-    const cloud = await skillsWithGroup('cloud')
-    const all = await listSkillNames()
-    assert.deepEqual(await installed(dir), cloud)
-    assert.ok(
-      cloud.length < all.length,
-      'expected --cloud to be a strict subset'
-    )
-  })
-
-  test('--core and --cloud together install the union of both groups', async () => {
-    const dir = await inTemp()
-    await run({ core: true, cloud: true })
+    await run({ core: true, client: true })
 
     const union = [
       ...new Set([
         ...(await skillsWithGroup('core')),
-        ...(await skillsWithGroup('cloud')),
+        ...(await skillsWithGroup('client')),
       ]),
     ].sort()
     assert.deepEqual(await installed(dir), union)

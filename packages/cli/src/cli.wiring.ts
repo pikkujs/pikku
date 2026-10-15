@@ -2106,11 +2106,6 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [core]',
               default: false,
             },
-            cloud: {
-              description:
-                'Install skills whose frontmatter includes installGroups: [cloud]',
-              default: false,
-            },
             client: {
               description:
                 'Install skills whose frontmatter includes installGroups: [client]',

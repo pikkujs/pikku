@@ -184,4 +184,4 @@ and pass them to `pikku ui theme apply`. The recipe is in `references/from-a-ref
 ## Hosted only
 
 Interactive theme pickers, design extraction, stock images, site crawling, favicon generation, AI-generated logos and
-agent-driven build flows exist only in Pikku Studio and are not part of the CLI.
+agent-driven build flows are not part of the CLI; a hosting platform may offer them.
