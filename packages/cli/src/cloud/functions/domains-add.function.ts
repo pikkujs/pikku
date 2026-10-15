@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudDomainsAddInput = z.object({
   hostname: z.string(),

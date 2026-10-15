@@ -1,4 +1,4 @@
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 type Node = { changeId: string; dependsOn?: string[] | null }
 type Stateful = Node & { status: string }

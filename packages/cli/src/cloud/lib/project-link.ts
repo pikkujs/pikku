@@ -1,6 +1,6 @@
 import { getRemoteUrl, git, isGitRepo } from '../../utils/git.js'
 import { readConfigProjectId, writeConfigProjectId } from './project-id.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import type { getCloudRPC } from './http.js'
 
 /**

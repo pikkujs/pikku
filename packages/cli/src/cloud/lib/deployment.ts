@@ -1,6 +1,6 @@
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 import type { GetDeploymentStatusOutput } from '../sdk/rpc-map.gen.d.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 type MissingConfigEntry = GetDeploymentStatusOutput['missingSecrets'][number]
 

@@ -1,5 +1,5 @@
 import type { ListChangesOutput } from '../sdk/rpc-map.gen.d.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { releaseChangeset } from './changes-local.js'
 import {
   currentBranch,

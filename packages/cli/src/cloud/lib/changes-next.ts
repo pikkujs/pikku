@@ -3,7 +3,7 @@ import type {
   ClaimChangesOutput,
   ListChangesOutput,
 } from '../sdk/rpc-map.gen.d.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { httpStatus } from './changes.js'
 import type { ChangeEvents } from './changes-events.js'
 

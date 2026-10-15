@@ -1,7 +1,7 @@
 import { extname } from 'node:path'
 import { resolveApiContext } from './config.js'
 import { getCloudRPC } from './http.js'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import type { CreateChangeInput, GetChangeInput } from '../sdk/rpc-map.gen.d.js'
 import { currentBranch } from '../../utils/git.js'
 import { readConfigProjectId } from './project-id.js'

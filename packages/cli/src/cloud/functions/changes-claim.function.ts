@@ -8,8 +8,8 @@ import {
   idList,
   requireProjectId,
 } from '../lib/changes.js'
-import { CloudPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
 import { git } from '../../utils/git.js'
 import { basename, dirname, join } from 'node:path'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'

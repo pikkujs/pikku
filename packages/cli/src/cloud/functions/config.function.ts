@@ -4,9 +4,9 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { getCloudRPC } from '../lib/http.js'
-import { dim, keyValue, safe } from '../lib/output.js'
+import { dim, keyValue, safe } from '../../utils/output.js'
 
 export const CloudConfigInput = z.object({
   apiUrl: z.string().optional(),

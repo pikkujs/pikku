@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { changesContext, idList, nonBlank } from '../lib/changes.js'
-import { dim, safe } from '../lib/output.js'
+import { dim, safe } from '../../utils/output.js'
 import type { CreateChangeOutput } from '../sdk/rpc-map.gen.d.js'
 import { SPECIALISTS } from '../lib/specialists.js'
 

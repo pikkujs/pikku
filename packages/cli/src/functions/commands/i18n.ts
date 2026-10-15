@@ -7,7 +7,7 @@ import {
 } from '@pikku/code-edit/i18n'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { workspaceRoot } from '../../utils/workspace-root.js'
-import { added, changed, dim, removed } from '../../cloud/lib/output.js'
+import { added, changed, dim, removed } from '../../utils/output.js'
 import {
   I18nCheckInput,
   I18nCheckOutput,

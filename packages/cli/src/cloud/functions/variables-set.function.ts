@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { resolveStage } from '../lib/stage.js'
 import { parseVariableValue } from '../lib/variable-value.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudVariablesSetInput = z.object({
   name: z.string(),

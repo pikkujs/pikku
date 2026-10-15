@@ -9,7 +9,7 @@ import {
   type AppPage,
 } from '@pikku/code-edit/routes'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
-import { added, changed, dim } from '../../cloud/lib/output.js'
+import { added, changed, dim } from '../../utils/output.js'
 import {
   PagesListInput,
   PagesListOutput,

@@ -27,7 +27,7 @@ import {
   saveConsent,
   type ReportAnswer,
 } from '../lib/report.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * Every finding field is optional here and the strictness lives in

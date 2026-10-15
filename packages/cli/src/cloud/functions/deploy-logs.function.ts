@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
-import { dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /** What `deploy logs` shows unless told otherwise — the end is where builds say why they stopped. */
 export const DEFAULT_TAIL_LINES = 100

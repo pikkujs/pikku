@@ -3,8 +3,8 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { resolveStageId } from '../lib/stage.js'
-import { table, dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { table, dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudDbSchemaInput = z.object({
   branch: z.string().default('main'),

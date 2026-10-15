@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety } from '../lib/deploy-safety.js'
 import { branchFromHead, currentBranch, resolveRef } from '../../utils/git.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'
 import {
@@ -13,7 +13,7 @@ import {
   resetPrompt,
   resetWarning,
 } from '../lib/deploy-reset.js'
-import { added, changed, removed, dim, table } from '../lib/output.js'
+import { added, changed, removed, dim, table } from '../../utils/output.js'
 import {
   blockedReason,
   blockedSummary,

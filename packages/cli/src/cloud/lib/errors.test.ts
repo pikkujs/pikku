@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { isExpectedError } from '@pikku/core/errors'
 
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 import { assertNamedBranchDeploySafety } from './deploy-safety.js'
 
 /**

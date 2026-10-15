@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { age, changeRef, changesContext, clockTime } from '../lib/changes.js'
-import { dim, keyValue, safe, safeBlock, statusColor } from '../lib/output.js'
+import { dim, keyValue, safe, safeBlock, statusColor } from '../../utils/output.js'
 import type { GetChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const CloudChangesShowInput = z.object({

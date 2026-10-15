@@ -1,7 +1,7 @@
 import { createInterface } from 'node:readline/promises'
 import { createInterface as createLineInterface } from 'node:readline'
 import { stdin, stdout } from 'node:process'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /**
  * Read the first line stdin has to offer, or `null` if it has none.

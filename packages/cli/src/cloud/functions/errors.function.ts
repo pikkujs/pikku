@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getCloudRPC } from '../lib/http.js'
-import { table, removed, dim } from '../lib/output.js'
-import { CloudPreconditionError } from '../lib/errors.js'
+import { table, removed, dim } from '../../utils/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export const CloudErrorsInput = z.object({
   branch: z.string().default('main'),

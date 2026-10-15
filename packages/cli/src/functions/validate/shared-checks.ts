@@ -15,7 +15,7 @@ import {
   projectWiresChannels,
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
-import { blankComments } from '../../cloud/lib/blank-comments.js'
+import { blankComments } from '../../utils/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
 

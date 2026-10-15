@@ -23,7 +23,7 @@ import {
   hkdfSync,
   randomBytes,
 } from 'node:crypto'
-import { CloudPreconditionError } from './errors.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 /** Algorithm tag carried by every sealed value. Must match cloud's. */
 export const SEALED_BOX_ALGORITHM = 'sealed-x25519-v1'

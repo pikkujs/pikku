@@ -7,8 +7,8 @@ import {
   waitForNext,
   type NextResult,
 } from '../lib/changes-next.js'
-import { CloudPreconditionError } from '../lib/errors.js'
-import { dim, safe } from '../lib/output.js'
+import { CloudPreconditionError } from '../../utils/precondition-error.js'
+import { dim, safe } from '../../utils/output.js'
 
 export const NEXT_EXIT_TIMEOUT = 2
 export const NEXT_EXIT_AUTH = 3
