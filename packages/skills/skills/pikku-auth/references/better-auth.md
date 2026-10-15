@@ -542,7 +542,7 @@ This is the endpoint `pikku scenario` signs its virtual users in through. The fr
 does not use it: it posts a virtual user
 id to `/sign-in/switch-virtual-user`, served by
 `pikkuVirtualUser({ virtualUserSignIn: { virtualUsers } })` with no credential — see
-`pikku-scenario` for the setup and `pikku-react` for `signInAsVirtualUser()`.
+`pikku-scenario` for the setup.
 
 ### Provisioning virtual users
 

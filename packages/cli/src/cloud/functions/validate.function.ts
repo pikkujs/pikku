@@ -158,23 +158,6 @@ const SINGLETON_SENSITIVE_PKGS = [
   'react-dom',
 ]
 
-// A file whose name says "this is the login surface". Used to decide whether an
-// app needs the virtual user quick-login control — an app with no login screen has
-// nothing to attach it to. Matched against the path relative to the app root, so
-// it covers src/pages/LoginPage.tsx as well as Next's app/login/page.tsx.
-const LOGIN_FILE_PATTERN =
-  /(?:^|\/)[\w[\]-]*(?:login|sign-?in)[\w[\]-]*(?:\/|\.)/i
-
-// Fingerprints of a one-click virtual user sign-in on the login screen: one
-// click signs in as a declared scenario virtual user, no password. Any one of
-// these means the app actually wires virtual user sign-in — a function's own
-// definition is excluded, since defining it without calling it locks the
-// reviewer out just as thoroughly.
-const VIRTUAL_USER_QUICK_LOGIN_PATTERNS = [
-  /(?<!function\s)\bsignInAsVirtualUser\s*\(/,
-  /\/auth\/sign-in\/virtual-user/,
-]
-
 // Minimum @pikku/* versions Pikku Studio Cloud requires. The pikku packages are versioned
 // independently (e.g. @pikku/cli moves faster than @pikku/core), so this is a
 // per-package floor map, not a single number. Only listed packages are
@@ -1841,51 +1824,6 @@ export async function runValidate(
             `apps/${name} ships Paraglide but no component imports from @/i18n or calls useLocale() — strings are not actually translated`,
             appPath,
             "Route user-visible strings through `m.*()` from '@/i18n/messages' and subscribe via `useLocale()`."
-          )
-        }
-
-        // ── one-click virtual user sign-in ────────
-        // Any frontend that ships a login screen must also ship a dev-only
-        // virtual user sign-in, so the app can be reviewed as each scenario virtual user
-        // without knowing a password. Without it the reviewer is locked out of
-        // their own sandbox. Only fires when a login surface exists — an app
-        // with no auth has nothing to attach the control to.
-        // Next.js keeps its routes outside src/, so scan app/ and pages/ too.
-        const isNextApp = !!appAllDeps['next']
-        const uiFiles = isNextApp
-          ? [
-              ...srcFiles,
-              ...(await listSourceFiles(join(appPath, 'app'))),
-              ...(await listSourceFiles(join(appPath, 'pages'))),
-            ]
-          : srcFiles
-
-        const loginFiles: string[] = []
-        let hasQuickLogin = false
-        for (const file of uiFiles) {
-          const text = await readTextSafe(file)
-          if (!text) continue
-          const rel = file.slice(appPath.length + 1).replace(/\\/g, '/')
-          if (LOGIN_FILE_PATTERN.test(rel)) loginFiles.push(rel)
-          if (VIRTUAL_USER_QUICK_LOGIN_PATTERNS.some((p) => p.test(text))) {
-            hasQuickLogin = true
-          }
-        }
-
-        if (loginFiles.length > 0 && !hasQuickLogin) {
-          e(
-            `app-missing-virtual-user-quick-login-${name}`,
-            `apps/${name} has a login screen (${loginFiles[0]}) but no one-click virtual user sign-in — nobody can view the app as a scenario virtual user without a password`,
-            join(appPath, loginFiles[0]!),
-            lines(
-              `In ${loginFiles[0]}, call signInAsVirtualUser({ apiUrl, id }) from @pikku/react`,
-              'for each virtual user the login screen offers.',
-              'On the server, pikkuVirtualUser from @pikku/better-auth serves the list and',
-              'the sign-in:',
-              '  pikkuVirtualUser({ allowSignIn: optIn,',
-              '    virtualUserSignIn: { virtualUsers: virtualUserList } })',
-              'No credential reaches the bundle: sign-in is by virtual user id.'
-            )
           )
         }
       }

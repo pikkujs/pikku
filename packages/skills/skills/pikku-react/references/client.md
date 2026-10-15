@@ -239,26 +239,6 @@ pikku.fetch.setHeader('x-tenant', tenantId)
 `authHeaders.jwt` becomes `Authorization: Bearer …` and `authHeaders.apiKey`
 becomes `X-API-KEY`; setting a JWT takes precedence over an API key.
 
-### Virtual user sign-in (`signInAsVirtualUser`)
-
-`signInAsVirtualUser({ apiUrl, id })` signs in as a declared scenario virtual user
-with no password. `pikku cloud validate` **requires** any frontend with a login
-screen to call it (`app-missing-virtual-user-quick-login-<app>`) — without it a
-reviewer is locked out of their own sandbox.
-
-```tsx
-import { signInAsVirtualUser } from '@pikku/react'
-
-await signInAsVirtualUser({ apiUrl: apiUrl(), id: virtualUser.id })
-```
-
-- **No credential reaches the bundle.** It posts only the virtual user id to
-  `/auth/sign-in/switch-virtual-user`. The server decides who may sign in, and
-  signs in nobody in production — see **pikku-scenario** for
-  `virtualUserSignIn`.
-- The endpoint only signs in rows flagged `virtualUser: true`, so it can never
-  impersonate a real user — see **pikku-auth**.
-
 ## What NOT to do
 
 - Don't instantiate `PikkuFetch`/`PikkuRPC` inside a component — `createPikku`

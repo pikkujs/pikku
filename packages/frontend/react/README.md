@@ -31,14 +31,6 @@ const Todos = () => {
 }
 ```
 
-## Virtual user sign-in
-
-`signInAsVirtualUser({ apiUrl, id })` signs in as a declared virtual user with no
-password, through Better Auth's virtual user endpoint. No credential reaches the
-bundle: only the virtual user id is posted to `/auth/sign-in/switch-virtual-user`.
-The server decides who may sign in: pass `virtualUserSignIn` to `pikkuVirtualUser` from
-`@pikku/better-auth`.
-
 ## Locale store
 
 `createLocaleStore()` is the reactive locale store a Paraglide frontend needs:
