@@ -346,7 +346,7 @@ and where a plain unit test is still the right tool.
 
 | Smell                                               | Why it's wrong                                                                                                                                   |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. There is no in-process function world.                                                       |
+| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. There is no in-process function world.                                                                    |
 | `scenario.do(...)` with no `{ virtualUser }`        | Throws. Every step runs as somebody.                                                                                                             |
 | A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                                     |
 | Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                                     |
