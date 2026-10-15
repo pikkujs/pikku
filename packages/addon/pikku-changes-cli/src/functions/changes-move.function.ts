@@ -64,13 +64,22 @@ export const ChangesReady = pikkuSessionlessFunc({
   func: async (_services, input) => move(input, 'ready', 'ready'),
 })
 
-const renderMove =
-  (words: string) =>
-  (_s: unknown, { changes }: { changes: Moved[] }): void => {
-    for (const change of changes)
-      console.log(`#${safe(change.shortId)} ${words}  ${dim(safe(change.title))}`)
-  }
+const printMoved = (changes: Moved[], words: string): void => {
+  for (const change of changes)
+    console.log(`#${safe(change.shortId)} ${words}  ${dim(safe(change.title))}`)
+}
 
-export const renderChangesStart = renderMove('in progress')
-export const renderChangesBacklog = renderMove('in the backlog')
-export const renderChangesReady = renderMove('ready')
+export const renderChangesStart = (
+  _s: unknown,
+  { changes }: { changes: Moved[] }
+): void => printMoved(changes, 'in progress')
+
+export const renderChangesBacklog = (
+  _s: unknown,
+  { changes }: { changes: Moved[] }
+): void => printMoved(changes, 'in the backlog')
+
+export const renderChangesReady = (
+  _s: unknown,
+  { changes }: { changes: Moved[] }
+): void => printMoved(changes, 'ready')
