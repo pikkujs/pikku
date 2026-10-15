@@ -10,6 +10,9 @@ beforeEach(() => {
   resetPikkuState()
 })
 
+const algorithmName = (algorithm: AlgorithmIdentifier): string =>
+  typeof algorithm === 'string' ? algorithm : algorithm.name
+
 const STRONG_SECRET = 'a'.repeat(43)
 const WEAK_SECRET = 'dev-remote-secret'
 
@@ -21,7 +24,7 @@ const createSecrets = (secret: string) => ({
 })
 
 /**
- * Signing is deliberately free here so the measurement isolates key derivation.
+ * Signing is deliberately free here so the round trip exercises only the session encryption.
  */
 const createJWT = () => ({
   encode: async (_expiresIn: unknown, payload: unknown) =>
@@ -95,23 +98,23 @@ describe('remote RPC session round trip', () => {
     )
   })
 
-  test('a full round trip stays under the per-hop latency budget', async () => {
+  test('a full round trip derives one HKDF key per hop and never runs a password KDF', async (t) => {
+    const subtle = globalThis.crypto.subtle
+    const importKey = t.mock.method(subtle, 'importKey')
+    const deriveKey = t.mock.method(subtle, 'deriveKey')
+    const deriveBits = t.mock.method(subtle, 'deriveBits')
     const session = { userId: 'user-1', role: 'admin' }
+    assert.deepStrictEqual(await roundTrip(STRONG_SECRET, session), session)
 
-    // Warm up so the measurement excludes module/JIT startup.
-    await roundTrip(STRONG_SECRET, session)
-
-    const iterations = 5
-    const start = performance.now()
-    for (let i = 0; i < iterations; i++) {
-      await roundTrip(STRONG_SECRET, session)
-    }
-    const perRoundTrip = (performance.now() - start) / iterations
-
-    assert.ok(
-      perRoundTrip < 20,
-      `remote RPC round trip took ${perRoundTrip.toFixed(1)}ms, budget is 20ms`
+    assert.deepStrictEqual(
+      deriveKey.mock.calls.map((call) => algorithmName(call.arguments[0])),
+      ['HKDF', 'HKDF']
     )
+    assert.deepStrictEqual(
+      importKey.mock.calls.map((call) => algorithmName(call.arguments[2])),
+      ['HKDF', 'HKDF']
+    )
+    assert.strictEqual(deriveBits.mock.callCount(), 0)
   })
 })
 

@@ -1,9 +1,9 @@
 import assert from 'node:assert'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, test } from 'node:test'
+import { after, describe, test } from 'node:test'
 import { GitService, WorkspacePathError, runGit } from './git.service.js'
 
 Object.assign(process.env, {
@@ -32,17 +32,34 @@ const identity = (cwd: string) => {
   git(cwd, 'config', 'user.email', 'test@example.com')
 }
 
-const setup = () => {
-  const remote = mkdtempSync(join(tmpdir(), 'pikku-git-remote-'))
-  const root = mkdtempSync(join(tmpdir(), 'pikku-git-'))
+const buildTemplate = () => {
+  const template = mkdtempSync(join(tmpdir(), 'pikku-git-template-'))
+  const remote = join(template, 'remote')
+  const root = join(template, 'root')
+  mkdirSync(remote)
+  mkdirSync(root)
   git(remote, 'init', '--bare', '-q', '-b', 'main')
   git(root, 'init', '-q', '-b', 'main')
   identity(root)
-  git(root, 'remote', 'add', 'origin', remote)
+  git(root, 'remote', 'add', 'origin', '../remote')
   writeFileSync(join(root, 'README.md'), 'seed\n')
   git(root, 'add', 'README.md')
   git(root, 'commit', '-q', '-m', 'seed')
-  return { root, remote }
+  return template
+}
+
+// Built once and copied per test (#2108); the relative origin URL keeps each
+// copy pointed at its own remote.
+let template: string | undefined
+after(() => {
+  if (template) rmSync(template, { recursive: true, force: true })
+})
+
+const setup = () => {
+  template ??= buildTemplate()
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-git-'))
+  cpSync(template, dir, { recursive: true })
+  return { root: join(dir, 'root'), remote: join(dir, 'remote') }
 }
 
 const write = (root: string, path: string, body: string) => {

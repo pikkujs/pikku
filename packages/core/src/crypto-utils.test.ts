@@ -16,6 +16,9 @@ import {
   envelopeRewrap,
 } from './crypto-utils.js'
 
+const algorithmName = (algorithm: AlgorithmIdentifier): string =>
+  typeof algorithm === 'string' ? algorithm : algorithm.name
+
 describe('encryptJSON / decryptJSON', () => {
   const secret = 'test-secret-key-for-encryption'
 
@@ -453,23 +456,25 @@ describe('encryptWithKeyMaterial / decryptWithKeyMaterial', () => {
     )
   })
 
-  test('key derivation is fast enough for the per-request path', async () => {
-    await encryptWithKeyMaterial(NAME, keyMaterial, info, { warm: true })
+  test('each encrypt and decrypt derives its key with one HKDF expansion, never a password KDF', async (t) => {
+    const subtle = globalThis.crypto.subtle
+    const importKey = t.mock.method(subtle, 'importKey')
+    const deriveKey = t.mock.method(subtle, 'deriveKey')
+    const deriveBits = t.mock.method(subtle, 'deriveBits')
+    const blob = await encryptWithKeyMaterial(NAME, keyMaterial, info, {
+      a: 1,
+    })
+    await decryptWithKeyMaterial(NAME, keyMaterial, info, blob)
 
-    const iterations = 20
-    const start = performance.now()
-    for (let i = 0; i < iterations; i++) {
-      const blob = await encryptWithKeyMaterial(NAME, keyMaterial, info, {
-        i,
-      })
-      await decryptWithKeyMaterial(NAME, keyMaterial, info, blob)
-    }
-    const perPair = (performance.now() - start) / iterations
-
-    assert.ok(
-      perPair < 5,
-      `encrypt+decrypt took ${perPair.toFixed(2)}ms, budget is 5ms`
+    assert.deepStrictEqual(
+      deriveKey.mock.calls.map((call) => algorithmName(call.arguments[0])),
+      ['HKDF', 'HKDF']
     )
+    assert.deepStrictEqual(
+      importKey.mock.calls.map((call) => algorithmName(call.arguments[2])),
+      ['HKDF', 'HKDF']
+    )
+    assert.strictEqual(deriveBits.mock.callCount(), 0)
   })
 })
 

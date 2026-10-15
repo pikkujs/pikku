@@ -1,8 +1,16 @@
-import { describe, test, beforeEach, afterEach } from 'node:test'
+import { describe, test, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import { mock } from 'bun:test'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, rm, rename, unlink } from 'node:fs/promises'
+import {
+  cp,
+  mkdtemp,
+  mkdir,
+  writeFile,
+  rm,
+  rename,
+  unlink,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { envWithoutInheritedRepo } from '@pikku/cli/addon-support'
@@ -82,8 +90,8 @@ const sh = (cwd: string, ...args: string[]) =>
     env: envWithoutInheritedRepo(),
   })
 
-async function makeRepo(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-'))
+async function buildTemplate(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-template-'))
   await writeFile(
     join(root, 'pikku.config.json'),
     JSON.stringify({ srcDirectories: ['packages/functions/src'] })
@@ -104,9 +112,25 @@ async function makeRepo(): Promise<string> {
   sh(root, 'config', 'user.email', 't@t')
   sh(root, 'config', 'user.name', 't')
   sh(root, 'config', 'commit.gpgsign', 'false')
+  sh(root, 'config', 'maintenance.auto', 'false')
   sh(root, 'add', '.')
   sh(root, 'commit', '-q', '-m', 'base')
   sh(root, 'checkout', '-q', '-b', 'feature')
+  return root
+}
+
+// Built once and copied per test (#2108), so each test spawns only the git
+// its own changes need. Auto-maintenance is off so no detached git is still
+// writing the template while it is copied.
+let template: Promise<string> | undefined
+after(async () => {
+  if (template) await rm(await template, { recursive: true, force: true })
+})
+
+async function makeRepo(): Promise<string> {
+  template ??= buildTemplate()
+  const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-'))
+  await cp(await template, root, { recursive: true })
   return root
 }
 
