@@ -1,3 +1,73 @@
+## 0.12.187
+
+### Patch Changes
+
+- f91a166: Addons ship default mocks in `<addon>/.mocks/<fn>/`, loaded under the namespace the app wires them as. The app's `.mocks/<ns>.<fn>/` adds scenarios, replaces one with the same name, and its default wins. `pikku mocks check`, `diff`, `sync`, `validate` and the generated stub types read both, and a new generated `mocks.gen.ts` beside the React Query client exports `registerPikkuMocks()`, so apps no longer glob `.mocks` by hand. Scaffolded addons publish `.mocks`, and `pikku validate` reports an addon whose `.mocks` is not in `files`.
+- 2b41b1a: Resolve `~/.pikkustudio/auth.json` from HOME on every read and write, so tests that point HOME at a temp folder no longer overwrite the real sign-in.
+- 7a89580: `pikku changes` moves out of the CLI into `@pikku/addon-changes-cli`, which the CLI wires as an addon. The command group, its flags and its output are unchanged. The CLI gains `@pikku/cli/addon-support` and `@pikku/cli/addon-support/validate` for addons that contribute commands, and a backend registry (`@pikku/addon-changes-cli/backend`) through which the cloud commands still in the CLI back `pikku changes` with Pikku Studio Cloud.
+- 6c28e8f: The CLI's generic render helpers (`packages/cli/src/utils/output.ts`), the comment blanker the validate checks scan through (`utils/blank-comments.ts`) and `CloudPreconditionError` (`utils/precondition-error.ts`) move out of `src/cloud/lib` into `src/utils`, and every importer — including the cloud commands still in the CLI — points at the new location. No behaviour change.
+- bf9bb86: `pikku cloud` moves out of the CLI into `@pikku/addon-cloud-cli`, which the CLI wires with `wireAddon` and `refCLI('cloud:cloudCommands')`, so `pikku cloud …` resolves exactly as before for anyone who installs `@pikku/cli`. `@pikku/cli/cloud` is gone: the typed Pikku Studio Cloud client is `@pikku/addon-cloud-cli/client`, which `@pikku/addon-console` now imports. The cloud addon registers its changes backend through `@pikku/addon-changes-cli/backend`, and `pikku validate` asks it for the checks that need a Pikku Studio Cloud project over RPC.
+- fdcc821: Fabric is gone from the open toolchain. The previous names are removed with no aliases.
+
+  The CLI group is `pikku cloud …` and the export is `@pikku/cli/cloud`. The project link is the `cloud` key of `pikku.config.json` (`cloud.projectId`), the CLI keeps its local state in `~/.pikkustudio` (run `pikku cloud login` again), and the project config file is `pikkustudio.config.json`.
+
+  Every environment variable drops the `FABRIC_` prefix for `PIKKUSTUDIO_` with the same suffix: `PIKKUSTUDIO_API_URL`, `PIKKUSTUDIO_PROJECT_ID`, `PIKKUSTUDIO_TOKEN`, `PIKKUSTUDIO_OPERATOR_TOKEN`, `PIKKUSTUDIO_AUTH_PUBLIC_KEY`, `PIKKUSTUDIO_STAGE_ID` and the rest. Rename them wherever you set them.
+
+  Wire ids: the operator sign-in route is `/sign-in/cloud`, the plugin and mode literal is `'cloud'`, the Better Auth plugin is `pikkuCloud`, its session field is `pikkustudioadmin`, and the signature header is `x-cloud-sig`. The cloud API calls are `getCloudLogs`, `getCloudLogsByStageKind`, `cloudCliProjects`, `cloudCliDeployments`, `providedByCloud` and `recordCloudAnalyticsEvents`. Addon packages are `@pikkustudio/*`, scaffolded files live under `scaffold/cloud` and `__cloud_*__`, and the API hosts are the `pikkustudio.app` and `pikkustudio.dev` domains.
+
+  `pikku skills install --fabric` is `--cloud`, the install group is `cloud`, and the skills are `pikku-cloud`, `pikku-cloud-debug`, `pikku-admin-to-cloud` and `pikku-blueprint-to-cloud`.
+
+  The stale analytics forwarder copies are removed from the online-shop example and the starter template.
+
+  The sealed-box salt stays `pikkufabric/sealed-box/v1`: it is a cryptographic constant that already-sealed secrets depend on.
+
+- 86c8d56: The generated React Query client finds the default mock again when an RPC has more than one. Metas loaded with `import.meta.glob(..., { import: 'default' })` are the meta object itself, and its own `default: true` was mistaken for a module default, so every stub threw "No default mock". Both a module namespace and a plain meta object now work.
+- f91a166: `pikku all` writes `addon/pikku-addons-meta.gen.json` listing each wired addon's functions, and `pikku mocks check` and `pikku validate` accept calls to them instead of reporting "no function". Any call under a remote addon namespace is accepted.
+- 2269cce: `pikku mocks check`, `pikku mocks diff` and the mocks part of `pikku validate` now find hook calls anywhere in the repo, not only in `apps/*/src`. They scan every file git tracks or does not ignore, submodules included, so `node_modules`, `dist`, `.pikku` and ignored copies are left out. `--src` still limits the scan to the directories given, and a project outside git falls back to `apps/*/src`.
+
+  A hook call counts only when its import resolves to this project's React Query client (`clientFiles.reactQueryFile`). Relative paths, tsconfig path aliases and package exports resolve the way TypeScript resolves them, and re-exports are followed. Hooks imported from another project's client are skipped, as is an import that only renames another export to a hook name, such as `usePikkuCloudQuery as usePikkuQuery`. An import that cannot be resolved is still checked.
+
+- 4cd7aeb: `mocks.gen.ts` is only generated when the app or a wired addon has a `.mocks` directory, so projects without mocks never need Vite's `import.meta.glob` types.
+- 88c7d37: The Pikku Studio Cloud skills (`pikku-cloud`, `pikku-blueprint-to-cloud`, `pikku-admin-to-cloud`) and the `cloud` install group are removed from the OSS skills corpus, along with the `--cloud` flag of `pikku skills install`. The `pikku cloud` command group is unchanged.
+- 6a0d4d3: `@pikku/cucumber` is removed from the repo; deprecating it on npm is a manual follow-up after this release. Its final release (0.12.18) was already an empty stub; nothing in Pikku depends on it. Pikku end-to-end tests are written with `pikkuFeature` / `pikkuScenario` and `pikkuScenarioStep`, which are typed Pikku functions run by `pikku scenario run`; there is no Gherkin, step-definition registry or World. The scenario skill, knowledge decisions and `create-pikku` starter description no longer mention Cucumber.
+- 8606fd7: Removes the dev "Sign in as …" switcher. `@pikku/react` no longer exports `useDevVirtualUsers`, `signInAsVirtualUser` or their option and result types, and `pikku cloud validate` no longer reports `app-missing-virtual-user-quick-login-<app>` for a login screen without one-click virtual user sign-in. A client app that wants one-click sign-in posts a virtual user id to `/auth/sign-in/switch-virtual-user` itself. The starter template drops the `devSwitcher` flag and the field-service example drops its switcher.
+- 6cfe3b1: `pikku cloud validate` is merged into `pikku validate`, which gains `--skip-typecheck`, `--skip-deploy-checks` and `--migrations-base`. The deploy-readiness checks run as a `project-checks` entry in the validate registry; the checks that need a Pikku Studio Cloud project (migration drift against the deployed stages, and the project-link findings) are passed in as a `projectChecks` hook, and a hook that throws becomes a `project-checks-skipped` finding — an info for `pikku validate`, an error for a deploy. The skills and knowledge notes now say `pikku validate`.
+- 33b102d: Virtual users now have one name everywhere. The id column of `virtual_user_run` and `virtual_user_schedule` is `virtual_user_id` (a migration renames it in place), the CLI group is `pikku virtual-user …`, and the declarations and imports live under `@pikku/core/virtual-user`. The previous names are removed with no aliases.
+
+  The default virtual user email domain is now `virtualuser.invalid`: apps that rely on the default domain get new accounts at the next provisioning (`pikku virtual-user sync`, deploy, or `pikku dev` start), and the old rows stay unused.
+
+  The sign-in surface carries the same name. The route is `/sign-in/virtual-user`, the environment variables are `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN` and the `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` / `VITE_*` equivalents, the Better Auth plugin is `pikkuVirtualUser`, the scenario step option and wire member are `virtualUser` and `virtualUsers`, and the Better Auth user flag column is `virtual_user`. Rename the environment variables wherever you set them, and add a migration that renames the flag column on the `user` table. Nothing is aliased.
+
+  The conversation runner is now `@pikku/core/virtual-user/conversation`, replacing the old `-flow` subpath. Update the import; the old subpath is gone.
+
+- a084c3b: Virtual users sign themselves in. A scheduled run signs in from inside the app through a server-only Better Auth endpoint, then drives the app over HTTP with the cookie. Outside callers (`pikku dev`, `pikku scenario run`, `pikku virtual-user run` and `rpc`, `pikku pages screenshot --as`, the Playwright provider) present one signed, short-lived, single-use EdDSA statement, which the app checks against `VIRTUAL_USER_VERIFY_KEY`; `pikku dev` generates the key pair, and a deployed stage's deployer holds `VIRTUAL_USER_SIGNING_KEY`. `@pikku/jose` gains `JoseVirtualUserStatementVerifier` and `@pikku/better-auth` takes `verifyKey`. Removed with no aliases: the operator token and `OperatorSignIn`, derived per-virtual-user secrets, `SCENARIO_VIRTUAL_USER_SECRET`, `PIKKU_VIRTUAL_USER_SECRETS`, `pikku virtual-user secret`, and `wireVirtualUserSignIn`. In production neither sign-in endpoint is registered.
+
+  The scenario cookie jar moved to `services` and `createCookieJar` is exported from `@pikku/core/virtual-user`, which removes the wire-to-wire import cycles; `VirtualUserSignIn.headers` is now optional.
+
+  Migration for apps: pass `verifyKey: await variables.get('VIRTUAL_USER_VERIFY_KEY')` to `pikkuVirtualUser` instead of `secret`, declare that variable as optional, delete any `SCENARIO_VIRTUAL_USER_SECRET` secret and any `wireVirtualUserSignIn` call, and stop passing `secret` or `operator` to `createHttpVirtualUsers`. A stage that must run scenarios still opts in with `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN`.
+
+- Updated dependencies [7a89580]
+- Updated dependencies [bf9bb86]
+- Updated dependencies [fdcc821]
+- Updated dependencies [9e9bfd3]
+- Updated dependencies [88c7d37]
+- Updated dependencies [6a0d4d3]
+- Updated dependencies [6cfe3b1]
+- Updated dependencies [33b102d]
+- Updated dependencies [6a25c70]
+- Updated dependencies [a084c3b]
+  - @pikku/addon-changes-cli@0.12.1
+  - @pikku/addon-cloud-cli@0.12.1
+  - @pikku/skills@0.12.55
+  - @pikku/core@0.12.142
+  - @pikku/better-auth@0.12.56
+  - @pikku/playwright@0.12.88
+  - @pikku/inspector@0.12.106
+  - @pikku/knowledge@0.12.20
+  - @pikku/kysely@0.13.37
+  - @pikku/code-edit@0.12.7
+  - @pikku/deploy-cloudflare@0.12.21
+
 ## 0.12.186
 
 ### Patch Changes

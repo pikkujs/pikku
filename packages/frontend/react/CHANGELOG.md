@@ -1,5 +1,18 @@
 # @pikku/react
 
+## 0.12.16
+
+### Patch Changes
+
+- 8606fd7: Removes the dev "Sign in as …" switcher. `@pikku/react` no longer exports `useDevVirtualUsers`, `signInAsVirtualUser` or their option and result types, and `pikku cloud validate` no longer reports `app-missing-virtual-user-quick-login-<app>` for a login screen without one-click virtual user sign-in. A client app that wants one-click sign-in posts a virtual user id to `/auth/sign-in/switch-virtual-user` itself. The starter template drops the `devSwitcher` flag and the field-service example drops its switcher.
+- 33b102d: Virtual users now have one name everywhere. The id column of `virtual_user_run` and `virtual_user_schedule` is `virtual_user_id` (a migration renames it in place), the CLI group is `pikku virtual-user …`, and the declarations and imports live under `@pikku/core/virtual-user`. The previous names are removed with no aliases.
+
+  The default virtual user email domain is now `virtualuser.invalid`: apps that rely on the default domain get new accounts at the next provisioning (`pikku virtual-user sync`, deploy, or `pikku dev` start), and the old rows stay unused.
+
+  The sign-in surface carries the same name. The route is `/sign-in/virtual-user`, the environment variables are `PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN` and the `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` / `VITE_*` equivalents, the Better Auth plugin is `pikkuVirtualUser`, the scenario step option and wire member are `virtualUser` and `virtualUsers`, and the Better Auth user flag column is `virtual_user`. Rename the environment variables wherever you set them, and add a migration that renames the flag column on the `user` table. Nothing is aliased.
+
+  The conversation runner is now `@pikku/core/virtual-user/conversation`, replacing the old `-flow` subpath. Update the import; the old subpath is gone.
+
 ## 0.12.15
 
 ### Patch Changes
