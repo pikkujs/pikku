@@ -7,7 +7,7 @@ tags: workflow
 
 # Scenario sessions are isolated per virtual user and reset between scenarios
 
-`createCookieJar` in `scenario-cookie-jar.ts` holds its `Map` as a closure
+`createCookieJar` in `services/scenario-cookie-jar.ts` holds its `Map` as a closure
 local, so two jars can never share a session. That is precisely what lets one
 scenario sign in as several people without one of them inheriting another's
 session. Every response is read, not just the sign-in, so a cookie the target

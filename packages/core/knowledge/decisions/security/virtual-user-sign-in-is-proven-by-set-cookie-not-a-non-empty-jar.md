@@ -1,16 +1,18 @@
 ---
 type: decision
 title: Virtual user sign-in is proven by Set-Cookie, not a non-empty jar
-description: HttpScenarioVirtualUser tracks its own signedIn flag and requires the sign-in response itself to set a cookie, because a populated jar proves nothing
+description: HttpVirtualUser tracks its own signedIn flag and both VirtualUserSignIn implementations require the sign-in response itself to set a cookie, because a populated jar proves nothing
 tags: services
 ---
 
 # Virtual user sign-in is proven by Set-Cookie, not a non-empty jar
 
-`HttpScenarioVirtualUser` (`packages/core/src/services/http-virtual-users.ts`) keeps
-a private `signedIn` boolean rather than inferring the session from its cookie
-jar, and `login()` throws when the sign-in response carries no `Set-Cookie`
-header even though the response was a 2xx.
+`HttpVirtualUser` (`packages/core/src/services/http-virtual-users.ts`) keeps a
+private `signedIn` boolean rather than inferring the session from its cookie
+jar. Both `VirtualUserSignIn` implementations in
+`packages/core/src/services/virtual-user-sign-in.ts` — `statementSignIn` and
+`inProcessSignIn` — throw when the sign-in response carries no `Set-Cookie`
+header, even though the response was a 2xx.
 
 A cookie jar cannot answer "did sign-in happen". A target app may set a cookie on
 any request — a CSRF token, an anonymous session, a locale — so a non-empty jar

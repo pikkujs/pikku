@@ -1,27 +1,31 @@
 ---
 type: decision
-title: Scenario agent calls sign in on 401 only
-description: postAgent sends the first request with whatever session it holds and logs in only if refused, so a virtual user can converse with a no-auth agent with no sign-in wiring
+title: Scenario agent calls retry sign-in only on 401
+description: HttpVirtualUser.sendAgent sends with whatever session the jar holds and signs in only after a 401, so a no-auth agent route never needs a sign-in; converse signs in eagerly instead
 tags: services
 ---
 
-# Scenario agent calls sign in on 401 only
+# Scenario agent calls retry sign-in only on 401
 
-`HttpScenarioVirtualUser.postAgent`
-(`packages/core/src/services/http-virtual-users.ts`) sends its first request
-with whatever cookie the jar happens to hold — none, for a virtual user that has never
-signed in — and only a 401 triggers `login()` and a single retry. Its sibling
-`invokeRaw` does the opposite: it signs in eagerly before the first RPC.
+`HttpVirtualUser.sendAgent` (`packages/core/src/services/http-virtual-users.ts`)
+sends its request with whatever cookie the jar holds. Only a 401 triggers
+`signOut()`, `login()` and a single retry. The agent calls that go through it
+are the stream and approve paths and `postAgent`. Its sibling `invokeRaw` does
+the opposite: it signs in eagerly before the first RPC.
 
-The asymmetry is deliberate. Agent HTTP routes may be public; RPC routes are
-assumed not to be. Making agent calls eager would mean a virtual user could not talk to
-a no-auth agent at all without a sign-in endpoint, a virtual user secret and a user
-table — a large amount of wiring to exercise an agent that requires none of it.
-Deferring to the 401 keeps the authenticated case working (the retry succeeds
-with the session attached) at the cost of one extra round trip the first time.
+`HttpVirtualUser.converse` does not rely on that path. Before its first turn it
+calls `login()` when `signedIn` is false. The reason is in the code comment
+there: a public agent route never returns 401, so the retry would never sign
+the virtual user in, and a virtual user is a real account, so conversing as
+nobody is not the intent. See
+[a virtual user's converse signs in before its first turn](a-virtual-user-converse-signs-in-before-its-first-turn.md).
 
-**What this rules out:** unifying the two paths so `postAgent` signs in up front
-"like `invokeRaw` does", and removing the 401 retry on the grounds that
-`invokeRaw` already guarantees a session. Note the ordering consequence: a virtual user
-whose first action is `converse` against a no-auth agent never signs in at all, so
-nothing else may assume `signedIn` is true after a conversation.
+The 401 path exists because agent HTTP routes may be public; RPC routes are
+assumed not to be. Making every agent call eager would mean a virtual user could
+not reach a no-auth agent without a sign-in endpoint and credentials. Deferring
+to the 401 keeps the authenticated case working (the retry succeeds with the
+session attached) at the cost of one extra round trip the first time.
+
+**What this rules out:** removing the 401 retry from `sendAgent` on the grounds
+that a sign-in always happens first, and making `sendAgent` sign in up front
+"like `invokeRaw` does" without first checking what the agent route requires.

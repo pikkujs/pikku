@@ -13,11 +13,16 @@ The field is gone. `PikkuScaffoldFeature` is now `boolean | { path?: string }`:
 whether the surface is generated, and where the file goes.
 
 The field was a second gate in front of one that already runs. `resolveSession`
-in `packages/core/src/function/function-runner.ts` throws `ForbiddenError` for a
-`pikkuFunc` with no session, unconditionally; a `pikkuSessionlessFunc` requires
-one when its own `auth: true` says so, when its wiring says so, or when
-`resolveAddonAuth` does. That is where authentication is decided, per function,
-by whoever wrote it. A config flag three directories away could only be coarser
+in `packages/core/src/function/function-runner.ts` (line 64) only loads a stored
+session; it throws nothing. The refusal is in `executeFunction`: a `pikkuFunc`
+with no session throws `MissingSessionError` (line 402, class at
+`packages/core/src/errors/errors.ts:36`), unconditionally. A
+`pikkuSessionlessFunc` throws the same error (line 392) only when its own
+`auth: true` says so, when its wiring says so, or when `resolveAddonAuth` does. That is where authentication is decided, per function,
+by whoever wrote it. Neither refusal is a `ForbiddenError`: both throw `MissingSessionError`
+(`function-runner.ts:392`, `:402`; class at `packages/core/src/errors/errors.ts:36`). The split between
+that error, `MissingScopeError` and `ForbiddenError` is recorded in
+[a call without a session raises MissingSessionError](./a-call-without-a-session-raises-missing-session-not-forbidden.md). A config flag three directories away could only be coarser
 than that, and being coarser was the whole problem the earlier decision was
 trying to work around by defaulting it closed.
 
