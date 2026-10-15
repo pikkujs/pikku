@@ -1,7 +1,7 @@
-import { describe, test } from 'node:test'
+import { after, describe, test } from 'node:test'
 import assert from 'node:assert'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -29,17 +29,35 @@ const commit = async (cwd: string, file: string) => {
   run(cwd, 'commit', '-m', file)
 }
 
-/** A clone of a bare remote, with `main` pushed and tracking. */
-const makeRepo = async () => {
-  const root = await mkdtemp(join(tmpdir(), 'pikku-deploy-safety-'))
+const buildTemplate = async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pikku-deploy-safety-template-'))
   const remote = join(root, 'remote.git')
   const work = join(root, 'work')
   run(root, 'init', '--bare', '-b', 'main', remote)
+  run(remote, 'config', 'maintenance.auto', 'false')
   run(root, 'clone', remote, work)
+  run(work, 'remote', 'set-url', 'origin', '../remote.git')
+  run(work, 'config', 'maintenance.auto', 'false')
   run(work, 'checkout', '-b', 'main')
   await commit(work, 'a.txt')
   run(work, 'push', '-u', 'origin', 'main')
-  return { work }
+  return root
+}
+
+// Built once and copied per test (#2108); the relative origin URL keeps each
+// copy pointed at its own remote, and with auto-maintenance off no detached git
+// is still writing the template while it is copied.
+let template: Promise<string> | undefined
+after(async () => {
+  if (template) await rm(await template, { recursive: true, force: true })
+})
+
+/** A clone of a bare remote, with `main` pushed and tracking. */
+const makeRepo = async () => {
+  template ??= buildTemplate()
+  const root = await mkdtemp(join(tmpdir(), 'pikku-deploy-safety-'))
+  await cp(await template, root, { recursive: true })
+  return { work: join(root, 'work') }
 }
 
 const refusal = (message: RegExp) => (error: unknown) => {

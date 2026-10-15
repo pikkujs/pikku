@@ -1,7 +1,8 @@
-import { describe, test, beforeEach, afterEach } from 'node:test'
+import { describe, test, before, beforeEach, after, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import {
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +14,7 @@ import { join } from 'node:path'
 import { envWithoutInheritedRepo } from '../../utils/git.js'
 import { pikkuReleaseInit, pikkuReleasePrepare } from './release.js'
 
+let template: string
 let root: string
 let app: string
 let remote: string
@@ -66,15 +68,19 @@ const ship = async (input: unknown = {}) => {
 const version = () =>
   JSON.parse(readFileSync(join(app, 'package.json'), 'utf-8')).version
 
-beforeEach(async () => {
-  root = mkdtempSync(join(tmpdir(), 'pikku-release-'))
-  remote = join(root, 'remote.git')
-  app = join(root, 'app')
-  sh(root, 'init', '-q', '--bare', remote)
-  sh(root, 'init', '-q', '-b', 'staging', app)
+// Built once and copied per test (#2108): the origin URL is relative, so each
+// copy pushes to its own remote, and with auto-maintenance off no detached git
+// is still writing the template while it is copied.
+before(async () => {
+  template = mkdtempSync(join(tmpdir(), 'pikku-release-template-'))
+  app = join(template, 'app')
+  sh(template, 'init', '-q', '--bare', 'remote.git')
+  sh(join(template, 'remote.git'), 'config', 'maintenance.auto', 'false')
+  sh(template, 'init', '-q', '-b', 'staging', app)
   sh(app, 'config', 'user.email', 'dev@example.com')
   sh(app, 'config', 'user.name', 'dev')
-  sh(app, 'remote', 'add', 'origin', remote)
+  sh(app, 'config', 'maintenance.auto', 'false')
+  sh(app, 'remote', 'add', 'origin', '../remote.git')
   writeFileSync(
     join(app, 'package.json'),
     '{\n  "name": "app",\n  "version": "0.1.0"\n}\n'
@@ -84,6 +90,15 @@ beforeEach(async () => {
   sh(app, 'add', '.')
   sh(app, 'commit', '-q', '-m', 'init')
   sh(app, 'push', '-q', 'origin', 'HEAD:refs/heads/staging')
+})
+
+after(() => rmSync(template, { recursive: true, force: true }))
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), 'pikku-release-'))
+  cpSync(template, root, { recursive: true })
+  remote = join(root, 'remote.git')
+  app = join(root, 'app')
 })
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))

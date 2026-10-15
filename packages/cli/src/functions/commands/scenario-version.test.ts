@@ -1,8 +1,9 @@
-import { describe, test } from 'node:test'
+import { after, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtempSync, writeFileSync } from 'node:fs'
+import { cp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -49,11 +50,21 @@ const execFileAsync = promisify(execFile)
  * a `gpg` that wants a passphrase, or a prompt reading the terminal it was
  * handed. `timeout` is the backstop — a fixture that cannot make a commit
  * should say so with git's own words, not run out the test's clock.
+ * `maintenance.auto=false` because the committed repo is copied per test, and
+ * a detached `git maintenance` still writing it would race the copy.
  */
 const git = async (cwd: string, ...args: string[]) => {
   const { stdout } = await execFileAsync(
     'git',
-    ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args],
+    [
+      '-c',
+      'core.hooksPath=/dev/null',
+      '-c',
+      'commit.gpgsign=false',
+      '-c',
+      'maintenance.auto=false',
+      ...args,
+    ],
     {
       cwd,
       encoding: 'utf8',
@@ -71,7 +82,7 @@ const git = async (cwd: string, ...args: string[]) => {
   return stdout.trim()
 }
 
-const repo = async (commits: boolean) => {
+const build = async (commits: boolean) => {
   const dir = mkdtempSync(join(tmpdir(), 'scenario-version-'))
   await git(dir, 'init', '-q', '-b', 'main')
   if (commits) {
@@ -79,6 +90,20 @@ const repo = async (commits: boolean) => {
     await git(dir, 'add', 'a.txt')
     await git(dir, 'commit', '-qm', 'one')
   }
+  return dir
+}
+
+// The committed repo is built once and copied per test (#2108).
+let committed: Promise<string> | undefined
+after(async () => {
+  if (committed) await rm(await committed, { recursive: true, force: true })
+})
+
+const repo = async (commits: boolean) => {
+  if (!commits) return build(false)
+  committed ??= build(true)
+  const dir = mkdtempSync(join(tmpdir(), 'scenario-version-'))
+  await cp(await committed, dir, { recursive: true })
   return dir
 }
 

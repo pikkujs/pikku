@@ -1,7 +1,7 @@
-import { describe, test } from 'node:test'
+import { after, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
+import { cp, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { envWithoutInheritedRepo } from '@pikku/cli/addon-support'
@@ -11,20 +11,35 @@ import {
   writeConfigProjectId,
 } from './project-id.js'
 
+const git = (dir: string, ...args: string[]) =>
+  execFileSync('git', args, {
+    cwd: dir,
+    env: envWithoutInheritedRepo(),
+    stdio: 'ignore',
+  })
+
+// The configured, empty repo is built once and copied per test (#2108).
+let template: Promise<string> | undefined
+after(async () => {
+  if (template) await rm(await template, { recursive: true, force: true })
+})
+
+const buildTemplate = async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'project-id-template-'))
+  git(dir, 'init', '-q')
+  git(dir, 'config', 'user.email', 't@t.t')
+  git(dir, 'config', 'user.name', 't')
+  git(dir, 'config', 'maintenance.auto', 'false')
+  return dir
+}
+
 const repo = async (config: string) => {
+  template ??= buildTemplate()
   const dir = await mkdtemp(join(tmpdir(), 'project-id-'))
-  const run = (...args: string[]) =>
-    execFileSync('git', args, {
-      cwd: dir,
-      env: envWithoutInheritedRepo(),
-      stdio: 'ignore',
-    })
-  run('init', '-q')
-  run('config', 'user.email', 't@t.t')
-  run('config', 'user.name', 't')
+  await cp(await template, dir, { recursive: true })
   await writeFile(join(dir, 'pikku.config.json'), config)
-  run('add', '.')
-  run('commit', '-qm', 'init')
+  git(dir, 'add', '.')
+  git(dir, 'commit', '-qm', 'init')
   return dir
 }
 
