@@ -30,6 +30,7 @@ import type {
   ChangesRPC,
 } from './types.js'
 import { assertDependencies } from './change-order.js'
+import { pickableStatus, type BoardStatus } from './changes-board.js'
 import {
   inferSpecialist,
   isSpecialist,
@@ -43,10 +44,18 @@ const STORE_FILE = 'pikku-changes.json'
 export type Routing = {
   specialist?: Specialist
   dependsOn?: string[]
-  backlog?: boolean
 }
 
-type Change = ListChangesOutput['changes'][number] & Routing
+type Filing = { backlog?: boolean }
+
+export const ASK_KINDS = ['question', 'visual'] as const
+export type AskKind = (typeof ASK_KINDS)[number]
+export type Ask = { kind: AskKind; askedBy: string; askedAt: Date }
+
+type Change = Omit<ListChangesOutput['changes'][number], 'status'> &
+  Routing & { status: BoardStatus; ask?: Ask }
+
+export type Move = 'backlog' | 'ready' | 'in_progress'
 
 export type Declaration = {
   creates: string[]
@@ -58,7 +67,7 @@ export type Declaration = {
 type Group = ListChangesOutput['groups'][number] & Partial<Declaration>
 type Message = GetChangeOutput['thread'][number]
 
-type Store = {
+export type Store = {
   nextShortId: number
   changes: Change[]
   groups: Group[]
@@ -68,8 +77,9 @@ type Store = {
 type LocalMap = {
   listChanges: [ListChangesInput, ListChangesOutput]
   getChange: [GetChangeInput, GetChangeOutput]
-  createChange: [CreateChangeInput & Routing, CreateChangeOutput]
+  createChange: [CreateChangeInput & Routing & Filing, CreateChangeOutput]
   updateChange: [{ changeId: string } & Routing, { change: Change }]
+  moveChange: [{ changeId: string; to: Move }, { change: Change }]
   claimChanges: [ClaimChangesInput, ClaimChangesOutput]
   completeChange: [CompleteChangeInput, CompleteChangeOutput]
   askChangeQuestion: [AskChangeQuestionInput, AskChangeQuestionOutput]
@@ -85,6 +95,7 @@ const DATES = new Set([
   'resolvedAt',
   'acknowledgedAt',
   'heldUntil',
+  'askedAt',
 ])
 
 class LocalChangesError extends Error {
@@ -108,10 +119,28 @@ export async function localStorePath(cwd = process.cwd()): Promise<string> {
   return join(isAbsolute(dir) ? dir : join(cwd, dir), STORE_FILE)
 }
 
+/**
+ * Older stores kept `open` and `claimed` as statuses and `backlog` as a flag.
+ * The status is now the board column and a claim lives on the group alone.
+ */
+export function migrate(store: Store): Store {
+  for (const change of store.changes) {
+    const old = change as { status: string; backlog?: boolean; ask?: Ask }
+    if (old.status === 'open' || old.status === 'claimed') old.status = 'ready'
+    if (old.backlog === true) old.status = 'backlog'
+    delete old.backlog
+    if (old.status === 'needs_answer' && !old.ask)
+      old.ask = { kind: 'question', askedBy: 'agent', askedAt: new Date() }
+  }
+  return store
+}
+
 async function read(path: string): Promise<Store> {
   try {
-    return JSON.parse(await readFile(path, 'utf8'), (key, value) =>
-      DATES.has(key) && typeof value === 'string' ? new Date(value) : value
+    return migrate(
+      JSON.parse(await readFile(path, 'utf8'), (key, value) =>
+        DATES.has(key) && typeof value === 'string' ? new Date(value) : value
+      )
     )
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
@@ -238,13 +267,18 @@ function message(
   return entry
 }
 
+function park(change: Change, kind: AskKind, askedBy: string): void {
+  change.status = 'needs_answer'
+  change.ask = { kind, askedBy, askedAt: new Date() }
+}
+
 const handlers: {
-  [N in keyof LocalMap]: (store: Store, data: LocalMap[N][0]) => LocalMap[N][1]
+  [N in keyof LocalMap]: (store: Store, data: LocalMap[N][0]) => unknown
 } = {
   listChanges: (store, input) => {
     const changes = store.changes.filter(
       (c) =>
-        (!input.status || input.status.includes(c.status)) &&
+        (!input.status || (input.status as string[]).includes(c.status)) &&
         (!input.groupId || c.groupId === input.groupId) &&
         (input.includeDone || (c.status !== 'done' && c.status !== 'dismissed'))
     )
@@ -277,14 +311,13 @@ const handlers: {
       changeId,
       specialist: tag(input.specialist, input.title, input.body),
       dependsOn,
-      backlog: input.backlog === true,
       shortId: String(store.nextShortId++),
       projectId: LOCAL_PROJECT_ID,
       stageId: LOCAL_STAGE_ID,
       groupId: null,
       title: input.title,
       body: input.body ?? null,
-      status: 'open',
+      status: input.backlog === true ? 'backlog' : 'ready',
       source: 'console',
       requestedBranch: input.requestedBranch ?? null,
       route: input.route ?? null,
@@ -315,7 +348,29 @@ const handlers: {
       change.specialist = tag(input.specialist, change.title, change.body)
     if (input.dependsOn !== undefined)
       change.dependsOn = dependencies(store, change.changeId, input.dependsOn)
-    if (input.backlog !== undefined) change.backlog = input.backlog
+    return { change }
+  },
+
+  moveChange: (store, input) => {
+    const change = find(store, input.changeId)
+    const ref = `#${change.shortId}`
+    if (change.status === 'done' || change.status === 'dismissed')
+      throw new LocalChangesError(`${ref} is ${change.status}`, 409)
+    if (input.to === 'in_progress') {
+      if (change.status === 'backlog')
+        throw new LocalChangesError(
+          `${ref} is in the backlog; run \`pikku changes ready ${change.shortId}\` first`,
+          409
+        )
+    } else if (input.to === 'ready') {
+      if (change.status !== 'backlog' && change.status !== 'ready')
+        throw new LocalChangesError(
+          `${ref} is ${change.status}; only a backlog change can be made ready`,
+          409
+        )
+    }
+    change.status = input.to
+    delete change.ask
     return { change }
   },
 
@@ -323,28 +378,32 @@ const handlers: {
     const now = new Date()
     const wanted = input.changeIds?.length
       ? input.changeIds.map((ref) => find(store, ref))
-      : store.changes.filter((c) => c.status === 'open' && !c.backlog)
-    const shelved = wanted.filter((c) => c.backlog)
+      : store.changes.filter(
+          (c) =>
+            pickableStatus(c.status) &&
+            (c.groupId === input.groupId || !leaseLive(store, c, now))
+        )
+    const shelved = wanted.filter((c) => c.status === 'backlog')
     if (shelved.length)
       throw new LocalChangesError(
         shelved
           .map(
             (c) =>
-              `#${c.shortId} is in the backlog; run \`pikku changes unbacklog ${c.shortId}\` first`
+              `#${c.shortId} is in the backlog; run \`pikku changes ready ${c.shortId}\` first`
           )
           .join('\n'),
         409
       )
     const taken = wanted.filter(
       (c) =>
-        (c.status !== 'open' && c.status !== 'claimed') ||
+        !pickableStatus(c.status) ||
         (leaseLive(store, c, now) && c.groupId !== input.groupId)
     )
     if (!wanted.length || taken.length)
       throw new LocalChangesError(
         taken.length
           ? `Already taken: ${taken.map((c) => `#${c.shortId}`).join(', ')}`
-          : 'Nothing open to claim',
+          : 'Nothing ready to claim',
         409
       )
     const existing = store.groups.find((g) => g.groupId === input.groupId)
@@ -366,16 +425,14 @@ const handlers: {
     if (clash) throw new LocalChangesError(clash, 409)
     store.groups = store.groups.filter((g) => g.groupId !== group.groupId)
     store.groups.push(group)
-    for (const change of wanted) {
-      change.groupId = group.groupId
-      change.status = 'claimed'
-    }
+    for (const change of wanted) change.groupId = group.groupId
     return { group, changes: wanted }
   },
 
   completeChange: (store, input) => {
     const change = find(store, input.changeId)
     change.status = 'done'
+    delete change.ask
     change.branch = input.branch ?? null
     change.headCommit = input.headCommit ?? null
     change.resolvedAt = new Date()
@@ -386,7 +443,7 @@ const handlers: {
 
   askChangeQuestion: (store, input) => {
     const change = find(store, input.changeId)
-    change.status = 'needs_answer'
+    park(change, 'question', input.authorName)
     return {
       message: message(
         store,
@@ -401,6 +458,10 @@ const handlers: {
 
   replyToChange: (store, input) => {
     const change = find(store, input.changeId)
+    if (change.status === 'needs_answer') {
+      change.status = 'in_progress'
+      delete change.ask
+    }
     return {
       message: message(store, change, 'agent', input.authorName, input.body),
     }
@@ -408,6 +469,7 @@ const handlers: {
 
   attachChangeShot: (store, input) => {
     const change = find(store, input.changeId)
+    park(change, 'visual', input.authorName)
     return {
       message: message(store, change, 'agent', input.authorName, input.label),
       key: '',

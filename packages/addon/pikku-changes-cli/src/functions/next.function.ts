@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import type { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { changesContext } from '../lib/context.js'
+import { board, statuses } from '../lib/changes-board.js'
 import { claimable } from '../lib/changes-next.js'
 import { PreconditionError } from '@pikku/cli/addon-support'
 import { openKnowledgeGaps } from '../lib/knowledge-gaps.js'
@@ -106,13 +107,15 @@ export async function pick(
   projectId: string,
   parallel: boolean
 ): Promise<Route> {
-  const list = await rpc.invoke('listChanges', {
-    projectId,
-    status: ['open', 'claimed', 'in_progress'],
-    includeDone: false,
-    pickupOnly: false,
-    limit: 200,
-  })
+  const list = board(
+    await rpc.invoke('listChanges', {
+      projectId,
+      status: statuses('ready', 'in_progress'),
+      includeDone: false,
+      pickupOnly: false,
+      limit: 200,
+    })
+  )
   const now = Date.now()
   const running = list.groups.filter(
     (g) => g.claimExpiresAt && new Date(g.claimExpiresAt).getTime() > now

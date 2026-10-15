@@ -38,10 +38,12 @@ import {
 } from './functions/changes-done.function.js'
 import {
   ChangesBacklog,
-  ChangesUnbacklog,
+  ChangesReady,
+  ChangesStart,
   renderChangesBacklog,
-  renderChangesUnbacklog,
-} from './functions/changes-backlog.function.js'
+  renderChangesReady,
+  renderChangesStart,
+} from './functions/changes-move.function.js'
 import {
   ChangesMerge,
   renderChangesMerge,
@@ -172,7 +174,7 @@ export const changesCommands = defineCLICommands({
       },
       backlog: {
         description:
-          'Track it without anyone picking it up — claim, next and wait skip it until `pikku changes unbacklog`',
+          'Track it without anyone picking it up — claim, next and wait skip it until `pikku changes ready`',
         type: 'boolean',
       },
       apiUrl: { description: 'Override the API URL for this call' },
@@ -346,21 +348,31 @@ export const changesCommands = defineCLICommands({
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
+  start: pikkuCLICommand({
+    func: ChangesStart,
+    render: renderChangesStart,
+    parameters: '<changeIds...>',
+    description:
+      'Mark ready changes in progress: the work has begun. A change left in progress whose lease lapsed is picked up again by next',
+    options: {
+      apiUrl: { description: 'Override the API URL for this call' },
+    },
+  }),
   backlog: pikkuCLICommand({
     func: ChangesBacklog,
     render: renderChangesBacklog,
     parameters: '<changeIds...>',
     description:
-      'Put changes in the backlog: still listed and tracked, never claimed or picked up by next and wait',
+      'Move changes to the backlog: still listed and tracked, never claimed or picked up by next and wait',
     options: {
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
-  unbacklog: pikkuCLICommand({
-    func: ChangesUnbacklog,
-    render: renderChangesUnbacklog,
+  ready: pikkuCLICommand({
+    func: ChangesReady,
+    render: renderChangesReady,
     parameters: '<changeIds...>',
-    description: 'Take changes out of the backlog so they can be picked up',
+    description: 'Move backlog changes to ready so they can be picked up',
     options: {
       apiUrl: { description: 'Override the API URL for this call' },
     },
