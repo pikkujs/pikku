@@ -7,7 +7,7 @@ tags: console, studio, cloud, credentials
 
 # The studio host uses the CLI's Pikku Studio Cloud token, and a linked project always routes model calls through the developer's LiteLLM key
 
-The token comes from `resolveApiContext`. It is `PIKKUSTUDIO_TOKEN` from the
+The token comes from `resolveApiContext`. It is `PIKKUSTUDIO_API_KEY` from the
 environment, or the token stored in the CLI auth file for the API URL
 (`packages/addon/pikku-cloud-cli/src/lib/config.ts:120`).
 

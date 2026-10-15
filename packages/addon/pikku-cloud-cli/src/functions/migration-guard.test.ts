@@ -24,13 +24,13 @@ const ENV_KEYS = [
   'HOME',
   'PIKKUSTUDIO_API_URL',
   'PIKKUSTUDIO_PROJECT_ID',
-  'PIKKUSTUDIO_TOKEN',
+  'PIKKUSTUDIO_API_KEY',
 ] as const
 const arranged = {
   HOME: home,
   PIKKUSTUDIO_API_URL: API_URL,
   PIKKUSTUDIO_PROJECT_ID: PROJECT_ID,
-  PIKKUSTUDIO_TOKEN: 'token',
+  PIKKUSTUDIO_API_KEY: 'token',
 }
 // Restored after every test (and after this file loads): left set, they make
 // the next test file in the same process look logged in and linked.

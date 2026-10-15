@@ -94,7 +94,7 @@ export type { LinkedProject, ProjectSource }
  *   3. the api-url of the last `login`
  *   4. hardcoded default
  *
- * Token comes from the PIKKUSTUDIO_TOKEN env var (a sandbox or CI holds no file),
+ * Token comes from the PIKKUSTUDIO_API_KEY env var (a sandbox or CI holds no file),
  * else ~/.pikkustudio/auth.json keyed by the resolved api-url. The
  * project is resolved by `resolveLinkedProject` — env, then the git
  * remote — and only when there is a token to ask cloud with.
@@ -117,7 +117,7 @@ export async function resolveApiContext(
         : [DEFAULT_API_URL, 'default']
   assertSecureApiUrl(apiUrl, apiUrlSource)
   const token =
-    process.env.PIKKUSTUDIO_TOKEN?.trim() || auth.tokens[apiUrl] || null
+    process.env.PIKKUSTUDIO_API_KEY?.trim() || auth.tokens[apiUrl] || null
 
   const project =
     opts.resolveProject === false
