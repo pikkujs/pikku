@@ -1,6 +1,4 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { changesContext } from '../../changes/context.js'
-import { openKnowledgeGaps } from '../../cloud/lib/knowledge-gaps.js'
 import { renderKnowledgeGaps } from '../knowledge/render.js'
 import {
   KnowledgeGapsInputSchema,
@@ -12,10 +10,8 @@ export const knowledgeGaps = pikkuSessionlessFunc({
     'List the knowledge notes no change builds yet — new, edited since they were built, or merged with items deferred — leaving out any already filed as a change.',
   input: KnowledgeGapsInputSchema,
   output: KnowledgeGapsOutputSchema,
-  func: async ({ config }) => {
-    const { rpc, projectId } = await changesContext(undefined)
-    return openKnowledgeGaps(config.rootDir, rpc, projectId!)
-  },
+  func: async (_services, input, { rpc }) =>
+    (rpc.invoke as any)('changes:ChangesKnowledgeGaps', input),
 })
 
 export { renderKnowledgeGaps }

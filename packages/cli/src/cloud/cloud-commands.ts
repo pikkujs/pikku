@@ -18,6 +18,7 @@
  * There is only one `wireCLI` in the pikku binary — this package contributes
  * a typed command map, nothing more.
  */
+import './lib/changes-backend.js'
 import {
   defineCLICommands,
   pikkuCLICommand,

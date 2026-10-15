@@ -10,7 +10,8 @@ import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { cloudCommands } from './cloud/cloud-commands.js'
-import { changesCommands } from './cloud/changes-commands.js'
+import { wireAddon } from '../.pikku/addon/index.js'
+import { refCLI } from '../.pikku/function/index.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { pikkuDist } from './functions/commands/dist.js'
@@ -216,6 +217,8 @@ import {
   pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
+
+wireAddon({ name: 'changes', package: '@pikku/addon-changes-cli' })
 
 wireCLI({
   program: 'pikku',
@@ -1219,7 +1222,7 @@ wireCLI({
     changes: {
       description:
         "The project's todo list: read what is open, file what was decided, claim a batch, ask what you need to know, tick items off, and route what runs next. Kept in the checkout",
-      subcommands: changesCommands,
+      subcommands: { ...refCLI('changes:changesCommands') },
     },
     validate: pikkuCLICommand({
       func: validate,
