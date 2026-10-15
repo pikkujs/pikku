@@ -78,16 +78,75 @@ const serializeChannelContract = (contract: Record<string, any>): string => {
   return `{ ${entries.join(', ')} }`
 }
 
-const serializeCliContract = (contract: Record<string, any>): string => {
-  const entries = Object.entries(contract).map(([command, value]) => {
-    const parts: string[] = [`func: ${refFunc(value.pikkuFuncId)}`]
-    if (Array.isArray(value.positionals) && value.positionals.length > 0) {
-      parts.push(`positionals: ${JSON.stringify(value.positionals)}`)
+const collectRendererPackages = (
+  commands: Record<string, any>,
+  into: Set<string>
+): void => {
+  for (const command of Object.values(commands)) {
+    if (command.renderName && command.packageName) {
+      into.add(command.packageName)
     }
-    parts.push(`options: ${JSON.stringify(value.options ?? {})}`)
-    return `${JSON.stringify(command)}: { ${parts.join(', ')} }`
-  })
+    if (command.subcommands) {
+      collectRendererPackages(command.subcommands, into)
+    }
+  }
+}
+
+const rendererAlias = (packageName: string): string =>
+  `__renderers_${packageName.replace(/[^a-zA-Z0-9]/g, '_')}`
+
+const serializeCliCommand = (value: any): string => {
+  const parts: string[] = []
+  if (value.pikkuFuncId) {
+    parts.push(`func: ${refFunc(value.pikkuFuncId)}`)
+  }
+  if (value.description) {
+    parts.push(`description: ${JSON.stringify(value.description)}`)
+  }
+  if (value.parameters) {
+    parts.push(`parameters: ${JSON.stringify(value.parameters)} as any`)
+  }
+  if (Array.isArray(value.positionals) && value.positionals.length > 0) {
+    parts.push(`positionals: ${JSON.stringify(value.positionals)}`)
+  }
+  parts.push(`options: ${JSON.stringify(value.options ?? {})}`)
+  if (value.renderName && value.packageName) {
+    parts.push(
+      `render: ${rendererAlias(value.packageName)}[${JSON.stringify(value.renderName)}]`
+    )
+  }
+  if (value.subcommands) {
+    parts.push(`subcommands: ${serializeCliCommands(value.subcommands)}`)
+  }
+  return `{ ${parts.join(', ')} }`
+}
+
+const serializeCliCommands = (commands: Record<string, any>): string => {
+  const entries = Object.entries(commands).map(
+    ([command, value]) =>
+      `${JSON.stringify(command)}: ${serializeCliCommand(value)}`
+  )
   return `{ ${entries.join(', ')} }`
+}
+
+const serializeCliContract = (contract: Record<string, any>): string =>
+  serializeCliCommands(contract)
+
+const serializeRendererImports = (
+  namespaces: Record<string, Record<string, any>>
+): string => {
+  const packages = new Set<string>()
+  for (const contracts of Object.values(namespaces)) {
+    for (const contract of Object.values(contracts)) {
+      collectRendererPackages(contract, packages)
+    }
+  }
+  return [...packages]
+    .map(
+      (packageName) =>
+        `import * as ${rendererAlias(packageName)} from '${packageName}/renderers'`
+    )
+    .join('\n')
 }
 
 const serializeMap = (
@@ -124,7 +183,10 @@ export const serializeAddonRefs = (state: AddonContracts): string => {
   )
   const cliMap = serializeMap(exported.addonCli ?? {}, serializeCliContract)
 
+  const rendererImports = serializeRendererImports(exported.addonCli ?? {})
+
   return `
+${rendererImports}
 /**
  * Addon contract references. Generated from each wired addon's published
  * contract metadata — no addon source is imported. Functions are proxied via

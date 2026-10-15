@@ -1,4 +1,6 @@
-import type { ChangesRPC } from './changes-local.js'
+import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+
+type CloudRPC = Pick<PikkuRPC, 'invoke'>
 import { CloudPreconditionError } from '../../utils/precondition-error.js'
 
 export interface ResolvedStage {
@@ -23,7 +25,7 @@ export interface ResolvedStage {
  * case this function exists to handle.
  */
 export async function resolveStage(
-  rpc: ChangesRPC,
+  rpc: CloudRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<ResolvedStage> {
@@ -52,7 +54,7 @@ export async function resolveStage(
 }
 
 export async function resolveStageId(
-  rpc: ChangesRPC,
+  rpc: CloudRPC,
   projectId: string,
   branch: string | undefined
 ): Promise<string> {
@@ -74,7 +76,7 @@ const hostOf = (value: string): string => {
  * path), or its id.
  */
 export async function matchStage(
-  rpc: ChangesRPC,
+  rpc: CloudRPC,
   projectId: string,
   ref: string
 ): Promise<ResolvedStage> {
@@ -101,7 +103,7 @@ export async function matchStage(
 }
 
 export async function autoDeployOffHints(
-  rpc: ChangesRPC,
+  rpc: CloudRPC,
   projectId: string,
   branch?: string
 ): Promise<string[]> {

@@ -253,7 +253,7 @@ ${programMeta.auth !== false ? '  onConnect: cliRequireSession,\n' : ''}  onMess
 ${Object.entries(commandMap)
   .map(([commandKey, { pikkuFuncId, isAddon, addonNamespace }]) => {
     const funcRef = isAddon
-      ? `ref('${addonNamespace ? `${addonNamespace}:${pikkuFuncId}` : pikkuFuncId}')`
+      ? `ref('${addonNamespace && !pikkuFuncId.includes(':') ? `${addonNamespace}:${pikkuFuncId}` : pikkuFuncId}')`
       : (functionFiles.get(pikkuFuncId)?.exportedName ?? pikkuFuncId)
     return `      '${commandKey}': {
         func: ${funcRef},

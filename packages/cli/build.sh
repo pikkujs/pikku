@@ -287,6 +287,32 @@ done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 echo "Building TypeScript to dist..."
 npx tsc -b || true
 
+# The pikku CLI imports the bootstrap of @pikku/addon-changes-cli at startup (it
+# wires the `changes` command group from it), and the addon is built by the CLI,
+# and it imports `@pikku/cli/addon-support`, which the tsc pass above has just
+# emitted. So the order is: CLI tsc (this tolerated pass), then the addon, then
+# the CLI's own codegen and strict tsc below, which read the addon's contract
+# metadata. On a clean checkout the addon has no dist yet, so a placeholder
+# bootstrap and a tolerated tsc pass of the addon let the CLI start long enough
+# to build it: the cloud code still in the CLI registers its changes backend
+# through `@pikku/addon-changes-cli/backend` at startup.
+_shim_dir=$(mktemp -d)
+printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
+chmod +x "$_shim_dir/pikku"
+for _addon in ../addon/pikku-changes-cli; do
+  if [ ! -f "$_addon/dist/.pikku/addon/pikku-bootstrap.gen.js" ]; then
+    mkdir -p "$_addon/dist/.pikku/addon"
+    echo "export {}" > "$_addon/dist/.pikku/addon/pikku-bootstrap.gen.js"
+  fi
+  if [ ! -f "$_addon/dist/src/backend.js" ]; then
+    (cd "$_addon" && npx tsc || true)
+  fi
+done
+for _addon in ../addon/pikku-changes-cli; do
+  echo "Building $_addon..."
+  (cd "$_addon" && PATH="$_shim_dir:$PATH" bun run build)
+done
+
 # Patch stale wireMCPTool import in compiled output (removed in current version)
 if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
   tmp=$(mktemp)
