@@ -145,10 +145,11 @@ Current status (with schemas):
 | section | online-shop | templates/functions |
 |---|---|---|
 | functions.meta / files | OK | OK |
-| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only + `TodoAssistantOutput` (agent, unported) |
+| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only |
 | http.*, queueWorkers.* | OK | OK |
 | import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK | OK |
-| schemaLookup | OK | 68/69 (agent) |
+| schemaLookup | OK | OK |
+| agents, scorers, mcpEndpoints | OK | OK |
 | schemas | 233/235, 2 order-only | 88/96, 7 order-only + agent |
 
 ## typescript-go differences
@@ -266,6 +267,12 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 
 ## Known lossy or partial pieces
 
+- **addon MCP tools.** `wireAddon({ mcp, mcpEndpoint })` tools and
+  `mcpEndpoints.surfaces` (load-addon-functions-meta.ts) wait for the
+  addWireAddon port: the stand-in does not read `mcp`. No parity project uses it.
+- **workflow helpers as MCP `func`.** `func: workflow('x')` gets a `__temp_`
+  id instead of `workflow:x` / functionType `helper`, because the shared
+  `extractFunctionName` does not port the workflow-helper case yet.
 - **addon functions.** `loadAddonFunctionsMeta` decodes addon
   `pikku-functions-meta*.gen.json` into the typed `FunctionMeta`. Fields Go has
   not typed yet are dropped. Fine for the sections above; revisit as groups
@@ -300,13 +307,9 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 | addChannel | add/add-channel.ts | 784 |
 | addGateway | add/add-gateway.ts | 143 |
 | addCLI, addCLIRenderers | add/add-cli.ts | 1029 |
-| addMCPResource | add/add-mcp-resource.ts | 175 |
-| addMCPPrompt | add/add-mcp-prompt.ts | 157 |
 | addWorkflowGraph | add/add-workflow-graph.ts | 644 |
 | addFeature | add/add-feature.ts | 293 |
-| addAgent | add/add-agent.ts | 678 |
-| addAgentScorer | add/add-agent-scorer.ts | 83 |
-| **total, wholly unported** | | **6909** |
+| **total, wholly unported** | | **5816** |
 | addMiddleware (stand-in) | add/add-middleware.ts | 944 |
 | addPermission (stand-in) | add/add-permission.ts | 311 |
 | addWireAddon (stand-in) | add/add-wire-addon.ts | 271 |
@@ -321,6 +324,7 @@ Ported:
 - add-rpc-invocations.ts (284)
 - add-keyed-wiring.ts (180), add-secret.ts, add-variable.ts and add-credential.ts (191)
 - resolve-versions.ts (235)
+- add-agent.ts (678), add-agent-scorer.ts (83), add-mcp-resource.ts (175), add-mcp-prompt.ts (157) and the MCP tool branch of add-functions.ts; fixture `testdata/agents-mcp`
 - schema-generator.ts (790)
 - load-addon-functions-meta.ts (745), functions and keyed meta only
 
