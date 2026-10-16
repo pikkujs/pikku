@@ -7,8 +7,8 @@
 // validate-exposed-functions-gated / validate-tags-resolve-to-middleware /
 // validate-single-step-workflows validators live in this package's own files;
 // contract hashes, addon schemas, the version manifest, workflow finalization,
-// getFilesAndMethods and the OpenAPI spec are finalize_b_stubs.go until their
-// ports replace it.
+// getFilesAndMethods and the OpenAPI spec are finalize_b.go and the files it
+// calls into.
 package finalize
 
 import (
@@ -42,15 +42,25 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 			validateSchemaReferences(log, st)
 		}
 
-		finalizeManifest(st, opts)
+		if err := finalizeManifest(st, opts); err != nil {
+			return err
+		}
 
-		finalizeWorkflows(st)
-		finalizeWorkflowHelperTypes(st)
-		finalizeWorkflowWires(st)
+		for _, step := range []func(*state.State) error{
+			finalizeWorkflows,
+			finalizeWorkflowHelperTypes,
+			finalizeWorkflowWires,
+		} {
+			if err := step(st); err != nil {
+				return err
+			}
+		}
 	}
 
 	startFilesAndMethods := time.Now()
-	getFilesAndMethods(st, opts)
+	if err := getFilesAndMethods(st, opts); err != nil {
+		return err
+	}
 	log.Debugf("Get files and methods completed in %sms", elapsedMs(startFilesAndMethods))
 
 	if !opts.SetupOnly {

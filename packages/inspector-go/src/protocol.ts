@@ -71,7 +71,11 @@ export interface InspectorGoStats {
   /** Files under rootDir the inspector actually swept. */
   projectFiles: number
   types: number
+  /** Type instantiations; the Go checker does not count them, so 0. */
+  instantiations: number
   symbols: number
+  /** Process CPU time (user + system), in milliseconds. */
+  cpuMs: number
   wallMs: number
   heapUsedMb: number
 }

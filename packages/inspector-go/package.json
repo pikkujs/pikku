@@ -40,7 +40,11 @@
   "dependencies": {
     "@pikku/inspector": "^0.12.106"
   },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.142"
+  },
   "devDependencies": {
+    "@pikku/core": "^0.12.142",
     "@types/node": "^24.13.3",
     "ajv": "^8.20.0",
     "tinyglobby": "^0.2.17"

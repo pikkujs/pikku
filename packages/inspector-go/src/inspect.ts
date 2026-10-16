@@ -13,6 +13,7 @@ import { findInspectorBinary } from './binary.js'
 import { runInspectorBinary } from './run-binary.js'
 import { replayDiagnostics } from './diagnostics.js'
 import { toAnalysisOptions, type InspectorGoInput } from './protocol.js'
+import { withOpenAPIErrors } from './openapi-errors.js'
 
 /**
  * `@pikku/inspector`'s `inspect`, with analysis done by the `pikku-inspect`
@@ -27,7 +28,7 @@ export const inspect = async (
   const start = performance.now()
   const input: InspectorGoInput = {
     routeFiles: routeFiles.map((file) => resolve(file)),
-    options: toAnalysisOptions(options),
+    options: withOpenAPIErrors(toAnalysisOptions(options)),
   }
   const output = await runInspectorBinary(findInspectorBinary(), input)
   replayDiagnostics(logger, output.diagnostics, output.validationPass)
@@ -45,9 +46,9 @@ export const inspect = async (
     projectFiles: output.stats.projectFiles,
     filesReused: 0,
     types: output.stats.types,
-    instantiations: 0,
+    instantiations: output.stats.instantiations ?? 0,
     symbols: output.stats.symbols,
-    cpuMs: 0,
+    cpuMs: output.stats.cpuMs ?? 0,
     wallMs: Math.round(performance.now() - start),
     heapUsedMb: output.stats.heapUsedMb,
   }

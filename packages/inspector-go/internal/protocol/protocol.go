@@ -67,13 +67,15 @@ type SchemaConfig struct {
 }
 
 type Stats struct {
-	Files        int `json:"files"`
-	ProjectFiles int `json:"projectFiles"`
-	FilesReused  int `json:"filesReused"`
-	Types        int `json:"types"`
-	Symbols      int `json:"symbols"`
-	WallMs       int `json:"wallMs"`
-	HeapUsedMb   int `json:"heapUsedMb"`
+	Files          int `json:"files"`
+	ProjectFiles   int `json:"projectFiles"`
+	FilesReused    int `json:"filesReused"`
+	Types          int `json:"types"`
+	Instantiations int `json:"instantiations"`
+	Symbols        int `json:"symbols"`
+	CpuMs          int `json:"cpuMs"`
+	WallMs         int `json:"wallMs"`
+	HeapUsedMb     int `json:"heapUsedMb"`
 }
 
 // Response is the analysis result: pre-finalize state (finalized is always
