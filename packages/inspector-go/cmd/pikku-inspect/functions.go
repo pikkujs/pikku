@@ -5,9 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -422,9 +421,72 @@ func filterVoid(names []string) []string {
 
 // --- implementationHash -----------------------------------------------------
 
+// printNode is ts.createPrinter({removeComments: true}).printNode.
+//
+// typescript-go ranks a non-null assertion at unary precedence, so it prints
+// `x!.y` as `(x!).y`; Strada treats `x!` as a left-hand-side expression and
+// never parenthesises it. The hash must stay byte-compatible with the TS
+// inspector, so those synthesised parens are recorded as they are written and
+// cut from the output.
 func printNode(n *ast.Node) string {
-	p := printer.NewPrinter(printer.PrinterOptions{RemoveComments: true}, printer.PrintHandlers{}, nil)
-	return p.Emit(n, ast.GetSourceFileOfNode(n))
+	w := &parenTrackingWriter{EmitTextWriter: printer.NewTextWriter("\n", 0), lastOpen: -1}
+	var stack []int
+	handlers := printer.PrintHandlers{
+		OnBeforeEmitNode: func(node *ast.Node) {
+			if node == nil || node.Kind != ast.KindNonNullExpression {
+				return
+			}
+			open := -1
+			if w.lastOpen == w.GetTextPos()-1 && (node.Parent == nil || node.Parent.Kind != ast.KindParenthesizedExpression) {
+				open = w.lastOpen
+			}
+			stack = append(stack, open)
+		},
+		OnAfterEmitNode: func(node *ast.Node) {
+			if node == nil || node.Kind != ast.KindNonNullExpression || len(stack) == 0 {
+				return
+			}
+			open := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			if open >= 0 {
+				w.cut = append(w.cut, open)
+				w.closeNext = true
+			}
+		},
+	}
+	p := printer.NewPrinter(printer.PrinterOptions{RemoveComments: true}, handlers, nil)
+	p.Write(n, ast.GetSourceFileOfNode(n), w, nil)
+	out := w.String()
+	if len(w.cut) == 0 {
+		return out
+	}
+	sort.Ints(w.cut)
+	var b strings.Builder
+	prev := 0
+	for _, i := range w.cut {
+		b.WriteString(out[prev:i])
+		prev = i + 1
+	}
+	b.WriteString(out[prev:])
+	return b.String()
+}
+
+type parenTrackingWriter struct {
+	printer.EmitTextWriter
+	lastOpen  int
+	closeNext bool
+	cut       []int
+}
+
+func (w *parenTrackingWriter) WritePunctuation(s string) {
+	w.EmitTextWriter.WritePunctuation(s)
+	switch {
+	case s == "(":
+		w.lastOpen = w.GetTextPos() - 1
+	case s == ")" && w.closeNext:
+		w.closeNext = false
+		w.cut = append(w.cut, w.GetTextPos()-1)
+	}
 }
 
 func implementationHash(wrapper string, handler, objectNode *ast.Node, isDirect bool) string {
@@ -449,9 +511,6 @@ func implementationHash(wrapper string, handler, objectNode *ast.Node, isDirect 
 		buf.Write(jsonValue(pair[1]))
 	}
 	buf.WriteByte('}')
-	if os.Getenv("PIKKU_DEBUG_HASH") != "" {
-		fmt.Fprintf(os.Stderr, "HASH %s\n", buf.String())
-	}
 	sum := sha256.Sum256(buf.Bytes())
 	return hex.EncodeToString(sum[:])[:16]
 }
