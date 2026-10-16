@@ -32,3 +32,9 @@ export const notLiteral = pikkuSessionlessFunc<void, void>({
   node: { displayName: 'X', category: 'Y', type: 'action' } as any,
   func: async () => {},
 })
+
+// An explicit empty tags list is kept as `tags: []`, not dropped.
+export const emptyTags = pikkuSessionlessFunc<void, void>({
+  tags: [],
+  func: async () => {},
+})

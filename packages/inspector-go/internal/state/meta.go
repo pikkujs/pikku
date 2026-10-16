@@ -90,7 +90,7 @@ type FunctionMeta struct {
 	ImplementationHash              string       `json:"implementationHash,omitempty"`
 	Version                         *int         `json:"version,omitempty"`
 	Title                           *string      `json:"title,omitempty"`
-	Tags                            []string     `json:"tags,omitempty"`
+	Tags                            []string     `json:"tags,omitzero"`
 	Summary                         *string      `json:"summary,omitempty"`
 	Description                     *string      `json:"description,omitempty"`
 	Errors                          []string     `json:"errors,omitempty"`
@@ -141,7 +141,7 @@ type HTTPRouteMeta struct {
 	Summary           *string   `json:"summary,omitempty"`
 	Description       *string   `json:"description,omitempty"`
 	Errors            []string  `json:"errors,omitempty"`
-	Tags              []string  `json:"tags,omitempty"`
+	Tags              []string  `json:"tags,omitzero"`
 	Middleware        []WireRef `json:"middleware,omitempty"`
 	Permissions       []WireRef `json:"permissions,omitempty"`
 	SSE               *bool     `json:"sse,omitempty"`
@@ -169,7 +169,7 @@ type QueueWorkerMeta struct {
 	Summary     *string   `json:"summary,omitempty"`
 	Description *string   `json:"description,omitempty"`
 	Errors      []string  `json:"errors,omitempty"`
-	Tags        []string  `json:"tags,omitempty"`
+	Tags        []string  `json:"tags,omitzero"`
 	Middleware  []WireRef `json:"middleware,omitempty"`
 }
 
