@@ -30,12 +30,7 @@ export type ExtractedFunctionName = {
   version: number | null
 }
 
-export function makeContextBasedId(
-  wiringType: string,
-  ...segments: string[]
-): string {
-  return [wiringType, ...segments].join(':')
-}
+export { makeContextBasedId } from './context-based-id.js'
 
 export function funcIdToTypeName(id: string): string {
   return id

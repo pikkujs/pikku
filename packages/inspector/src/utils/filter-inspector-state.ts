@@ -5,7 +5,7 @@ import type {
 } from '../types.js'
 import type { PikkuWiringTypes } from '@pikku/core/types'
 import { parseVersionedId } from '@pikku/core/utils'
-import { makeContextBasedId } from './extract-function-name.js'
+import { makeContextBasedId } from './context-based-id.js'
 import { aggregateRequiredServices } from './post-process.js'
 import {
   IncompatibleDeployTargetError,
