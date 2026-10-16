@@ -145,10 +145,11 @@ Current status (with schemas):
 | section | online-shop | templates/functions |
 |---|---|---|
 | functions.meta / files | OK | OK |
-| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only + `TodoAssistantOutput` (agent, unported) |
+| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only |
 | http.*, queueWorkers.* | OK | OK |
 | import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK | OK |
-| schemaLookup | OK | 68/69 (agent) |
+| schemaLookup | OK | OK |
+| agents, scorers, mcpEndpoints | OK | OK |
 | schemas | 233/235, 2 order-only | 88/96, 7 order-only + agent |
 
 ## typescript-go differences
@@ -266,6 +267,12 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 
 ## Known lossy or partial pieces
 
+- **addon MCP tools.** `wireAddon({ mcp, mcpEndpoint })` tools and
+  `mcpEndpoints.surfaces` (load-addon-functions-meta.ts) wait for the
+  addWireAddon port: the stand-in does not read `mcp`. No parity project uses it.
+- **workflow helpers as MCP `func`.** `func: workflow('x')` gets a `__temp_`
+  id instead of `workflow:x` / functionType `helper`, because the shared
+  `extractFunctionName` does not port the workflow-helper case yet.
 - **addon functions.** `loadAddonFunctionsMeta` decodes addon
   `pikku-functions-meta*.gen.json` into the typed `FunctionMeta`. Fields Go has
   not typed yet are dropped. Fine for the sections above; revisit as groups
@@ -283,30 +290,15 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 
 | group | TS file | lines |
 |---|---|---|
-| addAnalytics | add/add-analytics.ts | 217 |
-| addOutgoingWebhook | add/add-outgoing-webhook.ts | 120 |
 | addDefineScreens | add/add-define-screens.ts | 162 |
 | addWireRemoteAddon | add/add-wire-remote-addon.ts | 81 |
 | addWorkflow | add/add-workflow.ts | 481 |
-| addScope (+ applyDeclaredScopes) | add/add-scope.ts | 288 |
-| addSystemRole | add/add-system-role.ts | 162 |
-| addFeatureFlag | add/add-feature-flag.ts | 234 |
-| addVirtualUsers | add/add-virtual-users.ts | 287 |
 | addSchedule | add/add-schedule.ts | 120 |
 | addTrigger (+ validateWebhookSourceTriggers) | add/add-trigger.ts | 330 |
-| addChannel | add/add-channel.ts | 784 |
 | addGateway | add/add-gateway.ts | 143 |
-| addCLI, addCLIRenderers | add/add-cli.ts | 1029 |
-| addMCPResource | add/add-mcp-resource.ts | 175 |
-| addMCPPrompt | add/add-mcp-prompt.ts | 157 |
 | addWorkflowGraph | add/add-workflow-graph.ts | 644 |
-| addFeature | add/add-feature.ts | 293 |
-| addAgent | add/add-agent.ts | 678 |
-| addAgentScorer | add/add-agent-scorer.ts | 83 |
-| **total, wholly unported** | | **6909** |
+| **total, wholly unported** | | **1961** |
 | addWireAddon (stand-in) | add/add-wire-addon.ts | 271 |
-| secret-usage sweep | utils/extract-secret-usage.ts | 73 |
-| surface-usage sweep | utils/extract-surface-usage.ts | 121 |
 
 Ported:
 - add-functions.ts (1633)
@@ -316,6 +308,7 @@ Ported:
 - add-rpc-invocations.ts (284)
 - add-keyed-wiring.ts (180), add-secret.ts, add-variable.ts and add-credential.ts (191)
 - resolve-versions.ts (235)
+- add-agent.ts (678), add-agent-scorer.ts (83), add-mcp-resource.ts (175), add-mcp-prompt.ts (157) and the MCP tool branch of add-functions.ts; fixture `testdata/agents-mcp`
 - schema-generator.ts (790)
 - load-addon-functions-meta.ts (745), functions and keyed meta only
 - add-middleware.ts (944), add-permission.ts (311), utils/middleware.ts and
@@ -325,6 +318,12 @@ Ported:
 - add-auth.ts (357): `group_auth.go`. Its `throw` for better-auth's `admin()`
   is `panic(visit.Abort{...})`, which `analyze.Run` turns into an error.
 - add-approval-description.ts (76)
+- add-channel.ts (784), add-cli.ts (1029): `group_channel.go`, `group_cli.go`
+- add-scope.ts (288, except applyDeclaredScopes, which runs in finalize),
+  add-system-role.ts (162), add-feature-flag.ts (234), add-virtual-users.ts
+  (287), add-feature.ts (293), add-analytics.ts (217), add-outgoing-webhook.ts
+  (120), and the secret- and surface-usage sweeps (`usage_sweeps.go`);
+  addon scope trees via `scope_addon.go`; fixture `testdata/governance`
 
 The TS inspector `src/` is 33542 lines excluding tests, of which `add/` is
 23613 including its tests.

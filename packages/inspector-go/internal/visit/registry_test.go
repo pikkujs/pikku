@@ -33,7 +33,7 @@ func TestRegisteredGroups(t *testing.T) {
 		PhaseRoutes: {
 			"addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
 			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers",
-			"addFeature",
+			"addMCPResource", "addMCPPrompt", "addFeature", "addAgent", "addAgentScorer",
 		},
 	}
 	for p, names := range want {
