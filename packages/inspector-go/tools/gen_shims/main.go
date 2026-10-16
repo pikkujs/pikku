@@ -40,6 +40,8 @@ func main() {
 	packagesToShim := []string{
 		"ast",
 		"jsnum",
+		"module",
+		"parser",
 		"bundled",
 		"checker",
 		"compiler",

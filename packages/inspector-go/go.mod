@@ -9,6 +9,8 @@ replace (
 	github.com/microsoft/typescript-go/shim/compiler => ./shim/compiler
 	github.com/microsoft/typescript-go/shim/core => ./shim/core
 	github.com/microsoft/typescript-go/shim/jsnum => ./shim/jsnum
+	github.com/microsoft/typescript-go/shim/module => ./shim/module
+	github.com/microsoft/typescript-go/shim/parser => ./shim/parser
 	github.com/microsoft/typescript-go/shim/printer => ./shim/printer
 	github.com/microsoft/typescript-go/shim/scanner => ./shim/scanner
 	github.com/microsoft/typescript-go/shim/tsoptions => ./shim/tsoptions
@@ -23,6 +25,8 @@ require (
 	github.com/microsoft/typescript-go/shim/compiler v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/core v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/jsnum v0.0.0-00010101000000-000000000000
+	github.com/microsoft/typescript-go/shim/module v0.0.0-00010101000000-000000000000
+	github.com/microsoft/typescript-go/shim/parser v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/printer v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/scanner v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/tsoptions v0.0.0-00010101000000-000000000000
