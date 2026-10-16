@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.189",
+  "version": "0.12.190",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -54,7 +54,7 @@
     "@pikku/node-http-server": "^0.12.20",
     "@pikku/openapi-parser": "^0.12.23",
     "@pikku/schedule": "^0.12.9",
-    "@pikku/skills": "^0.12.56",
+    "@pikku/skills": "^0.12.57",
     "@pikku/websocket": "^0.12.5",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
