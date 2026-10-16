@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TsRunResult } from './ts-run.ts'
 
@@ -15,10 +15,19 @@ export const runTypeScript = (
   const dir = mkdtempSync(join(tmpdir(), 'pikku-parity-'))
   const outFile = join(dir, 'out.json')
   try {
-    const run = spawnSync('node', [TS_RUN, mode, projectDir, outFile], {
-      encoding: 'utf8',
-      maxBuffer: 256 * 1024 * 1024,
-    })
+    // The schema pass imports the project's sources through tsx, which reads
+    // the tsconfig in the working directory for `paths`. Run where the CLI
+    // runs, in the project, or `#pikku/*` falls back to package.json
+    // `imports` and needs a built dist/.
+    const run = spawnSync(
+      'node',
+      [TS_RUN, mode, resolve(projectDir), outFile],
+      {
+        cwd: resolve(projectDir),
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024 * 1024,
+      }
+    )
     if (run.status !== 0) {
       throw new Error(
         `ts-run ${mode} ${projectDir} exited with ${run.status}:\n${run.stderr}`
