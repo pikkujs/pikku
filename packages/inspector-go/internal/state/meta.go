@@ -113,6 +113,19 @@ type FunctionMeta struct {
 	// Inline is analysis scratch: the function was declared inline in a
 	// wiring rather than exported. Never serialized.
 	Inline bool `json:"-"`
+
+	// Verbatim, when set, is what the entry serializes as instead of the
+	// typed fields: metadata read whole from an addon's generated file, or a
+	// partial entry TS writes with only some of the keys.
+	Verbatim Raw `json:"-"`
+}
+
+func (m *FunctionMeta) MarshalJSON() ([]byte, error) {
+	if m.Verbatim != nil {
+		return m.Verbatim, nil
+	}
+	type plain FunctionMeta
+	return jsjson.Marshal((*plain)(m), "")
 }
 
 type HTTPRouteMeta struct {
@@ -136,6 +149,17 @@ type HTTPRouteMeta struct {
 	GroupBasePath     string    `json:"groupBasePath,omitempty"`
 	// Set by annotateHttpRouteAuth, a finalize step: absent after analysis.
 	RequiresSession *bool `json:"requiresSession,omitempty"`
+
+	// Verbatim: see FunctionMeta.Verbatim.
+	Verbatim Raw `json:"-"`
+}
+
+func (m *HTTPRouteMeta) MarshalJSON() ([]byte, error) {
+	if m.Verbatim != nil {
+		return m.Verbatim, nil
+	}
+	type plain HTTPRouteMeta
+	return jsjson.Marshal((*plain)(m), "")
 }
 
 type QueueWorkerMeta struct {
