@@ -68,7 +68,7 @@ func (s *Context) serializeHTTPRoutesContract(node *ast.Node) (state.Raw, bool) 
 	return out.raw(), true
 }
 
-// httpRouteMapKey is `prop.name.getText().replace(/^['"]|['"]$/g, '')`.
+// httpRouteMapKey is `prop.name.getText().replace(/^['"]|['"]$/g, ”)`.
 func httpRouteMapKey(name *ast.Node) string {
 	k := tsutil.NodeText(name)
 	if strings.HasPrefix(k, "'") || strings.HasPrefix(k, `"`) {

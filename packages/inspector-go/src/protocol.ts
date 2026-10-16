@@ -91,6 +91,18 @@ export interface InspectorGoOutput {
   state: SerializableInspectorState
   diagnostics: InspectorGoDiagnostic[]
   stats: InspectorGoStats
+  /**
+   * The diagnostics finalize logged inside its validation pass, as indices
+   * `[start, end)` into `diagnostics`. The wrapper replays the bracket as
+   * `logger.beginValidationPass()` / `endValidationPass()`. Absent when the
+   * binary ran no validation pass.
+   */
+  validationPass?: InspectorGoValidationPass
+}
+
+export interface InspectorGoValidationPass {
+  start: number
+  end: number
 }
 
 /** Projects `options` down to the fields analysis reads. */

@@ -27,6 +27,9 @@ type Options struct {
 	Tsconfig  string `json:"tsconfig,omitempty"`
 	RootDir   string `json:"rootDir,omitempty"`
 	SetupOnly bool   `json:"setupOnly,omitempty"`
+	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
+	// so checkAddonBans applies.
+	IsAddon bool `json:"isAddon,omitempty"`
 	// Types is InspectorOptions.types. Only finalize reads it; it is
 	// accepted and passed through untouched.
 	Types json.RawMessage `json:"types,omitempty"`
@@ -83,6 +86,11 @@ type Response struct {
 	State       *state.State      `json:"state"`
 	Diagnostics []diag.Diagnostic `json:"diagnostics"`
 	Stats       Stats             `json:"stats"`
+	// ValidationPass marks the diagnostics finalize logged between
+	// logger.beginValidationPass() and logger.endValidationPass(): indices
+	// [start, end) into Diagnostics. Absent when finalize did not run a
+	// validation pass (analysis only, or setupOnly).
+	ValidationPass *diag.Pass `json:"validationPass,omitempty"`
 }
 
 // ServeRequest / ServeResponse are one NDJSON line each in `serve` mode.

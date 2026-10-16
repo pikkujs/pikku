@@ -105,6 +105,44 @@ describe('replayDiagnostics', () => {
     assert.equal(logger.hasCriticalErrors(), true)
   })
 
+  test('replays the validation-pass bracket around its diagnostics', () => {
+    const calls: string[] = []
+    const logger = {
+      ...createRecordingLogger(),
+      warn: (message: string) => calls.push(`warn ${message}`),
+      beginValidationPass: () => calls.push('begin'),
+      endValidationPass: () => calls.push('end'),
+    }
+    replayDiagnostics(
+      logger,
+      [
+        { level: 'warn', message: 'analysis' },
+        { level: 'warn', message: 'validation' },
+      ],
+      { start: 1, end: 2 }
+    )
+    assert.deepEqual(calls, [
+      'warn analysis',
+      'begin',
+      'warn validation',
+      'end',
+    ])
+  })
+
+  test('an empty validation pass still opens and closes', () => {
+    const calls: string[] = []
+    replayDiagnostics(
+      {
+        ...createRecordingLogger(),
+        beginValidationPass: () => calls.push('begin'),
+        endValidationPass: () => calls.push('end'),
+      },
+      [],
+      { start: 0, end: 0 }
+    )
+    assert.deepEqual(calls, ['begin', 'end'])
+  })
+
   test('a critical without a code is a protocol violation', () => {
     assert.throws(() =>
       replayDiagnostics(createRecordingLogger(), [

@@ -31,7 +31,7 @@ export const inspect = async (
     options: withOpenAPIErrors(toAnalysisOptions(options)),
   }
   const output = await runInspectorBinary(findInspectorBinary(), input)
-  replayDiagnostics(logger, output.diagnostics)
+  replayDiagnostics(logger, output.diagnostics, output.validationPass)
 
   const state: InspectorState = {
     ...deserializeInspectorState(output.state),
