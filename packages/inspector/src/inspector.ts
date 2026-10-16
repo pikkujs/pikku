@@ -436,9 +436,11 @@ export const analyzeProgram = async (
         `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
       )
     }
-
-    state.serviceTypes = resolveServiceTypes(state, checker)
   }
+
+  // On a setup-only pass too: the CLI reads the singleton service names off
+  // a setup-only state to decide whether workflows have a workflowService.
+  state.serviceTypes = resolveServiceTypes(state, checker)
 
   const cpu = process.cpuUsage(cpuStart)
   state.stats = {

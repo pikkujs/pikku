@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode, resolveCoreType } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
@@ -67,18 +67,12 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
 
     if (hasWorkflows) {
-      const fallbackType = visitState.typesLookup
-        ? resolveCoreType(
-            visitState.typesLookup,
-            visitState.singletonServicesTypeImportMap
-          )
-        : undefined
+      // A setup-only state has no service aggregation; the inspector still
+      // resolves the SingletonServices type's keys into serviceTypes.
       const singletonServices =
         visitState.serviceAggregation.allSingletonServices.length > 0
           ? visitState.serviceAggregation.allSingletonServices
-          : (fallbackType
-              ?.getProperties()
-              .map((symbol) => symbol.getName()) ?? [])
+          : (visitState.serviceTypes?.singletonServices ?? [])
       const hasWorkflowState = singletonServices.includes('workflowService')
       if (!hasWorkflowState) {
         logger.critical(
