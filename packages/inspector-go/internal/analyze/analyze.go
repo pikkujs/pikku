@@ -43,6 +43,7 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
 	})
 
+	ctx.SweepUsage(prog.ProjectFiles)
 	ctx.Sweep(visit.PhaseSetup, prog.ProjectFiles)
 	ctx.LoadAddonFunctionsMeta()
 	if !req.Options.SetupOnly {

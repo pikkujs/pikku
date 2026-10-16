@@ -64,6 +64,9 @@ type Context struct {
 	// state.coreTypeProperties instead.
 	typesLookup map[string][]*checker.Type
 	coreTypes   []coreType
+
+	// cliConfigTypeWarned is add-cli.ts's module-level configTypeWarningShown.
+	cliConfigTypeWarned bool
 }
 
 type definition struct {
