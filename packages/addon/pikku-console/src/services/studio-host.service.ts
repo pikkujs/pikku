@@ -8,7 +8,7 @@ import {
   resolveApiContext,
   type CloudRPC,
   type ListChangesOutput,
-} from '@pikku/addon-cloud-cli/client'
+} from '@pikku/cli/cloud-client'
 
 export type StudioMode = 'local' | 'cloud'
 

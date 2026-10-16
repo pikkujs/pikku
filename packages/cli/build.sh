@@ -386,6 +386,19 @@ else
   echo "Warning: PikkuCLIConfig.schema.json not found, skipping schema copy"
 fi
 
+# The addons are private workspace packages that are never published, so the npm
+# tarball carries them itself: dist/node_modules/@pikku/<addon> sits on the
+# resolution path of every module under dist/, which is how wireAddon and the
+# `@pikku/addon-*` imports find them once @pikku/cli is installed from npm.
+echo "Bundling addons into dist/node_modules..."
+for _addon in changes cloud; do
+  _src="../addon/pikku-$_addon-cli"
+  _dest="dist/node_modules/@pikku/addon-$_addon-cli"
+  mkdir -p "$_dest"
+  cp "$_src/package.json" "$_src/LICENSE" "$_dest/"
+  cp -R "$_src/dist" "$_dest/dist"
+done
+
 # Build native CLI binaries for all platforms using bun --compile
 if command -v bun >/dev/null 2>&1; then
   echo "Building native CLI binaries..."

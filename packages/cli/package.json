@@ -38,8 +38,6 @@
     "@electric-sql/pglite-pgvector": "0.0.9",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
-    "@pikku/addon-changes-cli": "^0.12.2",
-    "@pikku/addon-cloud-cli": "^0.12.2",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/better-auth": "^0.12.56",
     "@pikku/bun-server": "^0.12.14",
@@ -88,6 +86,8 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@pikku/addon-changes-cli": "workspace:*",
+    "@pikku/addon-cloud-cli": "workspace:*",
     "@pikku/core": "^0.12.142",
     "@pikku/playwright": "^0.12.88",
     "@pikku/ws": "^0.12.10",
@@ -126,6 +126,11 @@
       "types": "./dist/src/addon-support.d.ts",
       "import": "./dist/src/addon-support.js",
       "default": "./dist/src/addon-support.js"
+    },
+    "./cloud-client": {
+      "types": "./dist/src/cloud-client.d.ts",
+      "import": "./dist/src/cloud-client.js",
+      "default": "./dist/src/cloud-client.js"
     }
   },
   "peerDependenciesMeta": {
