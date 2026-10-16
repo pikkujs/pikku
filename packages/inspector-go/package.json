@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/inspector-go"
   },
-  "description": "Go inspector engine for Pikku — runs analysis in the pikku-inspect binary and finalizes with @pikku/inspector",
+  "description": "Go inspector engine for Pikku \u2014 runs analysis in the pikku-inspect binary and finalizes with @pikku/inspector",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",
@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "ajv": "^8.20.0",
     "tinyglobby": "^0.2.17"
   },
   "engines": {

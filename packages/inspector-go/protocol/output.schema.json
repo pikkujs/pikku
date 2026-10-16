@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pikku.dev/schemas/inspector-go/protocol/1/output.json",
+  "title": "pikku-inspect --stdin output",
+  "description": "What `pikku-inspect --stdin` writes to stdout on success (exit code 0). Mirrors InspectorGoOutput in src/protocol.ts. stderr is free-form and passed through to the user.",
+  "type": "object",
+  "required": ["protocol", "finalized", "state", "diagnostics", "stats"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "description": "Protocol version. The wrapper rejects any other.",
+      "const": 1
+    },
+    "finalized": {
+      "description": "True when the binary already ran finalize; the wrapper then skips the TypeScript finalize. False while finalize is TypeScript-only.",
+      "type": "boolean"
+    },
+    "state": {
+      "description": "A SerializableInspectorState (packages/inspector/src/utils/serialize-inspector-state.ts), read with deserializeInspectorState. Pre-finalize when `finalized` is false. Sections the engine does not produce yet may be absent; the parity harness reports them as not ported.",
+      "type": "object",
+      "required": ["rootDir"],
+      "properties": {
+        "rootDir": { "type": "string" }
+      }
+    },
+    "diagnostics": {
+      "description": "Every message the TypeScript engine would have sent to its logger, in order. Replayed into the CLI logger.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/diagnostic" }
+    },
+    "stats": {
+      "type": "object",
+      "required": [
+        "files",
+        "projectFiles",
+        "types",
+        "symbols",
+        "wallMs",
+        "heapUsedMb"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "description": "Source files in the program, node_modules and lib included.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "projectFiles": {
+          "description": "Files under rootDir the inspector swept.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "types": { "type": "integer", "minimum": 0 },
+        "symbols": { "type": "integer", "minimum": 0 },
+        "wallMs": { "type": "number", "minimum": 0 },
+        "heapUsedMb": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "definitions": {
+    "diagnostic": {
+      "type": "object",
+      "required": ["level", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": ["critical", "error", "warn", "info", "debug"]
+        },
+        "code": {
+          "description": "An ErrorCode value, e.g. PKU123. A coded error or warn becomes a tracked diagnostic.",
+          "type": "string",
+          "pattern": "^PKU[0-9]+$"
+        },
+        "message": { "type": "string" }
+      },
+      "if": { "properties": { "level": { "const": "critical" } } },
+      "then": { "required": ["level", "code", "message"] }
+    }
+  }
+}

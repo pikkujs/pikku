@@ -663,6 +663,7 @@
       },
       "devDependencies": {
         "@types/node": "^24.13.3",
+        "ajv": "^8.20.0",
         "tinyglobby": "^0.2.17",
       },
     },
