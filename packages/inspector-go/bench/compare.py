@@ -1,26 +1,54 @@
-"""Per-section parity of the Go inspector bundle against the TS reference.
-usage: python3 compare.py ref.json go.json [-v]
+"""Per-section parity of the Go analysis against the TS reference.
+usage: python3 compare.py ts.json go.json [-v] [--bytes]
 
-Both files hold {functions, http, queueWorkers, typesMap}."""
-import json, sys
+Both files are {protocol, finalized, state, diagnostics, stats} as written by
+`pikku-inspect` and bench/ref-analyze.mjs. Sections are compared
+semantically (key order ignored); --bytes also reports byte-identical sections."""
+import json, re, sys
 from collections import Counter, defaultdict
 
-# Written by later TS passes the prototype does not port.
-POST = {"singletonServicesOnly"}
+TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|\w+|[^\s\w]')
+
+
+def canon(v):
+    """Order-insensitive form: typescript-go orders union members (and so the
+    keys of mapped types over them) differently from TS 6, so a type string or
+    a schema can differ only in the order of its members."""
+    if isinstance(v, str):
+        return tuple(sorted(TOKEN.findall(v)))
+    if isinstance(v, list):
+        return tuple(sorted((canon(x) for x in v), key=repr))
+    if isinstance(v, dict):
+        return tuple(sorted((k, canon(x)) for k, x in v.items()))
+    return v
+
 verbose = "-v" in sys.argv
-ref, go = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+check_bytes = "--bytes" in sys.argv
+paths = [a for a in sys.argv[1:] if not a.startswith("-")]
+ref_doc, go_doc = (json.load(open(p)) for p in paths)
+ref, go = ref_doc["state"], go_doc["state"]
+results = []
 
 
-def compare(section, r_entries, g_entries, ignore=frozenset()):
+def keyed(section, r_entries, g_entries):
     rk, gk = set(r_entries), set(g_entries)
     found = rk & gk
     present, match = Counter(), Counter()
     bad = defaultdict(list)
     whole = 0
+    order_only = 0
     for k in found:
         r, g = r_entries[k], g_entries[k]
+        if not isinstance(r, dict) or not isinstance(g, dict):
+            ok = r == g
+            present["<value>"] += 1
+            match["<value>"] += ok
+            if not ok:
+                bad["<value>"].append((k, r, g))
+            whole += ok
+            continue
         same = True
-        for f in (set(r) | set(g)) - ignore:
+        for f in set(r) | set(g):
             present[f] += 1
             if r.get(f) == g.get(f):
                 match[f] += 1
@@ -28,10 +56,12 @@ def compare(section, r_entries, g_entries, ignore=frozenset()):
                 same = False
                 bad[f].append((k, r.get(f), g.get(f)))
         whole += same
-    tp, tm = sum(present.values()), sum(match.values())
-    print(f"\n== {section}: ref={len(rk)} go={len(gk)} found={len(found)} "
-          f"identical={whole}/{len(rk)} fields={tm}/{tp}"
-          + (f" ({100*tm/tp:.1f}%)" if tp else ""))
+        if not same and canon(r) == canon(g):
+            order_only += 1
+    ok = whole == len(rk) == len(gk)
+    results.append((section, ok, whole, len(rk), order_only))
+    print(f"\n== {section}: ts={len(rk)} go={len(gk)} identical={whole}/{len(rk)}"
+          + (f" order-only={order_only}" if order_only else "") + ("" if ok else "  <-- DIFF"))
     if rk - gk:
         print("   missing in go:", sorted(rk - gk)[:12], "..." if len(rk - gk) > 12 else "")
     if gk - rk:
@@ -40,41 +70,81 @@ def compare(section, r_entries, g_entries, ignore=frozenset()):
         if verbose or match[f] != present[f]:
             print(f"   {f:30s} {match[f]:4d}/{present[f]:<4d}")
             for k, a, b in bad[f][:4]:
-                print(f"      {k}: ts={json.dumps(a)[:120]} go={json.dumps(b)[:120]}")
-    return whole, len(rk)
+                print(f"      {k}: ts={json.dumps(a)[:140]} go={json.dumps(b)[:140]}")
 
 
-rf, gf = ref["functions"], go["functions"]
-# stampAuthHandlerServices (post-processing, needs the auth-handler analysis)
-# overwrites the auth handler's services; not ported.
-for k, v in rf.items():
-    if v.get("name") == "authHandler" and k in gf:
-        gf[k] = dict(gf[k], services=v["services"])
-        print(f"note: {k}.services is stamped by stampAuthHandlerServices; excluded")
-compare("functions", rf, gf, POST)
+def pairs(v):  # Map serialized as [[k, v], ...]
+    return {k: x for k, x in v}
 
 
-def flat_http(h):
-    return {f"{m} {r}": v for m, routes in h.items() for r, v in routes.items()}
+def setof(v):
+    return {x: True for x in v}
 
 
-compare("http", flat_http(ref["http"]), flat_http(go["http"]))
-# post-process injects synthetic workflow orchestrator / step queues from the
-# workflow graphs, which the prototype does not extract.
-rq = {k: v for k, v in ref["queueWorkers"].items()
-      if not v["pikkuFuncId"].startswith("pikkuWorkflowOrchestrator:") and not k.startswith("wf-step-")}
-if len(rq) != len(ref["queueWorkers"]):
-    print(f"note: {len(ref['queueWorkers']) - len(rq)} synthetic workflow queues (post-process) excluded")
-compare("queueWorkers", rq, go["queueWorkers"])
+def http_flat(s):
+    return {f"{m} {r}": v for m, routes in s["http"]["meta"].items() for r, v in routes.items()}
 
 
-def tm(t):
-    return ({k: v for k, v in t["map"]}, {k: v for k, v in t["customTypes"]})
+def tm(s):
+    t = s["functions"]["typesMap"]
+    return {**{"map:" + k: v for k, v in t["map"]}, **{"custom:" + k: v for k, v in t["customTypes"]}}
 
 
-rm, rc = tm(ref["typesMap"])
-gm, gc = tm(go["typesMap"])
-compare("typesMap.map", rm, gm)
-compare("typesMap.customTypes", rc, gc)
-# The order matters to `exists` (first match wins); report it separately.
-print("\ntypesMap.map order identical:", [k for k, _ in ref["typesMap"]["map"]] == [k for k, _ in go["typesMap"]["map"]])
+SECTIONS = [
+    ("functions.meta", lambda s: s["functions"]["meta"]),
+    ("functions.files", lambda s: pairs(s["functions"]["files"])),
+    ("functions.typesMap", tm),
+    ("http.meta", http_flat),
+    ("http.files", lambda s: setof(s["http"]["files"])),
+    ("http.metaInputTypes", lambda s: pairs(s["http"]["metaInputTypes"])),
+    ("queueWorkers.meta", lambda s: s["queueWorkers"]["meta"]),
+    ("queueWorkers.files", lambda s: setof(s["queueWorkers"]["files"])),
+    ("rpc.internalMeta", lambda s: s["rpc"]["internalMeta"]),
+    ("rpc.internalFiles", lambda s: pairs(s["rpc"]["internalFiles"])),
+    ("rpc.exposedMeta", lambda s: s["rpc"]["exposedMeta"]),
+    ("rpc.exposedFiles", lambda s: pairs(s["rpc"]["exposedFiles"])),
+    ("rpc.invokedFunctions", lambda s: setof(s["rpc"]["invokedFunctions"])),
+    ("serviceAggregation.usedFunctions", lambda s: setof(s["serviceAggregation"]["usedFunctions"])),
+    ("serviceAggregation.usedMiddleware", lambda s: setof(s["serviceAggregation"]["usedMiddleware"])),
+    ("serviceAggregation.usedPermissions", lambda s: setof(s["serviceAggregation"]["usedPermissions"])),
+    ("singletonServicesTypeImportMap", lambda s: pairs(s["singletonServicesTypeImportMap"])),
+    ("wireServicesTypeImportMap", lambda s: pairs(s["wireServicesTypeImportMap"])),
+    ("userSessionTypeImportMap", lambda s: pairs(s["userSessionTypeImportMap"])),
+    ("configTypeImportMap", lambda s: pairs(s["configTypeImportMap"])),
+    ("singletonServicesFactories", lambda s: pairs(s["singletonServicesFactories"])),
+    ("wireServicesFactories", lambda s: pairs(s["wireServicesFactories"])),
+    ("configFactories", lambda s: pairs(s["configFactories"])),
+    ("serverLifecycleFactories", lambda s: pairs(s["serverLifecycleFactories"])),
+    ("wireServicesMeta", lambda s: pairs(s["wireServicesMeta"])),
+    ("coreTypeProperties", lambda s: s.get("coreTypeProperties", {})),
+    ("schemaLookup", lambda s: pairs(s["schemaLookup"])),
+    ("secrets.definitions", lambda s: {d["name"]: d for d in s["secrets"]["definitions"]}),
+    ("secrets.files", lambda s: setof(s["secrets"]["files"])),
+    ("credentials.definitions", lambda s: {d["name"]: d for d in s["credentials"]["definitions"]}),
+    ("variables.definitions", lambda s: {d["name"]: d for d in s["variables"]["definitions"]}),
+    ("schemas", lambda s: s["schemas"]),
+]
+only = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")]
+for name, get in SECTIONS:
+    if only and not any(name.startswith(o) for o in only):
+        continue
+    keyed(name, get(ref), get(go))
+
+rd = Counter((d["level"], d.get("code"), d["message"]) for d in ref_doc["diagnostics"])
+gd = Counter((d["level"], d.get("code"), d["message"]) for d in go_doc["diagnostics"])
+print(f"\n== diagnostics: ts={sum(rd.values())} go={sum(gd.values())} common={sum((rd & gd).values())}")
+for d in list((rd - gd).elements())[:8]:
+    print("   missing in go:", d)
+for d in list((gd - rd).elements())[:8]:
+    print("   extra in go:  ", d)
+
+if check_bytes:
+    print("\n== byte-identical top-level sections")
+    for k in ref:
+        if k in go:
+            same = json.dumps(ref[k], ensure_ascii=False, separators=(",", ":")) == json.dumps(go[k], ensure_ascii=False, separators=(",", ":"))
+            if verbose or not same:
+                print(f"   {k:34s} {'same' if same else 'differs'}")
+
+print("\nsummary:", ", ".join(
+    f"{n} {'OK' if ok else f'{w}/{t}' + (f' (+{o} order-only)' if o else '')}" for n, ok, w, t, o in results))
