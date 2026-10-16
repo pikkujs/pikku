@@ -46,7 +46,7 @@ type channelMeta struct {
 	Disconnect        *channelFuncRef       `json:"disconnect"`
 	Message           *channelFuncRef       `json:"message"`
 	MessageWirings    channelMessageWirings `json:"messageWirings"`
-	Binary            *bool                 `json:"binary,omitempty"`
+	Binary            *bool                 `json:"binary"` // getPropertyValue gives null when absent
 	Auth              *bool                 `json:"auth,omitempty"`
 	Summary           *string               `json:"summary,omitempty"`
 	Description       *string               `json:"description,omitempty"`
