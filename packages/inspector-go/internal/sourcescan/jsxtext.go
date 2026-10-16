@@ -111,7 +111,7 @@ func ReadJsxLiteralText(fileName, content string) []JsxLiteralText {
 		parent := n.Parent
 		switch {
 		case n.Kind == ast.KindJsxText:
-			add(n, n.Text())
+			add(n, n.AsJsxText().Text)
 		case n.Kind == ast.KindJsxExpression && n.Expression() != nil &&
 			parent != nil && (ast.IsJsxElement(parent) || ast.IsJsxFragment(parent)):
 			for _, literal := range rendered(n.Expression()) {

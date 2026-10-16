@@ -461,10 +461,14 @@ func (s *session) exportOrder(mod *ast.Symbol, visited map[*ast.Symbol]bool) []s
 		return nil
 	}
 	visited[mod] = true
+	// Strada's binder binds a statement list's function declarations before
+	// its other statements (bindEachFunctionsFirst), so they enter the symbol
+	// table first.
 	type positioned struct {
-		name string
-		file string
-		pos  int
+		name    string
+		file    string
+		hoisted bool
+		pos     int
 	}
 	var own []positioned
 	for name, sym := range mod.Exports {
@@ -478,12 +482,22 @@ func (s *session) exportOrder(mod *ast.Symbol, visited map[*ast.Symbol]bool) []s
 				p.file = sf.FileName()
 			}
 			p.pos = d.Pos()
+			for _, decl := range sym.Declarations {
+				if decl.Kind == ast.KindFunctionDeclaration {
+					p.hoisted = true
+					p.pos = decl.Pos()
+					break
+				}
+			}
 		}
 		own = append(own, p)
 	}
 	sort.Slice(own, func(i, j int) bool {
 		if own[i].file != own[j].file {
 			return own[i].file < own[j].file
+		}
+		if own[i].hoisted != own[j].hoisted {
+			return own[i].hoisted
 		}
 		if own[i].pos != own[j].pos {
 			return own[i].pos < own[j].pos

@@ -25,9 +25,12 @@ func Parse(fileName, content string, kind core.ScriptKind) *ast.SourceFile {
 			kind = core.ScriptKindTS
 		}
 	}
+	// typescript-go requires an absolute, normalized name; the name only
+	// labels the parse here, so a relative one is rooted at "/".
+	name := tspath.GetNormalizedAbsolutePath(fileName, "/")
 	return parser.ParseSourceFile(ast.SourceFileParseOptions{
-		FileName: fileName,
-		Path:     tspath.Path(fileName),
+		FileName: name,
+		Path:     tspath.Path(name),
 	}, content, kind)
 }
 

@@ -1,10 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
-import {
-  collectSurface,
-  type SurfaceEntrypoint,
-} from '@pikku/inspector/surface'
+import type { SurfaceEntrypoint } from '@pikku/inspector/surface'
+import { collectSurface } from '../../inspector-helpers.js'
 import {
   ENTRY_POINT_EDITORIAL,
   LEAF_EDITORIAL,
