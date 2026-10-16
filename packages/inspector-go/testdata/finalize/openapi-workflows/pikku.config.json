@@ -1,0 +1,14 @@
+{
+  "srcDirectories": ["./src"],
+  "outDir": "./.pikku",
+  "tsconfig": "./tsconfig.json",
+  "openAPI": {
+    "outputFile": ".pikku/openapi.json",
+    "additionalInfo": {
+      "info": { "title": "Fixture API", "version": "1.2.3", "description": "Finalize parity fixture" },
+      "servers": [{ "url": "https://api.example.com", "description": "prod" }],
+      "tags": [{ "name": "items", "description": "Item routes" }],
+      "externalDocs": { "url": "https://example.com/docs" }
+    }
+  }
+}

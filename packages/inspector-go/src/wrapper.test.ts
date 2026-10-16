@@ -67,7 +67,7 @@ describe('findInspectorBinary', () => {
 })
 
 describe('toAnalysisOptions', () => {
-  test('passes on only what analysis reads', () => {
+  test('passes on only what analysis and the Go finalize read', () => {
     assert.deepEqual(
       toAnalysisOptions({
         rootDir: '/p',
@@ -77,7 +77,12 @@ describe('toAnalysisOptions', () => {
         modelAliases: {},
         oldProgram: {} as any,
       } as any),
-      { rootDir: '/p', tsconfig: '/p/tsconfig.json' }
+      {
+        rootDir: '/p',
+        tsconfig: '/p/tsconfig.json',
+        openAPI: { additionalInfo: {} },
+        modelAliases: {},
+      }
     )
   })
 })
@@ -98,6 +103,44 @@ describe('replayDiagnostics', () => {
       { level: 'info', message: 'hello' },
     ])
     assert.equal(logger.hasCriticalErrors(), true)
+  })
+
+  test('replays the validation-pass bracket around its diagnostics', () => {
+    const calls: string[] = []
+    const logger = {
+      ...createRecordingLogger(),
+      warn: (message: string) => calls.push(`warn ${message}`),
+      beginValidationPass: () => calls.push('begin'),
+      endValidationPass: () => calls.push('end'),
+    }
+    replayDiagnostics(
+      logger,
+      [
+        { level: 'warn', message: 'analysis' },
+        { level: 'warn', message: 'validation' },
+      ],
+      { start: 1, end: 2 }
+    )
+    assert.deepEqual(calls, [
+      'warn analysis',
+      'begin',
+      'warn validation',
+      'end',
+    ])
+  })
+
+  test('an empty validation pass still opens and closes', () => {
+    const calls: string[] = []
+    replayDiagnostics(
+      {
+        ...createRecordingLogger(),
+        beginValidationPass: () => calls.push('begin'),
+        endValidationPass: () => calls.push('end'),
+      },
+      [],
+      { start: 0, end: 0 }
+    )
+    assert.deepEqual(calls, ['begin', 'end'])
   })
 
   test('a critical without a code is a protocol violation', () => {

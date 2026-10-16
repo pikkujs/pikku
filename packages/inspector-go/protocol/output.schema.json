@@ -51,9 +51,21 @@
           "minimum": 0
         },
         "types": { "type": "integer", "minimum": 0 },
+        "instantiations": { "type": "integer", "minimum": 0 },
         "symbols": { "type": "integer", "minimum": 0 },
+        "cpuMs": { "type": "number", "minimum": 0 },
         "wallMs": { "type": "number", "minimum": 0 },
         "heapUsedMb": { "type": "number", "minimum": 0 }
+      }
+    },
+    "validationPass": {
+      "description": "Present when the binary ran finalize's validation pass: the diagnostics logged between logger.beginValidationPass() and logger.endValidationPass(), as indices [start, end) into `diagnostics`. The wrapper replays the bracket around them.",
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
       }
     }
   },

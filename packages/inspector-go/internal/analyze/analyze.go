@@ -50,6 +50,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
 		SetupOnly:             req.Options.SetupOnly,
 		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
+		IsAddon:               req.Options.IsAddon,
 	})
 
 	ctx.SweepUsage(prog.ProjectFiles)
@@ -58,6 +59,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	if !req.Options.SetupOnly {
 		ctx.Sweep(visit.PhaseFunctions, prog.ProjectFiles)
 		ctx.Sweep(visit.PhaseRoutes, prog.ProjectFiles)
+		ctx.ValidateWebhookSourceTriggers()
 		ctx.ResolveLatestVersions()
 		if sc := req.Options.SchemaConfig; sc != nil {
 			out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)
@@ -69,6 +71,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	}
 
 	ctx.FinishCoreTypeProperties()
+	ctx.FinishServiceTypes()
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
@@ -78,13 +81,15 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 		State:       st,
 		Diagnostics: log.Entries(),
 		Stats: protocol.Stats{
-			Files:        len(req.RouteFiles),
-			ProjectFiles: len(prog.ProjectFiles),
-			FilesReused:  prog.FilesReused,
-			Types:        prog.TypeCount(),
-			Symbols:      prog.SymbolCount(),
-			WallMs:       int(time.Since(start).Milliseconds()),
-			HeapUsedMb:   int(mem.HeapAlloc >> 20),
+			Files:          len(req.RouteFiles),
+			ProjectFiles:   len(prog.ProjectFiles),
+			FilesReused:    prog.FilesReused,
+			Types:          prog.TypeCount(),
+			Instantiations: prog.InstantiationCount(),
+			Symbols:        prog.SymbolCount(),
+			CpuMs:          processCPUMs(),
+			WallMs:         int(time.Since(start).Milliseconds()),
+			HeapUsedMb:     int(mem.HeapAlloc >> 20),
 		},
 	}, nil
 }

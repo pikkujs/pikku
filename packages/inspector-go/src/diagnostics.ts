@@ -1,16 +1,24 @@
 import type { ErrorCode, InspectorLogger } from '@pikku/inspector'
-import type { InspectorGoDiagnostic } from './protocol.js'
+import type {
+  InspectorGoDiagnostic,
+  InspectorGoValidationPass,
+} from './protocol.js'
 
 /**
  * Hands the binary's messages to the logger the way the TypeScript inspector
  * would have emitted them: a coded critical, error or warn becomes a tracked
- * diagnostic, anything else a plain log line.
+ * diagnostic, anything else a plain log line. When the binary ran finalize,
+ * `validationPass` brackets the messages its validation pass logged, and the
+ * logger is told where that pass begins and ends.
  */
 export const replayDiagnostics = (
   logger: InspectorLogger,
-  diagnostics: InspectorGoDiagnostic[]
+  diagnostics: InspectorGoDiagnostic[],
+  validationPass?: InspectorGoValidationPass
 ): void => {
-  for (const { level, code, message } of diagnostics) {
+  for (const [index, { level, code, message }] of diagnostics.entries()) {
+    if (validationPass?.start === index) logger.beginValidationPass?.()
+    if (validationPass?.end === index) logger.endValidationPass?.()
     if (level === 'critical') {
       if (!code) {
         throw new Error(
@@ -22,6 +30,14 @@ export const replayDiagnostics = (
       logger.diagnostic({ severity: level, code: code as ErrorCode, message })
     } else {
       logger[level](message)
+    }
+  }
+  if (validationPass) {
+    if (validationPass.start >= diagnostics.length) {
+      logger.beginValidationPass?.()
+    }
+    if (validationPass.end >= diagnostics.length) {
+      logger.endValidationPass?.()
     }
   }
 }

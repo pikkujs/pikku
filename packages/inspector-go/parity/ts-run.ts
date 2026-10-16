@@ -35,6 +35,11 @@ export interface TsRunResult {
   /** The post-finalize state through `comparableState`. */
   post: unknown
   postDiagnostics: InspectorGoDiagnostic[]
+  /**
+   * reference only: the serialized post-finalize workflows section, which
+   * finalize parity feeds in while finalizeWorkflows is not ported.
+   */
+  postWorkflows?: SerializableInspectorState['workflows']
   /** roundtrip only: where serialize/deserialize lost or changed something. */
   serializationDiffs?: string[]
 }
@@ -76,6 +81,9 @@ if (mode === 'reference') {
     preDiagnostics,
     post: comparableState(analyzed),
     postDiagnostics: withoutDebug(logger.diagnostics),
+    postWorkflows: JSON.parse(
+      JSON.stringify(serializeInspectorState(analyzed).workflows)
+    ),
   }
 } else {
   const copy = deserializeInspectorState(structuredClone(pre))

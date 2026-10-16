@@ -90,7 +90,7 @@ type FunctionMeta struct {
 	ImplementationHash              string       `json:"implementationHash,omitempty"`
 	Version                         *int         `json:"version,omitempty"`
 	Title                           *string      `json:"title,omitempty"`
-	Tags                            []string     `json:"tags,omitempty"`
+	Tags                            []string     `json:"tags,omitzero"`
 	Summary                         *string      `json:"summary,omitempty"`
 	Description                     *string      `json:"description,omitempty"`
 	Errors                          []string     `json:"errors,omitempty"`
@@ -113,6 +113,19 @@ type FunctionMeta struct {
 	// Inline is analysis scratch: the function was declared inline in a
 	// wiring rather than exported. Never serialized.
 	Inline bool `json:"-"`
+
+	// Verbatim, when set, is what the entry serializes as instead of the
+	// typed fields: metadata read whole from an addon's generated file, or a
+	// partial entry TS writes with only some of the keys.
+	Verbatim Raw `json:"-"`
+}
+
+func (m *FunctionMeta) MarshalJSON() ([]byte, error) {
+	if m.Verbatim != nil {
+		return m.Verbatim, nil
+	}
+	type plain FunctionMeta
+	return jsjson.Marshal((*plain)(m), "")
 }
 
 type HTTPRouteMeta struct {
@@ -128,7 +141,7 @@ type HTTPRouteMeta struct {
 	Summary           *string   `json:"summary,omitempty"`
 	Description       *string   `json:"description,omitempty"`
 	Errors            []string  `json:"errors,omitempty"`
-	Tags              []string  `json:"tags,omitempty"`
+	Tags              []string  `json:"tags,omitzero"`
 	Middleware        []WireRef `json:"middleware,omitempty"`
 	Permissions       []WireRef `json:"permissions,omitempty"`
 	SSE               *bool     `json:"sse,omitempty"`
@@ -136,6 +149,17 @@ type HTTPRouteMeta struct {
 	GroupBasePath     string    `json:"groupBasePath,omitempty"`
 	// Set by annotateHttpRouteAuth, a finalize step: absent after analysis.
 	RequiresSession *bool `json:"requiresSession,omitempty"`
+
+	// Verbatim: see FunctionMeta.Verbatim.
+	Verbatim Raw `json:"-"`
+}
+
+func (m *HTTPRouteMeta) MarshalJSON() ([]byte, error) {
+	if m.Verbatim != nil {
+		return m.Verbatim, nil
+	}
+	type plain HTTPRouteMeta
+	return jsjson.Marshal((*plain)(m), "")
 }
 
 type QueueWorkerMeta struct {
@@ -145,7 +169,7 @@ type QueueWorkerMeta struct {
 	Summary     *string   `json:"summary,omitempty"`
 	Description *string   `json:"description,omitempty"`
 	Errors      []string  `json:"errors,omitempty"`
-	Tags        []string  `json:"tags,omitempty"`
+	Tags        []string  `json:"tags,omitzero"`
 	Middleware  []WireRef `json:"middleware,omitempty"`
 }
 

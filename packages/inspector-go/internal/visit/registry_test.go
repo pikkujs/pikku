@@ -26,13 +26,14 @@ func TestRegisteredGroups(t *testing.T) {
 			"addFileWithFactory CreateSingletonServices", "addFileWithFactory CreateWireServices",
 			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle",
 			"addAnalytics", "addOutgoingWebhook",
-			"addRPCInvocations", "addWireAddon (stand-in)", "addMiddleware", "addPermission",
+			"addRPCInvocations", "addWireAddon", "addDefineScreens", "addWireRemoteAddon", "addMiddleware", "addPermission",
 			"addApprovalDescription", "addWorkflow",
 		},
 		PhaseFunctions: {"addFunctions"},
 		PhaseRoutes: {
-			"addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
-			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers",
+			"checkAddonBans", "addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
+			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addSchedule", "addTrigger", "addQueueWorker", "addChannel",
+			"addGateway", "addCLI", "addCLIRenderers",
 			"addMCPResource", "addMCPPrompt", "addWorkflowGraph", "addFeature", "addAgent", "addAgentScorer",
 		},
 	}

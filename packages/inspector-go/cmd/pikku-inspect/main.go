@@ -2,6 +2,12 @@
 //
 //	pikku-inspect --stdin                 one Request on stdin, one Response on stdout
 //	pikku-inspect inspect --stdin         the same
+//	pikku-inspect inspect --stdin --finalize
+//	                                      analysis then the Go finalize pass
+//	                                      (testing until cutover)
+//	pikku-inspect finalize --stdin        {state, diagnostics?, options} on stdin:
+//	                                      finalize a serialized pre-finalize
+//	                                      state (finalize parity)
 //	pikku-inspect serve                   NDJSON requests on stdin, responses on stdout,
 //	                                      with parsed files cached between requests
 //	pikku-inspect [-timing] [-files f] [-schemas] <projectDir>
@@ -19,9 +25,12 @@ import (
 	"os"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/analyze"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/finalize"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/jsjson"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/program"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
 
 func main() {
@@ -31,10 +40,20 @@ func main() {
 	case len(args) == 1 && args[0] == "--stdin":
 		err = runInspect(os.Stdin, os.Stdout)
 	case len(args) >= 1 && args[0] == "inspect":
-		if len(args) != 2 || args[1] != "--stdin" {
-			err = fmt.Errorf("usage: pikku-inspect inspect --stdin")
-		} else {
+		switch {
+		case len(args) == 2 && args[1] == "--stdin":
 			err = runInspect(os.Stdin, os.Stdout)
+		case len(args) == 3 && args[1] == "--stdin" && args[2] == "--finalize",
+			len(args) == 3 && args[1] == "--finalize" && args[2] == "--stdin":
+			err = runInspectFinalize(os.Stdin, os.Stdout)
+		default:
+			err = fmt.Errorf("usage: pikku-inspect inspect --stdin [--finalize]")
+		}
+	case len(args) >= 1 && args[0] == "finalize":
+		if len(args) != 2 || args[1] != "--stdin" {
+			err = fmt.Errorf("usage: pikku-inspect finalize --stdin")
+		} else {
+			err = runFinalize(os.Stdin, os.Stdout)
 		}
 	case len(args) >= 1 && args[0] == "serve":
 		err = runServe(os.Stdin, os.Stdout)
@@ -63,6 +82,47 @@ func runInspect(r io.Reader, w io.Writer) error {
 	}
 	res, err := analyze.Run(req, nil)
 	if err != nil {
+		return err
+	}
+	return writeJSON(w, res, "")
+}
+
+func runInspectFinalize(r io.Reader, w io.Writer) error {
+	var req protocol.Request
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		return fmt.Errorf("reading request: %w", err)
+	}
+	res, err := analyze.Run(req, nil)
+	if err != nil {
+		return err
+	}
+	if err := finalize.Response(res, req.Options); err != nil {
+		return err
+	}
+	return writeJSON(w, res, "")
+}
+
+// finalizeRequest is the `finalize --stdin` input: a serialized pre-finalize
+// state (the TS reference's or the binary's own) and the options.
+type finalizeRequest struct {
+	State       *state.State      `json:"state"`
+	Diagnostics []diag.Diagnostic `json:"diagnostics"`
+	Options     protocol.Options  `json:"options"`
+}
+
+func runFinalize(r io.Reader, w io.Writer) error {
+	var req finalizeRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		return fmt.Errorf("reading request: %w", err)
+	}
+	if req.State == nil {
+		return fmt.Errorf("finalize: request has no state")
+	}
+	res := &protocol.Response{Protocol: protocol.Version, State: req.State, Diagnostics: req.Diagnostics}
+	if res.Diagnostics == nil {
+		res.Diagnostics = []diag.Diagnostic{}
+	}
+	if err := finalize.Response(res, req.Options); err != nil {
 		return err
 	}
 	return writeJSON(w, res, "")
