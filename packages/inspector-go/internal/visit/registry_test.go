@@ -29,7 +29,7 @@ func TestRegisteredGroups(t *testing.T) {
 			"addApprovalDescription",
 		},
 		PhaseFunctions: {"addFunctions"},
-		PhaseRoutes:    {"addAuth", "addSecret", "addCredential", "addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker"},
+		PhaseRoutes:    {"addAuth", "addSecret", "addCredential", "addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers"},
 	}
 	for p, names := range want {
 		vs := Visitors(p)

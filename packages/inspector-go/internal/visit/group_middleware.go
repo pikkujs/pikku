@@ -17,10 +17,6 @@ func init() {
 	Register(Visitor{Name: "addMiddleware", Phase: PhaseSetup, Order: OrderAddMiddleware, Visit: (*Context).addMiddleware})
 }
 
-func makeContextBasedId(wiringType string, segments ...string) string {
-	return strings.Join(append([]string{wiringType}, segments...), ":")
-}
-
 // recordMiddlewareGroup keeps every registration under one pattern or tag;
 // the first stays primary.
 func recordMiddlewareGroup(groups *state.Map[*state.MiddlewareGroupMeta], key string, group *state.MiddlewareGroupMeta) {
