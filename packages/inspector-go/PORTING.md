@@ -1,0 +1,386 @@
+# Porting the inspector to Go
+
+`pikku-inspect` is the analysis half of `@pikku/inspector` (`packages/inspector`)
+on [typescript-go](https://github.com/microsoft/typescript-go). It builds the
+program, runs the visit sweeps, resolves versions and generates schemas. It
+returns the state in finalize-ready form (`finalized: false`). The TS side runs
+finalize (post-process, validators, workflows, filesAndMethods) on that state.
+
+The TS wrapper, CLI engine selection and the `parity/` harness live outside this
+directory. Only Go code, `bench/` and this file live here.
+
+## Layout
+
+```
+cmd/pikku-inspect/   main.go: subcommand dispatch (--stdin, inspect --stdin, serve)
+                     legacy.go: bench mode, pikku-inspect [-timing] [-files f] [-schemas] [-setup-only] <projectDir>
+internal/analyze/    Run(Request, *program.Cache): inspector.ts lines 337-485, in order
+internal/protocol/   Request / Response / ServeRequest / ServeResponse (protocol: 1)
+internal/program/    program + checker with inspector.ts's compiler options; cross-program SourceFile Cache
+internal/visit/      Context (the sweep state), the registry, one group_*.go per add-*.ts, util_*.go helpers
+internal/state/      the full serializable InspectorState (serializeInspectorState byte-for-byte), ordered Record/Map/Set
+internal/typesmap/   types-map.ts
+internal/schemas/    schema-generator.ts (generateAllSchemas) and its vendor (Zod) converter hook
+internal/tsjg/       vendored ts-json-schema-generator-go v3.0.0-native.6 (MIT)
+internal/diag/       logger, diagnostics, ErrorCode constants generated from error-codes.ts (gen_codes.sh)
+internal/jsjson/     JSON.stringify-compatible encoding (key order, escaping, number format)
+internal/tsutil/     AST/text helpers with no Context: printing, props, walking, routes, UTF-16 offsets
+shim/                generated re-exports of typescript-go internals (tools/gen_shims)
+bench/               TS reference scripts, section compare, timing/RSS bench
+```
+
+### Protocol
+
+`pikku-inspect --stdin` reads one request and writes one response:
+
+```
+in:  {"routeFiles":[...],"options":{"tsconfig?","rootDir?","setupOnly?","types?","schemaConfig?"}}
+out: {"protocol":1,"finalized":false,"state":{...},"diagnostics":[{"level","code?","message"}],"stats":{...}}
+```
+
+- `setupOnly` runs only the setup sweep, as in TS.
+- `types` is passed through untouched; only finalize reads it.
+- `schemaConfig` turns schema generation on. `schemaConfig.vendorScript` names
+  the Node script that converts Zod schemas (see Schema generation).
+
+`pikku-inspect serve` reads NDJSON `{"id","method":"inspect","params":<request>}`
+and answers `{"id","result"|"error"}` per line.
+
+- One process keeps a `program.Cache` of parsed and bound SourceFiles across
+  requests. A file is reused when its path, parse options and text are
+  unchanged.
+- Each request gets a new checker. `Prune` drops files that the last request
+  did not touch.
+- The cache is a read-through optimisation. A cold process gives the same
+  answer, so the stateless/serverless rule holds.
+- Measured on examples/online-shop (123 functions):
+  - cold: 224 ms, 0 files reused
+  - warm: 140 ms, 1933 reused
+  - one function file touched: 175 ms, 1932 reused
+  - round-trip overhead: about 5 ms
+
+## Adding a visitor group
+
+1. Port `add/add-foo.ts` to `internal/visit/group_foo.go`. Register it from
+   `init()`:
+
+   ```go
+   func init() {
+       Register(Visitor{Name: "addFoo", Phase: PhaseRoutes, Order: OrderAddFoo, Visit: (*Context).addFoo})
+   }
+   ```
+
+2. Take the order key from `order.go`. Every `add*` call in `visit.ts` already
+   has one there (its index × 10). A group therefore runs at its TS position
+   no matter which file registers it.
+3. If the group needs new state fields, type them in `internal/state`. Many
+   sections are still `state.Raw`. Typing one must keep
+   `TestStateRoundTripsTSOutput` passing.
+4. Rewrite references in `ResolveLatestVersions.updateWiringReferences` if the
+   group stores `pikkuFuncId`s.
+5. Add the group's name to `TestRegisteredGroups`. Add its section to
+   `bench/compare.py` if it is not there.
+6. Run the parity commands below.
+
+Rules that bite:
+- Copy every log/diagnostic message from the TS source verbatim. The parity
+  diff compares diagnostics as a multiset.
+- Registration calls must stay detectable statically: match on the callee
+  identifier exactly as TS does.
+
+## Helper inventory
+
+| Go | TS |
+|---|---|
+| `tsutil.PrintNode` | `node.getText()` / printer, with Strada's `(x!).y` printing |
+| `tsutil.GetPropertyValue`, `GetArrayPropertyValue`, `FindPropertyAssignment`, `FoldStaticString` | `utils/get-property-value.ts`, `extract-node-value.ts` |
+| `tsutil.UnwrapAs`, `UnwrapNonNullParens`, `IsRpcExpr` | inline unwrapping in add-rpc-invocations / add-functions |
+| `tsutil.Walk`, `WalkSelf`, `CollectInvokedRpcNames`, `CollectStartedWorkflows` | `ts.forEachChild` recursion |
+| `tsutil.PathParams` | `pathToRegexp(route).keys` (path-to-regexp 8.4 parse + flatten, same error text) |
+| `tsutil.RouteMatchesPattern` | `utils/middleware.ts routeMatchesPattern` |
+| `tsutil.FuncIdToTypeName`, `FormatVersionedId`, `UTF16Offset` | `extract-function-name.ts`, `@pikku/core` versioning, JS string offsets |
+| `tsutil.NullifyType`, `IsPrimitive`, `IsVoidLikeType`, `IsLibFile`, `SymbolName` | type helpers in add-functions / resolve-function-types |
+| `Context.extractFunctionName`, `getCommonWireMetaData`, `getPropertyAssignmentInitializer`, `resolveFunctionDeclaration`, `extractFunctionNode` | `extract-function-name.ts`, `get-property-value.ts`, `extract-function-node.ts` |
+| `Context.resolveMiddleware`, `resolvePermissions`, `refId` | `utils/middleware.ts`, `utils/permissions.ts`, `resolve-ref-contract.ts` |
+| `Context.typeToString`, `resolveTypeImports`, `getNamesAndTypes`, `unwrapPromise*`, `resolveTypeName` | `add-functions.ts` type resolution |
+| `Context.resolveSchemaRef`, `detectSchemaVendor*` | `detect-schema-vendor.ts` and the schemaLookup branch of add-functions |
+| `visit.ParseVersionedId`, `Context.ResolveLatestVersions` | `@pikku/core parseVersionedId`, `utils/resolve-versions.ts` |
+| `typesmap.TypesMap` | `types-map.ts` |
+| `jsjson.Marshal` | `JSON.stringify` |
+
+## Parity
+
+The ported sections must match exactly on examples/online-shop and
+templates/functions:
+- functions (meta, files, typesMap)
+- http
+- queueWorkers
+- schemas
+
+```sh
+B=$(mktemp -d)
+go build -o $B/pikku-inspect ./cmd/pikku-inspect
+# TS reference: the analyze steps through packages/inspector/dist (build it first)
+node bench/ref-analyze.mjs ../../examples/online-shop $B/ts.json --schemas
+$B/pikku-inspect -schemas ../../examples/online-shop > $B/go.json
+python3 bench/compare.py $B/ts.json $B/go.json            # per-section summary + diagnostics multiset
+python3 bench/compare.py $B/ts.json $B/go.json -v --only=functions.typesMap
+# schemas only, against the pre-schema TS state
+node bench/ref-schemas.mjs ../../examples/online-shop $B/ref.json
+PIKKU_SCHEMA_PARITY_REF=$B/ref.json go test ./internal/schemas -run Parity -v
+# timing + RSS
+bench/bench.sh ../../examples/online-shop $B/pikku-inspect 3 $B/bench [--schemas]
+```
+
+Notes on the comparison:
+- `compare.py` reports an entry that differs only in token order as
+  "order-only".
+- For a ported section, the only acceptable difference is order-only, caused by
+  tsgo's literal-union ordering (see below).
+- Sections owned by unported groups show gaps until those groups land: rpc,
+  usedFunctions, credentials and some diagnostics.
+
+Current status (with schemas):
+
+| section | online-shop | templates/functions |
+|---|---|---|
+| functions.meta / files | OK | OK |
+| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only + `TodoAssistantOutput` (agent, unported) |
+| http.*, queueWorkers.* | OK | OK |
+| import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK | OK |
+| schemaLookup | OK | 68/69 (agent) |
+| schemas | 233/235, 2 order-only | 88/96, 7 order-only + agent |
+
+## typescript-go differences
+
+Each of these was found by a parity diff. Each is handled where noted.
+
+- **`(x!).y` printing.** Strada keeps the parentheses around a non-null
+  assertion that the source had; tsgo's printer drops them. This affects
+  `implementationHash`. `tsutil.PrintNode` uses a paren-tracking writer to
+  match Strada.
+- **Internal symbol names.** tsgo prefixes internal names with `\xFE`
+  (`\xFEdefault`, `\xFEcomputed`…) where TS uses `__`/`default`.
+  `tsutil.SymbolName` maps them back. Never compare `sym.Name` raw.
+- **Offsets.** tsgo node positions are UTF-8 byte offsets; TS ones are UTF-16
+  code units. Anything that leaves the process as a position goes through
+  `tsutil.UTF16Offset`.
+- **typeToString flags.** `checker.TypeToString` defaults differ from TS's
+  `checker.typeToString(t)`. Go calls `TypeToStringEx(t, nil,
+  TypeFormatFlagsNoTruncation, nil)` (`Context.typeToString`). Change it there
+  only, never per call site.
+- **Lib paths.** Default lib files live at `bundled:///libs/lib.*.d.ts`, not
+  `node_modules/typescript/lib`. `tsutil.IsLibFile` recognises both.
+- **`GetSymbolAtLocation` on an import** returns the alias symbol. Resolve it
+  (`Context.resolveAlias`) before reading declarations.
+- **Literal union ordering. Not fixable.** tsgo sorts literal union members by
+  value (`"high" | "low" | "medium"`), where TS keeps creation order. This also
+  reorders:
+  - mapped-type keys. Kysely `Selection` gives `GetProfileOutput` alphabetical
+    properties.
+  - the members of normalized object unions.
+
+  The result is order-only typesMap and schema differences: 4 + 2 on
+  online-shop, 7 + 7 on templates/functions. They are semantically equal.
+- **Inherited property order.** `GetPropertiesOfType` on an interface that
+  extends another lists inherited members first; TS lists own members first.
+  `coreTypeProperties` is therefore sorted on both sides. Its only consumer
+  uses `.includes`.
+- **`#imports` resolution.** tsgo resolves package.json `#imports` subpaths
+  with `.js`→`.ts` substitution; TS 6 does not. Go therefore sweeps generated
+  files that TS never loads:
+  - templates/functions: 79 vs 77 project files (`.pikku/agent/pikku-agent-types.gen.ts`, `.pikku/services/pikku-meta-service.gen.ts`)
+  - online-shop: 160 vs 151
+
+  So far this has added no state. Watch for it when porting a group that
+  matches generated code.
+- **JSON.** Go's encoder escapes `<>&` and U+2028/9 and formats numbers
+  differently from `JSON.stringify`. Integer-like keys of a JS object come
+  first in ascending order. `internal/jsjson` and `state.Record` reproduce
+  both. Never use `encoding/json` to write state.
+
+## typesLookup → coreTypeProperties
+
+TS state carries `typesLookup: Map<string, ts.Type[]>`, which cannot be
+serialized. It has two consumers, and both only need the property names of the
+core types:
+- `extractAllServices` in `utils/post-process.ts`. It runs in finalize, sorts
+  the names, and skips silently when `typesLookup` is absent.
+- `packages/cli/src/functions/wirings/workflow/pikku-command-workflow.ts:70`,
+  which only uses `.includes`.
+
+Go emits these instead:
+
+```
+coreTypeProperties: { "<variable name from an import map>": ["prop", ...] }   // sorted
+```
+
+Both consumers should read `coreTypeProperties` when `typesLookup` is absent.
+Otherwise `allSingletonServices`/`allWireServices` stay empty on a Go-analyzed
+state.
+`bench/ref-analyze.mjs` emits the same field from TS for parity.
+
+## Schema generation
+
+`schemas.GenerateAll` ports `schema-generator.ts`:
+- **Program.** It builds a second program with the project's full tsconfig
+  options, rooted at a virtual `__pikku_virtual_types__.ts` that is served from
+  memory and imports every type to generate. That program shares the
+  inspector's `program.Cache`, so the project's files are not re-parsed.
+- **Type lookups.** Named-type lookups are indexed once per generator.
+- **Schema names, in order:**
+  1. custom types
+  2. function input/output unique names
+  3. `schemasFromTypes`
+
+  Primitives are skipped.
+- **Zod first.** Vendor (Zod) schemas from `schemaLookup` are converted first,
+  through `VendorSchemaConverter`. The default `NodeConverter` runs
+  `vendorScript` (bench/vendor-schemas.mjs). That script imports the schema
+  modules through tsx and replays the Zod branch of `schema-generator.ts`,
+  using helpers from `packages/inspector/dist`.
+- **Missing converter.** No converter with a non-empty `schemaLookup` is an
+  error, not a silent skip.
+- **No cache.** `cacheDir` is accepted and ignored: Go does not read or write
+  `ts-schemas.json`.
+- **Not ported.** The http `inputTypes` loop: that field is always undefined.
+
+Parity against TS: online-shop 235/235 keys (230 byte-equal), functions 96/96
+(95 byte-equal). The byte differences are:
+- `definitions` key order (vega sorts)
+- `additionalProperties` placement
+- some vega error wording
+
+Timing for the TS-type part:
+
+| project | TS | Go cold | Go warm |
+|---|---|---|---|
+| online-shop | 510 ms | 107 ms | 71 ms |
+| functions | 238 ms | 179 ms | 126 ms |
+
+In schemas mode, the Node Zod converter (545–672 ms on online-shop) dominates
+Go's wall time.
+
+**Open decision:** ship `vendor-schemas.mjs` with the package, or export the
+Zod conversion from `@pikku/inspector` and have the wrapper do it.
+
+## Known lossy or partial pieces
+
+- **addon functions.** `loadAddonFunctionsMeta` decodes addon
+  `pikku-functions-meta*.gen.json` into the typed `FunctionMeta`. Fields Go has
+  not typed yet are dropped. Fine for the sections above; revisit as groups
+  land.
+- **addon scopes** are not loaded. Secret, variable and credential overrides
+  are.
+- **Stand-ins.** `addWireAddon`, `addMiddleware` and `addPermission` are
+  stand-ins: they record files and addon declarations only, not middleware or
+  permission meta.
+- **Not ported.** The secret-usage and surface-usage sweeps, and
+  `validateWebhookSourceTriggers`.
+
+## Unported
+
+### Visitor groups (analyze; must be ported to Go)
+
+| group | TS file | lines |
+|---|---|---|
+| addAnalytics | add/add-analytics.ts | 217 |
+| addOutgoingWebhook | add/add-outgoing-webhook.ts | 120 |
+| addDefineScreens | add/add-define-screens.ts | 162 |
+| addWireRemoteAddon | add/add-wire-remote-addon.ts | 81 |
+| addApprovalDescription | add/add-approval-description.ts | 76 |
+| addWorkflow | add/add-workflow.ts | 481 |
+| addAuth | add/add-auth.ts | 365 |
+| addScope (+ applyDeclaredScopes) | add/add-scope.ts | 288 |
+| addSystemRole | add/add-system-role.ts | 162 |
+| addFeatureFlag | add/add-feature-flag.ts | 234 |
+| addVirtualUsers | add/add-virtual-users.ts | 287 |
+| addSchedule | add/add-schedule.ts | 120 |
+| addTrigger (+ validateWebhookSourceTriggers) | add/add-trigger.ts | 330 |
+| addChannel | add/add-channel.ts | 784 |
+| addGateway | add/add-gateway.ts | 143 |
+| addCLI, addCLIRenderers | add/add-cli.ts | 1029 |
+| addMCPResource | add/add-mcp-resource.ts | 175 |
+| addMCPPrompt | add/add-mcp-prompt.ts | 157 |
+| addWorkflowGraph | add/add-workflow-graph.ts | 644 |
+| addFeature | add/add-feature.ts | 293 |
+| addAgent | add/add-agent.ts | 678 |
+| addAgentScorer | add/add-agent-scorer.ts | 83 |
+| **total, wholly unported** | | **6909** |
+| addMiddleware (stand-in) | add/add-middleware.ts | 944 |
+| addPermission (stand-in) | add/add-permission.ts | 311 |
+| addWireAddon (stand-in) | add/add-wire-addon.ts | 271 |
+| secret-usage sweep | utils/extract-secret-usage.ts | 73 |
+| surface-usage sweep | utils/extract-surface-usage.ts | 121 |
+
+Ported:
+- add-functions.ts (1633)
+- add-http-route.ts (530) and add-http-routes.ts (471)
+- add-queue-worker.ts (117)
+- add-file-extends-core-type.ts (66) and add-file-with-factory.ts (324)
+- add-rpc-invocations.ts (284)
+- add-keyed-wiring.ts (180), add-secret.ts, add-variable.ts and add-credential.ts (191)
+- resolve-versions.ts (235)
+- schema-generator.ts (790)
+- load-addon-functions-meta.ts (745), functions and keyed meta only
+
+The TS inspector `src/` is 33542 lines excluding tests, of which `add/` is
+23613 including its tests.
+
+### Finalize (runs in TS on the Go state today)
+
+| step | TS file | lines |
+|---|---|---|
+| computeRequiredSchemas, validateSchemaReferences, stampAuthHandlerServices, aggregateRequiredServices, computeResolvedIOTypes, computeMiddlewareGroupsMeta, computePermissionsGroupsMeta, validateNoSecretAliasServices, registerDerivedOAuth2AppSecrets, validateSecretUsage, computeDiagnostics, validateSchemaWiringSeparation, validateWorkflowGraphAddons, validateScenario{Services,Steps,Features}, validateAgent{Models,ToolReferences,ScorerReferences}, validate{Secret,Variable,Credential}Overrides, validateAddon{Uses,ContentGrants}, validateRemoteAddon{Dependencies,Auth}, validateScopeReferences, validateSystemRoleScopes, validateVirtualUserRoles | utils/post-process.ts | 1898 |
+| computeContractHashes, extractContractsFromMeta, updateManifest, validateContracts | utils/contract-hashes.ts | 389 |
+| loadAddonSchemas | utils/load-addon-functions-meta.ts | (part of 745) |
+| finalizeWorkflows | utils/workflow/graph/finalize-workflows.ts | 130 |
+| finalizeWorkflowHelperTypes, finalizeWorkflowWires | utils/workflow/graph/finalize-workflow-wires.ts | 310 |
+| getFilesAndMethods | utils/get-files-and-methods.ts | 157 |
+| validateSingleStepWorkflows | utils/validate-single-step-workflows.ts | 36 |
+| annotateHttpRouteAuth | utils/annotate-http-route-auth.ts | 53 |
+| validateExposedFunctionsGated | utils/validate-exposed-functions-gated.ts | 131 |
+| validateTagsResolveToMiddleware | utils/validate-tags-resolve-to-middleware.ts | 48 |
+| generateOpenAPISpec | utils/serialize-openapi-json.ts | 277 |
+
+`validateNoSecretAliasServices` takes the checker
+(`utils/secret-alias-services.ts`). It must move into analyze, or record what
+it needs, before finalize can run without a TS program.
+
+### Standalone helpers (compiler API outside inspect())
+
+These become further `pikku-inspect` subcommands in the main.go switch.
+
+| export | TS file | lines |
+|---|---|---|
+| collectSurface | surface/collect-surface.ts | 824 |
+| readJsxLiteralText | utils/read-jsx-literal-text.ts | 154 |
+| readModuleSpecifiers | utils/read-module-specifiers.ts | 33 |
+| readTsconfigOutDir | utils/read-tsconfig-out-dir.ts | 13 |
+| resolveCoreType | utils/resolve-core-type.ts | 35 |
+
+## typescript-go pin
+
+typescript-go is pinned to exactly
+`github.com/microsoft/typescript-go v0.0.0-20260708042240-2bd066d87f5b`. The pin
+appears in `go.mod` (indirect) and in every `shim/*/go.mod`. There is no
+auto-bump: no Renovate or Dependabot rule may touch it. tsgo has no stable Go
+API; internals change shape between commits, and a printer or checker change
+silently moves parity.
+
+Bump procedure (one PR, nothing else in it):
+
+1. Pick a commit and set it in every `shim/*/go.mod` and the root `go.mod`:
+
+   ```sh
+   for m in go.mod shim/*/go.mod shim/vfs/*/go.mod; do (cd $(dirname $m) && go get github.com/microsoft/typescript-go@<commit>); done
+   ```
+
+2. Regenerate the shims with `go run ./tools/gen_shims` from
+   `packages/inspector-go`. Add any newly needed unexported members to the
+   package's `extra-shim.json`.
+3. `go mod tidy && go build ./... && go vet ./... && go test ./...`.
+4. Run the full parity commands on both projects. The summary must be
+   unchanged, apart from order-only entries already listed above.
+5. Re-run `bench/bench.sh` and note the timing in the PR.
+6. Update the pin in this file.
