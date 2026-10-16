@@ -23,6 +23,9 @@ type extractedName struct {
 	exportedName string
 	propertyName string
 	version      int // 0 = none
+	// isHelper: the function is a workflow helper call (`workflow('name')`,
+	// `workflowStart`, `workflowStatus`, `graphStart`).
+	isHelper bool
 }
 
 func (s *Context) tempFuncId(n *ast.Node) string {
@@ -156,8 +159,21 @@ func (s *Context) extractFunctionName(callExpr *ast.Node) extractedName {
 		}
 	}
 
-	// (workflow helper and wireHTTP identifier special cases are not ported:
-	// addFunctions never reaches them.)
+	if ast.IsCallExpression(callExpr) && ast.IsIdentifier(callExpr.Expression()) && workflowHelpers[callExpr.Expression().Text()] {
+		helper := callExpr.Expression().Text()
+		args := callExpr.Arguments()
+		if len(args) > 0 && ast.IsStringLiteral(args[0]) {
+			id := helper + ":" + args[0].Text()
+			if helper == "graphStart" && len(args) > 1 && ast.IsStringLiteral(args[1]) {
+				id = helper + ":" + args[0].Text() + ":" + args[1].Text()
+			}
+			r.pikkuFuncId, r.name, r.explicitName, r.isHelper = id, id, id, true
+			return r
+		}
+	}
+
+	// (The wireHTTP identifier special case is not ported: the general path
+	// below gives the same id.)
 
 	if ast.IsCallExpression(callExpr) {
 		args := callExpr.Arguments()

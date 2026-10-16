@@ -23,24 +23,6 @@ func isTempId(id string) bool { return strings.HasPrefix(id, "__temp_") }
 
 var workflowHelpers = map[string]bool{"workflow": true, "workflowStart": true, "workflowStatus": true, "graphStart": true}
 
-// extractFunctionNameWithHelpers is extractFunctionName including the
-// workflow-helper special case (`workflow('name')` & co.) that the shared port
-// leaves out, and its isHelper result.
-func (s *Context) extractFunctionNameWithHelpers(n *ast.Node) (extractedName, bool) {
-	if ast.IsCallExpression(n) && ast.IsIdentifier(n.Expression()) && workflowHelpers[n.Expression().Text()] {
-		helper := n.Expression().Text()
-		args := n.Arguments()
-		if len(args) > 0 && ast.IsStringLiteral(args[0]) {
-			id := helper + ":" + args[0].Text()
-			if helper == "graphStart" && len(args) > 1 && ast.IsStringLiteral(args[1]) {
-				id = helper + ":" + args[0].Text() + ":" + args[1].Text()
-			}
-			return extractedName{pikkuFuncId: id, name: id, explicitName: id}, true
-		}
-	}
-	return s.extractFunctionName(n), false
-}
-
 // exportedVariableNameOf is utils/get-exported-variable-name.ts for a call
 // expression: the name of the exported `const x = <node>` in the swept file.
 func (s *Context) exportedVariableNameOf(node *ast.Node) string {

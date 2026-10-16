@@ -8,6 +8,7 @@ import (
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/visit"
 )
 
 // LoadAddonSchemas ports load-addon-functions-meta.ts loadAddonSchemas: each
@@ -30,12 +31,7 @@ func LoadAddonSchemas(_ *diag.Logger, st *state.State) {
 		if Truthy(decl.Remote) {
 			return
 		}
-		var metaPath string
-		for _, dir := range addonDirs(st.RootDir, decl.File) {
-			if metaPath = resolveAddonSubpath(dir, decl.Package, ".pikku/function/pikku-functions-meta.gen.json"); metaPath != "" {
-				break
-			}
-		}
+		metaPath := visit.ResolveAddonFile(st.RootDir, decl.File, decl.Package+"/.pikku/function/pikku-functions-meta.gen.json")
 		if metaPath == "" {
 			// MODULE_NOT_FOUND / ERR_PACKAGE_PATH_NOT_EXPORTED: skipped silently.
 			return
@@ -74,67 +70,4 @@ func rawTruthy(r state.Raw) any {
 		return true
 	}
 	return v
-}
-
-func addonPackageDir(file string) string {
-	for dir := filepath.Dir(file); dir != "/" && dir != "."; dir = filepath.Dir(dir) {
-		if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
-			return dir
-		}
-	}
-	return ""
-}
-
-// addonDirs is addon-resolution.ts addonResolutionDirs.
-func addonDirs(rootDir, declFile string) []string {
-	root, _ := filepath.Abs(rootDir)
-	if declFile != "" {
-		abs, _ := filepath.Abs(declFile)
-		if d := addonPackageDir(abs); d != "" && d != root {
-			return []string{d, root}
-		}
-	}
-	return []string{root}
-}
-
-// resolveAddonSubpath is require.resolve(`${pkg}/${subpath}`) from dir: find
-// node_modules/<pkg> walking up, map the subpath through the package's
-// exports (exact or `*` pattern), and return the realpath of the file.
-func resolveAddonSubpath(dir, pkg, subpath string) string {
-	for d := dir; ; d = filepath.Dir(d) {
-		pkgDir := filepath.Join(d, "node_modules", pkg)
-		if raw, err := os.ReadFile(filepath.Join(pkgDir, "package.json")); err == nil {
-			var pj struct {
-				Exports map[string]json.RawMessage `json:"exports"`
-			}
-			_ = json.Unmarshal(raw, &pj)
-			target := "./" + subpath
-			for k, v := range pj.Exports {
-				var to string
-				if json.Unmarshal(v, &to) != nil {
-					continue
-				}
-				if k == target {
-					target = to
-					break
-				}
-				if star := strings.Index(k, "*"); star >= 0 && strings.HasPrefix(target, k[:star]) && strings.HasSuffix(target, k[star+1:]) {
-					mid := target[star : len(target)-len(k)+star+1]
-					target = strings.Replace(to, "*", mid, 1)
-					break
-				}
-			}
-			p := filepath.Join(pkgDir, target)
-			if _, err := os.Stat(p); err == nil {
-				if real, err := filepath.EvalSymlinks(p); err == nil {
-					return real
-				}
-				return p
-			}
-			return ""
-		}
-		if parent := filepath.Dir(d); parent == d {
-			return ""
-		}
-	}
 }

@@ -368,3 +368,47 @@ func reorderObjectKeys(b []byte, first, last []string) ([]byte, error) {
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
 }
+
+// overlayObjectKeys sets keys on the JSON object b the way JS assignment
+// does: a key b already has keeps its position and takes the new value, a
+// new key goes at the end, in the order given.
+func overlayObjectKeys(b []byte, keys []string, vals map[string]any) ([]byte, error) {
+	if len(keys) == 0 {
+		return b, nil
+	}
+	var order []string
+	raws := map[string]json.RawMessage{}
+	if err := decodeObject(b, func(k string, raw json.RawMessage) error {
+		order = append(order, k)
+		raws[k] = raw
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	for _, k := range keys {
+		vb, err := jsjson.Marshal(vals[k], "")
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := raws[k]; !ok {
+			order = append(order, k)
+		}
+		raws[k] = vb
+	}
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, k := range order {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		kb, err := jsjson.Marshal(k, "")
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(kb)
+		buf.WriteByte(':')
+		buf.Write(raws[k])
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}

@@ -602,41 +602,15 @@ func (s *Context) loadAddonContracts(ns string, decl *addonDecl, req addonResolv
 	}
 }
 
-// LoadAddonSchemas is loadAddonSchemas, a finalize step: each addon's
-// published JSON schemas, for names the project's own generation left unset.
-func (s *Context) LoadAddonSchemas() {
-	for _, ns := range s.addonOrder {
-		decl := s.addons[ns]
-		if decl.remote {
-			continue
-		}
-		req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
-		metaPath, err := req.resolve(decl.pkg + "/.pikku/function/pikku-functions-meta.gen.json")
-		if err != nil {
-			continue
-		}
-		dir := filepath.Join(filepath.Dir(metaPath), "..", "schemas", "schemas")
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			name := e.Name()
-			if !strings.HasSuffix(name, ".schema.json") {
-				continue
-			}
-			schemaName := strings.Replace(name, ".schema.json", "", 1)
-			if existing, ok := s.State.Schemas.Get(schemaName); ok && len(existing) > 0 && !isFalsyJSON(existing) {
-				continue
-			}
-			v, err := readJSONFile(filepath.Join(dir, name))
-			if err != nil {
-				s.Log.Warn(fmt.Sprintf("Failed to load addon schemas for '%s' (%s): %s", ns, decl.pkg, err.Error()))
-				break
-			}
-			s.State.Schemas.Set(schemaName, v.raw())
-		}
+// ResolveAddonFile is require.resolve(id) the way loadAddonSchemas does it
+// for an addon declared in declFile: from the declaring package, then the
+// root. It returns "" when nothing resolves.
+func ResolveAddonFile(rootDir, declFile, id string) string {
+	p, err := addonResolver(addonResolutionDirs(rootDir, declFile)).resolve(id)
+	if err != nil {
+		return ""
 	}
+	return p
 }
 
 func isFalsyJSON(raw state.Raw) bool {

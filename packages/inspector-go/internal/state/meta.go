@@ -118,13 +118,32 @@ type FunctionMeta struct {
 
 	// Verbatim, when set, is what the entry serializes as instead of the
 	// typed fields: metadata read whole from an addon's generated file, or a
-	// partial entry TS writes with only some of the keys.
+	// partial entry TS writes with only some of the keys. The keys finalize
+	// assigns afterwards (the contract hashes, singletonServicesOnly) are
+	// laid over it.
 	Verbatim Raw `json:"-"`
 }
 
 func (m *FunctionMeta) MarshalJSON() ([]byte, error) {
 	if m.Verbatim != nil {
-		return m.Verbatim, nil
+		var keys []string
+		vals := map[string]any{}
+		for _, kv := range []struct {
+			k  string
+			v  any
+			on bool
+		}{
+			{"contractHash", m.ContractHash, m.ContractHash != ""},
+			{"inputHash", m.InputHash, m.InputHash != ""},
+			{"outputHash", m.OutputHash, m.OutputHash != ""},
+			{"singletonServicesOnly", m.SingletonServicesOnly, m.SingletonServicesOnly != nil},
+		} {
+			if kv.on {
+				keys = append(keys, kv.k)
+				vals[kv.k] = kv.v
+			}
+		}
+		return overlayObjectKeys(m.Verbatim, keys, vals)
 	}
 	type plain FunctionMeta
 	b, err := jsjson.Marshal((*plain)(m), "")
@@ -173,7 +192,10 @@ type HTTPRouteMeta struct {
 
 func (m *HTTPRouteMeta) MarshalJSON() ([]byte, error) {
 	if m.Verbatim != nil {
-		return m.Verbatim, nil
+		if m.RequiresSession == nil {
+			return m.Verbatim, nil
+		}
+		return overlayObjectKeys(m.Verbatim, []string{"requiresSession"}, map[string]any{"requiresSession": m.RequiresSession})
 	}
 	type plain HTTPRouteMeta
 	return jsjson.Marshal((*plain)(m), "")

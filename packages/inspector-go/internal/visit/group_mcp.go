@@ -54,14 +54,15 @@ func (s *Context) mcpEndpointFunc(obj *ast.Node, kind, label, key string) (funcI
 		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("No valid 'func' property for %s '%s'.", label, jsNullable(key)))
 		return nil, "", "", false
 	}
-	pikkuFuncId = s.extractFunctionName(funcInit).pikkuFuncId
+	extracted := s.extractFunctionName(funcInit)
+	pikkuFuncId = extracted.pikkuFuncId
 	if strings.HasPrefix(pikkuFuncId, "__temp_") && key != "" {
 		pikkuFuncId = "mcp:" + kind + ":" + key
 	}
 	if ast.IsIdentifier(funcInit) {
 		packageName = s.resolveAddonName(funcInit)
 	}
-	s.ensureFunctionMetadata(pikkuFuncId, key, funcInit)
+	s.ensureFunctionMetadata(pikkuFuncId, key, funcInit, extracted.isHelper)
 	return funcInit, pikkuFuncId, packageName, true
 }
 

@@ -254,18 +254,11 @@ func (s *Context) processCLICommand(name string, node *ast.Node, program cliProg
 					meta.set("packageName", s.addons[ns].pkg)
 				}
 			} else {
-				extracted, isHelper := s.extractFunctionNameWithHelpers(init)
+				extracted := s.extractFunctionName(init)
 				pikkuFuncId = extracted.pikkuFuncId
 				if isTempId(pikkuFuncId) {
 					pikkuFuncId = makeContextBasedId("cli", append([]string{program.name}, fullPath...)...)
-					if isHelper && s.State.Functions.Meta.At(pikkuFuncId) == nil {
-						s.State.Functions.Meta.Set(pikkuFuncId, &FunctionMeta{
-							PikkuFuncId: pikkuFuncId, FunctionType: "helper", Name: strings.Join(fullPath, " "),
-							Services: ServicesMeta{Services: []string{}}, Inputs: []string{}, Outputs: []string{},
-							Inline: true,
-						})
-					}
-					s.ensureInlineWiringFunction(pikkuFuncId, strings.Join(fullPath, " "), init)
+					s.ensureInlineWiringFunction(pikkuFuncId, strings.Join(fullPath, " "), init, extracted.isHelper)
 				}
 				meta.set("pikkuFuncId", pikkuFuncId)
 				if ast.IsIdentifier(init) {

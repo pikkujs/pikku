@@ -35,7 +35,7 @@ func (s *Context) addGateway(node *ast.Node) {
 		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("No valid 'func' property for gateway '%s'.", orNull(name)))
 		return
 	}
-	pikkuFuncId := s.wiringFuncId(funcInit, "gateway", name)
+	pikkuFuncId, isHelper := s.wiringFuncId(funcInit, "gateway", name)
 	packageName := ""
 	if ast.IsIdentifier(funcInit) {
 		packageName = s.resolveAddonName(funcInit)
@@ -43,7 +43,7 @@ func (s *Context) addGateway(node *ast.Node) {
 	if name == "" || !typ.Truthy() {
 		return
 	}
-	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit)
+	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, isHelper)
 	middleware := s.resolveMiddleware(obj, cm.tagsOrNil())
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedWires(&FunctionMeta{Middleware: middleware})

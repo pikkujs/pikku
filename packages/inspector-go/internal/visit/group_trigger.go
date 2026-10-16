@@ -52,11 +52,11 @@ func (s *Context) addWireTrigger(node, obj *ast.Node) {
 		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("No valid 'func' property for trigger '%s'.", orNull(name)))
 		return
 	}
-	pikkuFuncId := s.wiringFuncId(funcInit, "trigger", name)
+	pikkuFuncId, isHelper := s.wiringFuncId(funcInit, "trigger", name)
 	if name == "" {
 		return
 	}
-	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit)
+	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, isHelper)
 	middleware := s.resolveMiddleware(obj, cm.tagsOrNil())
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedWires(&FunctionMeta{Middleware: middleware})
@@ -156,11 +156,12 @@ func (s *Context) addWireTriggerWebhookSource(node, obj *ast.Node) {
 			s.State.ServiceAggregation.UsedFunctions.Add(target)
 			continue
 		}
-		id := s.extractFunctionName(init).pikkuFuncId
+		extracted := s.extractFunctionName(init)
+		id := extracted.pikkuFuncId
 		if strings.HasPrefix(id, "__temp_") {
 			id = makeContextBasedId("trigger-webhook", name, step)
 		}
-		s.ensureInlineWiringFunction(id, name+":"+step, init)
+		s.ensureInlineWiringFunction(id, name+":"+step, init, extracted.isHelper)
 		if m := s.State.Functions.Meta.At(id); m != nil && m.Sessionless == nil {
 			m.Sessionless = tsutil.BoolPtr(true)
 		}

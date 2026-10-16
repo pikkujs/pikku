@@ -198,7 +198,8 @@ func (s *Context) registerHTTPRoute(obj *ast.Node, sourceFile string, group grou
 		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("No valid 'func' property for route '%s'.", fullRoute))
 		return
 	}
-	funcName := s.extractFunctionName(funcInit).pikkuFuncId
+	extracted := s.extractFunctionName(funcInit)
+	funcName := extracted.pikkuFuncId
 	if strings.HasPrefix(funcName, "__temp_") {
 		funcName = "http:" + method + ":" + fullRoute
 	}
@@ -219,7 +220,7 @@ func (s *Context) registerHTTPRoute(obj *ast.Node, sourceFile string, group grou
 		}
 		funcName = refTarget
 	} else {
-		s.ensureFunctionMetadata(funcName, fullRoute, funcInit)
+		s.ensureFunctionMetadata(funcName, fullRoute, funcInit, extracted.isHelper)
 	}
 
 	resolvedAuth := tsutil.GetPropertyValue(obj, "auth").Bool
@@ -305,7 +306,8 @@ func (s *Context) addQueueWorker(obj *ast.Node, sourceFile string) {
 		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("No valid 'func' property for queue processor '%s'.", name))
 		return
 	}
-	pikkuFuncId := s.extractFunctionName(funcInit).pikkuFuncId
+	extracted := s.extractFunctionName(funcInit)
+	pikkuFuncId := extracted.pikkuFuncId
 	if strings.HasPrefix(pikkuFuncId, "__temp_") && name != "" {
 		pikkuFuncId = "queue:" + name
 	}
@@ -317,7 +319,7 @@ func (s *Context) addQueueWorker(obj *ast.Node, sourceFile string) {
 		s.Log.Critical(diag.MissingQueueName, fmt.Sprintf("No 'name' provided for queue processor function '%s'.", pikkuFuncId))
 		return
 	}
-	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit)
+	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, extracted.isHelper)
 	var tags []string
 	if cm.hasTags {
 		tags = cm.tags
@@ -335,14 +337,21 @@ func (s *Context) addQueueWorker(obj *ast.Node, sourceFile string) {
 
 // --- ensure-function-metadata.ts ---------------------------------------------
 
-func (s *Context) ensureFunctionMetadata(pikkuFuncId, fallbackName string, funcInit *ast.Node) {
+// ensureFunctionMetadata is utils/ensure-function-metadata.ts: stub metadata
+// for a function the wiring names but addFunctions did not register (an
+// inline function, or a workflow helper when isHelper).
+func (s *Context) ensureFunctionMetadata(pikkuFuncId, fallbackName string, funcInit *ast.Node, isHelper bool) {
 	m := s.State.Functions.Meta.At(pikkuFuncId)
 	if m == nil {
 		if fallbackName == "" {
 			fallbackName = pikkuFuncId
 		}
+		functionType := "inline"
+		if isHelper {
+			functionType = "helper"
+		}
 		m = &FunctionMeta{
-			PikkuFuncId: pikkuFuncId, FunctionType: "inline", Name: fallbackName,
+			PikkuFuncId: pikkuFuncId, FunctionType: functionType, Name: fallbackName,
 			Services: ServicesMeta{Services: []string{}}, Inputs: []string{}, Outputs: []string{},
 			Inline: true,
 		}
@@ -404,8 +413,8 @@ func (s *Context) populateTypesLookup(pikkuFuncId string, call *ast.Node) {
 	}
 }
 
-func (s *Context) ensureInlineWiringFunction(pikkuFuncId, fallbackName string, funcInit *ast.Node) {
-	s.ensureFunctionMetadata(pikkuFuncId, fallbackName, funcInit)
+func (s *Context) ensureInlineWiringFunction(pikkuFuncId, fallbackName string, funcInit *ast.Node, isHelper bool) {
+	s.ensureFunctionMetadata(pikkuFuncId, fallbackName, funcInit, isHelper)
 	if m := s.State.Functions.Meta.At(pikkuFuncId); m != nil && m.Sessionless == nil && ast.IsCallExpression(funcInit) && ast.IsIdentifier(funcInit.Expression()) {
 		m.Sessionless = tsutil.BoolPtr(funcInit.Expression().Text() != "pikkuFunc")
 	}
