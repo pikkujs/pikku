@@ -1,9 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { readModuleSpecifiers } from '@pikku/inspector'
+import { readModuleSpecifiersOf } from '../../inspector-helpers.js'
 import { collectAppSources } from './app-sources.js'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
+import type {
+  ValidateFinding,
+  ValidateSeverity,
+} from './virtual-user-checks.js'
 
 /**
  * The one core subpath an app is meant to name.
@@ -116,10 +119,14 @@ export const runCoreImportChecks = async (
   const findings: ValidateFinding[] = []
   let scenarioEntry: string | undefined
 
-  for (const file of await collectAppSources(dir)) {
-    const content = await readFile(file, 'utf8')
-    if (!content.includes('@pikku/core')) continue
-    for (const specifier of readModuleSpecifiers(file, content)) {
+  const sources: { fileName: string; content: string }[] = []
+  for (const fileName of await collectAppSources(dir)) {
+    const content = await readFile(fileName, 'utf8')
+    if (content.includes('@pikku/core')) sources.push({ fileName, content })
+  }
+  const specifiersOf = readModuleSpecifiersOf(sources)
+  for (const [index, { fileName: file }] of sources.entries()) {
+    for (const specifier of specifiersOf[index]!) {
       if (!isCoreImport(specifier) || isAllowed(specifier)) continue
 
       const leaf = LEAF_FOR_SUBPATH.get(specifier)
