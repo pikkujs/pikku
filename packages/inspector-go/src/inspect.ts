@@ -5,10 +5,7 @@ import type {
   InspectorOptions,
   InspectorState,
 } from '@pikku/inspector'
-import {
-  deserializeInspectorState,
-  finalizeInspectorState,
-} from '@pikku/inspector/finalize'
+import { deserializeInspectorState } from '@pikku/inspector/finalize'
 import { findInspectorBinary } from './binary.js'
 import { runInspectorBinary } from './run-binary.js'
 import { replayDiagnostics } from './diagnostics.js'
@@ -16,8 +13,8 @@ import { toAnalysisOptions, type InspectorGoInput } from './protocol.js'
 import { withOpenAPIErrors } from './openapi-errors.js'
 
 /**
- * `@pikku/inspector`'s `inspect`, with analysis done by the `pikku-inspect`
- * binary. The state it returns has no `program` and an empty `typesLookup`:
+ * Inspects `routeFiles` with the `pikku-inspect` binary, which runs analysis
+ * and finalize, and replays its diagnostics on `logger`. The state it returns has no `program` and an empty `typesLookup`:
  * the Go engine has no TypeScript objects to hand back.
  */
 export const inspect = async (
@@ -32,13 +29,13 @@ export const inspect = async (
   }
   const output = await runInspectorBinary(findInspectorBinary(), input)
   replayDiagnostics(logger, output.diagnostics, output.validationPass)
+  if (output.error !== undefined || !output.state) {
+    throw new Error(output.error ?? 'pikku-inspect returned no state')
+  }
 
   const state: InspectorState = {
     ...deserializeInspectorState(output.state),
     typesLookup: new Map(),
-  }
-  if (!output.finalized) {
-    await finalizeInspectorState(logger, state, options)
   }
 
   state.stats = {

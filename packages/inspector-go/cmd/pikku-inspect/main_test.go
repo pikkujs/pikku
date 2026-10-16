@@ -43,7 +43,7 @@ func TestInspectStdin(t *testing.T) {
 		t.Fatal(err)
 	}
 	res := decodeResponse(t, out.Bytes())
-	if res.Protocol != protocol.Version || res.Finalized {
+	if res.Protocol != protocol.Version || !res.Finalized || res.Error != "" {
 		t.Fatalf("protocol=%d finalized=%v", res.Protocol, res.Finalized)
 	}
 	if res.State.Functions.Meta.Len() == 0 || res.Stats.ProjectFiles == 0 {
@@ -115,5 +115,13 @@ func TestServeReusesFilesAndReportsErrors(t *testing.T) {
 	b, _ := json.Marshal(warm.State)
 	if !bytes.Equal(a, b) {
 		t.Error("a warm re-inspect produced a different state")
+	}
+}
+
+func TestFailureResponseHasErrorAndNoState(t *testing.T) {
+	f := protocol.FailureResponse(&protocol.Failure{Message: "boom"})
+	b, _ := json.Marshal(f)
+	if got := string(b); !strings.Contains(got, `"error":"boom"`) || !strings.Contains(got, `"diagnostics":[]`) || strings.Contains(got, `"state"`) {
+		t.Fatalf("failure response: %s", got)
 	}
 }

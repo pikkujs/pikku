@@ -78,12 +78,14 @@ type Stats struct {
 	HeapUsedMb     int `json:"heapUsedMb"`
 }
 
-// Response is the analysis result: pre-finalize state (finalized is always
-// false; the TS finalize step runs on it), diagnostics, stats.
+// Response is the result of one inspection: the finalized state (analysis
+// alone, from analyze.Run, leaves finalized false), diagnostics, stats. When
+// the inspection failed after it began logging, Error is set, State is nil
+// and Diagnostics holds what was logged up to the failure.
 type Response struct {
 	Protocol    int               `json:"protocol"`
 	Finalized   bool              `json:"finalized"`
-	State       *state.State      `json:"state"`
+	State       *state.State      `json:"state,omitempty"`
 	Diagnostics []diag.Diagnostic `json:"diagnostics"`
 	Stats       Stats             `json:"stats"`
 	// ValidationPass marks the diagnostics finalize logged between
@@ -91,6 +93,27 @@ type Response struct {
 	// [start, end) into Diagnostics. Absent when finalize did not run a
 	// validation pass (analysis only, or setupOnly).
 	ValidationPass *diag.Pass `json:"validationPass,omitempty"`
+	// Error is the message the TypeScript inspector would have thrown.
+	Error string `json:"error,omitempty"`
+}
+
+// Failure is an inspection that stopped with an error after logging: the
+// TypeScript inspector logs, then throws. It carries the diagnostics so they
+// still reach the user.
+type Failure struct {
+	Message     string
+	Diagnostics []diag.Diagnostic
+}
+
+func (f *Failure) Error() string { return f.Message }
+
+// FailureResponse is the Response that reports f.
+func FailureResponse(f *Failure) *Response {
+	diagnostics := f.Diagnostics
+	if diagnostics == nil {
+		diagnostics = []diag.Diagnostic{}
+	}
+	return &Response{Protocol: Version, Diagnostics: diagnostics, Error: f.Message}
 }
 
 // ServeRequest / ServeResponse are one NDJSON line each in `serve` mode.

@@ -12,7 +12,7 @@ func Response(res *protocol.Response, opts Options) error {
 	log := &diag.Logger{}
 	log.Seed(res.Diagnostics)
 	if err := Run(log, res.State, opts); err != nil {
-		return err
+		return &protocol.Failure{Message: err.Error(), Diagnostics: log.Entries()}
 	}
 	res.Diagnostics = log.Entries()
 	res.ValidationPass = log.ValidationPass()

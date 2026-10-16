@@ -14,8 +14,6 @@ export const INSPECTOR_PROTOCOL_VERSION = 1
 /**
  * The options the binary is given: what analysis reads, plus what the Go
  * finalize reads (`openAPI`, `manifest`, `modelAliases`, `strictMeta`).
- * Everything else in `InspectorOptions` is consumed only by the TypeScript
- * finalize that runs on this side of the pipe.
  */
 export type InspectorGoAnalysisOptions = Pick<
   InspectorOptions,
@@ -83,12 +81,10 @@ export interface InspectorGoStats {
 /** What `pikku-inspect --stdin` writes. */
 export interface InspectorGoOutput {
   protocol: typeof INSPECTOR_PROTOCOL_VERSION
-  /**
-   * True when the binary already ran finalize, so the wrapper must not run
-   * the TypeScript one again. False while finalize is still TypeScript-only.
-   */
+  /** True: the binary always runs finalize. False only alongside `error`. */
   finalized: boolean
-  state: SerializableInspectorState
+  /** Absent when `error` is set. */
+  state?: SerializableInspectorState
   diagnostics: InspectorGoDiagnostic[]
   stats: InspectorGoStats
   /**
@@ -98,6 +94,12 @@ export interface InspectorGoOutput {
    * binary ran no validation pass.
    */
   validationPass?: InspectorGoValidationPass
+  /**
+   * Set when the inspection failed after it began logging (a schema that
+   * could not be generated, a fatal analysis error). `diagnostics` still
+   * holds what was logged; the wrapper replays it, then throws this.
+   */
+  error?: string
 }
 
 export interface InspectorGoValidationPass {

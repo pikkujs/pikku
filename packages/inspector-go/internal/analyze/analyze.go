@@ -20,14 +20,18 @@ import (
 
 // Run inspects one request. cache may be nil; serve mode passes one cache for
 // the life of the process.
+//
+// An error raised after logging began (a schema generation failure, an
+// Abort) is a *protocol.Failure that carries the diagnostics logged so far.
 func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, err error) {
+	log := &diag.Logger{}
 	defer func() {
 		if r := recover(); r != nil {
 			abort, ok := r.(visit.Abort)
 			if !ok {
 				panic(r)
 			}
-			resp, err = nil, abort
+			resp, err = nil, &protocol.Failure{Message: abort.Message, Diagnostics: log.Entries()}
 		}
 	}()
 	start := time.Now()
@@ -45,7 +49,6 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	}
 	defer prog.Release()
 
-	log := &diag.Logger{}
 	st := state.New(prog.RootDir)
 	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
 		SetupOnly:             req.Options.SetupOnly,
@@ -64,7 +67,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 		if sc := req.Options.SchemaConfig; sc != nil {
 			out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)
 			if err != nil {
-				return nil, err
+				return nil, &protocol.Failure{Message: err.Error(), Diagnostics: log.Entries()}
 			}
 			st.Schemas = out
 		}

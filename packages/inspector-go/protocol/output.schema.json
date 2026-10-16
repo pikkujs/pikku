@@ -2,21 +2,23 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://pikku.dev/schemas/inspector-go/protocol/1/output.json",
   "title": "pikku-inspect --stdin output",
-  "description": "What `pikku-inspect --stdin` writes to stdout on success (exit code 0). Mirrors InspectorGoOutput in src/protocol.ts. stderr is free-form and passed through to the user.",
+  "description": "What `pikku-inspect --stdin` writes to stdout when it exits 0: a finalized state, or `error` with the diagnostics logged before the failure. Mirrors InspectorGoOutput in src/protocol.ts. stderr is free-form and passed through to the user.",
   "type": "object",
-  "required": ["protocol", "finalized", "state", "diagnostics", "stats"],
+  "required": ["protocol", "finalized", "diagnostics", "stats"],
   "additionalProperties": false,
+  "if": { "not": { "required": ["error"] } },
+  "then": { "required": ["state"] },
   "properties": {
     "protocol": {
       "description": "Protocol version. The wrapper rejects any other.",
       "const": 1
     },
     "finalized": {
-      "description": "True when the binary already ran finalize; the wrapper then skips the TypeScript finalize. False while finalize is TypeScript-only.",
+      "description": "True: the binary always runs finalize. False only alongside `error`.",
       "type": "boolean"
     },
     "state": {
-      "description": "A SerializableInspectorState (packages/inspector/src/utils/serialize-inspector-state.ts), read with deserializeInspectorState. Pre-finalize when `finalized` is false. Sections the engine does not produce yet may be absent; the parity harness reports them as not ported.",
+      "description": "A SerializableInspectorState (packages/inspector/src/utils/serialize-inspector-state.ts), read with deserializeInspectorState. Absent when `error` is set.",
       "type": "object",
       "required": ["rootDir"],
       "properties": {
@@ -57,6 +59,10 @@
         "wallMs": { "type": "number", "minimum": 0 },
         "heapUsedMb": { "type": "number", "minimum": 0 }
       }
+    },
+    "error": {
+      "description": "Set when the inspection failed after it began logging (a schema that could not be generated, a fatal analysis error). The wrapper replays `diagnostics`, then throws this message.",
+      "type": "string"
     },
     "validationPass": {
       "description": "Present when the binary ran finalize's validation pass: the diagnostics logged between logger.beginValidationPass() and logger.endValidationPass(), as indices [start, end) into `diagnostics`. The wrapper replays the bracket around them.",

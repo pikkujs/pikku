@@ -1,13 +1,9 @@
-// Command pikku-inspect is the Go port of @pikku/inspector's analysis phase.
+// Command pikku-inspect is the Pikku inspector: analysis and finalize.
 //
-//	pikku-inspect --stdin                 one Request on stdin, one Response on stdout
-//	pikku-inspect inspect --stdin         the same
-//	pikku-inspect inspect --stdin --finalize
-//	                                      analysis then the Go finalize pass
-//	                                      (testing until cutover)
+//	pikku-inspect --stdin                 one Request on stdin, one finalized Response on stdout
+//	pikku-inspect inspect --stdin         the same (a trailing --finalize is accepted and ignored)
 //	pikku-inspect finalize --stdin        {state, diagnostics?, options} on stdin:
-//	                                      finalize a serialized pre-finalize
-//	                                      state (finalize parity)
+//	                                      finalize a serialized pre-finalize state
 //	pikku-inspect serve                   NDJSON requests on stdin, responses on stdout,
 //	                                      with parsed files cached between requests
 //	pikku-inspect helper <method>         one helper call: params JSON on stdin,
@@ -23,6 +19,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -45,13 +42,12 @@ func main() {
 		err = runInspect(os.Stdin, os.Stdout)
 	case len(args) >= 1 && args[0] == "inspect":
 		switch {
-		case len(args) == 2 && args[1] == "--stdin":
-			err = runInspect(os.Stdin, os.Stdout)
-		case len(args) == 3 && args[1] == "--stdin" && args[2] == "--finalize",
+		case len(args) == 2 && args[1] == "--stdin",
+			len(args) == 3 && args[1] == "--stdin" && args[2] == "--finalize",
 			len(args) == 3 && args[1] == "--finalize" && args[2] == "--stdin":
-			err = runInspectFinalize(os.Stdin, os.Stdout)
+			err = runInspect(os.Stdin, os.Stdout)
 		default:
-			err = fmt.Errorf("usage: pikku-inspect inspect --stdin [--finalize]")
+			err = fmt.Errorf("usage: pikku-inspect inspect --stdin")
 		}
 	case len(args) >= 1 && args[0] == "finalize":
 		if len(args) != 2 || args[1] != "--stdin" {
@@ -85,28 +81,31 @@ func writeJSON(w io.Writer, v any, indent string) error {
 	return err
 }
 
+// inspect runs analysis then finalize. A *protocol.Failure comes back as a
+// Response with Error set, so the diagnostics logged before it still reach
+// the wrapper; any other error is returned.
+func inspect(req protocol.Request, cache *program.Cache) (*protocol.Response, error) {
+	res, err := analyze.Run(req, cache)
+	if err == nil {
+		err = finalize.Response(res, req.Options)
+	}
+	var failure *protocol.Failure
+	if errors.As(err, &failure) {
+		return protocol.FailureResponse(failure), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func runInspect(r io.Reader, w io.Writer) error {
 	var req protocol.Request
 	if err := json.NewDecoder(r).Decode(&req); err != nil {
 		return fmt.Errorf("reading request: %w", err)
 	}
-	res, err := analyze.Run(req, nil)
+	res, err := inspect(req, nil)
 	if err != nil {
-		return err
-	}
-	return writeJSON(w, res, "")
-}
-
-func runInspectFinalize(r io.Reader, w io.Writer) error {
-	var req protocol.Request
-	if err := json.NewDecoder(r).Decode(&req); err != nil {
-		return fmt.Errorf("reading request: %w", err)
-	}
-	res, err := analyze.Run(req, nil)
-	if err != nil {
-		return err
-	}
-	if err := finalize.Response(res, req.Options); err != nil {
 		return err
 	}
 	return writeJSON(w, res, "")
@@ -133,7 +132,11 @@ func runFinalize(r io.Reader, w io.Writer) error {
 		res.Diagnostics = []diag.Diagnostic{}
 	}
 	if err := finalize.Response(res, req.Options); err != nil {
-		return err
+		var failure *protocol.Failure
+		if !errors.As(err, &failure) {
+			return err
+		}
+		res = protocol.FailureResponse(failure)
 	}
 	return writeJSON(w, res, "")
 }
@@ -170,7 +173,7 @@ func runServe(r io.Reader, w io.Writer) error {
 			resp.ID = req.ID
 			switch req.Method {
 			case "inspect":
-				res, err := analyze.Run(req.Params, cache)
+				res, err := inspect(req.Params, cache)
 				if err != nil {
 					resp.Error = &protocol.ServeError{Message: err.Error()}
 				} else {
