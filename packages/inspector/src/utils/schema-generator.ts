@@ -7,7 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from 'fs'
-import { dirname, join, resolve } from 'path'
+import { basename, dirname, join, resolve } from 'path'
 import {
   createFormatter,
   createParser,
@@ -25,6 +25,7 @@ import type { JSONValue } from '@pikku/core/utils'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { TypesMap } from '../types-map.js'
 import { ErrorCode } from '../error-codes.js'
+import { getCachedSourceFile } from '../source-file-cache.js'
 import type { InspectorLogger, InspectorState, SchemaRef } from '../types.js'
 import { generateCustomTypes } from './custom-types-generator.js'
 
@@ -277,6 +278,23 @@ const createIndexedGenerator = (program: ts.Program, config: Config) => {
   )
 }
 
+/**
+ * Parse at the inspector's target so the schema program reuses the inspector's
+ * SourceFiles instead of re-parsing the project; `target` is part of the
+ * parse cache key. The lib the project's own target implies is pinned, so type
+ * resolution is unchanged.
+ */
+const parseAtInspectorTarget = (
+  options: ts.CompilerOptions
+): ts.CompilerOptions => {
+  if (options.target === ts.ScriptTarget.ESNext) return options
+  return {
+    ...options,
+    target: ts.ScriptTarget.ESNext,
+    lib: options.lib ?? [basename(ts.getDefaultLibFilePath(options))],
+  }
+}
+
 function createProgramWithVirtualFile(
   logger: InspectorLogger,
   tsconfig: string,
@@ -293,6 +311,9 @@ function createProgramWithVirtualFile(
       configFile.config,
       ts.sys,
       basePath
+    )
+    cachedParsedConfig.options = parseAtInspectorTarget(
+      cachedParsedConfig.options
     )
     cachedTsconfigPath = configPath
     cachedSchemaProgram = undefined
@@ -321,12 +342,21 @@ function createProgramWithVirtualFile(
           languageVersionOrOptions
         )
       }
-      return defaultHost.getSourceFile(
-        fileName,
-        languageVersionOrOptions,
-        onError,
-        shouldCreateNewSourceFile
-      )
+      if (shouldCreateNewSourceFile) {
+        return defaultHost.getSourceFile(
+          fileName,
+          languageVersionOrOptions,
+          onError,
+          shouldCreateNewSourceFile
+        )
+      }
+      // Shares the inspector's parsed files rather than parsing the project a
+      // second time.
+      const text = defaultHost.readFile(fileName)
+      if (text === undefined) return undefined
+      return getCachedSourceFile(fileName, text, languageVersionOrOptions, {
+        populate: false,
+      }).file
     },
     fileExists(fileName) {
       if (resolve(fileName) === resolvedVirtualPath) return true
