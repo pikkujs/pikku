@@ -25,10 +25,16 @@ func TestRegisteredGroups(t *testing.T) {
 			"addFileExtendsCoreType CoreUserSession", "addFileExtendsCoreType CoreConfig",
 			"addFileWithFactory CreateSingletonServices", "addFileWithFactory CreateWireServices",
 			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle",
-			"addRPCInvocations", "addWireAddon (stand-in)", "addMiddleware (stand-in)", "addPermission (stand-in)",
+			"addAnalytics", "addOutgoingWebhook",
+			"addRPCInvocations", "addWireAddon (stand-in)", "addMiddleware", "addPermission",
+			"addApprovalDescription", "addWorkflow",
 		},
 		PhaseFunctions: {"addFunctions"},
-		PhaseRoutes:    {"addSecret", "addCredential", "addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker"},
+		PhaseRoutes: {
+			"addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
+			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers",
+			"addMCPResource", "addMCPPrompt", "addWorkflowGraph", "addFeature", "addAgent", "addAgentScorer",
+		},
 	}
 	for p, names := range want {
 		vs := Visitors(p)

@@ -30,9 +30,7 @@ func init() {
 	Register(Visitor{Name: "addWireAddon (stand-in)", Phase: PhaseSetup, Order: OrderAddWireAddon, Visit: (*Context).visitWireAddonStandin})
 }
 
-// visitWireAddonStandin covers wireAddon and addHTTPMiddleware. TS handles
-// addHTTPMiddleware inside addMiddleware (order 140); it records into the same
-// scratch either way, so the order does not change the result.
+// visitWireAddonStandin covers wireAddon.
 func (s *Context) visitWireAddonStandin(node *ast.Node) {
 	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
 		return
@@ -60,16 +58,6 @@ func (s *Context) visitWireAddonStandin(node *ast.Node) {
 				"variable":   recordPropertyValue(args[0], "variableOverrides"),
 				"credential": recordPropertyValue(args[0], "credentialOverrides"),
 			},
-		}
-	case "addHTTPMiddleware":
-		if len(args) >= 2 && ast.IsStringLiteral(args[0]) && ast.IsArrayLiteralExpression(args[1]) {
-			p := args[0].Text()
-			for _, existing := range s.httpRouteMiddleware {
-				if existing == p {
-					return
-				}
-			}
-			s.httpRouteMiddleware = append(s.httpRouteMiddleware, p)
 		}
 	}
 }
@@ -175,8 +163,7 @@ func (s *Context) LoadAddonFunctionsMeta() {
 
 // loadAddonKeyedMeta merges an addon's secrets, variables and credentials
 // meta into the project's definitions, remapped through the wireAddon
-// overrides, as load-addon-functions-meta.ts does. Scopes are not loaded
-// (addScope is not ported).
+// overrides, as load-addon-functions-meta.ts does, and its scopes.
 func (s *Context) loadAddonKeyedMeta(decl *addonDecl, dir string) {
 	merge := func(sub, kind, idField string, defs *state.List[state.Raw]) {
 		path := resolvePackageSubpath(dir, decl.pkg, sub)
@@ -235,6 +222,7 @@ func (s *Context) loadAddonKeyedMeta(decl *addonDecl, dir string) {
 		})
 	}
 	merge(".pikku/secrets/pikku-secrets-meta.gen.json", "secret", "secretId", &s.State.Secrets.Definitions)
+	s.loadAddonScopes(decl, dir)
 	merge(".pikku/variables/pikku-variables-meta.gen.json", "variable", "variableId", &s.State.Variables.Definitions)
 	merge(".pikku/credentials/pikku-credentials-meta.gen.json", "credential", "", &s.State.Credentials.Definitions)
 }

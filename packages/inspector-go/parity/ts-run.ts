@@ -50,7 +50,17 @@ if (!['reference', 'roundtrip'].includes(mode) || !projectDir || !outFile) {
 
 const { routeFiles, options } = await projectInput(resolve(projectDir))
 const logger = createRecordingLogger()
-const analyzed = await analyzeProgram(logger, routeFiles, options)
+const analyzed = await analyzeProgram(logger, routeFiles, options).catch(
+  (error) => {
+    // The recording logger swallows what led up to the throw; show it.
+    for (const d of logger.diagnostics) {
+      if (d.level === 'error' || d.level === 'critical') {
+        console.error(`[${d.level}] ${d.message}`)
+      }
+    }
+    throw error
+  }
+)
 // A copy, not the serialized view: serialization shares objects with the live
 // state, and finalize below mutates them in place.
 const pre: SerializableInspectorState = JSON.parse(

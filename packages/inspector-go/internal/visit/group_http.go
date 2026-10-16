@@ -44,6 +44,9 @@ func (s *Context) addHTTPRoute(node *ast.Node) {
 }
 
 func (s *Context) addHTTPRoutes(node *ast.Node) {
+	if s.addExportedHTTPRoutes(node) {
+		return
+	}
 	obj := wiringCall(node, "wireHTTPRoutes")
 	if obj == nil {
 		return
@@ -287,16 +290,6 @@ func (s *Context) registerHTTPRoute(obj *ast.Node, sourceFile string, group grou
 		s.State.HTTP.Meta.Set(method, routes)
 	}
 	routes.Set(fullRoute, route)
-}
-
-func (s *Context) resolveHTTPMiddleware(route string, obj *ast.Node, tags []string) []WireRef {
-	var out []WireRef
-	for _, pattern := range s.httpRouteMiddleware {
-		if tsutil.RouteMatchesPattern(route, pattern) {
-			out = append(out, WireRef{Type: "http", Route: pattern})
-		}
-	}
-	return append(out, s.resolveMiddleware(obj, tags)...)
 }
 
 // --- wireQueueWorker -----------------------------------------------------------

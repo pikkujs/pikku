@@ -228,19 +228,36 @@ func FinalizeWorkflowWires(st *state.State) error {
 
 	scanChannels(g, recordValues(&st.Channels.Meta))
 
+	type mcpWire struct{ pikkuFuncId, value string }
+	var tools, prompts, resources []mcpWire
+	st.MCPEndpoints.ToolsMeta.Each(func(_ string, m *state.MCPToolMeta) {
+		if m != nil {
+			tools = append(tools, mcpWire{m.PikkuFuncId, m.Name})
+		}
+	})
+	st.MCPEndpoints.PromptsMeta.Each(func(_ string, m *state.MCPPromptMeta) {
+		if m != nil {
+			prompts = append(prompts, mcpWire{m.PikkuFuncId, m.Name})
+		}
+	})
+	st.MCPEndpoints.ResourcesMeta.Each(func(_ string, m *state.MCPResourceMeta) {
+		if m != nil {
+			resources = append(resources, mcpWire{m.PikkuFuncId, m.URI})
+		}
+	})
 	for _, kind := range []struct {
-		r     *state.Record[state.Raw]
+		wires []mcpWire
 		key   string
 		field string
 	}{
-		{&st.MCPEndpoints.ToolsMeta, "tool", "name"},
-		{&st.MCPEndpoints.PromptsMeta, "prompt", "name"},
-		{&st.MCPEndpoints.ResourcesMeta, "resource", "uri"},
+		{tools, "tool", "name"},
+		{prompts, "prompt", "name"},
+		{resources, "resource", "uri"},
 	} {
-		for _, meta := range recordValues(kind.r) {
-			if p, graph := g.lookup(meta.Get("pikkuFuncId")); graph != nil {
+		for _, w := range kind.wires {
+			if p, graph := g.lookup(w.pikkuFuncId); graph != nil {
 				mcp := subObject(g.wires(graph), "mcp")
-				pushTo(mcp, kind.key, Obj(kind.field, meta.Get(kind.field), "startNode", resolveStartNode(p, graph)))
+				pushTo(mcp, kind.key, Obj(kind.field, w.value, "startNode", resolveStartNode(p, graph)))
 			}
 		}
 	}

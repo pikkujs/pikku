@@ -145,7 +145,7 @@ func (s *Context) ResolveLatestVersions() {
 }
 
 // updateWiringReferences rewrites the wirings already typed in Go. Channels,
-// CLI, scheduled tasks, triggers and MCP are still Raw sections; port their
+// CLI, scheduled tasks and triggers are still Raw sections; port their
 // rewrite together with their visitor group.
 func (s *Context) updateWiringReferences(oldId, newId string) {
 	s.State.HTTP.Meta.Each(func(_ string, routes *state.Record[*HTTPRouteMeta]) {
@@ -160,4 +160,20 @@ func (s *Context) updateWiringReferences(oldId, newId string) {
 			q.PikkuFuncId = newId
 		}
 	})
+	s.State.MCPEndpoints.ResourcesMeta.Each(func(_ string, r *state.MCPResourceMeta) {
+		if r.PikkuFuncId == oldId {
+			r.PikkuFuncId = newId
+		}
+	})
+	s.State.MCPEndpoints.ToolsMeta.Each(func(_ string, t *state.MCPToolMeta) {
+		if t.PikkuFuncId == oldId {
+			t.PikkuFuncId = newId
+		}
+	})
+	s.State.MCPEndpoints.PromptsMeta.Each(func(_ string, p *state.MCPPromptMeta) {
+		if p.PikkuFuncId == oldId {
+			p.PikkuFuncId = newId
+		}
+	})
+	s.updateChannelAndCLIReferences(oldId, newId)
 }
