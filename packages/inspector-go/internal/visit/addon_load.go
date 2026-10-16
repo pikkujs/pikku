@@ -437,7 +437,15 @@ func (s *Context) loadAddonMCPTools(ns string, decl *addonDecl, meta *ojson) {
 			if surface != "" {
 				o.set("surface", ojsonString(surface))
 			}
-			s.State.MCPEndpoints.ToolsMeta.Set(toolName, o.raw())
+			// The addon's meta is JSON; a field of the wrong type would be a
+			// broken package, so the tool is decoded rather than built field
+			// by field.
+			tool := &state.MCPToolMeta{}
+			if err := json.Unmarshal(o.raw(), tool); err != nil {
+				s.Log.Debugf("Skipping MCP tool %s: %s", toolName, err.Error())
+				return
+			}
+			s.State.MCPEndpoints.ToolsMeta.Set(toolName, tool)
 		})
 	}
 	for _, fn := range selected {

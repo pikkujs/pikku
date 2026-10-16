@@ -32,8 +32,10 @@ type Types struct {
 // Options is the subset of InspectorOptions the analysis reads.
 type Options struct {
 	SetupOnly bool
-	Types     *Types
-	IsAddon   bool
+	// AllowComplexWorkflows is options.allow.complexWorkflows.
+	AllowComplexWorkflows bool
+	Types                 *Types
+	IsAddon               bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,
@@ -46,16 +48,10 @@ type Context struct {
 	RootDir    string
 	SourceFile *ast.SourceFile
 
-	// Stand-ins for setup-phase state whose visitor groups are not ported
-	// (addMiddleware, addPermission, addWireAddon, addHTTPMiddleware): just
-	// what the ported groups read back. They become real state sections when
-	// those groups are ported.
-	middlewareDefs      map[string]definition
-	permissionDefs      map[string]definition
-	tagMiddleware       map[string]bool
-	httpRouteMiddleware []string
-	addons              map[string]*addonDecl
-	addonOrder          []string
+	// Stand-in for setup-phase state whose visitor group is not ported
+	// (addWireAddon): just what the ported groups read back.
+	addons     map[string]*addonDecl
+	addonOrder []string
 
 	// typesLookup is InspectorState.typesLookup: live checker types, read
 	// only during analysis. What finalize needs from it is serialized as
@@ -67,22 +63,15 @@ type Context struct {
 	cliConfigTypeWarned bool
 }
 
-type definition struct {
-	exported bool
-}
-
 func NewContext(c *checker.Checker, st *state.State, log *diag.Logger, opts Options) *Context {
 	return &Context{
-		Checker:        c,
-		State:          st,
-		Log:            log,
-		Options:        opts,
-		RootDir:        st.RootDir,
-		middlewareDefs: map[string]definition{},
-		permissionDefs: map[string]definition{},
-		tagMiddleware:  map[string]bool{},
-		addons:         map[string]*addonDecl{},
-		typesLookup:    map[string][]*checker.Type{},
+		Checker:     c,
+		State:       st,
+		Log:         log,
+		Options:     opts,
+		RootDir:     st.RootDir,
+		addons:      map[string]*addonDecl{},
+		typesLookup: map[string][]*checker.Type{},
 	}
 }
 

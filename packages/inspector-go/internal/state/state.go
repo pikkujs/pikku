@@ -94,18 +94,18 @@ type State struct {
 }
 
 type Functions struct {
-	TypesMap             *typesmap.TypesMap    `json:"typesMap"`
-	Meta                 Record[*FunctionMeta] `json:"meta"`
-	Files                Map[FileExport]       `json:"files"`
-	ApprovalDescriptions Record[Raw]           `json:"approvalDescriptions"`
-	DynamicImportIds     Set                   `json:"-"`
+	TypesMap             *typesmap.TypesMap            `json:"typesMap"`
+	Meta                 Record[*FunctionMeta]         `json:"meta"`
+	Files                Map[FileExport]               `json:"files"`
+	ApprovalDescriptions Record[*MiddlewareDefinition] `json:"approvalDescriptions"`
+	DynamicImportIds     Set                           `json:"-"`
 }
 
 type HTTP struct {
 	MetaInputTypes  Map[MetaInputTypes]             `json:"metaInputTypes"`
 	Meta            Record[*Record[*HTTPRouteMeta]] `json:"meta"`
 	Files           Set                             `json:"files"`
-	RouteMiddleware Map[Raw]                        `json:"routeMiddleware"`
+	RouteMiddleware Map[*MiddlewareGroupMeta]       `json:"routeMiddleware"`
 }
 
 // HTTPMethods are the keys getInitialInspectorState gives http.meta.
@@ -159,24 +159,24 @@ type RPC struct {
 }
 
 type MCPEndpoints struct {
-	ResourcesMeta Record[Raw]     `json:"resourcesMeta"`
-	ToolsMeta     Record[Raw]     `json:"toolsMeta"`
-	PromptsMeta   Record[Raw]     `json:"promptsMeta"`
-	Files         Set             `json:"files"`
-	Surfaces      *Record[string] `json:"surfaces,omitempty"`
+	ResourcesMeta Record[*MCPResourceMeta] `json:"resourcesMeta"`
+	ToolsMeta     Record[*MCPToolMeta]     `json:"toolsMeta"`
+	PromptsMeta   Record[*MCPPromptMeta]   `json:"promptsMeta"`
+	Files         Set                      `json:"files"`
+	Surfaces      *Record[string]          `json:"surfaces,omitempty"`
 }
 
 // Agents follows the serializer's literal, which writes agentsMeta, files,
 // invokedAgentsByFile in that order.
 type Agents struct {
-	AgentsMeta          Record[Raw]     `json:"agentsMeta"`
-	Files               Map[FileExport] `json:"files"`
-	InvokedAgentsByFile Map[*Set]       `json:"invokedAgentsByFile"`
+	AgentsMeta          Record[*AgentMeta] `json:"agentsMeta"`
+	Files               Map[FileExport]    `json:"files"`
+	InvokedAgentsByFile Map[*Set]          `json:"invokedAgentsByFile"`
 }
 
 type Scorers struct {
-	ScorersMeta Record[Raw]     `json:"scorersMeta"`
-	Files       Map[FileExport] `json:"files"`
+	ScorersMeta Record[*ScorerMeta] `json:"scorersMeta"`
+	Files       Map[FileExport]     `json:"files"`
 }
 
 type CLIMeta struct {
@@ -190,10 +190,10 @@ type CLI struct {
 }
 
 type Auth struct {
-	Providers  Strings `json:"providers"`
-	Plugins    Strings `json:"plugins"`
-	Files      Set     `json:"files"`
-	Definition Raw     `json:"definition"`
+	Providers  Strings         `json:"providers"`
+	Plugins    Strings         `json:"plugins"`
+	Files      Set             `json:"files"`
+	Definition *AuthDefinition `json:"definition"`
 }
 
 type Secrets struct {
@@ -222,25 +222,25 @@ type Manifest struct {
 }
 
 type Middleware struct {
-	Definitions   Record[Raw] `json:"definitions"`
-	Instances     Record[Raw] `json:"instances"`
-	GlobalFiles   Set         `json:"globalFiles"`
-	TagMiddleware Map[Raw]    `json:"tagMiddleware"`
+	Definitions   Record[*MiddlewareDefinition] `json:"definitions"`
+	Instances     Record[*MiddlewareInstance]   `json:"instances"`
+	GlobalFiles   Set                           `json:"globalFiles"`
+	TagMiddleware Map[*MiddlewareGroupMeta]     `json:"tagMiddleware"`
 }
 
 type ChannelMiddleware struct {
-	Definitions   Record[Raw] `json:"definitions"`
-	Instances     Record[Raw] `json:"instances"`
-	TagMiddleware Map[Raw]    `json:"tagMiddleware"`
+	Definitions   Record[*MiddlewareDefinition] `json:"definitions"`
+	Instances     Record[*MiddlewareInstance]   `json:"instances"`
+	TagMiddleware Map[*MiddlewareGroupMeta]     `json:"tagMiddleware"`
 }
 
 type AgentMiddleware struct {
-	Definitions Record[Raw] `json:"definitions"`
+	Definitions Record[*MiddlewareDefinition] `json:"definitions"`
 }
 
 type Permissions struct {
-	Definitions Record[Raw] `json:"definitions"`
-	Instances   Record[Raw] `json:"instances"`
+	Definitions Record[*MiddlewareDefinition] `json:"definitions"`
+	Instances   Record[Raw]                   `json:"instances"`
 }
 
 type ServiceAggregation struct {
@@ -295,7 +295,6 @@ func New(rootDir string) *State {
 	}
 	s.Triggers.WebhookSourceMeta = NewRecord[Raw]()
 	s.MCPEndpoints.Surfaces = NewRecord[string]()
-	s.Auth.Definition = Raw("null")
 	s.Manifest.Initial = Raw("null")
 	s.Manifest.Current = Raw("null")
 	s.OpenAPISpec = Raw("null")

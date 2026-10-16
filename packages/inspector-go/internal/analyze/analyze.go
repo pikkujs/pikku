@@ -20,7 +20,16 @@ import (
 
 // Run inspects one request. cache may be nil; serve mode passes one cache for
 // the life of the process.
-func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error) {
+func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			abort, ok := r.(visit.Abort)
+			if !ok {
+				panic(r)
+			}
+			resp, err = nil, abort
+		}
+	}()
 	start := time.Now()
 	if cache != nil {
 		cache.Begin()
@@ -38,7 +47,11 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 
 	log := &diag.Logger{}
 	st := state.New(prog.RootDir)
-	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{SetupOnly: req.Options.SetupOnly, IsAddon: req.Options.IsAddon})
+	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
+		SetupOnly:             req.Options.SetupOnly,
+		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
+		IsAddon:               req.Options.IsAddon,
+	})
 
 	ctx.SweepUsage(prog.ProjectFiles)
 	ctx.Sweep(visit.PhaseSetup, prog.ProjectFiles)
