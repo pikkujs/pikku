@@ -5,11 +5,9 @@
  * result is compared with the reference's post-finalize state, so analysis
  * differences cannot leak in.
  *
- *   bun parity/finalize-parity.ts [--project <dir>]... [--bin <path>] [--all]
+ *   bun parity/finalize-parity.ts [--project <dir>]... [--bin <path>]
  *
- * Sections and fields finalize-b owns (contract hashes, addon schemas, the
- * manifest, workflow finalization, filesAndMethods, the OpenAPI spec) are
- * skipped unless --all is given: their Go steps are still stubs here.
+ * The options carry the OpenAPI error registry, as the wrapper sends them.
  * Diagnostics are the ones finalize logged, compared in order.
  */
 import { spawnSync } from 'node:child_process'
@@ -17,6 +15,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deserializeInspectorState } from '@pikku/inspector/finalize'
 import { toAnalysisOptions } from '../src/protocol.ts'
+import { withOpenAPIErrors } from '../src/openapi-errors.ts'
 import type { InspectorGoDiagnostic } from '../src/protocol.ts'
 import { projectInput } from './project-input.ts'
 import { comparableState, diffPaths } from './comparable.ts'
@@ -24,26 +23,12 @@ import { runTypeScript } from './run-ts.ts'
 
 const REPO = fileURLToPath(new URL('../../../', import.meta.url))
 
-const FINALIZE_B_SECTIONS = new Set([
-  'schemas',
-  'manifest',
-  'filesAndMethods',
-  'filesAndMethodsErrors',
-  'openAPISpec',
-  'workflows',
-  'exportedContracts',
-])
-/** Diff paths finalize-b's steps write inside sections finalize-a owns. */
-const FINALIZE_B_PATHS = [/\.(contractHash|inputHash|outputHash)$/]
-
 const args = process.argv.slice(2)
 const projects: string[] = []
 let bin = fileURLToPath(new URL('../bin/pikku-inspect', import.meta.url))
-let all = false
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--project') projects.push(resolve(args[++i]!))
   else if (args[i] === '--bin') bin = resolve(args[++i]!)
-  else if (args[i] === '--all') all = true
 }
 if (projects.length === 0) {
   projects.push(
@@ -63,12 +48,8 @@ for (const projectDir of projects) {
 
   const run = spawnSync(bin, ['finalize', '--stdin'], {
     input: JSON.stringify({
-      // finalizeWorkflows is a finalize-b stub here, but aggregateRequiredServices
-      // reads the graphs it builds, so the input carries TS's finalized workflows.
-      state: all
-        ? reference.pre
-        : { ...reference.pre, workflows: reference.postWorkflows! },
-      options: toAnalysisOptions(options),
+      state: reference.pre,
+      options: withOpenAPIErrors(toAnalysisOptions(options)),
     }),
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
@@ -88,15 +69,11 @@ for (const projectDir of projects) {
     ...Object.keys(tsPost),
     ...Object.keys(goPost),
   ])) {
-    if (!all && FINALIZE_B_SECTIONS.has(section)) continue
     const diffs = diffPaths(
       goPost[section],
       tsPost[section],
       200,
       `$.${section}`
-    ).filter(
-      (path) =>
-        all || !FINALIZE_B_PATHS.some((re) => re.test(path.split(':')[0]!))
     )
     if (diffs.length === 0) continue
     failed = true
