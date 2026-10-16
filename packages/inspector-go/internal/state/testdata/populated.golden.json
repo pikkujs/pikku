@@ -86,7 +86,8 @@
       }
     },
     "files": [],
-    "approvalDescriptions": {}
+    "approvalDescriptions": {},
+    "dynamicImportIds": []
   },
   "http": {
     "metaInputTypes": [],

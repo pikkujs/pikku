@@ -68,6 +68,8 @@ type State struct {
 	AgentMiddleware       AgentMiddleware                `json:"agentMiddleware"`
 	Permissions           Permissions                    `json:"permissions"`
 	ServiceAggregation    ServiceAggregation             `json:"serviceAggregation"`
+	// ServiceTypes is resolveServiceTypes' answer (analysis), read by finalize.
+	ServiceTypes          *ServiceTypes                  `json:"serviceTypes,omitempty"`
 	ResolvedIOTypes       Record[ResolvedIOType]         `json:"resolvedIOTypes"`
 	MiddlewareGroupsMeta  MiddlewareGroupsMeta           `json:"middlewareGroupsMeta"`
 	PermissionsGroupsMeta PermissionsGroupsMeta          `json:"permissionsGroupsMeta"`
@@ -98,7 +100,7 @@ type Functions struct {
 	Meta                 Record[*FunctionMeta]         `json:"meta"`
 	Files                Map[FileExport]               `json:"files"`
 	ApprovalDescriptions Record[*MiddlewareDefinition] `json:"approvalDescriptions"`
-	DynamicImportIds     Set                           `json:"-"`
+	DynamicImportIds     Set                           `json:"dynamicImportIds"`
 }
 
 type HTTP struct {
@@ -250,6 +252,16 @@ type ServiceAggregation struct {
 	UsedPermissions      Set     `json:"usedPermissions"`
 	AllSingletonServices Strings `json:"allSingletonServices"`
 	AllWireServices      Strings `json:"allWireServices"`
+}
+
+// ServiceTypes is InspectorServiceTypes: what finalize needs from the
+// SingletonServices and Services types, read off the checker by analysis.
+type ServiceTypes struct {
+	// SingletonServices is sorted; nil (JSON null) when the type is unresolved.
+	SingletonServices *Strings `json:"singletonServices"`
+	// Services is unfiltered, in property order; nil when unresolved.
+	Services      *Strings `json:"services"`
+	SecretAliases Strings  `json:"secretAliases"`
 }
 
 type ResolvedIOType struct {

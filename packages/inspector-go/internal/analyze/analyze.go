@@ -71,6 +71,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	}
 
 	ctx.FinishCoreTypeProperties()
+	ctx.FinishServiceTypes()
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
