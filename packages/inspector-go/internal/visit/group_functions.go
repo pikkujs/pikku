@@ -80,6 +80,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 
 	m := &FunctionMeta{FunctionType: "user", FuncWrapper: wrapper}
 	var objectNode *ast.Node
+	var nodeCfg *nodeConfig
 	var tags []string
 	var expose, mcp bool
 	var version int
@@ -195,7 +196,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 				version = int(f)
 			}
 		}
-		// node config (state.nodes) is out of scope for this slice.
+		nodeCfg = s.readNodeConfig(firstArg, name)
 		for _, p := range firstArg.Properties() {
 			if ast.IsPropertyAssignment(p) && ast.IsIdentifier(p.Name()) {
 				pn := p.Name().Text()
@@ -468,6 +469,9 @@ func (s *Context) addFunctions(node *ast.Node) {
 	}
 
 	s.State.Functions.Meta.Set(pikkuFuncId, m)
+	if nodeCfg != nil {
+		s.addNodeMeta(nodeCfg, ast.GetSourceFileOfNode(node).FileName(), pikkuFuncId, m)
+	}
 	if mcpEnabled {
 		s.addMCPTool(objectNode, sourceFile, name, m)
 		s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
