@@ -29,7 +29,8 @@ func (a agentMeta) where() string {
 }
 
 func validateAgentModels(log *diag.Logger, st *state.State, modelAliases map[string]string) {
-	st.Agents.AgentsMeta.Each(func(_ string, r state.Raw) {
+	agents := rawRecord(st.Agents.AgentsMeta)
+	agents.Each(func(_ string, r state.Raw) {
 		meta := decode[agentMeta](r)
 		name := templateValue(meta.Name)
 		if !truthy(meta.Model) {
@@ -57,7 +58,8 @@ func validateAgentToolReferences(log *diag.Logger, st *state.State, opts Options
 	if st.Agents.AgentsMeta.Len() == 0 {
 		return
 	}
-	st.Agents.AgentsMeta.Each(func(agentKey string, r state.Raw) {
+	agents := rawRecord(st.Agents.AgentsMeta)
+	agents.Each(func(agentKey string, r state.Raw) {
 		agent := decode[agentMeta](r)
 		where := agent.where()
 		for _, tool := range agent.Tools {
@@ -108,7 +110,8 @@ func validateAgentToolReferences(log *diag.Logger, st *state.State, opts Options
 
 func validateAgentScorerReferences(log *diag.Logger, st *state.State) {
 	known := st.Scorers.ScorersMeta.Keys()
-	st.Agents.AgentsMeta.Each(func(agentKey string, r state.Raw) {
+	agents := rawRecord(st.Agents.AgentsMeta)
+	agents.Each(func(agentKey string, r state.Raw) {
 		agent := decode[agentMeta](r)
 		for _, scorer := range agent.Scorers {
 			if slices.Contains(known, scorer) {

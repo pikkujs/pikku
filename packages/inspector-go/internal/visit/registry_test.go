@@ -27,13 +27,13 @@ func TestRegisteredGroups(t *testing.T) {
 			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle",
 			"addAnalytics", "addOutgoingWebhook",
 			"addRPCInvocations", "addWireAddon (stand-in)", "addMiddleware", "addPermission",
-			"addApprovalDescription",
+			"addApprovalDescription", "addWorkflow",
 		},
 		PhaseFunctions: {"addFunctions"},
 		PhaseRoutes: {
 			"addAuth", "addSecret", "addCredential", "addScope", "addSystemRole", "addFeatureFlag", "addVirtualUsers",
 			"addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers",
-			"addFeature",
+			"addMCPResource", "addMCPPrompt", "addWorkflowGraph", "addFeature", "addAgent", "addAgentScorer",
 		},
 	}
 	for p, names := range want {

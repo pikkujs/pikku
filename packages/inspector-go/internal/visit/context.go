@@ -32,8 +32,10 @@ type Types struct {
 // Options is the subset of InspectorOptions the analysis reads.
 type Options struct {
 	SetupOnly bool
-	Types     *Types
-	IsAddon   bool
+	// AllowComplexWorkflows is options.allow.complexWorkflows.
+	AllowComplexWorkflows bool
+	Types                 *Types
+	IsAddon               bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,

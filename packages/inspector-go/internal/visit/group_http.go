@@ -44,6 +44,9 @@ func (s *Context) addHTTPRoute(node *ast.Node) {
 }
 
 func (s *Context) addHTTPRoutes(node *ast.Node) {
+	if s.addExportedHTTPRoutes(node) {
+		return
+	}
 	obj := wiringCall(node, "wireHTTPRoutes")
 	if obj == nil {
 		return

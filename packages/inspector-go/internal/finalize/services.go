@@ -189,9 +189,9 @@ func aggregateRequiredServices(st *state.State) {
 		}
 	})
 	expandRawWirings(st.ScheduledTasks.Meta)
-	expandRawWirings(st.MCPEndpoints.ToolsMeta)
-	expandRawWirings(st.MCPEndpoints.PromptsMeta)
-	expandRawWirings(st.MCPEndpoints.ResourcesMeta)
+	expandRawWirings(rawRecord(st.MCPEndpoints.ToolsMeta))
+	expandRawWirings(rawRecord(st.MCPEndpoints.PromptsMeta))
+	expandRawWirings(rawRecord(st.MCPEndpoints.ResourcesMeta))
 
 	// 5. Services from wire service factories.
 	st.WireServicesMeta.Each(func(_ string, services state.Strings) { addList(services) })
