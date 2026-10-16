@@ -29,9 +29,13 @@ type State struct {
 	AddonRequiredParentServices    Strings           `json:"addonRequiredParentServices"`
 	AddonCreatedServices           Strings           `json:"addonCreatedServices"`
 	AddonServicesFactorySeen       bool              `json:"addonServicesFactorySeen"`
-	AddonServerlessIncompatible    Map[Strings]      `json:"addonServerlessIncompatible"`
-	ConfigFactories                PathToNameAndType `json:"configFactories"`
-	ServerLifecycleFactories       PathToNameAndType `json:"serverLifecycleFactories"`
+	// Analytics and OutgoingWebhooks are undefined until their visitor's
+	// `??= []` pushes the first entry, so empty is absent.
+	Analytics                   []Raw             `json:"analytics,omitempty"`
+	OutgoingWebhooks            []Raw             `json:"outgoingWebhooks,omitempty"`
+	AddonServerlessIncompatible Map[Strings]      `json:"addonServerlessIncompatible"`
+	ConfigFactories             PathToNameAndType `json:"configFactories"`
+	ServerLifecycleFactories    PathToNameAndType `json:"serverLifecycleFactories"`
 	// InspectorFilesAndMethods: written by getFilesAndMethods (finalize).
 	FilesAndMethods       Record[Raw]                    `json:"filesAndMethods"`
 	FilesAndMethodsErrors Map[PathToNameAndType]         `json:"filesAndMethodsErrors"`
@@ -66,6 +70,8 @@ type State struct {
 	AgentMiddleware       AgentMiddleware                `json:"agentMiddleware"`
 	Permissions           Permissions                    `json:"permissions"`
 	ServiceAggregation    ServiceAggregation             `json:"serviceAggregation"`
+	// ServiceTypes is resolveServiceTypes' answer (analysis), read by finalize.
+	ServiceTypes          *ServiceTypes                  `json:"serviceTypes,omitempty"`
 	ResolvedIOTypes       Record[ResolvedIOType]         `json:"resolvedIOTypes"`
 	MiddlewareGroupsMeta  MiddlewareGroupsMeta           `json:"middlewareGroupsMeta"`
 	PermissionsGroupsMeta PermissionsGroupsMeta          `json:"permissionsGroupsMeta"`
@@ -88,9 +94,7 @@ type State struct {
 	CoreTypeProperties *Record[Strings] `json:"coreTypeProperties,omitempty"`
 
 	// InspectorState members the serializer does not write.
-	Analytics        []Raw  `json:"-"`
-	OutgoingWebhooks []Raw  `json:"-"`
-	Stats            *Stats `json:"-"`
+	Stats *Stats `json:"-"`
 }
 
 type Functions struct {
@@ -98,7 +102,7 @@ type Functions struct {
 	Meta                 Record[*FunctionMeta] `json:"meta"`
 	Files                Map[FileExport]       `json:"files"`
 	ApprovalDescriptions Record[Raw]           `json:"approvalDescriptions"`
-	DynamicImportIds     Set                   `json:"-"`
+	DynamicImportIds     Set                   `json:"dynamicImportIds"`
 }
 
 type HTTP struct {
@@ -211,7 +215,7 @@ type Scopes struct {
 	Definitions List[Raw] `json:"definitions"`
 	Files       Set       `json:"files"`
 	// Declared holds declareScopes ids until addon scopes are merged.
-	Declared *Map[string] `json:"-"`
+	Declared *Map[string] `json:"declared,omitempty"`
 }
 
 type Manifest struct {
@@ -249,6 +253,16 @@ type ServiceAggregation struct {
 	UsedPermissions      Set     `json:"usedPermissions"`
 	AllSingletonServices Strings `json:"allSingletonServices"`
 	AllWireServices      Strings `json:"allWireServices"`
+}
+
+// ServiceTypes is InspectorServiceTypes: what finalize needs from the
+// SingletonServices and Services types, read off the checker by analysis.
+type ServiceTypes struct {
+	// SingletonServices is sorted; nil (JSON null) when the type is unresolved.
+	SingletonServices *Strings `json:"singletonServices"`
+	// Services is unfiltered, in property order; nil when unresolved.
+	Services      *Strings `json:"services"`
+	SecretAliases Strings  `json:"secretAliases"`
 }
 
 type ResolvedIOType struct {
