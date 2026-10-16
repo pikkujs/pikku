@@ -30,6 +30,8 @@ export interface PikkuCLICoreOutputFiles {
 
   // Schema and types
   schemaDirectory: string
+  /** The custom types every typed map imports, emitted once rather than per map. */
+  customTypesDeclarationFile: string
 
   // Function definitions
   functionsFile: string

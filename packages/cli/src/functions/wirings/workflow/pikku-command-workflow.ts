@@ -8,6 +8,7 @@ import { serializeVirtualUsers } from './serialize-virtual-users.js'
 import { resolveVirtualUsers } from '../../../utils/resolve-virtual-users.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
@@ -76,9 +77,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       const singletonServices =
         visitState.serviceAggregation.allSingletonServices.length > 0
           ? visitState.serviceAggregation.allSingletonServices
-          : (fallbackType
-              ?.getProperties()
-              .map((symbol) => symbol.getName()) ?? [])
+          : (fallbackType?.getProperties().map((symbol) => symbol.getName()) ??
+            [])
       const hasWorkflowState = singletonServices.includes('workflowService')
       if (!hasWorkflowState) {
         logger.critical(
@@ -272,6 +272,13 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      typesMap
+    )
+
     // Rides the workflow command rather than getting its own codegen node, so
     // it can't drift out of the two hand-maintained ordering lists.
     await writeFileInDir(
@@ -282,7 +289,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         config.scenarioStepMapDeclarationFile,
         packageMappings,
         typesMap,
-        functionState.meta
+        functionState.meta,
+        config.customTypesDeclarationFile
       )
     )
 
@@ -349,6 +357,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
             functionState.meta,
             workflows.meta,
             workflows.graphMeta,
+            config.customTypesDeclarationFile,
             visitState.rpc?.wireAddonDeclarations
           )
     )

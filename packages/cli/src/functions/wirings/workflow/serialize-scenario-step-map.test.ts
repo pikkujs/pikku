@@ -68,7 +68,14 @@ const functionsMeta = (): FunctionsMeta =>
   }) as unknown as FunctionsMeta
 
 const emit = (meta = functionsMeta()) =>
-  serializeScenarioStepMap(logger, '.pikku', {}, emptyTypesMap(), meta)
+  serializeScenarioStepMap(
+    logger,
+    '.pikku',
+    {},
+    emptyTypesMap(),
+    meta,
+    '.pikku/pikku-custom-types.gen.d.ts'
+  )
 
 describe('serializeScenarioStepMap', () => {
   test('every declared step becomes a key', () => {
@@ -109,7 +116,8 @@ describe('serializeScenarioStepMap', () => {
       '.pikku',
       {},
       emptyTypesMap(),
-      {} as FunctionsMeta
+      {} as FunctionsMeta,
+      '.pikku/pikku-custom-types.gen.d.ts'
     )
     assert.match(result, /export type FlattenedScenarioStepMap/)
   })

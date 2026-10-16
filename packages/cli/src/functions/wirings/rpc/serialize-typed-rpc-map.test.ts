@@ -30,7 +30,8 @@ describe('serializeTypedRPCMap', () => {
       {
         health: { inputType: 'void', outputType: 'string' },
         list: { inputType: 'any', outputType: 'string' },
-      }
+      },
+      '/tmp/pikku-custom-types.gen.d.ts'
     )
 
     assert.match(result, /type IsAny<T> = 0 extends \(1 & T\) \? true : false/)
@@ -49,6 +50,7 @@ describe('serializeTypedRPCMap', () => {
       emptyTypesMap,
       {},
       {},
+      '/tmp/pikku-custom-types.gen.d.ts',
       new Map([
         ['registry', { package: '@pikkustudio/addon-registry', remote: true }],
       ])
@@ -70,6 +72,7 @@ describe('serializeTypedRPCMap', () => {
       emptyTypesMap,
       {},
       {},
+      '/tmp/pikku-custom-types.gen.d.ts',
       new Map([['slack', { package: '@pikku/addon-slack' }]])
     )
 
@@ -86,7 +89,8 @@ describe('serializeTypedRPCMap', () => {
       {},
       emptyTypesMap,
       {},
-      {}
+      {},
+      '/tmp/pikku-custom-types.gen.d.ts'
     )
 
     assert.match(

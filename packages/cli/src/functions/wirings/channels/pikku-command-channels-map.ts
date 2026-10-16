@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedChannelsMap } from './serialize-typed-channel-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 
 export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -20,7 +21,14 @@ export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
       state.functions.meta,
       state.addonFunctions,
       state.channels.meta,
-      rpcInternalMapDeclarationFile
+      rpcInternalMapDeclarationFile,
+      config.customTypesDeclarationFile
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      state.functions.typesMap
     )
     await writeFileInDir(logger, channelsMapDeclarationFile, content)
   },

@@ -59,7 +59,8 @@ const serialize = (routeKey: string, methods: string[]) => {
     functionsMeta,
     {},
     meta,
-    '/proj/.pikku/rpc/pikku-rpc-map.internal.gen.d.ts'
+    '/proj/.pikku/rpc/pikku-rpc-map.internal.gen.d.ts',
+    '/proj/.pikku/pikku-custom-types.gen.d.ts'
   )
 }
 

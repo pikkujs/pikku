@@ -67,18 +67,46 @@ function stripClassificationWrappers(type: string): string {
   return output
 }
 
-export function generateCustomTypes(
-  typesMap: TypesMap,
-  requiredTypes: Set<string>
-) {
-  const typeDeclarations = Array.from(typesMap.customTypes.entries())
+function emittableCustomTypes(typesMap: TypesMap) {
+  return Array.from(typesMap.customTypes.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .filter(([_name, { type }]) => {
       const hasUndefinedGeneric =
         /\b(Name|In|Out|Key)\b/.test(type) && /\[.*\]/.test(type)
       return !hasUndefinedGeneric
     })
-    .map(([originalName, { type, references }]) => {
+}
+
+/**
+ * The names `generateCustomTypes` declares, in the order it declares them. A
+ * file that imports from the shared custom-types file uses this to know which
+ * names exist there.
+ */
+export function customTypeNames(typesMap: TypesMap): string[] {
+  return emittableCustomTypes(typesMap)
+    .filter(
+      ([originalName, { type }]) =>
+        sanitizeTypeName(originalName) !== stripClassificationWrappers(type)
+    )
+    .map(([originalName]) => sanitizeTypeName(originalName))
+}
+
+export interface GenerateCustomTypesOptions {
+  /**
+   * Turns the absolute path of a type's source file into the specifier the
+   * import line uses. Left out, the absolute path is used as-is — fine for the
+   * in-memory source the schema generator compiles, wrong for a file on disk.
+   */
+  resolveImportPath?: (absolutePath: string) => string
+}
+
+export function generateCustomTypes(
+  typesMap: TypesMap,
+  requiredTypes: Set<string>,
+  { resolveImportPath = (path) => path }: GenerateCustomTypesOptions = {}
+) {
+  const typeDeclarations = emittableCustomTypes(typesMap).map(
+    ([originalName, { type, references }]) => {
       const name = sanitizeTypeName(originalName)
       references.forEach((refName) => {
         if (
@@ -121,7 +149,8 @@ export function generateCustomTypes(
 
       if (name === typeString) return null
       return `export type ${name} = ${typeString}`
-    })
+    }
+  )
 
   const importsByPath = new Map<string, Set<string>>()
   for (const typeName of requiredTypes) {
@@ -142,7 +171,7 @@ export function generateCustomTypes(
   const importLines = Array.from(importsByPath.entries())
     .map(
       ([path, types]) =>
-        `import type { ${Array.from(types).join(', ')} } from '${path}'`
+        `import type { ${Array.from(types).join(', ')} } from '${resolveImportPath(path)}'`
     )
     .join('\n')
 
