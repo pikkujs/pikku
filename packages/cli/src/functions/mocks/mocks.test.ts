@@ -12,12 +12,8 @@ import {
 import { diffMocks, type SurfaceView } from './diff.js'
 import { mergeMocks, readMocks } from './read.js'
 import { findPackageDir, projectAddonMockSources } from './addon-mocks.js'
-import {
-  callIndex,
-  checkStubs,
-  frontendFiles,
-  scanFrontend,
-} from './stub-scan.js'
+import { callIndex, checkStubs, frontendFiles } from './stub-scan.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import { validateAgainstSchema } from './validate.js'
 
 const listSchema = {

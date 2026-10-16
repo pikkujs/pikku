@@ -316,7 +316,7 @@ export interface SerializableInspectorState {
  * Omits typesLookup (not needed for filtering/generation) and converts Maps/Sets to arrays
  */
 export function serializeInspectorState(
-  state: InspectorState
+  state: Omit<InspectorState, 'typesLookup'>
 ): SerializableInspectorState {
   // Helper to serialize TypesMap
   const serializeTypesMap = (
