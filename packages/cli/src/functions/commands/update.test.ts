@@ -290,6 +290,41 @@ describe('runUpdate', () => {
     )
   })
 
+  test('--update moves overrides and resolutions too, leaving nested overrides alone', async () => {
+    const root = scratch()
+    writeJson(join(root, 'package.json'), {
+      name: 'mono',
+      dependencies: { '@pikku/core': '0.12.83' },
+      overrides: {
+        '@pikku/core': '0.12.83',
+        '@pikku/inspector': '0.12.50',
+        '@pikku/kysely': { kysely: '^0.29.0' },
+        typescript: '^6.0.3',
+      },
+      resolutions: { '@pikku/cli': '^0.12.100' },
+    })
+
+    const result = await runUpdate({
+      ...base,
+      apply: true,
+      rootDir: root,
+      fetchPackument: async () => packument({ latest: '0.12.99' }),
+    })
+
+    const json = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'))
+    assert.equal(json.dependencies['@pikku/core'], '0.12.99')
+    assert.equal(
+      json.overrides['@pikku/core'],
+      '0.12.99',
+      'an override left behind pins the old version over the new range'
+    )
+    assert.equal(json.overrides['@pikku/inspector'], '0.12.99')
+    assert.deepEqual(json.overrides['@pikku/kysely'], { kysely: '^0.29.0' })
+    assert.equal(json.overrides.typescript, '^6.0.3')
+    assert.equal(json.resolutions['@pikku/cli'], '^0.12.99')
+    assert.equal(result.peers.length, 0)
+  })
+
   test('reports a peer the target version needs but the project does not satisfy', async () => {
     const root = scratch()
     writeJson(join(root, 'package.json'), {

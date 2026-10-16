@@ -64,7 +64,9 @@ to learn a dependency is vulnerable; use `update` to move Pikku itself.
 - Coverage is the nearest package.json walking up from the project root, plus
   every workspace it declares — a monorepo updates in one pass. All four
   dependency fields are read, `peerDependencies` included, so an addon's own
-  declared peer range moves with it.
+  declared peer range moves with it. `overrides` and `resolutions` move too —
+  an override left behind pins the old version over the new range. A nested
+  override (an object, not a version) is left alone.
 
 Statuses, per dependency: `outdated` (the range floor is behind latest — this is
 what `--update` writes), `stale-install` (the range already admits latest but

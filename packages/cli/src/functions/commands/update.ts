@@ -12,6 +12,8 @@ export type DependencyField =
   | 'devDependencies'
   | 'peerDependencies'
   | 'optionalDependencies'
+  | 'overrides'
+  | 'resolutions'
 
 export type UpdateStatus =
   'current' | 'outdated' | 'stale-install' | 'linked' | 'manual' | 'unresolved'
@@ -80,6 +82,12 @@ const DEPENDENCY_FIELDS: DependencyField[] = [
   'devDependencies',
   'peerDependencies',
   'optionalDependencies',
+]
+
+const VERSIONED_FIELDS: DependencyField[] = [
+  ...DEPENDENCY_FIELDS,
+  'overrides',
+  'resolutions',
 ]
 
 const LOCKFILES: Array<[string, PackageManager]> = [
@@ -342,9 +350,9 @@ export const runUpdate = async ({
 
   const names = new Set<string>()
   for (const manifest of manifests) {
-    for (const field of DEPENDENCY_FIELDS) {
-      for (const name of Object.keys(manifest.json[field] ?? {})) {
-        if (isPikkuPackage(name)) {
+    for (const field of VERSIONED_FIELDS) {
+      for (const [name, range] of Object.entries(manifest.json[field] ?? {})) {
+        if (isPikkuPackage(name) && typeof range === 'string') {
           names.add(name)
         }
       }
@@ -360,10 +368,10 @@ export const runUpdate = async ({
 
   const entries: UpdateEntry[] = []
   for (const manifest of manifests) {
-    for (const field of DEPENDENCY_FIELDS) {
-      const deps: Record<string, string> = manifest.json[field] ?? {}
+    for (const field of VERSIONED_FIELDS) {
+      const deps: Record<string, unknown> = manifest.json[field] ?? {}
       for (const [name, range] of Object.entries(deps)) {
-        if (!isPikkuPackage(name)) {
+        if (!isPikkuPackage(name) || typeof range !== 'string') {
           continue
         }
         const installedVersion = resolveInstalled(manifest.dir, name)
