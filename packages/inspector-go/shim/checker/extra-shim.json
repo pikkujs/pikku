@@ -1,0 +1,8 @@
+{
+  "ExtraMethods": {
+    "Checker": [
+      "getAwaitedType",
+      "getFullyQualifiedName"
+    ]
+  }
+}
