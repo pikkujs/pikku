@@ -65,13 +65,15 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 		State:       st,
 		Diagnostics: log.Entries(),
 		Stats: protocol.Stats{
-			Files:        len(req.RouteFiles),
-			ProjectFiles: len(prog.ProjectFiles),
-			FilesReused:  prog.FilesReused,
-			Types:        prog.TypeCount(),
-			Symbols:      prog.SymbolCount(),
-			WallMs:       int(time.Since(start).Milliseconds()),
-			HeapUsedMb:   int(mem.HeapAlloc >> 20),
+			Files:          len(req.RouteFiles),
+			ProjectFiles:   len(prog.ProjectFiles),
+			FilesReused:    prog.FilesReused,
+			Types:          prog.TypeCount(),
+			Instantiations: prog.InstantiationCount(),
+			Symbols:        prog.SymbolCount(),
+			CpuMs:          processCPUMs(),
+			WallMs:         int(time.Since(start).Milliseconds()),
+			HeapUsedMb:     int(mem.HeapAlloc >> 20),
 		},
 	}, nil
 }

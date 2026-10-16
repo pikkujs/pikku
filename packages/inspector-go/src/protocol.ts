@@ -12,9 +12,10 @@ import type {
 export const INSPECTOR_PROTOCOL_VERSION = 1
 
 /**
- * The options analysis reads, which is all the binary is given. Everything
- * else in `InspectorOptions` is consumed by the TypeScript finalize that runs
- * on this side of the pipe.
+ * The options the binary is given: what analysis reads, plus what the Go
+ * finalize reads (`openAPI`, `manifest`, `modelAliases`, `strictMeta`).
+ * Everything else in `InspectorOptions` is consumed only by the TypeScript
+ * finalize that runs on this side of the pipe.
  */
 export type InspectorGoAnalysisOptions = Pick<
   InspectorOptions,
@@ -26,6 +27,10 @@ export type InspectorGoAnalysisOptions = Pick<
   | 'tags'
   | 'classificationCheck'
   | 'allow'
+  | 'openAPI'
+  | 'manifest'
+  | 'modelAliases'
+  | 'strictMeta'
 > & {
   schemaConfig?: NonNullable<InspectorOptions['schemaConfig']> & {
     /**
@@ -66,7 +71,11 @@ export interface InspectorGoStats {
   /** Files under rootDir the inspector actually swept. */
   projectFiles: number
   types: number
+  /** Type instantiations; the Go checker does not count them, so 0. */
+  instantiations: number
   symbols: number
+  /** Process CPU time (user + system), in milliseconds. */
+  cpuMs: number
   wallMs: number
   heapUsedMb: number
 }
@@ -101,8 +110,14 @@ export const toAnalysisOptions = (
     tags: options.tags,
     classificationCheck: options.classificationCheck,
     allow: options.allow,
+    openAPI: options.openAPI,
+    manifest: options.manifest,
+    modelAliases: options.modelAliases,
+    strictMeta: options.strictMeta,
   }
   return Object.fromEntries(
-    Object.entries(picked).filter(([, value]) => value !== undefined)
+    Object.entries(picked).filter(
+      ([, value]) => value !== undefined && value !== null
+    )
   ) as InspectorGoAnalysisOptions
 }

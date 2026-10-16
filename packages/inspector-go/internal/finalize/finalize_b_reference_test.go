@@ -59,6 +59,7 @@ func TestFinalizeBAgainstReference(t *testing.T) {
 		if err := GenerateOpenAPISpec(log, st, opts.OpenAPI); err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("openAPISpec: %d bytes", len(st.OpenAPISpec))
 		want, _ := Parse(ref.OpenAPISpecRaw)
 		wantBytes, _ := Marshal(want)
 		if string(st.OpenAPISpec) != string(wantBytes) {
@@ -96,7 +97,12 @@ func TestFinalizeBAgainstReference(t *testing.T) {
 		for _, id := range meta.Keys() {
 			fn := AsObject(meta.Get(id))
 			o := NewObject()
-			for _, f := range []string{"contractHash", "inputHash", "outputHash", "inputSchemaName", "inputs"} {
+			fields := []string{"contractHash", "inputHash", "outputHash"}
+			// post-process.ts renames non-helper input schemas afterwards.
+			if fn.Get("functionType") == "helper" {
+				fields = append(fields, "inputSchemaName", "inputs")
+			}
+			for _, f := range fields {
 				o.Set(f, fn.Get(f))
 			}
 			out.Set(id, o)
