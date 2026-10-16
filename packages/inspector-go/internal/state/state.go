@@ -18,24 +18,22 @@ import (
 )
 
 type State struct {
-	RootDir                        string            `json:"rootDir"`
-	SingletonServicesTypeImportMap PathToNameAndType `json:"singletonServicesTypeImportMap"`
-	WireServicesTypeImportMap      PathToNameAndType `json:"wireServicesTypeImportMap"`
-	UserSessionTypeImportMap       PathToNameAndType `json:"userSessionTypeImportMap"`
-	ConfigTypeImportMap            PathToNameAndType `json:"configTypeImportMap"`
-	SingletonServicesFactories     PathToNameAndType `json:"singletonServicesFactories"`
-	WireServicesFactories          PathToNameAndType `json:"wireServicesFactories"`
-	WireServicesMeta               Map[Strings]      `json:"wireServicesMeta"`
-	AddonRequiredParentServices    Strings           `json:"addonRequiredParentServices"`
-	AddonCreatedServices           Strings           `json:"addonCreatedServices"`
-	AddonServicesFactorySeen       bool              `json:"addonServicesFactorySeen"`
-	// Analytics and OutgoingWebhooks are undefined until their visitor's
-	// `??= []` pushes the first entry, so empty is absent.
-	Analytics                   []Raw             `json:"analytics,omitempty"`
-	OutgoingWebhooks            []Raw             `json:"outgoingWebhooks,omitempty"`
-	AddonServerlessIncompatible Map[Strings]      `json:"addonServerlessIncompatible"`
-	ConfigFactories             PathToNameAndType `json:"configFactories"`
-	ServerLifecycleFactories    PathToNameAndType `json:"serverLifecycleFactories"`
+	RootDir                        string                  `json:"rootDir"`
+	SingletonServicesTypeImportMap PathToNameAndType       `json:"singletonServicesTypeImportMap"`
+	WireServicesTypeImportMap      PathToNameAndType       `json:"wireServicesTypeImportMap"`
+	UserSessionTypeImportMap       PathToNameAndType       `json:"userSessionTypeImportMap"`
+	ConfigTypeImportMap            PathToNameAndType       `json:"configTypeImportMap"`
+	SingletonServicesFactories     PathToNameAndType       `json:"singletonServicesFactories"`
+	WireServicesFactories          PathToNameAndType       `json:"wireServicesFactories"`
+	WireServicesMeta               Map[Strings]            `json:"wireServicesMeta"`
+	AddonRequiredParentServices    Strings                 `json:"addonRequiredParentServices"`
+	AddonCreatedServices           Strings                 `json:"addonCreatedServices"`
+	AddonServicesFactorySeen       bool                    `json:"addonServicesFactorySeen"`
+	Analytics                      []*AnalyticsDeclaration `json:"analytics,omitempty"`
+	OutgoingWebhooks               []*OutgoingWebhook      `json:"outgoingWebhooks,omitempty"`
+	AddonServerlessIncompatible    Map[Strings]            `json:"addonServerlessIncompatible"`
+	ConfigFactories                PathToNameAndType       `json:"configFactories"`
+	ServerLifecycleFactories       PathToNameAndType       `json:"serverLifecycleFactories"`
 	// InspectorFilesAndMethods: written by getFilesAndMethods (finalize).
 	FilesAndMethods       Record[Raw]                    `json:"filesAndMethods"`
 	FilesAndMethodsErrors Map[PathToNameAndType]         `json:"filesAndMethodsErrors"`
@@ -214,7 +212,8 @@ type Definitions struct {
 type Scopes struct {
 	Definitions List[Raw] `json:"definitions"`
 	Files       Set       `json:"files"`
-	// Declared holds declareScopes ids until addon scopes are merged.
+	// Declared holds declareScopes ids until addon scopes are merged
+	// (applyDeclaredScopes, in finalize).
 	Declared *Map[string] `json:"declared,omitempty"`
 }
 
