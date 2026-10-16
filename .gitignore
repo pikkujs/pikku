@@ -192,3 +192,5 @@ e2e/packages/web/src-tauri/
 
 # pikku-inspect built locally by `bun run build:go`
 packages/inspector-go/bin/
+# cross-compiled pikku-inspect binaries, built in CI by `build-go.mjs --all`
+packages/inspector-go/npm/*/bin/

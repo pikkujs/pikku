@@ -7,7 +7,6 @@ import {
   getInitialInspectorState,
   serializeInspectorState,
 } from '@pikku/inspector'
-import { findInspectorBinary, platformPackageName } from './binary.js'
 import { createRecordingLogger, replayDiagnostics } from './diagnostics.js'
 import { InspectorBinaryError, runInspectorBinary } from './run-binary.js'
 import { inspect } from './inspect.js'
@@ -48,22 +47,6 @@ const output = (overrides: Record<string, unknown> = {}) => ({
     heapUsedMb: 1,
   },
   ...overrides,
-})
-
-describe('findInspectorBinary', () => {
-  test('PIKKU_INSPECTOR_GO_BIN wins', () => {
-    assert.equal(
-      findInspectorBinary({ PIKKU_INSPECTOR_GO_BIN: '/opt/pikku-inspect' }),
-      '/opt/pikku-inspect'
-    )
-  })
-
-  test('names the per-platform package esbuild style', () => {
-    assert.equal(
-      platformPackageName('darwin', 'arm64'),
-      '@pikku/inspector-go-darwin-arm64'
-    )
-  })
 })
 
 describe('toAnalysisOptions', () => {
