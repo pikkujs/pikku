@@ -16,7 +16,7 @@
     "@ai-sdk/openai": "^4.0.81",
     "@ai-sdk/openai-compatible": "^3.0.59",
     "@pikku/addon-admin": "^0.12.12",
-    "@pikku/addon-console": "^0.12.61",
+    "@pikku/addon-console": "^0.12.62",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/better-auth": "^0.12.56",
     "@pikku/cloudflare": "^0.12.29",
