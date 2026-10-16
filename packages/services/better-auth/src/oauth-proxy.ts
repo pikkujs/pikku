@@ -5,45 +5,19 @@ import type { CoreSingletonServices } from '@pikku/core/types'
 import type { BetterAuthInstance } from './define-auth.js'
 import { PROVIDER_REGISTRY } from './provider-registry.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
-
-export const OAUTH_PROXY_SECRET_ID = 'OAUTH_PROXY_SECRET'
-export const OAUTH_PROXY_URL_VARIABLE = 'OAUTH_PROXY_URL'
-export const OAUTH_PROXY_KEY_ID_VARIABLE = 'OAUTH_PROXY_KEY_ID'
-export const OAUTH_PROXY_PROVIDERS_VARIABLE = 'OAUTH_PROXY_PROVIDERS'
-
-/** Providers a host may proxy. Each needs its `<ID>_OAUTH` secret declared. */
-export const OAUTH_PROXY_PROVIDER_IDS = [
-  'atlassian',
-  'cloudflare',
-  'discord',
-  'dropbox',
-  'facebook',
-  'figma',
-  'github',
-  'gitlab',
-  'google',
-  'huggingface',
-  'kakao',
-  'kick',
-  'line',
-  'linear',
-  'linkedin',
-  'microsoft',
-  'naver',
-  'notion',
-  'paybin',
-  'paypal',
-  'polar',
-  'railway',
-  'salesforce',
-  'slack',
-  'spotify',
-  'twitch',
-  'twitter',
-  'vercel',
-  'vk',
-  'zoom',
-] as const
+import {
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+} from './oauth-proxy-constants.js'
+export {
+  OAUTH_PROXY_SECRET_ID,
+  OAUTH_PROXY_URL_VARIABLE,
+  OAUTH_PROXY_KEY_ID_VARIABLE,
+  OAUTH_PROXY_PROVIDERS_VARIABLE,
+  OAUTH_PROXY_PROVIDER_IDS,
+} from './oauth-proxy-constants.js'
 
 /**
  * The client secret handed to a provider that signs in through the proxy. The
@@ -132,8 +106,7 @@ export const resolveOAuthProxyConfig = async (
       )
     }
     const credentials = (await readSecret(services, def.secretId)) as
-      | { clientId?: string }
-      | undefined
+      { clientId?: string } | undefined
     if (!credentials?.clientId) {
       throw new Error(
         `OAuth proxy: ${id} is listed in ${OAUTH_PROXY_PROVIDERS_VARIABLE} but ${def.secretId} has no clientId.`

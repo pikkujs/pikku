@@ -1,7 +1,7 @@
 import {
   VIRTUAL_USER_SIGN_IN_OPT_IN_ENV,
   DEV_VIRTUAL_USER_SIGN_IN_ENV,
-} from '@pikku/better-auth'
+} from '@pikku/better-auth/constants'
 import {
   VIRTUAL_USER_VERIFY_KEY_VARIABLE,
   type Logger,

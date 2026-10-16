@@ -11,7 +11,8 @@ import { applyOAuthProxy } from './oauth-proxy.js'
  */
 export interface BetterAuthInstance extends AuthInstance {}
 
-export const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
+import { PIKKU_BETTER_AUTH } from './constants.js'
+export { PIKKU_BETTER_AUTH }
 
 export type PikkuBetterAuthFactory<
   I extends BetterAuthInstance = BetterAuthInstance,
