@@ -401,14 +401,14 @@ const failures =
   results.flatMap((p) => p.sections).filter((r) => FAILING.includes(r.status))
     .length
 
-console.log(
-  `\n${results.length} projects: ` +
-    [...counts].map(([status, n]) => `${n} ${status}`).join(', ') +
-    (engineFailures ? `, ${engineFailures} engine failures` : '') +
-    (referenceFailures
-      ? `, ${referenceFailures} skipped (reference failed)`
-      : '')
-)
+const summary = [
+  ...[...counts].map(([status, n]) => `${n} ${status}`),
+  ...(engineFailures ? [`${engineFailures} engine failures`] : []),
+  ...(referenceFailures
+    ? [`${referenceFailures} skipped (reference failed)`]
+    : []),
+]
+console.log(`\n${results.length} projects: ${summary.join(', ')}`)
 for (const entry of allowList) {
   if (!usedAllowEntries.has(entry.id)) {
     console.log(`allow-list entry '${entry.id}' matched nothing`)
