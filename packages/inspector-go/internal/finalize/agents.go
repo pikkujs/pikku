@@ -20,7 +20,7 @@ type agentMeta struct {
 	Scorers    []string        `json:"scorers"`
 }
 
-// where is `agent.sourceFile ? ` (${agent.sourceFile})` : ''`.
+// where is `agent.sourceFile ? ` (${agent.sourceFile})` : ”`.
 func (a agentMeta) where() string {
 	if !truthy(a.SourceFile) {
 		return ""
