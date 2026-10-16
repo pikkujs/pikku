@@ -40,7 +40,7 @@ type VendorSchema struct {
 	TypeText string
 }
 
-// NodeConverter runs a helper script (bench/vendor-schemas.mjs speaks the
+// NodeConverter runs a helper script (scripts/vendor-schemas.mjs speaks the
 // protocol) under Node: the schemaLookup goes in on stdin as the TS serializer
 // writes it, the result comes back on stdout.
 type NodeConverter struct {
