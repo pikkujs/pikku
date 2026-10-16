@@ -2,7 +2,6 @@ package finalize
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,90 +9,6 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
-
-var primitiveTypes = map[string]bool{
-	"boolean": true, "string": true, "number": true, "null": true, "undefined": true,
-	"void": true, "any": true, "unknown": true, "never": true,
-}
-
-// ComputeRequiredSchemas ports post-process.ts computeRequiredSchemas.
-// schemasFromTypes is options.schemaConfig.schemasFromTypes.
-func ComputeRequiredSchemas(st *state.State, schemasFromTypes []string) {
-	tm := st.Functions.TypesMap
-	var required state.Set
-	st.Functions.Meta.Each(func(_ string, meta *state.FunctionMeta) {
-		if meta == nil {
-			return
-		}
-		for _, list := range [][]string{meta.Inputs, meta.Outputs} {
-			if len(list) == 0 || list[0] == "" {
-				continue
-			}
-			if name := uniqueName(tm, list[0]); name != "" && !primitiveTypes[name] {
-				required.Add(name)
-			}
-		}
-	})
-	if tm != nil {
-		for _, k := range tm.CustomTypeKeys() {
-			required.Add(k)
-		}
-	}
-	for _, k := range schemasFromTypes {
-		required.Add(k)
-	}
-	for _, k := range st.SchemaLookup.Keys() {
-		required.Add(k)
-	}
-	st.RequiredSchemas = required
-}
-
-// UnresolvedSchemaReferences ports unresolvedSchemaReferences.
-func UnresolvedSchemaReferences(st *state.State) []string {
-	tm := st.Functions.TypesMap
-	var unresolved []string
-	st.Functions.Meta.Each(func(name string, meta *state.FunctionMeta) {
-		if meta == nil {
-			return
-		}
-		for _, role := range []struct {
-			name string
-			list []string
-		}{{"input", meta.Inputs}, {"output", meta.Outputs}} {
-			if len(role.list) == 0 || role.list[0] == "" || primitiveTypes[role.list[0]] {
-				continue
-			}
-			resolved := uniqueName(tm, role.list[0])
-			if primitiveTypes[resolved] || st.Schemas.Has(resolved) {
-				continue
-			}
-			unresolved = append(unresolved, fmt.Sprintf("%s.%s → '%s'", name, role.name, resolved))
-		}
-	})
-	return unresolved
-}
-
-// ValidateSchemaReferences ports validateSchemaReferences.
-func ValidateSchemaReferences(log *diag.Logger, st *state.State) {
-	unresolved := UnresolvedSchemaReferences(st)
-	n := len(unresolved)
-	if n == 0 {
-		return
-	}
-	plural := func(one, many string) string {
-		if n == 1 {
-			return one
-		}
-		return many
-	}
-	log.Diagnostic(diag.Error, diag.SchemaReferenceUnresolved,
-		fmt.Sprintf("%d function contract%s ", n, plural("", "s"))+
-			fmt.Sprintf("name%s a schema that was never generated, so ", plural("s", ""))+
-			fmt.Sprintf("calling %s fails at runtime with ", plural("it", "them"))+
-			fmt.Sprintf("MissingSchemaError: %s. ", strings.Join(unresolved, ", "))+
-			"The usual cause is a named type used as the function's input/output that "+
-			"is declared but not exported — export it, or inline the type at the call site.")
-}
 
 // LoadAddonSchemas ports load-addon-functions-meta.ts loadAddonSchemas: each
 // local addon's generated `schemas/schemas/*.schema.json` is merged into
@@ -161,7 +76,7 @@ func rawTruthy(r state.Raw) any {
 	return v
 }
 
-func nearestPackageDir(file string) string {
+func addonPackageDir(file string) string {
 	for dir := filepath.Dir(file); dir != "/" && dir != "."; dir = filepath.Dir(dir) {
 		if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
 			return dir
@@ -175,7 +90,7 @@ func addonDirs(rootDir, declFile string) []string {
 	root, _ := filepath.Abs(rootDir)
 	if declFile != "" {
 		abs, _ := filepath.Abs(declFile)
-		if d := nearestPackageDir(abs); d != "" && d != root {
+		if d := addonPackageDir(abs); d != "" && d != root {
 			return []string{d, root}
 		}
 	}

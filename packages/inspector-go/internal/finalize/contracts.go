@@ -202,7 +202,7 @@ func contractVersion(id string, meta *state.FunctionMeta) (string, int) {
 	return base, v
 }
 
-func isTrue(b *bool) bool { return b != nil && *b }
+func boolPtrTrue(b *bool) bool { return b != nil && *b }
 
 // BuildCurrentContracts ports buildCurrentContracts.
 func BuildCurrentContracts(st *state.State) *Contracts {
@@ -210,7 +210,7 @@ func BuildCurrentContracts(st *state.State) *Contracts {
 	cache := &schemaCache{schemas: &st.Schemas}
 	tm := st.Functions.TypesMap
 	st.Functions.Meta.Each(func(id string, meta *state.FunctionMeta) {
-		if meta == nil || isTrue(meta.Remote) || isTrue(meta.WebhookReceive) {
+		if meta == nil || boolPtrTrue(meta.Remote) || boolPtrTrue(meta.WebhookReceive) {
 			return
 		}
 		key, version := contractVersion(id, meta)
@@ -246,7 +246,7 @@ func ComputeContractHashes(st *state.State) *Contracts {
 func ExtractContractsFromMeta(st *state.State) *Contracts {
 	result := &Contracts{}
 	st.Functions.Meta.Each(func(id string, meta *state.FunctionMeta) {
-		if meta == nil || isTrue(meta.Remote) || isTrue(meta.WebhookReceive) || meta.ContractHash == "" {
+		if meta == nil || boolPtrTrue(meta.Remote) || boolPtrTrue(meta.WebhookReceive) || meta.ContractHash == "" {
 			return
 		}
 		key, version := contractVersion(id, meta)

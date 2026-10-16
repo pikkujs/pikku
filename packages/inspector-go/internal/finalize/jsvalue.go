@@ -1,12 +1,9 @@
-// Package finalize is the checker-free half of inspect()
-// (packages/inspector/src/finalize.ts): everything that derives from the
-// state analysis produced, from state to state.
-//
 // This file holds the JS-value model the finalize steps work on where the
 // state section is still Raw JSON: an ordered object that enumerates keys as
 // a JS object does, can hold `undefined` members (they keep their position
 // and are dropped on encoding, as JSON.stringify drops them), and is shared
 // by pointer so in-place mutation behaves like JS object references.
+
 package finalize
 
 import (

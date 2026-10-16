@@ -61,7 +61,7 @@ func FinalizeWorkflows(st *state.State) error {
 	return nil
 }
 
-func graphNodes(graph *Object) []*Object {
+func graphNodeObjects(graph *Object) []*Object {
 	nodes := AsObject(graph.Get("nodes"))
 	var out []*Object
 	for _, k := range nodes.Keys() {
@@ -73,7 +73,7 @@ func graphNodes(graph *Object) []*Object {
 }
 
 func stampVersionsOnGraph(graph *Object, st *state.State) {
-	for _, node := range graphNodes(graph) {
+	for _, node := range graphNodeObjects(graph) {
 		rpc, ok := node.Get("rpcName").(string)
 		if !ok || isVersionedId(rpc) {
 			continue
@@ -97,7 +97,7 @@ func findLatestVersion(base string, st *state.State) int {
 }
 
 func computeStepHashes(graph *Object, st *state.State) {
-	for _, node := range graphNodes(graph) {
+	for _, node := range graphNodeObjects(graph) {
 		rpc, ok := node.Get("rpcName").(string)
 		if !ok {
 			continue
