@@ -1,6 +1,6 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector'
+import { generateCustomTypes } from '@pikku/inspector/lite'
 import type { Logger } from '@pikku/core/services'
 
 type WireAddonDeclarations = Map<

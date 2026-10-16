@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode, resolveCoreType } from '@pikku/inspector'
+import { ErrorCode, resolveCoreType } from '@pikku/inspector/lite'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
@@ -76,9 +76,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       const singletonServices =
         visitState.serviceAggregation.allSingletonServices.length > 0
           ? visitState.serviceAggregation.allSingletonServices
-          : (fallbackType
-              ?.getProperties()
-              .map((symbol) => symbol.getName()) ?? [])
+          : (fallbackType?.getProperties().map((symbol) => symbol.getName()) ??
+            [])
       const hasWorkflowState = singletonServices.includes('workflowService')
       if (!hasWorkflowState) {
         logger.critical(

@@ -24,13 +24,10 @@ import {
 } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
-  inspect,
   serializeInspectorState,
   deserializeInspectorState,
-  filterInspectorState,
-  getInitialInspectorState,
   ErrorCode,
-} from '@pikku/inspector'
+} from '@pikku/inspector/lite'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
@@ -272,6 +269,8 @@ export const createSingletonServices: CreateSingletonServices<
     bootstrapMode: boolean = false,
     unfiltered: boolean = false
   ) => {
+    const { inspect, filterInspectorState, getInitialInspectorState } =
+      await import('@pikku/inspector')
     // In bootstrap mode, return a minimal "zero state" with core types
     // This allows bootstrap to run immediately without inspecting the codebase
     if (bootstrapMode) {

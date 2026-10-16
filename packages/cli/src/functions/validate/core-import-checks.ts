@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { readModuleSpecifiers } from '@pikku/inspector'
 import { collectAppSources } from './app-sources.js'
 import { readJsonSafe } from './shared-checks.js'
-import type { ValidateFinding, ValidateSeverity } from './virtual-user-checks.js'
+import type {
+  ValidateFinding,
+  ValidateSeverity,
+} from './virtual-user-checks.js'
 
 /**
  * The one core subpath an app is meant to name.
@@ -113,6 +115,7 @@ export const runCoreImportChecks = async (
   const severity = severityFor(pikkuConfig)
   if (severity === 'off') return []
 
+  const { readModuleSpecifiers } = await import('@pikku/inspector')
   const findings: ValidateFinding[] = []
   let scenarioEntry: string | undefined
 

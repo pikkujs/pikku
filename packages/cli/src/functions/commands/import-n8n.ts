@@ -2,7 +2,6 @@ import { existsSync } from 'fs'
 import { basename, isAbsolute, join, resolve } from 'path'
 import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { parseN8n, generateWorkflowFromN8n } from '@pikku/n8n-import'
 
 async function writeFiles(
   baseDir: string,
@@ -49,6 +48,8 @@ async function importOne(
   baseDir: string,
   logger: ImportLogger
 ): Promise<boolean> {
+  const { parseN8n, generateWorkflowFromN8n } =
+    await import('@pikku/n8n-import')
   let parsed
   try {
     parsed = parseN8n(raw, nameHint)

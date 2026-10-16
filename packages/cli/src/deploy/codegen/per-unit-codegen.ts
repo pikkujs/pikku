@@ -16,7 +16,7 @@ import { randomBytes } from 'node:crypto'
 import { promisify } from 'node:util'
 
 import type { InspectorState } from '@pikku/inspector'
-import { serializeInspectorState } from '@pikku/inspector'
+import { serializeInspectorState } from '@pikku/inspector/lite'
 import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 import { toSafeKebab } from '../analyzer/analyzer.js'
 

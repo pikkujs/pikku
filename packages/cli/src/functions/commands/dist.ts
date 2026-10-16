@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs'
 import { cp, mkdir, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
-import { readTsconfigOutDir } from '@pikku/inspector'
 import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
@@ -63,7 +62,9 @@ export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
 
     const distDir = data.distDir
       ? resolve(rootDir, data.distDir)
-      : readTsconfigOutDir(resolve(rootDir, tsconfig))
+      : (await import('@pikku/inspector')).readTsconfigOutDir(
+          resolve(rootDir, tsconfig)
+        )
 
     if (!distDir) {
       logger.error(

@@ -4,7 +4,6 @@ import { projectAddonMockSources } from '../mocks/addon-mocks.js'
 import { loadSurface } from '../mocks/load.js'
 import { readLock } from '../mocks/lock.js'
 import { readMocks } from '../mocks/read.js'
-import { callIndex, frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
 import { renderMocksDiff } from '../mocks/render.js'
 
 export const mocksDiff = pikkuSessionlessFunc<
@@ -14,6 +13,8 @@ export const mocksDiff = pikkuSessionlessFunc<
   description:
     'Compare the mocks in .mocks/ with the functions they stand in for: which RPCs are added, which have changed shape, and which mocks no longer fit their function',
   func: async ({ config }, input) => {
+    const { callIndex, frontendFiles, scanFrontend } =
+      await import('../mocks/stub-scan.js')
     const mocks = await readMocks(
       config.rootDir,
       projectAddonMockSources(config.rootDir, config.outDir)

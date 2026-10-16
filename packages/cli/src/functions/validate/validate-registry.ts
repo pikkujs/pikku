@@ -193,7 +193,7 @@ export const CHECKS: ValidateCheck[] = [
     applies: async ({ dir }) =>
       existsSync(join(dir, 'pikku.config.json')) &&
       !existsSync(join(dir, ADDON_MARKER)) &&
-      usesMocks(dir),
+      (await usesMocks(dir)),
     run: async ({ dir }) => runMocksChecks(dir),
   },
   {

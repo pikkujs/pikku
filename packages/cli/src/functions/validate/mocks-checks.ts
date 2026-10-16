@@ -5,7 +5,6 @@ import {
   PROBLEM_REASON,
   runMocksCheck,
 } from '../mocks/run-check.js'
-import { frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
 const configOf = (dir: string): { outDir: string; client?: string } => {
@@ -24,8 +23,9 @@ const configOf = (dir: string): { outDir: string; client?: string } => {
 }
 
 /** Only a project that uses mocks or stub hooks has anything for this check to say. */
-export const usesMocks = (dir: string): boolean => {
+export const usesMocks = async (dir: string): Promise<boolean> => {
   if (existsSync(join(dir, '.mocks'))) return true
+  const { frontendFiles, scanFrontend } = await import('../mocks/stub-scan.js')
   return (
     scanFrontend(dir, frontendFiles(dir), configOf(dir).client).stubCalls
       .length > 0

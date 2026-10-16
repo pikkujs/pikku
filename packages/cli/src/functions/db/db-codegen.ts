@@ -13,7 +13,7 @@ import {
   bareUnquotedTableName,
   readMigrationProvenance,
 } from './migration-provenance.js'
-import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector'
+import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector/lite'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────

@@ -7,12 +7,11 @@
  * Workflow orchestrators dispatch to step units via queue or RPC (inline).
  */
 
+import type { InspectorState, SerializedWorkflowGraph } from '@pikku/inspector'
 import {
   incompatibleServicesFor,
   resolveDeployTarget,
-  type InspectorState,
-  type SerializedWorkflowGraph,
-} from '@pikku/inspector'
+} from '@pikku/inspector/lite'
 import { relative } from 'node:path'
 import type { FunctionMeta } from '@pikku/core/services'
 import type { ChannelMeta } from '@pikku/core/channel'

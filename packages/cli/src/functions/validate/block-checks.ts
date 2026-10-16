@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { readJsxLiteralText } from '@pikku/inspector'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
 const isBlock = (name: string) =>
@@ -71,6 +70,7 @@ const checkPackage = async (
     ]
   }
 
+  const { readJsxLiteralText } = await import('@pikku/inspector')
   for (const file of files) {
     const shown = relative(dir, file)
     const literals = readJsxLiteralText(file, await readFile(file, 'utf8'))

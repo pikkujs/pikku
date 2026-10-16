@@ -1,7 +1,6 @@
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
-import { unresolvedSchemaReferences } from '@pikku/inspector'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
@@ -474,7 +473,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // on every run for a re-generation that cannot help it.
     const unresolvedSchemas =
       !hadRPCInternalMap &&
-      unresolvedSchemaReferences(await getInspectorState()).length > 0
+      (await import('@pikku/inspector')).unresolvedSchemaReferences(
+        await getInspectorState()
+      ).length > 0
 
     if (
       workflows ||

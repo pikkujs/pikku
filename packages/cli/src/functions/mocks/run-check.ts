@@ -5,14 +5,7 @@ import type { AddonsMeta } from '../wirings/functions/serialize-addon-types.js'
 import { projectAddonMockSources, readAddonsMeta } from './addon-mocks.js'
 import { diffMocks } from './diff.js'
 import { readMocks } from './read.js'
-import {
-  callIndex,
-  checkStubs,
-  frontendFiles,
-  scanFrontend,
-  type StubCheck,
-  type StubProblemKind,
-} from './stub-scan.js'
+import type { StubCheck, StubProblemKind } from './stub-scan.js'
 
 export const PROBLEM_REASON: Record<
   StubProblemKind,
@@ -66,6 +59,8 @@ export interface MocksCheckOptions {
 export const runMocksCheck = async (
   options: MocksCheckOptions
 ): Promise<StubCheck> => {
+  const { callIndex, checkStubs, frontendFiles, scanFrontend } =
+    await import('./stub-scan.js')
   const { rootDir, outDir } = options
   const pikkuDir = resolve(rootDir, outDir)
   const surface = readSurface(pikkuDir)
