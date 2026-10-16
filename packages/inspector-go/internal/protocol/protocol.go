@@ -27,12 +27,31 @@ type Options struct {
 	Tsconfig  string `json:"tsconfig,omitempty"`
 	RootDir   string `json:"rootDir,omitempty"`
 	SetupOnly bool   `json:"setupOnly,omitempty"`
+	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
+	// so checkAddonBans applies.
+	IsAddon bool `json:"isAddon,omitempty"`
 	// Types is InspectorOptions.types. Only finalize reads it; it is
 	// accepted and passed through untouched.
 	Types json.RawMessage `json:"types,omitempty"`
 	// SchemaConfig is InspectorOptions.schemaConfig; schemas are generated
 	// only when it is present.
 	SchemaConfig *SchemaConfig `json:"schemaConfig,omitempty"`
+	// Allow is InspectorOptions.allow, the project's opt-ins.
+	Allow *Allow `json:"allow,omitempty"`
+
+	// Read only by finalize (`inspect --finalize`, `finalize --stdin`).
+	// OpenAPI is InspectorOptions.openAPI ({ additionalInfo }); Manifest is
+	// the versions.pikku.json contents; ModelAliases is pikku.config.json's
+	// "models" table; StrictMeta turns on the agent tool description check.
+	OpenAPI      json.RawMessage   `json:"openAPI,omitempty"`
+	Manifest     json.RawMessage   `json:"manifest,omitempty"`
+	ModelAliases map[string]string `json:"modelAliases,omitempty"`
+	StrictMeta   bool              `json:"strictMeta,omitempty"`
+}
+
+// Allow mirrors the `allow` block of pikku.config.json.
+type Allow struct {
+	ComplexWorkflows bool `json:"complexWorkflows,omitempty"`
 }
 
 // SchemaConfig mirrors the object packages/cli/src/services.ts passes.
@@ -65,6 +84,11 @@ type Response struct {
 	State       *state.State      `json:"state"`
 	Diagnostics []diag.Diagnostic `json:"diagnostics"`
 	Stats       Stats             `json:"stats"`
+	// ValidationPass marks the diagnostics finalize logged between
+	// logger.beginValidationPass() and logger.endValidationPass(): indices
+	// [start, end) into Diagnostics. Absent when finalize did not run a
+	// validation pass (analysis only, or setupOnly).
+	ValidationPass *diag.Pass `json:"validationPass,omitempty"`
 }
 
 // ServeRequest / ServeResponse are one NDJSON line each in `serve` mode.

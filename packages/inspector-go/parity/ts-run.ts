@@ -35,6 +35,11 @@ export interface TsRunResult {
   /** The post-finalize state through `comparableState`. */
   post: unknown
   postDiagnostics: InspectorGoDiagnostic[]
+  /**
+   * reference only: the serialized post-finalize workflows section, which
+   * finalize parity feeds in while finalizeWorkflows is not ported.
+   */
+  postWorkflows?: SerializableInspectorState['workflows']
   /** roundtrip only: where serialize/deserialize lost or changed something. */
   serializationDiffs?: string[]
 }
@@ -50,7 +55,17 @@ if (!['reference', 'roundtrip'].includes(mode) || !projectDir || !outFile) {
 
 const { routeFiles, options } = await projectInput(resolve(projectDir))
 const logger = createRecordingLogger()
-const analyzed = await analyzeProgram(logger, routeFiles, options)
+const analyzed = await analyzeProgram(logger, routeFiles, options).catch(
+  (error) => {
+    // The recording logger swallows what led up to the throw; show it.
+    for (const d of logger.diagnostics) {
+      if (d.level === 'error' || d.level === 'critical') {
+        console.error(`[${d.level}] ${d.message}`)
+      }
+    }
+    throw error
+  }
+)
 // A copy, not the serialized view: serialization shares objects with the live
 // state, and finalize below mutates them in place.
 const pre: SerializableInspectorState = JSON.parse(
@@ -66,6 +81,9 @@ if (mode === 'reference') {
     preDiagnostics,
     post: comparableState(analyzed),
     postDiagnostics: withoutDebug(logger.diagnostics),
+    postWorkflows: JSON.parse(
+      JSON.stringify(serializeInspectorState(analyzed).workflows)
+    ),
   }
 } else {
   const copy = deserializeInspectorState(structuredClone(pre))

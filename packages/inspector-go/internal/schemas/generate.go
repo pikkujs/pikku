@@ -28,8 +28,8 @@ type Config struct {
 	// AdditionalProperties is schema.additionalProperties; nil means false.
 	// schema.supportsImportAttributes only matters to codegen, not here.
 	AdditionalProperties *bool
-	// CacheDir is accepted for symmetry and unused: see PORTING.md, "Schema
-	// generation", on why the Go side keeps no ts-schemas.json.
+	// CacheDir is where the TS schemas are cached across runs, in
+	// go-ts-schemas.json (cache.go). Empty disables the cache.
 	CacheDir string
 	// Vendor converts schemaLookup. When the lookup is non-empty and Vendor
 	// is nil, GenerateAll fails rather than return a state missing them.
@@ -142,6 +142,15 @@ func generateTSSchemas(log *diag.Logger, cfg Config, st *state.State, covered ma
 	}
 	log.Debugf("generateTSSchemas needed for %d types: %s%s", len(uncovered), strings.Join(sample, ", "), more)
 
+	cacheKey := ""
+	if cfg.CacheDir != "" {
+		cacheKey = schemaCacheKey(cfg, content, uncovered)
+		if cached, ok := readSchemaCache(log, cfg.CacheDir, cacheKey); ok {
+			log.Debugf("Reusing on-disk TS schemas (types unchanged across runs)")
+			return cached
+		}
+	}
+
 	start := time.Now()
 	prog := createSchemaProgram(cfg.Tsconfig, virtualFilePath(cfg.Tsconfig), content, cache)
 	defer prog.release()
@@ -179,6 +188,13 @@ func generateTSSchemas(log *diag.Logger, cfg Config, st *state.State, covered ma
 			info = "type=" + ct.Type
 		}
 		log.Error(fmt.Sprintf("[%s] Error generating schema: %s. Message: %s. Type info: %s", diag.SchemaGenerationError, name, err.Error(), info))
+	}
+	if cacheKey != "" {
+		var files []string
+		for _, sf := range prog.SourceFiles() {
+			files = append(files, sf.FileName())
+		}
+		writeSchemaCache(log, cfg.CacheDir, cacheKey, schemas, schemaDeps(files))
 	}
 	return schemas
 }
