@@ -15,3 +15,24 @@ export type {
   InspectorGoStats,
   InspectorGoAnalysisOptions,
 } from './protocol.js'
+export {
+  readJsxLiteralText,
+  readJsxLiteralTextBatch,
+  readModuleSpecifiers,
+  readModuleSpecifiersBatch,
+  readTsconfigOutDir,
+  collectSurface,
+  scanFrontend,
+  scanHooks,
+  InspectorHelperError,
+} from './helpers.js'
+export type {
+  JsxLiteralText,
+  SourceFileInput,
+  CollectSurfaceOptions,
+  StubProblemKind,
+  StubCall,
+  PlainCall,
+  FrontendScan,
+  HookCall,
+} from './helpers.js'

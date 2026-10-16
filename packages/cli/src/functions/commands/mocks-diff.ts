@@ -4,7 +4,8 @@ import { projectAddonMockSources } from '../mocks/addon-mocks.js'
 import { loadSurface } from '../mocks/load.js'
 import { readLock } from '../mocks/lock.js'
 import { readMocks } from '../mocks/read.js'
-import { callIndex, frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
+import { callIndex, frontendFiles } from '../mocks/stub-scan.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import { renderMocksDiff } from '../mocks/render.js'
 
 export const mocksDiff = pikkuSessionlessFunc<
