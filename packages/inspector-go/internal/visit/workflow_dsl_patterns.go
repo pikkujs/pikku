@@ -52,11 +52,13 @@ func isScenarioExpectationCall(call *ast.Node) bool {
 	return false
 }
 
-func isWorkflowExpectEventuallyCall(call *ast.Node) bool { return wireMethod(call) == "expectEventually" }
-func isWorkflowSleepCall(call *ast.Node) bool           { return wireMethod(call) == "sleep" }
-func isWorkflowSuspendCall(call *ast.Node) bool         { return wireMethod(call) == "suspend" }
-func isWorkflowMilestoneCall(call *ast.Node) bool       { return wireMethod(call) == "milestone" }
-func isWorkflowApprovalCall(call *ast.Node) bool        { return wireMethod(call) == "approval" }
+func isWorkflowExpectEventuallyCall(call *ast.Node) bool {
+	return wireMethod(call) == "expectEventually"
+}
+func isWorkflowSleepCall(call *ast.Node) bool     { return wireMethod(call) == "sleep" }
+func isWorkflowSuspendCall(call *ast.Node) bool   { return wireMethod(call) == "suspend" }
+func isWorkflowMilestoneCall(call *ast.Node) bool { return wireMethod(call) == "milestone" }
+func isWorkflowApprovalCall(call *ast.Node) bool  { return wireMethod(call) == "approval" }
 
 // extractVirtualUserFromOptions: `{ virtualUser: virtualUsers.x }` → "x"
 // (also `virtualUsers['x']`).

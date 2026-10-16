@@ -34,8 +34,8 @@ type Options struct {
 	SetupOnly bool
 	// AllowComplexWorkflows is options.allow.complexWorkflows.
 	AllowComplexWorkflows bool
-	Types     *Types
-	IsAddon   bool
+	Types                 *Types
+	IsAddon               bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,
