@@ -1,0 +1,216 @@
+package state
+
+import "github.com/pikkujs/pikku/packages/inspector-go/internal/jsjson"
+
+// Typed element structs for the sections whose visitor groups are ported.
+//
+// Field order is the order the TS visitor's object literal assigns the keys,
+// because that is the order JSON.stringify writes them. omitempty / pointer
+// fields are the ones TS leaves `undefined` (and JSON.stringify drops); a
+// pointer without omitempty is a value TS writes as `null`.
+
+// List is a JSON array that encodes nil as [] — the TS state never holds a
+// missing array where this type is used.
+type List[T any] []T
+
+func (l List[T]) MarshalJSON() ([]byte, error) {
+	if l == nil {
+		return []byte("[]"), nil
+	}
+	return jsjson.Marshal([]T(l), "")
+}
+
+type Strings = List[string]
+
+type ServicesMeta struct {
+	Optimized bool     `json:"optimized"`
+	Services  []string `json:"services"`
+}
+
+type WiresMeta struct {
+	Optimized bool     `json:"optimized"`
+	Wires     []string `json:"wires"`
+}
+
+// WireRef is a middleware or permission reference (MiddlewareMetadata /
+// PermissionMetadata in @pikku/core).
+type WireRef struct {
+	Type   string `json:"type"`
+	Name   string `json:"name,omitempty"`
+	Tag    string `json:"tag,omitempty"`
+	Inline *bool  `json:"inline,omitempty"`
+	Route  string `json:"route,omitempty"`
+}
+
+type AuditMeta struct {
+	Durability string `json:"durability"`
+}
+
+// FunctionMeta is FunctionsMeta[string] from @pikku/core.
+//
+// Fields written only by finalize (requiresSession is on routes; here:
+// singletonServicesOnly, contractHash, inputHash, outputHash) are pointers so an
+// analyze-only state omits them exactly as TS does.
+type FunctionMeta struct {
+	PikkuFuncId                     string       `json:"pikkuFuncId"`
+	FunctionType                    string       `json:"functionType"`
+	FuncWrapper                     string       `json:"funcWrapper,omitempty"`
+	Sessionless                     *bool        `json:"sessionless,omitempty"`
+	Name                            string       `json:"name"`
+	Services                        ServicesMeta `json:"services"`
+	Wires                           *WiresMeta   `json:"wires,omitempty"`
+	Invokes                         []string     `json:"invokes,omitempty"`
+	InputSchemaName                 *string      `json:"inputSchemaName"`
+	OutputSchemaName                *string      `json:"outputSchemaName"`
+	Inputs                          []string     `json:"inputs"`
+	Outputs                         []string     `json:"outputs"`
+	Expose                          *bool        `json:"expose,omitempty"`
+	Auth                            *bool        `json:"auth,omitempty"`
+	PermissionsInBody               *bool        `json:"permissionsInBody,omitempty"`
+	Audit                           *AuditMeta   `json:"audit,omitempty"`
+	Remote                          *bool        `json:"remote,omitempty"`
+	ScenarioStep                    *bool        `json:"scenarioStep,omitempty"`
+	WebhookReceive                  *bool        `json:"webhookReceive,omitempty"`
+	Scenario                        *bool        `json:"scenario,omitempty"`
+	MCP                             *bool        `json:"mcp,omitempty"`
+	Readonly                        *bool        `json:"readonly,omitempty"`
+	Deploy                          string       `json:"deploy,omitempty"`
+	ApprovalRequired                *bool        `json:"approvalRequired,omitempty"`
+	ApprovalDescription             string       `json:"approvalDescription,omitempty"`
+	WorkflowQueued                  *bool        `json:"workflowQueued,omitempty"`
+	WorkflowRetries                 *float64     `json:"workflowRetries,omitempty"`
+	WorkflowTimeout                 string       `json:"workflowTimeout,omitempty"`
+	Compensate                      *bool        `json:"compensate,omitempty"`
+	ScenarioStepSurfaces            []string     `json:"scenarioStepSurfaces,omitempty"`
+	ScenarioStepRequiresVirtualUser *bool        `json:"scenarioStepRequiresVirtualUser,omitempty"`
+	ScenarioStepKind                string       `json:"scenarioStepKind,omitempty"`
+	ScenarioStepAddon               string       `json:"scenarioStepAddon,omitempty"`
+	ScenarioStepTemplate            string       `json:"scenarioStepTemplate,omitempty"`
+	Scopes                          []string     `json:"scopes,omitempty"`
+	ImplementationHash              string       `json:"implementationHash,omitempty"`
+	Version                         *int         `json:"version,omitempty"`
+	Title                           *string      `json:"title,omitempty"`
+	Tags                            []string     `json:"tags,omitempty"`
+	Summary                         *string      `json:"summary,omitempty"`
+	Description                     *string      `json:"description,omitempty"`
+	Errors                          []string     `json:"errors,omitempty"`
+	Middleware                      []WireRef    `json:"middleware,omitempty"`
+	Permissions                     []WireRef    `json:"permissions,omitempty"`
+	IsDirectFunction                *bool        `json:"isDirectFunction,omitempty"`
+	SourceFile                      string       `json:"sourceFile,omitempty"`
+	BodySourceFile                  string       `json:"bodySourceFile,omitempty"`
+	ExportedName                    string       `json:"exportedName,omitempty"`
+	BodyStart                       *int         `json:"bodyStart,omitempty"`
+	BodyEnd                         *int         `json:"bodyEnd,omitempty"`
+	StartsWorkflows                 []string     `json:"startsWorkflows,omitempty"`
+
+	// Finalize-only (contract-hashes.ts, post-process.ts).
+	ContractHash          string `json:"contractHash,omitempty"`
+	InputHash             string `json:"inputHash,omitempty"`
+	OutputHash            string `json:"outputHash,omitempty"`
+	SingletonServicesOnly *bool  `json:"singletonServicesOnly,omitempty"`
+
+	// Inline is analysis scratch: the function was declared inline in a
+	// wiring rather than exported. Never serialized.
+	Inline bool `json:"-"`
+}
+
+type HTTPRouteMeta struct {
+	PikkuFuncId       string    `json:"pikkuFuncId"`
+	PackageName       string    `json:"packageName,omitempty"`
+	Route             string    `json:"route"`
+	SourceFile        string    `json:"sourceFile"`
+	Method            string    `json:"method"`
+	Auth              *bool     `json:"auth,omitempty"`
+	Params            []string  `json:"params,omitempty"`
+	Query             []string  `json:"query,omitempty"`
+	Title             *string   `json:"title,omitempty"`
+	Summary           *string   `json:"summary,omitempty"`
+	Description       *string   `json:"description,omitempty"`
+	Errors            []string  `json:"errors,omitempty"`
+	Tags              []string  `json:"tags,omitempty"`
+	Middleware        []WireRef `json:"middleware,omitempty"`
+	Permissions       []WireRef `json:"permissions,omitempty"`
+	SSE               *bool     `json:"sse,omitempty"`
+	HeadersSchemaName string    `json:"headersSchemaName,omitempty"`
+	GroupBasePath     string    `json:"groupBasePath,omitempty"`
+	// Set by annotateHttpRouteAuth, a finalize step: absent after analysis.
+	RequiresSession *bool `json:"requiresSession,omitempty"`
+}
+
+type QueueWorkerMeta struct {
+	PikkuFuncId string    `json:"pikkuFuncId"`
+	PackageName string    `json:"packageName,omitempty"`
+	Name        string    `json:"name"`
+	Summary     *string   `json:"summary,omitempty"`
+	Description *string   `json:"description,omitempty"`
+	Errors      []string  `json:"errors,omitempty"`
+	Tags        []string  `json:"tags,omitempty"`
+	Middleware  []WireRef `json:"middleware,omitempty"`
+}
+
+// MetaInputTypes is one entry of http.metaInputTypes. computeInputTypes
+// always assigns all three arrays, empty ones included.
+type MetaInputTypes struct {
+	Query  Strings `json:"query"`
+	Params Strings `json:"params"`
+	Body   Strings `json:"body"`
+}
+
+// NameAndType is one entry of a PathToNameAndType map.
+type NameAndType struct {
+	Variable string  `json:"variable"`
+	Type     *string `json:"type"`
+	TypePath *string `json:"typePath"`
+}
+
+// PathToNameAndType is `Map<file, NameAndType[]>`.
+type PathToNameAndType = Map[[]NameAndType]
+
+// FileExport is the `{ path, exportedName }` value of the *Files maps.
+type FileExport struct {
+	Path         string `json:"path"`
+	ExportedName string `json:"exportedName"`
+}
+
+// SchemaRef is a schemaLookup entry: a Standard Schema value to convert to
+// JSON Schema later.
+type SchemaRef struct {
+	VariableName string `json:"variableName"`
+	SourceFile   string `json:"sourceFile"`
+	Vendor       string `json:"vendor,omitempty"`
+}
+
+// SecretUsage is extract-secret-usage.ts's per-file result.
+type SecretUsage struct {
+	Keys    Strings `json:"keys"`
+	Dynamic Strings `json:"dynamic"`
+}
+
+// SurfaceUsage is one symbol's counters in surfaceUsage.
+type SurfaceUsage struct {
+	Imports int     `json:"imports"`
+	SeenIn  Strings `json:"seenIn"`
+	Files   Strings `json:"files"`
+}
+
+// InspectorDiagnostic is a state.diagnostics entry (computeDiagnostics).
+type InspectorDiagnostic struct {
+	Code       string `json:"code"`
+	Message    string `json:"message"`
+	SourceFile string `json:"sourceFile"`
+	Position   int    `json:"position"`
+}
+
+// Stats is InspectorPassStats; the protocol carries it beside the state.
+type Stats struct {
+	Files          int `json:"files"`
+	ProjectFiles   int `json:"projectFiles"`
+	FilesReused    int `json:"filesReused"`
+	Types          int `json:"types"`
+	Instantiations int `json:"instantiations"`
+	Symbols        int `json:"symbols"`
+	CpuMs          int `json:"cpuMs"`
+	WallMs         int `json:"wallMs"`
+	HeapUsedMb     int `json:"heapUsedMb"`
+}
