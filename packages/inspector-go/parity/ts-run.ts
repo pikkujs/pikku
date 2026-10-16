@@ -51,7 +51,11 @@ if (!['reference', 'roundtrip'].includes(mode) || !projectDir || !outFile) {
 const { routeFiles, options } = await projectInput(resolve(projectDir))
 const logger = createRecordingLogger()
 const analyzed = await analyzeProgram(logger, routeFiles, options)
-const pre = serializeInspectorState(analyzed)
+// A copy, not the serialized view: serialization shares objects with the live
+// state, and finalize below mutates them in place.
+const pre: SerializableInspectorState = JSON.parse(
+  JSON.stringify(serializeInspectorState(analyzed))
+)
 const preDiagnostics = withoutDebug(logger.diagnostics)
 
 let result: TsRunResult
@@ -64,7 +68,7 @@ if (mode === 'reference') {
     postDiagnostics: withoutDebug(logger.diagnostics),
   }
 } else {
-  const copy = deserializeInspectorState(JSON.parse(JSON.stringify(pre)))
+  const copy = deserializeInspectorState(structuredClone(pre))
   const serializationDiffs = diffPaths(
     comparableState(copy),
     comparableState(analyzed)

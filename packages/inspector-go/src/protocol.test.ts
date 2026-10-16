@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import Ajv from 'ajv'
 import { toAnalysisOptions, type InspectorGoInput } from './protocol.js'
 import { projectInput } from '../parity/project-input.js'
-import { analyzeWithTypeScript } from '../parity/ts-reference.js'
+import { runInspectorBinary } from './run-binary.js'
 
 const schema = (name: string) =>
   JSON.parse(
@@ -36,8 +36,12 @@ describe('protocol JSON Schemas', async () => {
   })
 
   test('the TypeScript engine output matches output.schema.json', async () => {
-    const output = JSON.parse(
-      JSON.stringify(await analyzeWithTypeScript(input))
+    // Through the stand-in binary rather than in this process: an in-process
+    // analysis leaves bun's resolver unable to find addon metadata for any
+    // test file that runs after it in the same process.
+    const output = await runInspectorBinary(
+      fileURLToPath(new URL('../parity/ts-reference-bin.ts', import.meta.url)),
+      input
     )
     assert.ok(validateOutput(output), ajv.errorsText(validateOutput.errors))
   })
