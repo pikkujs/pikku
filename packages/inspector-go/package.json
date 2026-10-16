@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/inspector-go"
   },
-  "description": "Go inspector engine for Pikku \u2014 runs analysis in the pikku-inspect binary and finalizes with @pikku/inspector",
+  "description": "Go inspector engine for Pikku — runs analysis in the pikku-inspect binary and finalizes with @pikku/inspector",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",
@@ -29,7 +29,10 @@
   "scripts": {
     "tsc": "tsc",
     "build": "tsc -b && node scripts/build-go.mjs",
-    "build:go": "go build -o bin/pikku-inspect ./cmd/pikku-inspect",
+    "build:go": "node scripts/build-go.mjs --strict",
+    "build:go:all": "node scripts/build-go.mjs --all",
+    "check:binaries": "node scripts/check-platform-binary.mjs --all",
+    "check:tsgo-pin": "bash scripts/check-tsgo-pin.sh",
     "parity": "bun parity/parity.ts",
     "ncu": "npx npm-check-updates",
     "test": "bash run-tests.sh",
@@ -39,6 +42,13 @@
   },
   "dependencies": {
     "@pikku/inspector": "^0.12.106"
+  },
+  "optionalDependencies": {
+    "@pikku/inspector-go-darwin-arm64": "0.12.0",
+    "@pikku/inspector-go-darwin-x64": "0.12.0",
+    "@pikku/inspector-go-linux-arm64": "0.12.0",
+    "@pikku/inspector-go-linux-x64": "0.12.0",
+    "@pikku/inspector-go-win32-x64": "0.12.0"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.142"

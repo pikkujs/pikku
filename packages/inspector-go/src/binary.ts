@@ -2,8 +2,21 @@ import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
-const EXECUTABLE =
-  process.platform === 'win32' ? 'pikku-inspect.exe' : 'pikku-inspect'
+/**
+ * The `process.platform-process.arch` pairs with a prebuilt binary, one
+ * `@pikku/inspector-go-<platform>-<arch>` package each. Mirrors
+ * scripts/platforms.mjs.
+ */
+export const SUPPORTED_PLATFORMS = [
+  'darwin-arm64',
+  'darwin-x64',
+  'linux-x64',
+  'linux-arm64',
+  'win32-x64',
+] as const
+
+export const executableName = (platform: string = process.platform): string =>
+  platform === 'win32' ? 'pikku-inspect.exe' : 'pikku-inspect'
 
 /** The per-platform package that ships a prebuilt binary, esbuild style. */
 export const platformPackageName = (
@@ -11,28 +24,43 @@ export const platformPackageName = (
   arch: string = process.arch
 ): string => `@pikku/inspector-go-${platform}-${arch}`
 
-const fromPlatformPackage = (): string | undefined => {
-  const require = createRequire(import.meta.url)
-  try {
-    return require.resolve(`${platformPackageName()}/bin/${EXECUTABLE}`)
-  } catch {
-    return undefined
-  }
+export interface FindInspectorBinaryOptions {
+  platform?: string
+  arch?: string
+  /** Resolves a module specifier to a file; `require.resolve` by default. */
+  resolve?: (specifier: string) => string
+  /** The binary `bun run build:go` writes; this package's `bin/` by default. */
+  localBinary?: string
+  exists?: (path: string) => boolean
 }
 
-const fromLocalBuild = (): string | undefined => {
-  const local = fileURLToPath(new URL(`../bin/${EXECUTABLE}`, import.meta.url))
-  return existsSync(local) ? local : undefined
-}
+const defaultResolve = (specifier: string): string =>
+  createRequire(import.meta.url).resolve(specifier)
 
 export class InspectorBinaryNotFoundError extends Error {
-  constructor() {
-    super(
-      `No pikku-inspect binary found. Set PIKKU_INSPECTOR_GO_BIN, install ` +
-        `${platformPackageName()}, or run \`bun run build:go\` in @pikku/inspector-go.`
-    )
+  constructor(message: string) {
+    super(message)
     this.name = 'InspectorBinaryNotFoundError'
   }
+}
+
+const notFoundMessage = (platform: string, arch: string): string => {
+  const target = `${platform}-${arch}`
+  const pkg = platformPackageName(platform, arch)
+  const supported = (SUPPORTED_PLATFORMS as readonly string[]).includes(target)
+  const hint = supported
+    ? `${pkg} is not installed. It is an optional dependency of ` +
+      `@pikku/inspector-go, so it is skipped by \`--no-optional\`/` +
+      `\`--omit=optional\`, or when the lockfile was written on another ` +
+      `platform; reinstall with optional dependencies.`
+    : `There is no prebuilt binary for ${target} (prebuilt: ` +
+      `${SUPPORTED_PLATFORMS.join(', ')}). Build one with \`go build ` +
+      `./cmd/pikku-inspect\` in @pikku/inspector-go and point ` +
+      `PIKKU_INSPECTOR_GO_BIN at it.`
+  return (
+    `No pikku-inspect binary found for ${target}. ${hint} ` +
+    `Alternatively set PIKKU_INSPECTOR_GO_BIN to a pikku-inspect binary.`
+  )
 }
 
 /**
@@ -40,12 +68,38 @@ export class InspectorBinaryNotFoundError extends Error {
  * installed per-platform package, then a binary built in this package.
  */
 export const findInspectorBinary = (
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  options: FindInspectorBinaryOptions = {}
 ): string => {
-  const binary =
-    env.PIKKU_INSPECTOR_GO_BIN || fromPlatformPackage() || fromLocalBuild()
-  if (!binary) {
-    throw new InspectorBinaryNotFoundError()
+  const platform = options.platform ?? process.platform
+  const arch = options.arch ?? process.arch
+  const resolve = options.resolve ?? defaultResolve
+  const exists = options.exists ?? existsSync
+  const executable = executableName(platform)
+
+  const override = env.PIKKU_INSPECTOR_GO_BIN
+  if (override) {
+    if (!exists(override)) {
+      throw new InspectorBinaryNotFoundError(
+        `PIKKU_INSPECTOR_GO_BIN is set to ${override}, which does not exist.`
+      )
+    }
+    return override
   }
-  return binary
+
+  try {
+    const installed = resolve(
+      `${platformPackageName(platform, arch)}/bin/${executable}`
+    )
+    if (exists(installed)) return installed
+  } catch {
+    // not installed for this platform; fall through to a local build
+  }
+
+  const local =
+    options.localBinary ??
+    fileURLToPath(new URL(`../bin/${executable}`, import.meta.url))
+  if (exists(local)) return local
+
+  throw new InspectorBinaryNotFoundError(notFoundMessage(platform, arch))
 }

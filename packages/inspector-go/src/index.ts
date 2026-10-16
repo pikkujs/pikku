@@ -2,8 +2,11 @@ export { inspect } from './inspect.js'
 export {
   findInspectorBinary,
   platformPackageName,
+  executableName,
+  SUPPORTED_PLATFORMS,
   InspectorBinaryNotFoundError,
 } from './binary.js'
+export type { FindInspectorBinaryOptions } from './binary.js'
 export { runInspectorBinary, InspectorBinaryError } from './run-binary.js'
 export { replayDiagnostics, createRecordingLogger } from './diagnostics.js'
 export { INSPECTOR_PROTOCOL_VERSION, toAnalysisOptions } from './protocol.js'
