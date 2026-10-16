@@ -49,6 +49,7 @@ func main() {
 		"tsoptions",
 		"tspath",
 		"vfs/osvfs",
+		"printer",
 	}
 
 	packagesToShimFullNames := make([]string, len(packagesToShim))
