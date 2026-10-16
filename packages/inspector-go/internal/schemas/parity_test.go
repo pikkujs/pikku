@@ -63,7 +63,7 @@ func checkParity(t *testing.T, refPath string) {
 	if err := json.Unmarshal(raw, &ref); err != nil {
 		t.Fatal(err)
 	}
-	script, _ := filepath.Abs("../../bench/vendor-schemas.mjs")
+	script, _ := filepath.Abs("../../scripts/vendor-schemas.mjs")
 	cache := program.NewCache()
 
 	var got state.Record[state.Raw]
