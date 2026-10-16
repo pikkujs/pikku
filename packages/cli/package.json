@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/cli"
   },
-  "description": "Pikku CLI — code generation, dev server, migrations and deployment",
+  "description": "Pikku CLI \u2014 code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -47,6 +47,7 @@
     "@pikku/deploy-standalone": "^0.12.26",
     "@pikku/fetch": "^0.12.12",
     "@pikku/inspector": "^0.12.106",
+    "@pikku/inspector-go": "^0.12.0",
     "@pikku/knowledge": "^0.12.20",
     "@pikku/kysely": "^0.13.37",
     "@pikku/migrator-sql": "^0.12.8",

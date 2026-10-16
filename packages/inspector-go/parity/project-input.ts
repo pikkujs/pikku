@@ -42,9 +42,10 @@ export interface ProjectInput {
 
 /**
  * The inspector call `pikku all` would make for a project, as far as
- * pikku.config.json says: its source files and the options a full pass takes.
- * Scaffold files the CLI adds from derived paths are not included, which is
- * harmless for a comparison because both engines get the same input.
+ * pikku.config.json says: its source files and the options a full pass takes
+ * (packages/cli/src/services.ts). Left out: the scaffold files the CLI adds
+ * from derived paths, and the schema cacheDir. Both engines get the same
+ * input, so neither changes what a comparison finds.
  */
 export const projectInput = async (
   projectDir: string
@@ -87,10 +88,7 @@ export const projectInput = async (
       schemaConfig: {
         tsconfig: config.tsconfig,
         schemasFromTypes: config.schemasFromTypes,
-        schema: {
-          additionalProperties: false,
-          ...config.schema,
-        },
+        schema: config.schema,
       },
       openAPI: config.openAPI
         ? { additionalInfo: config.openAPI.additionalInfo }

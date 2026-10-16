@@ -24,6 +24,9 @@
       "path": "../inspector/tsconfig.json"
     },
     {
+      "path": "../inspector-go/tsconfig.json"
+    },
+    {
       "path": "../openapi-to-zod-schema/tsconfig.json"
     }
   ]
