@@ -40,6 +40,7 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 	st := state.New(prog.RootDir)
 	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{SetupOnly: req.Options.SetupOnly})
 
+	ctx.SweepUsage(prog.ProjectFiles)
 	ctx.Sweep(visit.PhaseSetup, prog.ProjectFiles)
 	ctx.LoadAddonFunctionsMeta()
 	if !req.Options.SetupOnly {

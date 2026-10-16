@@ -175,8 +175,7 @@ func (s *Context) LoadAddonFunctionsMeta() {
 
 // loadAddonKeyedMeta merges an addon's secrets, variables and credentials
 // meta into the project's definitions, remapped through the wireAddon
-// overrides, as load-addon-functions-meta.ts does. Scopes are not loaded
-// (addScope is not ported).
+// overrides, as load-addon-functions-meta.ts does, and its scopes.
 func (s *Context) loadAddonKeyedMeta(decl *addonDecl, dir string) {
 	merge := func(sub, kind, idField string, defs *state.List[state.Raw]) {
 		path := resolvePackageSubpath(dir, decl.pkg, sub)
@@ -235,6 +234,7 @@ func (s *Context) loadAddonKeyedMeta(decl *addonDecl, dir string) {
 		})
 	}
 	merge(".pikku/secrets/pikku-secrets-meta.gen.json", "secret", "secretId", &s.State.Secrets.Definitions)
+	s.loadAddonScopes(decl, dir)
 	merge(".pikku/variables/pikku-variables-meta.gen.json", "variable", "variableId", &s.State.Variables.Definitions)
 	merge(".pikku/credentials/pikku-credentials-meta.gen.json", "credential", "", &s.State.Credentials.Definitions)
 }
