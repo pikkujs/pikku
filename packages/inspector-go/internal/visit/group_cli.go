@@ -573,8 +573,8 @@ func (s *Context) enumFromJsonSchema(pikkuFuncId, propertyName string) []string 
 	}
 	var schema struct {
 		Properties map[string]struct {
-			Enum  []any  `json:"enum"`
-			Type  any    `json:"type"`
+			Enum  []any `json:"enum"`
+			Type  any   `json:"type"`
 			Items *struct {
 				Enum []any `json:"enum"`
 			} `json:"items"`
