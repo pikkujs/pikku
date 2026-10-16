@@ -513,24 +513,6 @@ func (s *Context) resolveScorerNames(obj *ast.Node, agentName string) []string {
 	return names
 }
 
-// resolveChannelMiddleware is utils/middleware.ts resolveChannelMiddleware:
-// tag middleware from channelMiddleware.tagMiddleware, then the
-// `channelMiddleware` array against channelMiddleware.definitions.
-func (s *Context) resolveChannelMiddleware(obj *ast.Node, tags []string) []WireRef {
-	var out []WireRef
-	for _, t := range tags {
-		if s.State.ChannelMiddleware.TagMiddleware.Has(t) {
-			out = append(out, WireRef{Type: "tag", Tag: t})
-		}
-	}
-	if p := tsutil.FindPropertyAssignment(obj, "channelMiddleware"); p != nil {
-		for _, name := range s.middlewareRefNames(p.Initializer()) {
-			out = append(out, WireRef{Type: "wire", Name: name, Inline: tsutil.BoolPtr(definitionNotExported(s.State.ChannelMiddleware.Definitions, name))})
-		}
-	}
-	return out
-}
-
 // resolveAgentMiddleware is utils/middleware.ts resolveAgentMiddleware.
 func (s *Context) resolveAgentMiddleware(obj *ast.Node) []WireRef {
 	p := tsutil.FindPropertyAssignment(obj, "agentMiddleware")

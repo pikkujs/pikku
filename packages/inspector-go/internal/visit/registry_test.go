@@ -28,7 +28,7 @@ func TestRegisteredGroups(t *testing.T) {
 			"addRPCInvocations", "addWireAddon (stand-in)", "addMiddleware (stand-in)", "addPermission (stand-in)",
 		},
 		PhaseFunctions: {"addFunctions"},
-		PhaseRoutes:    {"addSecret", "addCredential", "addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addMCPResource", "addMCPPrompt", "addAgent", "addAgentScorer"},
+		PhaseRoutes:    {"addSecret", "addCredential", "addVariable", "addHTTPRoute", "addHTTPRoutes", "addQueueWorker", "addChannel", "addCLI", "addCLIRenderers", "addMCPResource", "addMCPPrompt", "addAgent", "addAgentScorer"},
 	}
 	for p, names := range want {
 		vs := Visitors(p)
