@@ -26,6 +26,7 @@ internal/diag/       logger, diagnostics, ErrorCode constants generated from err
 internal/jsjson/     JSON.stringify-compatible encoding (key order, escaping, number format)
 internal/tsutil/     AST/text helpers with no Context: printing, props, walking, routes, UTF-16 offsets
 shim/                generated re-exports of typescript-go internals (tools/gen_shims)
+npm/                 one prebuilt-binary npm package per platform (see Distribution)
 bench/               TS reference scripts, section compare, timing/RSS bench
 ```
 
@@ -399,4 +400,31 @@ Bump procedure (one PR, nothing else in it):
 4. Run the full parity commands on both projects. The summary must be
    unchanged.
 5. Re-run `bench/bench.sh` and note the timing in the PR.
-6. Update the pin in this file.
+6. Update the pin in this file and `PINNED` in `scripts/check-tsgo-pin.sh`.
+
+`scripts/check-tsgo-pin.sh` (the `Go (inspector-go)` CI job) enforces this: it
+fails when `go.mod` resolves another typescript-go, when a `shim/*/go.mod`
+names another version, when `go mod verify` fails, or when re-running
+`tools/gen_shims` changes `shim/`.
+
+## Distribution
+
+The binary ships esbuild style. `npm/<platform>-<arch>/` holds one package per
+target, `@pikku/inspector-go-<platform>-<arch>`, with `os`/`cpu` set and only
+`bin/pikku-inspect[.exe]` in it. `@pikku/inspector-go` lists them as exact
+`optionalDependencies`, so a package manager installs the one matching the
+host, and `src/binary.ts` resolves it. They are in a changesets `fixed` group
+with `@pikku/inspector-go`, so every release bumps all six together.
+
+- `node scripts/build-go.mjs` builds `bin/` for the host (local development).
+- `node scripts/build-go.mjs --all` (or `--target linux-x64`) is the release
+  build: `CGO_ENABLED=0 -trimpath -ldflags "-s -w"` into `npm/*/bin/`. The
+  Publish workflow runs it before `changeset publish`.
+- `node scripts/check-platform-binary.mjs` is each platform package's
+  `prepublishOnly`: no binary, a truncated one, a wrong os/arch or a
+  dynamically linked ELF refuses the publish.
+
+The targets are listed in `scripts/platforms.mjs` and again in
+`src/binary.ts`; `binary.test.ts` fails if those, `npm/` and
+`optionalDependencies` disagree. There are no musl packages: the static linux
+binaries run on Alpine as they are.
