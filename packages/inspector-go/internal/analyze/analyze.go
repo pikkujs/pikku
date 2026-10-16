@@ -38,7 +38,10 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 
 	log := &diag.Logger{}
 	st := state.New(prog.RootDir)
-	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{SetupOnly: req.Options.SetupOnly})
+	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{
+		SetupOnly:             req.Options.SetupOnly,
+		AllowComplexWorkflows: req.Options.Allow != nil && req.Options.Allow.ComplexWorkflows,
+	})
 
 	ctx.Sweep(visit.PhaseSetup, prog.ProjectFiles)
 	ctx.LoadAddonFunctionsMeta()
