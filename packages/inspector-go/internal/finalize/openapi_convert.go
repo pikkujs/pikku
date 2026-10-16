@@ -117,7 +117,7 @@ func jsSame(a, b any) bool {
 	if oka || okb {
 		return oka && okb && ia == ib
 	}
-	if isArray(a) || isArray(b) {
+	if jsIsArray(a) || jsIsArray(b) {
 		return false
 	}
 	return a == b
@@ -415,7 +415,7 @@ func deepMerge(target, source any) any {
 		sv := jsGet(source, k)
 		var mv any
 		switch {
-		case isArray(sv):
+		case jsIsArray(sv):
 			mv = cloneEnumerable(sv)
 		case isJSObject(sv):
 			tv := any(Undefined)
@@ -437,7 +437,7 @@ func deepMerge(target, source any) any {
 	return out
 }
 
-func isArray(v any) bool { _, ok := v.([]any); return ok }
+func jsIsArray(v any) bool { _, ok := v.([]any); return ok }
 
 func (d *derefCtx) crawl(obj any, path, pathFromRoot string, depth int) (*derefResult, error) {
 	result := &derefResult{value: obj}
