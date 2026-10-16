@@ -38,6 +38,12 @@ const noTruncationMaxLength = 1_000_000 * 2
 // TypeToString is checker.TypeToStringEx(t, nil, flags, nil) with union
 // members printed in Strada's (type id) order.
 func TypeToString(c *checker.Checker, t *checker.Type, flags checker.TypeFormatFlags) string {
+	return TypeToStringAt(c, t, nil, flags)
+}
+
+// TypeToStringAt is checker.TypeToStringEx(t, enclosing, flags, nil) with
+// union members and mapped-type properties in Strada's order.
+func TypeToStringAt(c *checker.Checker, t *checker.Type, enclosing *ast.Node, flags checker.TypeFormatFlags) string {
 	ec := printer.NewEmitContext()
 	nb := checker.NewNodeBuilder(c, ec)
 	builderFlags := uint32(flags&checker.TypeFormatFlagsNodeBuilderFlagsMask) | nodeBuilderFlagsIgnoreErrors
@@ -45,7 +51,7 @@ func TypeToString(c *checker.Checker, t *checker.Type, flags checker.TypeFormatF
 	if noTruncation {
 		builderFlags |= 1 // nodebuilder.FlagsNoTruncation
 	}
-	node := buildTypeNode(nb.TypeToTypeNode, t, nil, builderFlags)
+	node := buildTypeNode(nb.TypeToTypeNode, t, enclosing, builderFlags)
 	if node == nil {
 		panic("should always get typenode")
 	}
