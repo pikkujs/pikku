@@ -37,3 +37,5 @@ export const users = defineVirtualUsers({
 })
 
 declare const someRole: string
+
+export const again = defineVirtualUsers({ yan: { name: 'Yan' } })
