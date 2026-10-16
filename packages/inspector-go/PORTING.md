@@ -241,8 +241,13 @@ state.
   using helpers from `packages/inspector/dist`.
 - **Missing converter.** No converter with a non-empty `schemaLookup` is an
   error, not a silent skip.
-- **No cache.** `cacheDir` is accepted and ignored: Go does not read or write
-  `ts-schemas.json`.
+- **Disk cache.** When `cacheDir` is set, the TS schemas are cached in
+  `<cacheDir>/go-ts-schemas.json` (internal/schemas/cache.go). This is a separate
+  file from the TS engine's `ts-schemas.json`, because the two engines' output
+  is not byte-identical. The key is a sha1 of the engine binary, the generator
+  options, the names to generate and the custom-types source. Dependencies are
+  checked by mtime and size, as in TS. Read and write failures are logged at
+  debug level only. The same-process in-memory fast path is not ported.
 - **Not ported.** The http `inputTypes` loop: that field is always undefined.
 
 Parity against TS: online-shop 235/235 keys (230 byte-equal), functions 96/96
