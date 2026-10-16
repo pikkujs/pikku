@@ -90,20 +90,20 @@ func serializeGroupMap(groups state.Map[state.Raw]) state.Record[state.Raw] {
 
 func computeMiddlewareGroupsMeta(st *state.State) {
 	st.MiddlewareGroupsMeta = state.MiddlewareGroupsMeta{
-		Definitions: st.Middleware.Definitions,
-		Instances:   st.Middleware.Instances,
-		HTTPGroups:  serializeGroupMap(st.HTTP.RouteMiddleware),
-		TagGroups:   serializeGroupMap(st.Middleware.TagMiddleware),
+		Definitions: rawRecord(st.Middleware.Definitions),
+		Instances:   rawRecord(st.Middleware.Instances),
+		HTTPGroups:  serializeGroupMap(rawMap(st.HTTP.RouteMiddleware)),
+		TagGroups:   serializeGroupMap(rawMap(st.Middleware.TagMiddleware)),
 		ChannelMiddleware: state.ChannelMiddlewareGroups{
-			Definitions: st.ChannelMiddleware.Definitions,
-			Instances:   st.ChannelMiddleware.Instances,
-			TagGroups:   serializeGroupMap(st.ChannelMiddleware.TagMiddleware),
+			Definitions: rawRecord(st.ChannelMiddleware.Definitions),
+			Instances:   rawRecord(st.ChannelMiddleware.Instances),
+			TagGroups:   serializeGroupMap(rawMap(st.ChannelMiddleware.TagMiddleware)),
 		},
 	}
 }
 
 func computePermissionsGroupsMeta(st *state.State) {
-	st.PermissionsGroupsMeta = state.PermissionsGroupsMeta{Definitions: st.Permissions.Definitions}
+	st.PermissionsGroupsMeta = state.PermissionsGroupsMeta{Definitions: rawRecord(st.Permissions.Definitions)}
 }
 
 var primitiveTypes = map[string]bool{

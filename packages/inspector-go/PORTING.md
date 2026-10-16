@@ -101,7 +101,7 @@ Rules that bite:
 | `tsutil.FuncIdToTypeName`, `FormatVersionedId`, `UTF16Offset` | `extract-function-name.ts`, `@pikku/core` versioning, JS string offsets |
 | `tsutil.NullifyType`, `IsPrimitive`, `IsVoidLikeType`, `IsLibFile`, `SymbolName` | type helpers in add-functions / resolve-function-types |
 | `Context.extractFunctionName`, `getCommonWireMetaData`, `getPropertyAssignmentInitializer`, `resolveFunctionDeclaration`, `extractFunctionNode` | `extract-function-name.ts`, `get-property-value.ts`, `extract-function-node.ts` |
-| `Context.resolveMiddleware`, `resolvePermissions`, `refId` | `utils/middleware.ts`, `utils/permissions.ts`, `resolve-ref-contract.ts` |
+| `Context.resolveMiddleware`, `resolveHTTPMiddleware`, `resolveChannelMiddleware`, `resolveAgentMiddleware`, `resolvePermissions`, `refId` | `utils/middleware.ts`, `utils/permissions.ts`, `resolve-ref-contract.ts` |
 | `Context.typeToString`, `resolveTypeImports`, `getNamesAndTypes`, `unwrapPromise*`, `resolveTypeName` | `add-functions.ts` type resolution |
 | `Context.resolveSchemaRef`, `detectSchemaVendor*` | `detect-schema-vendor.ts` and the schemaLookup branch of add-functions |
 | `visit.ParseVersionedId`, `Context.ResolveLatestVersions` | `@pikku/core parseVersionedId`, `utils/resolve-versions.ts` |
@@ -272,9 +272,8 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
   land.
 - **addon scopes** are not loaded. Secret, variable and credential overrides
   are.
-- **Stand-ins.** `addWireAddon`, `addMiddleware` and `addPermission` are
-  stand-ins: they record files and addon declarations only, not middleware or
-  permission meta.
+- **Stand-in.** `addWireAddon` is a stand-in: it records addon declarations
+  only.
 - **Not ported.** The secret-usage and surface-usage sweeps, and
   `validateWebhookSourceTriggers`.
 
@@ -288,9 +287,7 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 | addOutgoingWebhook | add/add-outgoing-webhook.ts | 120 |
 | addDefineScreens | add/add-define-screens.ts | 162 |
 | addWireRemoteAddon | add/add-wire-remote-addon.ts | 81 |
-| addApprovalDescription | add/add-approval-description.ts | 76 |
 | addWorkflow | add/add-workflow.ts | 481 |
-| addAuth | add/add-auth.ts | 365 |
 | addScope (+ applyDeclaredScopes) | add/add-scope.ts | 288 |
 | addSystemRole | add/add-system-role.ts | 162 |
 | addFeatureFlag | add/add-feature-flag.ts | 234 |
@@ -307,8 +304,6 @@ Zod conversion from `@pikku/inspector` and have the wrapper do it.
 | addAgent | add/add-agent.ts | 678 |
 | addAgentScorer | add/add-agent-scorer.ts | 83 |
 | **total, wholly unported** | | **6909** |
-| addMiddleware (stand-in) | add/add-middleware.ts | 944 |
-| addPermission (stand-in) | add/add-permission.ts | 311 |
 | addWireAddon (stand-in) | add/add-wire-addon.ts | 271 |
 | secret-usage sweep | utils/extract-secret-usage.ts | 73 |
 | surface-usage sweep | utils/extract-surface-usage.ts | 121 |
@@ -323,6 +318,13 @@ Ported:
 - resolve-versions.ts (235)
 - schema-generator.ts (790)
 - load-addon-functions-meta.ts (745), functions and keyed meta only
+- add-middleware.ts (944), add-permission.ts (311), utils/middleware.ts and
+  utils/permissions.ts: `group_middleware.go`, `group_permission.go`,
+  `util_middleware.go` (which also has `resolveChannelMiddleware` /
+  `resolveAgentMiddleware` for the channel and agent groups)
+- add-auth.ts (357): `group_auth.go`. Its `throw` for better-auth's `admin()`
+  is `panic(visit.Abort{...})`, which `analyze.Run` turns into an error.
+- add-approval-description.ts (76)
 
 The TS inspector `src/` is 33542 lines excluding tests, of which `add/` is
 23613 including its tests.

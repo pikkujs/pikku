@@ -40,10 +40,10 @@ type authDef struct {
 
 // authDefinition is state.auth.definition, nil when it is null.
 func authDefinition(st *state.State) *authDef {
-	if !truthy(json.RawMessage(st.Auth.Definition)) {
+	if st.Auth.Definition == nil {
 		return nil
 	}
-	d := decode[authDef](st.Auth.Definition)
+	d := decode[authDef](encode(st.Auth.Definition))
 	return &d
 }
 
@@ -132,11 +132,11 @@ func aggregateRequiredServices(st *state.State) {
 			switch {
 			case item.Type == "tag":
 				if g, ok := st.Middleware.TagMiddleware.Get(item.Tag); ok {
-					addRaw(decode[groupMeta](g).Services)
+					addRaw(decode[groupMeta](encode(g)).Services)
 				}
 			case item.Type == "http" && item.Route != nil:
 				if g, ok := st.HTTP.RouteMiddleware.Get(*item.Route); ok {
-					addRaw(decode[groupMeta](g).Services)
+					addRaw(decode[groupMeta](encode(g)).Services)
 				}
 			}
 		}
@@ -161,14 +161,14 @@ func aggregateRequiredServices(st *state.State) {
 	// 2. Used middleware.
 	for _, name := range agg.UsedMiddleware.Values() {
 		if r, ok := st.Middleware.Definitions.Get(name); ok {
-			addRaw(decode[definitionMeta](r).Services)
+			addRaw(decode[definitionMeta](encode(r)).Services)
 		}
 	}
 
 	// 3. Used permissions.
 	for _, name := range agg.UsedPermissions.Values() {
 		if r, ok := st.Permissions.Definitions.Get(name); ok {
-			addRaw(decode[definitionMeta](r).Services)
+			addRaw(decode[definitionMeta](encode(r)).Services)
 		}
 	}
 

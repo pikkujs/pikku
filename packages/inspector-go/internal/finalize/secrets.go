@@ -41,7 +41,8 @@ func validateNoSecretAliasServices(log *diag.Logger, st *state.State) {
 			report("Function", id, meta.Services.Services)
 		}
 	})
-	st.Permissions.Definitions.Each(func(id string, r state.Raw) {
+	permissions := rawRecord(st.Permissions.Definitions)
+	permissions.Each(func(id string, r state.Raw) {
 		var services []string
 		if d := decode[definitionMeta](r); d.Services != nil && d.Services.Services != nil {
 			services = *d.Services.Services
@@ -228,8 +229,8 @@ func computeDiagnostics(st *state.State) {
 			}
 		})
 	}
-	definitions("Middleware", st.Middleware.Definitions)
-	definitions("Permission", st.Permissions.Definitions)
+	definitions("Middleware", rawRecord(st.Middleware.Definitions))
+	definitions("Permission", rawRecord(st.Permissions.Definitions))
 
 	st.Diagnostics = out
 }

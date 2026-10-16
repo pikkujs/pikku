@@ -117,8 +117,8 @@ func validateSchemaWiringSeparation(log *diag.Logger, st *state.State) {
 			}
 		})
 	}
-	addGroupFiles(st.HTTP.RouteMiddleware)
-	addGroupFiles(st.Middleware.TagMiddleware)
+	addGroupFiles(rawMap(st.HTTP.RouteMiddleware))
+	addGroupFiles(rawMap(st.Middleware.TagMiddleware))
 
 	for _, file := range schemaFiles.items {
 		if !wiringFiles[file] {

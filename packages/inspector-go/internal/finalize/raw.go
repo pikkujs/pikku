@@ -225,3 +225,18 @@ func (s *orderedSet) add(v string) {
 }
 
 func (s *orderedSet) has(v string) bool { return s.seen[v] }
+
+// rawRecord re-encodes a typed record as Raw values, for the steps written
+// against the untyped sections.
+func rawRecord[V any](in state.Record[V]) state.Record[state.Raw] {
+	var out state.Record[state.Raw]
+	in.Each(func(k string, v V) { out.Set(k, encode(v)) })
+	return out
+}
+
+// rawMap is rawRecord for a Map.
+func rawMap[V any](in state.Map[V]) state.Map[state.Raw] {
+	var out state.Map[state.Raw]
+	in.Each(func(k string, v V) { out.Set(k, encode(v)) })
+	return out
+}

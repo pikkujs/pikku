@@ -302,46 +302,6 @@ func (s *Context) addMessageRoutesOf(entries []channelEntry) *channelMessageWiri
 	return result
 }
 
-// resolveChannelMiddleware is utils/middleware.ts resolveChannelMiddleware,
-// read from the channelMiddleware state section addMiddleware fills.
-func (s *Context) resolveChannelMiddleware(obj *ast.Node, tags []string) []WireRef {
-	var out []WireRef
-	for _, t := range tags {
-		if s.State.ChannelMiddleware.TagMiddleware.Has(t) {
-			out = append(out, WireRef{Type: "tag", Tag: t})
-		}
-	}
-	p := tsutil.FindPropertyAssignment(obj, "channelMiddleware")
-	if p == nil || !ast.IsArrayLiteralExpression(p.Initializer()) {
-		return out
-	}
-	for _, e := range p.Initializer().Elements() {
-		var id string
-		switch {
-		case ast.IsIdentifier(e):
-			id = s.refId(e)
-			if isTempId(id) {
-				id = e.Text()
-			}
-		case ast.IsCallExpression(e):
-			id = s.refId(e.Expression())
-			if isTempId(id) && ast.IsIdentifier(e.Expression()) {
-				id = e.Expression().Text()
-			}
-		default:
-			continue
-		}
-		inline := false
-		if def, ok := rawObject(s.State.ChannelMiddleware.Definitions.At(id)); ok {
-			if v, ok := def.Get("exportedName"); ok && string(v) == "null" {
-				inline = true
-			}
-		}
-		out = append(out, WireRef{Type: "wire", Name: id, Inline: tsutil.BoolPtr(inline)})
-	}
-	return out
-}
-
 func (s *Context) addChannel(node *ast.Node) {
 	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
 		return
