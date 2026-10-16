@@ -160,4 +160,5 @@ func (s *Context) updateWiringReferences(oldId, newId string) {
 			q.PikkuFuncId = newId
 		}
 	})
+	s.updateChannelAndCLIReferences(oldId, newId)
 }
