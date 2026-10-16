@@ -297,6 +297,7 @@ func (c *dslCtx) extractVariableDeclaration(stmt *ast.Node) *jsObj {
 				step = c.extractRpcStep(call, varName)
 			}
 			if step != nil {
+				c.touchType(decl)
 				c.outputVars[varName] = true
 				return step
 			}
@@ -309,6 +310,7 @@ func (c *dslCtx) extractVariableDeclaration(stmt *ast.Node) *jsObj {
 				step = c.extractParallelGroup(call)
 			}
 			if step != nil {
+				c.touchType(decl)
 				c.outputVars[varName] = true
 				return step
 			}
@@ -318,12 +320,14 @@ func (c *dslCtx) extractVariableDeclaration(stmt *ast.Node) *jsObj {
 		switch propertyCallName(init) {
 		case "filter":
 			if st := c.extractArrayFilter(init, varName); st != nil {
+				c.touchType(decl)
 				c.outputVars[varName] = true
 				return st
 			}
 		}
 		if m := propertyCallName(init); m == "some" || m == "every" {
 			if st := c.extractArrayPredicate(init, varName); st != nil {
+				c.touchType(decl)
 				c.outputVars[varName] = true
 				return st
 			}
@@ -353,6 +357,7 @@ func (c *dslCtx) extractDestructuredDeclaration(decl *ast.Node) *jsObj {
 				for i, el := range elements {
 					name := el.Name().Text()
 					children[i].Set("outputVar", name)
+					c.touchType(el.Name())
 					c.outputVars[name] = true
 				}
 				return step
@@ -404,6 +409,7 @@ func (c *dslCtx) extractExpressionStatement(stmt *ast.Node) *jsObj {
 			step = c.extractRpcStep(call, ov)
 		}
 		if hasOutput && outputVar != "" && step != nil {
+			c.touchType(expr)
 			c.outputVars[outputVar] = true
 		}
 		return step
@@ -420,6 +426,7 @@ func (c *dslCtx) extractExpressionStatement(stmt *ast.Node) *jsObj {
 	if isWorkflowApprovalCall(call) {
 		step := c.extractApprovalStep(call, outputVar)
 		if outputVar != "" && step != nil {
+			c.touchType(expr)
 			c.outputVars[outputVar] = true
 		}
 		return step
@@ -879,6 +886,7 @@ func (c *dslCtx) extractFanoutBodyStep(stmt *ast.Node, body *[]*jsObj) {
 			return
 		}
 		if name, ok := varName.(string); ok {
+			c.touchType(decl)
 			c.outputVars[name] = true
 		}
 		*body = append(*body, step)
@@ -1386,4 +1394,13 @@ func (s *Context) inferSimpleType(t *checker.Type) string {
 		return "array"
 	}
 	return "object"
+}
+
+// touchType asks the checker for a node's type and drops the answer. The TS
+// extractor records every step output's type (outputVars, arrayVars) and never
+// reads it back, so the port keeps no type; but the lookup decides when the
+// checker first creates the literal types in it, and union members print, and
+// so become schema enums, in that creation order (tsutil.TypeToString).
+func (c *dslCtx) touchType(n *ast.Node) {
+	c.s.Checker.GetTypeAtLocation(n)
 }

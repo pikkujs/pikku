@@ -6,6 +6,7 @@ import "github.com/microsoft/typescript-go/internal/ast"
 import "github.com/microsoft/typescript-go/internal/checker"
 import "github.com/microsoft/typescript-go/internal/core"
 import "github.com/microsoft/typescript-go/internal/diagnostics"
+import "github.com/microsoft/typescript-go/internal/jsnum"
 import "github.com/microsoft/typescript-go/internal/nodebuilder"
 import "github.com/microsoft/typescript-go/internal/printer"
 import "github.com/microsoft/typescript-go/internal/tracing"
@@ -84,6 +85,12 @@ type Checker = checker.Checker
 
 //go:linkname Checker_getFullyQualifiedName github.com/microsoft/typescript-go/internal/checker.(*Checker).getFullyQualifiedName
 func Checker_getFullyQualifiedName(recv *checker.Checker, symbol *ast.Symbol, containingLocation *ast.Node) string
+
+//go:linkname Checker_getStringLiteralType github.com/microsoft/typescript-go/internal/checker.(*Checker).getStringLiteralType
+func Checker_getStringLiteralType(recv *checker.Checker, value string) *checker.Type
+
+//go:linkname Checker_getNumberLiteralType github.com/microsoft/typescript-go/internal/checker.(*Checker).getNumberLiteralType
+func Checker_getNumberLiteralType(recv *checker.Checker, value jsnum.Number) *checker.Type
 
 //go:linkname Checker_getAwaitedType github.com/microsoft/typescript-go/internal/checker.(*Checker).getAwaitedType
 func Checker_getAwaitedType(recv *checker.Checker, t *checker.Type) *checker.Type

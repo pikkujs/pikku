@@ -11,6 +11,7 @@ import (
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/tsutils"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/types"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // createTypes parses each node in the given context.
@@ -100,7 +101,7 @@ func expressionDeclaration(typeChecker *checker.Checker, t *checker.Type, node *
 		symbol = t.Alias().Symbol()
 	}
 
-	decl := typeChecker.TypeToTypeNode(t, node, nodeBuilderFlagsIgnoreErrors, synth.Map())
+	decl := tsutil.TypeToTypeNode(typeChecker, t, node, nodeBuilderFlagsIgnoreErrors, synth.Map())
 	if decl == nil && symbol != nil {
 		decl = symbol.ValueDeclaration
 		if decl == nil && len(symbol.Declarations) > 0 {

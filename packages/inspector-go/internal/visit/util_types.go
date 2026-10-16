@@ -15,7 +15,7 @@ import (
 // the name with a different path.
 
 func (s *Context) typeToString(t *checker.Type) string {
-	return s.Checker.TypeToStringEx(t, nil, checker.TypeFormatFlagsNoTruncation, nil)
+	return tsutil.TypeToString(s.Checker, t, checker.TypeFormatFlagsNoTruncation)
 }
 
 func (s *Context) unwrapPromise(t *checker.Type) *checker.Type {

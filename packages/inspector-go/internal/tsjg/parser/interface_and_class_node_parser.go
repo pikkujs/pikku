@@ -6,6 +6,7 @@ import (
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/tsutils"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/types"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // InterfaceAndClassNodeParser parses interface and class declarations into
@@ -124,7 +125,7 @@ func (p *InterfaceAndClassNodeParser) getProperties(node *ast.Node, context *Con
 		// Ignore members without an initializer; they have no useful type.
 		if memberType == nil && member.Initializer() != nil {
 			t := p.typeChecker.GetTypeAtLocation(member)
-			memberType = p.typeChecker.TypeToTypeNode(t, node, nodeBuilderFlagsNoTruncation, p.synth.Map())
+			memberType = tsutil.TypeToTypeNode(p.typeChecker, t, node, nodeBuilderFlagsNoTruncation, p.synth.Map())
 
 			// TypeToTypeNode returns a node that is detached from the AST, so
 			// AnnotatedNodeParser cannot walk up to the member to read its

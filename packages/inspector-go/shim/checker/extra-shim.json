@@ -2,7 +2,9 @@
   "ExtraMethods": {
     "Checker": [
       "getAwaitedType",
-      "getFullyQualifiedName"
+      "getFullyQualifiedName",
+      "getNumberLiteralType",
+      "getStringLiteralType"
     ]
   }
 }

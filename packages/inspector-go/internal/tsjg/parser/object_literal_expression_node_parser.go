@@ -7,6 +7,7 @@ import (
 	"github.com/microsoft/typescript-go/shim/checker"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/types"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // ObjectLiteralExpressionNodeParser parses object literal expressions
@@ -46,7 +47,7 @@ func (p *ObjectLiteralExpressionNodeParser) CreateType(node *ast.Node, context *
 
 	memberTypes := []types.Type{object}
 	for _, spread := range spreadAssignments {
-		referenced := p.checker.TypeToTypeNode(
+		referenced := tsutil.TypeToTypeNode(p.checker,
 			p.checker.GetTypeAtLocation(spread.AsSpreadAssignment().Expression),
 			nil,
 			nodeBuilderFlagsNoTruncation,
@@ -81,7 +82,7 @@ func (p *ObjectLiteralExpressionNodeParser) parseProperties(properties []*ast.No
 		var typeNode *ast.Node
 		switch {
 		case ast.IsShorthandPropertyAssignment(prop):
-			typeNode = p.checker.TypeToTypeNode(
+			typeNode = tsutil.TypeToTypeNode(p.checker,
 				p.checker.GetTypeAtLocation(prop),
 				nil,
 				nodeBuilderFlagsNoTruncation,

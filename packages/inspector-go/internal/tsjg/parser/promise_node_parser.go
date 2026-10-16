@@ -7,6 +7,7 @@ import (
 	"github.com/microsoft/typescript-go/shim/checker"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsjg/types"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // PromiseNodeParser unwraps Promise<T> (src/NodeParser/PromiseNodeParser.ts).
@@ -57,7 +58,7 @@ func (p *PromiseNodeParser) SupportsNode(node *ast.Node) bool {
 func (p *PromiseNodeParser) CreateType(node *ast.Node, context *Context, _ *types.ReferenceType) types.Type {
 	t := p.typeChecker.GetTypeAtLocation(node)
 	awaitedType := checker.Checker_getAwaitedType(p.typeChecker, t)
-	awaitedNode := p.typeChecker.TypeToTypeNode(awaitedType, nil, nodeBuilderFlagsIgnoreErrors, p.synth.Map())
+	awaitedNode := tsutil.TypeToTypeNode(p.typeChecker, awaitedType, nil, nodeBuilderFlagsIgnoreErrors, p.synth.Map())
 
 	if awaitedNode == nil {
 		panic(fmt.Errorf("could not find awaited node %s", DescribeNode(node)))
