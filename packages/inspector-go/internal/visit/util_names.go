@@ -1,16 +1,16 @@
-package main
+package visit
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
-	"github.com/microsoft/typescript-go/shim/scanner"
+
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // Port of utils/extract-function-name.ts (the paths addFunctions and the
@@ -25,71 +25,24 @@ type extractedName struct {
 	version      int // 0 = none
 }
 
-var nonAlnum = regexp.MustCompile(`[^a-zA-Z0-9]`)
-
-func funcIdToTypeName(id string) string {
-	var b strings.Builder
-	for _, s := range nonAlnum.Split(id, -1) {
-		if s == "" {
-			continue
-		}
-		b.WriteString(strings.ToUpper(s[:1]) + s[1:])
-	}
-	return b.String()
-}
-
-func formatVersionedId(base string, version int) string {
-	return fmt.Sprintf("%s@v%d", base, version)
-}
-
-func nodeStart(n *ast.Node) int {
-	return scanner.GetTokenPosOfNode(n, ast.GetSourceFileOfNode(n), false)
-}
-
-// nodeText is ts.Node#getText(): the source text from the token start.
-func nodeText(n *ast.Node) string {
+func (s *Context) tempFuncId(n *ast.Node) string {
 	sf := ast.GetSourceFileOfNode(n)
-	return sf.Text()[nodeStart(n):n.End()]
-}
-
-func (s *state) tempFuncId(n *ast.Node) string {
-	sf := ast.GetSourceFileOfNode(n)
-	rel, _ := filepath.Rel(s.rootDir, sf.FileName())
+	rel, _ := filepath.Rel(s.RootDir, sf.FileName())
 	// TS hashes the UTF-16 offset; typescript-go positions are UTF-8 byte offsets.
-	sum := sha1.Sum([]byte(fmt.Sprintf("%s:%d", rel, utf16Offset(sf.Text(), nodeStart(n)))))
+	sum := sha1.Sum([]byte(fmt.Sprintf("%s:%d", rel, tsutil.UTF16Offset(sf.Text(), tsutil.NodeStart(n)))))
 	return "__temp_" + hex.EncodeToString(sum[:])[:16]
 }
 
-func isFunctionLike(n *ast.Node) bool {
-	return n != nil && (ast.IsArrowFunction(n) || ast.IsFunctionExpression(n))
-}
-
-func isPikkuCall(n *ast.Node) bool {
-	return n != nil && ast.IsCallExpression(n) && ast.IsIdentifier(n.Expression()) &&
-		strings.HasPrefix(n.Expression().Text(), "pikku")
-}
-
-func hasExportModifier(n *ast.Node) bool {
-	return n.ModifierFlags()&ast.ModifierFlagsExport != 0
-}
-
-func (s *state) resolveAlias(sym *ast.Symbol) *ast.Symbol {
+func (s *Context) resolveAlias(sym *ast.Symbol) *ast.Symbol {
 	if sym != nil && sym.Flags&ast.SymbolFlagsAlias != 0 {
-		if r := s.c.GetAliasedSymbol(sym); r != nil {
+		if r := s.Checker.GetAliasedSymbol(sym); r != nil {
 			return r
 		}
 	}
 	return sym
 }
 
-func firstDecl(sym *ast.Symbol) *ast.Node {
-	if sym == nil || len(sym.Declarations) == 0 {
-		return nil
-	}
-	return sym.Declarations[0]
-}
-
-func (s *state) isNamedExport(decl *ast.Node) bool {
+func (s *Context) isNamedExport(decl *ast.Node) bool {
 	parent := decl.Parent
 	if parent == nil {
 		return false
@@ -99,7 +52,7 @@ func (s *state) isNamedExport(decl *ast.Node) bool {
 		if stmt == nil {
 			return false
 		}
-		if ast.IsVariableStatement(stmt) && hasExportModifier(stmt) {
+		if ast.IsVariableStatement(stmt) && tsutil.HasExportModifier(stmt) {
 			return true
 		}
 	}
@@ -108,18 +61,18 @@ func (s *state) isNamedExport(decl *ast.Node) bool {
 		return false
 	}
 	sf := ast.GetSourceFileOfNode(decl)
-	modSym := s.c.GetSymbolAtLocation(sf.AsNode())
+	modSym := s.Checker.GetSymbolAtLocation(sf.AsNode())
 	if modSym == nil {
 		modSym = sf.AsNode().Symbol()
 	}
 	if modSym == nil {
 		return false
 	}
-	declSym := s.c.GetSymbolAtLocation(name)
+	declSym := s.Checker.GetSymbolAtLocation(name)
 	if declSym == nil {
 		return false
 	}
-	for _, exp := range s.c.GetExportsOfModule(modSym) {
+	for _, exp := range s.Checker.GetExportsOfModule(modSym) {
 		if s.resolveAlias(exp) == declSym {
 			return true
 		}
@@ -129,15 +82,15 @@ func (s *state) isNamedExport(decl *ast.Node) bool {
 
 // exportedNameOfDecl handles the `func: someFunc` / shorthand resolution:
 // variable initialised to pikkuX(fn) or a function, or a function declaration.
-func (s *state) exportedNameOfDecl(decl *ast.Node) (string, bool) {
+func (s *Context) exportedNameOfDecl(decl *ast.Node) (string, bool) {
 	if decl == nil {
 		return "", false
 	}
 	if ast.IsVariableDeclaration(decl) && decl.Initializer() != nil {
 		init := decl.Initializer()
-		if isPikkuCall(init) {
+		if tsutil.IsPikkuCall(init) {
 			args := init.Arguments()
-			if len(args) > 0 && isFunctionLike(args[0]) {
+			if len(args) > 0 && tsutil.IsFunctionLike(args[0]) {
 				if s.isNamedExport(decl) && ast.IsIdentifier(decl.Name()) {
 					return decl.Name().Text(), true
 				}
@@ -145,7 +98,7 @@ func (s *state) exportedNameOfDecl(decl *ast.Node) (string, bool) {
 			}
 			return "", false
 		}
-		if isFunctionLike(init) {
+		if tsutil.IsFunctionLike(init) {
 			if s.isNamedExport(decl) && ast.IsIdentifier(decl.Name()) {
 				return decl.Name().Text(), true
 			}
@@ -154,7 +107,7 @@ func (s *state) exportedNameOfDecl(decl *ast.Node) (string, bool) {
 		return "", false
 	}
 	if ast.IsFunctionDeclaration(decl) {
-		if hasExportModifier(decl) && decl.Name() != nil {
+		if tsutil.HasExportModifier(decl) && decl.Name() != nil {
 			return decl.Name().Text(), true
 		}
 		return "", true
@@ -187,7 +140,7 @@ func extractOverrideAndVersion(obj *ast.Node, r *extractedName) {
 	}
 }
 
-func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
+func (s *Context) extractFunctionName(callExpr *ast.Node) extractedName {
 	var r extractedName
 	parent := callExpr.Parent
 
@@ -208,7 +161,7 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 
 	if ast.IsCallExpression(callExpr) {
 		args := callExpr.Arguments()
-		if isPikkuCall(callExpr) && len(args) > 0 && ast.IsObjectLiteralExpression(args[0]) {
+		if tsutil.IsPikkuCall(callExpr) && len(args) > 0 && ast.IsObjectLiteralExpression(args[0]) {
 			extractOverrideAndVersion(args[0], &r)
 		}
 		if len(args) > 0 && ast.IsObjectLiteralExpression(args[0]) {
@@ -216,8 +169,8 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 				if ast.IsPropertyAssignment(p) && ast.IsIdentifier(p.Name()) && p.Name().Text() == "func" {
 					init := p.Initializer()
 					if ast.IsIdentifier(init) {
-						if sym := s.c.GetSymbolAtLocation(init); sym != nil {
-							if name, ok := s.exportedNameOfDecl(firstDecl(s.resolveAlias(sym))); ok && name != "" {
+						if sym := s.Checker.GetSymbolAtLocation(init); sym != nil {
+							if name, ok := s.exportedNameOfDecl(tsutil.FirstDecl(s.resolveAlias(sym))); ok && name != "" {
 								r.exportedName = name
 							}
 						}
@@ -225,8 +178,8 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 					break
 				}
 				if ast.IsShorthandPropertyAssignment(p) && p.Name().Text() == "func" {
-					if sym := s.c.GetShorthandAssignmentValueSymbol(p); sym != nil {
-						if name, ok := s.exportedNameOfDecl(firstDecl(sym)); ok {
+					if sym := s.Checker.GetShorthandAssignmentValueSymbol(p); sym != nil {
+						if name, ok := s.exportedNameOfDecl(tsutil.FirstDecl(sym)); ok {
 							if name != "" {
 								r.exportedName = name
 							}
@@ -237,11 +190,11 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 			}
 		}
 	} else if ast.IsIdentifier(callExpr) {
-		if sym := s.c.GetSymbolAtLocation(callExpr); sym != nil {
-			decl := firstDecl(s.resolveAlias(sym))
+		if sym := s.Checker.GetSymbolAtLocation(callExpr); sym != nil {
+			decl := tsutil.FirstDecl(s.resolveAlias(sym))
 			if decl != nil && ast.IsVariableDeclaration(decl) && decl.Initializer() != nil {
 				init := decl.Initializer()
-				if isPikkuCall(init) {
+				if tsutil.IsPikkuCall(init) {
 					a := init.Arguments()
 					if len(a) > 0 && ast.IsObjectLiteralExpression(a[0]) {
 						extractOverrideAndVersion(a[0], &r)
@@ -249,13 +202,13 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 					if s.isNamedExport(decl) && ast.IsIdentifier(decl.Name()) {
 						r.exportedName = decl.Name().Text()
 					}
-				} else if isFunctionLike(init) {
+				} else if tsutil.IsFunctionLike(init) {
 					if s.isNamedExport(decl) && ast.IsIdentifier(decl.Name()) {
 						r.exportedName = decl.Name().Text()
 					}
 				}
 			} else if decl != nil && ast.IsFunctionDeclaration(decl) {
-				if hasExportModifier(decl) && decl.Name() != nil {
+				if tsutil.HasExportModifier(decl) && decl.Name() != nil {
 					r.exportedName = decl.Name().Text()
 				}
 			}
@@ -299,21 +252,7 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 		if strings.HasSuffix(r.pikkuFuncId, suffix) && len(r.pikkuFuncId) > len(suffix) {
 			r.pikkuFuncId = strings.TrimSuffix(r.pikkuFuncId, suffix)
 		}
-		r.pikkuFuncId = formatVersionedId(r.pikkuFuncId, r.version)
+		r.pikkuFuncId = tsutil.FormatVersionedId(r.pikkuFuncId, r.version)
 	}
 	return r
-}
-
-// utf16Offset converts a UTF-8 byte offset into text to the UTF-16 code-unit
-// offset Strada would report for the same position.
-func utf16Offset(text string, byteOff int) int {
-	n := 0
-	for _, r := range text[:byteOff] {
-		if r >= 0x10000 {
-			n += 2
-		} else {
-			n++
-		}
-	}
-	return n
 }

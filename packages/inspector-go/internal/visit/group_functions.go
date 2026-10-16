@@ -1,22 +1,29 @@
-package main
+package visit
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
 	"github.com/microsoft/typescript-go/shim/checker"
-	"github.com/microsoft/typescript-go/shim/printer"
 	"github.com/microsoft/typescript-go/shim/scanner"
+
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // Port of add/add-functions.ts (addFunctions).
+
+func init() {
+	Register(Visitor{Name: "addFunctions", Phase: PhaseFunctions, Order: OrderAddFunctions, Visit: (*Context).addFunctions})
+}
 
 var pikkuFuncPattern = regexp.MustCompile(`(?i)pikku.*func`)
 var validVarName = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$]*$`)
@@ -39,7 +46,7 @@ func isScenarioInstrumentation(name string) bool {
 	return scenarioInstrumentation[strings.SplitN(name, "@", 2)[0]]
 }
 
-func (s *state) addFunctions(node *ast.Node) {
+func (s *Context) addFunctions(node *ast.Node) {
 	if !ast.IsCallExpression(node) {
 		return
 	}
@@ -76,7 +83,7 @@ func (s *state) addFunctions(node *ast.Node) {
 	var tags []string
 	var expose, mcp bool
 	var version int
-	var inputSchemaVar, outputSchemaVar bool
+	var inputSchemaRef, outputSchemaRef *state.SchemaRef
 
 	firstArg := args[0]
 	handlerNode, resolvedFunc, isDirect := s.extractFunctionNode(firstArg)
@@ -94,35 +101,35 @@ func (s *state) addFunctions(node *ast.Node) {
 		if cm.hasErrors {
 			m.Errors = cm.errors
 		}
-		expose = getPropertyValue(firstArg, "expose").truthy()
-		m.Remote = orNil(getPropertyValue(firstArg, "remote").truthy())
-		mcp = getPropertyValue(firstArg, "mcp").truthy()
-		if v := getPropertyValue(firstArg, "auth"); v.boolean != nil {
-			m.Auth = v.boolean
+		expose = tsutil.GetPropertyValue(firstArg, "expose").Truthy()
+		m.Remote = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "remote").Truthy())
+		mcp = tsutil.GetPropertyValue(firstArg, "mcp").Truthy()
+		if v := tsutil.GetPropertyValue(firstArg, "auth"); v.Bool != nil {
+			m.Auth = v.Bool
 		}
-		m.PermissionsInBody = orNil(getPropertyValue(firstArg, "permissionsInBody").truthy())
-		if p := findPropertyAssignment(firstArg, "audit"); p != nil {
+		m.PermissionsInBody = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "permissionsInBody").Truthy())
+		if p := tsutil.FindPropertyAssignment(firstArg, "audit"); p != nil {
 			init := p.Initializer()
 			if init.Kind == ast.KindTrueKeyword {
 				m.Audit = &AuditMeta{Durability: "best-effort"}
 			} else if ast.IsObjectLiteralExpression(init) {
-				d := getPropertyValue(init, "durability").asString()
+				d := tsutil.GetPropertyValue(init, "durability").AsString()
 				if d == "" {
 					d = "best-effort"
 				}
 				m.Audit = &AuditMeta{Durability: d}
 			}
 		}
-		m.Readonly = orNil(getPropertyValue(firstArg, "readonly").truthy())
-		m.Deploy = getPropertyValue(firstArg, "deploy").asString()
-		m.ApprovalRequired = orNil(getPropertyValue(firstArg, "approvalRequired").truthy())
-		if v := getPropertyValue(firstArg, "workflowQueued"); v.boolean != nil && *v.boolean {
-			m.WorkflowQueued = boolPtr(true)
+		m.Readonly = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "readonly").Truthy())
+		m.Deploy = tsutil.GetPropertyValue(firstArg, "deploy").AsString()
+		m.ApprovalRequired = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "approvalRequired").Truthy())
+		if v := tsutil.GetPropertyValue(firstArg, "workflowQueued"); v.Bool != nil && *v.Bool {
+			m.WorkflowQueued = tsutil.BoolPtr(true)
 		}
-		if v := getPropertyValue(firstArg, "workflowRetries"); v.num != nil {
-			m.WorkflowRetries = v.num
+		if v := tsutil.GetPropertyValue(firstArg, "workflowRetries"); v.Num != nil {
+			m.WorkflowRetries = v.Num
 		}
-		m.WorkflowTimeout = getPropertyValue(firstArg, "workflowTimeout").asString()
+		m.WorkflowTimeout = tsutil.GetPropertyValue(firstArg, "workflowTimeout").AsString()
 
 		var declared []string
 		for _, surface := range scenarioSurfaceKeys {
@@ -140,7 +147,7 @@ func (s *state) addFunctions(node *ast.Node) {
 			}
 			m.ScenarioStepSurfaces = []string{"default"}
 			if scenarioStepKind == "addon" {
-				m.ScenarioStepAddon = getPropertyValue(firstArg, "addon").asString()
+				m.ScenarioStepAddon = tsutil.GetPropertyValue(firstArg, "addon").AsString()
 				if m.ScenarioStepAddon == "" {
 					return
 				}
@@ -149,17 +156,17 @@ func (s *state) addFunctions(node *ast.Node) {
 			if len(declared) > 0 {
 				m.ScenarioStepSurfaces = declared
 			}
-			vu := getPropertyValue(firstArg, "virtualUser")
+			vu := tsutil.GetPropertyValue(firstArg, "virtualUser")
 			browser := false
 			for _, d := range declared {
 				browser = browser || d == "browser"
 			}
-			if (vu.boolean != nil && *vu.boolean) || browser {
-				m.ScenarioStepRequiresVirtualUser = boolPtr(true)
+			if (vu.Bool != nil && *vu.Bool) || browser {
+				m.ScenarioStepRequiresVirtualUser = tsutil.BoolPtr(true)
 			}
 		}
-		m.ScenarioStepTemplate = getPropertyValue(firstArg, "template").asString()
-		if sc, ok := getArrayPropertyValue(firstArg, "scopes"); ok {
+		m.ScenarioStepTemplate = tsutil.GetPropertyValue(firstArg, "template").AsString()
+		if sc, ok := tsutil.GetArrayPropertyValue(firstArg, "scopes"); ok {
 			m.Scopes = sc
 		}
 		for _, p := range firstArg.Properties() {
@@ -173,15 +180,15 @@ func (s *state) addFunctions(node *ast.Node) {
 				break
 			}
 		}
-		if v := getPropertyValue(firstArg, "version"); v.present {
+		if v := tsutil.GetPropertyValue(firstArg, "version"); v.Present {
 			var f float64
 			var err error
 			switch {
-			case v.num != nil:
-				f = *v.num
-			case v.str != nil:
-				f, err = strconv.ParseFloat(*v.str, 64)
-			case v.boolean != nil && *v.boolean:
+			case v.Num != nil:
+				f = *v.Num
+			case v.Str != nil:
+				f, err = strconv.ParseFloat(*v.Str, 64)
+			case v.Bool != nil && *v.Bool:
 				f = 1
 			}
 			if err == nil && f >= 1 && f == float64(int(f)) {
@@ -192,15 +199,28 @@ func (s *state) addFunctions(node *ast.Node) {
 		for _, p := range firstArg.Properties() {
 			if ast.IsPropertyAssignment(p) && ast.IsIdentifier(p.Name()) {
 				pn := p.Name().Text()
-				if (pn == "input" || pn == "output") && ast.IsIdentifier(p.Initializer()) {
-					// TS also checks the schema vendor (zod/valibot/...) here and
-					// registers it in state.schemaLookup; the prototype only
-					// records that a schema variable was given.
-					if pn == "input" {
-						inputSchemaVar = true
-					} else {
-						outputSchemaVar = true
+				if pn != "input" && pn != "output" {
+					continue
+				}
+				switch init := p.Initializer(); {
+				case ast.IsIdentifier(init):
+					ref := s.resolveSchemaRef(init, "Function '"+name+"' "+pn)
+					if ref == nil {
+						break
 					}
+					if pn == "input" {
+						inputSchemaRef = ref
+					} else {
+						outputSchemaRef = ref
+					}
+				case ast.IsCallExpression(init):
+					schemaName := tsutil.FuncIdToTypeName(name) + strings.ToUpper(pn[:1]) + pn[1:]
+					s.Log.Diagnostic(diag.Error, diag.InlineSchema,
+						"Inline schemas are not supported for '"+pn+"' in '"+name+"'; "+
+							"it is validated against its TypeScript type only, so refinements are not enforced.\n"+
+							"  Extract to an exported variable:\n"+
+							"    export const "+schemaName+" = "+tsutil.NodeText(init)+"\n"+
+							"  Then use: "+pn+": "+schemaName)
 				}
 			}
 		}
@@ -218,7 +238,7 @@ func (s *state) addFunctions(node *ast.Node) {
 		if strings.HasSuffix(base, suffix) && len(base) > len(suffix) {
 			base = strings.TrimSuffix(base, suffix)
 		}
-		pikkuFuncId = formatVersionedId(base, version)
+		pikkuFuncId = tsutil.FormatVersionedId(base, version)
 		m.Version = &version
 	}
 	m.PikkuFuncId = pikkuFuncId
@@ -234,26 +254,26 @@ func (s *state) addFunctions(node *ast.Node) {
 	mcpEnabled := mcp || isMCPToolFunc
 
 	handler := handlerNode
-	if resolvedFunc != nil && isFunctionLike(resolvedFunc) {
+	if resolvedFunc != nil && tsutil.IsFunctionLike(resolvedFunc) {
 		handler = resolvedFunc
 	}
-	if !isFunctionLike(handler) {
-		s.meta[pikkuFuncId] = &FunctionMeta{
+	if !tsutil.IsFunctionLike(handler) {
+		s.State.Functions.Meta.Set(pikkuFuncId, &FunctionMeta{
 			PikkuFuncId: pikkuFuncId, FunctionType: "user", Name: name,
 			Services: ServicesMeta{Optimized: false, Services: []string{}},
 			Inputs:   []string{}, Outputs: []string{},
-		}
+		})
 		return
 	}
 
 	services := ServicesMeta{Optimized: true, Services: []string{}}
 	addServices := func(fnNode *ast.Node, dedupe bool) {
-		p := paramAt(fnNode, 0)
+		p := tsutil.ParamAt(fnNode, 0)
 		if p == nil {
 			return
 		}
 		if ast.IsObjectBindingPattern(p.Name()) {
-			for _, n := range bindingNames(p) {
+			for _, n := range tsutil.BindingNames(p) {
 				if dedupe {
 					dup := false
 					for _, e := range services.Services {
@@ -276,7 +296,7 @@ func (s *state) addFunctions(node *ast.Node) {
 	if objectNode != nil {
 		compensateInit = s.getPropertyAssignmentInitializer(objectNode, "compensate", true)
 	}
-	if compensateInit != nil && isFunctionLike(compensateInit) {
+	if compensateInit != nil && tsutil.IsFunctionLike(compensateInit) {
 		addServices(compensateInit, true)
 		cw := extractUsedWires(compensateInit, 2)
 		seen := map[string]bool{}
@@ -290,37 +310,44 @@ func (s *state) addFunctions(node *ast.Node) {
 		wires = WiresMeta{Optimized: wires.Optimized && cw.Optimized, Wires: merged}
 	}
 	if compensateInit != nil {
-		m.Compensate = boolPtr(true)
+		m.Compensate = tsutil.BoolPtr(true)
 	}
 
 	body := handler.Body()
-	if inv := collectInvokedRpcNames(body); len(inv) > 0 {
+	if inv := tsutil.CollectInvokedRpcNames(body); len(inv) > 0 {
 		m.Invokes = inv
 	}
 
 	// --- Generics → types, unwrapped from Promise ---
 	var generics []*checker.Type
 	for _, tn := range node.TypeArguments() {
-		generics = append(generics, s.unwrapPromise(s.c.GetTypeFromTypeNode(tn)))
+		generics = append(generics, s.unwrapPromise(s.Checker.GetTypeFromTypeNode(tn)))
 	}
 	isChannelConnection := channelConnRe.MatchString(wrapper)
-	capitalized := funcIdToTypeName(name)
+	capitalized := tsutil.FuncIdToTypeName(name)
 
 	var inputNames, outputNames []string
-	tm := s.typesMap
+	var inputTypes []*checker.Type
+	tm := s.TypesMap()
 	switch {
-	case inputSchemaVar:
+	case inputSchemaRef != nil:
 		inputNames = []string{capitalized + "Input"}
-		tm.addCustomType(inputNames[0], "unknown", nil)
+		s.State.SchemaLookup.Set(inputNames[0], *inputSchemaRef)
+		tm.AddCustomType(inputNames[0], "unknown", nil)
 	case isListFunc && len(generics) >= 1:
 		inputNames = []string{capitalized + "Input"}
 		refs := s.resolveTypeImports(generics[0], true)
-		tm.addCustomType(inputNames[0], "{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & "+s.typeToString(generics[0]), dedupe(refs))
+		tm.AddCustomType(inputNames[0], "{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & "+s.typeToString(generics[0]), tsutil.Dedupe(refs))
+		if p := tsutil.ParamAt(handler, 1); p != nil {
+			inputTypes = []*checker.Type{s.Checker.GetTypeAtLocation(p)}
+		} else {
+			inputTypes = []*checker.Type{generics[0]}
+		}
 	case !isChannelConnection && !isListFunc && len(generics) >= 1:
-		inputNames, _ = s.getNamesAndTypes("Input", name, generics[0])
+		inputNames, inputTypes = s.getNamesAndTypes("Input", name, generics[0])
 	default:
-		if p := paramAt(handler, 1); p != nil {
-			inputNames, _ = s.getNamesAndTypes("Input", pikkuFuncId, s.c.GetTypeAtLocation(p))
+		if p := tsutil.ParamAt(handler, 1); p != nil {
+			inputNames, inputTypes = s.getNamesAndTypes("Input", pikkuFuncId, s.Checker.GetTypeAtLocation(p))
 		}
 	}
 	if isWebhookReceive {
@@ -328,18 +355,19 @@ func (s *state) addFunctions(node *ast.Node) {
 	}
 
 	switch {
-	case outputSchemaVar:
+	case outputSchemaRef != nil:
 		outputNames = []string{capitalized + "Output"}
-		tm.addCustomType(outputNames[0], "unknown", nil)
+		s.State.SchemaLookup.Set(outputNames[0], *outputSchemaRef)
+		tm.AddCustomType(outputNames[0], "unknown", nil)
 	case isListFunc && len(generics) >= 2:
 		outputNames = []string{capitalized + "Output"}
 		refs := s.resolveTypeImports(generics[1], true)
-		tm.addCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(generics[1])+">; nextCursor: string | null; totalCount?: number; }", dedupe(refs))
+		tm.AddCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(generics[1])+">; nextCursor: string | null; totalCount?: number; }", tsutil.Dedupe(refs))
 	case !isListFunc && len(generics) >= 2:
 		outputNames, _ = s.getNamesAndTypes("Output", name, generics[1])
 	default:
-		if sig := s.c.GetSignatureFromDeclaration(handler); sig != nil {
-			ret := s.unwrapPromise(s.c.GetReturnTypeOfSignature(sig))
+		if sig := s.Checker.GetSignatureFromDeclaration(handler); sig != nil {
+			ret := s.unwrapPromise(s.Checker.GetReturnTypeOfSignature(sig))
 			outputNames, _ = s.getNamesAndTypes("Output", pikkuFuncId, ret)
 		}
 	}
@@ -350,17 +378,40 @@ func (s *state) addFunctions(node *ast.Node) {
 	}
 	if t, ok := mcpOutputTypes[wrapper]; ok && (len(outputNames) == 0 || outputNames[0] != t) {
 		if !s.registerMCPOutputType(expression, t) {
-			tm.addCustomType(t, t, nil)
+			tm.AddCustomType(t, t, nil)
 		}
 		outputNames = []string{t}
 	}
 
-	sourceFile := ast.GetSourceFileOfNode(node).FileName()
-	if existing := s.meta[pikkuFuncId]; existing != nil && existing.SourceFile != "" && existing.SourceFile != sourceFile {
-		return // DUPLICATE_FUNCTION_NAME
+	if len(inputNames) > 1 {
+		s.Log.Warn("More than one input type detected, only the first one will be used as a schema.")
+	}
+	if len(inputTypes) > 0 {
+		s.typesLookup[pikkuFuncId] = inputTypes
 	}
 
-	m.Sessionless = boolPtr(wrapper != "pikkuFunc")
+	sourceFile := ast.GetSourceFileOfNode(node).FileName()
+	if existing := s.State.Functions.Meta.At(pikkuFuncId); existing != nil && existing.SourceFile != "" && existing.SourceFile != sourceFile {
+		s.Log.Critical(diag.DuplicateFunctionName, fmt.Sprintf("Function name '%s' is not unique. '%s' is already defined in '%s' and cannot be redefined in '%s'.",
+			name, pikkuFuncId, existing.SourceFile, sourceFile))
+		return
+	}
+	if fn.exportedName != "" || fn.explicitName != "" {
+		if existing := s.State.RPC.InternalMeta.At(name); existing != "" && !areCompatibleFunctionIds(existing, pikkuFuncId) {
+			s.Log.Critical(diag.DuplicateFunctionName, fmt.Sprintf("Function name '%s' is not unique. It already points to '%s' in '%s', but '%s' in '%s' tried to use the same name.",
+				name, existing, s.existingFunctionSource(existing), pikkuFuncId, sourceFile))
+			return
+		}
+		if expose {
+			if existing := s.State.RPC.ExposedMeta.At(name); existing != "" && !areCompatibleFunctionIds(existing, pikkuFuncId) {
+				s.Log.Critical(diag.DuplicateFunctionName, fmt.Sprintf("Exposed function name '%s' is not unique. It already points to '%s' in '%s', but '%s' in '%s' tried to use the same name.",
+					name, existing, s.existingFunctionSource(existing), pikkuFuncId, sourceFile))
+				return
+			}
+		}
+	}
+
+	m.Sessionless = tsutil.BoolPtr(wrapper != "pikkuFunc")
 	m.Services = services
 	if len(wires.Wires) > 0 || !wires.Optimized {
 		m.Wires = &wires
@@ -373,14 +424,14 @@ func (s *state) addFunctions(node *ast.Node) {
 	}
 	m.Inputs = filterVoid(inputNames)
 	m.Outputs = filterVoid(outputNames)
-	m.Expose = orNil(expose)
+	m.Expose = tsutil.OrNil(expose)
 	if isWebhookReceive {
-		m.Auth = boolPtr(false)
+		m.Auth = tsutil.BoolPtr(false)
 	}
-	m.ScenarioStep = orNil(isScenarioStep)
-	m.WebhookReceive = orNil(isWebhookReceive)
-	m.Scenario = orNil(isScenario)
-	m.MCP = orNil(mcpEnabled)
+	m.ScenarioStep = tsutil.OrNil(isScenarioStep)
+	m.WebhookReceive = tsutil.OrNil(isWebhookReceive)
+	m.Scenario = tsutil.OrNil(isScenario)
+	m.MCP = tsutil.OrNil(mcpEnabled)
 	if scenarioStepKind != "" && scenarioStepKind != "virtualUser" {
 		m.ScenarioStepKind = scenarioStepKind
 	}
@@ -394,7 +445,7 @@ func (s *state) addFunctions(node *ast.Node) {
 		}
 	}
 	m.ImplementationHash = implementationHash(wrapper, handler, objectNode, isDirect)
-	m.IsDirectFunction = boolPtr(isDirect)
+	m.IsDirectFunction = tsutil.BoolPtr(isDirect)
 	m.SourceFile = sourceFile
 	handlerSF := ast.GetSourceFileOfNode(handler)
 	if handlerSF.FileName() != sourceFile {
@@ -405,36 +456,118 @@ func (s *state) addFunctions(node *ast.Node) {
 	var bs, be int
 	if ast.IsBlock(body) && len(body.Statements()) > 0 {
 		stmts := body.Statements()
-		bs = lineOf(nodeStart(stmts[0]))
+		bs = lineOf(tsutil.NodeStart(stmts[0]))
 		be = lineOf(stmts[len(stmts)-1].End())
 	} else {
-		bs = lineOf(nodeStart(body))
+		bs = lineOf(tsutil.NodeStart(body))
 		be = lineOf(body.End())
 	}
 	m.BodyStart, m.BodyEnd = &bs, &be
-	if sw := collectStartedWorkflows(body); len(sw) > 0 {
+	if sw := tsutil.CollectStartedWorkflows(body); len(sw) > 0 {
 		m.StartsWorkflows = sw
 	}
 
-	s.meta[pikkuFuncId] = m
+	s.State.Functions.Meta.Set(pikkuFuncId, m)
+	if mcpEnabled {
+		// mcpEndpoints.toolsMeta is an unported (Raw) section; only the
+		// service-aggregation side effects are recorded.
+		s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
+		s.addUsedWires(m)
+	}
+	s.registerRPC(rpcRegistration{
+		wrapper: wrapper, pikkuFuncId: pikkuFuncId, name: name,
+		exportedName: fn.exportedName, explicitName: fn.explicitName,
+		sourceFile: sourceFile, expose: expose, remote: m.Remote != nil && *m.Remote,
+		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive, versioned: version != 0,
+	})
+}
+
+func (s *Context) existingFunctionSource(id string) string {
+	if m := s.State.Functions.Meta.At(id); m != nil && m.SourceFile != "" {
+		return m.SourceFile
+	}
+	if f, ok := s.State.RPC.InternalFiles.Get(id); ok && f.Path != "" {
+		return f.Path
+	}
+	return "unknown file"
+}
+
+func (s *Context) addUsedWires(m *FunctionMeta) {
+	for _, w := range m.Middleware {
+		if w.Type == "wire" {
+			s.State.ServiceAggregation.UsedMiddleware.Add(w.Name)
+		}
+	}
+	for _, w := range m.Permissions {
+		if w.Type == "wire" {
+			s.State.ServiceAggregation.UsedPermissions.Add(w.Name)
+		}
+	}
+}
+
+var nonRPCPattern = regexp.MustCompile(`(?i)Trigger|ChannelConnection|ChannelDisconnection`)
+
+type rpcRegistration struct {
+	wrapper, pikkuFuncId, name, exportedName, explicitName, sourceFile string
+	expose, remote, mcpEnabled, notRpc, versioned                      bool
+}
+
+// registerRPC is the tail of addFunctions: the function's file and its RPC
+// entries.
+func (s *Context) registerRPC(r rpcRegistration) {
+	if strings.Contains(r.wrapper, "Workflow") || nonRPCPattern.MatchString(r.wrapper) {
+		return
+	}
+	st := s.State
+	file := state.FileExport{Path: r.sourceFile, ExportedName: r.exportedName}
+	if r.exportedName != "" {
+		st.Functions.Files.Set(r.pikkuFuncId, file)
+	}
+	if r.exportedName == "" && r.explicitName == "" {
+		return
+	}
+	if r.exportedName == "" {
+		s.Log.Error(fmt.Sprintf("• Function with explicit name '%s' is not exported, this is not allowed.", r.name))
+		return
+	}
+	if r.remote && !r.notRpc {
+		st.RPC.InvokedFunctions.Add(r.pikkuFuncId)
+		st.RPC.RemoteMeta.Set(r.name, r.pikkuFuncId)
+		st.RPC.RemoteFiles.Set(r.name, file)
+	}
+	if r.expose && !r.notRpc {
+		st.RPC.ExposedMeta.Set(r.name, r.pikkuFuncId)
+		st.RPC.ExposedFiles.Set(r.name, file)
+		st.ServiceAggregation.UsedFunctions.Add(r.pikkuFuncId)
+	}
+	if !r.notRpc {
+		st.RPC.InternalMeta.Set(r.name, r.pikkuFuncId)
+		if r.versioned {
+			st.RPC.InternalMeta.Set(r.pikkuFuncId, r.pikkuFuncId)
+			st.RPC.InvokedFunctions.Add(r.pikkuFuncId)
+		}
+	}
+	if st.RPC.InvokedFunctions.Has(r.pikkuFuncId) || r.expose || r.remote || r.mcpEnabled {
+		st.RPC.InternalFiles.Set(r.pikkuFuncId, file)
+	}
 }
 
 // registerMCPOutputType records where the wrapper's MCP response type is
 // declared, resolved from the wrapper's own declaration.
-func (s *state) registerMCPOutputType(wrapperIdent *ast.Node, typeName string) bool {
-	sym := s.resolveAlias(s.c.GetSymbolAtLocation(wrapperIdent))
+func (s *Context) registerMCPOutputType(wrapperIdent *ast.Node, typeName string) bool {
+	sym := s.resolveAlias(s.Checker.GetSymbolAtLocation(wrapperIdent))
 	if sym == nil {
 		return false
 	}
 	for _, d := range sym.Declarations {
-		ts := s.c.ResolveName(typeName, d, ast.SymbolFlagsType, false)
+		ts := s.Checker.ResolveName(typeName, d, ast.SymbolFlagsType, false)
 		if ts == nil {
 			continue
 		}
-		if decl := firstDecl(s.resolveAlias(ts)); decl != nil {
+		if decl := tsutil.FirstDecl(s.resolveAlias(ts)); decl != nil {
 			path := ast.GetSourceFileOfNode(decl).FileName()
-			if s.typesMap.exists(typeName, path) == "" {
-				s.typesMap.addType(typeName, path)
+			if s.TypesMap().Exists(typeName, path) == "" {
+				s.TypesMap().AddType(typeName, path)
 			}
 			return true
 		}
@@ -454,82 +587,14 @@ func filterVoid(names []string) []string {
 
 // --- implementationHash -----------------------------------------------------
 
-// printNode is ts.createPrinter({removeComments: true}).printNode.
-//
-// typescript-go ranks a non-null assertion at unary precedence, so it prints
-// `x!.y` as `(x!).y`; Strada treats `x!` as a left-hand-side expression and
-// never parenthesises it. The hash must stay byte-compatible with the TS
-// inspector, so those synthesised parens are recorded as they are written and
-// cut from the output.
-func printNode(n *ast.Node) string {
-	w := &parenTrackingWriter{EmitTextWriter: printer.NewTextWriter("\n", 0), lastOpen: -1}
-	var stack []int
-	handlers := printer.PrintHandlers{
-		OnBeforeEmitNode: func(node *ast.Node) {
-			if node == nil || node.Kind != ast.KindNonNullExpression {
-				return
-			}
-			open := -1
-			if w.lastOpen == w.GetTextPos()-1 && (node.Parent == nil || node.Parent.Kind != ast.KindParenthesizedExpression) {
-				open = w.lastOpen
-			}
-			stack = append(stack, open)
-		},
-		OnAfterEmitNode: func(node *ast.Node) {
-			if node == nil || node.Kind != ast.KindNonNullExpression || len(stack) == 0 {
-				return
-			}
-			open := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			if open >= 0 {
-				w.cut = append(w.cut, open)
-				w.closeNext = true
-			}
-		},
-	}
-	p := printer.NewPrinter(printer.PrinterOptions{RemoveComments: true}, handlers, nil)
-	p.Write(n, ast.GetSourceFileOfNode(n), w, nil)
-	out := w.String()
-	if len(w.cut) == 0 {
-		return out
-	}
-	sort.Ints(w.cut)
-	var b strings.Builder
-	prev := 0
-	for _, i := range w.cut {
-		b.WriteString(out[prev:i])
-		prev = i + 1
-	}
-	b.WriteString(out[prev:])
-	return b.String()
-}
-
-type parenTrackingWriter struct {
-	printer.EmitTextWriter
-	lastOpen  int
-	closeNext bool
-	cut       []int
-}
-
-func (w *parenTrackingWriter) WritePunctuation(s string) {
-	w.EmitTextWriter.WritePunctuation(s)
-	switch {
-	case s == "(":
-		w.lastOpen = w.GetTextPos() - 1
-	case s == ")" && w.closeNext:
-		w.closeNext = false
-		w.cut = append(w.cut, w.GetTextPos()-1)
-	}
-}
-
 func implementationHash(wrapper string, handler, objectNode *ast.Node, isDirect bool) string {
 	var config any
 	if objectNode != nil {
-		config = printNode(objectNode)
+		config = tsutil.PrintNode(objectNode)
 	}
 	// canonicalJSON: keys sorted; JSON.stringify does not HTML-escape.
 	payload := []any{
-		[2]any{"config", config}, [2]any{"handler", printNode(handler)},
+		[2]any{"config", config}, [2]any{"handler", tsutil.PrintNode(handler)},
 		[2]any{"isDirectFunction", isDirect}, [2]any{"wrapper", wrapper},
 	}
 	var buf bytes.Buffer

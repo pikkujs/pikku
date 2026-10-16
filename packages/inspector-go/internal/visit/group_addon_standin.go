@@ -1,4 +1,4 @@
-package main
+package visit
 
 import (
 	"encoding/json"
@@ -7,6 +7,10 @@ import (
 	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
+
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/jsjson"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // Port of the parts of add-wire-addon.ts / load-addon-functions-meta.ts that
@@ -18,9 +22,18 @@ type addonDecl struct {
 	file   string
 	auth   *bool
 	scopes []string
+	// secretOverrides / variableOverrides / credentialOverrides
+	overrides map[string]*state.Record[string]
 }
 
-func (s *state) visitSetupWirings(node *ast.Node) {
+func init() {
+	Register(Visitor{Name: "addWireAddon (stand-in)", Phase: PhaseSetup, Order: OrderAddWireAddon, Visit: (*Context).visitWireAddonStandin})
+}
+
+// visitWireAddonStandin covers wireAddon and addHTTPMiddleware. TS handles
+// addHTTPMiddleware inside addMiddleware (order 140); it records into the same
+// scratch either way, so the order does not change the result.
+func (s *Context) visitWireAddonStandin(node *ast.Node) {
 	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
 		return
 	}
@@ -30,18 +43,23 @@ func (s *state) visitSetupWirings(node *ast.Node) {
 		if len(args) == 0 || !ast.IsObjectLiteralExpression(args[0]) {
 			return
 		}
-		name := getPropertyValue(args[0], "name").asString()
-		pkg := getPropertyValue(args[0], "package").asString()
+		name := tsutil.GetPropertyValue(args[0], "name").AsString()
+		pkg := tsutil.GetPropertyValue(args[0], "package").AsString()
 		if name == "" || pkg == "" {
 			return
 		}
 		if _, ok := s.addons[name]; !ok {
 			s.addonOrder = append(s.addonOrder, name)
 		}
-		scopes, _ := getArrayPropertyValue(args[0], "scopes")
+		scopes, _ := tsutil.GetArrayPropertyValue(args[0], "scopes")
 		s.addons[name] = &addonDecl{
 			pkg: pkg, file: ast.GetSourceFileOfNode(node).FileName(),
-			auth: getPropertyValue(args[0], "auth").boolean, scopes: scopes,
+			auth: tsutil.GetPropertyValue(args[0], "auth").Bool, scopes: scopes,
+			overrides: map[string]*state.Record[string]{
+				"secret":     recordPropertyValue(args[0], "secretOverrides"),
+				"variable":   recordPropertyValue(args[0], "variableOverrides"),
+				"credential": recordPropertyValue(args[0], "credentialOverrides"),
+			},
 		}
 	case "addHTTPMiddleware":
 		if len(args) >= 2 && ast.IsStringLiteral(args[0]) && ast.IsArrayLiteralExpression(args[1]) {
@@ -115,10 +133,11 @@ func resolvePackageSubpath(dir, pkg, subpath string) string {
 	}
 }
 
-func (s *state) loadAddonFunctionsMeta() {
+// LoadAddonFunctionsMeta ports load-addon-functions-meta.ts.
+func (s *Context) LoadAddonFunctionsMeta() {
 	for _, ns := range s.addonOrder {
 		decl := s.addons[ns]
-		for _, dir := range addonResolutionDirs(s.rootDir, decl.file) {
+		for _, dir := range addonResolutionDirs(s.RootDir, decl.file) {
 			var metaPath string
 			for _, suffix := range []string{"-verbose.gen.json", ".gen.json"} {
 				if metaPath = resolvePackageSubpath(dir, decl.pkg, ".pikku/function/pikku-functions-meta"+suffix); metaPath != "" {
@@ -132,55 +151,101 @@ func (s *state) loadAddonFunctionsMeta() {
 			if err != nil {
 				break
 			}
-			meta := map[string]*FunctionMeta{}
-			if json.Unmarshal(raw, &meta) != nil {
+			meta := state.NewRecord[*FunctionMeta]()
+			if json.Unmarshal(raw, meta) != nil {
 				break
 			}
-			s.addonFunctions[ns] = meta
+			s.State.AddonFunctions.Set(ns, meta)
 			// registerAddonTypes, in the meta file's key order.
 			typesPath := filepath.ToSlash(filepath.Join(filepath.Dir(metaPath), "..", "rpc", "pikku-rpc-wirings-map.internal.gen.d.ts"))
 			if _, err := os.Stat(typesPath); err == nil {
-				for _, k := range jsonObjectKeys(raw) {
-					m := meta[k]
+				meta.Each(func(_ string, m *FunctionMeta) {
 					for _, n := range []*string{m.InputSchemaName, m.OutputSchemaName} {
-						if n != nil && *n != "" && s.typesMap.exists(*n, typesPath) == "" {
-							s.typesMap.addType(*n, typesPath)
+						if n != nil && *n != "" && s.TypesMap().Exists(*n, typesPath) == "" {
+							s.TypesMap().AddType(*n, typesPath)
 						}
 					}
-				}
+				})
 			}
+			s.loadAddonKeyedMeta(decl, dir)
 			break
 		}
 	}
 }
 
-func jsonObjectKeys(raw []byte) []string {
-	dec := json.NewDecoder(strings.NewReader(string(raw)))
-	if t, err := dec.Token(); err != nil || t != json.Delim('{') {
-		return nil
-	}
-	var keys []string
-	for dec.More() {
-		t, err := dec.Token()
+// loadAddonKeyedMeta merges an addon's secrets, variables and credentials
+// meta into the project's definitions, remapped through the wireAddon
+// overrides, as load-addon-functions-meta.ts does. Scopes are not loaded
+// (addScope is not ported).
+func (s *Context) loadAddonKeyedMeta(decl *addonDecl, dir string) {
+	merge := func(sub, kind, idField string, defs *state.List[state.Raw]) {
+		path := resolvePackageSubpath(dir, decl.pkg, sub)
+		if path == "" {
+			return
+		}
+		raw, err := os.ReadFile(path)
 		if err != nil {
-			return keys
+			return
 		}
-		keys = append(keys, t.(string))
-		var skip json.RawMessage
-		if dec.Decode(&skip) != nil {
-			return keys
+		var meta state.Record[state.Raw]
+		if json.Unmarshal(raw, &meta) != nil {
+			return
 		}
+		overrides := decl.overrides[kind]
+		meta.Each(func(key string, defRaw state.Raw) {
+			var def state.Record[state.Raw]
+			if json.Unmarshal(defRaw, &def) != nil {
+				return
+			}
+			id := key
+			if idField != "" {
+				var v string
+				if r, ok := def.Get(idField); ok && json.Unmarshal(r, &v) == nil {
+					id = v
+				}
+			}
+			if overrides != nil {
+				if o, ok := overrides.Get(id); ok {
+					id = o
+				}
+			}
+			for _, existing := range *defs {
+				var d struct {
+					Name     string  `json:"name"`
+					SecretID *string `json:"secretId"`
+					VarID    *string `json:"variableId"`
+				}
+				_ = json.Unmarshal(existing, &d)
+				have := d.Name
+				if idField == "secretId" && d.SecretID != nil {
+					have = *d.SecretID
+				} else if idField == "variableId" && d.VarID != nil {
+					have = *d.VarID
+				}
+				if have == id {
+					return
+				}
+			}
+			field := idField
+			if field == "" {
+				field = "name"
+			}
+			def.Set(field, state.Raw(jsjson.MustMarshal(id)))
+			*defs = append(*defs, state.Raw(jsjson.MustMarshal(&def)))
+		})
 	}
-	return keys
+	merge(".pikku/secrets/pikku-secrets-meta.gen.json", "secret", "secretId", &s.State.Secrets.Definitions)
+	merge(".pikku/variables/pikku-variables-meta.gen.json", "variable", "variableId", &s.State.Variables.Definitions)
+	merge(".pikku/credentials/pikku-credentials-meta.gen.json", "credential", "", &s.State.Credentials.Definitions)
 }
 
-func (s *state) resolveFunctionMeta(id string) *FunctionMeta {
-	if m := s.meta[id]; m != nil {
+func (s *Context) resolveFunctionMeta(id string) *FunctionMeta {
+	if m := s.State.Functions.Meta.At(id); m != nil {
 		return m
 	}
 	if i := strings.Index(id, ":"); i > 0 {
-		if fns := s.addonFunctions[id[:i]]; fns != nil {
-			return fns[id[i+1:]]
+		if fns, ok := s.State.AddonFunctions.Get(id[:i]); ok && fns != nil {
+			return fns.At(id[i+1:])
 		}
 	}
 	return nil
@@ -202,11 +267,11 @@ func findPackageNameForFile(file string) string {
 	return pj.Name
 }
 
-func (s *state) resolveAddonName(ident *ast.Node) string {
+func (s *Context) resolveAddonName(ident *ast.Node) string {
 	if len(s.addons) == 0 {
 		return ""
 	}
-	decl := firstDecl(s.c.GetSymbolAtLocation(ident))
+	decl := tsutil.FirstDecl(s.Checker.GetSymbolAtLocation(ident))
 	if decl == nil {
 		return ""
 	}

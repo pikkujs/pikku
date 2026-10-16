@@ -149,12 +149,12 @@ type QueueWorkerMeta struct {
 	Middleware  []WireRef `json:"middleware,omitempty"`
 }
 
-// MetaInputTypes is one entry of http.metaInputTypes. All three keys are
-// always assigned, so an undefined one is dropped by JSON.stringify.
+// MetaInputTypes is one entry of http.metaInputTypes. computeInputTypes
+// always assigns all three arrays, empty ones included.
 type MetaInputTypes struct {
-	Query  []string `json:"query,omitempty"`
-	Params []string `json:"params,omitempty"`
-	Body   []string `json:"body,omitempty"`
+	Query  Strings `json:"query"`
+	Params Strings `json:"params"`
+	Body   Strings `json:"body"`
 }
 
 // NameAndType is one entry of a PathToNameAndType map.

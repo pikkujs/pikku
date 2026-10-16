@@ -1,10 +1,12 @@
-package main
+package visit
 
 import (
 	"strings"
 
 	"github.com/microsoft/typescript-go/shim/ast"
 	"github.com/microsoft/typescript-go/shim/checker"
+
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/tsutil"
 )
 
 // Type-naming half of add-functions.ts. The TypesMap unique-name machinery is
@@ -12,30 +14,16 @@ import (
 // which is what TypesMap.addType does unless an earlier addUniqueType claimed
 // the name with a different path.
 
-func nullifyType(name string) string {
-	switch name {
-	case "void", "undefined", "unknown", "any", "null":
-		return ""
-	}
-	return name
+func (s *Context) typeToString(t *checker.Type) string {
+	return s.Checker.TypeToStringEx(t, nil, checker.TypeFormatFlagsNoTruncation, nil)
 }
 
-const primitiveFlags = checker.TypeFlagsNumber | checker.TypeFlagsString | checker.TypeFlagsBoolean |
-	checker.TypeFlagsBigInt | checker.TypeFlagsESSymbol | checker.TypeFlagsVoid | checker.TypeFlagsUndefined |
-	checker.TypeFlagsNull | checker.TypeFlagsUnknown | checker.TypeFlagsVoidLike
-
-func isPrimitive(t *checker.Type) bool { return t.Flags()&primitiveFlags != 0 }
-
-func (s *state) typeToString(t *checker.Type) string {
-	return s.c.TypeToStringEx(t, nil, checker.TypeFormatFlagsNoTruncation, nil)
-}
-
-func (s *state) unwrapPromise(t *checker.Type) *checker.Type {
+func (s *Context) unwrapPromise(t *checker.Type) *checker.Type {
 	if t == nil || t.Symbol() == nil {
 		return t
 	}
 	sym := t.Symbol()
-	isPromise := sym.Name == "Promise" && strings.Contains(checker.Checker_getFullyQualifiedName(s.c, sym, nil), "Promise")
+	isPromise := sym.Name == "Promise" && strings.Contains(checker.Checker_getFullyQualifiedName(s.Checker, sym, nil), "Promise")
 	if !isPromise {
 		return t
 	}
@@ -43,21 +31,15 @@ func (s *state) unwrapPromise(t *checker.Type) *checker.Type {
 		return a.TypeArguments()[0]
 	}
 	if t.ObjectFlags()&checker.ObjectFlagsReference != 0 {
-		if args := s.c.GetTypeArguments(t); len(args) == 1 {
+		if args := s.Checker.GetTypeArguments(t); len(args) == 1 {
 			return args[0]
 		}
 	}
 	return t
 }
 
-func isLibFile(path string) bool {
-	// TS checks for node_modules/typescript; typescript-go serves its lib
-	// files from an embedded "bundled:///libs/..." filesystem instead.
-	return strings.Contains(path, "node_modules/typescript") || strings.HasPrefix(path, "bundled:")
-}
-
-func (s *state) resolveTypeImports(t *checker.Type, isCustom bool) []string {
-	tm := s.typesMap
+func (s *Context) resolveTypeImports(t *checker.Type, isCustom bool) []string {
+	tm := s.TypesMap()
 	var out []string
 	var visit func(cur *checker.Type)
 	visitNested := func(cur *checker.Type) {
@@ -72,7 +54,7 @@ func (s *state) resolveTypeImports(t *checker.Type, isCustom bool) []string {
 			}
 		}
 		if cur.Flags()&checker.TypeFlagsObject != 0 && cur.ObjectFlags()&checker.ObjectFlagsReference != 0 {
-			for _, ta := range s.c.GetTypeArguments(cur) {
+			for _, ta := range s.Checker.GetTypeArguments(cur) {
 				visit(ta)
 			}
 		}
@@ -85,16 +67,16 @@ func (s *state) resolveTypeImports(t *checker.Type, isCustom bool) []string {
 		if sym == nil {
 			sym = cur.Symbol()
 		}
-		if decl := firstDecl(sym); decl != nil {
+		if decl := tsutil.FirstDecl(sym); decl != nil {
 			path := ast.GetSourceFileOfNode(decl).FileName()
-			name := tsSymbolName(sym)
-			if !isLibFile(path) && sym.Name != ast.InternalSymbolNameType && !isPrimitive(cur) && decl.Kind != ast.KindEnumMember {
-				unique := tm.exists(name, path)
+			name := tsutil.SymbolName(sym)
+			if !tsutil.IsLibFile(path) && sym.Name != ast.InternalSymbolNameType && !tsutil.IsPrimitive(cur) && decl.Kind != ast.KindEnumMember {
+				unique := tm.Exists(name, path)
 				if unique == "" {
 					if isCustom {
-						unique = tm.addUniqueType(name, path)
+						unique = tm.AddUniqueType(name, path)
 					} else {
-						tm.addType(name, path)
+						tm.AddType(name, path)
 						unique = name
 					}
 				}
@@ -110,9 +92,9 @@ func (s *state) resolveTypeImports(t *checker.Type, isCustom bool) []string {
 		if cur.Flags()&checker.TypeFlagsObject != 0 {
 			ts := cur.Symbol()
 			if ts == nil || ts.Name == ast.InternalSymbolNameType {
-				for _, prop := range s.c.GetPropertiesOfType(cur) {
+				for _, prop := range s.Checker.GetPropertiesOfType(cur) {
 					if prop.ValueDeclaration != nil {
-						if pt := s.c.GetTypeOfSymbolAtLocation(prop, prop.ValueDeclaration); pt != nil {
+						if pt := s.Checker.GetTypeOfSymbolAtLocation(prop, prop.ValueDeclaration); pt != nil {
 							visit(pt)
 						}
 					}
@@ -124,14 +106,14 @@ func (s *state) resolveTypeImports(t *checker.Type, isCustom bool) []string {
 	return out
 }
 
-func (s *state) getNamesAndTypes(direction, funcName string, t *checker.Type) ([]string, []*checker.Type) {
+func (s *Context) getNamesAndTypes(direction, funcName string, t *checker.Type) ([]string, []*checker.Type) {
 	if t == nil || t.Flags()&(checker.TypeFlagsVoidLike|checker.TypeFlagsNull) != 0 {
 		return nil, nil
 	}
 	var types []*checker.Type
 	var names []string
 	add := func(m *checker.Type) {
-		if n := nullifyType(s.typeToString(m)); n != "" {
+		if n := tsutil.NullifyType(s.typeToString(m)); n != "" {
 			types = append(types, m)
 			names = append(names, n)
 		}
@@ -144,17 +126,17 @@ func (s *state) getNamesAndTypes(direction, funcName string, t *checker.Type) ([
 		add(t)
 	}
 	if len(names) > 1 || (len(names) == 1 && !validVarName.MatchString(names[0])) {
-		aliasName := funcIdToTypeName(funcName) + direction
+		aliasName := tsutil.FuncIdToTypeName(funcName) + direction
 		refs := []string{}
 		for _, rt := range types {
 			refs = append(refs, s.resolveTypeImports(rt, true)...)
 		}
-		s.typesMap.addCustomType(aliasName, strings.Join(names, " | "), refs)
+		s.TypesMap().AddCustomType(aliasName, strings.Join(names, " | "), refs)
 		return []string{aliasName}, types
 	}
 	var out []string
 	for i, n := range names {
-		if isPrimitive(types[i]) {
+		if tsutil.IsPrimitive(types[i]) {
 			out = append(out, n)
 		} else {
 			out = append(out, s.resolveTypeImports(types[i], false)...)
@@ -165,21 +147,17 @@ func (s *state) getNamesAndTypes(direction, funcName string, t *checker.Type) ([
 
 // --- ensure-function-metadata.ts flavour of the same helpers ---------------
 
-func isVoidLikeType(t *checker.Type) bool {
-	return t.Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsUndefined|checker.TypeFlagsVoidLike) != 0
-}
-
-func (s *state) isPromiseSym(t *checker.Type) bool {
+func (s *Context) isPromiseSym(t *checker.Type) bool {
 	sym := t.Symbol()
-	return sym != nil && sym.Name == "Promise" && strings.Contains(checker.Checker_getFullyQualifiedName(s.c, sym, nil), "Promise")
+	return sym != nil && sym.Name == "Promise" && strings.Contains(checker.Checker_getFullyQualifiedName(s.Checker, sym, nil), "Promise")
 }
 
-func (s *state) firstTypeArg(t *checker.Type) *checker.Type {
+func (s *Context) firstTypeArg(t *checker.Type) *checker.Type {
 	if a := t.Alias(); a != nil && len(a.TypeArguments()) > 0 {
 		return a.TypeArguments()[0]
 	}
 	if t.ObjectFlags()&checker.ObjectFlagsReference != 0 {
-		if args := s.c.GetTypeArguments(t); len(args) > 0 {
+		if args := s.Checker.GetTypeArguments(t); len(args) > 0 {
 			return args[0]
 		}
 	}
@@ -187,15 +165,15 @@ func (s *state) firstTypeArg(t *checker.Type) *checker.Type {
 }
 
 // unwrapPromiseOrVoid also drops `void` / `Promise<void>` members of a union.
-func (s *state) unwrapPromiseOrVoid(t *checker.Type) *checker.Type {
+func (s *Context) unwrapPromiseOrVoid(t *checker.Type) *checker.Type {
 	if t.IsUnion() {
 		var nonVoid []*checker.Type
 		for _, m := range t.Types() {
-			if isVoidLikeType(m) {
+			if tsutil.IsVoidLikeType(m) {
 				continue
 			}
 			if s.isPromiseSym(m) {
-				if inner := s.firstTypeArg(m); inner != nil && isVoidLikeType(inner) {
+				if inner := s.firstTypeArg(m); inner != nil && tsutil.IsVoidLikeType(inner) {
 					continue
 				}
 			}
@@ -209,7 +187,7 @@ func (s *state) unwrapPromiseOrVoid(t *checker.Type) *checker.Type {
 	return s.unwrapPromise(t)
 }
 
-func (s *state) resolveTypeName(t *checker.Type, funcName, direction string) string {
+func (s *Context) resolveTypeName(t *checker.Type, funcName, direction string) string {
 	if t.Flags()&(checker.TypeFlagsVoidLike|checker.TypeFlagsNull) != 0 {
 		return ""
 	}
@@ -225,24 +203,15 @@ func (s *state) resolveTypeName(t *checker.Type, funcName, direction string) str
 		if sym == nil {
 			sym = t.Symbol()
 		}
-		if decl := firstDecl(sym); decl != nil {
+		if decl := tsutil.FirstDecl(sym); decl != nil {
 			path := ast.GetSourceFileOfNode(decl).FileName()
-			if s.typesMap.exists(str, path) == "" {
-				s.typesMap.addType(str, path)
+			if s.TypesMap().Exists(str, path) == "" {
+				s.TypesMap().AddType(str, path)
 			}
 		}
 		return str
 	}
-	alias := funcIdToTypeName(funcName) + direction
-	s.typesMap.addCustomType(alias, str, nil)
+	alias := tsutil.FuncIdToTypeName(funcName) + direction
+	s.TypesMap().AddCustomType(alias, str, nil)
 	return alias
-}
-
-// tsSymbolName spells internal symbol names the way Strada does: tsgo marks
-// them with a 0xFE byte ("\xFEobject"), TS with a "__" prefix ("__object").
-func tsSymbolName(sym *ast.Symbol) string {
-	if strings.HasPrefix(sym.Name, "\xFE") {
-		return "__" + sym.Name[1:]
-	}
-	return sym.Name
 }
