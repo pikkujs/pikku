@@ -20,7 +20,16 @@ import (
 
 // Run inspects one request. cache may be nil; serve mode passes one cache for
 // the life of the process.
-func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error) {
+func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			abort, ok := r.(visit.Abort)
+			if !ok {
+				panic(r)
+			}
+			resp, err = nil, abort
+		}
+	}()
 	start := time.Now()
 	if cache != nil {
 		cache.Begin()

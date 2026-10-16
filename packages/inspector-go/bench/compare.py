@@ -122,6 +122,18 @@ SECTIONS = [
     ("secrets.files", lambda s: setof(s["secrets"]["files"])),
     ("credentials.definitions", lambda s: {d["name"]: d for d in s["credentials"]["definitions"]}),
     ("variables.definitions", lambda s: {d["name"]: d for d in s["variables"]["definitions"]}),
+    ("middleware.definitions", lambda s: s["middleware"]["definitions"]),
+    ("middleware.instances", lambda s: s["middleware"]["instances"]),
+    ("middleware.tagMiddleware", lambda s: pairs(s["middleware"]["tagMiddleware"])),
+    ("middleware.globalFiles", lambda s: setof(s["middleware"]["globalFiles"])),
+    ("http.routeMiddleware", lambda s: pairs(s["http"]["routeMiddleware"])),
+    ("channelMiddleware.definitions", lambda s: s["channelMiddleware"]["definitions"]),
+    ("channelMiddleware.instances", lambda s: s["channelMiddleware"]["instances"]),
+    ("channelMiddleware.tagMiddleware", lambda s: pairs(s["channelMiddleware"]["tagMiddleware"])),
+    ("agentMiddleware.definitions", lambda s: s["agentMiddleware"]["definitions"]),
+    ("permissions.definitions", lambda s: s["permissions"]["definitions"]),
+    ("functions.approvalDescriptions", lambda s: s["functions"]["approvalDescriptions"]),
+    ("auth", lambda s: {"auth": s["auth"]}),
     ("schemas", lambda s: s["schemas"]),
 ]
 only = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")]

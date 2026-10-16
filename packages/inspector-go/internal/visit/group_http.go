@@ -289,16 +289,6 @@ func (s *Context) registerHTTPRoute(obj *ast.Node, sourceFile string, group grou
 	routes.Set(fullRoute, route)
 }
 
-func (s *Context) resolveHTTPMiddleware(route string, obj *ast.Node, tags []string) []WireRef {
-	var out []WireRef
-	for _, pattern := range s.httpRouteMiddleware {
-		if tsutil.RouteMatchesPattern(route, pattern) {
-			out = append(out, WireRef{Type: "http", Route: pattern})
-		}
-	}
-	return append(out, s.resolveMiddleware(obj, tags)...)
-}
-
 // --- wireQueueWorker -----------------------------------------------------------
 
 func (s *Context) addQueueWorker(obj *ast.Node, sourceFile string) {

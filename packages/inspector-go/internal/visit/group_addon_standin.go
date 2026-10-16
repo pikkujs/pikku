@@ -30,9 +30,7 @@ func init() {
 	Register(Visitor{Name: "addWireAddon (stand-in)", Phase: PhaseSetup, Order: OrderAddWireAddon, Visit: (*Context).visitWireAddonStandin})
 }
 
-// visitWireAddonStandin covers wireAddon and addHTTPMiddleware. TS handles
-// addHTTPMiddleware inside addMiddleware (order 140); it records into the same
-// scratch either way, so the order does not change the result.
+// visitWireAddonStandin covers wireAddon.
 func (s *Context) visitWireAddonStandin(node *ast.Node) {
 	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
 		return
@@ -60,16 +58,6 @@ func (s *Context) visitWireAddonStandin(node *ast.Node) {
 				"variable":   recordPropertyValue(args[0], "variableOverrides"),
 				"credential": recordPropertyValue(args[0], "credentialOverrides"),
 			},
-		}
-	case "addHTTPMiddleware":
-		if len(args) >= 2 && ast.IsStringLiteral(args[0]) && ast.IsArrayLiteralExpression(args[1]) {
-			p := args[0].Text()
-			for _, existing := range s.httpRouteMiddleware {
-				if existing == p {
-					return
-				}
-			}
-			s.httpRouteMiddleware = append(s.httpRouteMiddleware, p)
 		}
 	}
 }
