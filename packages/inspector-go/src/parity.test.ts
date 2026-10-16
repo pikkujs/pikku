@@ -48,46 +48,65 @@ const harness = (env: Record<string, string>, extraArgs: string[] = []) => {
   }
 }
 
+// Each case spawns the harness, which spawns a TypeScript inspection.
+const HARNESS_TIMEOUT = { timeout: 120_000 }
+
 describe('parity harness', () => {
-  test('the TypeScript engine is at parity with itself', () => {
-    const run = harness({})
-    assert.equal(run.status, 0, run.stdout)
-    assert.deepEqual(
-      run.sections.filter((s) => s.status !== 'ok'),
-      []
-    )
-    assert.ok(run.find('functions', 'pre'))
-    assert.ok(run.find('functions', 'post'))
-    assert.ok(run.find('diagnostics.warn', 'post'))
-  })
+  test(
+    'the TypeScript engine is at parity with itself',
+    HARNESS_TIMEOUT,
+    () => {
+      const run = harness({})
+      assert.equal(run.status, 0, run.stdout)
+      assert.deepEqual(
+        run.sections.filter((s) => s.status !== 'ok'),
+        []
+      )
+      assert.ok(run.find('functions', 'pre'))
+      assert.ok(run.find('functions', 'post'))
+      assert.ok(run.find('diagnostics.warn', 'post'))
+    }
+  )
 
-  test('tsgo-ordered customTypes are normalized by the allow-list', () => {
-    const run = harness({ PIKKU_TS_REFERENCE_REORDER: '1' })
-    assert.equal(run.status, 0, run.stdout)
-    assert.equal(run.find('functions', 'pre')?.status, 'normalized')
-    assert.equal(
-      run.find('functions', 'pre')?.allowedBy,
-      'tsgo-custom-type-ordering'
-    )
-  })
+  test(
+    'tsgo-ordered customTypes are normalized by the allow-list',
+    HARNESS_TIMEOUT,
+    () => {
+      const run = harness({ PIKKU_TS_REFERENCE_REORDER: '1' })
+      assert.equal(run.status, 0, run.stdout)
+      assert.equal(run.find('functions', 'pre')?.status, 'normalized')
+      assert.equal(
+        run.find('functions', 'pre')?.allowedBy,
+        'tsgo-custom-type-ordering'
+      )
+    }
+  )
 
-  test('a section the binary leaves out is not ported, and fails --strict', () => {
-    const run = harness({ PIKKU_TS_REFERENCE_DROP: 'cli,scorers' })
-    assert.equal(run.status, 0, run.stdout)
-    assert.equal(run.find('cli', 'pre')?.status, 'not ported')
-    assert.equal(run.find('cli', 'post')?.status, 'not ported')
-    assert.equal(run.find('scorers', 'post')?.status, 'not ported')
-    assert.match(run.stdout, /not ported/)
+  test(
+    'a section the binary leaves out is not ported, and fails --strict',
+    HARNESS_TIMEOUT,
+    () => {
+      const run = harness({ PIKKU_TS_REFERENCE_DROP: 'cli,scorers' })
+      assert.equal(run.status, 0, run.stdout)
+      assert.equal(run.find('cli', 'pre')?.status, 'not ported')
+      assert.equal(run.find('cli', 'post')?.status, 'not ported')
+      assert.equal(run.find('scorers', 'post')?.status, 'not ported')
+      assert.match(run.stdout, /not ported/)
 
-    const strict = harness({ PIKKU_TS_REFERENCE_DROP: 'cli' }, ['--strict'])
-    assert.equal(strict.status, 1)
-  })
+      const strict = harness({ PIKKU_TS_REFERENCE_DROP: 'cli' }, ['--strict'])
+      assert.equal(strict.status, 1)
+    }
+  )
 
-  test('a diagnostic the reference never gave is a diff in both phases', () => {
-    const run = harness({ PIKKU_TS_REFERENCE_EXTRA_WARN: 'surprise' })
-    assert.equal(run.status, 1)
-    assert.equal(run.find('diagnostics.warn', 'pre')?.status, 'diff')
-    assert.equal(run.find('diagnostics.warn', 'post')?.status, 'diff')
-    assert.match(run.stdout, /\+ go only: surprise/)
-  })
+  test(
+    'a diagnostic the reference never gave is a diff in both phases',
+    HARNESS_TIMEOUT,
+    () => {
+      const run = harness({ PIKKU_TS_REFERENCE_EXTRA_WARN: 'surprise' })
+      assert.equal(run.status, 1)
+      assert.equal(run.find('diagnostics.warn', 'pre')?.status, 'diff')
+      assert.equal(run.find('diagnostics.warn', 'post')?.status, 'diff')
+      assert.match(run.stdout, /\+ go only: surprise/)
+    }
+  )
 })

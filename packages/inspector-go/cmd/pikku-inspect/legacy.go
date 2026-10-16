@@ -116,12 +116,12 @@ func findSourceFiles(rootDir string, srcDirs []string) []string {
 	return out
 }
 
-// findVendorScript looks for this repo's bench/vendor-schemas.mjs above the
+// findVendorScript looks for this repo's scripts/vendor-schemas.mjs above the
 // project, which is where legacy (bench) runs find it.
 func findVendorScript(projectDir string) string {
 	dir, _ := filepath.Abs(projectDir)
 	for {
-		p := filepath.Join(dir, "packages", "inspector-go", "bench", "vendor-schemas.mjs")
+		p := filepath.Join(dir, "packages", "inspector-go", "scripts", "vendor-schemas.mjs")
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
