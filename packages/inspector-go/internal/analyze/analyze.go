@@ -38,13 +38,14 @@ func Run(req protocol.Request, cache *program.Cache) (*protocol.Response, error)
 
 	log := &diag.Logger{}
 	st := state.New(prog.RootDir)
-	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{SetupOnly: req.Options.SetupOnly})
+	ctx := visit.NewContext(prog.Checker, st, log, visit.Options{SetupOnly: req.Options.SetupOnly, IsAddon: req.Options.IsAddon})
 
 	ctx.Sweep(visit.PhaseSetup, prog.ProjectFiles)
 	ctx.LoadAddonFunctionsMeta()
 	if !req.Options.SetupOnly {
 		ctx.Sweep(visit.PhaseFunctions, prog.ProjectFiles)
 		ctx.Sweep(visit.PhaseRoutes, prog.ProjectFiles)
+		ctx.ValidateWebhookSourceTriggers()
 		ctx.ResolveLatestVersions()
 		if sc := req.Options.SchemaConfig; sc != nil {
 			out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)

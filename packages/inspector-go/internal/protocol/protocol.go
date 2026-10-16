@@ -27,6 +27,9 @@ type Options struct {
 	Tsconfig  string `json:"tsconfig,omitempty"`
 	RootDir   string `json:"rootDir,omitempty"`
 	SetupOnly bool   `json:"setupOnly,omitempty"`
+	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
+	// so checkAddonBans applies.
+	IsAddon bool `json:"isAddon,omitempty"`
 	// Types is InspectorOptions.types. Only finalize reads it; it is
 	// accepted and passed through untouched.
 	Types json.RawMessage `json:"types,omitempty"`
