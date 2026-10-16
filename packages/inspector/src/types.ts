@@ -604,6 +604,15 @@ export type ScreensManifestMeta = {
   scopes?: string[]
 }
 
+export interface InspectorServiceTypes {
+  /** Property names of the project's SingletonServices type, sorted. */
+  singletonServices: string[] | null
+  /** Property names of the project's Services type, unfiltered. */
+  services: string[] | null
+  /** Singleton services that are a `SecretService` under another name. */
+  secretAliases: string[]
+}
+
 export interface InspectorState {
   /** Set when this package calls `defineScreens`: the screens it ships. */
   screensManifest?: ScreensManifestMeta
@@ -869,6 +878,12 @@ export interface InspectorState {
   channelMiddleware: InspectorChannelMiddlewareState
   agentMiddleware: InspectorAIMiddlewareState
   permissions: InspectorPermissionState
+  /**
+   * What the checker concluded about the project's core service types, read
+   * during analysis so that finalize never needs `typesLookup`. A field is null
+   * when the type did not resolve.
+   */
+  serviceTypes?: InspectorServiceTypes
   serviceAggregation: {
     requiredServices: Set<string>
     usedFunctions: Set<string>

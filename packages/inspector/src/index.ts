@@ -1,4 +1,9 @@
-export { inspect, getInitialInspectorState } from './inspector.js'
+export {
+  inspect,
+  analyzeProgram,
+  getInitialInspectorState,
+} from './inspector.js'
+export { finalizeInspectorState } from './finalize.js'
 export type { TypesMap } from './types-map.js'
 export type {
   AddonConfig,
@@ -13,6 +18,7 @@ export type {
   InspectorMiddlewareState,
   InspectorOptions,
   InspectorPermissionState,
+  InspectorServiceTypes,
   InspectorState,
   MetaInputTypes,
   MiddlewareGroupMeta,

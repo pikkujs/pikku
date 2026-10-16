@@ -11,21 +11,19 @@ import type {
   PermissionMetadata,
 } from '@pikku/core/function'
 import type { MiddlewareMetadata } from '@pikku/core/middleware'
-import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
-import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
-import { findSecretAliasServices } from './secret-alias-services.js'
 import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
-import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
-import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
+import {
+  AUTH_HANDLER_FUNC_ID,
+  DYNAMIC_SCENARIO_STEP_TARGET,
+} from './inspector-constants.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { ScenarioStepMeta } from '@pikku/core/scenario'
-import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
 import { addonResolutionDirs } from './addon-resolution.js'
 
 /**
@@ -98,38 +96,29 @@ function expandAndAddGroupServices(
 }
 
 /**
- * Extracts all service names from SingletonServices and Services types.
- * This provides the complete list of available services for code generation.
- * Only runs if typesLookup is available (omitted in deserialized states).
+ * Applies the service names of the SingletonServices and Services types, which
+ * `resolveServiceTypes` read off the checker during analysis. This provides the
+ * complete list of available services for code generation.
+ * Skipped when analysis did not resolve them (e.g. an older serialized state).
  */
 function extractAllServices(
   state: InspectorState | Omit<InspectorState, 'typesLookup'>
 ): void {
-  // Skip if typesLookup is not available (e.g., deserialized state)
-  if (!('typesLookup' in state)) {
+  const resolved = state.serviceTypes
+  if (!resolved) {
     return
   }
 
-  // Extract all singleton services from the SingletonServices type
-  const singletonServicesType = resolveCoreType(
-    state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
-  if (singletonServicesType) {
-    state.serviceAggregation.allSingletonServices = extractTypeKeys(
-      singletonServicesType
-    ).sort()
+  if (resolved.singletonServices) {
+    state.serviceAggregation.allSingletonServices = [
+      ...resolved.singletonServices,
+    ]
   }
 
-  // Extract all services from the Services type
-  const servicesType = resolveCoreType(
-    state.typesLookup,
-    state.wireServicesTypeImportMap
-  )
-  if (servicesType) {
+  if (resolved.services) {
     // Wire services are those in Services but not in SingletonServices
     const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
-    state.serviceAggregation.allWireServices = extractTypeKeys(servicesType)
+    state.serviceAggregation.allWireServices = resolved.services
       .filter((name) => !singletonSet.has(name))
       .sort()
     markSingletonServicesOnly(
@@ -1483,20 +1472,9 @@ export function validateSchemaWiringSeparation(
  */
 export function validateNoSecretAliasServices(
   logger: InspectorLogger,
-  checker: ts.TypeChecker,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>
 ): void {
-  if (!('typesLookup' in state)) {
-    return
-  }
-  const singletonServicesType = resolveCoreType(
-    state.typesLookup,
-    state.singletonServicesTypeImportMap
-  )
-  if (!singletonServicesType) {
-    return
-  }
-  const aliases = findSecretAliasServices(singletonServicesType, checker)
+  const aliases = state.serviceTypes?.secretAliases ?? []
   if (aliases.length === 0) {
     return
   }

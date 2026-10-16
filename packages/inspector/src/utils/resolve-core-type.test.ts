@@ -2,9 +2,18 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import ts from 'typescript'
 import { aggregateRequiredServices } from './post-process.js'
+import { resolveServiceTypes } from './resolve-service-types.js'
 import type { InspectorState, PathToNameAndType } from '../types.js'
 
 const SOURCE_FILE = '/application-types.ts'
+
+const checkers = new WeakMap<InspectorState, ts.TypeChecker>()
+
+/** Analysis reads the core types off the checker; finalize aggregates them. */
+const resolveAndAggregate = (state: InspectorState): void => {
+  state.serviceTypes = resolveServiceTypes(state, checkers.get(state)!)
+  aggregateRequiredServices(state)
+}
 
 /**
  * Builds the slice of inspector state that service extraction reads: the
@@ -41,7 +50,7 @@ const stateWithCoreTypes = (
     ])
   }
 
-  return {
+  const state = {
     typesLookup,
     singletonServicesTypeImportMap: importMapFor(singletonName),
     wireServicesTypeImportMap: importMapFor(wireName),
@@ -80,6 +89,8 @@ const stateWithCoreTypes = (
     addonFunctions: {},
     addonRequiredParentServices: [],
   } as unknown as InspectorState
+  checkers.set(state, checker)
+  return state
 }
 
 const CONVENTIONAL = `
@@ -99,7 +110,7 @@ describe('service extraction resolves core types by declaration, not by name', (
       'SingletonServices',
       'Services'
     )
-    aggregateRequiredServices(state)
+    resolveAndAggregate(state)
     assert.deepEqual(state.serviceAggregation.allSingletonServices, [
       'kysely',
       'logger',
@@ -113,7 +124,7 @@ describe('service extraction resolves core types by declaration, not by name', (
       'AppSingletonServices',
       'AppServices'
     )
-    aggregateRequiredServices(state)
+    resolveAndAggregate(state)
     assert.deepEqual(
       state.serviceAggregation.allSingletonServices,
       ['kysely', 'logger'],
@@ -135,7 +146,7 @@ describe('service extraction resolves core types by declaration, not by name', (
     // assertions below true no matter what it did. `typesLookup` still holds
     // both interfaces under their conventional names — resolving one from
     // there is exactly the bug this guards.
-    aggregateRequiredServices(state)
+    resolveAndAggregate(state)
     assert.deepEqual(state.serviceAggregation.allSingletonServices, [])
     assert.deepEqual(state.serviceAggregation.allWireServices, [])
   })
@@ -153,7 +164,7 @@ describe('functions that read no wire service are marked singletonServicesOnly',
     for (const [id, services] of Object.entries(functions)) {
       state.functions.meta[id] = { pikkuFuncId: id, services } as any
     }
-    aggregateRequiredServices(state)
+    resolveAndAggregate(state)
     return state.functions.meta
   }
 
@@ -191,7 +202,7 @@ describe('functions that read no wire service are marked singletonServicesOnly',
       pikkuFuncId: 'reads',
       services: { optimized: true, services: ['logger'] },
     } as any
-    aggregateRequiredServices(state)
+    resolveAndAggregate(state)
     assert.equal(state.functions.meta.reads!.singletonServicesOnly, undefined)
   })
 })

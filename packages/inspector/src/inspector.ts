@@ -1,5 +1,4 @@
 import * as ts from 'typescript'
-import { applyDeclaredScopes } from './add/add-scope.js'
 import { performance } from 'perf_hooks'
 import { dirname, relative, resolve } from 'path'
 import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
@@ -9,72 +8,21 @@ import type {
   InspectorLogger,
   InspectorOptions,
 } from './types.js'
-import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import { createSourceFileCacheHost } from './source-file-cache.js'
 import { createNestedProjectFilter } from './utils/nested-project-filter.js'
 import { toProgramPath } from './utils/program-path.js'
-import {
-  aggregateRequiredServices,
-  stampAuthHandlerServices,
-  validateAgentModels,
-  validateAgentToolReferences,
-  validateAgentScorerReferences,
-  validateSecretOverrides,
-  validateVariableOverrides,
-  validateCredentialOverrides,
-  validateAddonUses,
-  validateAddonContentGrants,
-  validateRemoteAddonDependencies,
-  validateRemoteAddonAuth,
-  validateScopeReferences,
-  validateSystemRoleScopes,
-  validateVirtualUserRoles,
-  computeResolvedIOTypes,
-  computeMiddlewareGroupsMeta,
-  computePermissionsGroupsMeta,
-  computeRequiredSchemas,
-  validateNoSecretAliasServices,
-  registerDerivedOAuth2AppSecrets,
-  validateSecretUsage,
-  computeDiagnostics,
-  validateSchemaReferences,
-  validateSchemaWiringSeparation,
-  validateScenarioServices,
-  validateScenarioSteps,
-  validateScenarioFeatures,
-  validateWorkflowGraphAddons,
-} from './utils/post-process.js'
-import { validateExposedFunctionsGated } from './utils/validate-exposed-functions-gated.js'
-import { validateTagsResolveToMiddleware } from './utils/validate-tags-resolve-to-middleware.js'
-import { validateSingleStepWorkflows } from './utils/validate-single-step-workflows.js'
-import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
-import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
-import { pikkuState } from '@pikku/core/state'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { validateWebhookSourceTriggers } from './add/add-trigger.js'
-import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
-import {
-  finalizeWorkflowHelperTypes,
-  finalizeWorkflowWires,
-} from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
   accumulateSurfaceUsage,
   surfaceUsageArea,
 } from './utils/extract-surface-usage.js'
-import {
-  loadAddonFunctionsMeta,
-  loadAddonSchemas,
-} from './utils/load-addon-functions-meta.js'
-import {
-  computeContractHashes,
-  extractContractsFromMeta,
-  updateManifest,
-  createEmptyManifest,
-  validateContracts,
-} from './utils/contract-hashes.js'
+import { loadAddonFunctionsMeta } from './utils/load-addon-functions-meta.js'
+import { resolveServiceTypes } from './utils/resolve-service-types.js'
+import { finalizeInspectorState } from './finalize.js'
 
 /**
  * Creates an initial/empty inspector state with all required properties initialized
@@ -334,7 +282,12 @@ const readProjectPathMappings = (
   }
 }
 
-export const inspect = async (
+/**
+ * The engine-specific half of an inspection: builds the program, walks it with
+ * the checker and generates the schemas. What it returns is the pre-finalize
+ * state that `finalizeInspectorState` completes.
+ */
+export const analyzeProgram = async (
   logger: InspectorLogger,
   routeFiles: string[],
   options: InspectorOptions = {}
@@ -482,104 +435,9 @@ export const inspect = async (
       logger.debug(
         `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
       )
-      computeContractHashes(
-        state.schemas,
-        state.functions.typesMap,
-        state.functions.meta
-      )
-      computeRequiredSchemas(state, options)
     }
 
-    // Re-load addon schemas (generateAllSchemas replaces state.schemas)
-    await loadAddonSchemas(logger, state)
-
-    // After the addon merge, not before: an addon supplies its own schemas here,
-    // and checking earlier would report every one of them as unresolved.
-    if (options.schemaConfig) {
-      validateSchemaReferences(logger, state)
-    }
-
-    state.manifest.initial = options.manifest ?? null
-    const contracts = extractContractsFromMeta(state.functions.meta)
-    const baseManifest = state.manifest.initial ?? createEmptyManifest()
-    state.manifest.current = updateManifest(baseManifest, contracts)
-    state.manifest.errors = validateContracts(baseManifest, contracts).errors
-
-    finalizeWorkflows(state)
-    finalizeWorkflowHelperTypes(state)
-    finalizeWorkflowWires(state)
-  }
-
-  // Populate filesAndMethods
-  const startFilesAndMethods = performance.now()
-  const { result, errors } = getFilesAndMethods(state, options.types)
-  state.filesAndMethods = result
-  state.filesAndMethodsErrors = errors
-  logger.debug(
-    `Get files and methods completed in ${(performance.now() - startFilesAndMethods).toFixed(2)}ms`
-  )
-
-  if (!options.setupOnly) {
-    // Everything below re-derives from the state this pass just built, so it
-    // supersedes whatever an earlier pass concluded about a source graph the
-    // run has since finished generating into.
-    logger.beginValidationPass?.()
-    const startAggregate = performance.now()
-    // Apply the inspected auth handler service set before aggregation so it
-    // flows into requiredServices (the generated handler's own func is opaque).
-    stampAuthHandlerServices(state)
-    aggregateRequiredServices(state)
-    logger.debug(
-      `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
-    )
-
-    computeResolvedIOTypes(state)
-    computeMiddlewareGroupsMeta(state)
-    computePermissionsGroupsMeta(state)
-    validateNoSecretAliasServices(logger, checker, state)
-    registerDerivedOAuth2AppSecrets(state)
-    validateSecretUsage(logger, state)
-    computeDiagnostics(state)
-    validateSchemaWiringSeparation(logger, state)
-    validateWorkflowGraphAddons(logger, state)
-    validateSingleStepWorkflows(logger, state)
-    validateScenarioServices(logger, state)
-    validateScenarioSteps(logger, state)
-    validateScenarioFeatures(logger, state)
-    // Needs every route, every function and every wireAddon declaration
-    // together, so it can only run once the whole program is inspected.
-    annotateHttpRouteAuth(state)
-    // Last of the validators: they read function meta and every wireAddon
-    // declaration together, so they need the whole program inspected.
-    validateExposedFunctionsGated(logger, state)
-    validateTagsResolveToMiddleware(logger, state)
-
-    if (options.openAPI) {
-      state.openAPISpec = await generateOpenAPISpec(
-        logger,
-        state.functions.meta,
-        state.http.meta,
-        state.schemas,
-        options.openAPI.additionalInfo,
-        pikkuState(null, 'misc', 'errors')
-      )
-    }
-
-    validateAgentModels(logger, state, options.modelAliases)
-    validateAgentToolReferences(logger, state, options)
-    validateAgentScorerReferences(logger, state)
-    validateSecretOverrides(logger, state)
-    validateVariableOverrides(logger, state)
-    validateCredentialOverrides(logger, state)
-    validateAddonUses(logger, state)
-    validateAddonContentGrants(logger, state)
-    validateRemoteAddonDependencies(logger, state)
-    validateRemoteAddonAuth(logger, state)
-    applyDeclaredScopes(state)
-    validateScopeReferences(logger, state)
-    validateSystemRoleScopes(logger, state)
-    validateVirtualUserRoles(logger, state)
-    logger.endValidationPass?.()
+    state.serviceTypes = resolveServiceTypes(state, checker)
   }
 
   const cpu = process.cpuUsage(cpuStart)
@@ -596,5 +454,24 @@ export const inspect = async (
   }
   state.program = program
 
+  return state
+}
+
+export const inspect = async (
+  logger: InspectorLogger,
+  routeFiles: string[],
+  options: InspectorOptions = {}
+): Promise<InspectorState> => {
+  const cpuStart = process.cpuUsage()
+  const start = performance.now()
+  const state = await analyzeProgram(logger, routeFiles, options)
+  await finalizeInspectorState(logger, state, options)
+  const cpu = process.cpuUsage(cpuStart)
+  state.stats = {
+    ...state.stats!,
+    cpuMs: Math.round((cpu.user + cpu.system) / 1000),
+    wallMs: Math.round(performance.now() - start),
+    heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1048576),
+  }
   return state
 }
