@@ -12,9 +12,10 @@ import type {
 export const INSPECTOR_PROTOCOL_VERSION = 1
 
 /**
- * The options analysis reads, which is all the binary is given. Everything
- * else in `InspectorOptions` is consumed by the TypeScript finalize that runs
- * on this side of the pipe.
+ * The options the binary is given: what analysis reads, plus what the Go
+ * finalize reads (`openAPI`, `manifest`, `modelAliases`, `strictMeta`).
+ * Everything else in `InspectorOptions` is consumed only by the TypeScript
+ * finalize that runs on this side of the pipe.
  */
 export type InspectorGoAnalysisOptions = Pick<
   InspectorOptions,
@@ -26,6 +27,10 @@ export type InspectorGoAnalysisOptions = Pick<
   | 'tags'
   | 'classificationCheck'
   | 'allow'
+  | 'openAPI'
+  | 'manifest'
+  | 'modelAliases'
+  | 'strictMeta'
 > & {
   schemaConfig?: NonNullable<InspectorOptions['schemaConfig']> & {
     /**
@@ -82,6 +87,18 @@ export interface InspectorGoOutput {
   state: SerializableInspectorState
   diagnostics: InspectorGoDiagnostic[]
   stats: InspectorGoStats
+  /**
+   * The diagnostics finalize logged inside its validation pass, as indices
+   * `[start, end)` into `diagnostics`. The wrapper replays the bracket as
+   * `logger.beginValidationPass()` / `endValidationPass()`. Absent when the
+   * binary ran no validation pass.
+   */
+  validationPass?: InspectorGoValidationPass
+}
+
+export interface InspectorGoValidationPass {
+  start: number
+  end: number
 }
 
 /** Projects `options` down to the fields analysis reads. */
@@ -101,8 +118,14 @@ export const toAnalysisOptions = (
     tags: options.tags,
     classificationCheck: options.classificationCheck,
     allow: options.allow,
+    openAPI: options.openAPI,
+    manifest: options.manifest,
+    modelAliases: options.modelAliases,
+    strictMeta: options.strictMeta,
   }
   return Object.fromEntries(
-    Object.entries(picked).filter(([, value]) => value !== undefined)
+    Object.entries(picked).filter(
+      ([, value]) => value !== undefined && value !== null
+    )
   ) as InspectorGoAnalysisOptions
 }

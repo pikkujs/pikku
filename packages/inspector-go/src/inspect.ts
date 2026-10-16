@@ -30,7 +30,7 @@ export const inspect = async (
     options: toAnalysisOptions(options),
   }
   const output = await runInspectorBinary(findInspectorBinary(), input)
-  replayDiagnostics(logger, output.diagnostics)
+  replayDiagnostics(logger, output.diagnostics, output.validationPass)
 
   const state: InspectorState = {
     ...deserializeInspectorState(output.state),

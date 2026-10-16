@@ -37,8 +37,48 @@ type Diagnostic struct {
 type Logger struct {
 	mu       sync.Mutex
 	entries  []Diagnostic
+	pass     *Pass
 	Verbose  bool
 	DebugOut io.Writer
+}
+
+// Pass is the half-open range [Start, End) of entries logged inside a
+// validation pass.
+type Pass struct {
+	Start int `json:"start"`
+	End   int `json:"end"`
+}
+
+// BeginValidationPass is logger.beginValidationPass(): the CLI logger drops
+// what earlier passes reported once a new one begins.
+func (l *Logger) BeginValidationPass() {
+	l.mu.Lock()
+	l.pass = &Pass{Start: len(l.entries), End: -1}
+	l.mu.Unlock()
+}
+
+// EndValidationPass is logger.endValidationPass().
+func (l *Logger) EndValidationPass() {
+	l.mu.Lock()
+	if l.pass != nil {
+		l.pass.End = len(l.entries)
+	}
+	l.mu.Unlock()
+}
+
+// ValidationPass returns the last validation pass, or nil when none ran. A
+// pass that was begun but not ended runs to the last entry.
+func (l *Logger) ValidationPass() *Pass {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.pass == nil {
+		return nil
+	}
+	p := *l.pass
+	if p.End < 0 {
+		p.End = len(l.entries)
+	}
+	return &p
 }
 
 func (l *Logger) add(d Diagnostic) {
@@ -91,4 +131,12 @@ func (l *Logger) Entries() []Diagnostic {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return append([]Diagnostic{}, l.entries...)
+}
+
+// Seed appends entries recorded by an earlier logger, so a later phase (the
+// finalize pass on an analyzed Response) continues the same diagnostics list.
+func (l *Logger) Seed(entries []Diagnostic) {
+	l.mu.Lock()
+	l.entries = append(l.entries, entries...)
+	l.mu.Unlock()
 }

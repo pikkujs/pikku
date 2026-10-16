@@ -31,6 +31,26 @@
           "description": "Run only the setup sweep (factories, wireAddon, config), skipping functions, routes and schemas.",
           "type": "boolean"
         },
+        "openAPI": {
+          "description": "Read by the Go finalize only: InspectorOptions.openAPI. When set, finalize generates the OpenAPI spec.",
+          "type": "object",
+          "properties": {
+            "additionalInfo": { "type": "object" }
+          }
+        },
+        "manifest": {
+          "description": "Read by the Go finalize only: the versions.pikku.json contents (InspectorOptions.manifest).",
+          "type": "object"
+        },
+        "modelAliases": {
+          "description": "Read by the Go finalize only: the \"models\" table of pikku.config.json, alias -> provider/model.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "strictMeta": {
+          "description": "Read by the Go finalize only: report agent tools without a description.",
+          "type": "boolean"
+        },
         "types": {
           "description": "Type names the user configured in pikku.config.json.",
           "type": "object",
