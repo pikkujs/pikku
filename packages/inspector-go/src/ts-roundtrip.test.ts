@@ -42,24 +42,29 @@ for (const project of PROJECTS) {
       assertSame(roundtrip.postDiagnostics, reference.postDiagnostics)
     })
 
-    test('the binary wrapper, fed by the TypeScript engine, equals inspect()', async () => {
-      const previous = process.env.PIKKU_INSPECTOR_GO_BIN
-      process.env.PIKKU_INSPECTOR_GO_BIN = fileURLToPath(
-        new URL('../parity/ts-reference-bin.ts', import.meta.url)
-      )
-      try {
-        const { routeFiles, options } = await projectInput(repo(project))
-        const logger = createRecordingLogger()
-        const state = await inspectWithBinary(logger, routeFiles, options)
-        assertSame(comparableState(state), reference.post)
-        assertSame(
-          logger.diagnostics.filter((d) => d.level !== 'debug'),
-          reference.postDiagnostics
+    // Spawns a full TypeScript inspection of the project.
+    test(
+      'the binary wrapper, fed by the TypeScript engine, equals inspect()',
+      { timeout: 120_000 },
+      async () => {
+        const previous = process.env.PIKKU_INSPECTOR_GO_BIN
+        process.env.PIKKU_INSPECTOR_GO_BIN = fileURLToPath(
+          new URL('../parity/ts-reference-bin.ts', import.meta.url)
         )
-      } finally {
-        if (previous === undefined) delete process.env.PIKKU_INSPECTOR_GO_BIN
-        else process.env.PIKKU_INSPECTOR_GO_BIN = previous
+        try {
+          const { routeFiles, options } = await projectInput(repo(project))
+          const logger = createRecordingLogger()
+          const state = await inspectWithBinary(logger, routeFiles, options)
+          assertSame(comparableState(state), reference.post)
+          assertSame(
+            logger.diagnostics.filter((d) => d.level !== 'debug'),
+            reference.postDiagnostics
+          )
+        } finally {
+          if (previous === undefined) delete process.env.PIKKU_INSPECTOR_GO_BIN
+          else process.env.PIKKU_INSPECTOR_GO_BIN = previous
+        }
       }
-    })
+    )
   })
 }
