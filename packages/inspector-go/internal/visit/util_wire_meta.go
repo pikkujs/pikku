@@ -64,20 +64,12 @@ func propValue(v tsutil.PropValue) any {
 
 // wiringFuncId is extractFunctionName plus the context-based id TS gives an
 // inline function.
-func (s *Context) wiringFuncId(funcInit *ast.Node, segments ...string) string {
+func (s *Context) wiringFuncId(funcInit *ast.Node, wiringType, name string) string {
 	id := s.extractFunctionName(funcInit).pikkuFuncId
-	if len(id) >= 7 && id[:7] == "__temp_" && segments[1] != "" {
-		id = makeContextBasedId(segments...)
+	if isTempId(id) && name != "" {
+		id = makeContextBasedId(wiringType, name)
 	}
 	return id
-}
-
-func makeContextBasedId(segments ...string) string {
-	out := segments[0]
-	for _, s := range segments[1:] {
-		out += ":" + s
-	}
-	return out
 }
 
 // tagsOrNil is the tags resolveMiddleware takes: undefined when absent.

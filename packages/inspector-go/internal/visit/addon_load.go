@@ -301,7 +301,14 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	}
 
 	s.loadAddonSecrets(decl, req)
-	s.loadAddonScopes(decl, req)
+	// Scopes: governance's loadAddonScopes (scope_addon.go), given the
+	// directory the scopes meta resolves from.
+	for _, dir := range req {
+		if resolvePackageSubpath(dir, decl.pkg, ".pikku/scopes/pikku-scopes-meta.gen.json") != "" {
+			s.loadAddonScopes(decl, dir)
+			break
+		}
+	}
 	s.loadAddonVariables(decl, req)
 	s.loadAddonCredentials(decl, req)
 	s.loadAddonServices(ns, decl, req)
@@ -522,37 +529,6 @@ func (s *Context) loadAddonVariables(decl *addonDecl, req addonResolver) {
 func (s *Context) loadAddonCredentials(decl *addonDecl, req addonResolver) {
 	s.mergeAddonDefinitions(req, decl.pkg+"/.pikku/credentials/pikku-credentials-meta.gen.json",
 		&s.State.Credentials.Definitions, decl.overrides["credential"], "name", "credential", decl.pkg)
-}
-
-// loadAddonScopes adds the addon's own scopes, stamped with the package the
-// host installed it as.
-func (s *Context) loadAddonScopes(decl *addonDecl, req addonResolver) {
-	meta, err := readResolvedJSON(req, decl.pkg+"/.pikku/scopes/pikku-scopes-meta.gen.json")
-	if err != nil || !meta.isObject() {
-		return
-	}
-	meta.obj.Each(func(key string, def *ojson) {
-		for _, d := range definitionsOf(s.State.Scopes.Definitions) {
-			if n, ok := d.get("name").str(); ok && n == key {
-				return
-			}
-		}
-		origin := newOObject()
-		origin.set("kind", ojsonString("addon"))
-		origin.set("package", ojsonString(decl.pkg))
-		if o := def.get("origin"); o != nil {
-			if k, _ := o.get("kind").str(); k == "addon" && o.has("displayName") {
-				origin.set("displayName", o.get("displayName"))
-			}
-		}
-		entry := def.clone()
-		if !entry.isObject() {
-			entry = newOObject()
-		}
-		entry.set("origin", origin)
-		s.State.Scopes.Definitions = append(s.State.Scopes.Definitions, entry.raw())
-		s.Log.Debugf("Loaded addon scope '%s' from %s", key, decl.pkg)
-	})
 }
 
 // loadAddonServices reads serverlessIncompatible and requiredParentServices
