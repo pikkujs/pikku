@@ -298,7 +298,7 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.188",
+        "@pikku/cli": "^0.12.189",
         "@pikku/core": "^0.12.142",
         "zod": "^4",
       },
@@ -318,14 +318,14 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.188",
+        "@pikku/cli": "^0.12.189",
         "@pikku/core": "^0.12.142",
         "zod": "^4",
       },
     },
     "packages/addon/pikku-console": {
       "name": "@pikku/addon-console",
-      "version": "0.12.61",
+      "version": "0.12.62",
       "dependencies": {
         "@pikku/code-edit": "^0.12.7",
         "@pikku/knowledge": "^0.12.20",
@@ -334,7 +334,7 @@
       },
       "devDependencies": {
         "@pikku/better-auth": "^0.12.56",
-        "@pikku/cli": "^0.12.187",
+        "@pikku/cli": "^0.12.189",
         "@pikku/core": "^0.12.142",
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -342,7 +342,7 @@
       },
       "peerDependencies": {
         "@pikku/better-auth": "^0.12.56",
-        "@pikku/cli": "^0.12.188",
+        "@pikku/cli": "^0.12.189",
         "@pikku/core": "^0.12.142",
       },
       "optionalPeers": [
@@ -390,7 +390,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.188",
+      "version": "0.12.189",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -1545,7 +1545,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.188",
+        "@pikku/cli": "^0.12.189",
         "@pikku/core": "^0.12.142",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
