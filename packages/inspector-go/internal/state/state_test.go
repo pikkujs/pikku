@@ -38,7 +38,7 @@ func TestPopulatedStateMatchesTSSerializer(t *testing.T) {
 	out := "Foo"
 	s.Functions.Meta.Set("z", &FunctionMeta{
 		PikkuFuncId: "z", FunctionType: "user", Name: "z",
-		Services: ServicesMeta{Optimized: true, Services: []string{"a"}},
+		Services:         ServicesMeta{Optimized: true, Services: []string{"a"}},
 		OutputSchemaName: &out, Inputs: []string{}, Outputs: []string{"Foo"},
 		Expose: ptr(true), Tags: []string{"t"},
 	})
