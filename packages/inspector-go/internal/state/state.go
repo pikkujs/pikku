@@ -159,24 +159,24 @@ type RPC struct {
 }
 
 type MCPEndpoints struct {
-	ResourcesMeta Record[Raw]     `json:"resourcesMeta"`
-	ToolsMeta     Record[Raw]     `json:"toolsMeta"`
-	PromptsMeta   Record[Raw]     `json:"promptsMeta"`
-	Files         Set             `json:"files"`
-	Surfaces      *Record[string] `json:"surfaces,omitempty"`
+	ResourcesMeta Record[*MCPResourceMeta] `json:"resourcesMeta"`
+	ToolsMeta     Record[*MCPToolMeta]     `json:"toolsMeta"`
+	PromptsMeta   Record[*MCPPromptMeta]   `json:"promptsMeta"`
+	Files         Set                      `json:"files"`
+	Surfaces      *Record[string]          `json:"surfaces,omitempty"`
 }
 
 // Agents follows the serializer's literal, which writes agentsMeta, files,
 // invokedAgentsByFile in that order.
 type Agents struct {
-	AgentsMeta          Record[Raw]     `json:"agentsMeta"`
-	Files               Map[FileExport] `json:"files"`
-	InvokedAgentsByFile Map[*Set]       `json:"invokedAgentsByFile"`
+	AgentsMeta          Record[*AgentMeta] `json:"agentsMeta"`
+	Files               Map[FileExport]    `json:"files"`
+	InvokedAgentsByFile Map[*Set]          `json:"invokedAgentsByFile"`
 }
 
 type Scorers struct {
-	ScorersMeta Record[Raw]     `json:"scorersMeta"`
-	Files       Map[FileExport] `json:"files"`
+	ScorersMeta Record[*ScorerMeta] `json:"scorersMeta"`
+	Files       Map[FileExport]     `json:"files"`
 }
 
 type CLIMeta struct {

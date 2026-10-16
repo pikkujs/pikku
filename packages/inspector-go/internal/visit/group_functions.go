@@ -469,8 +469,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 
 	s.State.Functions.Meta.Set(pikkuFuncId, m)
 	if mcpEnabled {
-		// mcpEndpoints.toolsMeta is an unported (Raw) section; only the
-		// service-aggregation side effects are recorded.
+		s.addMCPTool(objectNode, sourceFile, name, m)
 		s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 		s.addUsedWires(m)
 	}
