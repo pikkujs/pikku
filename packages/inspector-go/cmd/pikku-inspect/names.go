@@ -55,9 +55,8 @@ func nodeText(n *ast.Node) string {
 func (s *state) tempFuncId(n *ast.Node) string {
 	sf := ast.GetSourceFileOfNode(n)
 	rel, _ := filepath.Rel(s.rootDir, sf.FileName())
-	// NOTE: TS hashes the UTF-16 offset; typescript-go positions are UTF-8 byte
-	// offsets, so ids diverge for files with non-ASCII text before the call.
-	sum := sha1.Sum([]byte(fmt.Sprintf("%s:%d", rel, nodeStart(n))))
+	// TS hashes the UTF-16 offset; typescript-go positions are UTF-8 byte offsets.
+	sum := sha1.Sum([]byte(fmt.Sprintf("%s:%d", rel, utf16Offset(sf.Text(), nodeStart(n)))))
 	return "__temp_" + hex.EncodeToString(sum[:])[:16]
 }
 
@@ -303,4 +302,18 @@ func (s *state) extractFunctionName(callExpr *ast.Node) extractedName {
 		r.pikkuFuncId = formatVersionedId(r.pikkuFuncId, r.version)
 	}
 	return r
+}
+
+// utf16Offset converts a UTF-8 byte offset into text to the UTF-16 code-unit
+// offset Strada would report for the same position.
+func utf16Offset(text string, byteOff int) int {
+	n := 0
+	for _, r := range text[:byteOff] {
+		if r >= 0x10000 {
+			n += 2
+		} else {
+			n++
+		}
+	}
+	return n
 }

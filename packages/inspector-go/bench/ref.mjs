@@ -1,4 +1,5 @@
-// Reference: run the TS inspector on a project and dump functions.meta + timings.
+// Reference: run the TS inspector on a project and dump its meta + timings.
+// full mode writes {functions, http, queueWorkers, typesMap}.
 // usage: node ref.mjs <projectDir> <outJson> [full|slice]
 //   full  = the whole inspect() (no schema generation, as with no schemaConfig)
 //   slice = program + checker + visitFunctions only (the Go prototype's scope)
@@ -24,7 +25,13 @@ const tInspect = performance.now()
 let meta
 if (mode === 'full') {
   const state = await insp.inspect(logger, files, { rootDir, tsconfig: path.join(projectDir, cfg.tsconfig) })
-  meta = state.functions.meta
+  const tm = state.functions.typesMap
+  meta = {
+    functions: state.functions.meta,
+    http: state.http.meta,
+    queueWorkers: state.queueWorkers.meta,
+    typesMap: { map: [...tm.map.entries()], customTypes: [...tm.customTypes.entries()] },
+  }
 } else {
   const ts = (await import(WT + '/packages/inspector/node_modules/typescript/lib/typescript.js')).default
   const { visitFunctions } = await import(WT + '/packages/inspector/dist/visit.js')
@@ -41,4 +48,4 @@ if (mode === 'full') {
 const inspectMs = performance.now() - tInspect
 writeFileSync(out, JSON.stringify(meta, null, 2))
 if (process.env.DUMP_FILES) writeFileSync(process.env.DUMP_FILES, files.slice().sort().join('\n'))
-console.log(JSON.stringify({ mode, files: files.length, functions: Object.keys(meta).length, programMs, inspectMs: Math.round(inspectMs), totalMs: Math.round(performance.now() - t0) }))
+console.log(JSON.stringify({ mode, files: files.length, functions: Object.keys(meta.functions ?? meta).length, programMs, inspectMs: Math.round(inspectMs), totalMs: Math.round(performance.now() - t0) }))

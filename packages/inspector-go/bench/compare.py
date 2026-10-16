@@ -1,44 +1,80 @@
-"""Field-by-field parity of Go functions meta against the TS reference.
-usage: python3 compare.py ref.json go.json [-v]"""
+"""Per-section parity of the Go inspector bundle against the TS reference.
+usage: python3 compare.py ref.json go.json [-v]
+
+Both files hold {functions, http, queueWorkers, typesMap}."""
 import json, sys
 from collections import Counter, defaultdict
 
-# Written by later TS passes, not by addFunctions.
+# Written by later TS passes the prototype does not port.
 POST = {"singletonServicesOnly"}
-ref, go = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
-# resolveLatestVersions (a later pass) re-keys the unversioned latest of a
-# versioned family as `name@vN`. Undo that on the reference so the slice compares.
-for k in [k for k in ref if "@v" in k and k not in go]:
-    base = k.split("@v")[0]
-    if base in go and go[base].get("sourceFile") == ref[k].get("sourceFile") and "version" not in go[base]:
-        r = dict(ref.pop(k)); r["pikkuFuncId"] = base; r.pop("version", None); ref[base] = r
-        print(f"note: ref {k} is resolveLatestVersions' re-key of {base}; compared as {base}")
-# stampAuthHandlerServices (post-processing) overwrites the auth handler's services.
-for k, v in ref.items():
-    if v.get("name") == "authHandler" and k in go:
-        go[k] = dict(go[k], services=v["services"]); print(f"note: {k}.services is stamped by stampAuthHandlerServices; excluded")
 verbose = "-v" in sys.argv
-# Entries other visitors add (http agent routes, queues, ...) carry no funcWrapper.
-in_slice = {k for k, v in ref.items() if "funcWrapper" in v or "implementationHash" in v}
-found = in_slice & set(go)
-print(f"ref total={len(ref)} in-slice={len(in_slice)} go={len(go)} found={len(found)} "
-      f"({100*len(found)/len(in_slice):.1f}%) extra-in-go={sorted(set(go)-set(ref))}")
-print("not found:", sorted(in_slice - set(go)), " out of slice:", sorted(set(ref) - in_slice))
-present, match = Counter(), Counter()
-bad = defaultdict(list)
-for k in found:
-    r, g = ref[k], go[k]
-    for f in (set(r) | set(g)) - POST:
-        present[f] += 1
-        if r.get(f) == g.get(f):
-            match[f] += 1
-        else:
-            bad[f].append((k, r.get(f), g.get(f)))
-tot_p, tot_m = sum(present.values()), sum(match.values())
-print(f"field values matched: {tot_m}/{tot_p} ({100*tot_m/tot_p:.1f}%); whole entries identical: "
-      f"{sum(1 for k in found if all(ref[k].get(f)==go[k].get(f) for f in (set(ref[k])|set(go[k]))-POST))}/{len(found)}")
-for f in sorted(present, key=lambda f: (match[f]/present[f], f)):
-    print(f"  {f:34s} {match[f]:4d}/{present[f]:<4d} {100*match[f]/present[f]:5.1f}%")
-    if verbose or match[f] != present[f]:
-        for k, a, b in bad[f][:4]:
-            print(f"      {k}: ts={json.dumps(a)[:110]} go={json.dumps(b)[:110]}")
+ref, go = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+
+
+def compare(section, r_entries, g_entries, ignore=frozenset()):
+    rk, gk = set(r_entries), set(g_entries)
+    found = rk & gk
+    present, match = Counter(), Counter()
+    bad = defaultdict(list)
+    whole = 0
+    for k in found:
+        r, g = r_entries[k], g_entries[k]
+        same = True
+        for f in (set(r) | set(g)) - ignore:
+            present[f] += 1
+            if r.get(f) == g.get(f):
+                match[f] += 1
+            else:
+                same = False
+                bad[f].append((k, r.get(f), g.get(f)))
+        whole += same
+    tp, tm = sum(present.values()), sum(match.values())
+    print(f"\n== {section}: ref={len(rk)} go={len(gk)} found={len(found)} "
+          f"identical={whole}/{len(rk)} fields={tm}/{tp}"
+          + (f" ({100*tm/tp:.1f}%)" if tp else ""))
+    if rk - gk:
+        print("   missing in go:", sorted(rk - gk)[:12], "..." if len(rk - gk) > 12 else "")
+    if gk - rk:
+        print("   extra in go:  ", sorted(gk - rk)[:12], "..." if len(gk - rk) > 12 else "")
+    for f in sorted(present, key=lambda f: (match[f] / present[f], f)):
+        if verbose or match[f] != present[f]:
+            print(f"   {f:30s} {match[f]:4d}/{present[f]:<4d}")
+            for k, a, b in bad[f][:4]:
+                print(f"      {k}: ts={json.dumps(a)[:120]} go={json.dumps(b)[:120]}")
+    return whole, len(rk)
+
+
+rf, gf = ref["functions"], go["functions"]
+# stampAuthHandlerServices (post-processing, needs the auth-handler analysis)
+# overwrites the auth handler's services; not ported.
+for k, v in rf.items():
+    if v.get("name") == "authHandler" and k in gf:
+        gf[k] = dict(gf[k], services=v["services"])
+        print(f"note: {k}.services is stamped by stampAuthHandlerServices; excluded")
+compare("functions", rf, gf, POST)
+
+
+def flat_http(h):
+    return {f"{m} {r}": v for m, routes in h.items() for r, v in routes.items()}
+
+
+compare("http", flat_http(ref["http"]), flat_http(go["http"]))
+# post-process injects synthetic workflow orchestrator / step queues from the
+# workflow graphs, which the prototype does not extract.
+rq = {k: v for k, v in ref["queueWorkers"].items()
+      if not v["pikkuFuncId"].startswith("pikkuWorkflowOrchestrator:") and not k.startswith("wf-step-")}
+if len(rq) != len(ref["queueWorkers"]):
+    print(f"note: {len(ref['queueWorkers']) - len(rq)} synthetic workflow queues (post-process) excluded")
+compare("queueWorkers", rq, go["queueWorkers"])
+
+
+def tm(t):
+    return ({k: v for k, v in t["map"]}, {k: v for k, v in t["customTypes"]})
+
+
+rm, rc = tm(ref["typesMap"])
+gm, gc = tm(go["typesMap"])
+compare("typesMap.map", rm, gm)
+compare("typesMap.customTypes", rc, gc)
+# The order matters to `exists` (first match wins); report it separately.
+print("\ntypesMap.map order identical:", [k for k, _ in ref["typesMap"]["map"]] == [k for k, _ in go["typesMap"]["map"]])

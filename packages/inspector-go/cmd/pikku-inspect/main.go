@@ -120,17 +120,28 @@ func main() {
 	// Minimal stand-in for the setup sweep: only what addFunctions reads back
 	// (middleware / permission definitions and tag middleware).
 	for _, sf := range sourceFiles {
-		walk(sf.AsNode(), st.visitSetup)
+		walk(sf.AsNode(), func(n *ast.Node) { st.visitSetup(n); st.visitSetupWirings(n) })
 	}
+	st.loadAddonFunctionsMeta()
 	for _, sf := range sourceFiles {
 		walk(sf.AsNode(), st.addFunctions)
 	}
+	for _, sf := range sourceFiles {
+		walk(sf.AsNode(), st.visitRoutes)
+	}
+	st.resolveLatestVersions()
+	st.annotateHTTPRouteAuth()
 	visitDur := time.Since(tVisit)
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
-	must(enc.Encode(st.meta))
+	must(enc.Encode(map[string]any{
+		"functions":    st.meta,
+		"http":         st.http,
+		"queueWorkers": st.queues,
+		"typesMap":     st.typesMap,
+	}))
 
 	if *timing {
 		fmt.Fprintf(os.Stderr, `{"files":%d,"programFiles":%d,"projectFiles":%d,"functions":%d,"programMs":%d,"checkerMs":%d,"visitMs":%d,"totalMs":%d}`+"\n",

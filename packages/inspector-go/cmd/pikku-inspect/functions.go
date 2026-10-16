@@ -307,16 +307,20 @@ func (s *state) addFunctions(node *ast.Node) {
 	capitalized := funcIdToTypeName(name)
 
 	var inputNames, outputNames []string
+	tm := s.typesMap
 	switch {
 	case inputSchemaVar:
 		inputNames = []string{capitalized + "Input"}
+		tm.addCustomType(inputNames[0], "unknown", nil)
 	case isListFunc && len(generics) >= 1:
 		inputNames = []string{capitalized + "Input"}
+		refs := s.resolveTypeImports(generics[0], true)
+		tm.addCustomType(inputNames[0], "{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & "+s.typeToString(generics[0]), dedupe(refs))
 	case !isChannelConnection && !isListFunc && len(generics) >= 1:
-		inputNames = s.getNamesAndTypes("Input", name, generics[0])
+		inputNames, _ = s.getNamesAndTypes("Input", name, generics[0])
 	default:
 		if p := paramAt(handler, 1); p != nil {
-			inputNames = s.getNamesAndTypes("Input", pikkuFuncId, s.c.GetTypeAtLocation(p))
+			inputNames, _ = s.getNamesAndTypes("Input", pikkuFuncId, s.c.GetTypeAtLocation(p))
 		}
 	}
 	if isWebhookReceive {
@@ -326,14 +330,17 @@ func (s *state) addFunctions(node *ast.Node) {
 	switch {
 	case outputSchemaVar:
 		outputNames = []string{capitalized + "Output"}
+		tm.addCustomType(outputNames[0], "unknown", nil)
 	case isListFunc && len(generics) >= 2:
 		outputNames = []string{capitalized + "Output"}
+		refs := s.resolveTypeImports(generics[1], true)
+		tm.addCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(generics[1])+">; nextCursor: string | null; totalCount?: number; }", dedupe(refs))
 	case !isListFunc && len(generics) >= 2:
-		outputNames = s.getNamesAndTypes("Output", name, generics[1])
+		outputNames, _ = s.getNamesAndTypes("Output", name, generics[1])
 	default:
 		if sig := s.c.GetSignatureFromDeclaration(handler); sig != nil {
 			ret := s.unwrapPromise(s.c.GetReturnTypeOfSignature(sig))
-			outputNames = s.getNamesAndTypes("Output", pikkuFuncId, ret)
+			outputNames, _ = s.getNamesAndTypes("Output", pikkuFuncId, ret)
 		}
 	}
 	mcpOutputTypes := map[string]string{
@@ -342,6 +349,9 @@ func (s *state) addFunctions(node *ast.Node) {
 		"pikkuMCPPromptFunc":   "MCPPromptResponse",
 	}
 	if t, ok := mcpOutputTypes[wrapper]; ok && (len(outputNames) == 0 || outputNames[0] != t) {
+		if !s.registerMCPOutputType(expression, t) {
+			tm.addCustomType(t, t, nil)
+		}
 		outputNames = []string{t}
 	}
 
@@ -407,6 +417,29 @@ func (s *state) addFunctions(node *ast.Node) {
 	}
 
 	s.meta[pikkuFuncId] = m
+}
+
+// registerMCPOutputType records where the wrapper's MCP response type is
+// declared, resolved from the wrapper's own declaration.
+func (s *state) registerMCPOutputType(wrapperIdent *ast.Node, typeName string) bool {
+	sym := s.resolveAlias(s.c.GetSymbolAtLocation(wrapperIdent))
+	if sym == nil {
+		return false
+	}
+	for _, d := range sym.Declarations {
+		ts := s.c.ResolveName(typeName, d, ast.SymbolFlagsType, false)
+		if ts == nil {
+			continue
+		}
+		if decl := firstDecl(s.resolveAlias(ts)); decl != nil {
+			path := ast.GetSourceFileOfNode(decl).FileName()
+			if s.typesMap.exists(typeName, path) == "" {
+				s.typesMap.addType(typeName, path)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func filterVoid(names []string) []string {

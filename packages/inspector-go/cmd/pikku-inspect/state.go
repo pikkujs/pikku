@@ -20,6 +20,7 @@ type WireRef struct {
 	Name   string `json:"name,omitempty"`
 	Tag    string `json:"tag,omitempty"`
 	Inline *bool  `json:"inline,omitempty"`
+	Route  string `json:"route,omitempty"`
 }
 
 type AuditMeta struct {
@@ -80,6 +81,8 @@ type FunctionMeta struct {
 	BodyStart                       *int         `json:"bodyStart,omitempty"`
 	BodyEnd                         *int         `json:"bodyEnd,omitempty"`
 	StartsWorkflows                 []string     `json:"startsWorkflows,omitempty"`
+
+	inline bool
 }
 
 type definition struct {
@@ -87,13 +90,21 @@ type definition struct {
 }
 
 type state struct {
-	rootDir string
-	c       *checker.Checker
-	meta    map[string]*FunctionMeta
+	rootDir  string
+	c        *checker.Checker
+	meta     map[string]*FunctionMeta
+	typesMap *TypesMap
 
 	middlewareDefs map[string]definition
 	permissionDefs map[string]definition
 	tagMiddleware  map[string]bool
+
+	httpRouteMiddleware []string
+	addons              map[string]*addonDecl
+	addonOrder          []string
+	addonFunctions      map[string]map[string]*FunctionMeta
+	http                map[string]map[string]*HTTPRouteMeta
+	queues              map[string]*QueueWorkerMeta
 }
 
 func newState(rootDir string, c *checker.Checker) *state {
@@ -101,9 +112,14 @@ func newState(rootDir string, c *checker.Checker) *state {
 		rootDir:        rootDir,
 		c:              c,
 		meta:           map[string]*FunctionMeta{},
+		typesMap:       newTypesMap(),
 		middlewareDefs: map[string]definition{},
 		permissionDefs: map[string]definition{},
 		tagMiddleware:  map[string]bool{},
+		addons:         map[string]*addonDecl{},
+		addonFunctions: map[string]map[string]*FunctionMeta{},
+		http:           map[string]map[string]*HTTPRouteMeta{},
+		queues:         map[string]*QueueWorkerMeta{},
 	}
 }
 
