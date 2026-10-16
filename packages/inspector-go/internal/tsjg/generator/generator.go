@@ -120,9 +120,17 @@ func (g *SchemaGenerator) createSchemaFromNodes(rootNodes []*ast.Node) *schema.D
 		g.appendRootChildDefinitions(rootType, definitions)
 	}
 
+	// Object.assign over each root's reachable set: a name keeps the position
+	// it was first given.
 	reachable := map[string]*schema.Definition{}
+	var order []string
 	for _, def := range rootTypeDefinitions {
-		maps.Copy(reachable, schema.RemoveUnreachable(def, definitions))
+		for _, name := range schema.RemoveUnreachable(def, definitions) {
+			if _, ok := reachable[name]; !ok {
+				order = append(order, name)
+			}
+			reachable[name] = definitions[name]
+		}
 	}
 
 	out := &schema.Definition{
@@ -137,6 +145,7 @@ func (g *SchemaGenerator) createSchemaFromNodes(rootNodes []*ast.Node) *schema.D
 		out = &merged
 	}
 	out.Definitions = reachable
+	out.DefinitionOrder = order
 	return out
 }
 

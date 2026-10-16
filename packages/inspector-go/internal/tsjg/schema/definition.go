@@ -53,6 +53,15 @@ type Definition struct {
 	PropertyNames        *Definition
 	Discriminator        any
 	Definitions          map[string]*Definition
+	// DefinitionOrder is the key order of Definitions, when it is not
+	// alphabetical: the generator's reachability order.
+	DefinitionOrder []string
+	// Appended lists keywords that TS adds to an existing definition object
+	// (getAllOfDefinitionReducer assigning properties or required to an
+	// object that had none), in the order they were added. A JS object
+	// keeps keys in insertion order, so they serialize after the keywords
+	// the object was created with, not in their usual position.
+	Appended []string
 	// Extra holds annotation keywords merged into the definition
 	// (description, default, examples, custom tags, ...).
 	Extra map[string]any
@@ -235,10 +244,23 @@ func (d *Definition) MarshalJSON() ([]byte, error) {
 		{"propertyNames", d.PropertyNames, d.PropertyNames != nil},
 		{"discriminator", d.Discriminator, d.Discriminator != nil},
 	}
+	appended := map[string]bool{}
+	for _, k := range d.Appended {
+		appended[k] = true
+	}
 	for _, f := range fields {
-		if f.on {
+		if f.on && !appended[f.key] {
 			if err := emit(f.key, f.val); err != nil {
 				return nil, err
+			}
+		}
+	}
+	for _, k := range d.Appended {
+		for _, f := range fields {
+			if f.key == k && f.on && !emitted[k] {
+				if err := emit(f.key, f.val); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -260,7 +282,7 @@ func (d *Definition) MarshalJSON() ([]byte, error) {
 	}
 
 	if d.Definitions != nil {
-		if err := emit("definitions", sortedMap(d.Definitions)); err != nil {
+		if err := emit("definitions", orderedMap{d.Definitions, d.DefinitionOrder}); err != nil {
 			return nil, err
 		}
 	}
@@ -329,6 +351,41 @@ func (s sortedMapT) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// orderedMap marshals definitions in a given key order, then any keys the
+// order does not name, sorted.
+type orderedMap struct {
+	m     map[string]*Definition
+	order []string
+}
+
+func (o orderedMap) MarshalJSON() ([]byte, error) {
+	keys := make([]string, 0, len(o.m))
+	named := map[string]bool{}
+	for _, k := range o.order {
+		if _, ok := o.m[k]; ok && !named[k] {
+			named[k] = true
+			keys = append(keys, k)
+		}
+	}
+	var rest []string
+	for k := range o.m {
+		if !named[k] {
+			rest = append(rest, k)
+		}
+	}
+	sort.Strings(rest)
+	keys = append(keys, rest...)
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for _, k := range keys {
+		if err := writeMember(&buf, k, o.m[k]); err != nil {
+			return nil, err
+		}
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+
 // Clone returns a deep-ish copy of the definition: nested containers are
 // copied, but leaf *Definition values are shared.
 func (d *Definition) Clone() *Definition {
@@ -341,6 +398,7 @@ func (d *Definition) Clone() *Definition {
 		maps.Copy(c.Extra, d.Extra)
 	}
 	c.Required = append([]string(nil), d.Required...)
+	c.Appended = append([]string(nil), d.Appended...)
 	c.Enum = append([]any(nil), d.Enum...)
 	c.AllOf = append([]*Definition(nil), d.AllOf...)
 	c.AnyOf = append([]*Definition(nil), d.AnyOf...)

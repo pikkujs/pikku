@@ -14,6 +14,9 @@ func getAllOfDefinitionReducer(childTypeFormatter TypeFormatter) func(*schema.De
 	return func(definition *schema.Definition, baseType types.Type) *schema.Definition {
 		other := childTypeFormatter.GetDefinition(types.DerefType(baseType))
 
+		if definition.Properties == nil {
+			definition.Appended = appendKey(definition.Appended, "properties")
+		}
 		definition.Properties = deepMergeProperties(other.Properties, definition.Properties)
 
 		if isPropsDefinition(definition.AdditionalProperties) && isPropsDefinition(other.AdditionalProperties) {
@@ -70,6 +73,9 @@ func getAllOfDefinitionReducer(childTypeFormatter TypeFormatter) func(*schema.De
 		}
 
 		if other.Required != nil {
+			if len(definition.Required) == 0 {
+				definition.Appended = appendKey(definition.Appended, "required")
+			}
 			required := unique(append(append([]string(nil), definition.Required...), other.Required...))
 			sort.Strings(required)
 			definition.Required = required
@@ -198,4 +204,14 @@ func castTypeArray(t any) []string {
 // source: anything that is neither undefined nor true (false or a definition).
 func isPropsDefinition(props any) bool {
 	return props != nil && props != true
+}
+
+// appendKey records key as added after creation, unless it already was.
+func appendKey(keys []string, key string) []string {
+	for _, k := range keys {
+		if k == key {
+			return keys
+		}
+	}
+	return append(keys, key)
 }

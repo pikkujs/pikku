@@ -110,8 +110,10 @@ type FunctionMeta struct {
 	OutputHash            string `json:"outputHash,omitempty"`
 	SingletonServicesOnly *bool  `json:"singletonServicesOnly,omitempty"`
 
-	// Inline is analysis scratch: the function was declared inline in a
-	// wiring rather than exported. Never serialized.
+	// Inline is analysis scratch: the entry was created by
+	// ensureFunctionMetadata for a function declared inline in a wiring
+	// rather than exported. Never serialized; it selects the key order TS
+	// gives such an entry (see inlineMetaKeyOrder).
 	Inline bool `json:"-"`
 
 	// Verbatim, when set, is what the entry serializes as instead of the
@@ -125,8 +127,23 @@ func (m *FunctionMeta) MarshalJSON() ([]byte, error) {
 		return m.Verbatim, nil
 	}
 	type plain FunctionMeta
-	return jsjson.Marshal((*plain)(m), "")
+	b, err := jsjson.Marshal((*plain)(m), "")
+	if err != nil || !m.Inline {
+		return b, err
+	}
+	return reorderObjectKeys(b, inlineMetaKeysFirst, inlineMetaKeysLast)
 }
+
+// inlineMetaKeysFirst and inlineMetaKeysLast are the key order of a
+// FunctionMeta that ensure-function-metadata.ts creates: the literal it
+// assigns (with its `middleware: undefined` slot), then `sourceFile`, then
+// whatever else was set, then the keys TS assigns last — tags, permissions,
+// ensureInlineWiringFunction's `sessionless` and finalize's hashes. JS keeps
+// a key where it was first assigned, so these land after the literal.
+var (
+	inlineMetaKeysFirst = []string{"pikkuFuncId", "functionType", "name", "services", "inputSchemaName", "outputSchemaName", "inputs", "outputs", "middleware", "sourceFile"}
+	inlineMetaKeysLast  = []string{"tags", "permissions", "sessionless", "contractHash", "inputHash", "outputHash", "singletonServicesOnly"}
+)
 
 type HTTPRouteMeta struct {
 	PikkuFuncId       string    `json:"pikkuFuncId"`
@@ -163,7 +180,11 @@ func (m *HTTPRouteMeta) MarshalJSON() ([]byte, error) {
 }
 
 type QueueWorkerMeta struct {
-	PikkuFuncId string    `json:"pikkuFuncId"`
+	PikkuFuncId string `json:"pikkuFuncId"`
+	// NameFirst puts `name` ahead of `pikkuFuncId`, the order of the
+	// synthetic workflow queue entries post-process.ts writes. Never
+	// serialized.
+	NameFirst   bool      `json:"-"`
 	PackageName string    `json:"packageName,omitempty"`
 	Name        string    `json:"name"`
 	Summary     *string   `json:"summary,omitempty"`
@@ -171,6 +192,15 @@ type QueueWorkerMeta struct {
 	Errors      []string  `json:"errors,omitempty"`
 	Tags        []string  `json:"tags,omitzero"`
 	Middleware  []WireRef `json:"middleware,omitempty"`
+}
+
+func (m *QueueWorkerMeta) MarshalJSON() ([]byte, error) {
+	type plain QueueWorkerMeta
+	b, err := jsjson.Marshal((*plain)(m), "")
+	if err != nil || !m.NameFirst {
+		return b, err
+	}
+	return reorderObjectKeys(b, []string{"name"}, nil)
 }
 
 // MetaInputTypes is one entry of http.metaInputTypes. computeInputTypes

@@ -3,27 +3,36 @@ package schema
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 )
 
 const definitionPrefix = "#/definitions/"
 
 // RemoveUnreachable filters definitions down to those reachable from the
-// root definition (src/Utils/removeUnreachable.ts).
-func RemoveUnreachable(root *Definition, definitions map[string]*Definition) map[string]*Definition {
+// root definition (src/Utils/removeUnreachable.ts). It returns the names in
+// the order TS's Set first meets them, which is the key order of the
+// `definitions` object TS writes.
+func RemoveUnreachable(root *Definition, definitions map[string]*Definition) []string {
 	if root == nil {
-		return definitions
+		names := make([]string, 0, len(definitions))
+		for name := range definitions {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		return names
 	}
-	reachable := map[string]bool{}
+	reachable := &reachableSet{seen: map[string]bool{}}
 	addReachable(root, definitions, reachable)
-	out := map[string]*Definition{}
-	for name := range reachable {
-		out[name] = definitions[name]
-	}
-	return out
+	return reachable.order
 }
 
-func addReachable(d *Definition, definitions map[string]*Definition, reachable map[string]bool) {
+type reachableSet struct {
+	seen  map[string]bool
+	order []string
+}
+
+func addReachable(d *Definition, definitions map[string]*Definition, reachable *reachableSet) {
 	if d == nil {
 		return
 	}
@@ -33,10 +42,11 @@ func addReachable(d *Definition, definitions map[string]*Definition, reachable m
 			return
 		}
 		name := decodeRef(strings.TrimPrefix(d.Ref, definitionPrefix))
-		if reachable[name] {
+		if reachable.seen[name] {
 			return
 		}
-		reachable[name] = true
+		reachable.seen[name] = true
+		reachable.order = append(reachable.order, name)
 		ref, ok := definitions[name]
 		if !ok {
 			panic(fmt.Errorf("encountered a reference to a missing definition %q, this is a bug", d.Ref))

@@ -240,7 +240,7 @@ func aggregateRequiredServices(st *state.State) {
 		}
 		orch := "wf-orchestrator-" + toKebab(graph.Name)
 		if !st.QueueWorkers.Meta.Has(orch) {
-			st.QueueWorkers.Meta.Set(orch, &state.QueueWorkerMeta{Name: orch, PikkuFuncId: "pikkuWorkflowOrchestrator:" + graph.Name})
+			st.QueueWorkers.Meta.Set(orch, &state.QueueWorkerMeta{NameFirst: true, Name: orch, PikkuFuncId: "pikkuWorkflowOrchestrator:" + graph.Name})
 		}
 		decodeObject(state.Raw(graph.Nodes)).Each(func(_ string, n state.Raw) {
 			rpcName, ok := nodeRPCName(n)
@@ -262,7 +262,7 @@ func aggregateRequiredServices(st *state.State) {
 			}
 			step := "wf-step-" + toKebab(rpcName)
 			if !st.QueueWorkers.Meta.Has(step) {
-				st.QueueWorkers.Meta.Set(step, &state.QueueWorkerMeta{Name: step, PikkuFuncId: "pikkuWorkflowWorker:" + rpcName})
+				st.QueueWorkers.Meta.Set(step, &state.QueueWorkerMeta{NameFirst: true, Name: step, PikkuFuncId: "pikkuWorkflowWorker:" + rpcName})
 			}
 		})
 	})

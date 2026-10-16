@@ -312,3 +312,59 @@ func decodeObject(b []byte, fn func(k string, raw json.RawMessage) error) error 
 	}
 	return nil
 }
+
+// reorderObjectKeys rewrites the JSON object b so that the keys in first
+// lead, in that order, the keys in last close it, in that order, and every
+// other key keeps its relative order in between. Keys absent from b are
+// skipped.
+func reorderObjectKeys(b []byte, first, last []string) ([]byte, error) {
+	vals := map[string]json.RawMessage{}
+	var keys []string
+	if err := decodeObject(b, func(k string, raw json.RawMessage) error {
+		keys = append(keys, k)
+		vals[k] = raw
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	placed := map[string]bool{}
+	for _, k := range first {
+		placed[k] = true
+	}
+	for _, k := range last {
+		placed[k] = true
+	}
+	order := make([]string, 0, len(keys))
+	add := func(k string) {
+		if _, ok := vals[k]; ok {
+			order = append(order, k)
+		}
+	}
+	for _, k := range first {
+		add(k)
+	}
+	for _, k := range keys {
+		if !placed[k] {
+			order = append(order, k)
+		}
+	}
+	for _, k := range last {
+		add(k)
+	}
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, k := range order {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		kb, err := jsjson.Marshal(k, "")
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(kb)
+		buf.WriteByte(':')
+		buf.Write(vals[k])
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
