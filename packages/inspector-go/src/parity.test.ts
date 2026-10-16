@@ -69,16 +69,13 @@ describe('parity harness', () => {
   )
 
   test(
-    'tsgo-ordered customTypes are normalized by the allow-list',
+    'customTypes printed in another order are a diff, not normalized away',
     HARNESS_TIMEOUT,
     () => {
       const run = harness({ PIKKU_TS_REFERENCE_REORDER: '1' })
-      assert.equal(run.status, 0, run.stdout)
-      assert.equal(run.find('functions', 'pre')?.status, 'normalized')
-      assert.equal(
-        run.find('functions', 'pre')?.allowedBy,
-        'tsgo-custom-type-ordering'
-      )
+      assert.equal(run.status, 1, run.stdout)
+      assert.equal(run.find('functions', 'pre')?.status, 'diff')
+      assert.equal(run.find('functions', 'pre')?.allowedBy, undefined)
     }
   )
 

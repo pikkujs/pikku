@@ -135,8 +135,9 @@ bench/bench.sh ../../examples/online-shop $B/pikku-inspect 3 $B/bench [--schemas
 Notes on the comparison:
 - `compare.py` reports an entry that differs only in token order as
   "order-only".
-- For a ported section, the only acceptable difference is order-only, caused by
-  tsgo's literal-union ordering (see below).
+- For a ported section, no difference is acceptable, order-only included:
+  union and property order reach schema `enum`/`required` arrays and with them
+  the contract hashes (see "Union and property order" below).
 - Sections owned by unported groups show gaps until those groups land: rpc,
   usedFunctions, credentials and some diagnostics.
 
@@ -145,12 +146,12 @@ Current status (with schemas):
 | section | online-shop | templates/functions |
 |---|---|---|
 | functions.meta / files | OK | OK |
-| functions.typesMap | 549/553, 4 order-only | 92/100, 7 order-only |
+| functions.typesMap | OK | OK |
 | http.*, queueWorkers.* | OK | OK |
 | import maps, factories, wireServicesMeta, coreTypeProperties, secrets, variables | OK | OK |
 | schemaLookup | OK | OK |
 | agents, scorers, mcpEndpoints | OK | OK |
-| schemas | 233/235, 2 order-only | 88/96, 7 order-only + agent |
+| schemas | OK | OK |
 
 ## typescript-go differences
 
@@ -167,22 +168,31 @@ Each of these was found by a parity diff. Each is handled where noted.
   code units. Anything that leaves the process as a position goes through
   `tsutil.UTF16Offset`.
 - **typeToString flags.** `checker.TypeToString` defaults differ from TS's
-  `checker.typeToString(t)`. Go calls `TypeToStringEx(t, nil,
-  TypeFormatFlagsNoTruncation, nil)` (`Context.typeToString`). Change it there
+  `checker.typeToString(t)`. Go calls `tsutil.TypeToString(c, t,
+  TypeFormatFlagsNoTruncation)` (`Context.typeToString`). Change it there
   only, never per call site.
 - **Lib paths.** Default lib files live at `bundled:///libs/lib.*.d.ts`, not
   `node_modules/typescript/lib`. `tsutil.IsLibFile` recognises both.
 - **`GetSymbolAtLocation` on an import** returns the alias symbol. Resolve it
   (`Context.resolveAlias`) before reading declarations.
-- **Literal union ordering. Not fixable.** tsgo sorts literal union members by
-  value (`"high" | "low" | "medium"`), where TS keeps creation order. This also
-  reorders:
-  - mapped-type keys. Kysely `Selection` gives `GetProfileOutput` alphabetical
-    properties.
-  - the members of normalized object unions.
-
-  The result is order-only typesMap and schema differences: 4 + 2 on
-  online-shop, 7 + 7 on templates/functions. They are semantically equal.
+- **Union and property order.** tsgo sorts union members by value
+  (`"high" | "low" | "medium"`); TS sorts them by type id, which is creation
+  order. The same sort reorders the properties of a mapped type over a key
+  union (Kysely `Selection`, `Pick`, `Record`), and tsgo lists a widened object
+  literal's gained `?: undefined` properties by declaration position where TS
+  appends them. All of it reaches schema `enum`/`required` and the contract
+  hashes. Handled in `internal/tsutil`:
+  - `TypeToString` and `TypeToTypeNode` (used by `Context.typeToString` and
+    every `tsjg` parser) walk the printed node with the type it came from and
+    sort union members by type id and mapped-type properties by key literal
+    id (`ReorderTypeNode`). Never call the checker's printers directly.
+  - `UnionTypesInIdOrder` is the same order for code that iterates
+    `t.Types()` itself (`getNamesAndTypes`).
+  - Ids are creation order, so Go must make the checker calls TS makes, when
+    TS makes them. The DSL workflow extractor asks for each step output's
+    type for that reason alone (`dslCtx.touchType`).
+  Strada's order is itself only as stable as its check order: Node and Bun
+  runs of the TS reference can differ where readdir order changes it.
 - **Inherited property order.** `GetPropertiesOfType` on an interface that
   extends another lists inherited members first; TS lists own members first.
   `coreTypeProperties` is therefore sorted on both sides. Its only consumer
@@ -387,6 +397,6 @@ Bump procedure (one PR, nothing else in it):
    package's `extra-shim.json`.
 3. `go mod tidy && go build ./... && go vet ./... && go test ./...`.
 4. Run the full parity commands on both projects. The summary must be
-   unchanged, apart from order-only entries already listed above.
+   unchanged.
 5. Re-run `bench/bench.sh` and note the timing in the PR.
 6. Update the pin in this file.

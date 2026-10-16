@@ -9,7 +9,7 @@ import (
 	"github.com/microsoft/typescript-go/shim/printer"
 )
 
-// Union constituent order.
+// Union constituent and mapped-type property order.
 //
 // Strada keeps a union's constituents sorted by type id, which is creation
 // order: `z.enum(['low', 'medium', 'high'])` prints as
@@ -19,6 +19,13 @@ import (
 // reordered. Literal and keyword types are interned per checker and their ids
 // are still allocated in creation order, so sorting a printed union's members
 // by those ids gives back Strada's order.
+//
+// A mapped type over a key union ({ [K in 'b' | 'a']: X }, Pick, Record, the
+// Kysely Selection behind `.select(['name', 'email'])`) creates its properties
+// in the order it iterates that union, so its members print in value order
+// too, and with them a schema's `required`. Their Strada order is the ids of
+// the key literals, carried through homomorphic mapped types ({ [K in keyof
+// T]: X }) unchanged.
 
 // nodeBuilderFlagsIgnoreErrors is nodebuilder.FlagsIgnoreErrors, which
 // typeToStringEx always adds; the internal package cannot be imported.
@@ -42,7 +49,7 @@ func TypeToString(c *checker.Checker, t *checker.Type, flags checker.TypeFormatF
 	if node == nil {
 		panic("should always get typenode")
 	}
-	ReorderUnionTypeNodes(c, node)
+	ReorderTypeNode(c, t, node)
 	newLine := ""
 	if flags&checker.TypeFormatFlagsMultilineObjectLiterals != 0 {
 		newLine = "\n"
@@ -67,7 +74,7 @@ func TypeToTypeNode(c *checker.Checker, t *checker.Type, enclosing *ast.Node, fl
 	nb := checker.NewNodeBuilderEx(c, printer.NewEmitContext(), idToSymbol)
 	node := buildTypeNode(nb.TypeToTypeNode, t, enclosing, flags)
 	if node != nil {
-		ReorderUnionTypeNodes(c, node)
+		ReorderTypeNode(c, t, node)
 	}
 	return node
 }

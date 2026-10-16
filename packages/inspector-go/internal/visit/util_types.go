@@ -119,7 +119,7 @@ func (s *Context) getNamesAndTypes(direction, funcName string, t *checker.Type) 
 		}
 	}
 	if t.IsUnion() && t.Flags()&checker.TypeFlagsIntersection == 0 {
-		for _, m := range t.Types() {
+		for _, m := range tsutil.UnionTypesInIdOrder(t) {
 			add(m)
 		}
 	} else {

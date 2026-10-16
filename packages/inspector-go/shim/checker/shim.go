@@ -86,14 +86,23 @@ type Checker = checker.Checker
 //go:linkname Checker_getFullyQualifiedName github.com/microsoft/typescript-go/internal/checker.(*Checker).getFullyQualifiedName
 func Checker_getFullyQualifiedName(recv *checker.Checker, symbol *ast.Symbol, containingLocation *ast.Node) string
 
+//go:linkname Checker_isMappedTypeWithKeyofConstraintDeclaration github.com/microsoft/typescript-go/internal/checker.(*Checker).isMappedTypeWithKeyofConstraintDeclaration
+func Checker_isMappedTypeWithKeyofConstraintDeclaration(recv *checker.Checker, t *checker.Type) bool
+
 //go:linkname Checker_getStringLiteralType github.com/microsoft/typescript-go/internal/checker.(*Checker).getStringLiteralType
 func Checker_getStringLiteralType(recv *checker.Checker, value string) *checker.Type
 
 //go:linkname Checker_getNumberLiteralType github.com/microsoft/typescript-go/internal/checker.(*Checker).getNumberLiteralType
 func Checker_getNumberLiteralType(recv *checker.Checker, value jsnum.Number) *checker.Type
 
+//go:linkname Checker_getModifiersTypeFromMappedType github.com/microsoft/typescript-go/internal/checker.(*Checker).getModifiersTypeFromMappedType
+func Checker_getModifiersTypeFromMappedType(recv *checker.Checker, t *checker.Type) *checker.Type
+
 //go:linkname Checker_getAwaitedType github.com/microsoft/typescript-go/internal/checker.(*Checker).getAwaitedType
 func Checker_getAwaitedType(recv *checker.Checker, t *checker.Type) *checker.Type
+
+//go:linkname Checker_formatUnionTypes github.com/microsoft/typescript-go/internal/checker.(*Checker).formatUnionTypes
+func Checker_formatUnionTypes(recv *checker.Checker, types []*checker.Type, expandingEnum bool) []*checker.Type
 
 //go:linkname CompareTypes github.com/microsoft/typescript-go/internal/checker.CompareTypes
 func CompareTypes(t1 *checker.Type, t2 *checker.Type) int

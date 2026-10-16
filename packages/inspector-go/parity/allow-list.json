@@ -1,9 +1,1 @@
-[
-  {
-    "id": "tsgo-custom-type-ordering",
-    "reason": "tsgo prints string-literal unions and object-literal properties in a different order from Strada. The type is the same, so typesMap.customTypes type strings are compared with union members and properties sorted on both sides.",
-    "section": "functions",
-    "phases": ["pre", "post"],
-    "normalize": "sort-custom-type-strings"
-  }
-]
+[]
