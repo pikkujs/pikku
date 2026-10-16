@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import type {
   InspectorOptions,
   SerializableInspectorState,
@@ -21,12 +22,24 @@ export type InspectorGoAnalysisOptions = Pick<
   | 'rootDir'
   | 'setupOnly'
   | 'types'
-  | 'schemaConfig'
   | 'isAddon'
   | 'tags'
   | 'classificationCheck'
   | 'allow'
->
+> & {
+  schemaConfig?: NonNullable<InspectorOptions['schemaConfig']> & {
+    /**
+     * The Node script that turns Zod schemas into JSON Schema. Zod schemas
+     * are runtime values, so the binary cannot read them itself.
+     */
+    vendorScript?: string
+  }
+}
+
+/** The Zod converter this package ships, run by the binary through Node. */
+export const VENDOR_SCHEMA_SCRIPT = fileURLToPath(
+  new URL('../scripts/vendor-schemas.mjs', import.meta.url)
+)
 
 /** What `pikku-inspect --stdin` reads. */
 export interface InspectorGoInput {
@@ -80,7 +93,10 @@ export const toAnalysisOptions = (
     rootDir: options.rootDir,
     setupOnly: options.setupOnly,
     types: options.types,
-    schemaConfig: options.schemaConfig,
+    schemaConfig: options.schemaConfig && {
+      vendorScript: VENDOR_SCHEMA_SCRIPT,
+      ...options.schemaConfig,
+    },
     isAddon: options.isAddon,
     tags: options.tags,
     classificationCheck: options.classificationCheck,

@@ -10,15 +10,16 @@
 // The conversion is generateZodSchemas / processZodSchema from
 // packages/inspector/src/utils/schema-generator.ts, line for line, minus the
 // typesMap and logger: the Go side adds each typeText as a custom type and logs
-// the errors itself. It lives here, beside the Go module, only until
-// @pikku/inspector exports it; it resolves tsx, zod and the helpers from the
-// inspector package in this repository.
+// the errors itself. It resolves tsx, zod and the helpers from the installed
+// @pikku/inspector package.
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { pathToFileURL } from 'node:url'
 
-const INSPECTOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../inspector')
+const INSPECTOR = path.dirname(
+  path.dirname(createRequire(import.meta.url).resolve('@pikku/inspector'))
+)
 const requireFromInspector = createRequire(INSPECTOR + '/package.json')
 const importFromInspector = (spec) => import(pathToFileURL(requireFromInspector.resolve(spec)).href)
 

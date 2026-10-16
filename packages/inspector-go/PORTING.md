@@ -236,7 +236,7 @@ state.
   Primitives are skipped.
 - **Zod first.** Vendor (Zod) schemas from `schemaLookup` are converted first,
   through `VendorSchemaConverter`. The default `NodeConverter` runs
-  `vendorScript` (bench/vendor-schemas.mjs). That script imports the schema
+  `vendorScript` (scripts/vendor-schemas.mjs). That script imports the schema
   modules through tsx and replays the Zod branch of `schema-generator.ts`,
   using helpers from `packages/inspector/dist`.
 - **Missing converter.** No converter with a non-empty `schemaLookup` is an
