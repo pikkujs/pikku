@@ -51,7 +51,7 @@ type SchemaConfig struct {
 	Schema           json.RawMessage `json:"schema,omitempty"`
 	CacheDir         string          `json:"cacheDir,omitempty"`
 	// VendorScript is the Node script that converts Zod (vendor) schemas,
-	// bench/vendor-schemas.mjs or its published copy. Required when the
+	// scripts/vendor-schemas.mjs or its published copy. Required when the
 	// project has schemaLookup entries.
 	VendorScript string `json:"vendorScript,omitempty"`
 }
