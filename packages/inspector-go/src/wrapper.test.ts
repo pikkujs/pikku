@@ -67,7 +67,7 @@ describe('findInspectorBinary', () => {
 })
 
 describe('toAnalysisOptions', () => {
-  test('passes on only what analysis reads', () => {
+  test('passes on only what analysis and the Go finalize read', () => {
     assert.deepEqual(
       toAnalysisOptions({
         rootDir: '/p',
@@ -77,7 +77,12 @@ describe('toAnalysisOptions', () => {
         modelAliases: {},
         oldProgram: {} as any,
       } as any),
-      { rootDir: '/p', tsconfig: '/p/tsconfig.json' }
+      {
+        rootDir: '/p',
+        tsconfig: '/p/tsconfig.json',
+        openAPI: { additionalInfo: {} },
+        modelAliases: {},
+      }
     )
   })
 })
