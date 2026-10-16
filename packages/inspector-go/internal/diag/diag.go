@@ -132,3 +132,11 @@ func (l *Logger) Entries() []Diagnostic {
 	defer l.mu.Unlock()
 	return append([]Diagnostic{}, l.entries...)
 }
+
+// Seed appends entries recorded by an earlier logger, so a later phase (the
+// finalize pass on an analyzed Response) continues the same diagnostics list.
+func (l *Logger) Seed(entries []Diagnostic) {
+	l.mu.Lock()
+	l.entries = append(l.entries, entries...)
+	l.mu.Unlock()
+}
