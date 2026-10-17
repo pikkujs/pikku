@@ -102,7 +102,7 @@
   "devDependencies": {
     "@ag-ui/core": "0.0.57",
     "@pikku/deploy": "^0.12.15",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",
     "tsx": "^4.23.15"
   },

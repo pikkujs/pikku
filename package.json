@@ -92,7 +92,7 @@
     "@pikku/fastify-plugin": "workspace:*",
     "@pikku/uws-handler": "workspace:*",
     "@types/autocannon": "^7.12.7",
-    "@types/node": "^25.9.9",
+    "@types/node": "^26.6.5",
     "@typescript/native": "npm:typescript@^7.0.2",
     "autocannon": "^8.0.0",
     "esbuild": "^0.28.2",
