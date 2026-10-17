@@ -452,16 +452,18 @@ export const serializeLocalServices = ({
         : `import type { Kysely } from '@pikku/kysely'`
     )
   }
-  imports.push(`import {
+  imports.push(
+    `import {
   IncomingWebhookService,
   InMemoryAgentRunStateService,
-  InMemoryQueueService,
-  InMemoryTriggerService,
   InMemoryTriggerSourceStore,
-  InMemoryWorkflowService,
   LocalEmailService,
   QueueWebhookService,
-} from '@pikku/core/services'`)
+} from '@pikku/core/services'`,
+    `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
+    `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
+    `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`
+  )
   if (localCLI) {
     imports.push(
       `import { LocalMetaService } from '@pikku/core/services/local-meta'`,

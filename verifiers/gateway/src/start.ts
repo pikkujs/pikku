@@ -3,7 +3,7 @@ import '../.pikku/pikku-bootstrap.gen.js'
 
 import { wireGateway } from '#pikku/gateway'
 import { fetch } from '@pikku/core/http'
-import { LocalGatewayService } from '@pikku/core/services'
+import { LocalGatewayService } from '@pikku/core/services/local-gateway'
 import { runLocalChannel } from '@pikku/core/channel/local'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { MockGatewayAdapter } from './mock-adapter.js'

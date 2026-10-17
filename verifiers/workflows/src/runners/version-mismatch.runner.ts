@@ -19,7 +19,7 @@
  *   yarn test:version-mismatch --redis    # Redis
  */
 
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { pikkuState } from '@pikku/core/state'
