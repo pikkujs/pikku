@@ -37,6 +37,8 @@ import {
   unitWiresRemoteJobInbox,
 } from '@pikku/deploy'
 
+import { coercionContributor } from './coercion-contributor.js'
+
 export type { PlatformServiceContributor } from '@pikku/deploy'
 
 export const CLOUDFLARE_BINDING_SOURCES: readonly BindingSource[] = [
@@ -75,6 +77,12 @@ export interface CloudflareProviderAdapterOptions {
    * runtime profile, `wrangler.toml` and the verifier all follow it.
    */
   compatDate?: string
+  /**
+   * Attach the app's generated column coercion map to the platform's `kysely`,
+   * as `pikku dev` does. On by default; turn it off for a platform whose own
+   * kysely contributor already applies the map.
+   */
+  coercion?: boolean
 }
 
 /**
@@ -154,7 +162,17 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     this.workflowQueues = options.workflowQueues ?? false
     this.httpQueueJobs = options.httpQueueJobs ?? false
     this.compatDate = options.compatDate ?? DEFAULT_COMPAT_DATE
-    this.contributors = dedupeContributors(options.contributors)
+    this.contributors = dedupeContributors([
+      ...(options.coercion === false ? [] : [coercionContributor]),
+      ...(options.contributors ?? []),
+    ])
+    // Last, so it wraps the kysely any other contributor built.
+    const coercion = this.contributors.findIndex(
+      (c) => c.name === coercionContributor.name
+    )
+    if (coercion >= 0) {
+      this.contributors.push(...this.contributors.splice(coercion, 1))
+    }
     assertContributorsSupported(
       this.contributors,
       CLOUDFLARE_BINDING_SOURCES,
@@ -177,10 +195,15 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   }
 
   private contributorImports(
+    ctx: EntryGenerationContext,
     platform: PlatformImports,
     sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
   ): string[] {
-    return collectContributorImports(this.contributorsFor(sources), platform)
+    return collectContributorImports(
+      this.contributorsFor(sources),
+      platform,
+      ctx
+    )
   }
 
   private contributorLines(
@@ -284,7 +307,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
-      ...this.contributorImports(platform, ['env']),
+      ...this.contributorImports(ctx, platform, ['env']),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -397,7 +420,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -460,7 +483,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -557,7 +580,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
