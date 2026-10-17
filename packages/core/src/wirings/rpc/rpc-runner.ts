@@ -7,10 +7,10 @@ import type {
 import {
   forwardStepName,
   isCompensationStepName,
-} from '../../function/compensation-name.js'
+} from '../../compensation-name.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
-import { runPikkuFunc } from '../../function/function-runner.js'
+import type { runPikkuFunc as RunPikkuFunc } from '../../function/function-runner.js'
 import type { AddonInstance } from '../addon/addon-runner.js'
 import { addonInstanceForNamespace } from '../addon/addon-runner.js'
 import { isAddonFunctionExposed } from '../addon/wire-addon.js'
@@ -19,6 +19,21 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from '../addon/remote-addon-auth.js'
+
+/**
+ * The function runner, reached lazily. `function-runner` builds every
+ * invocation's `wire.rpc` from this module, so a static import back would be a
+ * module cycle. By the time an rpc call runs the runner is loaded, and the
+ * import resolves from the module cache once.
+ */
+let functionRunner: typeof RunPikkuFunc | undefined
+const runPikkuFunc = async <In, Out>(
+  ...args: Parameters<typeof RunPikkuFunc<In, Out>>
+): Promise<Out> => {
+  functionRunner ??= (await import('../../function/function-runner.js'))
+    .runPikkuFunc
+  return functionRunner<In, Out>(...args)
+}
 
 /**
  * The session for a wire: read through `getSession` when a runner attached one,

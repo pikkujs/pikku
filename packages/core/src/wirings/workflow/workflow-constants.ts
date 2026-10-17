@@ -118,4 +118,4 @@ export {
   compensationStepName,
   forwardStepName,
   isCompensationStepName,
-} from '../../function/compensation-name.js'
+} from '../../compensation-name.js'

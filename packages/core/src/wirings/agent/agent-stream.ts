@@ -12,14 +12,14 @@ import type {
 } from './agent.types.js'
 import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
-import { applyInputMiddleware } from './agent-turn.js'
+import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 import { SPOKEN_TRANSCRIPT } from './voice-input.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from '../channel/channel-middleware-runner.js'
+} from '../../channel-middleware-runner.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
 import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { AgentStorageService } from '../../services/agent-storage-service.js'
@@ -428,16 +428,7 @@ async function runStreamStepLoop(
 
     const approvalsNeeded = checkForApprovals(stepResult, runnerParams.tools)
     if (approvalsNeeded.length > 0) {
-      for (const approval of approvalsNeeded) {
-        const toolDef = runnerParams.tools.find(
-          (t) => t.name === approval.toolName
-        )
-        if (toolDef?.approvalDescriptionFn && !approval.reason) {
-          try {
-            approval.reason = await toolDef.approvalDescriptionFn(approval.args)
-          } catch {}
-        }
-      }
+      await describeApprovals(approvalsNeeded, runnerParams.tools)
       return { outcome: 'approval', approvals: approvalsNeeded }
     }
 

@@ -18,7 +18,7 @@ import {
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from './channel-middleware-runner.js'
+} from '../../channel-middleware-runner.js'
 
 export const runChannelLifecycleWithMiddleware = async ({
   channelConfig,
