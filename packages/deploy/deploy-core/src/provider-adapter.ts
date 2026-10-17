@@ -173,6 +173,15 @@ export interface ProviderAdapter {
   readonly workflowQueues?: boolean
 
   /**
+   * Whether a serverless unit's bootstrap defers its addons' function and
+   * schema registration to an exported `loadAddons()`, which the provider's
+   * entry awaits before building services. For runtimes that cap the CPU a
+   * script may spend at startup, where evaluating an addon's whole surface
+   * fails the deploy. Defaults to `false`.
+   */
+  readonly lazyAddonRegistration?: boolean
+
+  /**
    * Whether the artifact opens SQLite through a libsqlite3 it has to carry
    * itself. True for a compiled bun binary: on macOS bun otherwise opens
    * Apple's SQLite, which cannot load extensions, so the build ships the host's

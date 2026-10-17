@@ -555,6 +555,7 @@ export async function runBuildPipeline(options: {
         inspectorState,
         deployDir: unitsDir,
         workflowQueues,
+        lazyAddons: provider.lazyAddonRegistration ?? false,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
