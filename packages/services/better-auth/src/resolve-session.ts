@@ -61,7 +61,7 @@ export const readSessionSecret = async (
  * The tail every better-auth session middleware shares once it holds an
  * authenticated `{ user, session }`: impersonation (or the warning that it is
  * not configured), the app's `mapSession` or the default mapping, the
- * `virtualUser` stamp, scope resolution, and finally `setSession`.
+ * `virtualUser` stamp, scope resolution, and finally `setInitialSession`.
  *
  * `mapSession` and impersonation hooks are caller code, so their errors
  * propagate — see `a-session-read-that-fails-is-an-error-not-anonymous.md`.
@@ -70,14 +70,14 @@ export const resolveAndSetSession = async <R extends SessionLike>({
   result,
   services,
   getHeader,
-  setSession,
+  setInitialSession,
   mapSession,
   impersonation,
 }: {
   result: R
   services: CoreServices
   getHeader: (name: string) => string | undefined | null
-  setSession: (session: CoreUserSession) => Promise<void> | void
+  setInitialSession: (session: CoreUserSession) => Promise<void> | void
   mapSession?: (
     result: R,
     services: CoreServices
@@ -95,7 +95,7 @@ export const resolveAndSetSession = async <R extends SessionLike>({
     if (impersonated) {
       // Scopes resolve for the impersonated userId, not the admin's — an
       // impersonated session runs as the target, with the target's rights.
-      await setSession(await withResolvedScopes(impersonated, services))
+      await setInitialSession(await withResolvedScopes(impersonated, services))
       return
     }
   } else {
@@ -105,7 +105,7 @@ export const resolveAndSetSession = async <R extends SessionLike>({
   const mapped = mapSession
     ? await mapSession(result, services)
     : defaultSession(result)
-  await setSession(
+  await setInitialSession(
     await withResolvedScopes(
       stampVirtualUserFlag(mapped, result.user),
       services

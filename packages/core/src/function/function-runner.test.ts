@@ -744,6 +744,7 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should set session helpers on the wire when a session service is provided', async () => {
     const sessionStore = {
       get: async () => undefined,
+      set: async () => {},
     }
     const sessionService = new PikkuSessionService(sessionStore as any)
     const wire: any = {}

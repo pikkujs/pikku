@@ -27,22 +27,24 @@ export const addonScopeCap = pikkuMiddlewareFactory<{
     name: string
   ) => readonly string[] | undefined | Promise<readonly string[] | undefined>
 }>(({ resolve }) =>
-  pikkuMiddleware(async (_services, { http, setSession, getSession }, next) => {
-    const name = http?.request?.header(ADDON_HEADER)
-    const session = await getSession?.()
-    if (!name || !setSession || !session) {
+  pikkuMiddleware(
+    async (_services, { http, setInitialSession, getSession }, next) => {
+      const name = http?.request?.header(ADDON_HEADER)
+      const session = await getSession?.()
+      if (!name || !setInitialSession || !session) {
+        return next()
+      }
+
+      const role = await resolve(name)
+      if (!role) {
+        throw new ForbiddenError(`Unknown addon '${name}'`)
+      }
+
+      setInitialSession({
+        ...session,
+        scopes: intersectScopes(session.scopes, role),
+      })
       return next()
     }
-
-    const role = await resolve(name)
-    if (!role) {
-      throw new ForbiddenError(`Unknown addon '${name}'`)
-    }
-
-    await setSession({
-      ...session,
-      scopes: intersectScopes(session.scopes, role),
-    })
-    return next()
-  })
+  )
 )

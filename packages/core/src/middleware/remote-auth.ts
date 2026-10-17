@@ -19,7 +19,7 @@ const isRemoteRpcPath = (path: string): boolean =>
   path.toLowerCase().startsWith(REMOTE_RPC_PREFIX)
 
 export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
-  async ({ secrets, jwt }, { http, setSession }, next) => {
+  async ({ secrets, jwt }, { http, setInitialSession }, next) => {
     if (!http?.request || !secrets) {
       return next()
     }
@@ -82,8 +82,8 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
           REMOTE_SESSION_INFO,
           payload.session
         )
-        if (decrypted?.session && setSession) {
-          await setSession(decrypted.session)
+        if (decrypted?.session && setInitialSession) {
+          setInitialSession(decrypted.session)
         }
       } catch {
         throw new UnauthorizedError()
