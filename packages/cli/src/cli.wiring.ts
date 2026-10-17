@@ -1617,7 +1617,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: virtualUserSync,
           description:
-            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to provisionVirtualUsers from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({
