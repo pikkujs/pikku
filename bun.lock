@@ -1225,9 +1225,12 @@
     "packages/services/pino": {
       "name": "@pikku/pino",
       "version": "0.12.6",
+      "devDependencies": {
+        "pino": "^10.4.0",
+      },
       "peerDependencies": {
         "@pikku/core": "^0.12.138",
-        "pino": "^9.5.0",
+        "pino": "^9.5.0 || ^10.0.0",
       },
     },
     "packages/services/queue-bullmq": {
