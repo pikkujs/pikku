@@ -2,11 +2,11 @@ import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import {
   ConsoleLogger,
   IncomingWebhookService,
-  InMemoryQueueService,
   LocalSecretService,
   LocalVariablesService,
   QueueWebhookService,
 } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { FileCredentialService } from './file-credential-service.js'

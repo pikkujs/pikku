@@ -16,7 +16,7 @@ import {
   LogLevel,
   NoopAuditService,
 } from '@pikku/core/services'
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { CLILogger } from './services/cli-logger.service.js'
 import {
   getPikkuCLIConfig,

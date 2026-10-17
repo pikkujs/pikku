@@ -84,7 +84,7 @@ Nothing fires until a `TriggerService` is started. For a single process,
 target and sets it up:
 
 ```typescript
-import { InMemoryTriggerService } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 
 const triggerService = new InMemoryTriggerService()
 await triggerService.start()

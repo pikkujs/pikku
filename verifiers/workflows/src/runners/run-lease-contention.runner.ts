@@ -31,11 +31,8 @@
 import { fork, type ChildProcess } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import type { LeaseService } from '@pikku/core/services'
-import {
-  InMemoryLeaseService,
-  InMemoryQueueService,
-  LogLevel,
-} from '@pikku/core/services'
+import { InMemoryLeaseService, LogLevel } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { pikkuState } from '@pikku/core/state'
 import { CamelCasePlugin, Kysely, MysqlDialect, sql } from 'kysely'
