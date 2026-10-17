@@ -2,6 +2,8 @@ import { CronJob } from 'cron'
 import type { CoreUserSession } from '@pikku/core/types'
 import type {
   ScheduledTaskInfo,
+  ScheduledTaskRun,
+  ScheduledTaskRuns,
   ScheduledTaskSummary,
 } from '@pikku/core/services'
 import { SchedulerService } from '@pikku/core/services'
@@ -20,6 +22,8 @@ interface DelayedTask {
   timer: ReturnType<typeof setTimeout>
 }
 
+const RUN_HISTORY_LIMIT = 50
+
 const getLogger = () => {
   return pikkuState(null, 'package', 'singletonServices')!.logger
 }
@@ -31,6 +35,7 @@ const getLogger = () => {
 export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
   private delayedTasks = new Map<string, DelayedTask>()
+  private taskRuns = new Map<string, ScheduledTaskRun[]>()
   private idCounter = 0
 
   async init(): Promise<void> {}
@@ -125,6 +130,19 @@ export class InMemorySchedulerService extends SchedulerService {
     }))
   }
 
+  async getTaskRuns(): Promise<Record<string, ScheduledTaskRuns>> {
+    const runs: Record<string, ScheduledTaskRuns> = {}
+    for (const [name, job] of this.cronJobs) {
+      const history = this.taskRuns.get(name) ?? []
+      runs[name] = {
+        nextRun: job.isActive ? job.nextDate().toJSDate() : null,
+        lastRun: history[0] ?? null,
+        history: [...history],
+      }
+    }
+    return runs
+  }
+
   async close(): Promise<void> {
     await this.stop()
     // Clear delayed tasks
@@ -158,17 +176,46 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
+        const startedAt = new Date()
         try {
           getLogger().info(`Running scheduled task: ${name}`)
           await runScheduledTask({ name })
           getLogger().debug(`Completed scheduled task: ${name}`)
+          this.recordRun(name, startedAt, 'completed', null)
         } catch (err: unknown) {
-          getLogger().error(`Scheduled task '${name}' failed: ${err}`)
+          const skipped =
+            err instanceof Error && err.name === 'ScheduledTaskSkippedError'
+          this.recordRun(
+            name,
+            startedAt,
+            skipped ? 'skipped' : 'failed',
+            err instanceof Error ? err.message : String(err)
+          )
+          if (!skipped) {
+            getLogger().error(`Scheduled task '${name}' failed: ${err}`)
+          }
         }
       },
       null,
       true
     )
     this.cronJobs.set(name, job)
+  }
+
+  private recordRun(
+    name: string,
+    startedAt: Date,
+    status: ScheduledTaskRun['status'],
+    error: string | null
+  ) {
+    const history = this.taskRuns.get(name) ?? []
+    history.unshift({
+      startedAt,
+      status,
+      durationMs: Date.now() - startedAt.getTime(),
+      error,
+    })
+    history.length = Math.min(history.length, RUN_HISTORY_LIMIT)
+    this.taskRuns.set(name, history)
   }
 }

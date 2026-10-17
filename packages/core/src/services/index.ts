@@ -120,6 +120,8 @@ export type { SessionService } from './user-session-service.js'
 export type {
   ScheduledTaskSummary,
   ScheduledTaskInfo,
+  ScheduledTaskRun,
+  ScheduledTaskRuns,
 } from './scheduler-service.js'
 export { SchedulerService } from './scheduler-service.js'
 export type { TriggerService } from './trigger-service.js'

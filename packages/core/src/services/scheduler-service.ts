@@ -12,6 +12,20 @@ export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   status?: 'scheduled' | 'active' | 'completed' | 'failed'
 }
 
+export interface ScheduledTaskRun {
+  startedAt: Date
+  status: 'completed' | 'failed' | 'skipped'
+  durationMs: number
+  error: string | null
+}
+
+export interface ScheduledTaskRuns {
+  nextRun: Date | null
+  lastRun: ScheduledTaskRun | null
+  /** Newest first. */
+  history: ScheduledTaskRun[]
+}
+
 export abstract class SchedulerService {
   abstract init(): Promise<void>
 
@@ -30,6 +44,11 @@ export abstract class SchedulerService {
   abstract getAllTasks(): Promise<ScheduledTaskSummary[]>
 
   abstract close(): Promise<void>
+
+  /** Per wired cron task. Empty when this scheduler keeps no run history. */
+  async getTaskRuns(): Promise<Record<string, ScheduledTaskRuns>> {
+    return {}
+  }
 
   async start(): Promise<void> {}
 

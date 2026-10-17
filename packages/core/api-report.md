@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3283 observable things**: 1098 exported names, plus
-2185 members on the classes and interfaces among them, reachable
+**3293 observable things**: 1100 exported names, plus
+2193 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 176 | 150 | 476 |
+| `./services` | 178 | 152 | 484 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
@@ -5478,6 +5478,17 @@ export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   session?: CoreUserSession
   status?: 'scheduled' | 'active' | 'completed' | 'failed'
 }
+export interface ScheduledTaskRun {
+  startedAt: Date
+  status: 'completed' | 'failed' | 'skipped'
+  durationMs: number
+  error: string | null
+}
+export interface ScheduledTaskRuns {
+  nextRun: Date | null
+  lastRun: ScheduledTaskRun | null
+  history: ScheduledTaskRun[]
+}
 export interface ScheduledTaskSummary {
   taskId: string
   rpcName: string
@@ -5490,6 +5501,7 @@ export abstract class SchedulerService {
   abstract getTask(taskId: string): Promise<ScheduledTaskInfo | null>
   abstract getAllTasks(): Promise<ScheduledTaskSummary[]>
   abstract close(): Promise<void>
+  async getTaskRuns(): Promise<Record<string, ScheduledTaskRuns>>
   async start(): Promise<void>
   async stop(): Promise<void>
 }
