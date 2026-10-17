@@ -21,7 +21,7 @@
     "@pikku/jose": "^0.12.9",
     "@pikku/next": "^0.12.12",
     "better-auth": "^1.7.10",
-    "next": "15.5.28",
+    "next": "16.4.2",
     "react": "^19",
     "react-dom": "^19",
     "tslib": "^2.8.1",
