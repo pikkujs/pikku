@@ -111,6 +111,8 @@ export type {
 } from './credential-oauth-providers.js'
 export {
   pikkuCredentialOAuth,
+  findPlatformUserId,
+  PLATFORM_USER_EMAIL,
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
 export type {
