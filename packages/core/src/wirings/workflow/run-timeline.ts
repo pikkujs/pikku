@@ -1,5 +1,8 @@
 import type { SerializedError } from '../../errors/serialized-error.js'
-import { isCompensationStepName } from './workflow-constants.js'
+import {
+  isCompensationStepName,
+  STEP_IN_FLIGHT_STATES,
+} from './workflow-constants.js'
 import type { StepState, StepStatus } from './workflow.types.js'
 
 export interface RunTimelineEvent {
@@ -104,12 +107,6 @@ export interface ReconstructedRunState {
   phase: RunPhase
 }
 
-const IN_FLIGHT: ReadonlySet<StepStatus> = new Set([
-  'pending',
-  'scheduled',
-  'running',
-])
-
 export function reconstructStateAt(
   timeline: RunTimeline,
   at: number | Date
@@ -185,7 +182,7 @@ export function reconstructFinalState(
 
 function derivePhase(steps: ReconstructedStep[]): RunPhase {
   if (steps.length === 0) return 'pending'
-  if (steps.some((s) => IN_FLIGHT.has(s.status))) return 'running'
+  if (steps.some((s) => STEP_IN_FLIGHT_STATES.has(s.status))) return 'running'
   if (steps.some((s) => s.status === 'failed')) return 'failed'
   return 'idle'
 }

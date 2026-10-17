@@ -2,6 +2,7 @@ import type { SerializedError } from '../../errors/serialized-error.js'
 import {
   isCompensationStepName,
   isMilestoneStepName,
+  STEP_IN_FLIGHT_STATES,
 } from './workflow-constants.js'
 import type { StepStatus } from './workflow.types.js'
 
@@ -35,12 +36,6 @@ export interface UnwindPlan {
   compensated: boolean
 }
 
-const IN_FLIGHT: ReadonlySet<StepStatus> = new Set([
-  'pending',
-  'scheduled',
-  'running',
-])
-
 const startedAt = (record: UnwindRecord): number => record.createdAt.getTime()
 
 const finishedAt = (record: UnwindRecord): number =>
@@ -73,7 +68,7 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
   const lastMilestone = milestones[0]
 
   const forwardInFlight = forward.some(
-    (r) => IN_FLIGHT.has(r.status) && input.hasCompensation(r)
+    (r) => STEP_IN_FLIGHT_STATES.has(r.status) && input.hasCompensation(r)
   )
 
   let candidates = forward.filter((r) => {
