@@ -63,7 +63,7 @@ A service factory should **construct** services, not run startup side effects. S
 
 ```typescript
 // src/lifecycle.ts
-import { pikkuServerLifecycle } from '@pikku/core'
+import { pikkuServerLifecycle } from '@pikku/core/lifecycle'
 import type { SingletonServices } from '../types/application-types.js'
 
 export const lifecycle = pikkuServerLifecycle<SingletonServices>({

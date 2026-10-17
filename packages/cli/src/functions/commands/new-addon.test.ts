@@ -225,80 +225,87 @@ describe('getAddonFiles', () => {
    * green while `SingletonServices` extends an unresolved name — which the
    * inspector reads as an addon declaring no services at all.
    */
-  test('the scaffolded application types name a subpath that exports them', () => {
-    const applicationTypes = getAddonFiles(vars('Acme CRM', 'desc'), {
-      secret: false,
-      variable: false,
-      oauth: false,
-    })['types/application-types.d.ts']!
+  const scaffolds = {
+    addon: () =>
+      getAddonFiles(vars('Acme CRM', 'desc'), {
+        secret: false,
+        variable: false,
+        oauth: false,
+      }),
+    'addon test project': () => getTestFiles(vars('Acme CRM', 'desc')),
+  }
+  for (const [scaffold, files] of Object.entries(scaffolds)) {
+    test(`the ${scaffold} application types name a subpath that exports them`, () => {
+      const applicationTypes = files()['types/application-types.d.ts']!
 
-    const specifier = applicationTypes.match(
-      /import type \{[^}]*\} from '(@pikku\/core[^']*)'/
-    )?.[1]
-    assert.ok(specifier, 'the scaffold imports the core application types')
+      const specifier = applicationTypes.match(
+        /import type \{[^}]*\} from '(@pikku\/core[^']*)'/
+      )?.[1]
+      assert.ok(specifier, 'the scaffold imports the core application types')
 
-    const coreRoot = join(
-      dirname(fileURLToPath(import.meta.url)),
-      '..',
-      '..',
-      '..',
-      '..',
-      'core'
-    )
-    const subpath = specifier.slice('@pikku/core'.length) || '.'
-    const target: string = JSON.parse(
-      readFileSync(join(coreRoot, 'package.json'), 'utf8')
-    ).exports[subpath === '.' ? '.' : `.${subpath}`]
-    assert.ok(target, `@pikku/core does not export ${specifier}`)
+      const coreRoot = join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        '..',
+        '..',
+        'core'
+      )
+      const subpath = specifier.slice('@pikku/core'.length) || '.'
+      const target: string = JSON.parse(
+        readFileSync(join(coreRoot, 'package.json'), 'utf8')
+      ).exports[subpath === '.' ? '.' : `.${subpath}`]
+      assert.ok(target, `@pikku/core does not export ${specifier}`)
 
-    // The entry point re-exports rather than declares, so what it carries is
-    // only visible by walking the chain — the names are declared in the same
-    // file either way, and a check on the declaration passes for a subpath
-    // that does not re-export them.
-    const reachable = (entry: string, seen = new Set<string>()): string => {
-      if (seen.has(entry)) return ''
-      seen.add(entry)
-      const source = readFileSync(entry, 'utf8')
-      const resolve = (specifier: string) =>
-        join(dirname(entry), specifier.replace(/\.js$/, '.ts'))
-      let text = source
-      for (const star of source.matchAll(
-        /export (?:type )?\* from '(\.[^']*)'/g
-      )) {
-        text += reachable(resolve(star[1]!), seen)
-      }
-      for (const named of source.matchAll(
-        /export (?:type )?\{([^}]*)\} from '(\.[^']*)'/g
-      )) {
-        const carried = reachable(resolve(named[2]!), new Set(seen))
-        for (const name of named[1]!.split(',')) {
-          const exported = name.trim().split(/\s+as\s+/)[0]
-          if (!exported) continue
-          const declaration = carried.match(
-            new RegExp(
-              `\\bexport (?:interface|type|const|class) ${exported}\\b`
-            )
-          )
-          if (declaration) text += `\n${declaration[0]}`
+      // The entry point re-exports rather than declares, so what it carries is
+      // only visible by walking the chain — the names are declared in the same
+      // file either way, and a check on the declaration passes for a subpath
+      // that does not re-export them.
+      const reachable = (entry: string, seen = new Set<string>()): string => {
+        if (seen.has(entry)) return ''
+        seen.add(entry)
+        const source = readFileSync(entry, 'utf8')
+        const resolve = (specifier: string) =>
+          join(dirname(entry), specifier.replace(/\.js$/, '.ts'))
+        let text = source
+        for (const star of source.matchAll(
+          /export (?:type )?\* from '(\.[^']*)'/g
+        )) {
+          text += reachable(resolve(star[1]!), seen)
         }
+        for (const named of source.matchAll(
+          /export (?:type )?\{([^}]*)\} from '(\.[^']*)'/g
+        )) {
+          const carried = reachable(resolve(named[2]!), new Set(seen))
+          for (const name of named[1]!.split(',')) {
+            const exported = name.trim().split(/\s+as\s+/)[0]
+            if (!exported) continue
+            const declaration = carried.match(
+              new RegExp(
+                `\\bexport (?:interface|type|const|class) ${exported}\\b`
+              )
+            )
+            if (declaration) text += `\n${declaration[0]}`
+          }
+        }
+        return text
       }
-      return text
-    }
 
-    const exported = reachable(
-      join(
-        coreRoot,
-        target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts')
+      const exported = reachable(
+        join(
+          coreRoot,
+          target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts')
+        )
       )
-    )
-    for (const name of applicationTypes.matchAll(/\bCore[A-Za-z]+/g)) {
-      assert.match(
-        exported,
-        new RegExp(`\\bexport (?:interface|type) ${name[0]}\\b`),
-        `${name[0]} is not reachable from ${specifier}`
-      )
-    }
-  })
+      for (const name of applicationTypes.matchAll(/\bCore[A-Za-z]+/g)) {
+        assert.match(
+          exported,
+          new RegExp(`\\bexport (?:interface|type) ${name[0]}\\b`),
+          `${name[0]} is not reachable from ${specifier}`
+        )
+      }
+    })
+  }
 
   test('keeps composed prose in a single string literal', () => {
     const files = getAddonFiles(vars("Bob's CRM", 'desc'), {
@@ -508,7 +515,11 @@ describe('openapi onboarding', () => {
     ({ info: { title: 'Acme', version: '1' }, authType }) as any
 
   test('the config lists the addon for the console and keeps its service', () => {
-    const files = getAddonFiles(vars, { secret: false, variable: false, oauth: false })
+    const files = getAddonFiles(vars, {
+      secret: false,
+      variable: false,
+      oauth: false,
+    })
     const config = JSON.parse(files['pikku.config.json']!)
     assert.equal(config.node, undefined)
     assert.deepEqual(config.addon, {
@@ -530,8 +541,14 @@ describe('openapi onboarding', () => {
       secret: false,
       oauth: true,
     })
-    assert.equal(resolveAddonAuth(spec('apiKey'), { auth: 'shared' }).mode, 'shared')
-    assert.equal(resolveAddonAuth(spec('bearer'), { credential: 'apikey' }).credential, 'apikey')
+    assert.equal(
+      resolveAddonAuth(spec('apiKey'), { auth: 'shared' }).mode,
+      'shared'
+    )
+    assert.equal(
+      resolveAddonAuth(spec('bearer'), { credential: 'apikey' }).credential,
+      'apikey'
+    )
   })
 
   test('a delegated auth-config wins over the spec', () => {
@@ -546,7 +563,9 @@ describe('openapi onboarding', () => {
     assert.throws(() => resolveAddonAuth(spec('none'), {}), /--auth none/)
     assert.equal(resolveAddonAuth(spec('none'), { auth: 'none' }).mode, 'none')
     assert.equal(
-      resolveAddonAuth(spec('none'), { authConfig: { headerName: 'X-Key' } as any }).credential,
+      resolveAddonAuth(spec('none'), {
+        authConfig: { headerName: 'X-Key' } as any,
+      }).credential,
       'apikey'
     )
   })
