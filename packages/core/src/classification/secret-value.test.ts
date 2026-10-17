@@ -190,10 +190,10 @@ const _sinkAssertions = async (
   // @ts-expect-error nor in the log metadata
   logger.info('using', { token: secret })
 
-  // @ts-expect-error nor written into an audit input
   await auditLog.write({
     type: 'used',
     source: 'explicit',
+    // @ts-expect-error nor written into an audit input
     input: { token: secret },
   })
   const metadata = { token: secret }
