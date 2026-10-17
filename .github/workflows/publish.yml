@@ -169,6 +169,33 @@ jobs:
             echo "  Uploading $(basename $f)"
             gh release upload "$tag" "$f" --clobber
           done
+      - name: Upload pikku-inspect binaries to GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          published='${{ steps.changesets.outputs.publishedPackages }}'
+          version=$(echo "$published" | node -e "
+            const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const go = pkgs.find(p => p.name === '@pikku/inspector-go');
+            if (go) process.stdout.write(go.version);
+          ")
+          if [ -z "$version" ]; then
+            echo "@pikku/inspector-go was not published this run — skipping binary upload"
+            exit 0
+          fi
+          tag="@pikku/inspector-go@${version}"
+          assets=$(mktemp -d)
+          for dir in packages/inspector-go/npm/*/; do
+            target=$(basename "$dir")
+            ext=""
+            [[ "$target" == win32-* ]] && ext=".exe"
+            cp "${dir}bin/pikku-inspect${ext}" "$assets/pikku-inspect-${target}${ext}"
+          done
+          (cd "$assets" && sha256sum pikku-inspect-* > SHA256SUMS)
+          echo "Uploading pikku-inspect binaries for $tag"
+          gh release upload "$tag" "$assets"/* --clobber
       - name: Update Homebrew tap
         if: steps.upload-binaries.outputs.cli_version != ''
         shell: bash
