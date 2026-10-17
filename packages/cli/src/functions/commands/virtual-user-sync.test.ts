@@ -63,7 +63,9 @@ const run = async (data: any, virtualUsers: unknown[] = VIRTUAL_USERS) =>
     {
       logger,
       config,
-      getInspectorState: async () => ({ virtualUsers: { definitions: virtualUsers } }),
+      getInspectorState: async () => ({
+        virtualUsers: { definitions: virtualUsers },
+      }),
     } as any,
     data,
     {} as any
@@ -112,10 +114,10 @@ describe('pikku virtual-user sync', () => {
     assert.match(output, /mo\s+mo@e2e\.test -> platform-admin/)
   })
 
-  test('points at the plugin rather than claiming to have written anything', async () => {
+  test('points at provisionVirtualUsers rather than claiming to have written anything', async () => {
     await run({ environment: 'local' })
 
-    assert.match(logs.join('\n'), /pikkuCloud/)
+    assert.match(logs.join('\n'), /provisionVirtualUsers\(/)
   })
 
   test('refuses an environment that is not configured', async () => {
