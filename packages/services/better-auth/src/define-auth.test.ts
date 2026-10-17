@@ -4,7 +4,11 @@ import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { pikkuState } from '@pikku/core/state'
 
-import { PIKKU_BETTER_AUTH, pikkuBetterAuth } from './define-auth.js'
+import {
+  PIKKU_BETTER_AUTH,
+  pikkuBetterAuth,
+  type BetterAuthInstance,
+} from './define-auth.js'
 import {
   markStatelessSessionInUse,
   resetStatelessSessionInUse,
@@ -112,10 +116,10 @@ describe('pikkuBetterAuth', () => {
     const instance = await pikkuBetterAuth(async () => original)(services)
 
     assert.notEqual(instance, original, 'the proxy rebuilds the instance')
-    assert.ok(instance.options?.socialProviders?.google)
-    assert.ok(
-      instance.options?.plugins?.some((p: any) => p.id === 'oauth-proxy')
-    )
+    // The proxy adds what the app's own literal options type does not declare.
+    const options: BetterAuthInstance['options'] = instance.options
+    assert.ok(options?.socialProviders?.google)
+    assert.ok(options?.plugins?.some((p: any) => p.id === 'oauth-proxy'))
     const ctx = await instance.$context
     assert.equal(
       ctx.authCookies.sessionData.attributes.maxAge,

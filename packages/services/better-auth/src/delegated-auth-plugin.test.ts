@@ -435,7 +435,7 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
       session: [],
       account: [],
     })
-    const signIn = (auth: ReturnType<typeof betterAuth>) =>
+    const signIn = (auth: ReturnType<typeof makeAuth>['auth']) =>
       signInDelegated(auth, { email: 'jane@corp.com', password: 'hunter2' })
 
     test('is refused by default, even for an email the upstream returned', async () => {
