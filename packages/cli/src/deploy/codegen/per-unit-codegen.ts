@@ -61,6 +61,8 @@ export interface PerUnitCodegenOptions {
    * meta the provider doesn't actually use. Defaults to `true`.
    */
   workflowQueues?: boolean
+  /** Pass `--lazy-addons`, so each unit's bootstrap exports `loadAddons()`. */
+  lazyAddons?: boolean
 }
 
 export interface PerUnitCodegenResult {
@@ -373,6 +375,7 @@ export async function generatePerUnitCodegen(
               : []),
             `--outDir=${unitPikkuDir}`,
             '--force-relative-imports',
+            ...(options.lazyAddons ? ['--lazy-addons'] : []),
             '--silent',
           ],
           {
