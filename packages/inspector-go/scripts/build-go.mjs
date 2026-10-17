@@ -7,6 +7,8 @@
 //                                        from PIKKU_INSPECTOR_GO_BIN or the
 //                                        per-platform package)
 //   node scripts/build-go.mjs --strict   host build that fails without go
+//   PIKKU_INSPECTOR_GO_SKIP_BUILD=1      skip the host build (CI, where the
+//                                        binary is built by its own job)
 //   node scripts/build-go.mjs --all      release build of every target into
 //                                        npm/<platform>-<arch>/bin/
 //   node scripts/build-go.mjs --target linux-x64 [--target ...]
@@ -45,6 +47,12 @@ const probe = spawnSync('go', ['version'], { stdio: 'ignore' })
 const hasGo = !probe.error && probe.status === 0
 
 if (!all && targets.length === 0) {
+  if (process.env.PIKKU_INSPECTOR_GO_SKIP_BUILD) {
+    console.warn(
+      '@pikku/inspector-go: PIKKU_INSPECTOR_GO_SKIP_BUILD set, skipping bin/pikku-inspect'
+    )
+    process.exit(0)
+  }
   if (!hasGo) {
     if (strict) fail('go not found on PATH')
     console.warn(

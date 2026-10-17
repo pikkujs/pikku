@@ -32,6 +32,14 @@ runs:
       uses: ./.github/actions/download-tar
       with:
         name: build-output
+    # pikku-inspect, from the Go build job (inspector-go-build), into its
+    # platform packages: the CLI's default inspector engine. Every job that
+    # downloads the build output also needs that job.
+    - name: Download pikku-inspect
+      if: ${{ inputs.download-build == 'true' }}
+      uses: ./.github/actions/download-tar
+      with:
+        name: pikku-inspect
     # A dependency whose postinstall downloads a release binary (serverless,
     # workerd, esbuild) fails the whole install when that fetch blips, and the
     # job then reads as a broken pull request. Bun resumes from what it
