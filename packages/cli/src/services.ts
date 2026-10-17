@@ -30,13 +30,11 @@ import {
   getInitialInspectorState,
   ErrorCode,
 } from '@pikku/inspector/lite'
-import {
-  inspect as inspectWithGo,
-  findInspectorBinary,
-} from '@pikku/inspector-go'
+import { inspect as inspectWithGo } from '@pikku/inspector-go'
 import { loadTypeScriptHelpers } from './inspector-helpers.js'
 import {
   getInspectorEngine,
+  nativeInspectorAvailable,
   resolveInspectorEngine,
   setInspectorEngine,
   type InspectorEngine,
@@ -252,14 +250,7 @@ export const createConfig: CreateConfig<
     flag: (data as { inspector?: string }).inspector,
     env: process.env.PIKKU_INSPECTOR,
     config: cliConfig.inspector,
-    nativeAvailable: () => {
-      try {
-        findInspectorBinary()
-        return true
-      } catch {
-        return false
-      }
-    },
+    nativeAvailable: nativeInspectorAvailable,
     onFallback: () =>
       logger.warn(
         'No pikku-inspect binary for this platform; using the TypeScript inspector. Reinstall with optional dependencies, or set "inspector": "typescript" in pikku.config.json to silence this.'

@@ -1,3 +1,4 @@
+import { findInspectorBinary } from '@pikku/inspector-go'
 import { z } from 'zod'
 
 /**
@@ -83,10 +84,23 @@ export const setInspectorEngine = (engine: InspectorEngine): void => {
   selected = engine
 }
 
+/** Whether a `pikku-inspect` binary exists for this platform. */
+export const nativeInspectorAvailable = (): boolean => {
+  try {
+    findInspectorBinary()
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * The engine this process uses. Before the CLI has resolved its config (a
  * build script calling a helper directly), it resolves from the environment
- * alone.
+ * alone, falling back to `typescript` like the CLI does when no binary exists.
  */
 export const getInspectorEngine = (): InspectorEngine =>
-  selected ?? resolveInspectorEngine({ env: process.env.PIKKU_INSPECTOR })
+  (selected ??= resolveInspectorEngine({
+    env: process.env.PIKKU_INSPECTOR,
+    nativeAvailable: nativeInspectorAvailable,
+  }))
