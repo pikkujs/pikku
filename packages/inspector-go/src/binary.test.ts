@@ -157,7 +157,8 @@ describe('findInspectorBinary', () => {
       (error: Error) =>
         error.message.includes('for freebsd-x64') &&
         error.message.includes('no prebuilt binary') &&
-        error.message.includes('darwin-arm64, darwin-x64')
+        error.message.includes('darwin-arm64, darwin-x64') &&
+        error.message.includes('"inspector": "typescript"')
     )
   })
 

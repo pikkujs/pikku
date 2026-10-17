@@ -290,6 +290,10 @@ wireCLI({
     wireServicesFactoryType: {
       description: 'Specify which wire services factory to use',
     },
+    inspector: {
+      description:
+        "Inspector engine: 'native' (the pikku-inspect binary, default) or 'typescript' (the TypeScript compiler API). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
+    },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
     },

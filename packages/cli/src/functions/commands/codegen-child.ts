@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { readdirSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { getInspectorEngine } from '../../inspector-engine.js'
 
 export type CodegenChildOptions = {
   command: string[]
@@ -26,6 +27,7 @@ export const runCodegenChild = (
     process.argv[1]!,
     ...options.command,
     `--stateOutput=${stateFile}`,
+    `--inspector=${getInspectorEngine()}`,
   ]
   if (options.config) args.push(`--config=${options.config}`)
   if (options.outDir) args.push(`--outDir=${options.outDir}`)

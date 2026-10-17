@@ -915,6 +915,16 @@ export type PikkuCLIInput = {
   stateInput?: string
 
   /**
+   * Which inspector analyses the project. `native` (the default) runs the
+   * prebuilt `pikku-inspect` binary from `@pikku/inspector-go`, built on
+   * typescript-go (TypeScript 7). `typescript` runs `@pikku/inspector` on the
+   * TypeScript 6 compiler API — use it on a platform with no prebuilt binary.
+   * Both generate identical output. Overridden per invocation by
+   * `--inspector` and by the `PIKKU_INSPECTOR` environment variable.
+   */
+  inspector?: 'native' | 'typescript'
+
+  /**
    * Run the data-classification security lint (scans function return types for
    * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
    * inference on every function and is not part of codegen. Enable here to always

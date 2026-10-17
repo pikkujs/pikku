@@ -24,13 +24,20 @@ import {
 } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
+  inspect as inspectWithTypeScript,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
 } from '@pikku/inspector'
-import { inspect } from '@pikku/inspector-go'
+import { inspect as inspectWithGo } from '@pikku/inspector-go'
+import {
+  getInspectorEngine,
+  resolveInspectorEngine,
+  setInspectorEngine,
+  type InspectorEngine,
+} from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
@@ -67,6 +74,13 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   wiresNotDestructured: 'error',
   functionDynamicImport: 'warn',
 }
+
+/**
+ * The inspect function for an engine. The native engine ignores `oldProgram`:
+ * the binary keeps no program between runs.
+ */
+const inspectorFor = (engine: InspectorEngine): typeof inspectWithTypeScript =>
+  engine === 'native' ? inspectWithGo : inspectWithTypeScript
 
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
@@ -225,9 +239,16 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
+  const inspector = resolveInspectorEngine({
+    flag: (data as { inspector?: string }).inspector,
+    env: process.env.PIKKU_INSPECTOR,
+    config: cliConfig.inspector,
+  })
+  setInspectorEngine(inspector)
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
+    inspector,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data, cliConfig),
     preloadedInspectorState,
@@ -255,6 +276,9 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectorInvalidated = false
 
   let inspectPass = 0
+  const releaseProgram = (state: { program?: unknown } | undefined) => {
+    if (state) state.program = undefined
+  }
 
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
@@ -367,13 +391,27 @@ export const createSingletonServices: CreateSingletonServices<
         ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
+      // The outgoing state's `typesLookup` holds live `ts.Type`s. A type reaches
+      // its checker and the checker reaches the whole program, so that one map
+      // pins a parsed program and an exercised checker for as long as the state
+      // exists — `releaseProgram` alone frees nothing. Every reader of the old
+      // state is done once a re-inspection is asked for, so drop the types here
+      // and the old program is collectable while the new one is built, instead
+      // of both being live at once.
+      if (unfilteredState && 'typesLookup' in unfilteredState) {
+        unfilteredState.typesLookup.clear()
+      }
+      const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
       const tsGenerationAtInspect = getTsWriteGeneration()
-      unfilteredState = await inspect(logger, wiringFiles, {
+      unfilteredState = await inspectorFor(
+        config.inspector ?? getInspectorEngine()
+      )(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,
+        oldProgram,
         tsconfig: config.tsconfig,
         types: {
           configFileType: config.configFile,
@@ -423,6 +461,8 @@ export const createSingletonServices: CreateSingletonServices<
       }
       inspectedTsGeneration = tsGenerationAtInspect
       inspectorInvalidated = false
+
+      releaseProgram(unfilteredState)
 
       if (
         'diagnostics' in unfilteredState &&
