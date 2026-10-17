@@ -32,7 +32,7 @@ export function getServiceRPC(baseUrl: string, token: string): RPCInvoke {
 
 ```typescript
 const apiKeyAuth = pikkuMiddleware(
-  async ({ kysely }, { http, setSession, session }, next) => {
+  async ({ kysely }, { http, setInitialSession, session }, next) => {
     if (session) return next() // already authenticated
 
     const header = http?.request?.header?.('x-api-key')
@@ -43,7 +43,7 @@ const apiKeyAuth = pikkuMiddleware(
       .select('userId')
       .where('key', '=', header)
       .executeTakeFirst()
-    if (row) setSession?.({ userId: row.userId })
+    if (row) setInitialSession?.({ userId: row.userId })
 
     return next()
   }

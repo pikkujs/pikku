@@ -420,6 +420,11 @@ wireCLI({
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
           default: false,
         },
+        lazyAddons: {
+          description:
+            "Register wired addons' functions and schemas from an exported loadAddons() instead of at startup (used by per-unit deploy codegen)",
+          default: false,
+        },
       },
     }),
     bootstrap: pikkuCLICommand({
@@ -1638,7 +1643,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: virtualUserSync,
           description:
-            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to provisionVirtualUsers from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({

@@ -31,7 +31,8 @@ export interface VirtualUserGenOutput {
  */
 export const serializeVirtualUserFunctions = (
   leaf: (name: string) => string,
-  pathToVirtualUsers: string
+  pathToVirtualUsers: string,
+  { betterAuth = false }: { betterAuth?: boolean } = {}
 ): VirtualUserGenOutput => {
   const schemas = `/**
  * Auto-generated virtual user schemas
@@ -281,7 +282,7 @@ import {
   writeVirtualUserSchedule,
 } from '@pikku/core/virtual-user'
 import { createVirtualUsers, virtualUserConfigs, virtualUserEnvironments } from '${pathToVirtualUsers}'
-import {
+${betterAuth ? "import { findPlatformUserId, PLATFORM_USER_ID } from '@pikku/better-auth'\n" : ''}import {
   ExecuteVirtualUserRunInput,
   ExecuteVirtualUserRunOutput,
   GetVirtualUserRunInput,
@@ -507,17 +508,42 @@ export const listVirtualUserSchedules = pikkuFunc({
  * builds its wire with a \`sessionService\`, so the session set here is the one
  * the function is frozen with.
  */
-const PLATFORM_USER_ID = 'pikku-platform'
+${
+  betterAuth
+    ? `// \`pikku-platform\` is only the id the row is asked for: under uuid or serial
+// ids better-auth assigns its own, so the row is looked up by its reserved
+// address, falling back to the requested id before the row exists.
+const platformUserId = async (
+  auth: (() => Promise<{ $context?: Promise<any> }>) | undefined
+): Promise<string> => {
+  const context = await (await auth?.())?.$context
+  return (
+    (context && (await findPlatformUserId(context.internalAdapter))) ??
+    PLATFORM_USER_ID
+  )
+}
 
 export const virtualUserPlatformSession = pikkuMiddleware(
-  async (_services, { setSession }, next) => {
-    await setSession?.({
+  async ({ auth }, { setInitialSession }, next) => {
+    setInitialSession?.({
+      userId: await platformUserId(auth),
+      scopes: ['virtualUser:run'],
+    } as Session)
+    return next()
+  }
+)`
+    : `const PLATFORM_USER_ID = 'pikku-platform'
+
+export const virtualUserPlatformSession = pikkuMiddleware(
+  async (_services, { setInitialSession }, next) => {
+    setInitialSession?.({
       userId: PLATFORM_USER_ID,
       scopes: ['virtualUser:run'],
     } as Session)
     return next()
   }
-)
+)`
+}
 
 /**
  * Acts on whichever virtual users are due, once.

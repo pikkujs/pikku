@@ -129,6 +129,80 @@ describe('addAuth inspector', () => {
     }
   })
 
+  // The stateless middleware reads the cookie without building the auth
+  // instance, so whatever changes the cookie's name or its verification has to
+  // reach it through codegen.
+  test('reads the cookie prefix, strategy and version the stateless middleware needs', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-cookieopts-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        "    advanced: { cookiePrefix: 'shop' },",
+        "    session: { cookieCache: { enabled: true, strategy: 'jwe', version: '2' } },",
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.equal(state.auth.definition?.cookiePrefix, 'shop')
+      assert.equal(state.auth.definition?.cookieCacheStrategy, 'jwe')
+      assert.equal(state.auth.definition?.cookieCacheVersion, '2')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('warns when a cookie option is not a literal the generated middleware can carry', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-cookievar-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "const prefix = process.env.PREFIX ?? 'shop'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    advanced: { cookiePrefix: prefix },',
+        '    session: { cookieCache: { enabled: true } },',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    const warnings: string[] = []
+    try {
+      const state = await inspect(
+        { ...makeLogger(criticals), warn: (m: string) => warnings.push(m) },
+        [file],
+        { rootDir }
+      )
+      assert.equal(state.auth.definition?.cookiePrefix, undefined)
+      assert.ok(
+        warnings.some(
+          (w) =>
+            w.includes('advanced.cookiePrefix') &&
+            w.includes('register betterAuthStatelessSession')
+        ),
+        warnings.join('\n')
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('cookieCache: { enabled: false } does not enable the stateless split', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-nocache-'))
     const file = join(rootDir, 'auth.ts')

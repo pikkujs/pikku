@@ -107,6 +107,38 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 **Tradeoff:** server-side session revocation isn't seen until the cookie cache expires (sign-out is still immediate — it deletes the cookie).
 
+**Read the cookie the way the app writes it.** The stateless middleware never builds the auth instance, so it cannot see your `betterAuth({ ... })` options. The generated one is given `advanced.cookiePrefix`, `cookieCache.strategy` and `cookieCache.version` when they are **string literals** in the `betterAuth({ ... })` call — keep them literal and there is nothing to do. When one is not (an env var, a constant from elsewhere), the CLI warns and you register your own, which runs before the generated one:
+
+- A `jwe` or `jwt` `cookieCache.strategy` is recognised from the cookie's shape. Pin it with `cookieCache: { strategy }` if you prefer.
+- A custom `advanced.cookiePrefix` must be passed as `betterAuthStatelessSession({ cookiePrefix })`.
+- A `cookieCache.version` must be passed as `cookieCache: { version }`, or cookies of an older version still verify.
+- `cookieCache.jwt` (e.g. a JWKS) is never passed through — register your own for it.
+
+`pikkuBetterAuth` logs an error at startup when a constructed stateless middleware disagrees with the auth config.
+
+```typescript
+addGlobalMiddleware([
+  betterAuthStatelessSession({
+    cookiePrefix: 'my-app',
+    cookieCache: { strategy: 'jwe', version: '2' },
+  }),
+])
+```
+
+### Store-backed sessions (`secondaryStorage`)
+
+With better-auth's `secondaryStorage`, a session token _is_ the store key, so `betterAuthStoreSession` resolves a session with one `get` and no server bundled — and, unlike the stateless path, revocation is immediate. The token arrives on `Authorization: Bearer …` (enable `bearer()`) or on the session cookie; `transports` picks which.
+
+```typescript
+const storage = inMemorySessionStore() // or your own AuthSessionStorage over Redis/KV
+
+betterAuth({ secondaryStorage: storage, plugins: [bearer()] /* … */ })
+
+addGlobalMiddleware([betterAuthStoreSession({ store: () => storage })])
+```
+
+`AuthSessionStorage` is better-auth 1.7's `SecondaryStorage` contract: `get`, `set`, `delete`, `getAndDelete` and `increment`. It was called `SessionStore` before 0.13, which clashed with `@pikku/core`'s unrelated `SessionStore`. `prefixedSessionStore(storage, 'app_1/')` namespaces one backing store for several apps.
+
 **Don't add a redundant default `addHTTPMiddleware('*', [betterAuthSession()])`** — with cookieCache on, that re-drags the stateful server into every unit and defeats the split (validate flags it as `better-auth-stateful-session-global`). If you don't need to customize the session, the generated middleware is enough.
 
 **Customizing the session bridge (`mapSession`, `impersonation`, `apiKey`, …):** you do NOT chain a second middleware on top of the generated one — register your OWN global session middleware and the CLI steps aside (it stops generating its default). This works on both paths and is detected the same way:
@@ -126,21 +158,21 @@ resolves the caller's scopes through the registered `ScopeService` and checks th
 `admin:*` tree (`ADMIN_SCOPES` exports the ids so you never spell them as bare
 strings):
 
-| Gate                                                                 | Scope required             |
-| -------------------------------------------------------------------- | -------------------------- |
-| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`        |
-| `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link`   |
-| the console's user directory                                         | `admin:users:list`         |
-| create a user out of band                                            | `admin:users:create`       |
-| ban / unban                                                          | `admin:users:ban`          |
-| delete a user and their data                                         | `admin:users:remove`       |
-| revoke a user's sessions                                             | `admin:users:sessions`     |
-| set a user's password                                                | `admin:users:password`     |
-| read credential values and who holds them                            | `admin:credentials:read`   |
-| set and delete credentials                                           | `admin:credentials:manage` |
-| view declared scopes, roles, and who holds them                      | `admin:scopes:read`        |
-| create roles, change their scopes, grant them                        | `admin:scopes:manage`      |
-| read the audit trail                                                 | `admin:audit:read`         |
+| Gate                                                   | Scope required             |
+| ------------------------------------------------------ | -------------------------- |
+| `impersonation` (any of the three session middlewares) | `admin:impersonate`        |
+| `credentialOAuth`'s `canLinkSingleton`                 | `admin:credentials:link`   |
+| the console's user directory                           | `admin:users:list`         |
+| create a user out of band                              | `admin:users:create`       |
+| ban / unban                                            | `admin:users:ban`          |
+| delete a user and their data                           | `admin:users:remove`       |
+| revoke a user's sessions                               | `admin:users:sessions`     |
+| set a user's password                                  | `admin:users:password`     |
+| read credential values and who holds them              | `admin:credentials:read`   |
+| set and delete credentials                             | `admin:credentials:manage` |
+| view declared scopes, roles, and who holds them        | `admin:scopes:read`        |
+| create roles, change their scopes, grant them          | `admin:scopes:manage`      |
+| read the audit trail                                   | `admin:audit:read`         |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -244,15 +276,15 @@ like any other. None is automatic — an app wires the ones it needs.
 | Plugin                   | Plugin `id`        | Adds                                                                    | Use it when                                                   |
 | ------------------------ | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `pikkuBan()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
-| `pikkuVirtualUser()`     | `virtualUser`      | `POST /sign-in/virtual-user`, `user.virtualUser`                        | Scenarios sign in as a virtual user         |
+| `pikkuVirtualUser()`     | `virtualUser`      | `POST /sign-in/virtual-user`, `user.virtualUser`                        | Scenarios sign in as a virtual user                           |
 | `pikkuCredentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
 | `pikkuDelegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
 
 Every one carries a `pikku` prefix, because a `plugins: [...]` array mixes these
 with better-auth's own and a bare `virtualUser()` next to `organization()` says
-nothing about where it came from. The unprefixed names — `ban`, `virtualUser`,
-`credentialOAuth`, `delegatedAuth` — are still exported as deprecated
-aliases, so existing apps keep working.
+nothing about where it came from. The unprefixed names (`ban`, `virtualUser`,
+`credentialOAuth`, `delegatedAuth`) were removed; import the `pikku`-prefixed
+ones.
 
 The plugin's `id` is what better-auth stores; the **export name** is what the
 inspector reads off your `plugins` array and what generated metadata is keyed
@@ -338,6 +370,23 @@ call would be dead anyway.
 An upstream user with no email gets one made up from the login, and the
 identity says so with `syntheticEmail: true`. A made-up address never links to
 an existing user row, so it cannot take over someone else's account.
+
+Even a real upstream email does not link to an existing local user unless you
+opt in, because it is still the upstream's word for that address:
+
+```typescript
+pikkuDelegatedAuth({
+  // false (default): a first sign-in whose email is taken is refused.
+  // 'non-admins': link unless the local user holds an admin or pikku:console
+  //               scope; needs scopeService, and links nobody without it.
+  // 'all': link anyone, administrators included.
+  linkExistingUsersByEmail: 'non-admins',
+  /* … */
+})
+```
+
+Roles are only ever granted: a role the upstream stops returning is not
+revoked.
 
 For an addon generated from an OpenAPI spec, none of this is written by hand:
 `pikku new addon --openapi … --auth-config <file>` generates
@@ -449,11 +498,16 @@ The session cookie is `better-auth.session_token` (dev) / `__Secure-better-auth.
 ### Dev quick login
 
 Set `PIKKU_DEV_QUICK_LOGIN=true` and `${basePath}/dev/quick-login` signs in a
-fixed dev admin (`admin@pikku.dev`), creating the user idempotently and granting
-it the bare `admin` scope. It is guarded twice — the env var _and_ a localhost
-hostname check — because a one-request path to an admin session is exactly the
-thing that must not survive a deploy. An app that has not declared the `admin`
-scope still gets a session, with a warning, since a scopeless dev user is useful.
+dev admin (`admin@pikku.dev`), creating the user if needed and granting it the
+`admin` and `pikku:console` roots. The account has no lasting password: each
+process sets a random one just before signing in, so it cannot be signed into
+through `/sign-in/email`. The route is off under `NODE_ENV=production` whatever
+the flag says, and refuses a request carrying a proxy-forwarding header, a
+non-loopback `Host` or `Origin`, or `Sec-Fetch-Site: cross-site`. Those are
+headers the client writes, so the real boundary is that `pikku serve` and
+`pikku dev` listen on 127.0.0.1 — don't set the flag on a runtime bound to
+0.0.0.0. An app that has not declared the scopes still gets a session, with a
+warning, since a scopeless dev user is useful.
 
 ### Virtual user sign-in (`virtualUser` plugin)
 
@@ -641,7 +695,9 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => be
 ```
 
 - Export exactly ONE `pikkuBetterAuth` per project; the CLI generates a single catch-all worker for all auth routes.
-- `betterAuthSession({ auth })` (generated) bridges the better-auth session into the Pikku session on every request — you never add it by hand.
+- The generated session middleware (`betterAuthSession()` or `betterAuthStatelessSession()`) bridges the better-auth session into the Pikku session on every request — you only register one yourself to customise it (`mapSession`, `impersonation`, `apiKey`; see "Stateless session" above).
+- `createAuthHandler()` takes no arguments: it reads `services.auth`. The CLI generates the catch-all route with it.
+- Outside a pikku function (Next.js route, TanStack loader), `getAuthSession(auth, request, createConfig, createSingletonServices)` reads the session. With a factory it builds the services and the instance once and reuses them across calls.
 - MFA, organizations, passkeys, etc. are better-auth plugins: add them to `betterAuth({ plugins: [...] })`. The catch-all route already forwards their endpoints.
 
 ---

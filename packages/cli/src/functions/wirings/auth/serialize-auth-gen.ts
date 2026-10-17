@@ -53,6 +53,27 @@ export interface AuthGenOutput {
 }
 
 /**
+ * The stateless middleware never builds the auth instance, so it reads the
+ * cookie with the prefix, strategy and version the inspector found in the
+ * config; anything it could not read statically was warned about there.
+ */
+const statelessSessionOptions = (definition: AuthDefinition): string => {
+  const cookieCache = [
+    definition.cookieCacheStrategy !== undefined &&
+      `strategy: ${JSON.stringify(definition.cookieCacheStrategy)}`,
+    definition.cookieCacheVersion !== undefined &&
+      `version: ${JSON.stringify(definition.cookieCacheVersion)}`,
+  ].filter(Boolean)
+  const options = [
+    `priority: 'lowest'`,
+    definition.cookiePrefix !== undefined &&
+      `cookiePrefix: ${JSON.stringify(definition.cookiePrefix)}`,
+    cookieCache.length > 0 && `cookieCache: { ${cookieCache.join(', ')} }`,
+  ].filter(Boolean)
+  return `{ ${options.join(', ')} }`
+}
+
+/**
  * Generates the `auth.gen.ts` (HTTP wiring) and `auth-secrets.gen.ts` (schemas +
  * secret/variable wiring) files from a `pikkuBetterAuth((services) => betterAuth(...))`
  * export.
@@ -372,7 +393,7 @@ export const serializeAuthGen = (
       `import { betterAuthStatelessSession } from '@pikku/better-auth'`,
       '',
       `addGlobalMiddleware([`,
-      `  betterAuthStatelessSession({ priority: 'lowest' }),`,
+      `  betterAuthStatelessSession(${statelessSessionOptions(definition)}),`,
       ...(includeConsoleToken ? consoleTokenMiddlewareLines() : []),
       `])`,
       '',

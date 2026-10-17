@@ -6,6 +6,14 @@ import { useSyncExternalStore } from 'react'
  */
 const RTL_LANGUAGES = ['ar', 'he', 'fa', 'ur']
 
+/**
+ * `process.env` where there is one — under SSR — read through `globalThis`, so
+ * this browser module needs no Node types to compile.
+ */
+const serverEnv = (): Record<string, string | undefined> | undefined =>
+  (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env
+
 export interface CreateLocaleStoreOptions<L extends string> {
   /** Every locale the app serves. Drives URL prefixes, hreflang and narrowing. */
   locales: readonly L[]
@@ -130,7 +138,7 @@ export const createLocaleStore = <L extends string>(
   const isI18nDebug = (): boolean => {
     if (debugMode !== undefined) return debugMode
     debugMode = (() => {
-      if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1') {
+      if (serverEnv()?.I18N_DEBUG === '1') {
         return true
       }
       if (typeof window === 'undefined') return false

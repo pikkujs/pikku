@@ -24,10 +24,35 @@ const runner = new VercelAgentRunner(
 **Methods:**
 
 - `stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>` — Stream AI responses with tool calls
-- `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming)
+- `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming). Its `object` is `unknown` and unchecked; for a typed, validated one-shot call use `runAgentStructured` below
 - `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see the voice reference
 - `generateImage`, `embed`, `embedMany`, `rerank` — the remaining AI SDK surfaces
 - `withApiKey(apiKey)` — returns a **new** runner built from `providerFactory`; returns `this` unchanged when no factory was supplied or the key is blank. This is the per-user-credential path
+
+### A typed one-shot call: `runAgentStructured`
+
+Calling the runner directly — a single tool-free call, no thread — returns an
+unchecked `object`. `runAgentStructured` from `@pikku/core/agent` takes a
+Standard Schema that also converts to JSON Schema (a zod 4 schema is one),
+sends the JSON Schema to the model, and validates the answer against the
+original schema:
+
+```typescript
+import { runAgentStructured } from '@pikku/core/agent'
+
+const { object } = await runAgentStructured(agentRunner, {
+  model: 'openai/gpt-5-mini',
+  instructions: 'Review the screenshot.',
+  messages,
+  tools: [],
+  maxSteps: 1,
+  toolChoice: 'none',
+  outputSchema: z.object({ score: z.number(), notes: z.string().optional() }),
+})
+object.score // number
+```
+
+A mismatch, or no object at all, throws `AgentOutputValidationError`.
 
 ### Model strings are `provider/model`
 

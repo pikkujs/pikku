@@ -10,8 +10,13 @@ import { existsSync, readFileSync } from 'node:fs'
 import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
+import type { GatewaysMeta } from '@pikku/core/gateway'
 
-import { analyzeDeployment, unroutedHttpWirings } from './analyzer/index.js'
+import {
+  analyzeDeployment,
+  unroutedHttpWirings,
+  unservedGateways,
+} from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest, HttpRouteInfo } from '@pikku/deploy'
@@ -26,6 +31,7 @@ import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import { getDeadGenFilePatterns } from './bundler/bundler.js'
 import { verifyUnitsRuntime } from './runtime-verifier.js'
+import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
 import {
@@ -44,6 +50,8 @@ export interface BuildLogger {
   debug(msg: string): void
 }
 
+type UnservedGateway = Pick<GatewaysMeta[string], 'name' | 'type' | 'route'>
+
 export interface BuildPipelineResult {
   manifest: DeploymentManifest
   providerDir: string
@@ -54,6 +62,8 @@ export interface BuildPipelineResult {
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
   unroutedWirings: HttpRouteInfo[]
+  /** `wireGateway`s no unit serves — websocket and listener gateways. */
+  unservedGateways: UnservedGateway[]
 }
 
 /**
@@ -70,7 +80,7 @@ export class PikkuDeployBuildFailedError extends PikkuError {}
 export function describeBuildFailure(
   result: Pick<
     BuildPipelineResult,
-    'bundleErrors' | 'codegenErrors' | 'unroutedWirings'
+    'bundleErrors' | 'codegenErrors' | 'unroutedWirings' | 'unservedGateways'
   >
 ): string | null {
   const failures = [
@@ -78,7 +88,8 @@ export function describeBuildFailure(
     ...result.bundleErrors.map((e) => `bundle ${e.unitName}: ${e.error}`),
   ]
   const unrouted = result.unroutedWirings ?? []
-  if (failures.length === 0 && unrouted.length === 0) {
+  const gateways = result.unservedGateways ?? []
+  if (failures.length === 0 && unrouted.length === 0 && gateways.length === 0) {
     return null
   }
   const parts: string[] = []
@@ -95,8 +106,18 @@ export function describeBuildFailure(
           .join('\n  ')
     )
   }
+  if (gateways.length > 0) {
+    parts.push(
+      `Deploy build failed — ${gateways.length} gateway(s) cannot be deployed to separate units; only webhook gateways can:\n  ` +
+        gateways.map(describeUnservedGateway).join('\n  ') +
+        `\n  Serve them from a standalone deploy, or change them to type: 'webhook'.`
+    )
+  }
   return parts.join('\n\n')
 }
+
+export const describeUnservedGateway = (gateway: UnservedGateway) =>
+  `${gateway.name} (${gateway.type}${gateway.route ? ` ${gateway.route}` : ''})`
 
 const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'
 const UNITS_DIR_NAME = 'units'
@@ -399,6 +420,11 @@ export async function runBuildPipeline(options: {
   const unroutedWirings = provider.singleUnit
     ? []
     : unroutedHttpWirings(inspectorState.http.meta, manifest.units)
+  const unservedGatewayList = provider.singleUnit
+    ? []
+    : unservedGateways(inspectorState.gateways?.meta, manifest).map(
+        ({ name, type, route }) => ({ name, type, route })
+      )
 
   let bundled: BundleResult[] = []
   let bundleErrors: Array<{ unitName: string; error: string }> = []
@@ -443,7 +469,11 @@ export async function runBuildPipeline(options: {
       logger.info(`Frontend: ${keys.length} files from ${options.frontend.dir}`)
     }
 
-    const embedded = await stageEmbeddedFiles(projectDir, unitDir, options.embed)
+    const embedded = await stageEmbeddedFiles(
+      projectDir,
+      unitDir,
+      options.embed
+    )
     if (embedded.length > 0) logger.info(`Embedded: ${embedded.join(', ')}`)
 
     const ctx = {
@@ -523,6 +553,7 @@ export async function runBuildPipeline(options: {
         bundleErrors: [],
         codegenErrors: [],
         unroutedWirings,
+        unservedGateways: unservedGatewayList,
       }
     }
 
@@ -537,6 +568,7 @@ export async function runBuildPipeline(options: {
         inspectorState,
         deployDir: unitsDir,
         workflowQueues,
+        lazyAddons: provider.lazyAddonRegistration ?? false,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
@@ -649,6 +681,13 @@ export async function runBuildPipeline(options: {
     logger.info('Bundling...')
     const serverlessEntryFiles = new Map<string, string>()
     const serverEntryFiles = new Map<string, string>()
+    const coercionMap = readCoercionMap(
+      join(
+        options.outDir ?? join(projectDir, '.pikku'),
+        'db',
+        'coercion.gen.ts'
+      )
+    )
 
     for (const unit of manifest.units) {
       const pikkuDir = unitPikkuDirs.get(unit.name)
@@ -662,6 +701,7 @@ export async function runBuildPipeline(options: {
       const ctx = {
         ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
+        coercionMap,
       }
       const source =
         unit.target === 'server'
@@ -856,5 +896,6 @@ export async function runBuildPipeline(options: {
     bundleErrors,
     codegenErrors,
     unroutedWirings,
+    unservedGateways: unservedGatewayList,
   }
 }

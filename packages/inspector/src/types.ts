@@ -262,9 +262,22 @@ export interface InspectorPermissionInstance {
   isFactoryCall: boolean
 }
 
+/**
+ * One `addGlobalPermission(...)` call. It registers at module evaluation, so
+ * codegen must import its file — or call `exportName`, when the call sits in an
+ * exported zero-argument factory — or the global gate does not exist.
+ */
+export interface InspectorGlobalPermissionRegistration {
+  sourceFile: string
+  position: number
+  exportName: string | null
+  definitionIds: string[]
+}
+
 export interface InspectorPermissionState {
   definitions: Record<string, InspectorPermissionDefinition>
   instances: Record<string, InspectorPermissionInstance>
+  global: InspectorGlobalPermissionRegistration[]
 }
 
 export type InspectorFilters = {
@@ -513,6 +526,12 @@ export interface AuthDefinition {
   /** Whether `session.cookieCache` is enabled — drives the stateless session
    * middleware split in the auth codegen. Absent/false ⇒ stateful middleware. */
   cookieCache?: boolean
+  /** `advanced.cookiePrefix`, when written as a string literal. */
+  cookiePrefix?: string
+  /** `session.cookieCache.strategy`, when written as a string literal. */
+  cookieCacheStrategy?: string
+  /** `session.cookieCache.version`, when written as a string literal. */
+  cookieCacheVersion?: string
   /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either

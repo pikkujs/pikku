@@ -37,6 +37,8 @@ import {
   unitWiresRemoteJobInbox,
 } from '@pikku/deploy'
 
+import { coercionContributor } from './coercion-contributor.js'
+
 export type { PlatformServiceContributor } from '@pikku/deploy'
 
 export const CLOUDFLARE_BINDING_SOURCES: readonly BindingSource[] = [
@@ -75,7 +77,32 @@ export interface CloudflareProviderAdapterOptions {
    * runtime profile, `wrangler.toml` and the verifier all follow it.
    */
   compatDate?: string
+  /**
+   * Attach the app's generated column coercion map to the platform's `kysely`,
+   * as `pikku dev` does. On by default; turn it off for a platform whose own
+   * kysely contributor already applies the map.
+   */
+  coercion?: boolean
 }
+
+const SERVICES_AFTER_ADDONS = 'createSingletonServicesAfterAddons'
+
+/**
+ * A worker's bootstrap leaves its addons' functions and schemas to
+ * `loadAddons()` (see `lazyAddonRegistration`), so the services factory every
+ * request path builds through runs it first. The namespace import keeps an
+ * eagerly generated bootstrap, which has no such export, bundling.
+ */
+const lazyBootstrapLines = (ctx: EntryGenerationContext): string[] => [
+  `import * as __pikkuBootstrap from '${ctx.bootstrapPath}'`,
+  ``,
+  `const ${SERVICES_AFTER_ADDONS} = async (`,
+  `  ...args: Parameters<typeof ${ctx.servicesVar}>`,
+  `) => {`,
+  `  await (__pikkuBootstrap as { loadAddons?: () => Promise<unknown> }).loadAddons?.()`,
+  `  return ${ctx.servicesVar}(...args)`,
+  `}`,
+]
 
 /**
  * Extracts the unique handler types from a unit's handlers array.
@@ -145,6 +172,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    * `CloudflareProviderAdapterOptions.workflowQueues`.
    */
   readonly workflowQueues: boolean
+  /**
+   * A Worker evaluates its whole bundle inside a startup CPU budget, and an
+   * addon's full surface exceeds it on its own.
+   */
+  readonly lazyAddonRegistration = true
   readonly httpQueueJobs: boolean
   readonly compatDate: string
 
@@ -154,7 +186,17 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     this.workflowQueues = options.workflowQueues ?? false
     this.httpQueueJobs = options.httpQueueJobs ?? false
     this.compatDate = options.compatDate ?? DEFAULT_COMPAT_DATE
-    this.contributors = dedupeContributors(options.contributors)
+    this.contributors = dedupeContributors([
+      ...(options.coercion === false ? [] : [coercionContributor]),
+      ...(options.contributors ?? []),
+    ])
+    // Last, so it wraps the kysely any other contributor built.
+    const coercion = this.contributors.findIndex(
+      (c) => c.name === coercionContributor.name
+    )
+    if (coercion >= 0) {
+      this.contributors.push(...this.contributors.splice(coercion, 1))
+    }
     assertContributorsSupported(
       this.contributors,
       CLOUDFLARE_BINDING_SOURCES,
@@ -177,10 +219,15 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   }
 
   private contributorImports(
+    ctx: EntryGenerationContext,
     platform: PlatformImports,
     sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
   ): string[] {
-    return collectContributorImports(this.contributorsFor(sources), platform)
+    return collectContributorImports(
+      this.contributorsFor(sources),
+      platform,
+      ctx
+    )
   }
 
   private contributorLines(
@@ -284,7 +331,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
-      ...this.contributorImports(platform, ['env']),
+      ...this.contributorImports(ctx, platform, ['env']),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -397,16 +444,16 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
       `export default createCloudflareHandler(`,
-      `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
+      `  { createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices },`,
       `  ${JSON.stringify(handlerTypes)},`,
       `  { httpQueueJobs: ${this.resolveHttpQueueJobs(ctx.unit)} }`,
       `)`,
@@ -460,16 +507,16 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
       `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare/handler'`,
-      `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
+      `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices })`,
       ``,
     ]
 
@@ -506,7 +553,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
     const httpQueueJobs = this.resolveHttpQueueJobs(ctx.unit)
 
-    const factoriesArg = `{ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices }`
+    const factoriesArg = `{ createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices }`
 
     const exportLine = servesMCP
       ? `export default createCloudflareMCPHandler(${factoriesArg}, { ${ctx.mcpServerOption.replace(/,\s*$/, '')} })`
@@ -557,11 +604,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(ctx, platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generateGatewayPlatformServicesBlock(ctx, platform, bindingsMap),
       ``,
@@ -589,7 +636,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     return [
       `const __pikkuFactories = {`,
       `  createConfig: ${ctx.configVar},`,
-      `  createSingletonServices: ${ctx.servicesVar},`,
+      `  createSingletonServices: ${SERVICES_AFTER_ADDONS},`,
       `  createPlatformServices,`,
       `}`,
       ``,

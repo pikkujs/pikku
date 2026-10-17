@@ -47,6 +47,17 @@ const rewriteSetCookies = (response: Response): Response => {
   })
 }
 
+/**
+ * The function behind the generated `/api/auth/**` route. It forwards the
+ * request to `services.auth().handler`, merging relayed cross-site cookies in
+ * first, serves dev quick login when that is on, and rewrites the response's
+ * cookies for cross-site use under `AUTH_COOKIE_CROSS_SITE`.
+ *
+ * Takes no arguments: the instance comes from `services.auth`, which the
+ * generated services wrapper builds from the app's `pikkuBetterAuth` factory.
+ *
+ * @example snippet: betterAuthHandler
+ */
 export const createAuthHandler = (): {
   func: CorePikkuFunctionSessionless<any, any>
 } => ({
@@ -55,17 +66,22 @@ export const createAuthHandler = (): {
     if (!request) {
       return
     }
-    const auth = (await (services as any).auth()) as BetterAuthInstance
+    if (!services.auth) {
+      throw new Error(
+        'createAuthHandler: services.auth is missing — register the better-auth factory with pikkuBetterAuth'
+      )
+    }
+    const auth: BetterAuthInstance = await services.auth()
     const webRequest = toWebRequest(request)
     // /get-session, sign-out and /update-user all read the session off Cookie.
     mergeRelayedCookies(webRequest.headers)
-    const basePath = (auth as any).options?.basePath ?? '/api/auth'
+    const basePath = auth.options?.basePath ?? '/api/auth'
     const response = isDevQuickLoginRequest(webRequest, basePath)
       ? await handleDevQuickLogin(
           auth,
           webRequest,
-          (services as any).logger,
-          (services as any).scopeService
+          services.logger,
+          services.scopeService
         )
       : await auth.handler(webRequest)
     return crossSiteCookies() ? rewriteSetCookies(response) : response

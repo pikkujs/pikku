@@ -43,7 +43,8 @@ export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
     )
     const { schemas, functions } = serializeVirtualUserFunctions(
       leaf,
-      pathToVirtualUsers
+      pathToVirtualUsers,
+      { betterAuth: Boolean(state.auth?.definition) }
     )
     await writeFileInDir(logger, config.virtualUserSchemasFile, schemas)
     await writeFileInDir(logger, config.virtualUserFunctionsFile, functions)

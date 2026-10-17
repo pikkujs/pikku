@@ -43,6 +43,13 @@ export class PikkuSessionService<
   public async set(session: UserSession) {
     this.sessionChanged = true
     this.session = session
+    // A session set before anyone was resolved — the usual case for
+    // middleware or a login function signing someone in — is stored under its
+    // own user rather than not at all.
+    const userId = (session as { userId?: unknown } | undefined)?.userId
+    if (this.pikkuUserId === undefined && typeof userId === 'string') {
+      this.pikkuUserId = userId
+    }
     if (this.sessionStore && this.pikkuUserId) {
       await this.sessionStore.set(this.pikkuUserId, session)
     }
@@ -61,14 +68,21 @@ export class PikkuSessionService<
   }
 }
 
+// knowledge: decisions/security/set-session-persists-and-set-initial-session-does-not.md
+/**
+ * The session accessors a transport puts on the wire before middleware runs.
+ * `setSession` and `clearSession` mean the same here as in a function body:
+ * they mark the session changed (so `authCookie` re-issues the cookie) and
+ * write the session store. `setInitialSession` is the request-scoped one, for
+ * middleware that establishes who the caller is from a credential it was
+ * handed.
+ */
 export function createMiddlewareSessionWireProps<
   UserSession extends CoreUserSession,
 >(session: SessionService<UserSession>) {
   return {
     session: session.get() as UserSession | undefined,
-    setSession: (s: UserSession) => session.setInitial(s),
-    getSession: () => session.get(),
-    hasSessionChanged: () => session.sessionChanged,
+    ...createSessionAccessors(session),
   }
 }
 
@@ -77,7 +91,16 @@ export function createFunctionSessionWireProps<
 >(session: SessionService<UserSession>) {
   return {
     session: session.freezeInitial(),
+    ...createSessionAccessors(session),
+  }
+}
+
+export function createSessionAccessors<UserSession extends CoreUserSession>(
+  session: SessionService<UserSession>
+) {
+  return {
     setSession: (s: UserSession) => session.set(s),
+    setInitialSession: (s: UserSession) => session.setInitial(s),
     clearSession: () => session.clear(),
     getSession: () => session.get(),
     hasSessionChanged: () => session.sessionChanged,

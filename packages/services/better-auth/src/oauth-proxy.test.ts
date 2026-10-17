@@ -19,7 +19,8 @@ const makeServices = (
       logger: { info: (m: string) => logs.push(m) } as any,
       secrets: {
         getSecret: async (id: string) => {
-          if (!(id in secrets)) throw new Error(`Requested secret not found: ${id}`)
+          if (!(id in secrets))
+            throw new Error(`Requested secret not found: ${id}`)
           return { reveal: () => secrets[id] }
         },
       },
@@ -32,7 +33,10 @@ const full = () =>
   makeServices(
     {
       OAUTH_PROXY_SECRET: 'stage-key',
-      GOOGLE_OAUTH: { clientId: 'cloud-google-id', clientSecret: 'oauth-proxy' },
+      GOOGLE_OAUTH: {
+        clientId: 'cloud-google-id',
+        clientSecret: 'oauth-proxy',
+      },
     },
     {
       OAUTH_PROXY_URL: PROXY,
@@ -169,7 +173,10 @@ describe('applyOAuthProxy', () => {
       `${PROXY}/api/auth/callback/google`
     )
     assert.ok(url.searchParams.get('state')!.startsWith(`${KEY_ID}.`))
-    assert.match(logs.join('\n'), /google goes through https:\/\/oauth.example.com/)
+    assert.match(
+      logs.join('\n'),
+      /google goes through https:\/\/oauth.example.com/
+    )
   })
 
   test('leaves the app its own providers and plugins', async () => {

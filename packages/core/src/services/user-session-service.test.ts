@@ -68,7 +68,22 @@ describe('PikkuSessionService', () => {
     assert.deepStrictEqual(storedSession, { userId: 'new' })
   })
 
-  test('should not persist to sessionStore when pikkuUserId is not set', async () => {
+  test('should persist under the session userId when no pikkuUserId is set', async () => {
+    let storedId: string | undefined
+    const store = {
+      get: async () => undefined,
+      set: async (id: string) => {
+        storedId = id
+      },
+      clear: async () => {},
+    }
+    const service = new PikkuSessionService(store as any)
+    await service.set({ userId: 'new' })
+    assert.strictEqual(storedId, 'new')
+    assert.strictEqual(service.getPikkuUserId(), 'new')
+  })
+
+  test('should not persist a session that names no user when no pikkuUserId is set', async () => {
     let setCalled = false
     const store = {
       get: async () => undefined,
@@ -78,7 +93,7 @@ describe('PikkuSessionService', () => {
       clear: async () => {},
     }
     const service = new PikkuSessionService(store as any)
-    await service.set({ userId: 'new' })
+    await service.set({ scopes: ['a'] } as any)
     assert.strictEqual(setCalled, false)
   })
 
@@ -118,11 +133,50 @@ describe('createMiddlewareSessionWireProps', () => {
     assert.ok('hasSessionChanged' in props)
   })
 
-  test('setSession should call setInitial', () => {
-    const service = new PikkuSessionService()
+  test('setSession marks the session changed and persists, as in a function body', async () => {
+    const stored: Array<[string, unknown]> = []
+    const store = {
+      get: async () => undefined,
+      set: async (id: string, session: unknown) => {
+        stored.push([id, session])
+      },
+      clear: async () => {},
+    }
+    const service = new PikkuSessionService(store as any)
     const props = createMiddlewareSessionWireProps(service)
-    props.setSession({ userId: 'user-2' })
+    await props.setSession({ userId: 'user-2' })
     assert.deepStrictEqual(service.get(), { userId: 'user-2' })
+    assert.strictEqual(props.hasSessionChanged(), true)
+    assert.deepStrictEqual(stored, [['user-2', { userId: 'user-2' }]])
+  })
+
+  test('setInitialSession sets the session without marking it changed or persisting', () => {
+    let setCalled = false
+    const store = {
+      get: async () => undefined,
+      set: async () => {
+        setCalled = true
+      },
+      clear: async () => {},
+    }
+    const service = new PikkuSessionService(store as any)
+    const props = createMiddlewareSessionWireProps(service)
+    props.setInitialSession({ userId: 'user-2' })
+    assert.deepStrictEqual(service.get(), { userId: 'user-2' })
+    assert.strictEqual(props.hasSessionChanged(), false)
+    assert.strictEqual(setCalled, false)
+  })
+
+  test('middleware and function props bind the same session setters', () => {
+    const service = new PikkuSessionService()
+    const middleware = createMiddlewareSessionWireProps(service)
+    const fn = createFunctionSessionWireProps(service)
+    const { session: _m, ...middlewareSetters } = middleware
+    const { session: _f, ...functionSetters } = fn
+    assert.deepStrictEqual(
+      Object.keys(middlewareSetters).sort(),
+      Object.keys(functionSetters).sort()
+    )
   })
 })
 
