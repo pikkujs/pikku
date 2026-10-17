@@ -15,11 +15,12 @@ export const MIDDLEWARE_HELPERS: ReadonlySet<string> = new Set([
   'addChannelMiddleware',
 ])
 
-/** The helpers that define permissions. */
+/** The helpers that define or register permissions. */
 export const PERMISSION_HELPERS: ReadonlySet<string> = new Set([
   'pikkuPermission',
   'pikkuAuth',
   'pikkuPermissionFactory',
+  'addGlobalPermission',
 ])
 
 type NameMatcher = ReadonlySet<string> | ((name: string) => boolean)

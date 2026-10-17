@@ -251,6 +251,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     permissions: {
       definitions: {},
       instances: {},
+      global: [],
     },
     serviceAggregation: {
       requiredServices: new Set(),

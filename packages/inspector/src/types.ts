@@ -262,9 +262,22 @@ export interface InspectorPermissionInstance {
   isFactoryCall: boolean
 }
 
+/**
+ * One `addGlobalPermission(...)` call. It registers at module evaluation, so
+ * codegen must import its file — or call `exportName`, when the call sits in an
+ * exported zero-argument factory — or the global gate does not exist.
+ */
+export interface InspectorGlobalPermissionRegistration {
+  sourceFile: string
+  position: number
+  exportName: string | null
+  definitionIds: string[]
+}
+
 export interface InspectorPermissionState {
   definitions: Record<string, InspectorPermissionDefinition>
   instances: Record<string, InspectorPermissionInstance>
+  global: InspectorGlobalPermissionRegistration[]
 }
 
 export type InspectorFilters = {
