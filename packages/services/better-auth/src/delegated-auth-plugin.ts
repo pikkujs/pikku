@@ -49,6 +49,7 @@ export interface UpstreamIdentity {
   credential: unknown
 }
 
+/** Options for {@link pikkuDelegatedAuth}. */
 export interface DelegatedAuthOptions {
   /**
    * Verify the credentials against THE upstream system of record (exactly one

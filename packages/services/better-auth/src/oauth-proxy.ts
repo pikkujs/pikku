@@ -34,6 +34,7 @@ type ProxyServices = Pick<CoreSingletonServices, 'logger'> & {
   }
 }
 
+/** A stage's resolved OAuth proxy configuration. */
 export interface OAuthProxyConfig {
   productionURL: string
   secret: string

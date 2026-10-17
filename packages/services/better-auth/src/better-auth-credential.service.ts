@@ -5,6 +5,7 @@ import {
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
 
+/** Options for {@link BetterAuthCredentialService}. */
 export interface BetterAuthCredentialServiceOptions {
   /**
    * Resolves the better-auth instance. Lazy by necessity: the auth factory is
@@ -50,6 +51,8 @@ const isAccountNotFound = (error: unknown): boolean =>
  * Reads OAuth2 credentials out of better-auth's `account` table, so a token is
  * refreshed on read rather than served stale. Everything else falls through to
  * `fallback`.
+ *
+ * @example snippet: betterAuthCredentialOAuth
  */
 export class BetterAuthCredentialService implements CredentialService {
   private readonly getAuth: () => Promise<BetterAuthInstance>

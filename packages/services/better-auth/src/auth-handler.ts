@@ -47,6 +47,17 @@ const rewriteSetCookies = (response: Response): Response => {
   })
 }
 
+/**
+ * The function behind the generated `/api/auth/**` route. It forwards the
+ * request to `services.auth().handler`, merging relayed cross-site cookies in
+ * first, serves dev quick login when that is on, and rewrites the response's
+ * cookies for cross-site use under `AUTH_COOKIE_CROSS_SITE`.
+ *
+ * Takes no arguments: the instance comes from `services.auth`, which the
+ * generated services wrapper builds from the app's `pikkuBetterAuth` factory.
+ *
+ * @example snippet: betterAuthHandler
+ */
 export const createAuthHandler = (): {
   func: CorePikkuFunctionSessionless<any, any>
 } => ({
