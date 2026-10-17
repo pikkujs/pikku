@@ -4,6 +4,7 @@ import {
   analyzeDeployment as analyzeUnpinned,
   toSafeKebab,
   unroutedHttpWirings,
+  unservedGateways,
 } from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
 
@@ -1587,5 +1588,154 @@ describe('analyzeDeployment - rpc.invoke between units', () => {
     const caller = units.find((u) => u.name === 'get-candidate')
     assert.ok(caller?.dependsOn.includes('get-candidate-by-id'))
     assert.equal(caller?.dispatch?.['getCandidateById'], 'get-candidate-by-id')
+  })
+})
+
+/**
+ * A webhook gateway as the inspector records it: the gateway meta naming its
+ * handler, and the POST/GET wrappers it projects into `http.meta` so the route
+ * is visible.
+ */
+function stateWithGateways(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        handleSlack: {
+          pikkuFuncId: 'handleSlack',
+          name: 'handleSlack',
+          services: { optimized: true, services: ['kysely'] },
+        },
+        gateway__slack__post: {
+          pikkuFuncId: 'gateway__slack__post',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+        gateway__slack__verify: {
+          pikkuFuncId: 'gateway__slack__verify',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+        handleChat: { pikkuFuncId: 'handleChat', name: 'handleChat' },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/webhooks/slack': {
+            pikkuFuncId: 'gateway__slack__post',
+            route: '/webhooks/slack',
+            method: 'post',
+          },
+        },
+        get: {
+          '/webhooks/slack': {
+            pikkuFuncId: 'gateway__slack__verify',
+            route: '/webhooks/slack',
+            method: 'get',
+          },
+        },
+      },
+    },
+    gateways: {
+      meta: {
+        slack: {
+          pikkuFuncId: 'handleSlack',
+          name: 'slack',
+          type: 'webhook',
+          route: '/webhooks/slack',
+          gateway: true,
+          tags: ['chat'],
+        },
+        chat: {
+          pikkuFuncId: 'handleChat',
+          name: 'chat',
+          type: 'websocket',
+          route: '/chat',
+          gateway: true,
+        },
+      },
+      files: new Set(),
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - wireGateway', () => {
+  // The wrappers used to become two units of their own, holding neither the
+  // handler they call nor the services it builds, and the gateway itself never
+  // reached the manifest.
+  test('a webhook gateway is served from its handler unit', () => {
+    const manifest = analyzeDeployment(stateWithGateways(), {
+      projectId: 'test',
+    })
+
+    assert.deepEqual(
+      manifest.units.map((u) => u.name),
+      ['handle-slack']
+    )
+    const unit = manifest.units[0]!
+    assert.deepEqual(unit.functionIds, [
+      'handleSlack',
+      'gateway__slack__post',
+      'gateway__slack__verify',
+    ])
+    assert.deepEqual(unit.services, [
+      { capability: 'database', sourceServiceName: 'kysely' },
+    ])
+    assert.deepEqual(unit.tags, ['chat'])
+    assert.deepEqual(unit.handlers, [
+      {
+        type: 'fetch',
+        routes: [
+          {
+            method: 'POST',
+            route: '/webhooks/slack',
+            pikkuFuncId: 'gateway__slack__post',
+          },
+          {
+            method: 'GET',
+            route: '/webhooks/slack',
+            pikkuFuncId: 'gateway__slack__verify',
+          },
+        ],
+      },
+    ])
+    assert.deepEqual(manifest.gateways, [
+      {
+        name: 'slack',
+        type: 'webhook',
+        route: '/webhooks/slack',
+        unitName: 'handle-slack',
+        functionId: 'handleSlack',
+      },
+    ])
+    const state = stateWithGateways()
+    assert.deepEqual(unroutedHttpWirings(state.http.meta, manifest.units), [])
+  })
+
+  test('a websocket gateway is reported rather than dropped', () => {
+    const state = stateWithGateways()
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    assert.deepEqual(
+      unservedGateways(state.gateways.meta, manifest).map((g) => g.name),
+      ['chat']
+    )
+  })
+
+  test('a project without gateways has nothing to report', () => {
+    const manifest = analyzeDeployment(stateWithScenario(), {
+      projectId: 'test',
+    })
+    assert.deepEqual(manifest.gateways, [])
+    assert.deepEqual(unservedGateways(undefined, manifest), [])
   })
 })
