@@ -53,6 +53,10 @@ import {
 import { validate, renderValidate } from './functions/commands/validate.js'
 import { pikkuVerify, renderPikkuVerify } from './functions/commands/verify.js'
 import {
+  experimentNativeComparison,
+  renderExperimentNativeComparison,
+} from './functions/commands/experiment-native-comparison.js'
+import {
   examplesAdd,
   examplesList,
   examplesShow,
@@ -292,7 +296,7 @@ wireCLI({
     },
     inspector: {
       description:
-        "Inspector engine: 'typescript' (the TypeScript compiler API, default) or 'native' (the pikku-inspect binary). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
+        "Inspector engine: 'native' (the pikku-inspect binary, default) or 'typescript' (the TypeScript compiler API). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
     },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
@@ -1276,6 +1280,24 @@ wireCLI({
         },
       },
     }),
+    experiment: {
+      description: 'Experiments that measure or compare how the CLI behaves',
+      subcommands: {
+        'native-comparison': pikkuCLICommand({
+          func: experimentNativeComparison,
+          render: renderExperimentNativeComparison,
+          description:
+            "Run this project's codegen with the TypeScript inspector and then the native one, from the same .pikku state, and compare wall time, CPU time, peak memory and the generated output",
+          options: {
+            runs: {
+              description:
+                'Runs per engine; with more than one, the median is reported',
+              default: '1',
+            },
+          },
+        }),
+      },
+    },
     scenario: {
       description: 'Run and inspect scenarios (pikkuScenario)',
       subcommands: {
