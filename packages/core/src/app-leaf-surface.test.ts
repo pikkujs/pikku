@@ -48,6 +48,9 @@ const skipped = new Set([
   // into `generated/` and leaves them behind, so a second test run in the same
   // checkout (a retried push, say) scanned CLI output this repo does not own.
   'generated',
+  // Inspector engine fixtures (`packages/inspector-go/testdata`): projects
+  // written to exercise the inspector, deprecated imports included.
+  'testdata',
   'starter-template',
 ])
 

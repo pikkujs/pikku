@@ -144,6 +144,10 @@ jobs:
       - name: Parity of finalize alone
         working-directory: packages/inspector-go
         run: bun parity/finalize-parity.ts --bin npm/linux-x64/bin/pikku-inspect --project ../../templates/functions --project ../../examples/field-service
+      # `bun install @pikku/cli` from a registry, as a user does: only this
+      # platform's binary package arrives, and the CLI's inspector-go runs it.
+      - name: Install smoke test
+        run: node packages/inspector-go/install-smoke/run.mjs
 
   lint:
     name: Lint & Format
