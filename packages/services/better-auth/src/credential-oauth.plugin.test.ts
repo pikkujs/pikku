@@ -196,14 +196,18 @@ describe('credentialOAuth plugin', () => {
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const space = new URL((await (await link(auth, 'acme', cookie)).json()).url)
-    const comma = new URL((await (await link(auth, 'twist', cookie)).json()).url)
+    const comma = new URL(
+      (await (await link(auth, 'twist', cookie)).json()).url
+    )
 
     assert.equal(space.searchParams.get('scope'), 'read write')
     assert.equal(comma.searchParams.get('scope'), 'read,write')
   })
 
   test('a provider with no scopes gets no scope parameter', async () => {
-    const auth = makeAuth(emptyDb(), [{ ...provider('acme', 'wire'), scopes: [] }])
+    const auth = makeAuth(emptyDb(), [
+      { ...provider('acme', 'wire'), scopes: [] },
+    ])
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const url = new URL((await (await link(auth, 'acme', cookie)).json()).url)

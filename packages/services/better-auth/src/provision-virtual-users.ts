@@ -164,7 +164,7 @@ export const provisionVirtualUsers = async (
       'Provisioning virtual users requires better-auth to be wired (services.auth is missing)'
     )
   }
-  const ctx = (await (await auth()).$context) as any
+  const ctx = await (await auth()).$context
 
   const banAvailable =
     typeof ctx.hasPlugin === 'function'

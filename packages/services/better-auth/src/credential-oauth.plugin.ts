@@ -155,7 +155,7 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
       // silently become that person's, and vanish when they unlinked it.
       let ownerId = session.user.id
       if (config.type === 'singleton') {
-        if (!(await canLinkSingleton(session as any))) {
+        if (!(await canLinkSingleton(session))) {
           throw new APIError('FORBIDDEN', {
             message: `Connecting '${config.providerId}' rebinds it for every user — that is an admin action`,
             code: 'SINGLETON_LINK_FORBIDDEN',

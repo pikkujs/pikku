@@ -22,11 +22,7 @@ const signUp = async () => {
     }),
     emailAndPassword: { enabled: true },
     plugins: [bearer()],
-    secondaryStorage: {
-      get: (key) => store.get(key),
-      set: (key, value, ttl) => store.set(key, value, ttl),
-      delete: (key) => store.delete(key),
-    },
+    secondaryStorage: store,
   })
 
   const response = await auth.api.signUpEmail({
