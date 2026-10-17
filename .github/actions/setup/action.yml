@@ -8,6 +8,12 @@ inputs:
   download-build:
     description: Whether to download build output artifact
     default: 'true'
+  download-inspector-go:
+    description: >-
+      Download the pikku-inspect binaries from the inspector-go-build job into
+      their platform packages, for jobs that run the native inspector engine.
+      Such a job must also need inspector-go-build.
+    default: 'false'
   enable-yarn:
     description: >-
       Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
@@ -32,11 +38,8 @@ runs:
       uses: ./.github/actions/download-tar
       with:
         name: build-output
-    # pikku-inspect, from the Go build job (inspector-go-build), into its
-    # platform packages: the CLI's default inspector engine. Every job that
-    # downloads the build output also needs that job.
     - name: Download pikku-inspect
-      if: ${{ inputs.download-build == 'true' }}
+      if: ${{ inputs.download-inspector-go == 'true' }}
       uses: ./.github/actions/download-tar
       with:
         name: pikku-inspect

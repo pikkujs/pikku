@@ -39,14 +39,10 @@ runs:
         restore-keys: |
           ts-build-v3-
     # pikku-inspect is built by its own job in parallel with this one
-    # (inspector-go-build), so this job neither builds it nor waits for it:
-    # its codegen runs on the TypeScript engine, whose output is byte-identical
-    # (held so by the Inspector parity job). Jobs after it use the binary.
-    - name: Use the TypeScript inspector and skip the Go build
+    # (inspector-go-build); codegen here runs on the default TypeScript engine.
+    - name: Skip the Go build
       shell: bash
-      run: |
-        echo "PIKKU_INSPECTOR=typescript" >> "$GITHUB_ENV"
-        echo "PIKKU_INSPECTOR_GO_SKIP_BUILD=1" >> "$GITHUB_ENV"
+      run: echo "PIKKU_INSPECTOR_GO_SKIP_BUILD=1" >> "$GITHUB_ENV"
     - name: Build packages
       shell: bash
       run: |

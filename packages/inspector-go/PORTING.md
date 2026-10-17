@@ -5,10 +5,10 @@
 program, runs the visit sweeps, resolves versions, generates schemas and runs
 finalize, returning the finalized state (`finalized: true`).
 
-It is the CLI's default engine (`native`); the TypeScript inspector stays
-supported beside it, selected with `inspector: 'typescript'` in
-pikku.config.json, `--inspector typescript` or `PIKKU_INSPECTOR=typescript`,
-until TypeScript 7 ships a compiler API. See
+The CLI uses it when the engine is `native`: `inspector: 'native'` in
+pikku.config.json, `--inspector native` or `PIKKU_INSPECTOR=native`. The
+TypeScript inspector stays the default until TypeScript 7 ships a compiler
+API. See
 `knowledge/decisions/both-engines-stay-behind-a-switch-until-typescript-7.md`.
 
 The TS wrapper and the `parity/` harness live outside the Go tree; the engine

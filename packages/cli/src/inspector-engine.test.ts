@@ -3,9 +3,9 @@ import { describe, test } from 'node:test'
 import { resolveInspectorEngine } from './inspector-engine.js'
 
 describe('resolveInspectorEngine', () => {
-  test('defaults to native', () => {
-    assert.equal(resolveInspectorEngine(), 'native')
-    assert.equal(resolveInspectorEngine({}), 'native')
+  test('defaults to typescript', () => {
+    assert.equal(resolveInspectorEngine(), 'typescript')
+    assert.equal(resolveInspectorEngine({}), 'typescript')
   })
 
   test('config opts into typescript', () => {

@@ -26,10 +26,11 @@ client files to emit.
 The CLI reads your source with one of two engines, which generate identical
 output:
 
-- `native` (default) — the `pikku-inspect` binary from `@pikku/inspector-go`,
-  built on typescript-go (TypeScript 7). Installed for your platform through
-  an optional dependency.
-- `typescript` — `@pikku/inspector`, on the TypeScript 6 compiler API.
+- `typescript` (default) — `@pikku/inspector`, on the TypeScript 6 compiler
+  API.
+- `native` — the `pikku-inspect` binary from `@pikku/inspector-go`, built on
+  typescript-go (TypeScript 7). Several times faster. Installed for your
+  platform through an optional dependency.
 
 Choose with, in order of precedence, the `--inspector` flag, the
 `PIKKU_INSPECTOR` environment variable, or the `inspector` key in
@@ -37,7 +38,7 @@ Choose with, in order of precedence, the `--inspector` flag, the
 
 ```json
 {
-  "inspector": "typescript"
+  "inspector": "native"
 }
 ```
 

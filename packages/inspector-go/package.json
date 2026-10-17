@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/inspector-go"
   },
-  "description": "Native inspector engine for Pikku, the CLI default — runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
+  "description": "Native inspector engine for Pikku, opt-in through `inspector: \"native\"` — runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",

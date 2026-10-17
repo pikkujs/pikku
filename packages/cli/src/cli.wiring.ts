@@ -292,7 +292,7 @@ wireCLI({
     },
     inspector: {
       description:
-        "Inspector engine: 'native' (the pikku-inspect binary, default) or 'typescript' (the TypeScript compiler API). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
+        "Inspector engine: 'typescript' (the TypeScript compiler API, default) or 'native' (the pikku-inspect binary). Overrides PIKKU_INSPECTOR and the `inspector` key in pikku.config.json.",
     },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',
