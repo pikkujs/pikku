@@ -14,7 +14,7 @@ _after_ `runChannelLifecycleWithMiddleware` has executed the `onConnect`
 lifecycle, not before.
 
 Auth middleware runs as part of that lifecycle — it is what inspects the upgrade
-request's cookie or token and calls `setSession`. Before it runs there is no
+request's cookie or token and calls `setInitialSession`. Before it runs there is no
 `pikkuUserId` to store, so an earlier write would persist `undefined` and the
 channel would stay anonymous for its whole life. That mapping is what
 `runChannelMessage` and `runChannelDisconnect` later use to rehydrate the session

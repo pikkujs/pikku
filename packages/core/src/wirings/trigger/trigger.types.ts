@@ -5,8 +5,24 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { CoreNodeConfig } from '../node/node.types.js'
 
+// knowledge: decisions/security/a-trigger-event-runs-as-the-user-its-source-asserts.md
+/**
+ * Facts about a trigger event that its source asserts, kept apart from the
+ * event data so that nothing in a payload the source received can set them.
+ */
+export interface TriggerInvokeOptions {
+  /**
+   * The user the event belongs to. The target runs as this user — its
+   * credentials and stored session resolve for them — exactly as a queue job
+   * or workflow run carrying a `pikkuUserId` does. Pass only a user the source
+   * has established itself, such as the one whose credential it polled with;
+   * never one read out of the event.
+   */
+  pikkuUserId?: string
+}
+
 export interface PikkuTrigger<TOutput = unknown> {
-  invoke: (data: TOutput) => void
+  invoke: (data: TOutput, options?: TriggerInvokeOptions) => void
 }
 
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
@@ -23,7 +39,7 @@ export type CorePikkuTriggerFunction<
 > = (
   services: Services,
   input: TInput,
-  wire: { trigger: { invoke: (data: TOutput) => void } }
+  wire: { trigger: PikkuTrigger<TOutput> }
 ) => Promise<() => void | Promise<void>>
 
 export type CorePikkuTriggerFunctionConfig<

@@ -367,6 +367,27 @@ addError(AIProviderNotConfiguredError, {
     'No AI provider configured. Please set up an AI provider (e.g. OpenAI, Anthropic) and provide a valid API key to use this agent.',
 })
 
+/**
+ * The model answered, but not with what the agent's output schema promises.
+ * A 502 rather than a 422: the bad content came from the model, not from the
+ * caller, and resending the same request is the only remedy the caller has.
+ */
+export class AgentOutputValidationError extends PikkuError {
+  constructor(
+    public readonly agentName: string | undefined,
+    public readonly issues: readonly string[]
+  ) {
+    super(
+      `${agentName ? `Agent '${agentName}'` : 'The model'} returned output that does not match its output schema: ${issues.join('; ')}`
+    )
+  }
+}
+addError(AgentOutputValidationError, {
+  status: 502,
+  message:
+    "The AI model returned output that does not match the agent's output schema.",
+})
+
 export class AIProviderAuthError extends PikkuError {
   constructor(message?: string) {
     super(

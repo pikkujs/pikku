@@ -94,8 +94,8 @@ export const betterAuthSession = (
   return pikkuMiddleware({
     priority,
     func: async (services, wire, next) => {
-      const { http, setSession } = wire
-      if (!http?.request || !setSession || (await hasLiveSession(wire))) {
+      const { http, setInitialSession } = wire
+      if (!http?.request || !setInitialSession || (await hasLiveSession(wire))) {
         return next()
       }
       // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
@@ -133,7 +133,7 @@ export const betterAuthSession = (
             )
           }
           if (mapped) {
-            await setSession(await withResolvedScopes(mapped, services))
+            await setInitialSession(await withResolvedScopes(mapped, services))
           }
           // The api-key header is authoritative for this request — never fall
           // through to getSession (a bare mock session would shadow our scope).
@@ -167,7 +167,7 @@ export const betterAuthSession = (
           result,
           services,
           getHeader: (name) => request.header(name),
-          setSession,
+          setInitialSession,
           mapSession,
           impersonation,
         })

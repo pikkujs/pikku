@@ -336,7 +336,20 @@ export type PikkuWire<
   session: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined
+  /**
+   * Sign the caller in as `session`: marks the session changed, so `authCookie`
+   * re-issues the cookie, and writes the session store under the session's
+   * `userId`. Means the same in middleware and in a function body. Await it.
+   */
   setSession: (session: UserSession) => Promise<void> | void
+  /**
+   * Establish who the caller is for this invocation only — what auth
+   * middleware does with a credential it was handed. Does not mark the session
+   * changed and writes nothing, so no cookie is re-issued. The function body
+   * sees it as `session`; set it before the body starts.
+   */
+  setInitialSession: (session: UserSession) => void
+  /** Sign the caller out: marks the session changed and clears the session store entry. */
   clearSession: () => Promise<void> | void
   /** Fetch the latest session (may read from backing store) */
   getSession: () => Promise<UserSession> | UserSession | undefined

@@ -13,6 +13,14 @@
 third argument — not on services. `setSession`/`clearSession` may be async
 (cookie and session-store backends write on the way out), so await them.
 
+`setSession` means the same in middleware and in a function body: it signs the
+caller in — the session is marked changed, so `authCookie` re-issues the cookie,
+and it is written to the session store under its `userId`. Middleware that only
+works out who the caller is from a credential it was handed (a cookie, a bearer
+token, an API key) calls `setInitialSession` instead: the function sees that
+session, but nothing is persisted and no cookie is re-issued. Calling
+`setSession` there would rewrite the cookie and the store on every request.
+
 ```typescript
 // Read session in pikkuFunc (session guaranteed to exist)
 const getProfile = pikkuFunc({

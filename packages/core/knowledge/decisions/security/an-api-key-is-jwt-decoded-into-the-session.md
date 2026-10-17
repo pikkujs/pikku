@@ -13,7 +13,7 @@ tags: core, auth, middleware, api-keys
 the query is read only when no header value was found (`auth-apikey.ts:25`).
 
 The key is decoded with `jwtService.decode` and, if that returns a value, passed
-to `setSession` (`auth-apikey.ts:29-33`). The middleware does nothing when a
+to `setInitialSession` (`auth-apikey.ts:29-33`). The middleware does nothing when a
 session already exists (`auth-apikey.ts:17`), which the doc comment describes as
 leaving "an existing session alone, so it composes with other auth middleware"
 (`auth-apikey.ts:6-7`).

@@ -26,7 +26,7 @@ export class InMemoryTriggerService extends PikkuTriggerService {
         const triggerInstance = await this.setupTriggerInstance(
           name,
           source.input,
-          (data) => this.onTriggerFire(name, targets, data)
+          (data, options) => this.onTriggerFire(name, targets, data, options)
         )
 
         this.activeTriggers.set(name, triggerInstance)

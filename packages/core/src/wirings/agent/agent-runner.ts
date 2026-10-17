@@ -55,6 +55,7 @@ import {
   lastUserMessageText,
 } from './agent-finalize.js'
 import { resolveModelConfig } from './agent-model-config.js'
+import { validateAgentOutput } from './agent-output.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { deniedToolResult, randomUUID } from './agent-utils.js'
 
@@ -105,6 +106,8 @@ export async function runAgent(
 
   const {
     agent,
+    packageName,
+    resolvedName,
     agentRunner,
     storage,
     memoryConfig,
@@ -304,7 +307,13 @@ export async function runAgent(
       appendStepMessages(runnerParams, stepResult)
     }
 
-    const finalObject = lastStepResult?.object
+    const finalObject = await validateAgentOutput(
+      agentName,
+      pikkuState(packageName, 'agent', 'agentsMeta')[resolvedName]
+        ?.outputSchema,
+      lastStepResult?.object,
+      packageName
+    )
     const structuredOutput = extractStructuredAssistantOutput(finalObject)
     const finalText = structuredOutput.text ?? lastStepResult?.text ?? ''
 
@@ -773,7 +782,12 @@ async function continueAfterToolResultSync(
     }
 
     const finalText = lastStepResult?.text ?? ''
-    const finalObject = lastStepResult?.object
+    const finalObject = await validateAgentOutput(
+      run.agentName,
+      meta?.outputSchema,
+      lastStepResult?.object,
+      packageName
+    )
 
     const result = {
       text: finalText,

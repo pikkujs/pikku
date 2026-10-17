@@ -138,8 +138,8 @@ export const betterAuthStoreSession = (
   return pikkuMiddleware({
     priority,
     func: async (services, wire, next) => {
-      const { http, setSession } = wire
-      if (!http?.request || !setSession || (await hasLiveSession(wire))) {
+      const { http, setInitialSession } = wire
+      if (!http?.request || !setInitialSession || (await hasLiveSession(wire))) {
         return next()
       }
       const request = http.request
@@ -185,7 +185,7 @@ export const betterAuthStoreSession = (
         result: stored,
         services,
         getHeader: (name) => headers.get(name),
-        setSession,
+        setInitialSession,
         mapSession,
         impersonation,
       })

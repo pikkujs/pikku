@@ -38,7 +38,7 @@ wireScheduler({
 })
 ```
 
-`runScheduledTask` builds its wire with a `sessionService`, so a `setSession`
+`runScheduledTask` builds its wire with a `sessionService`, so a `setInitialSession`
 here is the session the function is frozen with. See the machine-auth section of
 `pikku-middleware` for the factory and for why a cron is not a user row.
 

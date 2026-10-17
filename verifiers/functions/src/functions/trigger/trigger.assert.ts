@@ -59,4 +59,22 @@ describe('trigger verifier', () => {
 
     assert.equal(getInvoker('test-event'), undefined)
   })
+
+  test('runs the target as the user the source names', async () => {
+    const invoke = getInvoker('test-event')
+
+    invoke?.({ payload: 'for alice' }, { pikkuUserId: 'alice' })
+    invoke?.({ payload: 'for bob' }, { pikkuUserId: 'bob' })
+    invoke?.({ payload: 'for nobody' })
+    await waitFor(() => getInvocations().length === 3)
+
+    const byPayload = Object.fromEntries(
+      getInvocations().map((i) => [i.data.payload, i.pikkuUserId])
+    )
+    assert.deepEqual(byPayload, {
+      'for alice': 'alice',
+      'for bob': 'bob',
+      'for nobody': undefined,
+    })
+  })
 })

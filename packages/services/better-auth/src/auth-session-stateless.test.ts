@@ -80,7 +80,7 @@ const resolve = async (
         headers: () => headers,
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
   }
   await betterAuthStatelessSession(options)(services, wire, async () => {})
   return captured[0] ?? null
