@@ -36,7 +36,7 @@
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",
     "tsc": "bun run --filter '*' tsc",
-    "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/addon-*' build",
+    "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/core' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
     "build:templates": "bun run --filter './templates/**' --filter '!@project/root' build",
     "build:examples": "bun run --filter './examples/**' build",
