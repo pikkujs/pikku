@@ -50,7 +50,11 @@ export const resolveVirtualUserSignIn = (
   const nearMissOptIn =
     resolvedOptIn !== undefined &&
     resolvedOptIn !== VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE
-  const isDev = env?.[DEV_VIRTUAL_USER_SIGN_IN_ENV] === 'true'
+  // `pikku dev` sets the flag; a production deploy that inherited it is not
+  // `pikku dev`, and must not get statement-free switching or new rows from it.
+  const isDev =
+    env?.[DEV_VIRTUAL_USER_SIGN_IN_ENV] === 'true' &&
+    env?.NODE_ENV !== 'production'
 
   if (resolvedOptIn === VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE) {
     return {
