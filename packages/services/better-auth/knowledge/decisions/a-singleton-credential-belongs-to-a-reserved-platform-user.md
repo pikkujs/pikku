@@ -18,6 +18,13 @@ the token for every user, so the rules are:
   Its comment says it is "never sign-in-able: it is created with no credential
   account of any kind." The user is created lazily on first link, so an app with no
   singleton credentials never gets the row.
+- **Found by email, not id.** The row is created asking for the id
+  `pikku-platform`, but under `advanced.database.generateId: 'uuid' | 'serial'`
+  better-auth assigns its own. So both the plugin and
+  `BetterAuthCredentialService` find it by the reserved address
+  `platform@pikku.internal` (`findPlatformUserId`). Looking it up by the reserved
+  id created a new Platform user on every link under those id schemes, and the
+  credential service never found the token.
 - **Why not the clicker.** The comment says that otherwise the credential "would
   silently become that person's, and vanish when they unlinked it."
 

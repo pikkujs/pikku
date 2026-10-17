@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { createHMAC } from '@better-auth/utils/hmac'
+import { makeSignature } from 'better-auth/crypto'
 import { verifySessionCredential } from './session-credential.js'
 
 const SECRET = 'test-secret'
 const TOKEN = 'sess_abc'
 
 const sign = async (token: string, secret = SECRET) =>
-  `${token}.${await createHMAC('SHA-256', 'base64urlnopad').sign(secret, token)}`
+  `${token}.${await makeSignature(token, secret)}`
 
 describe('session credential', () => {
   test('recovers the token from a signed value', async () => {
@@ -46,5 +46,24 @@ describe('session credential', () => {
     for (const bad of ['', '.', 'a.', '.b', 'a.b.c', 'not-a-credential']) {
       assert.equal(await verifySessionCredential(bad, SECRET), null)
     }
+  })
+
+  test('accepts the URL-safe alphabet without padding', async () => {
+    const signature = (await sign(TOKEN)).split('.')[1]!
+    const urlSafe = signature
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+    assert.equal(
+      await verifySessionCredential(`${TOKEN}.${urlSafe}`, SECRET),
+      TOKEN
+    )
+  })
+
+  test('rejects a signature that is not base64 at all', async () => {
+    assert.equal(
+      await verifySessionCredential(`${TOKEN}.%%%not*base64`, SECRET),
+      null
+    )
   })
 })

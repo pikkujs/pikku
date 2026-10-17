@@ -9,6 +9,15 @@ import type {
 } from './define-auth.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
 
+/**
+ * Turns a better-auth instance, or a `pikkuBetterAuth` factory plus the app's
+ * `createConfig`/`createSingletonServices`, into a getter that resolves the
+ * instance. A factory's services and instance are built on first call and
+ * shared after it; a failed build is retried on the next call.
+ *
+ * @throws When given a factory without `createSingletonServices`.
+ * @example snippet: betterAuthServerSession
+ */
 export const createResolvedAuthGetter = <
   I extends BetterAuthInstance,
   C extends CoreConfig = CoreConfig,
@@ -62,6 +71,58 @@ export const createResolvedAuthGetter = <
   return async () => auth as I
 }
 
+type FactoryGetterEntry = {
+  createConfig: unknown
+  createSingletonServices: unknown
+  getter: () => Promise<BetterAuthInstance>
+}
+
+/**
+ * One getter per (factory, createConfig, createSingletonServices), so calling
+ * {@link getAuthSession} with a factory on every request builds the singleton
+ * services — database pools included — and the better-auth instance once,
+ * rather than once per call.
+ */
+const factoryGetters = new WeakMap<object, FactoryGetterEntry[]>()
+
+const cachedFactoryGetter = <
+  I extends BetterAuthInstance,
+  C extends CoreConfig,
+  S extends CoreSingletonServices<C>,
+>(
+  auth: PikkuBetterAuthFactory<I, S>,
+  createConfig: CreateConfig<C> | undefined,
+  createSingletonServices: (config: C) => Promise<S>
+): (() => Promise<I>) => {
+  const entries = factoryGetters.get(auth) ?? []
+  factoryGetters.set(auth, entries)
+  const found = entries.find(
+    (entry) =>
+      entry.createConfig === createConfig &&
+      entry.createSingletonServices === createSingletonServices
+  )
+  if (found) {
+    return found.getter as () => Promise<I>
+  }
+  const getter = createResolvedAuthGetter<I, C, S>(
+    auth,
+    createConfig,
+    createSingletonServices
+  )
+  entries.push({ createConfig, createSingletonServices, getter })
+  return getter
+}
+
+/**
+ * Reads the better-auth session for a request outside a pikku function — a
+ * Next.js route handler, a TanStack Start loader. Relayed cross-site cookies are
+ * merged in first, on a copy of the headers.
+ *
+ * Given a factory, the singleton services and the instance are built once per
+ * (factory, createConfig, createSingletonServices) and reused across calls.
+ *
+ * @example snippet: betterAuthServerSession
+ */
 export function getAuthSession<I extends BetterAuthInstance>(
   auth: I,
   request: Request | Headers
@@ -86,11 +147,18 @@ export async function getAuthSession<
   createConfig?: CreateConfig<C>,
   createSingletonServices?: (config: C) => Promise<S>
 ): Promise<Awaited<ReturnType<I['api']['getSession']>>> {
-  const instance = await createResolvedAuthGetter<I, C, S>(
-    auth,
-    createConfig,
-    createSingletonServices
-  )()
+  const instance =
+    typeof auth === 'function' && createSingletonServices
+      ? await cachedFactoryGetter<I, C, S>(
+          auth,
+          createConfig,
+          createSingletonServices
+        )()
+      : await createResolvedAuthGetter<I, C, S>(
+          auth,
+          createConfig,
+          createSingletonServices
+        )()
 
   // Copy even when handed a Headers: mergeRelayedCookies mutates its argument,
   // and that one belongs to the caller.

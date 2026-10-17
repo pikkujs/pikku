@@ -6,9 +6,13 @@ import type { BetterAuthInstance } from './define-auth.js'
 import { PROVIDER_REGISTRY } from './provider-registry.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
 
+/** Secret shared with the OAuth proxy, which signs the hand-back with it. */
 export const OAUTH_PROXY_SECRET_ID = 'OAUTH_PROXY_SECRET'
+/** The proxy's base URL, which every proxied provider's callback goes through. */
 export const OAUTH_PROXY_URL_VARIABLE = 'OAUTH_PROXY_URL'
+/** Optional id prefixed onto proxied state, so one proxy can serve several stages. */
 export const OAUTH_PROXY_KEY_ID_VARIABLE = 'OAUTH_PROXY_KEY_ID'
+/** Comma-separated provider ids to route through the proxy. */
 export const OAUTH_PROXY_PROVIDERS_VARIABLE = 'OAUTH_PROXY_PROVIDERS'
 
 /** Providers a host may proxy. Each needs its `<ID>_OAUTH` secret declared. */
@@ -53,9 +57,14 @@ const PLACEHOLDER_CLIENT_SECRET = 'oauth-proxy'
 
 type ProxyServices = Pick<CoreSingletonServices, 'logger'> & {
   secrets?: { getSecret(id: string): Promise<{ reveal(): unknown }> }
-  variables?: { get(id: string): Promise<string | undefined | null> }
+  variables?: {
+    get(
+      id: string
+    ): Promise<string | undefined | null> | string | undefined | null
+  }
 }
 
+/** A stage's resolved OAuth proxy configuration. */
 export interface OAuthProxyConfig {
   productionURL: string
   secret: string
@@ -132,8 +141,7 @@ export const resolveOAuthProxyConfig = async (
       )
     }
     const credentials = (await readSecret(services, def.secretId)) as
-      | { clientId?: string }
-      | undefined
+      { clientId?: string } | undefined
     if (!credentials?.clientId) {
       throw new Error(
         `OAuth proxy: ${id} is listed in ${OAUTH_PROXY_PROVIDERS_VARIABLE} but ${def.secretId} has no clientId.`
@@ -197,7 +205,7 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
   const config = await resolveOAuthProxyConfig(services)
   if (!config) return instance
 
-  const options = (instance as any).options ?? {}
+  const options = instance.options ?? {}
   const own = Object.keys(options.socialProviders ?? {}).filter((id) =>
     Object.hasOwn(config.providers, id)
   )

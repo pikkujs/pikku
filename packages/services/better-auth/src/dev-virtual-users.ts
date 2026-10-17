@@ -30,6 +30,7 @@ export type DevVirtualUser = {
   jobTitle: string | null
 }
 
+/** A virtual user as the dev switcher is given it, before it is filtered to the signable ones. */
 export type DevSignInVirtualUser = {
   id: string
   name?: string

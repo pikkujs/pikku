@@ -1,19 +1,29 @@
+/**
+ * Set to `true` by `pikku dev`. Opens virtual user sign-in, statement-free
+ * switching and provisioning — but never under `NODE_ENV=production`.
+ */
 export const DEV_VIRTUAL_USER_SIGN_IN_ENV = 'PIKKU_DEV_VIRTUAL_USER_SIGN_IN'
 
+/** The variable a deployed stage sets to open virtual user sign-in. */
 export const VIRTUAL_USER_SIGN_IN_OPT_IN_ENV =
   'PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN'
+/** The one value of {@link VIRTUAL_USER_SIGN_IN_OPT_IN_ENV} that opens it. */
 export const VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE =
   'passwordless-virtual-user-sign-in'
 
+/** Returned by the sign-in endpoints while the gate is shut. */
 export const VIRTUAL_USER_SIGN_IN_DISABLED_MESSAGE =
   'Virtual user sign-in is disabled outside `pikku dev`'
 
+/** Returned outside `pikku dev` for an address with no provisioned row. */
 export const VIRTUAL_USER_NOT_PROVISIONED_MESSAGE =
   'No virtual user account exists for that address — the deployment provisions its virtual users at startup, so check they were declared in this environment'
 
+/** Why {@link resolveVirtualUserSignIn} opened or shut the gate. */
 export type VirtualUserSignInReason =
   'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
 
+/** The resolved virtual user sign-in gate. */
 export interface VirtualUserSignInGate {
   enabled: boolean
   reason: VirtualUserSignInReason
@@ -50,7 +60,11 @@ export const resolveVirtualUserSignIn = (
   const nearMissOptIn =
     resolvedOptIn !== undefined &&
     resolvedOptIn !== VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE
-  const isDev = env?.[DEV_VIRTUAL_USER_SIGN_IN_ENV] === 'true'
+  // `pikku dev` sets the flag; a production deploy that inherited it is not
+  // `pikku dev`, and must not get statement-free switching or new rows from it.
+  const isDev =
+    env?.[DEV_VIRTUAL_USER_SIGN_IN_ENV] === 'true' &&
+    env?.NODE_ENV !== 'production'
 
   if (resolvedOptIn === VIRTUAL_USER_SIGN_IN_OPT_IN_VALUE) {
     return {
