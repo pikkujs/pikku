@@ -22,12 +22,13 @@ export const mergeRequestData = <In = unknown>(
       if (FORBIDDEN_KEYS.has(key)) {
         continue
       }
-      if (key in merged && !valuesAreEquivalent(merged[key], value)) {
+      if (!Object.hasOwn(merged, key)) {
+        merged[key] = value
+      } else if (!valuesAreEquivalent(merged[key], value)) {
         throw new UnprocessableContentError(
           `Conflicting values for key "${key}": "${String(merged[key])}" vs "${String(value)}"`
         )
       }
-      merged[key] ??= value
     }
   }
   return merged as In
