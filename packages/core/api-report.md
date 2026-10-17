@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3283 observable things**: 1099 exported names, plus
-2184 members on the classes and interfaces among them, reachable
+**3291 observable things**: 1104 exported names, plus
+2187 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -18,14 +18,14 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
-| `./agent` | 52 | 50 | 81 |
+| `./agent` | 54 | 52 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 23 | 23 | 71 |
 | `./http` | 27 | 27 | 58 |
-| `./errors` | 51 | 51 | 24 |
+| `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 40 | 40 | 11 |
+| `./trigger` | 42 | 42 | 13 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
@@ -150,6 +150,7 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   setSession: (session: UserSession) => Promise<void> | void
+  setInitialSession: (session: UserSession) => void
   clearSession: () => Promise<void> | void
   getSession: () => Promise<UserSession> | UserSession | undefined
   hasSessionChanged: () => boolean
@@ -345,6 +346,7 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   setSession: (session: UserSession) => Promise<void> | void
+  setInitialSession: (session: UserSession) => void
   clearSession: () => Promise<void> | void
   getSession: () => Promise<UserSession> | UserSession | undefined
   hasSessionChanged: () => boolean
@@ -3177,7 +3179,7 @@ export type CorePikkuTriggerFunction<
 > = (
   services: Services,
   input: TInput,
-  wire: { trigger: { invoke: (data: TOutput) => void } }
+  wire: { trigger: PikkuTrigger<TOutput> }
 ) => Promise<() => void | Promise<void>>
 export type CorePikkuTriggerFunctionConfig<
   TInput = unknown,
@@ -3228,14 +3230,17 @@ export type OrphanedWebhookRegistration = {
   label: string
 }
 PIKKU_INCOMING_WEBHOOK_QUEUE_NAME: "pikku-incoming-webhooks"
+export interface PikkuTrigger<TOutput = unknown> {
+  invoke: (data: TOutput, options?: TriggerInvokeOptions) => void
+}
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers: Map<string, TriggerInstance>
   abstract start(): Promise<void>
   async stop(): Promise<void>
   protected getTriggerTargets(): Map<string, TriggerTarget[]>
   protected getTriggerSources(): Map<string, { input?: unknown }>
-  protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown) => Promise<void>): Promise<TriggerInstance>
-  protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
+  protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown, options?: TriggerInvokeOptions) => Promise<void>): Promise<TriggerInstance>
+  protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown, options?: TriggerInvokeOptions): Promise<void>
 }
 receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<void | { received: number; }>
 reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
@@ -3247,6 +3252,9 @@ export type TriggerEvent<Name extends string = string, Data = unknown> = {
   name: Name
   id?: string
   data: Data
+}
+export interface TriggerInvokeOptions {
+  pikkuUserId?: string
 }
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 export type TriggerSourceMeta = Record<
@@ -3700,6 +3708,8 @@ export interface AgentMessage {
   undelivered?: boolean
   createdAt: Date
 }
+export type AgentOutputSchema<TObject> = StandardSchemaV1<unknown, TObject> &
+  StandardJSONSchemaV1<unknown, TObject>
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
 export type AgentRPCFactory = (
   wire: PikkuRawWire,
@@ -3991,6 +4001,7 @@ export type RunAgentParams = {
   getCredential?: GetCredential
   anonymousOwnerResourceId?: string
 }
+runAgentStructured: <TObject>(agentRunner: AgentRunnerService, { outputSchema, ...params }: Omit<AgentRunnerParams, "outputSchema"> & { outputSchema: AgentOutputSchema<TObject>; }) => Promise<AgentStepResult<TObject> & { object: TObject; }>
 signalRunInterrupt: (runId: string, interruption?: AgentInterruption) => boolean
 export type SpeakableScripts = string[] | Record<string, string>
 SPOKEN_TRANSCRIPT: "voice:transcript"
@@ -4634,6 +4645,9 @@ export type OAuth2Token = {
 
 ```ts
 addError: (error: any, { status, message, mcpCode }: ErrorDetails) => void
+export class AgentOutputValidationError extends PikkuError {
+  constructor(public readonly agentName: string | undefined, public readonly issues: readonly string[])
+}
 export class AIProviderAuthError extends PikkuError {
   constructor(message?: string)
 }
@@ -4794,9 +4808,9 @@ export type AgentsMeta = Record<
     exportedName?: string
   }
 >
-export type AgentStepResult = {
+export type AgentStepResult<TObject = unknown> = {
   text: string
-  object?: unknown
+  object?: TObject
   toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
   toolResults: {
     toolCallId: string
@@ -4935,7 +4949,7 @@ export interface CoverageService {
   stop(): Promise<void>
 }
 createInvocationAudit: (service: AuditService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined) => AuditLog
-createMiddlewareSessionWireProps: <UserSession extends CoreUserSession>(session: SessionService<UserSession>) => { session: UserSession | undefined; setSession: (s: UserSession) => void; getSession: () => UserSession | undefined; hasSessionChanged: () => boolean; }
+createMiddlewareSessionWireProps: <UserSession extends CoreUserSession>(session: SessionService<UserSession>) => { setSession: (s: UserSession) => void | Promise<void>; setInitialSession: (s: UserSession) => void; clearSession: () => void | Promise<void>; getSession: () => UserSession | undefined; hasSessionChanged: () => boolean; session: UserSession | undefined; }
 export type CreateRunInput = Omit<AgentRunState, 'runId'>
 createStubProxy: (tracker: StubTracker) => Record<string, unknown>
 export type CredentialMeta = {
