@@ -1,4 +1,5 @@
 import type { CoreUserSession } from '../types/core.types.js'
+import type { ScheduledTaskRuns } from '../wirings/scheduler/scheduler.types.js'
 
 export interface ScheduledTaskSummary {
   taskId: string
@@ -10,20 +11,6 @@ export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   data?: any
   session?: CoreUserSession
   status?: 'scheduled' | 'active' | 'completed' | 'failed'
-}
-
-export interface ScheduledTaskRun {
-  startedAt: Date
-  status: 'completed' | 'failed' | 'skipped'
-  durationMs: number
-  error: string | null
-}
-
-export interface ScheduledTaskRuns {
-  nextRun: Date | null
-  lastRun: ScheduledTaskRun | null
-  /** Newest first. */
-  history: ScheduledTaskRun[]
 }
 
 export abstract class SchedulerService {

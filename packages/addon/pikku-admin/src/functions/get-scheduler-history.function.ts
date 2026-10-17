@@ -1,4 +1,4 @@
-import type { ScheduledTaskRuns } from '@pikku/core/services'
+import type { ScheduledTaskRuns } from '@pikku/core/scheduler'
 import { pikkuFunc } from '#pikku/addon/function'
 
 /**

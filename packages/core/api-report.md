@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 178 | 152 | 485 |
+| `./services` | 176 | 150 | 478 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
@@ -42,6 +42,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/local` | 3 | 3 | 18 |
 | `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
+| `./scheduler` | 9 | 9 | 8 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./addon` | 13 | 13 | 2 |
@@ -53,7 +54,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
-| `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
 | `./webhook` | 7 | 7 | 1 |
 | `./hmac` | 8 | 8 | 0 |
@@ -3166,6 +3166,17 @@ runScheduledTask: ({ name, session, traceId, }: RunScheduledTasksParams) => Prom
 export class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string)
 }
+export interface ScheduledTaskRun {
+  startedAt: Date
+  status: 'completed' | 'failed' | 'skipped'
+  durationMs: number
+  error: string | null
+}
+export interface ScheduledTaskRuns {
+  nextRun: Date | null
+  lastRun: ScheduledTaskRun | null
+  history: ScheduledTaskRun[]
+}
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
   Record<
     string,
@@ -5496,17 +5507,6 @@ export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   data?: any
   session?: CoreUserSession
   status?: 'scheduled' | 'active' | 'completed' | 'failed'
-}
-export interface ScheduledTaskRun {
-  startedAt: Date
-  status: 'completed' | 'failed' | 'skipped'
-  durationMs: number
-  error: string | null
-}
-export interface ScheduledTaskRuns {
-  nextRun: Date | null
-  lastRun: ScheduledTaskRun | null
-  history: ScheduledTaskRun[]
 }
 export interface ScheduledTaskSummary {
   taskId: string

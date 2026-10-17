@@ -40,3 +40,17 @@ export interface PikkuScheduledTask {
   /** Never returns — throws to abort the run. */
   skip: (reason?: string) => void
 }
+
+export interface ScheduledTaskRun {
+  startedAt: Date
+  status: 'completed' | 'failed' | 'skipped'
+  durationMs: number
+  error: string | null
+}
+
+export interface ScheduledTaskRuns {
+  nextRun: Date | null
+  lastRun: ScheduledTaskRun | null
+  /** Newest first. */
+  history: ScheduledTaskRun[]
+}

@@ -2,10 +2,12 @@ import { CronJob } from 'cron'
 import type { CoreUserSession } from '@pikku/core/types'
 import type {
   ScheduledTaskInfo,
-  ScheduledTaskRun,
-  ScheduledTaskRuns,
   ScheduledTaskSummary,
 } from '@pikku/core/services'
+import type {
+  ScheduledTaskRun,
+  ScheduledTaskRuns,
+} from '@pikku/core/scheduler'
 import { SchedulerService } from '@pikku/core/services'
 import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState, getSingletonServices } from '@pikku/core/state'
