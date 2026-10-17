@@ -6,6 +6,7 @@
     "outDir": "dist",
     "target": "esnext",
     "declaration": true,
+    "skipLibCheck": true,
     "composite": true
   },
   "include": ["bin/**/*.ts", "src/**/*.ts"],
