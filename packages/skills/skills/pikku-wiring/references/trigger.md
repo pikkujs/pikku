@@ -77,6 +77,29 @@ The config-object form (`pikkuTriggerFunc({ func, title, description, tags,
 input, output })`) is also accepted when you want schemas or metadata on the
 source.
 
+### Events that belong to a user
+
+A source that watches something on a user's behalf — polling each connected
+user's mailbox, say — names that user as the second argument to `invoke`:
+
+```typescript
+for (const userId of await credentialService.getUsersWithCredential('gmail')) {
+  for (const message of await fetchNewMessages(userId)) {
+    trigger.invoke(message, { pikkuUserId: userId })
+  }
+}
+```
+
+The target then runs as that user, exactly like a queue job or workflow run
+carrying a `pikkuUserId`: its `type: 'wire'` credentials and its stored session
+resolve for them, and a workflow target records them on the run. Without the
+option the target runs as nobody.
+
+The user is the source's assertion, not the event's — it is a separate argument
+so nothing in the event data can set it. Pass only a user the source has
+established itself, such as the one whose credential it just polled with, and
+never an id read out of the event.
+
 ## Starting triggers
 
 Nothing fires until a `TriggerService` is started. For a single process,

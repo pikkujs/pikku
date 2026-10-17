@@ -1,6 +1,7 @@
 import { rpcService } from '../rpc/rpc-runner.js'
 import { setupTrigger } from './trigger-runner.js'
-import type { TriggerInstance } from './trigger.types.js'
+import type { TriggerInstance, TriggerInvokeOptions } from './trigger.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type { TriggerService } from '../../services/trigger-service.js'
 import {
   getSingletonServices,
@@ -62,7 +63,7 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async setupTriggerInstance(
     name: string,
     input: unknown,
-    onTrigger: (data: unknown) => Promise<void>
+    onTrigger: (data: unknown, options?: TriggerInvokeOptions) => Promise<void>
   ): Promise<TriggerInstance> {
     return setupTrigger({
       name,
@@ -74,13 +75,20 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async onTriggerFire(
     triggerName: string,
     targets: TriggerTarget[],
-    data: unknown
+    data: unknown,
+    options?: TriggerInvokeOptions
   ): Promise<void> {
     const singletonServices = getSingletonServices()
     const createWireServices = getCreateWireServices()
-    const wireServices = await createWireServices?.(singletonServices, {})
+    // The user rides on the wire, where the function runner resolves the
+    // target's session and credentials from it and a started workflow records
+    // it on the run.
+    const wire: PikkuRawWire = options?.pikkuUserId
+      ? { pikkuUserId: options.pikkuUserId }
+      : {}
+    const wireServices = await createWireServices?.(singletonServices, wire)
     const services = { ...singletonServices, ...wireServices }
-    const rpc = rpcService.getContextRPCService(services, {}, false)
+    const rpc = rpcService.getContextRPCService(services, wire, false)
 
     for (const target of targets) {
       try {

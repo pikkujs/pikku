@@ -24,7 +24,8 @@ ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = 
 
 /**
  * A trigger function that sets up a subscription and returns a teardown function.
- * The trigger is fired via wire.trigger.invoke(data).
+ * The trigger is fired via wire.trigger.invoke(data), or
+ * wire.trigger.invoke(data, { pikkuUserId }) to run the target as that user.
  *
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type produced when trigger fires
