@@ -8,6 +8,14 @@ import type { SecretValue } from '@pikku/core/classification'
 
 import type { AWSConfig } from './aws-config.js'
 
+const parseSecretString = <T>(value: string): SecretValue<T> => {
+  try {
+    return createSecretValue(JSON.parse(value) as T)
+  } catch {
+    return createSecretValue(value as unknown as T)
+  }
+}
+
 export class AWSSecrets implements SecretService {
   private readonly client: SecretsManagerClient
 
@@ -15,37 +23,50 @@ export class AWSSecrets implements SecretService {
     this.client = new SecretsManagerClient({ region: config.awsRegion })
   }
 
-  public async getSecret<T = string>(
+  /**
+   * The secret's string value, or `undefined` when it does not exist or holds
+   * no string. Anything else — throttling, an expired role, a network failure —
+   * is thrown: reporting it as absent would let a caller treat an outage as
+   * "not configured", which for `PIKKU_REMOTE_SECRET` means sending remote
+   * calls unauthenticated.
+   */
+  private async fetchSecretString(
     SecretId: string
-  ): Promise<SecretValue<T>> {
+  ): Promise<string | undefined> {
     try {
       const result = await this.client.send(
         new GetSecretValueCommand({ SecretId })
       )
-      if (result.SecretString) {
-        try {
-          return createSecretValue(JSON.parse(result.SecretString) as T)
-        } catch {
-          return createSecretValue(result.SecretString as unknown as T)
-        }
+      return result.SecretString || undefined
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ResourceNotFoundException') {
+        return undefined
       }
-      throw new Error(`Secret '${SecretId}' has no string value`)
-    } catch (e: any) {
+      throw e
+    }
+  }
+
+  public async getSecret<T = string>(
+    SecretId: string
+  ): Promise<SecretValue<T>> {
+    let value: string | undefined
+    try {
+      value = await this.fetchSecretString(SecretId)
+    } catch (e: unknown) {
       throw new Error(`FATAL: Error finding secret: ${SecretId}`, {
         cause: e,
       })
     }
+    if (value === undefined) {
+      throw new Error(`FATAL: Error finding secret: ${SecretId}`, {
+        cause: new Error(`Secret '${SecretId}' has no string value`),
+      })
+    }
+    return parseSecretString<T>(value)
   }
 
   public async hasSecret(SecretId: string): Promise<boolean> {
-    try {
-      const result = await this.client.send(
-        new GetSecretValueCommand({ SecretId })
-      )
-      return !!result.SecretString
-    } catch {
-      return false
-    }
+    return (await this.fetchSecretString(SecretId)) !== undefined
   }
 
   public async setSecret(_key: string, _value: unknown): Promise<void> {
@@ -59,11 +80,13 @@ export class AWSSecrets implements SecretService {
   public async getSecrets<
     T extends Record<string, unknown> = Record<string, unknown>,
   >(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>> {
-    const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
+    const values = await Promise.all(
+      keys.map((key) => this.fetchSecretString(key))
+    )
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
-      if (results[i].status === 'fulfilled')
-        out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
+      const value = values[i]
+      if (value !== undefined) out[key] = parseSecretString(value)
     })
     return out as Partial<SecretValues<T>>
   }
