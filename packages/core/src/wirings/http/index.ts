@@ -3,6 +3,7 @@ export {
   DEFAULT_MAX_BODY_SIZE,
 } from './pikku-fetch-http-request.js'
 export { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
+export { mergeRequestData } from './merge-request-data.js'
 export { logRoutes } from './log-http-routes.js'
 
 export { fetch, fetchData, wireHTTP, addHTTPMiddleware } from './http-runner.js'
