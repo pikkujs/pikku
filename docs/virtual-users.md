@@ -291,15 +291,15 @@ deliverable, not synthetic dead ends:
 ```
 
 The `runId` suffix is not decoration. Without it two concurrent runs share an inbox _and_
-a user row, and run B reads run A's magic link — the collision `assertDistinctEmails`
-already guards for declared virtual users, reintroduced by computing addresses. Sub-addressing
+a user row, and run B reads run A's magic link. Within one run, `virtualUserEmails` refuses
+two virtual users whose ids compute the same address, for the same reason. Sub-addressing
 also buys isolation for free, since a different address is a different account in the app.
 The bare form stays for seeded fixtures that must be stable.
 
 ### The mailbox is an interface
 
 Capturing inbound mail is platform-specific — Cloudflare can do it with an Email Worker on
-a test domain, and `defineTriggerSource` already exists to receive it — so pikku declares
+a test domain, and `wireTriggerSource` already exists to receive it — so pikku declares
 the interface and ships no default:
 
 ```ts
