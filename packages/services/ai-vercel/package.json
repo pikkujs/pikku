@@ -29,8 +29,8 @@
     "ai": "^7.0.0"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "^4.0.7",
-    "ai": "^7.0.66",
-    "zod": "^4.4.3"
+    "@ai-sdk/provider": "^4.0.29",
+    "ai": "^7.0.143",
+    "zod": "^4.6.7"
   }
 }

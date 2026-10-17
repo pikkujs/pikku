@@ -24,7 +24,7 @@
     "@pikku/core": "^0.12.142"
   },
   "dependencies": {
-    "jose": "^6.2.9"
+    "jose": "^6.2.12"
   },
   "exports": {
     ".": "./dist/index.js"

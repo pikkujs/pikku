@@ -43,8 +43,8 @@
     "@pikku/better-auth": "^0.12.43",
     "@pikku/core": "^0.12.113",
     "@types/react": "^19",
-    "better-auth": "^1.7.5",
-    "next": "15.5.23",
+    "better-auth": "^1.7.10",
+    "next": "15.5.28",
     "react": "^19",
     "react-dom": "^19"
   },

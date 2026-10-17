@@ -21,6 +21,6 @@
   },
   "devDependencies": {
     "@standard-schema/spec": "^1.1.0",
-    "@types/bun": "^1.4.0"
+    "@types/bun": "^1.4.3"
   }
 }

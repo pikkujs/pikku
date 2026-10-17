@@ -31,7 +31,7 @@
   "dependencies": {
     "@pikku/uws-handler": "^0.12.10",
     "@types/qs": "^6",
-    "qs": "^6.15.3",
+    "qs": "^6.16.1",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4"
   },
   "devDependencies": {

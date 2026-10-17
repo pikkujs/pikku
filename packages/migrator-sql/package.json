@@ -25,9 +25,9 @@
     "node": ">=22.10"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.3",
     "@types/node": "^22",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "exports": {
     ".": "./dist/src/index.js",

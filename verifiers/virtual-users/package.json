@@ -11,16 +11,16 @@
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "better-auth": "^1.7.5",
+    "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",
-    "kysely": "^0.29.5"
+    "kysely": "^0.29.6"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "build": "tsc -b",
