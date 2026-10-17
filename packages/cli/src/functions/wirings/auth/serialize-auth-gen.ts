@@ -5,7 +5,7 @@ import {
   OAUTH_PROXY_URL_VARIABLE,
   OAUTH_PROXY_KEY_ID_VARIABLE,
   OAUTH_PROXY_PROVIDERS_VARIABLE,
-} from '@pikku/better-auth'
+} from '@pikku/better-auth/constants'
 import { AUTH_HANDLER_FUNC_ID } from '@pikku/inspector/state'
 import type { AuthDefinition } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'

@@ -19,6 +19,49 @@ import { createHash } from 'crypto'
  */
 const cache = new Map<string, { hash: string; file: ts.SourceFile }>()
 
+/**
+ * A SourceFile is only shareable between programs that would have parsed it
+ * the same way: the language version and the module format the program
+ * implies for it (ESM vs CJS) are baked into the AST. The inspector and the
+ * schema generator use different compiler options, so both go into the key.
+ */
+const cacheKey = (
+  fileName: string,
+  languageVersionOrOptions: ts.ScriptTarget | ts.CreateSourceFileOptions
+): string => {
+  if (typeof languageVersionOrOptions !== 'object') {
+    return `${fileName}\0${languageVersionOrOptions}`
+  }
+  const { languageVersion, impliedNodeFormat, jsDocParsingMode } =
+    languageVersionOrOptions
+  return `${fileName}\0${languageVersion}\0${impliedNodeFormat ?? ''}\0${jsDocParsingMode ?? ''}`
+}
+
+/**
+ * Parse through the shared cache. With `populate: false` the cache is only
+ * read: a short-lived program (the schema generator's) reuses what the
+ * inspector parsed without pinning its own files past its lifetime.
+ */
+export const getCachedSourceFile = (
+  fileName: string,
+  text: string,
+  languageVersionOrOptions: ts.ScriptTarget | ts.CreateSourceFileOptions,
+  { populate = true }: { populate?: boolean } = {}
+): { file: ts.SourceFile; reused: boolean } => {
+  const key = cacheKey(fileName, languageVersionOrOptions)
+  const hash = createHash('sha1').update(text).digest('hex')
+  const hit = cache.get(key)
+  if (hit && hit.hash === hash) return { file: hit.file, reused: true }
+  const file = ts.createSourceFile(
+    fileName,
+    text,
+    languageVersionOrOptions,
+    true
+  )
+  if (populate) cache.set(key, { hash, file })
+  return { file, reused: false }
+}
+
 export interface SourceFileCacheHost extends ts.CompilerHost {
   /** Files served from the cache by the program just built. */
   readonly reused: () => number
@@ -45,19 +88,12 @@ export const createSourceFileCacheHost = (
     }
     if (text === undefined) return undefined
 
-    const hash = createHash('sha1').update(text).digest('hex')
-    const hit = cache.get(fileName)
-    if (hit && hit.hash === hash) {
-      reused++
-      return hit.file
-    }
-    const file = ts.createSourceFile(
+    const { file, reused: hit } = getCachedSourceFile(
       fileName,
       text,
-      languageVersionOrOptions,
-      true
+      languageVersionOrOptions
     )
-    cache.set(fileName, { hash, file })
+    if (hit) reused++
     return file
   }
 
@@ -65,8 +101,8 @@ export const createSourceFileCacheHost = (
     reused: () => reused,
     prune: (program: ts.Program) => {
       const live = new Set(program.getSourceFiles().map((sf) => sf.fileName))
-      for (const fileName of cache.keys()) {
-        if (!live.has(fileName)) cache.delete(fileName)
+      for (const [key, entry] of cache) {
+        if (!live.has(entry.file.fileName)) cache.delete(key)
       }
     },
   })
