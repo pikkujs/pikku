@@ -127,6 +127,64 @@ for (const scenario of scenarios) {
   )
 }
 
+// A Cloudflare unit's bootstrap defers the addon's functions and schemas to
+// loadAddons(), so evaluating it at Worker startup registers neither.
+{
+  const outDir = join(rootDir, '.pikku-shake', 'lazy')
+  rmSync(outDir, { recursive: true, force: true })
+  execFileSync(
+    'npx',
+    [
+      'pikku',
+      'all',
+      '--names=testAddonHello',
+      `--outDir=${outDir}`,
+      '--force-relative-imports',
+      '--lazy-addons',
+      '--silent',
+    ],
+    { cwd: rootDir, stdio: 'pipe' }
+  )
+  const bootstrapFile = join(outDir, 'pikku-bootstrap.gen.ts')
+  const bootstrap = readFileSync(bootstrapFile, 'utf8')
+  const addon = '@pikku/templates-function-addon/.pikku'
+
+  check(
+    'lazy',
+    'addon bootstrap not imported whole',
+    !bootstrap.includes(ADDON_BOOTSTRAP_IMPORT)
+  )
+  check(
+    'lazy',
+    'addon meta imported up front',
+    bootstrap.includes(`import '${addon}/function/pikku-functions-meta.gen.js'`)
+  )
+  check(
+    'lazy',
+    'addon functions and schemas only imported from loadAddons()',
+    !bootstrap.includes(`import '${addon}/function/pikku-functions.gen.js'`) &&
+      bootstrap.includes(`import('${addon}/function/pikku-functions.gen.js')`)
+  )
+
+  const registered = JSON.parse(
+    execFileSync(
+      'npx',
+      ['tsx', join(rootDir, 'src', 'lazy-addons.check.ts'), bootstrapFile],
+      { cwd: rootDir, stdio: 'pipe' }
+    ).toString()
+  ) as { atStartup: number; afterLoadAddons: number }
+  check(
+    'lazy',
+    `no addon function registered at startup (${registered.atStartup})`,
+    registered.atStartup === 0
+  )
+  check(
+    'lazy',
+    `loadAddons() registers them (${registered.afterLoadAddons})`,
+    registered.afterLoadAddons > 0
+  )
+}
+
 if (!passed) {
   console.log('\n✗ Addon tree-shaking verification FAILED')
   process.exit(1)

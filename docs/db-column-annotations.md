@@ -38,6 +38,17 @@ and the `fromDb()` coercion. The CLI, `@pikku/kysely-node-sqlite` and
 `@pikku/kysely-bun-sqlite` all use that one implementation, so a fix cannot
 land in one and miss the others.
 
+The map only takes effect where something attaches the plugin to the `kysely`
+an app is handed:
+
+- `pikku dev`, `pikku serve` and a generated local CLI — the local services file
+  opens the database with `createCoercionPlugin({ map: coercionMap })`.
+- Standalone deploys — the entry imports the map (`db.coercionImportPath`).
+- Cloudflare deploys — `@pikku/deploy-cloudflare`'s `coercionContributor`, on by
+  default, emits the map as a literal and wraps the `services.kysely` the
+  platform contributors built. A platform whose own contributor already applies
+  it passes `coercion: false` to the adapter.
+
 ## Two axes: what changes the _type_ vs only the _validator_
 
 This distinction drives every extension decision.
