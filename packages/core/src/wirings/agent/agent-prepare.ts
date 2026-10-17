@@ -29,8 +29,6 @@ import { createMiddlewareSessionWireProps } from '../../services/user-session-se
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from './agent-utils.js'
 import { awaitPendingInterruptNote } from './agent-interrupt.js'
-import { streamAgent } from './agent-stream.js'
-import { runAgent } from './agent-runner.js'
 import {
   resolveNamespace,
   ContextAwareRPCService,
@@ -693,6 +691,8 @@ export async function buildToolDefs(
             agentSessionMap.set(sessionKey, threadId)
           }
 
+          // A sub-agent runs on the same runners that build these tools. They
+          // import this module, so importing them back statically is a cycle.
           if (streamContext) {
             const isDelegate = agentMode !== 'supervise'
             if (isDelegate && streamContext.delegateState) {
@@ -723,6 +723,7 @@ export async function buildToolDefs(
                     await subChannel.send(event)
                   },
                 }
+            const { streamAgent } = await import('./agent-stream.js')
             const resultText = await streamAgent(
               subAgentName,
               buildSubAgentRunInput(
@@ -755,6 +756,7 @@ export async function buildToolDefs(
             return resultText
           }
 
+          const { runAgent } = await import('./agent-runner.js')
           const result = await runAgent(
             subAgentName,
             buildSubAgentRunInput(message, threadId, resourceId, parentContext),

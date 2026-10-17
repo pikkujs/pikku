@@ -1,10 +1,13 @@
 import { beginChanges } from './abort-scope.js'
-import { forwardStepName, isCompensationStepName } from './compensation-name.js'
+import {
+  forwardStepName,
+  isCompensationStepName,
+} from '../compensation-name.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from '../wirings/channel/channel-middleware-runner.js'
+} from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
 import { getCreateWireServices, pikkuState } from '../pikku-state.js'
