@@ -7,7 +7,7 @@ tags: core, virtual-users, auth
 
 # A virtual user reads its roles from the app's own RPC before better-auth's user.role
 
-`HttpVirtualUser.sessionRoles` (`packages/core/src/services/http-virtual-users.ts`) answers
+`HttpVirtualUser.sessionRoles` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`) answers
 "what roles does this session hold" in a fixed order. First the app's exposed RPC,
 which defaults to `getMyScopes` and can be renamed or switched off with `rolesRpc`.
 Only then better-auth's `get-session`, where its admin plugin puts `role` on the

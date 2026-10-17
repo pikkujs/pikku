@@ -1,7 +1,7 @@
 import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { pikkuState, resetPikkuState } from '../../pikku-state.js'
+import { pikkuState, resetPikkuState } from './pikku-state.js'
 import {
   addChannelMiddleware,
   clearChannelMiddlewareCache,

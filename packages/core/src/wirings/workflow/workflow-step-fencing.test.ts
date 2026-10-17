@@ -1,5 +1,5 @@
 import { defineServiceTests } from '../../testing/service-tests.js'
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 
 defineServiceTests({
   name: 'in-memory',

@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { FileScenarioRunStore } from '@pikku/core/services/file-scenario-run-store'
 import {
   createHttpVirtualUsers,

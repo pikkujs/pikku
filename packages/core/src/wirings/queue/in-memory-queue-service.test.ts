@@ -2,8 +2,8 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryQueueService } from './in-memory-queue-service.js'
-import { wireQueueWorker } from '../wirings/queue/queue-runner.js'
-import { resetPikkuState, pikkuState } from '../pikku-state.js'
+import { wireQueueWorker } from './queue-runner.js'
+import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 
 beforeEach(() => {
   resetPikkuState()

@@ -496,7 +496,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   generateEntrySource(ctx: EntryGenerationContext): string {
     return [
       `// Generated standalone entry — all functions in one process`,
-      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryTriggerSourceStore, InMemoryWorkflowService } from '@pikku/core/services'`,
+      `import { ConsoleLogger, InMemoryTriggerSourceStore } from '@pikku/core/services'`,
+      `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
+      `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
+      `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       ...(ctx.db
         ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
         : []),

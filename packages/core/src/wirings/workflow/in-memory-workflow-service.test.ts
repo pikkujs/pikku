@@ -1,8 +1,8 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
-import { getQueueWorkers } from '../wirings/queue/queue-runner.js'
-import { pikkuState, resetPikkuState } from '../pikku-state.js'
+import { getQueueWorkers } from '../queue/queue-runner.js'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 
 let service: InMemoryWorkflowService
 

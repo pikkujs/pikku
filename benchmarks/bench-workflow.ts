@@ -25,10 +25,8 @@
 
 import { addFunction } from '@pikku/core/function'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
-import {
-  InMemoryWorkflowService,
-  InMemoryQueueService,
-} from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { addWorkflow } from '@pikku/core/workflow'
 import { rpcService } from '@pikku/core/rpc'
 

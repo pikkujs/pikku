@@ -1,6 +1,5 @@
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
 import type { AgentMessage } from '../agent/agent.types.js'
-import { randomUUID } from '../agent/agent-utils.js'
 import type {
   PikkuAgentScorer,
   ScorerInput,
@@ -151,7 +150,7 @@ export const runJudge = async (
 
   const messages: AgentMessage[] = [
     {
-      id: randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       role: 'user',
       content: buildJudgePrompt(judge, input),
       createdAt: new Date(),

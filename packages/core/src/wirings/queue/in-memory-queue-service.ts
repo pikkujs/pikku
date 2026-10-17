@@ -1,9 +1,5 @@
-import type {
-  QueueService,
-  QueueJob,
-  JobOptions,
-} from '../wirings/queue/queue.types.js'
-import { runQueueJob } from '../wirings/queue/queue-runner.js'
+import type { QueueService, QueueJob, JobOptions } from './queue.types.js'
+import { runQueueJob } from './queue-runner.js'
 
 // knowledge: decisions/internals/the-dev-queue-copies-prod-timing-and-serialization-semantics.md
 export class InMemoryQueueService implements QueueService {
