@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3282 observable things**: 1098 exported names, plus
-2184 members on the classes and interfaces among them, reachable
+**3283 observable things**: 1098 exported names, plus
+2185 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 176 | 150 | 475 |
+| `./services` | 176 | 150 | 476 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
@@ -5131,6 +5131,7 @@ export class IncomingWebhookService {
   protected async enqueue(job: WebhookSourceJob): Promise<string>
   public async recordAttempt(_receiptId: string, _attempt: IncomingWebhookAttempt): Promise<void>
   public async listReceipts(_opts?: { source?: string; limit?: number }): Promise<IncomingWebhookReceiptRecord[]>
+  public async getReceipt(_receiptId: string): Promise<IncomingWebhookReceiptRecord | null>
 }
 export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>

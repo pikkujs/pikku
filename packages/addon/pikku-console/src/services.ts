@@ -40,6 +40,7 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       coverageService,
       webhookService,
+      incomingWebhookService,
       auth,
     }
   ) => {
@@ -137,6 +138,7 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       coverageService,
       webhookService,
+      incomingWebhookService,
       codeEditService,
       stateDiffService,
       dbSchemaService,
