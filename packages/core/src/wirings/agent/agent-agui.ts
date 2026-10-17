@@ -25,12 +25,12 @@ type AGUIEvent =
       type: 'RUN_FINISHED'
       threadId: string
       runId: string
-      model?: string
-      usage?: {
-        promptTokens: number
-        completionTokens: number
+      usage?: Array<{
+        model?: string
+        inputTokens: number
+        outputTokens: number
         totalTokens: number
-      }
+      }>
     }
   | { type: 'RUN_ERROR'; message: string; code?: string }
   | { type: 'STEP_STARTED'; stepName: string }
@@ -145,14 +145,16 @@ export function wrapChannelWithAGUI(
       type: 'RUN_FINISHED',
       threadId,
       runId: resolveRunId(),
-      ...(usageModel ? { model: usageModel } : {}),
       ...(sawUsage
         ? {
-            usage: {
-              promptTokens: usageTotals.input,
-              completionTokens: usageTotals.output,
-              totalTokens: usageTotals.input + usageTotals.output,
-            },
+            usage: [
+              {
+                ...(usageModel ? { model: usageModel } : {}),
+                inputTokens: usageTotals.input,
+                outputTokens: usageTotals.output,
+                totalTokens: usageTotals.input + usageTotals.output,
+              },
+            ],
           }
         : {}),
     })

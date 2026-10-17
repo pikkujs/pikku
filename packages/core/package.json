@@ -100,7 +100,7 @@
     "picoquery": "^2.5.0"
   },
   "devDependencies": {
-    "@ag-ui/core": "0.0.57",
+    "@ag-ui/core": "0.0.59",
     "@pikku/deploy": "^0.12.15",
     "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",

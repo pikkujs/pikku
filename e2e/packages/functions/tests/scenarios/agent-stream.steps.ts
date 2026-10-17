@@ -56,7 +56,7 @@ export const streamsAgent = pikkuScenarioStep<
     )
 
     const usage = firstOfType(events, AG_UI.runFinished)?.usage as
-      { totalTokens?: number } | undefined
+      Array<{ totalTokens?: number }> | undefined
 
     return {
       status,
@@ -65,7 +65,8 @@ export const streamsAgent = pikkuScenarioStep<
         .filter((event) => event.type === AG_UI.textContent)
         .map((event) => String(event.delta ?? ''))
         .join(''),
-      totalTokens: usage?.totalTokens ?? 0,
+      totalTokens:
+        usage?.reduce((sum, entry) => sum + (entry.totalTokens ?? 0), 0) ?? 0,
       toolCallId: firstOfType(events, AG_UI.toolCallStart)?.toolCallId as
         string | undefined,
       toolResultId: firstOfType(events, AG_UI.toolCallResult)?.toolCallId as
