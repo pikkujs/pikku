@@ -526,6 +526,12 @@ export interface AuthDefinition {
   /** Whether `session.cookieCache` is enabled — drives the stateless session
    * middleware split in the auth codegen. Absent/false ⇒ stateful middleware. */
   cookieCache?: boolean
+  /** `advanced.cookiePrefix`, when written as a string literal. */
+  cookiePrefix?: string
+  /** `session.cookieCache.strategy`, when written as a string literal. */
+  cookieCacheStrategy?: string
+  /** `session.cookieCache.version`, when written as a string literal. */
+  cookieCacheVersion?: string
   /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either

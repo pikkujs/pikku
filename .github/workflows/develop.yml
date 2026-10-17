@@ -77,8 +77,7 @@ jobs:
   # @ts-expect-error in a type-test project, or a test file that drifted from
   # the API it exercises passes every other job. Each package's `tsc` script
   # is the check. Packages only: examples, verifiers, templates and e2e need
-  # their generated .pikku output first. @pikku/workflow-graph is excluded
-  # until it can type-check @pikku/react's use of `process`.
+  # their generated .pikku output first.
   typecheck:
     name: Typecheck
     if: ${{ !github.event.pull_request.draft }}
@@ -89,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: bun run --filter './packages/**' --filter '!@pikku/workflow-graph' tsc
+      - run: bun run --filter './packages/**' tsc
 
   build:
     name: Build
