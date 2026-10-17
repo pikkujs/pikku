@@ -29,7 +29,7 @@ import {
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
-} from '@pikku/inspector/state'
+} from '@pikku/inspector/lite'
 import {
   inspect as inspectWithGo,
   findInspectorBinary,

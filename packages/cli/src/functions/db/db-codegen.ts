@@ -14,7 +14,7 @@ import {
   readMigrationProvenance,
 } from './migration-provenance.js'
 import type { CodedDiagnostic } from '@pikku/inspector'
-import { ErrorCode } from '@pikku/inspector/state'
+import { ErrorCode } from '@pikku/inspector/lite'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────

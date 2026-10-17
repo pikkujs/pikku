@@ -1,11 +1,16 @@
 /**
- * Everything a consumer of an `InspectorState` needs — serializing it,
- * filtering it, reading codes and manifests out of it — without the
- * TypeScript compiler, which the main entry loads for `inspect`. The CLI
- * imports this so the native engine never loads `typescript`.
+ * The inspector's exports that never load the TypeScript compiler.
+ *
+ * `@pikku/inspector` itself pulls in `typescript` and `ts-json-schema-generator`
+ * at module load, which costs a CLI command that only wants an error code or a
+ * serializer most of its startup time, and costs the native engine the
+ * compiler's memory for nothing. Everything a consumer of an `InspectorState`
+ * needs is here and safe to import eagerly; `lite.test.ts` fails if anything
+ * reachable from this file imports `typescript`.
  */
 export { getInitialInspectorState } from './initial-state.js'
 export { ErrorCode } from './error-codes.js'
+export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
 export {
   SCENARIO_INSTRUMENTATION_FUNCTIONS,
@@ -37,6 +42,7 @@ export {
   deserializeAllDslWorkflows,
 } from './utils/workflow/dsl/deserialize-dsl-workflow.js'
 export { resolveFunctionMeta } from './utils/resolve-function-meta.js'
+export { resolveCoreType } from './utils/resolve-core-type.js'
 export {
   addonResolutionDirs,
   createAddonResolver,

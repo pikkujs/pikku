@@ -2,7 +2,7 @@ import type { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
-import { resolveFunctionMeta } from '@pikku/inspector/state'
+import { resolveFunctionMeta } from '@pikku/inspector/lite'
 import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
 

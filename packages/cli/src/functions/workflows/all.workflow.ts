@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
-import { unresolvedSchemaReferences } from '@pikku/inspector/state'
+import { unresolvedSchemaReferences } from '@pikku/inspector/lite'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'

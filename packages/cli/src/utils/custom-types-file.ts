@@ -1,5 +1,5 @@
 import type { TypesMap } from '@pikku/inspector'
-import { customTypeNames, generateCustomTypes } from '@pikku/inspector/state'
+import { customTypeNames, generateCustomTypes } from '@pikku/inspector/lite'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { getFileImportRelativePath } from './file-import-path.js'
 import { writeFileInDir } from './file-writer.js'

@@ -3,7 +3,7 @@
  * and registers them with pikkuState
  */
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { sanitizeTypeName } from '@pikku/inspector/state'
+import { sanitizeTypeName } from '@pikku/inspector/lite'
 
 export const serializeWorkflowMeta = (
   outputPath: string,

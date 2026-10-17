@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode } from '@pikku/inspector/state'
+import { ErrorCode } from '@pikku/inspector/lite'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'

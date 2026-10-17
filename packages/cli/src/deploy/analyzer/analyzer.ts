@@ -11,7 +11,7 @@ import type { InspectorState, SerializedWorkflowGraph } from '@pikku/inspector'
 import {
   incompatibleServicesFor,
   resolveDeployTarget,
-} from '@pikku/inspector/state'
+} from '@pikku/inspector/lite'
 import { relative } from 'node:path'
 import type { FunctionMeta } from '@pikku/core/services'
 import type { ChannelMeta } from '@pikku/core/channel'

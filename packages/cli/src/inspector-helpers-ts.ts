@@ -9,4 +9,4 @@ export {
   readTsconfigOutDir,
 } from '@pikku/inspector'
 export { collectSurface } from '@pikku/inspector/surface'
-export { scanFrontend } from './functions/mocks/stub-scan.js'
+export { scanFrontend } from './functions/mocks/stub-scan-source.js'

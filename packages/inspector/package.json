@@ -18,10 +18,10 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./state": {
-      "types": "./dist/state.d.ts",
-      "import": "./dist/state.js",
-      "default": "./dist/state.js"
+    "./lite": {
+      "types": "./dist/lite.d.ts",
+      "import": "./dist/lite.js",
+      "default": "./dist/lite.js"
     },
     "./schema-generator": {
       "types": "./dist/schema-generator.d.ts",

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { lstat, readdir, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { ErrorCode } from '@pikku/inspector/state'
+import { ErrorCode } from '@pikku/inspector/lite'
 import { readJsonSafe } from './shared-checks.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
