@@ -479,6 +479,11 @@ export function filterInspectorState(
       meta: JSON.parse(JSON.stringify(state.channels.meta)),
       files: new Set<string>(), // Will be repopulated with filtered files
     },
+    gateways: {
+      ...state.gateways,
+      meta: JSON.parse(JSON.stringify(state.gateways?.meta ?? {})),
+      files: new Set<string>(),
+    },
     triggers: {
       ...state.triggers,
       meta: JSON.parse(JSON.stringify(state.triggers?.meta ?? {})),
@@ -688,6 +693,45 @@ export function filterInspectorState(
     state.channels.files,
     Object.keys(filteredState.channels.meta).length > 0
   )
+
+  // Filter gateways. A gateway is addressed by its own name or by the function
+  // it runs, so a deploy unit naming either keeps the wiring that serves it.
+  for (const name of Object.keys(filteredState.gateways.meta)) {
+    const gatewayMeta = filteredState.gateways.meta[name]
+    const matches = matchesFilters(
+      filters,
+      {
+        type: 'gateway' as PikkuWiringTypes,
+        name: gatewayMeta.pikkuFuncId,
+        altNames: [name],
+        tags: gatewayMeta.tags,
+        httpRoute: gatewayMeta.route,
+      },
+      logger,
+
+      undefined,
+
+      keptByDeploy
+    )
+
+    if (!matches) {
+      delete filteredState.gateways.meta[name]
+    } else {
+      filteredState.serviceAggregation.usedFunctions.add(
+        gatewayMeta.pikkuFuncId
+      )
+      extractWireNames(gatewayMeta.middleware).forEach((name: string) =>
+        filteredState.serviceAggregation.usedMiddleware.add(name)
+      )
+    }
+  }
+
+  // The meta records no source file per gateway, so a surviving gateway keeps
+  // every gateway file and none surviving drops them all.
+  filteredState.gateways.files =
+    Object.keys(filteredState.gateways.meta).length > 0
+      ? new Set(state.gateways?.files ?? [])
+      : new Set<string>()
 
   // Filter triggers
   for (const name of Object.keys(filteredState.triggers.meta)) {

@@ -143,6 +143,21 @@ export interface ChannelDefinition {
   functionIds: string[]
 }
 
+/**
+ * A `wireGateway` the deployment serves. Only webhook gateways have one: a
+ * websocket gateway rides a channel the provider would have to host, and a
+ * listener opens its connection outward from a long-lived process, so neither
+ * maps onto a unit's route table.
+ */
+export interface GatewayDefinition {
+  name: string
+  type: 'webhook'
+  route: string
+  unitName: string
+  /** The function the gateway runs per inbound message. */
+  functionId: string
+}
+
 export interface AgentDefinition {
   name: string
   unitName: string
@@ -217,6 +232,7 @@ export interface DeploymentManifest {
   queues: QueueDefinition[]
   scheduledTasks: ScheduledTaskDefinition[]
   channels: ChannelDefinition[]
+  gateways: GatewayDefinition[]
   agents: AgentDefinition[]
   mcpEndpoints: MCPEndpointDefinition[]
   workflows: WorkflowDefinition[]
