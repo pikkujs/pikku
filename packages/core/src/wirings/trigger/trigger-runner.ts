@@ -3,6 +3,7 @@ import type {
   CoreTrigger,
   CoreTriggerSource,
   TriggerInstance,
+  TriggerInvokeOptions,
 } from './trigger.types.js'
 import {
   pikkuState,
@@ -59,7 +60,10 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
 export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   input?: TInput
-  onTrigger: (data: TOutput) => void | Promise<void>
+  onTrigger: (
+    data: TOutput,
+    options?: TriggerInvokeOptions
+  ) => void | Promise<void>
 }
 
 export async function setupTrigger<TInput = unknown, TOutput = unknown>({
@@ -83,11 +87,25 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   const wire: PikkuRawWire = {
     trigger: {
-      invoke: (data: unknown) => {
+      invoke: (data: unknown, options?: TriggerInvokeOptions) => {
+        const pikkuUserId = options?.pikkuUserId
+        if (
+          pikkuUserId !== undefined &&
+          (typeof pikkuUserId !== 'string' || pikkuUserId === '')
+        ) {
+          // Running it as nobody would hide the source's bug, and as anyone
+          // else is not possible: the event is dropped.
+          singletonServices.logger.error(
+            `Trigger '${name}' fired with an invalid pikkuUserId; dropping the event`
+          )
+          return
+        }
         singletonServices.logger.info(`Trigger fired: ${name}`)
         // `invoke` is typed void for trigger sources, so a rejection from the
         // trigger function is logged here rather than left unhandled.
-        Promise.resolve(onTrigger(data as TOutput)).catch((e) =>
+        Promise.resolve(
+          onTrigger(data as TOutput, pikkuUserId ? { pikkuUserId } : undefined)
+        ).catch((e) =>
           singletonServices.logger.error(
             `Trigger '${name}' handler failed: ${e?.message ?? e}`
           )

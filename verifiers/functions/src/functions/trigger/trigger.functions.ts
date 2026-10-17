@@ -1,7 +1,11 @@
 import { pikkuTriggerFunc } from '#pikku/trigger'
+import type { TriggerInvokeOptions } from '@pikku/core/trigger'
 
 // A controllable trigger — stores invoke callback so tests can fire it manually
-const invokers = new Map<string, (data: any) => void>()
+const invokers = new Map<
+  string,
+  (data: any, options?: TriggerInvokeOptions) => void
+>()
 
 export const getInvoker = (key: string) => invokers.get(key)
 export const clearInvokers = () => invokers.clear()
