@@ -1,13 +1,18 @@
 # Porting the inspector to Go
 
-`pikku-inspect` is the analysis half of `@pikku/inspector` (`packages/inspector`)
-on [typescript-go](https://github.com/microsoft/typescript-go). It builds the
-program, runs the visit sweeps, resolves versions and generates schemas. It
-returns the state in finalize-ready form (`finalized: false`). The TS side runs
-finalize (post-process, validators, workflows, filesAndMethods) on that state.
+`pikku-inspect` is `@pikku/inspector` (`packages/inspector`) on
+[typescript-go](https://github.com/microsoft/typescript-go). It builds the
+program, runs the visit sweeps, resolves versions, generates schemas and runs
+finalize, returning the finalized state (`finalized: true`).
 
-The TS wrapper, CLI engine selection and the `parity/` harness live outside this
-directory. Only Go code, `bench/` and this file live here.
+It is the CLI's default engine (`native`); the TypeScript inspector stays
+supported beside it, selected with `inspector: 'typescript'` in
+pikku.config.json, `--inspector typescript` or `PIKKU_INSPECTOR=typescript`,
+until TypeScript 7 ships a compiler API. See
+`knowledge/decisions/both-engines-stay-behind-a-switch-until-typescript-7.md`.
+
+The TS wrapper and the `parity/` harness live outside the Go tree; the engine
+switch is `packages/cli/src/inspector-engine.ts`.
 
 ## Layout
 
@@ -211,26 +216,16 @@ Each of these was found by a parity diff. Each is handled where noted.
   first in ascending order. `internal/jsjson` and `state.Record` reproduce
   both. Never use `encoding/json` to write state.
 
-## typesLookup → coreTypeProperties
+## typesLookup → serviceTypes
 
 TS state carries `typesLookup: Map<string, ts.Type[]>`, which cannot be
-serialized. It has two consumers, and both only need the property names of the
-core types:
-- `extractAllServices` in `utils/post-process.ts`. It runs in finalize, sorts
-  the names, and skips silently when `typesLookup` is absent.
-- `packages/cli/src/functions/wirings/workflow/pikku-command-workflow.ts:70`,
-  which only uses `.includes`.
-
-Go emits these instead:
-
-```
-coreTypeProperties: { "<variable name from an import map>": ["prop", ...] }   // sorted
-```
-
-Both consumers should read `coreTypeProperties` when `typesLookup` is absent.
-Otherwise `allSingletonServices`/`allWireServices` stay empty on a Go-analyzed
-state.
-`bench/ref-analyze.mjs` emits the same field from TS for parity.
+serialized. Nothing outside the TypeScript engine reads it any more: finalize's
+`extractAllServices` and the CLI's workflow codegen read the serialized
+`serviceTypes` (`singletonServices`, `services`), which both engines emit.
+The CLI only clears `typesLookup` after a TypeScript-engine inspection to
+release memory. Go's state still has a `coreTypeProperties` field (the core
+types' property names, sorted), used by `bench/`; finalize and the CLI do not
+read it.
 
 ## Schema generation
 

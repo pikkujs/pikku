@@ -1,13 +1,18 @@
 ---
 type: decision
 title: After cutover @pikku/inspector keeps only its TypeScript-free parts
-description: The analysis moves to the pikku-inspect binary; @pikku/inspector keeps state types, ErrorCode, serialization and the other pure helpers, with no typescript dependency
+description: Deferred until TypeScript 7 has a compiler API. When the TypeScript engine is retired, @pikku/inspector keeps state types, ErrorCode, serialization and the other pure helpers, with no typescript dependency
 tags: [inspector, inspector-go, packaging]
 ---
 
 # After cutover @pikku/inspector keeps only its TypeScript-free parts
 
-Once [the Go engine replaces the TypeScript inspector](the-go-engine-replaces-the-typescript-inspector.md):
+> [!NOTE]
+> Deferred. [Both engines stay, behind a switch, until TypeScript 7 has a compiler API](both-engines-stay-behind-a-switch-until-typescript-7.md),
+> so nothing below is removed yet. This is the plan for the day the TypeScript
+> engine is retired.
+
+Once the TypeScript engine is retired:
 
 - `@pikku/inspector` keeps the pure pieces: the state and meta types, `ErrorCode`,
   `serializeInspectorState` / `deserializeInspectorState`, the workflow-graph types
@@ -16,9 +21,8 @@ Once [the Go engine replaces the TypeScript inspector](the-go-engine-replaces-th
 - The analysis lives in the `pikku-inspect` binary, shipped as
   `@pikku/inspector-go` plus one `@pikku/inspector-go-<platform>-<arch>` package per
   platform, installed through `optionalDependencies` the way esbuild ships its
-  binary. Those platform packages are neither declared nor published yet; until
-  they are, the wrapper finds the binary through `PIKKU_INSPECTOR_GO_BIN` or the
-  package's own `bin/pikku-inspect`.
+  binary. `PIKKU_INSPECTOR_GO_BIN` or the package's own `bin/pikku-inspect`
+  override it in development.
 - `InspectorState.typesLookup` and `InspectorState.program`, and
   `InspectorOptions.oldProgram`, are removed: they hold live compiler objects.
 
@@ -71,7 +75,7 @@ The CLI also imports `typescript` directly in `src/functions/mocks/stub-scan.ts`
 | `AUTH_HANDLER_FUNC_ID`                                                               | pure; `index.ts` re-exports it through `add/add-auth.ts`, which imports `typescript`; point it at `utils/inspector-constants.ts`                                        |
 | `filterInspectorState`                                                               | pure, but imports `makeContextBasedId` from `utils/extract-function-name.ts`, which imports `typescript`; split that helper out                                         |
 | `deserializeDslWorkflow`, `deserializeGraphWorkflow`, `deserializeAllDslWorkflows`   | pure, but `index.ts` takes them from `workflow/dsl/index.ts`, which also exports the compiler-based `extractDSLWorkflow`; import `deserialize-dsl-workflow.ts` directly |
-| `finalizeInspectorState` (`./finalize`)                                              | pure today; it is ported to Go with finalize, and deleted after                                                                                                         |
+| `finalizeInspectorState` (`./finalize`)                                              | the TypeScript engine's finalize; the Go binary runs its own, so it goes with the engine                                                                                |
 
 > [!IMPORTANT]
 > The last four pure rows load `typescript` today through a shared module. Each
