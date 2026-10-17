@@ -42,6 +42,12 @@ const runPikkuFunc = async <In, Out>(
 const resolveWireSession = async (wire: PikkuRawWire) =>
   typeof wire.getSession === 'function' ? await wire.getSession() : wire.session
 
+/**
+ * Thrown when an RPC name resolves to no function, or to one that `rpc.exposed` may not call. Maps to HTTP 404 and MCP `-32601`.
+ *
+ * An unexposed function is reported as not found rather than forbidden, so the
+ * response does not reveal whether an internal function by that name exists.
+ */
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
   constructor(rpcName: string) {
@@ -55,6 +61,7 @@ addError(RPCNotFoundError, {
   message: 'RPC function not found.',
 })
 
+/** Thrown when a remote addon's configuration cannot be used, for example when its `serverUrl` resolves empty. Maps to HTTP 500. */
 export class RemoteAddonConfigError extends PikkuError {
   constructor(namespace: string, detail: string) {
     super(`Remote addon '${namespace}' is misconfigured: ${detail}`)
@@ -65,6 +72,7 @@ addError(RemoteAddonConfigError, {
   message: 'Remote addon is misconfigured.',
 })
 
+/** Thrown when a remote addon answers an RPC with a non-2xx status. Maps to HTTP 502; the upstream status is kept on `httpStatus` and the first 300 characters of its body in the message. */
 export class RemoteAddonRequestError extends PikkuError {
   public readonly httpStatus: number
   constructor(
@@ -606,6 +614,21 @@ export class ContextAwareRPCService {
   }
 }
 
+/**
+ * Builds the `rpc` object handed to every function on its wire.
+ *
+ * `rpc.invoke(name, data)` calls another function in-process, or through the
+ * `DeploymentService` when the function lives in another deployment unit.
+ * `rpc.exposed` does the same but only reaches functions marked `expose: true`
+ * (and, for addons, those the consuming app exposes), which is what the public
+ * RPC endpoint uses. `rpc.remote` always goes through the `DeploymentService`.
+ * Calls carry the caller's wire, so the session and trace ID propagate. An addon
+ * can only call the addons it lists in `uses`.
+ *
+ * Runtimes create this through {@link rpcService}; apps reach it as `rpc` on the wire.
+ *
+ * @example snippet: rpcInternalCall
+ */
 export class PikkuRPCService<
   Services extends CoreServices,
   TypedRPC = PikkuRPC,
@@ -675,4 +698,5 @@ class ContextRPCView {
   }
 }
 
+/** The shared {@link PikkuRPCService}. Function runners call `getContextRPCService` on it to give each invocation its own `rpc`. */
 export const rpcService = new PikkuRPCService()

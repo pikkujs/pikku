@@ -1,5 +1,6 @@
 import type { AnalyticsIdentityResolver } from './analytics.types.js'
 
+/** Options for `cookieAnalyticsIdentity`: which cookies carry vendor ids and which grant consent. */
 export interface CookieAnalyticsIdentityOptions {
   /** Identity key to read it from, e.g. `{ gaClientId: '_ga' }`. */
   vendorIds?: Record<string, string>

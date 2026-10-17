@@ -3,6 +3,7 @@ import { addError } from '../../errors/error-handler.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import type { WorkflowRunWire } from './workflow.types.js'
 
+/** The caller is not the user who started this workflow run. Responds 403. */
 export class WorkflowRunForbiddenError extends ForbiddenError {
   constructor() {
     super('Not authorized to access this workflow run')

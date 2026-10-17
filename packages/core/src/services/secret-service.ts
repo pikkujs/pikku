@@ -3,6 +3,19 @@ import type { SecretValue } from '../classification/secret-value.js'
 /** A record of secrets, each still wrapped. */
 export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
 
+/**
+ * Reads and writes secrets, provided as the `secrets` singleton service (for
+ * example a cloud secret manager, or {@link LocalSecretService} in
+ * development).
+ *
+ * Values come back wrapped in a `SecretValue`, which logs and serializes as
+ * `[secret]` until `.reveal()` is called, and the logger, audit log and email
+ * service refuse a `SecretValue` at compile time. Function bodies and
+ * permissions cannot reach this service at all; read secrets in your service
+ * factories and pass the values to the services that need them.
+ *
+ * @example snippet: shopServices
+ */
 export interface SecretService {
   /**
    * Throws if the secret is not found, unless `defineSecret` declared it

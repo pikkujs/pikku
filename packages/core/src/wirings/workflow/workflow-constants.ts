@@ -1,5 +1,8 @@
 import type { StepStatus } from './workflow.types.js'
 
+/**
+ * How many times a failed step is retried when neither the step nor the app's `workflow.retries` config says.
+ */
 export const DEFAULT_STEP_RETRIES = 5
 
 /** Statuses from which a run never advances again on its own. */

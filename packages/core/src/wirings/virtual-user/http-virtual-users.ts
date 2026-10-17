@@ -24,6 +24,7 @@ import {
 import { getSingletonServices } from '../../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 
+/** How `createHttpVirtualUsers` reaches the target app and signs each virtual user in. */
 export interface HttpVirtualUsersConfig {
   /**
    * Base API URL of the target app, INCLUDING the HTTP prefix — e.g.

@@ -1,3 +1,4 @@
+/** How long `pollUntil` keeps trying (default 15s) and how often (default 250ms). */
 export interface PollOptions {
   timeoutMs?: number
   intervalMs?: number

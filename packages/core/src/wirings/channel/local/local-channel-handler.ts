@@ -2,6 +2,7 @@ import type { Logger } from '../../../services/logger.js'
 import type { BinaryData } from '../channel.types.js'
 import { PikkuAbstractChannelHandler } from '../pikku-abstract-channel-handler.js'
 
+/** The {@link PikkuChannelHandler} for runtimes that hold the socket in-process (Node WebSocket servers, uWS, Bun). The runtime registers callbacks for sending, opening, messages and closing. */
 export class PikkuLocalChannelHandler<
   OpeningData = unknown,
   Out = unknown,

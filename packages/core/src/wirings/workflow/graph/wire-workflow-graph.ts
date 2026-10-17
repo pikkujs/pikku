@@ -1,3 +1,4 @@
+/** What `pikkuWorkflowGraph` takes. */
 export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, string>,
   T,
@@ -18,6 +19,7 @@ export interface PikkuWorkflowGraphConfig<
   notes?: string[]
 }
 
+/** The marker `pikkuWorkflowGraph` returns; the graph itself is read from source by `pikku all`. */
 export interface PikkuWorkflowGraphResult {
   __type: 'pikkuWorkflowGraph'
   name?: string
@@ -26,6 +28,16 @@ export interface PikkuWorkflowGraphResult {
   notes?: string[]
 }
 
+/**
+ * Declares a workflow as a graph: each node names an RPC, and `config` says what
+ * feeds it and which nodes run next. The shape is data, so the console can draw
+ * it and a run records which branch it took.
+ *
+ * The inspector reads the graph from source at build time; at runtime this only
+ * returns a marker carrying the descriptive fields.
+ *
+ * @example snippet: workflowGraph
+ */
 export function pikkuWorkflowGraph<
   const FuncMap extends Record<string, string>,
 >(config: PikkuWorkflowGraphConfig<FuncMap, any>): PikkuWorkflowGraphResult {

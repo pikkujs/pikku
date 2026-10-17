@@ -1,6 +1,10 @@
 import type { CoreUserSession } from '../types/core.types.js'
 import type { SessionStore } from './session-store.js'
 
+/**
+ * A {@link SessionStore} held in process memory, for development and tests.
+ * Sessions are lost on restart and not shared between processes.
+ */
 export class InMemorySessionStore<
   UserSession extends CoreUserSession = CoreUserSession,
 > implements SessionStore<UserSession> {

@@ -124,10 +124,12 @@ export type CoreVirtualUser = {
 /** Virtual users to declare, keyed by id. */
 export type CoreVirtualUsers = Record<string, CoreVirtualUser>
 
+/** Generated metadata for the account a virtual user signs in with. */
 export type VirtualUserAccountMeta = {
   provider?: string
 }
 
+/** Generated metadata for one declared virtual user. */
 export type VirtualUserMeta = {
   /** The key it was declared under. */
   id: string
@@ -152,5 +154,7 @@ export type VirtualUserMeta = {
   sourceFile?: string
 }
 
+/** Every declared virtual user, in declaration order. */
 export type VirtualUserDefinitions = VirtualUserMeta[]
+/** Generated metadata for every declared virtual user, keyed by id. */
 export type VirtualUsersMeta = Record<string, VirtualUserMeta>

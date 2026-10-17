@@ -9,6 +9,14 @@ import {
   type RunAgentParams,
 } from './agent-prepare.js'
 
+/**
+ * Registers an agent's runtime config under its name. Called by generated code.
+ *
+ * Skipped with a warning when the inspector recorded no metadata for the agent.
+ *
+ * @throws Error when an agent with the same name is already registered.
+ * @internal
+ */
 export const addAgent = (
   agentName: string,
   agent: CoreAgent<any, any>,

@@ -37,6 +37,10 @@ export type {
 
 import type { WorkflowStepMeta } from './dsl/workflow-dsl.types.js'
 
+/**
+ * How a run was started: the wire type, the parent run and step for a child
+ * workflow, and the user whose session started it — who becomes its owner.
+ */
 export interface WorkflowRunWire {
   type: string
   id?: string
@@ -45,6 +49,9 @@ export interface WorkflowRunWire {
   pikkuUserId?: string
 }
 
+/**
+ * The resolved `workflow` section of the app config: default retries and the queue names the engine uses.
+ */
 export interface WorkflowServiceConfig {
   retries: number
   retryDelay: number
@@ -53,6 +60,13 @@ export interface WorkflowServiceConfig {
   sleeperRPCName: string
 }
 
+/**
+ * How a workflow service routes its jobs. `per-workflow` (the default) uses a
+ * workflow's dedicated queue when one is declared; `shared-groups` sends every
+ * job through the shared queues, grouped by workflow, with
+ * `queueGroupConcurrency` (default 2) per group. `queueConcurrency` defaults
+ * to 20.
+ */
 export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
@@ -69,11 +83,15 @@ export interface WorkflowServiceOptions extends WorkflowQueueOptions {
   leaseService: LeaseService
 }
 
+/** A step a deterministic workflow is known to run, before it runs. */
 export interface WorkflowPlannedStep {
   stepName: string
   displayName?: string
 }
 
+/**
+ * Where a run stands. `compensating` and the two after it belong to a saga unwinding after a failure.
+ */
 export type WorkflowStatus =
   | 'running'
   | 'suspended'
@@ -84,11 +102,14 @@ export type WorkflowStatus =
   | 'compensated'
   | 'compensation_failed'
 
+/** Whether a recorded version of a workflow's graph may be run. */
 export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
 
+/** Where one step attempt stands. */
 export type StepStatus =
   'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
 
+/** One stored workflow run. */
 export interface WorkflowRun {
   id: string
   workflow: string
@@ -105,6 +126,7 @@ export interface WorkflowRun {
   updatedAt: Date
 }
 
+/** One stored attempt at a workflow step. */
 export interface StepState {
   stepId: string
   status: StepStatus
@@ -139,6 +161,7 @@ export interface StepState {
   failedAt?: Date
 }
 
+/** A run summarised for display: status, steps and outcome. */
 export interface WorkflowRunStatus {
   id: string
   status: WorkflowStatus
@@ -158,6 +181,11 @@ export interface WorkflowRunStatus {
   stuckSteps?: Array<{ stepName: string; error: string }>
 }
 
+/**
+ * Read and delete access to stored workflow runs, for consoles and status
+ * routes. It applies no ownership check of its own: callers that expose it to
+ * users check with `assertWorkflowRunOwner` first.
+ */
 export interface WorkflowRunService {
   listRuns(options?: {
     workflowName?: string
@@ -180,6 +208,11 @@ export interface WorkflowRunService {
   deleteRun(id: string): Promise<boolean>
 }
 
+/**
+ * A secondary store that receives a copy of every write a workflow service
+ * makes — for reporting or a console database. A failed mirror write is logged
+ * and ignored, and the engine never reads from it.
+ */
 export interface WorkflowRunMirror {
   createRun(
     runId: string,
@@ -236,6 +269,7 @@ export interface WorkflowRunMirror {
   ): Promise<void>
 }
 
+/** A registered workflow: its name and the function that runs it. */
 export type CoreWorkflow<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
@@ -246,20 +280,24 @@ export type CoreWorkflow<
   tags?: string[]
 }
 
+/** Start, read and cancel runs of one workflow. */
 export interface PikkuWorkflow {
   start: <I>(input: I) => Promise<{ runId: string }>
   getRun: (runId: string) => Promise<WorkflowRun>
   cancelRun: (runId: string) => Promise<void>
 }
 
+/** One declared workflow context variable: its type, default and description. */
 export interface ContextVariable {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array'
   default?: unknown
   description?: string
 }
 
+/** A workflow's declared context variables, keyed by name. */
 export type WorkflowContext = Record<string, ContextVariable>
 
+/** Generated metadata for every workflow, keyed by name. */
 export type WorkflowsMeta = Record<
   string,
   CommonWireMeta & {
@@ -281,6 +319,7 @@ export type WorkflowsMeta = Record<
   }
 >
 
+/** The slice of a workflow's generated metadata the engine needs at run time. */
 export interface WorkflowRuntimeMeta {
   name: string
   pikkuFuncId: string
@@ -295,4 +334,5 @@ export interface WorkflowRuntimeMeta {
   plannedSteps?: WorkflowPlannedStep[]
 }
 
+/** Runtime workflow metadata, keyed by name. */
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>

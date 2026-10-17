@@ -1,5 +1,10 @@
 import type { Lease, LeaseService } from './lease-service.js'
 
+/**
+ * A {@link LeaseService} held in process memory, for development and tests.
+ * Leases exclude holders in this process only. The clock can be injected for
+ * tests.
+ */
 export class InMemoryLeaseService implements LeaseService {
   private leases = new Map<string, Lease>()
 

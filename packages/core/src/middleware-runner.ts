@@ -31,6 +31,13 @@ const sortByPriority = (
   )
 }
 
+/**
+ * Runs `middlewares` as an onion around `main`, ordered by priority (stable
+ * within a priority), and returns `main`'s result. A middleware that does not
+ * call `next` stops the chain: `main` is never run and the result is
+ * `undefined`.
+ * @internal
+ */
 export const runMiddleware = async <
   Middleware extends CorePikkuMiddleware<any, any>,
 >(

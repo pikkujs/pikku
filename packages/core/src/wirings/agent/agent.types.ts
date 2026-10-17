@@ -18,6 +18,10 @@ import type { PikkuRPC } from '../rpc/rpc-types.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 
+/**
+ * What `wire.rpc.agent` needs from the invocation: the caller's session service.
+ * @internal
+ */
 export type AgentRPCOptions = {
   sessionService?: SessionService<CoreUserSession>
 }
@@ -32,6 +36,10 @@ export type AgentRPCFactory = (
   options: AgentRPCOptions
 ) => PikkuRPC['agent']
 
+/**
+ * A conversation thread. `resourceId` is its owner partition: the session principal, or a
+ * `principal:` sub-partition of it.
+ */
 export interface AgentThread {
   id: string
   resourceId: string
@@ -41,6 +49,7 @@ export interface AgentThread {
   updatedAt: Date
 }
 
+/** One part of a multi-part message: text, an image, a file (audio included) or named data. */
 export type AgentContentPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data?: string; url?: string; mediaType?: string }
@@ -80,6 +89,7 @@ export interface AgentToolResult {
   error?: string
 }
 
+/** A message on an agent thread, as stored and as sent to the model. */
 export interface AgentMessage {
   id: string
   role: 'system' | 'user' | 'assistant' | 'tool'
@@ -107,6 +117,7 @@ export interface AgentMessage {
   createdAt: Date
 }
 
+/** One model step of a run: its token usage and the tool calls it made. */
 export interface AgentStep {
   usage: { inputTokens: number; outputTokens: number }
   toolCalls?: {
@@ -126,6 +137,10 @@ export interface AgentInputAttachment {
   filename?: string
 }
 
+/**
+ * What a caller sends to run an agent. `resourceId` is partitioned under the session principal
+ * before use, so it cannot address another user's threads.
+ */
 export interface AgentInput {
   message: string
   threadId: string
@@ -205,6 +220,10 @@ export interface AgentToolDef extends Partial<ApprovalPolicy> {
   forwardsApproval?: boolean
 }
 
+/**
+ * Hooks an agent middleware can implement: rewrite the model input, observe each step, transform
+ * the output stream, or handle errors. Build one with `pikkuAgentMiddleware`.
+ */
 export interface PikkuAgentMiddlewareHooks<
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -366,6 +385,10 @@ export interface PikkuAgentMiddlewareHooks<
   ) => Promise<void> | void
 }
 
+/**
+ * An agent's memory: which storage, vector store and embedder services to use, how many recent
+ * messages to load, and an optional working-memory schema.
+ */
 export type AgentMemoryConfig = {
   storage?: string
   vector?: string
@@ -374,6 +397,10 @@ export type AgentMemoryConfig = {
   workingMemory?: unknown
 }
 
+/**
+ * The configuration an agent is declared with (`pikkuAgent`): model, instructions, tools,
+ * sub-agents, memory, auth and middleware.
+ */
 export type CoreAgent<
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
@@ -460,6 +487,10 @@ export type CoreAgent<
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 
+/**
+ * An event a streamed agent run sends: step starts, text and reasoning deltas, tool calls and
+ * results, approval and credential requests, usage, errors and `done`.
+ */
 export type AgentStreamEvent =
   | { type: 'step-start'; stepNumber: number; agent?: string; session?: string }
   | { type: 'text-delta'; text: string; agent?: string; session?: string }
@@ -586,11 +617,16 @@ export type AgentStreamEvent =
     }
   | { type: 'done' }
 
+/** The channel a streamed agent run writes `AgentStreamEvent`s to. */
 export interface AgentStreamChannel extends PikkuChannel<
   unknown,
   AgentStreamEvent
 > {}
 
+/**
+ * A tool call a suspended run is waiting on: a direct tool call, a sub-agent's call surfaced to
+ * the parent, or a missing credential.
+ */
 export type PendingApproval =
   | {
       type: 'tool-call'
@@ -616,6 +652,7 @@ export type PendingApproval =
       connectUrl?: string
     }
 
+/** A run's persisted state: status, why it is suspended, its pending approvals and token usage. */
 export interface AgentRunState {
   runId: string
   agentName: string
@@ -631,6 +668,7 @@ export interface AgentRunState {
   updatedAt: Date
 }
 
+/** A run as listed by `AgentRunService`, with usage flattened into columns. */
 export interface AgentRunRow {
   runId: string
   agentName: string
@@ -647,6 +685,10 @@ export interface AgentRunRow {
   updatedAt: Date
 }
 
+/**
+ * Read and delete access to stored threads, messages and runs, for consoles and thread APIs.
+ * Pass `owners` from the session (see `threadOwnerConstraint`) whenever results go back to a client.
+ */
 export interface AgentRunService {
   listThreads(options?: {
     agentName?: string
@@ -672,6 +714,7 @@ export interface AgentRunService {
   getDistinctAgentNames(): Promise<string[]>
 }
 
+/** Inspector-generated metadata for every agent, keyed by name, without its runtime-only fields. */
 export type AgentsMeta = Record<
   string,
   Omit<

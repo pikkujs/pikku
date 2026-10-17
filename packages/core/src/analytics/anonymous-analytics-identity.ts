@@ -12,6 +12,7 @@ const DEFAULT_COOKIE: SerializeOptions = {
   secure: true,
 }
 
+/** Options for `anonymousAnalyticsIdentity`. */
 export interface AnonymousAnalyticsIdentityOptions {
   /** Cookie name. Defaults to `pikku_aid`. */
   name?: string

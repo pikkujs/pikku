@@ -5,6 +5,7 @@ import {
 } from './workflow-constants.js'
 import type { StepState, StepStatus } from './workflow.types.js'
 
+/** One lifecycle transition of one step, in run order. */
 export interface RunTimelineEvent {
   seq: number
   at: Date
@@ -20,8 +21,10 @@ export interface RunTimelineEvent {
   error?: SerializedError
 }
 
+/** Every step transition in a run, ordered by time. */
 export type RunTimeline = RunTimelineEvent[]
 
+/** One stored step attempt, with the name of the step it belongs to. */
 export type HistoryEntry = StepState & { stepName: string }
 
 const LIFECYCLE_ORDER: Record<RunTimelineEvent['type'], number> = {
@@ -32,6 +35,11 @@ const LIFECYCLE_ORDER: Record<RunTimelineEvent['type'], number> = {
   failed: 3,
 }
 
+/**
+ * Flattens a run's step history into a {@link RunTimeline}: one event per
+ * recorded transition, ordered by timestamp, then lifecycle order, then history
+ * order, and numbered with `seq`.
+ */
 export function buildRunTimeline(history: HistoryEntry[]): RunTimeline {
   const raw: Array<Omit<RunTimelineEvent, 'seq'> & { order: number }> = []
 
@@ -85,6 +93,7 @@ export function buildRunTimeline(history: HistoryEntry[]): RunTimeline {
   return raw.map(({ order: _order, ...event }, seq) => ({ ...event, seq }))
 }
 
+/** A step as it stood at a point in a run's timeline. */
 export interface ReconstructedStep {
   stepName: string
   compensating: boolean
@@ -95,8 +104,12 @@ export interface ReconstructedStep {
   error?: SerializedError
 }
 
+/**
+ * Where a reconstructed run stood: nothing started, a step in flight, a step failed, or nothing in flight.
+ */
 export type RunPhase = 'pending' | 'running' | 'failed' | 'idle'
 
+/** A run's steps, results and path as of one point in its timeline. */
 export interface ReconstructedRunState {
   /** seq of the last applied event, or -1 if the point precedes all events. */
   seq: number
@@ -107,6 +120,13 @@ export interface ReconstructedRunState {
   phase: RunPhase
 }
 
+/**
+ * Replays a timeline up to a point, for stepping through a run after the fact.
+ *
+ * @param timeline - The run's timeline, from {@link buildRunTimeline}.
+ * @param at - The last event to apply, by `seq`, or every event up to a time.
+ * @returns The run as it stood at that point.
+ */
 export function reconstructStateAt(
   timeline: RunTimeline,
   at: number | Date
@@ -174,6 +194,7 @@ export function reconstructStateAt(
   }
 }
 
+/** The run as its whole timeline leaves it. */
 export function reconstructFinalState(
   timeline: RunTimeline
 ): ReconstructedRunState {

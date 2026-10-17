@@ -22,6 +22,7 @@ export type RawCLIFrame =
   | { action: 'cli-error'; error: string }
   | { action: 'cli-control'; event: 'complete'; exitCode: number }
 
+/** What the server produces for one raw CLI invocation: help text, a result, or an error, plus the exit code the client should exit with. */
 export interface RawCLIResult {
   help?: string
   result?: unknown

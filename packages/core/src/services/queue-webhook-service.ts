@@ -16,6 +16,16 @@ import {
 const MAX_CAPTURED_RESPONSE_BODY = 2_000
 
 // knowledge: decisions/security/webhook-bodies-are-signed-before-they-are-enqueued.md
+/**
+ * A {@link WebhookService} that delivers through the `pikku-outgoing-webhooks`
+ * queue, so a slow or failing receiver is retried by the queue rather than
+ * holding up the caller.
+ *
+ * The body is signed before it is enqueued, with `input.secret` or else the
+ * secret named by `config.webhook.secret`; if that secret resolves to nothing
+ * the webhook is sent unsigned and an error is logged. Retries default to
+ * `config.webhook.retries`, then {@link DEFAULT_WEBHOOK_RETRIES}.
+ */
 export class QueueWebhookService extends WebhookService {
   // knowledge: decisions/internals/webhook-service-collaborators-are-constructor-args-not-locator-lookups.md
   constructor(protected queueService: QueueService) {
@@ -92,6 +102,15 @@ export class QueueWebhookService extends WebhookService {
 }
 
 // knowledge: decisions/internals/webhook-delivery-history-records-every-attempt-best-effort.md
+/**
+ * The queue worker that delivers one outgoing webhook. It POSTs through
+ * `safeFetch`, so private and internal hosts are refused unless listed in
+ * `config.webhook.allowedHosts`, and times out after 30 seconds. Each attempt
+ * is recorded when the service keeps delivery history.
+ *
+ * @throws Error when the receiver does not answer with a 2xx status, so the
+ * queue retries the job
+ */
 export async function pikkuWebhookWorkerFunc(
   services: { logger: Logger; webhookService?: WebhookService },
   { url, body, headers, deliveryId }: WebhookJobData

@@ -4,6 +4,13 @@ import type {
   SendEmailResult,
 } from './email-service.js'
 
+/**
+ * An {@link EmailService} for development that sends nothing. It logs the
+ * recipients and subject to the console, with the body and attachments reduced
+ * to their lengths.
+ *
+ * @example snippet: shopServices
+ */
 export class LocalEmailService implements EmailService {
   async send(input: SendEmailInput): Promise<SendEmailResult> {
     const payload: Record<string, unknown> = {

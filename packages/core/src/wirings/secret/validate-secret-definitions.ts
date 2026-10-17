@@ -6,6 +6,13 @@ import type { SchemaRefLike } from '../../types/core.types.js'
 
 export type { SchemaRefLike }
 
+/**
+ * Merges the secret declarations the inspector found into meta keyed by name.
+ * Declarations that share a `secretId` must agree on schema and OAuth 2 config.
+ *
+ * @throws Error when two declarations of one `secretId` disagree.
+ * @internal Called by the CLI when generating meta.
+ */
 export function validateAndBuildSecretDefinitionsMeta(
   definitions: SecretDefinitions,
   schemaLookup: Map<string, SchemaRefLike>

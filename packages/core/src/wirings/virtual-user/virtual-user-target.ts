@@ -1,6 +1,7 @@
 import type { ScenarioVirtualUser } from '../../services/virtual-users-service.js'
 import type { VirtualUserTarget } from './virtual-user.types.js'
 
+/** Options for `virtualUserTarget`. */
 export interface VirtualUserTargetOptions {
   /** Model the virtual user uses for its side of a conversation with an agent. */
   model?: string

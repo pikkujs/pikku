@@ -2,6 +2,10 @@ import type { Logger } from './services/logger.js'
 import type { WireServices } from './types/core.types.js'
 import { BadRequestError } from './errors/errors.js'
 
+/**
+ * Calls `close()` on every wire service that has one, in parallel, at the end of a
+ * wiring. A failing `close` is logged and does not stop the others.
+ */
 export const closeWireServices = async (
   logger: Logger,
   wireServices: WireServices
@@ -21,11 +25,19 @@ export const closeWireServices = async (
 
 let _uidPrefix: string | undefined
 let _uidCounter = 0
+/**
+ * A process-unique id (random 8-character prefix plus a counter). Not
+ * unpredictable, so never use it as a token or secret.
+ */
 export const createWeakUID = () => {
   _uidPrefix ??= globalThis.crypto.randomUUID().slice(0, 8)
   return `${_uidPrefix}-${++_uidCounter}`
 }
 
+/**
+ * Whether a response body needs `JSON.stringify`: false for strings and binary
+ * (`ArrayBuffer` and typed arrays), which are sent as they are.
+ */
 export const isSerializable = (data: any): boolean => {
   return !(
     typeof data === 'string' ||
@@ -41,6 +53,11 @@ export const isSerializable = (data: any): boolean => {
   )
 }
 
+/**
+ * Looks up the groups for a hierarchical tag and each of its `:`-separated
+ * ancestors, most specific first: `'admin:users'` yields the groups for
+ * `'admin:users'` then `'admin'`.
+ */
 export const getTagGroups = <T>(
   tagGroups: Record<string, T>,
   tag: string
@@ -76,6 +93,11 @@ export const parseJson = <T = any>(input: string | Uint8Array): T => {
 
 const EMPTY_ARRAY = Object.freeze([])
 
+/**
+ * Returns a frozen copy of the array with duplicates removed, keeping first-seen
+ * order. Used for middleware and permission lists, so the same function is never
+ * run twice.
+ */
 export const freezeDedupe = <T>(
   arr?: readonly T[] | T[] | undefined
 ): readonly T[] => {
@@ -95,11 +117,14 @@ export const freezeDedupe = <T>(
 
 export { stopSingletonServices, pikkuServerLifecycle } from './lifecycle.js'
 
+/** `T` with the keys `K` made required. */
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
 
+/** A JSON scalar; `undefined` is included because it is dropped on serialisation rather than rejected. */
 export type JSONPrimitive = string | number | boolean | null | undefined
 
+/** Any value that round-trips through JSON. */
 export type JSONValue =
   | JSONPrimitive
   | JSONValue[]
@@ -107,10 +132,13 @@ export type JSONValue =
       [key: string]: JSONValue
     }
 
+/** `T` with the keys `K` made required and every other key unchanged. */
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
+/** `T` with every key optional except `K`. */
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 
+/** `T` with every key optional, but at least one of them present. */
 export type RequireAtLeastOne<T> = {
   [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
 }[keyof T]

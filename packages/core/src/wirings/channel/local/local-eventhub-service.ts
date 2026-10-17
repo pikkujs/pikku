@@ -1,6 +1,7 @@
 import type { PikkuChannelHandler } from '../channel.types.js'
 import type { EventHubService } from '../eventhub-service.js'
 
+/** An {@link EventHubService} that keeps subscriptions in memory, for a single process. A channel that fails to receive is dropped from all its topics. */
 export class LocalEventHubService<
   Data extends Record<string, any> = {},
 > implements EventHubService<Data> {

@@ -32,11 +32,13 @@ export type WebhookRequest = {
  */
 export type WebhookReceiveResult = { events: TriggerEvent[] }
 
+/** The HTTP methods a webhook source can be mounted on. */
 export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 
 /** Whatever `setup` wants back on the next deploy, for providers whose endpoints cannot be found by label. */
 export type WebhookSourceState = Record<string, unknown>
 
+/** What a webhook source's `check` and `setup` steps are given. */
 export type WebhookLifecycleInput = {
   /** Always this deployment's own route: nothing can point it elsewhere. */
   url: string
@@ -47,11 +49,13 @@ export type WebhookLifecycleInput = {
   previous?: WebhookSourceState
 }
 
+/** Whether the provider-side registration matches what this deployment needs. */
 export type WebhookCheckResult =
   | { status: 'ok' }
   | { status: 'missing' }
   | { status: 'drifted'; reason: string }
 
+/** What `setup` did at the provider. */
 export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'
@@ -60,11 +64,13 @@ export type WebhookSetupResult =
   /** The provider has no API for this: `instructions` tell a person what to set by hand. */
   | { status: 'manual'; instructions: string }
 
+/** What a webhook source's `teardown` step is given. */
 export type WebhookTeardownInput = {
   label: string
   previous?: WebhookSourceState
 }
 
+/** Whether `teardown` removed a registration or found none. */
 export type WebhookTeardownResult = { status: 'deleted' | 'absent' }
 
 /**
@@ -105,6 +111,7 @@ type SourceFunction<In, Out> = CorePikkuFunctionConfig<any, any> & {
   func: (services: any, data: In, wire: any) => Promise<Out>
 }
 
+/** What `wireTriggerWebhookSource` takes. */
 export type CoreTriggerWebhookSource<
   Events extends Record<string, StandardSchemaV1> = Record<
     string,
@@ -142,6 +149,9 @@ export type CoreTriggerWebhookSource<
   teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>
 }
 
+/**
+ * Generated metadata for one webhook source: its route and the function ids of its lifecycle steps.
+ */
 export type WebhookSourceMeta = {
   name: string
   method: WebhookSourceMethod | WebhookSourceMethod[]
@@ -153,6 +163,7 @@ export type WebhookSourceMeta = {
   teardown?: string
 }
 
+/** Generated metadata for every webhook source, keyed by name. */
 export type WebhookSourcesMeta = Record<string, WebhookSourceMeta>
 
 /** One queued event on its way to its trigger. */
