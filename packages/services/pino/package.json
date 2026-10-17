@@ -21,7 +21,10 @@
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.138",
-    "pino": "^9.5.0"
+    "pino": "^9.5.0 || ^10.0.0"
+  },
+  "devDependencies": {
+    "pino": "^10.4.0"
   },
   "exports": {
     ".": "./dist/index.js"
