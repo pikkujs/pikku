@@ -50,6 +50,18 @@ const readStringProp = (
   return undefined
 }
 
+/**
+ * Whether a property is written at all, literal or not — so a value the
+ * inspector cannot read can be told apart from one that was never set.
+ */
+const hasProp = (obj: ts.ObjectLiteralExpression, name: string): boolean =>
+  obj.properties.some(
+    (p) =>
+      (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === name
+  )
+
 /** Find an object-literal-valued property off an object literal, if present. */
 const readObjectProp = (
   obj: ts.ObjectLiteralExpression,
@@ -271,6 +283,10 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
   let basePath = DEFAULT_BASE_PATH
   let hasCredentials = false
   let cookieCache = false
+  let cookiePrefix: string | undefined
+  let cookieCacheStrategy: string | undefined
+  let cookieCacheVersion: string | undefined
+  const unreadCookieOptions: string[] = []
   const betterAuthCall = findBetterAuthCall(factory, checker)
   const config = betterAuthCall?.arguments[0]
 
@@ -291,7 +307,32 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
         cookieCache =
           !enabledProp ||
           enabledProp.initializer.kind !== ts.SyntaxKind.FalseKeyword
+
+        cookieCacheStrategy = readStringProp(cookieCacheBlock, 'strategy')
+        if (!cookieCacheStrategy && hasProp(cookieCacheBlock, 'strategy')) {
+          unreadCookieOptions.push('session.cookieCache.strategy')
+        }
+        cookieCacheVersion = readStringProp(cookieCacheBlock, 'version')
+        if (!cookieCacheVersion && hasProp(cookieCacheBlock, 'version')) {
+          unreadCookieOptions.push('session.cookieCache.version')
+        }
       }
+    }
+
+    // The stateless middleware never builds the auth instance, so it has to be
+    // told how the cookie was written: read the parts that change its name and
+    // its verification, and say so when one is not a literal.
+    const advanced = readObjectProp(config, 'advanced')
+    if (advanced) {
+      cookiePrefix = readStringProp(advanced, 'cookiePrefix')
+      if (!cookiePrefix && hasProp(advanced, 'cookiePrefix')) {
+        unreadCookieOptions.push('advanced.cookiePrefix')
+      }
+    }
+    if (cookieCache && unreadCookieOptions.length > 0) {
+      logger.warn(
+        `pikkuBetterAuth in ${sourceFile}: ${unreadCookieOptions.join(', ')} is not a string literal, so the generated betterAuthStatelessSession cannot read the session cookie the way it is written. Write it as a literal, or register betterAuthStatelessSession({ cookiePrefix, cookieCache: { strategy, version } }) yourself with addGlobalMiddleware — yours runs first and the generated one then does nothing.`
+      )
     }
 
     const emailAndPassword = readObjectProp(config, 'emailAndPassword')
@@ -350,6 +391,9 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
     basePath,
     hasCredentials,
     cookieCache,
+    ...(cookiePrefix !== undefined && { cookiePrefix }),
+    ...(cookieCacheStrategy !== undefined && { cookieCacheStrategy }),
+    ...(cookieCacheVersion !== undefined && { cookieCacheVersion }),
     plugins: [...state.auth.plugins],
     services,
   }

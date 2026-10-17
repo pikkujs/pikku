@@ -107,11 +107,12 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 **Tradeoff:** server-side session revocation isn't seen until the cookie cache expires (sign-out is still immediate — it deletes the cookie).
 
-**Read the cookie the way the app writes it.** The stateless middleware never builds the auth instance, so it cannot see your `betterAuth({ ... })` options:
+**Read the cookie the way the app writes it.** The stateless middleware never builds the auth instance, so it cannot see your `betterAuth({ ... })` options. The generated one is given `advanced.cookiePrefix`, `cookieCache.strategy` and `cookieCache.version` when they are **string literals** in the `betterAuth({ ... })` call — keep them literal and there is nothing to do. When one is not (an env var, a constant from elsewhere), the CLI warns and you register your own, which runs before the generated one:
 
 - A `jwe` or `jwt` `cookieCache.strategy` is recognised from the cookie's shape. Pin it with `cookieCache: { strategy }` if you prefer.
 - A custom `advanced.cookiePrefix` must be passed as `betterAuthStatelessSession({ cookiePrefix })`.
 - A `cookieCache.version` must be passed as `cookieCache: { version }`, or cookies of an older version still verify.
+- `cookieCache.jwt` (e.g. a JWKS) is never passed through — register your own for it.
 
 `pikkuBetterAuth` logs an error at startup when a constructed stateless middleware disagrees with the auth config.
 
