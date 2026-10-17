@@ -175,6 +175,24 @@ jobs:
       - name: Check for undeclared dependencies
         run: bun run knip
 
+  # bun test strips types without checking them, so a type error, an unused
+  # @ts-expect-error in a type-test project, or a test file that drifted from
+  # the API it exercises passes every other job. Each package's `tsc` script
+  # is the check. Packages only: examples, verifiers, templates and e2e need
+  # their generated .pikku output first. @pikku/workflow-graph is excluded
+  # until it can type-check @pikku/react's use of `process`.
+  typecheck:
+    name: Typecheck
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Project references resolve to the built .d.ts of each dependency.
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: bun run --filter './packages/**' --filter '!@pikku/workflow-graph' tsc
+
   build:
     name: Build
     if: ${{ !github.event.pull_request.draft }}
