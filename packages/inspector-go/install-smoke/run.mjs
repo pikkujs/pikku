@@ -98,7 +98,7 @@ for (const d of dirs) {
   local.set(m.name, { manifest: m, file, data })
 }
 
-const server = createServer(async (req, res) => {
+const serve = async (req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0])
   if (url.startsWith('/-/')) {
     res.writeHead(200, { 'content-type': 'application/octet-stream' })
@@ -149,7 +149,8 @@ const server = createServer(async (req, res) => {
   }
   res.writeHead(200, { 'content-type': 'application/json' })
   res.end(JSON.stringify(body))
-})
+}
+const server = createServer((req, res) => void serve(req, res))
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const registry = `http://127.0.0.1:${server.address().port}`
 
