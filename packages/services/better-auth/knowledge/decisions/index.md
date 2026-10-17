@@ -7,6 +7,7 @@ description: Rules chosen in @pikku/better-auth, and what each one rules out
 # Decisions
 
 <!-- pikku:knowledge-index -->
+
 - [A banned user is refused at session creation and the ban lapses on expiry](a-banned-user-is-refused-at-session-creation-and-lapses-on-expiry.md) — The pikku ban plugin refuses a session for a banned user at creation, clears an expired ban only when that happens, and a ban written by an admin ends existing sessions at once
 - [A credential link is keyed by the linking user and never signs anyone in](a-credential-link-is-keyed-by-the-linking-user-and-never-signs-anyone-in.md) — Connecting an OAuth credential stores its account row under the linking user's id rather than the provider's identity, and the callback refuses any flow that is not a link
 - [A delegated login never claims an existing user by a synthetic email](a-delegated-login-never-claims-an-existing-user-by-a-synthetic-email.md) — Upstream login attaches to an existing user row only when the app opts in and the upstream itself returned that email, never to an administrator unless the app allows it, and never to a virtual user row or a user already bound to another upstream identity
@@ -36,4 +37,5 @@ description: Rules chosen in @pikku/better-auth, and what each one rules out
 - [The virtual user sign-in gate stays shut unless dev or the exact opt-in value is set](the-virtual-user-sign-in-gate-stays-shut-unless-dev-or-the-exact-opt-in-value.md) — Virtual user sign-in opens only under pikku dev or when PIKKU_ALLOW_VIRTUAL_USER_SIGN_IN holds the one exact value, a near-miss value is warned about without being echoed, and a shut gate registers no sign-in endpoint
 - [User administration is decided by scopes, not a role column](user-administration-is-decided-by-scopes-not-a-role-column.md) — pikku drops better-auth's admin plugin and its role column; each user-admin operation is a plain call, and the admin scope on the calling function is the only gate
 - [Virtual user upstream credentials are read from the environment on each sign-in](virtual-user-upstream-credentials-are-read-from-the-environment-on-each-sign-in.md) — The credentials a virtual user carries are taken from VIRTUAL_USER_CREDENTIAL variables at every sign-in, stored per virtual user, and removed when the variable is gone
+
 <!-- /pikku:knowledge-index -->
