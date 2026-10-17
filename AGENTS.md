@@ -215,7 +215,7 @@ reviewer decides whether that is acceptable, not the author.
 - [ ] **Skills** — if the change alters how an agent should work in this repo (a new command, a new failure mode, a workflow that is now different), update `.claude/skills/` or this file.
 - [ ] **Docs** — user-facing behaviour goes in the website docs. A config key nobody can find is a config key nobody uses.
 - [ ] **Knowledge** — durable decisions, rejected alternatives and gotchas go in the owning package's `knowledge/` bundle, **not** in code comments. A comment explaining why one approach was chosen over another is knowledge in the wrong place; see Code style → Comments.
-- [ ] **Changeset** — `bun run changeset`, always `patch`.
+- [ ] **Changeset** — `bun run changeset`, always `patch`. The one exception is a planned minor release: while `.changeset/release-<version>.json` exists, a package it lists may take `minor` to land on that version (`scripts/check-changesets-are-patch.mjs`; see `packages/core/knowledge/decisions/internals/a-minor-release-moves-every-package-on-the-line-together.md`). Never add a package to the marker, or create one, from a feature PR.
 
 Roughly the order to do them in, because each one finds what the previous one
 missed.

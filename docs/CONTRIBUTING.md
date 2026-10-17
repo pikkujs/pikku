@@ -140,6 +140,8 @@ bun run changeset
 
 Changesets are always `patch`, and CI rejects any other bump. The package names must match the `name` in each package's own `package.json`.
 
+The one exception is a planned minor release. A maintainer adds a `.changeset/release-<version>.json` marker listing the packages that move, for example `{ "version": "0.13.0", "minor": ["@pikku/core", …] }`. While it exists, CI accepts `minor` for those packages, and only when the bump lands exactly on that version. `major` is never accepted. The release's version step deletes the marker, so the exception ends with the release that needed it.
+
 ## Runtime Adapters
 
 Pikku supports multiple runtime environments. When creating new runtime adapters:
