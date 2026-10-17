@@ -51,6 +51,7 @@ for (const project of PROJECTS) {
         process.env.PIKKU_INSPECTOR_GO_BIN = fileURLToPath(
           new URL('../parity/ts-reference-bin.ts', import.meta.url)
         )
+        process.env.PIKKU_TS_REFERENCE_FINALIZE = '1'
         try {
           const { routeFiles, options } = await projectInput(repo(project))
           const logger = createRecordingLogger()
@@ -61,6 +62,7 @@ for (const project of PROJECTS) {
             reference.postDiagnostics
           )
         } finally {
+          delete process.env.PIKKU_TS_REFERENCE_FINALIZE
           if (previous === undefined) delete process.env.PIKKU_INSPECTOR_GO_BIN
           else process.env.PIKKU_INSPECTOR_GO_BIN = previous
         }

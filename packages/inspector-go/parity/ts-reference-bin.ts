@@ -3,6 +3,10 @@
 // PIKKU_INSPECTOR_GO_BIN here to run the Go wrapper or the parity harness end
 // to end without Go.
 //
+// PIKKU_TS_REFERENCE_FINALIZE=1 finalizes, as the real binary always does, for
+// the wrapper (which no longer finalizes); without it the output is the
+// analysis-only state the parity harness compares before finalize.
+//
 // For the harness's own tests it can also misbehave on request:
 //   PIKKU_TS_REFERENCE_DROP=a,b       leave those state sections out
 //   PIKKU_TS_REFERENCE_REORDER=1      print customTypes the other way round,
@@ -14,7 +18,8 @@ import { reorderTypeString } from './normalize.ts'
 const chunks: Buffer[] = []
 for await (const chunk of process.stdin) chunks.push(chunk)
 const output = await analyzeWithTypeScript(
-  JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  JSON.parse(Buffer.concat(chunks).toString('utf8')),
+  { finalize: !!process.env.PIKKU_TS_REFERENCE_FINALIZE }
 )
 
 const state = output.state as unknown as Record<string, any>
