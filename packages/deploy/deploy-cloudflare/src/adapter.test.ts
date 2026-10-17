@@ -134,6 +134,40 @@ describe('CloudflareProviderAdapter column coercion', () => {
   })
 })
 
+describe('CloudflareProviderAdapter addon registration', () => {
+  test('a worker builds its services only after loadAddons()', () => {
+    const adapter = new CloudflareProviderAdapter()
+    assert.equal(adapter.lazyAddonRegistration, true)
+
+    const source = adapter.generateEntrySource(ctx)
+    assert.match(
+      source,
+      /import \* as __pikkuBootstrap from '\.\/\.pikku\/pikku-bootstrap\.gen\.js'/
+    )
+    assert.doesNotMatch(source, /^import '\.\/\.pikku\/pikku-bootstrap/m)
+    assert.ok(
+      source.includes(
+        [
+          '  await (__pikkuBootstrap as { loadAddons?: () => Promise<unknown> }).loadAddons?.()',
+          '  return createSingletonServices(...args)',
+        ].join('\n')
+      )
+    )
+    assert.match(
+      source,
+      /createSingletonServices: createSingletonServicesAfterAddons/
+    )
+  })
+
+  test('the container keeps its eager bootstrap', () => {
+    const source = new CloudflareProviderAdapter().generateServerEntrySource(
+      ctx
+    )
+    assert.match(source, /^import '\.\/\.pikku\/pikku-bootstrap\.gen\.js'/m)
+    assert.doesNotMatch(source, /loadAddons/)
+  })
+})
+
 const inboxUnit = {
   ...(unit as object),
   handlers: [
