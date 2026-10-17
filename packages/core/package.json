@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.142",
+  "version": "0.12.143",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -102,9 +102,9 @@
   "devDependencies": {
     "@ag-ui/core": "0.0.57",
     "@pikku/deploy": "^0.12.15",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "engines": {
     "node": ">=24"

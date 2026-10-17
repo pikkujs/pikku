@@ -31,13 +31,13 @@ installGroups: [core]
 This skill covers writing and running scenarios end to end. Five topics are one level down, and
 each says when to open it:
 
-| Read                             | For                                                                                                                                 |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `references/steps.md`            | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                                           |
-| `references/browser.md`          | Browser bindings, and locating by message key in a translated app                                                                   |
+| Read                             | For                                                                                                                               |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `references/steps.md`            | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                                         |
+| `references/browser.md`          | Browser bindings, and locating by message key in a translated app                                                                 |
 | `references/virtual-users.md`    | Virtual users vs virtual users, `defineVirtualUsers`, upstream credentials for virtual users, and human sign-in as a virtual user |
-| `references/coverage.md`         | Live coverage, filling it, and unit tests for pure logic                                                                            |
-| `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                                                 |
+| `references/coverage.md`         | Live coverage, filling it, and unit tests for pure logic                                                                          |
+| `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                                               |
 
 ## What a scenario is
 
@@ -321,6 +321,7 @@ pikku scenario run local --spawn --exclude-tags ai-live
 | `--api-url` / `--app-url`  | Override the environment's URLs — for a target that only exists at run time       |
 | `--trace`                  | Keep every stack frame on failure (default shows only the project's own)          |
 | `--coverage`               | Reset/snapshot server coverage per scenario                                       |
+| `--run-id <id>`            | Record the run under this id rather than a fresh one, so a caller can follow it   |
 
 Output is `PASS <name> (<ms>) → <output>` / `FAIL <name> (<ms>): <error>`, then `N/M scenarios passed against '<env>'`. A scenario inside a feature is named `<Feature> › <scenario> <data>`.
 

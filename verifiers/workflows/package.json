@@ -19,9 +19,9 @@
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "ioredis": "^6.0.0",
-    "kysely": "^0.29.5",
+    "kysely": "^0.29.6",
     "kysely-postgres-js": "^3.0.0",
-    "mysql2": "^3.23.3",
+    "mysql2": "^3.24.6",
     "postgres": "^3.4.9",
     "zod": "^4"
   },
@@ -29,8 +29,8 @@
     "@pikku/cli": "workspace:*",
     "@pikku/inspector": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
-    "tsx": "^4.23.12"
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "build": "tsc -b",

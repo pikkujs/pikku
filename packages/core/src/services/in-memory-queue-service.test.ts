@@ -160,3 +160,63 @@ describe('InMemoryQueueService retry', () => {
     assert.equal(calls.count, 1, 'a job without attempts runs exactly once')
   })
 })
+
+describe('InMemoryQueueService inspect', () => {
+  test('counts live jobs and keeps finished ones with their outcome', async () => {
+    registerWorker('inspected', (count) => {
+      if (count === 2) throw new Error('boom')
+    })
+    const queue = new InMemoryQueueService()
+
+    const first = await queue.add('inspected', {})
+    const before = await queue.inspect('inspected')
+    assert.equal(before.counts.waiting, 1)
+    assert.equal(before.recent[0]!.jobId, first)
+
+    const second = await queue.add('inspected', {})
+    assert.ok(
+      await waitUntil(() => {
+        const totals = (queue as any).finishedTotals.get('inspected')
+        return totals?.completed === 1 && totals?.failed === 1
+      })
+    )
+
+    const after = await queue.inspect('inspected')
+    assert.deepEqual(after.counts, {
+      waiting: 0,
+      active: 0,
+      delayed: 0,
+      completed: 1,
+      failed: 1,
+    })
+    const byId = new Map(after.recent.map((job) => [job.jobId, job]))
+    const failed = [...byId.values()].find((job) => job.status === 'failed')!
+    assert.equal(failed.error, 'boom')
+    assert.equal(failed.attemptsMade, 1)
+    assert.ok(failed.durationMs! >= 0)
+    assert.ok(byId.has(first) && byId.has(second))
+    assert.deepEqual((await queue.inspect('unknown')).recent, [])
+  })
+
+  test('a job waiting on a retry counts as delayed', async () => {
+    registerWorker('retrying', () => {
+      throw new Error('again')
+    })
+    const queue = new InMemoryQueueService()
+    await queue.add(
+      'retrying',
+      {},
+      { attempts: 3, backoff: { type: 'fixed', delay: 1000 } }
+    )
+
+    assert.ok(
+      await waitUntil(
+        () => (queue as any).jobs.get('retrying')[0].attemptsMade === 1
+      )
+    )
+    await new Promise((r) => setTimeout(r, 20))
+    const { counts, recent } = await queue.inspect('retrying')
+    assert.equal(counts.delayed, 1)
+    assert.equal(recent[0]!.error, 'again')
+  })
+})

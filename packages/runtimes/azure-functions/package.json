@@ -29,8 +29,8 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@azure/functions": "4.16.2",
-    "@azure/storage-queue": "^12.31.0"
+    "@azure/functions": "4.16.5",
+    "@azure/storage-queue": "^12.32.0"
   },
   "exports": {
     ".": "./dist/index.js"

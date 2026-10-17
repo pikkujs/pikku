@@ -12,10 +12,10 @@
     "@pikku/kysely": "workspace:*",
     "@pikku/next": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "better-auth": "^1.7.5",
+    "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",
-    "kysely": "^0.29.5",
-    "next": "15.5.23",
+    "kysely": "^0.29.6",
+    "next": "15.5.28",
     "react": "^19",
     "react-dom": "^19",
     "zod": "^4"
@@ -24,10 +24,10 @@
     "@pikku/cli": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "pikku": "pikku",

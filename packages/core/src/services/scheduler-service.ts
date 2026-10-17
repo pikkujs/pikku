@@ -1,4 +1,5 @@
 import type { CoreUserSession } from '../types/core.types.js'
+import type { ScheduledTaskRuns } from '../wirings/scheduler/scheduler.types.js'
 
 export interface ScheduledTaskSummary {
   taskId: string
@@ -30,6 +31,11 @@ export abstract class SchedulerService {
   abstract getAllTasks(): Promise<ScheduledTaskSummary[]>
 
   abstract close(): Promise<void>
+
+  /** Per wired cron task. Empty when this scheduler keeps no run history. */
+  async getTaskRuns(): Promise<Record<string, ScheduledTaskRuns>> {
+    return {}
+  }
 
   async start(): Promise<void> {}
 

@@ -14,15 +14,15 @@
     "test:queue": "npx tsx client/queue-worker.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.142",
+    "@pikku/core": "^0.12.143",
     "@pikku/queue-pg-boss": "^0.12.11",
     "tslib": "^2.8.1",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24"
+    "@types/node": "^26"
   },
   "exports": {
     ".": "./src/start.ts"

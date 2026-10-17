@@ -13,27 +13,27 @@
     "db:types": "pikku db types"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.81",
-    "@ai-sdk/openai-compatible": "^3.0.59",
-    "@pikku/addon-admin": "^0.12.12",
-    "@pikku/addon-console": "^0.12.62",
+    "@ai-sdk/openai": "^4.0.96",
+    "@ai-sdk/openai-compatible": "^3.0.71",
+    "@pikku/addon-admin": "^0.12.13",
+    "@pikku/addon-console": "^0.12.63",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/better-auth": "^0.12.56",
     "@pikku/cloudflare": "^0.12.29",
-    "@pikku/core": "^0.12.142",
-    "@pikku/kysely": "^0.13.37",
+    "@pikku/core": "^0.12.143",
+    "@pikku/kysely": "^0.13.38",
     "@pikku/schema-cfworker": "^0.12.8",
     "@standard-schema/spec": "^1.1.0",
-    "ai": "^7.0.122",
-    "better-auth": "^1.7.6",
-    "kysely": "^0.29.0",
-    "tsx": "^4.21.0",
-    "zod": "^4.3.6"
+    "ai": "^7.0.143",
+    "better-auth": "^1.7.10",
+    "kysely": "^0.29.6",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@pikku/playwright": "^0.12.88",
-    "@playwright/test": "^1.50.0",
-    "@types/node": "^24",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26",
     "typescript": "^6.0.3"
   }
 }

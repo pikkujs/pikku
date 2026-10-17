@@ -12,6 +12,6 @@
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/deploy-standalone": "workspace:*",
-    "@types/node": "^24"
+    "@types/node": "^26"
   }
 }

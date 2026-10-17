@@ -120,6 +120,7 @@ export const createSingletonServices = pikkuAddonServices(
     }
 
     return {
+      variables,
       metaService,
       wiringService,
       secretAdminService,

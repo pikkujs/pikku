@@ -118,4 +118,15 @@ export class KyselyIncomingWebhookService extends IncomingWebhookService {
     }
     return query.execute()
   }
+
+  public async getReceipt(
+    receiptId: string
+  ): Promise<IncomingWebhookReceiptRecord | null> {
+    const receipt = await this.db
+      .selectFrom('webhookReceipt')
+      .selectAll()
+      .where('receiptId', '=', receiptId)
+      .executeTakeFirst()
+    return receipt ?? null
+  }
 }

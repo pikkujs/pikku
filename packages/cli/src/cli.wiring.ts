@@ -1372,6 +1372,10 @@ wireCLI({
               description:
                 "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose virtual users sign into different apps — comma-separated, and a bare url is the fallback",
             },
+            runId: {
+              description:
+                'The id to record this run under in .pikku/scenario-runs, instead of a fresh one — so whoever started the run can follow it. Must not already exist',
+            },
           },
         }),
         list: pikkuCLICommand({

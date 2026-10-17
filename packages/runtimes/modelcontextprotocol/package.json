@@ -27,7 +27,7 @@
     "@pikku/core": "^0.12.138"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0"
+    "@modelcontextprotocol/server": "2.3.1"
   },
   "engines": {
     "node": ">=24"
@@ -45,6 +45,6 @@
     }
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0"
+    "@modelcontextprotocol/sdk": "1.32.1"
   }
 }

@@ -92,3 +92,68 @@ describe('InMemorySchedulerService scheduleRPC', () => {
     }
   })
 })
+
+describe('InMemorySchedulerService getTaskRuns', () => {
+  test('records each cron run with its outcome, and the next run', async () => {
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      debug: () => {},
+      error: () => {},
+    }
+    pikkuState(null, 'package', 'singletonServices', { logger } as any)
+
+    const wire = (name: string, func: (...args: any[]) => Promise<void>) => {
+      const pikkuFuncId = `scheduler_${name}`
+      pikkuState(null, 'scheduler', 'meta')[name] = {
+        pikkuFuncId,
+        name,
+        schedule: '* * * * * *',
+      }
+      pikkuState(null, 'function', 'meta')[pikkuFuncId] = {
+        pikkuFuncId,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+      } as any
+      addFunction(pikkuFuncId, { func, auth: false } as any)
+      pikkuState(null, 'scheduler', 'tasks').set(name, {
+        name,
+        schedule: '* * * * * *',
+        func: { func, auth: false },
+      } as any)
+    }
+    wire('passes', async () => {})
+    wire('throws', async () => {
+      throw new Error('boom')
+    })
+    wire('skips', async (_services, _data, { scheduledTask }) => {
+      scheduledTask.skip('nothing to do')
+    })
+
+    const scheduler = new InMemorySchedulerService()
+    try {
+      await scheduler.start()
+      const ran = await waitFor(
+        () =>
+          ['passes', 'throws', 'skips'].every(
+            (name) => (scheduler as any).taskRuns.get(name)?.length > 0
+          ),
+        3000
+      )
+      assert.ok(ran)
+
+      const runs = await scheduler.getTaskRuns()
+      assert.equal(runs.passes!.lastRun!.status, 'completed')
+      assert.equal(runs.passes!.lastRun!.error, null)
+      assert.equal(runs.throws!.lastRun!.status, 'failed')
+      assert.match(runs.throws!.lastRun!.error!, /boom/)
+      assert.equal(runs.skips!.lastRun!.status, 'skipped')
+      assert.ok(runs.passes!.nextRun! > runs.passes!.lastRun!.startedAt)
+      assert.equal(runs.passes!.history[0], runs.passes!.lastRun)
+    } finally {
+      await scheduler.close()
+      pikkuState(null, 'scheduler', 'tasks').clear()
+    }
+  })
+})

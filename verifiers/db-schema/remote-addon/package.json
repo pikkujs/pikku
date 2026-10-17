@@ -38,7 +38,7 @@
     "@pikku/cli": "*",
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
-    "kysely": "^0.29.5",
+    "kysely": "^0.29.6",
     "zod": "^4"
   }
 }
