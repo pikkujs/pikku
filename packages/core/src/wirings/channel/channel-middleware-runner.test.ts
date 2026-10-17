@@ -186,3 +186,25 @@ describe('wrapChannelWithMiddleware', () => {
     assert.strictEqual(wrapped.channel!.sendBinary, wrapped.channel!.sendBinary)
   })
 })
+
+describe('combineChannelMiddleware package namespaces (#267)', () => {
+  test("an addon's named channel middleware is found in the addon's namespace", () => {
+    const gate = async () => {}
+    pikkuState('@acme/addon', 'misc', 'channelMiddleware').gate = [gate]
+
+    const scoped = combineChannelMiddleware('channel', 'events', {
+      wireInheritedChannelMiddleware: [{ type: 'wire', name: 'gate' }],
+      packageName: '@acme/addon',
+    })
+    const root = combineChannelMiddleware('channel', 'events', {
+      wireInheritedChannelMiddleware: [{ type: 'wire', name: 'gate' }],
+    })
+
+    assert.deepEqual(scoped, [gate])
+    assert.deepEqual(
+      root,
+      [],
+      "the addon's cached chain must not stand in for the root's"
+    )
+  })
+})
