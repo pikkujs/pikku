@@ -7,6 +7,11 @@ export const DEFAULT_IMPERSONATION_HEADER = 'x-pikku-impersonate-user-id'
 /** The `{ user, session }` shape both session paths resolve before mapping. */
 export type SessionLike = { user: any; session: any }
 
+/**
+ * Opt-in admin impersonation for the session middlewares: a caller allowed to
+ * impersonate names a target user in a header and the request runs as them,
+ * with their scopes.
+ */
 export type ImpersonationOptions = {
   /** Header carrying the target user id. Defaults to `x-pikku-impersonate-user-id`. */
   header?: string
@@ -38,6 +43,7 @@ const findUserById = async (userId: string, services: CoreServices) => {
   return ctx.internalAdapter.findUserById(userId)
 }
 
+/** Maps a resolved `{ user, session }` to the pikku session. */
 export type MapSession = (
   result: SessionLike,
   services: CoreServices
