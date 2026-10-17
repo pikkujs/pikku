@@ -315,8 +315,12 @@ func (s *Context) addFunctions(node *ast.Node) {
 	}
 
 	body := handler.Body()
-	if inv := tsutil.CollectInvokedRpcNames(body); len(inv) > 0 {
-		m.Invokes = inv
+	invoked := tsutil.CollectInvokedRpcNames(body)
+	if len(invoked.Names) > 0 {
+		m.Invokes = invoked.Names
+	}
+	for _, call := range invoked.Dynamic {
+		s.Log.Warn(fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`, pikkuFuncId, call))
 	}
 
 	// --- Generics → types, unwrapped from Promise ---
@@ -464,8 +468,19 @@ func (s *Context) addFunctions(node *ast.Node) {
 		be = lineOf(body.End())
 	}
 	m.BodyStart, m.BodyEnd = &bs, &be
-	if sw := tsutil.CollectStartedWorkflows(body); len(sw) > 0 {
-		m.StartsWorkflows = sw
+	started := tsutil.CollectStartedWorkflows(body)
+	if len(started.Names) > 0 {
+		m.StartsWorkflows = started.Names
+	}
+	// Generated scaffolds (the workflow start/run routes) take the name from the
+	// request by design, and are served by units that have every workflow.
+	if !generatedFileRe.MatchString(ast.GetSourceFileOfNode(handler).FileName()) {
+		for _, call := range started.Dynamic {
+			s.Log.Warn(fmt.Sprintf(`• %s calls %s with a computed name — the deploy planner cannot bundle that workflow's meta into %s's unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`, pikkuFuncId, call, pikkuFuncId))
+		}
+		if len(started.RpcHandoffs) > 0 {
+			s.Log.Warn(fmt.Sprintf(`• %s passes rpc to %s — rpc.startWorkflow / rpc.invoke calls made there are invisible to the deploy planner, so their targets are not bundled into or bound to %s's unit. Make those calls in the handler itself.`, pikkuFuncId, strings.Join(started.RpcHandoffs, ", "), pikkuFuncId))
+		}
 	}
 
 	s.State.Functions.Meta.Set(pikkuFuncId, m)
@@ -587,6 +602,8 @@ func filterVoid(names []string) []string {
 	}
 	return out
 }
+
+var generatedFileRe = regexp.MustCompile(`\.gen\.[cm]?[jt]s$`)
 
 // --- implementationHash -----------------------------------------------------
 

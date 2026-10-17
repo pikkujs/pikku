@@ -24,7 +24,7 @@ func PrintNode(n *ast.Node) string {
 				return
 			}
 			open := -1
-			if w.lastOpen == w.GetTextPos()-1 && (node.Parent == nil || node.Parent.Kind != ast.KindParenthesizedExpression) {
+			if w.lastOpen == w.GetTextPos()-1 && isLeftHandOperand(node) {
 				open = w.lastOpen
 			}
 			stack = append(stack, open)
@@ -56,6 +56,24 @@ func PrintNode(n *ast.Node) string {
 	}
 	b.WriteString(out[prev:])
 	return b.String()
+}
+
+// isLeftHandOperand: `x!` is what is accessed, called, constructed or
+// incremented, the places typescript-go adds parens. A `(` written just before it anywhere else
+// is the source's own: an argument list, `if (`, a ParenthesizedExpression.
+func isLeftHandOperand(node *ast.Node) bool {
+	parent := node.Parent
+	if parent == nil {
+		return false
+	}
+	switch parent.Kind {
+	case ast.KindPropertyAccessExpression, ast.KindElementAccessExpression,
+		ast.KindCallExpression, ast.KindNewExpression, ast.KindTaggedTemplateExpression:
+		return parent.Expression() == node
+	case ast.KindPostfixUnaryExpression:
+		return parent.AsPostfixUnaryExpression().Operand == node
+	}
+	return false
 }
 
 type parenTrackingWriter struct {
