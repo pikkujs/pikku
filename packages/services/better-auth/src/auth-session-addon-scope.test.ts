@@ -14,7 +14,7 @@ describe('betterAuthSession in a scope without an auth service', () => {
         headers: () => ({}),
       },
     },
-    setSession: () => {
+    setInitialSession: () => {
       assert.fail('no session should be set without an auth service')
     },
     session: undefined,

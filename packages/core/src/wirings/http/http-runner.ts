@@ -28,7 +28,10 @@ import {
   getSingletonServices,
   getCreateWireServices,
 } from '../../pikku-state.js'
-import { PikkuSessionService } from '../../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createMiddlewareSessionWireProps,
+} from '../../services/user-session-service.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { isProduction } from '../../env.js'
@@ -288,10 +291,7 @@ const executeRoute = async (
     traceId: requestId,
     http,
     channel,
-    session: userSession.get() as CoreUserSession | undefined,
-    setSession: (s: any) => userSession.setInitial(s),
-    getSession: () => userSession.get(),
-    hasSessionChanged: () => userSession.sessionChanged,
+    ...createMiddlewareSessionWireProps(userSession),
   }
 
   const statusBeforeRoute = http?.response?.statusCode

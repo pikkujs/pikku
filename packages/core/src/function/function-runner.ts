@@ -32,7 +32,10 @@ import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.type
 import type { CorePikkuFunctionConfig } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
-import { PikkuSessionService } from '../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createFunctionSessionWireProps,
+} from '../services/user-session-service.js'
 import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
 import { verifyScopes } from '../scopes.js'
 import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
@@ -69,6 +72,13 @@ async function resolveSession(
   singletonServices: CoreSingletonServices,
   sessionService?: SessionService<CoreUserSession>
 ): Promise<void> {
+  // A session middleware established lives on the session service, not on the
+  // transport's snapshot of the wire. Read it from there, so it is what the
+  // function sees and what its user id is resolved from.
+  // knowledge: decisions/security/set-session-persists-and-set-initial-session-does-not.md
+  if (!wire.session && sessionService?.get()) {
+    wire.session = sessionService.get()
+  }
   const pikkuUserId = defaultPikkuUserIdResolver(wire)
   if (pikkuUserId) {
     wire.pikkuUserId = pikkuUserId
@@ -376,11 +386,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     )
 
     if (sessionService) {
-      invocationWire.session = sessionService.freezeInitial()
-      invocationWire.setSession = (s: any) => sessionService.set(s)
-      invocationWire.clearSession = () => sessionService.clear()
-      invocationWire.getSession = () => sessionService.get()
-      invocationWire.hasSessionChanged = () => sessionService.sessionChanged
+      Object.assign(
+        invocationWire,
+        createFunctionSessionWireProps(sessionService)
+      )
     }
 
     const session = invocationWire.session

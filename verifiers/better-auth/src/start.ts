@@ -183,7 +183,7 @@ async function main(): Promise<void> {
         singletonServices as any,
         {
           http: { request: { headers: () => headers } },
-          setSession: (s: any) => {
+          setInitialSession: (s: any) => {
             captured = s
           },
           session: undefined,

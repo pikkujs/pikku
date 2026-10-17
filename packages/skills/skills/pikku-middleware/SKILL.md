@@ -5,7 +5,7 @@ description: >-
   tag-scoped (addTagMiddleware), per-wiring, session-setting; execution order and priority; the
   pikkuMiddleware factory; resolving a token into a session (HTTP, cron); service-to-service bearer
   gates. TRIGGER when: middleware on some or all routes, tag-scoped concerns, global interceptors,
-  priority/order questions, or middleware calling setSession for a machine caller. DO NOT TRIGGER
+  priority/order questions, or middleware calling setInitialSession for a machine caller. DO NOT TRIGGER
   for choosing an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`),
   permissions or scopes (use pikku-permissions), or deployment.
 installGroups: [core]
@@ -45,7 +45,8 @@ const telemetryMiddleware = pikkuMiddleware({
 The `wire` object gives you:
 
 - `wire.http` — inbound HTTP context (headers, URL, cookies)
-- `wire.setSession(session)` — set the session for this request
+- `wire.setInitialSession(session)` — establish who the caller is for this request; nothing is persisted and no cookie is re-issued. What auth middleware calls.
+- `wire.setSession(session)` / `wire.clearSession()` — sign the caller in or out: marks the session changed (so `authCookie` re-issues the cookie) and writes the session store. Same meaning as in a function body; await it.
 - `wire.getSession()` — read the current session
 - `wire.session` — the session set so far (may be undefined)
 
@@ -181,20 +182,20 @@ Within the same priority level, the collection order above is preserved. Use pri
 
 ## ⛔ MACHINE AUTH: THE TOKEN BECOMES A SESSION. ⛔
 
-**A caller that has an identity — a sandbox, a deployed stage, a pool host, a device — is authenticated ONCE, in middleware, which calls `setSession`. The function is then an ordinary `pikkuFunc` gated with `scopes`. It reads `session`. It NEVER re-derives who the caller is.**
+**A caller that has an identity — a sandbox, a deployed stage, a pool host, a device — is authenticated ONCE, in middleware, which calls `setInitialSession`. The function is then an ordinary `pikkuFunc` gated with `scopes`. It reads `session`. It NEVER re-derives who the caller is.**
 
 Either a function is sessionless (genuinely public) or it has a session. Anything in between — a token verified inside `func`, a token verified in a `permissions` check that returns `true`, an identity passed in the input schema, the same resolver memoised per request so N functions can each call it — is the anti-pattern this section exists to kill.
 
 ```typescript
 // middleware.ts — resolve the bearer ONCE, for every route
 const sandboxBearerAuth = pikkuMiddleware<SingletonServices>(
-  async ({ kysely, auth }, { http, getSession, setSession }, next) => {
+  async ({ kysely, auth }, { http, getSession, setInitialSession }, next) => {
     if (await getSession?.()) return next()
     const header = http?.request?.header?.('authorization')
     if (!header?.startsWith('Bearer ')) return next()
     const sandbox = await resolveSandboxSession(kysely, auth, header.slice(7).trim())
     if (sandbox) {
-      setSession?.({ userId: sandbox.createdByUserId ?? sandbox.sandboxInstanceId,
+      setInitialSession?.({ userId: sandbox.createdByUserId ?? sandbox.sandboxInstanceId,
         orgId: sandbox.organizationId, scopes: ['machine:sandbox'], sandbox } as UserSession)
     }
     return next()
@@ -222,7 +223,7 @@ An unresolved token leaves the session unset and the function throws `MissingSes
 
 ### It MUST be `addHTTPMiddleware`, never `addTagMiddleware`
 
-**A session set in tag middleware is invisible to the function when the call arrives over `POST /rpc/:rpcName`.** Tag middleware runs inside `runPikkuFunc`, and the RPC dispatch calls it without a `sessionService`, so `invocationWire.session` is never re-read after your `setSession` — the function sees the session the OUTER wire had, which is none. `addHTTPMiddleware('*')` runs on the `/rpc` route itself, before its handler, and that session is the one the dispatched function inherits. Tag middleware is still right for a gate that only says yes/no.
+**A session set in tag middleware is invisible to the function when the call arrives over `POST /rpc/:rpcName`.** Tag middleware runs inside `runPikkuFunc`, and the RPC dispatch calls it without a `sessionService`, so `invocationWire.session` is never re-read after your `setInitialSession` — the function sees the session the OUTER wire had, which is none. `addHTTPMiddleware('*')` runs on the `/rpc` route itself, before its handler, and that session is the one the dispatched function inherits. Tag middleware is still right for a gate that only says yes/no.
 
 ### A cron is a machine identity too — set it in the task's own middleware
 
@@ -230,8 +231,8 @@ A scheduled task has no caller and no header, but it is still a machine principa
 
 ```typescript
 const cronSession = pikkuMiddleware(
-  async (_services, { scheduledTask, setSession }, next) => {
-    setSession?.({
+  async (_services, { scheduledTask, setInitialSession }, next) => {
+    setInitialSession?.({
       userId: `cron:${scheduledTask?.name}`,
       scopes: ['machine:cron'],
     } as UserSession)

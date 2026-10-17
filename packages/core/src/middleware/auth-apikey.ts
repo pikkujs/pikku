@@ -13,8 +13,8 @@ export const authAPIKey = pikkuMiddlewareFactory<{
   source: 'header' | 'query' | 'all'
 }>(({ source }) =>
   pikkuMiddleware(
-    async ({ jwt: jwtService }, { http, setSession, session }, next) => {
-      if (!http?.request || !setSession || session) {
+    async ({ jwt: jwtService }, { http, setInitialSession, session }, next) => {
+      if (!http?.request || !setInitialSession || session) {
         return next()
       }
 
@@ -29,7 +29,7 @@ export const authAPIKey = pikkuMiddlewareFactory<{
       if (apiKey && jwtService) {
         const userSession = await jwtService.decode(apiKey)
         if (userSession) {
-          await setSession?.(userSession)
+          setInitialSession?.(userSession)
         }
       }
 
