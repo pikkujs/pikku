@@ -27,7 +27,7 @@
     "@pikku/core": "^0.12.143"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2"
+    "@types/node": "^26.6.5"
   },
   "engines": {
     "node": ">=24"

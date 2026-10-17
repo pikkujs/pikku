@@ -73,7 +73,7 @@
     "@playwright/test": "^1.64.1",
     "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "@types/ws": "^8.18.2",
     "c8": "^12.0.0",
     "ws": "^8.22.0"

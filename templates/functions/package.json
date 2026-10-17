@@ -39,7 +39,7 @@
     "@pikku/ws": "^0.12.10",
     "@standard-schema/spec": "^1.1.0",
     "@types/aws-lambda": "^8.10.164",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/ws": "^8",
     "concurrently": "^10.0.6",
     "serverless": "^4.44.0",

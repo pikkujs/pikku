@@ -30,7 +30,7 @@
     "@pikku/cli": "^0.12.191",
     "@pikku/inspector": "^0.12.106",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24"
+    "@types/node": "^26"
   },
   "exports": {
     ".": "./src/start.ts"
