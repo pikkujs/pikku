@@ -66,3 +66,14 @@ test('mergeRequestData drops prototype-polluting keys', () => {
   assert.equal(({} as Record<string, unknown>).polluted, undefined)
   assert.equal(Object.getPrototypeOf(merged), Object.prototype)
 })
+
+test('mergeRequestData accepts keys that name Object.prototype members', () => {
+  const merged = mergeRequestData<Record<string, unknown>>(
+    { toString: '1' },
+    { hasOwnProperty: 'yes', valueOf: '2' },
+    { toString: 1 }
+  )
+  assert.equal(merged.toString, '1')
+  assert.equal(merged.hasOwnProperty, 'yes')
+  assert.equal(merged.valueOf, '2')
+})
