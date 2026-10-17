@@ -9,6 +9,14 @@ import { pikkuState, getAllPackageStates } from './pikku-state.js'
 const schemaKey = (name: string, packageName: string | null): string =>
   packageName ? `${packageName}:${name}` : name
 
+/**
+ * Registers a JSON Schema by name for a package. Generated schema files call
+ * this; a module's `default` export is unwrapped.
+ *
+ * @param name - The schema name functions' metadata refers to.
+ * @param value - The schema, or a module whose `default` is the schema.
+ * @param packageName - The addon package; `null` for the app.
+ */
 export const addSchema = (
   name: string,
   value: any,
@@ -18,6 +26,7 @@ export const addSchema = (
   pikkuState(packageName, 'misc', 'schemas').set(name, schema)
 }
 
+/** The JSON Schema registered under `name` for a package, if any. */
 export const getSchema = (
   name: string,
   packageName: string | null = null
@@ -25,6 +34,14 @@ export const getSchema = (
   return pikkuState(packageName, 'misc', 'schemas').get(name)
 }
 
+/**
+ * Hands every registered schema, for the app and every addon, to the schema
+ * service to compile, then logs an error for each HTTP route whose input
+ * schema did not load. A schema that fails to compile is logged, not thrown.
+ *
+ * @param schemaService - Defaults to the registered singleton services' `schema`.
+ * @throws {Error} When no schema service is given or registered.
+ */
 export const compileAllSchemas = (
   logger: Logger,
   schemaService?: SchemaService
@@ -150,6 +167,14 @@ const coerceNumeric = (value: string, integer: boolean) => {
   return parsed
 }
 
+/**
+ * Converts top-level string values to the type their schema property declares,
+ * for transports that only carry text (query strings, argv): comma-separated
+ * strings to arrays, `date-time` strings to `Date`, and numeric strings to
+ * numbers only when the number prints back as the identical text. Mutates
+ * `data` in place; anything it cannot convert exactly is left for the
+ * validator to reject.
+ */
 export const coerceTopLevelDataFromSchema = (
   schemaName: string,
   data: any,
@@ -214,6 +239,17 @@ const stripUndefinedValues = <T>(value: T): T => {
   ) as T
 }
 
+/**
+ * Validates `data` against a registered schema, throwing on failure.
+ *
+ * Without a schema service this does nothing at all, so an app that wires no
+ * `schema` service runs functions on unvalidated input. With one, a function
+ * that declares no input schema refuses any non-empty data.
+ *
+ * @throws {UnprocessableContentError} Data was passed where no schema is declared.
+ * @throws {MissingSchemaError} The named schema was never registered.
+ * Validation failures are thrown by the schema service itself.
+ */
 export const validateSchema = async (
   logger: Logger,
   schemaService: SchemaService | undefined,

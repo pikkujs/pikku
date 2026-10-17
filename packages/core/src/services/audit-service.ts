@@ -6,16 +6,26 @@ import type {
 import type { Logger } from './logger.js'
 import type { Safe } from '../classification/secret-value.js'
 
+/**
+ * `best-effort` buffers events and writes them when the invocation closes,
+ * logging (not throwing) on failure; `transactional` writes each event before
+ * `write` resolves, so a failed write fails the function.
+ */
 export type AuditDurability = 'best-effort' | 'transactional'
 export type AuditOutcome = 'success' | 'failed' | 'denied'
 export type AuditSource = 'auto' | 'explicit'
 
+/**
+ * A function's `audit` setting: `true` for best-effort auditing, or an object
+ * choosing the durability.
+ */
 export type AuditConfig =
   | boolean
   | {
       durability?: AuditDurability
     }
 
+/** An {@link AuditConfig} with its defaults filled in. */
 export type ResolvedAuditConfig = {
   durability: AuditDurability
 }
@@ -38,6 +48,11 @@ export type AuditUserIdentity = {
   pikkuUserId?: string
 }
 
+/**
+ * One entry in the audit trail. The invocation fields (`functionId`,
+ * `wireType`, `traceId`, `userIdentity`) are filled in from the wire when an
+ * event is written through an {@link AuditLog}.
+ */
 export type AuditEvent = {
   eventId?: string
   type: string
@@ -55,6 +70,7 @@ export type AuditEvent = {
   metadata?: Record<string, unknown>
 }
 
+/** Events flushed together at the end of a best-effort invocation. */
 export type AuditEventBatch = AuditEvent[]
 
 /**
@@ -91,6 +107,7 @@ export type AuditFacets = {
   types: string[]
 }
 
+/** One page of audit events returned by {@link AuditService.query}. */
 export type AuditQueryResult = {
   events: AuditEvent[]
   /** Offset of the next page, or `null` at the end. */
@@ -99,6 +116,15 @@ export type AuditQueryResult = {
   facets?: AuditFacets
 }
 
+/**
+ * The durable sink for audit events, provided as the `audit` singleton service.
+ * Functions do not call it directly: they write through the per-invocation
+ * {@link AuditLog} from {@link createInvocationAudit}, which adds the caller's
+ * identity and applies the function's durability.
+ *
+ * `write` takes a whole batch when the sink supports it; otherwise events go
+ * through `audit` one at a time.
+ */
 export interface AuditService {
   audit(event: AuditEvent): Promise<void>
   write?(batch: AuditEventBatch): Promise<void>
@@ -113,6 +139,12 @@ export interface AuditService {
   facets?(): Promise<AuditFacets>
 }
 
+/**
+ * An audit sink that discards every event. Use it for local development and
+ * tests where no trail is kept; it has no read side.
+ *
+ * @example snippet: shopServices
+ */
 export class NoopAuditService implements AuditService {
   async audit(_event: AuditEvent): Promise<void> {}
 
@@ -246,6 +278,22 @@ export const resolveAuditConfig = (
   }
 }
 
+/**
+ * Creates the {@link AuditLog} for one invocation, normally from your
+ * wire-services factory.
+ *
+ * When the function did not opt in with `audit`, the returned log drops every
+ * write and logs a warning once, so a missing opt-in is visible rather than
+ * silent.
+ *
+ * @param service - the singleton audit sink
+ * @param wire - the invocation's wire, which supplies the audit config and the
+ * caller's identity
+ * @param logger - used for the dropped-write warning when the wire has no
+ * logger
+ *
+ * @example snippet: shopWireServices
+ */
 export const createInvocationAudit = (
   service: AuditService,
   wire: PikkuWire<any, any, any, CoreUserSession>,

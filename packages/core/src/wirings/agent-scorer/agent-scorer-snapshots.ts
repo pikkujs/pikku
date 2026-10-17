@@ -37,6 +37,7 @@ export const recordScoreSnapshot = (run: ScorerInput): void => {
   }
 }
 
+/** The scorer input recorded for `runId`, if snapshots are enabled and it has not been evicted. */
 export const getScoreSnapshot = (runId: string): ScorerInput | undefined =>
   snapshots.get(runId)
 

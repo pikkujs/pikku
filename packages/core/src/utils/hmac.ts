@@ -63,8 +63,11 @@ export function timingSafeStringEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
+/** The bytes an HMAC is computed over: a string is UTF-8 encoded, so pass the raw request body, not re-serialised JSON. */
 export type WebhookPayload = string | Uint8Array
+/** The hash an HMAC helper signs with. `sha1` exists only for providers that still sign with it. */
 export type HmacAlgorithm = 'sha1' | 'sha256' | 'sha512'
+/** How the signing secret string is turned into key bytes: as UTF-8 text, or decoded from hex or base64. */
 export type SecretEncoding = 'utf8' | 'hex' | 'base64'
 
 const HMAC_HASH: Record<HmacAlgorithm, string> = {

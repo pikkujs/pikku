@@ -16,12 +16,29 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 
+/** Parameters for {@link runScheduledTask}: the task's name, an optional session to run it with, and an optional trace ID. */
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
   traceId?: string
 }
 
+/**
+ * Registers a sessionless function to run on a cron schedule.
+ *
+ * The task only runs once a scheduler service (or a platform cron trigger
+ * calling {@link runScheduledTask}) drives it; wiring alone schedules nothing.
+ * The function receives no input, and can call `scheduledTask.skip()` on its
+ * wire to end the run early.
+ *
+ * Registration needs the metadata `pikku` generates for the task. When none is
+ * found the wiring is skipped with a warning rather than throwing.
+ *
+ * @param scheduledTask - The task's unique name, cron `schedule`, function, and optional middleware.
+ * @throws {Error} When a task with the same name is already wired.
+ *
+ * @example snippet: wireScheduler
+ */
 export const wireScheduler = <
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<void, void>
@@ -52,6 +69,7 @@ export const wireScheduler = <
   tasks.set(scheduledTask.name, scheduledTask)
 }
 
+/** Thrown by {@link runScheduledTask} when no task, or no generated metadata, exists for the requested name. */
 export class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string) {
     super(`Scheduled task not found: ${title}`)
@@ -67,6 +85,16 @@ class ScheduledTaskSkippedError extends PikkuError {
   }
 }
 
+/**
+ * Runs one wired scheduled task now. Scheduler services and platform cron handlers call this on each tick.
+ *
+ * When `session` is given it is placed on the wire, so the function and its
+ * middleware see that user; otherwise the task runs without one.
+ *
+ * @param params - See {@link RunScheduledTasksParams}. `traceId` defaults to `cron-<name>-<timestamp>`.
+ * @throws {ScheduledTaskNotFoundError} When the task or its metadata is missing.
+ * @throws The error the function threw, including the one `scheduledTask.skip()` raises, so the caller can tell a skip from a failure.
+ */
 export async function runScheduledTask({
   name,
   session,
@@ -133,6 +161,7 @@ export async function runScheduledTask({
   }
 }
 
+/** Every wired scheduled task, keyed by name. Scheduler services read this to know what to schedule. */
 export const getScheduledTasks = () => {
   return pikkuState(null, 'scheduler', 'tasks')
 }

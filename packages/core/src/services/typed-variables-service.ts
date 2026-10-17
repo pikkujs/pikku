@@ -10,6 +10,7 @@ export interface VariableStatus {
   hasDefault: boolean
 }
 
+/** Generated metadata for one declared variable. */
 export type VariableMeta = {
   name: string
   displayName: string

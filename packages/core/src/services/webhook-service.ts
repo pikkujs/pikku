@@ -2,6 +2,7 @@ import { NotImplementedError } from '../errors/errors.js'
 import { hmacSha256Hex, timingSafeStringEqual } from '../utils/hmac.js'
 import type { Safe } from '../classification/secret-value.js'
 
+/** One outgoing webhook to send. */
 export interface SendWebhookInput {
   url: string
   /** Sent as the `X-Pikku-Event` header. */
@@ -18,6 +19,7 @@ export interface SendWebhookInput {
   organizationId?: string
 }
 
+/** The queue job that will deliver the webhook. */
 export interface SendWebhookResult {
   jobId: string
   /**
@@ -30,6 +32,10 @@ export interface SendWebhookResult {
   deliveryId?: string
 }
 
+/**
+ * The `webhook` section of your config: signing secret, signature header, retry
+ * policy and the hosts webhooks may be sent to.
+ */
 export interface WebhookServiceConfig {
   retries?: number
   /** Omitted means exponential backoff. */
@@ -44,6 +50,7 @@ export interface WebhookServiceConfig {
   allowedHosts?: string[]
 }
 
+/** A signed webhook as queued for delivery. */
 export interface WebhookJobData {
   url: string
   event?: string
@@ -56,6 +63,7 @@ export interface WebhookJobData {
   deliveryId?: string
 }
 
+/** The outcome of one delivery attempt. */
 export interface WebhookAttemptResult {
   /** Absent when the request never completed. */
   statusCode?: number
@@ -65,6 +73,7 @@ export interface WebhookAttemptResult {
   delivered: boolean
 }
 
+/** A stored webhook delivery and its current status. */
 export interface WebhookDeliveryRecord {
   deliveryId: string
   organizationId: string | null
@@ -87,17 +96,33 @@ export interface WebhookAttemptRecord {
   createdAt: Date
 }
 
+/** A stored webhook delivery with every attempt made. */
 export interface WebhookDeliveryWithAttempts {
   delivery: WebhookDeliveryRecord
   attempts: WebhookAttemptRecord[]
 }
 
+/** The queue outgoing webhooks are delivered through. */
 export const PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME = 'pikku-outgoing-webhooks'
 
 export const DEFAULT_WEBHOOK_SIGNATURE_HEADER = 'X-Pikku-Signature'
 
+/**
+ * How many times a failed webhook delivery is retried when nothing else is
+ * configured.
+ */
 export const DEFAULT_WEBHOOK_RETRIES = 3
 
+/**
+ * Sends signed outgoing webhooks, provided as the `webhookService` singleton
+ * service ({@link QueueWebhookService} delivers through a queue). Bodies are
+ * signed with HMAC-SHA256 as `sha256=<hex>` in the signature header (default
+ * `X-Pikku-Signature`); receivers check it with {@link WebhookService.verify},
+ * which compares in constant time.
+ *
+ * The input is `Safe<>`-guarded, so a `SecretValue` cannot be sent in a
+ * payload. Delivery history is optional: the default keeps none.
+ */
 export abstract class WebhookService {
   abstract send<T extends SendWebhookInput>(
     input: Safe<T>

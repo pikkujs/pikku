@@ -3,6 +3,10 @@ import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type { AddonInstance } from './addon-runner.js'
+/**
+ * Options for `wireAddon`: the instance name, its package, and what the consuming app grants it
+ * (auth, scopes, exposed functions, secret/credential/content access and overrides).
+ */
 export type WireAddonConfig = {
   /** How this instance is addressed. One package may be wired more than once, and the name is what tells the instances apart. */
   name: string

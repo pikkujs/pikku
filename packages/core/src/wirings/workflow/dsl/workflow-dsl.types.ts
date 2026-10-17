@@ -588,14 +588,15 @@ export interface WorkflowStepWire {
   fromInvocationId?: string
 }
 
-/**
- * Workflow wire object for DSL workflows
- * Provides workflow-specific capabilities to function execution
- */
+/** The outcome of the forward call a `compensate` function is undoing. */
 export type CompensatingFor<Out = unknown> =
   | { ok: true; output: Out; stepName?: string }
   | { ok: false; output: null; error: SerializedError; stepName?: string }
 
+/**
+ * Workflow wire object for DSL workflows
+ * Provides workflow-specific capabilities to function execution
+ */
 export interface PikkuWorkflowWire {
   /**
    * Set only while a function's `compensate` is running: the outcome of the
@@ -648,6 +649,9 @@ export type ScenarioContext<Out = unknown> = 0 extends 1 & Out
     ? Partial<Out>
     : Record<string, unknown>
 
+/**
+ * The workflow wire a scenario body receives: every workflow step, plus the expectation steps and the shared `context`.
+ */
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   /**
    * Scratch the body writes and the `before`/`after` hooks read. A hook is a

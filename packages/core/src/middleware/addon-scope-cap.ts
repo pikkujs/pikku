@@ -5,6 +5,10 @@ import {
   pikkuMiddlewareFactory,
 } from './middleware-factories.js'
 
+/**
+ * The request header naming the addon a call is made on behalf of, read by
+ * {@link addonScopeCap}.
+ */
 export const ADDON_HEADER = 'x-pikku-addon'
 
 /**

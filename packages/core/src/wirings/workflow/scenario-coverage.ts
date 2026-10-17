@@ -36,6 +36,7 @@ export interface UncoveredMutation {
   sourceFile?: string
 }
 
+/** How much of the app the scenario suite exercises: API lines, user mutations and routes. */
 export interface ScenarioCoverage {
   /** Line coverage across every scenario; `null` until a run with `--coverage` has been recorded. */
   api: {

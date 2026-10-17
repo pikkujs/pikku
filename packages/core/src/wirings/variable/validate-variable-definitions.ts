@@ -6,6 +6,13 @@ import type { SchemaRefLike } from '../../types/core.types.js'
 
 export type { SchemaRefLike }
 
+/**
+ * Merges the variable declarations the inspector found into meta keyed by name.
+ * Declarations that share a `variableId` must use the same schema.
+ *
+ * @throws Error when two declarations of one `variableId` disagree on schema.
+ * @internal Called by the CLI when generating meta.
+ */
 export function validateAndBuildVariableDefinitionsMeta(
   definitions: VariableDefinitions,
   schemaLookup: Map<string, SchemaRefLike>

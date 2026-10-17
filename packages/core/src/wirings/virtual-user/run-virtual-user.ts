@@ -77,6 +77,7 @@ export interface VirtualUserCallContext {
   disposition: VirtualUserDisposition
 }
 
+/** Everything one autonomous virtual-user run is given. */
 export interface RunVirtualUserParams {
   /** The person being run — name, job title, personality, goals. */
   virtualUser: ResolvedVirtualUser

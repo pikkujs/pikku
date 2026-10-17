@@ -64,6 +64,11 @@ const registerGatewayHandler = (config: CoreGateway): string => {
 const gatewayInheritedMiddleware = (config: CoreGateway) =>
   pikkuState(null, 'gateway', 'meta')[config.name]?.middleware
 
+/**
+ * Resolves a gateway's adapter, calling a factory adapter with the singleton services once and
+ * caching the promise per gateway config.
+ * @internal
+ */
 export const resolveGatewayAdapter = (
   config: CoreGateway,
   services: CoreSingletonServices
@@ -84,6 +89,24 @@ import type {
   CoreSingletonServices,
 } from '../../types/core.types.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
+/**
+ * Wires a messaging gateway (Slack, WhatsApp, a web chat, ...) so each inbound message runs `func`
+ * with the adapter-normalised message.
+ *
+ * - `webhook` registers `POST <route>` (and `GET <route>` for adapters with `verifyWebhook`,
+ *   answering the platform's challenge; a failed challenge is a 401).
+ * - `websocket` registers a channel at `route`; replies go back over the socket.
+ * - `listener` registers no route; `GatewayService.start()` opens the adapter outward.
+ *
+ * The routes themselves are unauthenticated, so verify the platform's signature in the gateway's
+ * `middleware`. That middleware runs before the function gate and may establish the session the
+ * handler's `auth` then checks. A non-empty `text`, `richContent` or `attachments` return value is
+ * sent back to the sender through the adapter.
+ *
+ * @param config - The gateway's name, transport, adapter and handler.
+ * @throws Error when `type` is unknown, or `route` is missing for `webhook`/`websocket`.
+ * @example snippet: gatewayWebsocket
+ */
 export const wireGateway = (config: CoreGateway): void => {
   pikkuState(null, 'gateway', 'gateways').set(config.name, config)
 

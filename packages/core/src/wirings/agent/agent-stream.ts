@@ -698,6 +698,22 @@ function handleCredentialRequests(
   })()
 }
 
+/**
+ * Runs an agent and streams its progress (text deltas, tool calls, approvals, usage) to `channel`.
+ *
+ * Authorization and thread partitioning are as for `runAgent`. A tool needing approval or a
+ * credential ends the stream with an `approval-request` or `credential-request` event and leaves the run
+ * suspended for `resumeAgent`.
+ *
+ * @param agentName - The agent to run.
+ * @param input - The user message, thread and resource ids, and optional model overrides.
+ * @param channel - Receives the `AgentStreamEvent`s.
+ * @param params - The caller's session and credential access.
+ * @param agentSessionMap - Sub-agent session ids, shared across delegated calls in one run.
+ * @param options - Approval policy and a run-created callback.
+ * @returns The full text of the streamed reply.
+ * @throws As `runAgent` does, before the stream starts.
+ */
 export async function streamAgent(
   agentName: string,
   input: {
@@ -1089,6 +1105,20 @@ export async function interruptAgent(
   return { stopped, inFlightTools: getInFlightTools(input.runId) }
 }
 
+/**
+ * Answers one pending approval on a suspended run and streams the continuation to `channel`.
+ * Backs `rpc.agent.resume`.
+ *
+ * Only the run's owner may resume it, and the agent is re-authorized. The approval is claimed
+ * atomically, so a second concurrent resume fails instead of running the tool again.
+ *
+ * @param input - The run, the tool call being answered and the decision.
+ * @param channel - Receives the continuation's `AgentStreamEvent`s.
+ * @param params - The caller's session.
+ * @param options - Approval policy for the rest of the run.
+ * @throws ForbiddenError when the caller does not own the run; Error when the run or its pending
+ * approval is missing, or the approval was already resolved.
+ */
 export async function resumeAgent(
   input: {
     runId: string

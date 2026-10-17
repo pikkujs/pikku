@@ -2,6 +2,7 @@ import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { PikkuRawWire } from '../../types/core.types.js'
 import type { AgentInterruptResult } from '../agent/agent-interrupt.js'
 
+/** The `rpc` object on a function's wire. An app's generated types narrow `invoke`, `remote`, `startWorkflow` and `agent` to its own functions, workflows and agents; see {@link PikkuRPCService} for how each call is routed. */
 export type PikkuRPC<
   Invoke extends (...args: any[]) => any = (...args: any[]) => any,
   Remote extends (...args: any[]) => any = (...args: any[]) => any,
@@ -46,6 +47,7 @@ export type PikkuRPC<
   }
 }
 
+/** Generated metadata for one RPC name: the function it resolves to, whether `rpc.exposed` may call it, and whether it is reachable remotely. */
 export type RPCMeta = {
   pikkuFuncId: string
   expose: boolean

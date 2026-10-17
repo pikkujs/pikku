@@ -198,6 +198,8 @@ ${
  * stays off until someone turns it on. Declaration only: nothing runs here.
  *
  * @param source - Webhook source with name, events and its steps
+ *
+ * @example snippet: wireTriggerWebhookSource
  */
 export const wireTriggerWebhookSource = <
   Events extends Record<string, StandardSchemaV1> = Record<string, StandardSchemaV1>

@@ -60,6 +60,7 @@ export type VirtualUserLLM = (
   params: AgentRunnerParams
 ) => Promise<AgentStepResult>
 
+/** What `runConversation` needs to play one virtual user against one agent. */
 export interface RunConversationParams {
   /** The person being played — name, job title, personality. */
   virtualUser: ResolvedVirtualUser

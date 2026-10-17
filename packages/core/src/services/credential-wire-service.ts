@@ -16,6 +16,15 @@ export type CredentialResolutionConfig = {
   resolutions: Record<string, CredentialResolution>
 }
 
+/**
+ * Holds the credentials one invocation can see, behind `wire.getCredential`.
+ * Per-user values are loaded lazily from the `CredentialService` for the
+ * resolved pikku user; credentials the wiring marks `singleton` are always read
+ * from the deployment and never from the user's own store, so a user cannot
+ * override a deployment-owned token.
+ *
+ * @internal
+ */
 export class PikkuCredentialWireService {
   private credentials: Record<string, unknown> = {}
   private loaded = false

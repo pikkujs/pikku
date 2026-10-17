@@ -5,6 +5,11 @@ import { pipeline } from 'stream/promises'
 import type { Readable } from 'stream'
 import type { Logger } from './logger.js'
 
+/**
+ * Scratch files for one unit of work, kept under a temporary directory.
+ * `cleanup` deletes every file this instance wrote. Keys are joined to the
+ * directory as given, so do not pass untrusted keys.
+ */
 export class TemporaryFileInstance {
   private files: string[] = []
 
@@ -62,6 +67,10 @@ export class TemporaryFileInstance {
   }
 }
 
+/**
+ * Creates a {@link TemporaryFileInstance} per unit of work, all under one
+ * temporary directory.
+ */
 export class TemporaryFileService {
   constructor(
     private logger: Logger,

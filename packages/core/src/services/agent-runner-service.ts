@@ -7,6 +7,11 @@ import type {
 
 export type AIProviderOptions = Record<string, Record<string, unknown>>
 
+/**
+ * One model call as `runAgent` and `streamAgent` hand it to an {@link
+ * AgentRunnerService}: the resolved model, instructions, conversation so far
+ * and the tools the agent may call.
+ */
 export type AgentRunnerParams = {
   model: string
   temperature?: number
@@ -41,6 +46,10 @@ export type AgentRunnerParams = {
   providerOptions?: AIProviderOptions
 }
 
+/**
+ * The outcome of a whole agent run: the final text (or structured `object` when
+ * an output schema was set), every step taken, and summed token usage.
+ */
 export type AgentRunnerResult = {
   text: string
   object?: unknown
@@ -48,6 +57,10 @@ export type AgentRunnerResult = {
   usage: { inputTokens: number; outputTokens: number }
 }
 
+/**
+ * What one model step produced: text, the tool calls it made and their results,
+ * token usage, and why the model stopped.
+ */
 export type AgentStepResult<TObject = unknown> = {
   text: string
   object?: TObject
@@ -216,6 +229,17 @@ export type AIRerankResult<VALUE extends string | Record<string, unknown>> = {
   response?: unknown
 }
 
+/**
+ * The bridge from pikku agents to an LLM SDK (for example `@pikku/ai-vercel`).
+ * The agent runner calls `run` or `stream` once per step and executes the
+ * returned tool calls itself, so approval, permission and tool-scoping checks
+ * stay in pikku rather than in the SDK.
+ *
+ * `stream` must write deltas to the channel as they arrive and resolve with the
+ * same step result `run` would return. The media methods (`transcribe`,
+ * `generateSpeech`, `generateImage`, `embed`, `embedMany`, `rerank`) are
+ * optional; a runner without one makes the matching agent feature unavailable.
+ */
 export interface AgentRunnerService {
   stream(
     params: AgentRunnerParams,

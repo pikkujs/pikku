@@ -1,3 +1,7 @@
+/**
+ * A cookie store shared by the steps of one scenario run; see {@link
+ * createCookieJar}.
+ */
 export interface ScenarioCookieJar {
   fetch: typeof fetch
   clear(): void

@@ -1,9 +1,20 @@
 // knowledge: decisions/internals/core-data-classification-brand-is-an-optional-property.md
+/**
+ * Brands a value as private: personal data that may be stored but must not leave in a response unchecked.
+ * The brand is optional, so plain values are still assignable; the inspector reads it statically.
+ */
 export type Private<T> = T & { readonly __classification__?: 'private' }
+/** Brands a value as personally identifiable information. Same erasable, optional brand as `Private<T>`. */
 export type Pii<T> = T & { readonly __classification__?: 'pii' }
+/**
+ * Brands a value as secret (credentials, tokens). Same erasable, optional brand as `Private<T>`;
+ * `SecretValue.reveal()` returns this so the inspector can follow a revealed secret.
+ */
 export type Secret<T> = T & { readonly __classification__?: 'secret' }
 
+/** Sensitivity level of a value or column, from least to most sensitive. */
 export type Classification = 'public' | 'private' | 'pii' | 'secret'
+/** How a column is rewritten when data is anonymized; `null` means no strategy has been chosen. */
 export type AnonymizeStrategy =
   'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 
@@ -49,6 +60,7 @@ export type SealedValue = string & { readonly [sealedBrand]: true }
  *  credential being written into the column that should hold its hash. */
 export type HashedValue = string & { readonly [hashedBrand]: true }
 
+/** One column's entry in the classification manifest: its sensitivity, anonymize strategy and at-rest form. */
 export interface ColumnClassification {
   classification: Classification
   anonymize_strategy: AnonymizeStrategy
@@ -67,6 +79,7 @@ export interface ColumnClassification {
   description?: string
 }
 
+/** Per-table, per-column classification manifest, generated as `classification.gen.ts` by `pikku db migrate`. */
 export type ClassificationManifest = {
   version: 1
   tables: Record<string, Record<string, ColumnClassification>>

@@ -25,13 +25,19 @@ export interface PikkuTrigger<TOutput = unknown> {
   invoke: (data: TOutput, options?: TriggerInvokeOptions) => void
 }
 
+/** Generated metadata for every wired trigger, keyed by name. */
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 
+/** Generated metadata for every wired trigger source, keyed by name. */
 export type TriggerSourceMeta = Record<
   string,
   { name: string; pikkuFuncId: string; packageName?: string }
 >
 
+/**
+ * A trigger source's body: subscribes using `input`, calls `wire.trigger.invoke`
+ * each time the event happens, and resolves to the function that unsubscribes.
+ */
 export type CorePikkuTriggerFunction<
   TInput = unknown,
   TOutput = unknown,
@@ -42,6 +48,9 @@ export type CorePikkuTriggerFunction<
   wire: { trigger: PikkuTrigger<TOutput> }
 ) => Promise<() => void | Promise<void>>
 
+/**
+ * A trigger source function with its schemas and descriptive metadata, as `pikkuTriggerFunc` returns it.
+ */
 export type CorePikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
@@ -87,6 +96,7 @@ export const pikkuTriggerFunc = <
   return triggerOrConfig
 }
 
+/** What `wireTrigger` takes: the name a trigger source fires and the function run each time. */
 export interface CoreTrigger<PikkuFunctionConfig = any> {
   /** What a `wireTriggerSource` points at to fire this trigger. It is the contract between the two, so both must spell it the same. */
   name: string

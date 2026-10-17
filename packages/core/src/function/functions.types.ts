@@ -14,6 +14,12 @@ import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
 import type { Safe } from '../classification/secret-value.js'
 
+/**
+ * The body of a function that requires a session: `(services, data, wire)`,
+ * with `wire.session` typed as present. `pikkuFunc` takes one of these; the
+ * runner refuses the call with `MissingSessionError` before the body runs when
+ * there is no session.
+ */
 export type CorePikkuFunction<
   In,
   Out,
@@ -30,6 +36,10 @@ export type CorePikkuFunction<
   ? Promise<Safe<Out>>
   : Promise<Safe<Out>> | Promise<void>
 
+/**
+ * The body of a function that may run without a session, so `wire.session` is
+ * optional. `pikkuSessionlessFunc` takes one of these.
+ */
 export type CorePikkuFunctionSessionless<
   In,
   Out,
@@ -46,6 +56,11 @@ export type CorePikkuFunctionSessionless<
   ? Promise<Safe<Out>>
   : Promise<Safe<Out>> | Promise<void>
 
+/**
+ * A permission check: resolves `true` to allow the call. Runs after input
+ * validation, so `data` is the validated input. Its services have no
+ * `secrets`.
+ */
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSecretlessSingletonServices =
@@ -54,6 +69,10 @@ export type CorePikkuPermission<
     PikkuWire<In, never, false, any, PikkuRPC, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
+/**
+ * The object form of {@link pikkuPermission}, for a check that carries a name
+ * or description.
+ */
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSecretlessSingletonServices =
@@ -66,6 +85,18 @@ export type CorePikkuPermissionConfig<
   description?: string
 }
 
+/**
+ * Declares a permission: an async check that resolves `true` to allow a call
+ * and `false` to refuse it with `ForbiddenError` (403). It receives the
+ * services (without `secrets`), the validated input and the wire.
+ *
+ * Attach it through a function's or wiring's `permissions`: within one group
+ * the keys are alternatives, so the call passes when any key passes, and an
+ * array under a key must pass in full. Global permissions from
+ * `addGlobalPermission` must all pass as well.
+ *
+ * @example snippet: permissionFunction
+ */
 export const pikkuPermission = <
   In = any,
   Services extends CoreSecretlessSingletonServices =
@@ -85,6 +116,10 @@ export const pikkuPermission = <
   return typeof permission === 'function' ? permission : permission.func
 }
 
+/**
+ * A function that takes options and returns a permission, as declared with
+ * {@link pikkuPermissionFactory}.
+ */
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSecretlessSingletonServices =
@@ -130,12 +165,17 @@ export const pikkuApprovalDescription = <
   return fn
 }
 
+/** A session check: receives the services and the session, never the input. */
 export type CorePikkuAuth<
   Services extends CoreSecretlessSingletonServices =
     SecretlessServices<CoreServices>,
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, session: Session) => Promise<boolean> | boolean
 
+/**
+ * The object form of {@link pikkuAuth}, for a check that carries a name or
+ * description.
+ */
 export type CorePikkuAuthConfig<
   Services extends CoreSecretlessSingletonServices =
     SecretlessServices<CoreServices>,
@@ -154,6 +194,17 @@ export type CorePikkuAuthConfig<
  */
 export type AuthBranded = { __pikkuAuth?: true }
 
+/**
+ * Declares a permission that depends only on the session, not the input. The
+ * resulting permission refuses outright when there is no session, so the
+ * check itself always sees one.
+ *
+ * Because it does not read the input, an agent can evaluate it ahead of time
+ * to decide which tools a session may be offered (see `checkAuthPermissions`);
+ * ordinary permissions are only checked when a tool is actually called.
+ *
+ * @example snippet: shopIsAuthenticated
+ */
 export const pikkuAuth = <
   Services extends CoreSecretlessSingletonServices =
     SecretlessServices<CoreServices>,
@@ -176,6 +227,10 @@ export const pikkuAuth = <
   return wrapper
 }
 
+/**
+ * Permissions keyed by name. The call passes when any key passes (OR); an array
+ * under one key must pass in full (AND).
+ */
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   Record<string, PikkuPermission | PikkuPermission[]> | undefined
 
@@ -190,6 +245,10 @@ export type CorePikkuFunctionHook<Services = any, Data = any, Wire = any> = (
   wire: Wire
 ) => Promise<void> | void
 
+/**
+ * Everything a function is declared with: its body and the options
+ * `pikkuFunc` / `pikkuSessionlessFunc` accept.
+ */
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any, any>

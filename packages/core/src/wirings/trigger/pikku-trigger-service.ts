@@ -15,6 +15,11 @@ export type TriggerTarget = {
   startNode?: string
 }
 
+/**
+ * Base class for a {@link TriggerService}: pairs registered trigger sources with
+ * the triggers listening to them and owns teardown. Subclasses decide where and
+ * when sources start by implementing `start`.
+ */
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers = new Map<string, TriggerInstance>()
 

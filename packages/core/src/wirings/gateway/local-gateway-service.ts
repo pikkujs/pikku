@@ -7,6 +7,10 @@ import {
 } from './gateway-runner.js'
 
 // knowledge: decisions/internals/local-trigger-and-gateway-services-assume-a-single-process.md
+/**
+ * In-process `GatewayService` that starts every `listener` gateway's adapter and closes them on `stop()`.
+ * Assumes a single process: running it in several would open each listener more than once.
+ */
 export class LocalGatewayService implements GatewayService {
   private activeAdapters = new Map<string, GatewayAdapter>()
 

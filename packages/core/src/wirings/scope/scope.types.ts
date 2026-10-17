@@ -18,6 +18,7 @@ export type CoreScopeNode = {
  */
 export type CoreScopes = Record<string, CoreScopeNode>
 
+/** A node of a scope tree as recorded in generated meta. */
 export type ScopeNodeMeta = {
   displayName?: string
   description?: string
@@ -33,6 +34,7 @@ export type ScopeOrigin =
   | { kind: 'generated' }
   | { kind: 'addon'; package: string; displayName?: string }
 
+/** A root scope tree as recorded in generated meta, with where it came from. */
 export type ScopeDefinitionMeta = {
   name: string
   displayName?: string
@@ -42,9 +44,12 @@ export type ScopeDefinitionMeta = {
   origin?: ScopeOrigin
 }
 
+/** Scope trees as the inspector found them. */
 export type ScopeDefinitions = ScopeDefinitionMeta[]
+/** Scope trees collected by the CLI, keyed by root segment. */
 export type ScopeDefinitionsMeta = Record<string, ScopeDefinitionMeta>
 
+/** One grantable scope from a flattened scope tree; every node, not just the leaves, appears. */
 export type FlatScope = {
   /** Colon-delimited id, e.g. `admin:invoices:create`. */
   id: string

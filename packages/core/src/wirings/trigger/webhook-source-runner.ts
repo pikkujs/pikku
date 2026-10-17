@@ -38,6 +38,25 @@ import { webhookSecretCredentialName } from './webhook-source.types.js'
 
 const LIFECYCLE = ['receive', 'check', 'setup', 'teardown'] as const
 
+/**
+ * Registers a webhook trigger source: Pikku mounts its route (by default
+ * `POST /webhooks/<name>`), runs `receive` to turn each request into events,
+ * validates each event against `events`, and queues it on
+ * `pikku-incoming-webhooks` for the trigger named `<name>:<event>`. The sender
+ * is answered at once; a failing trigger is retried by the queue.
+ *
+ * With `verify`, a request with a body is refused with 401 unless it is signed
+ * with the secret in the source's credential; an unsigned body-less request
+ * (a HEAD probe, a validation handshake) may be answered but its events are
+ * refused. Without `verify`, `receive` is responsible for authenticating.
+ *
+ * Skipped with a warning when no metadata was generated for it.
+ *
+ * @param source - The source's name, events, verification and lifecycle steps.
+ * @throws Error when a webhook source with the same name is already registered.
+ *
+ * @example snippet: wireTriggerWebhookSource
+ */
 export const wireTriggerWebhookSource = <
   Events extends Record<string, StandardSchemaV1>,
 >(
@@ -347,6 +366,7 @@ const recordAttempt = (
       )
     )
 
+/** What one lifecycle pass (`check`, `setup` or `teardown`) did for one webhook source. */
 export type WebhookSourceOutcome = {
   source: string
   url: string
@@ -654,8 +674,12 @@ export type WebhookRegistration = {
   credentials?: Record<string, unknown>
 }
 
+/** Every source's {@link WebhookRegistration}, keyed by source name. */
 export type WebhookRegistrations = Record<string, WebhookRegistration>
 
+/**
+ * A registration kept for a source that is no longer declared, which nothing will tear down automatically.
+ */
 export type OrphanedWebhookRegistration = {
   source: string
   url: string

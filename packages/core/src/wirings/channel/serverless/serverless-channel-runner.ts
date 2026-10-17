@@ -28,6 +28,7 @@ import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
+/** Parameters for the serverless channel runners: the connection, the {@link ChannelStore} that persists it, and the factory that builds a handler able to send through the platform. */
 export interface RunServerlessChannelParams<
   ChannelData,
 > extends RunChannelParams<ChannelData> {
@@ -70,6 +71,20 @@ const getVariablesForChannel = ({
   }
 }
 
+/**
+ * Handles a serverless connect event: opens the channel, stores it, and runs `onConnect`.
+ *
+ * The opening data is validated against the channel's input schema. If
+ * `onConnect` (or its middleware) established a session, its `pikkuUserId` is
+ * stored with the channel, and later messages and the disconnect reload the
+ * session from `sessionStore` by that id. On success the response status is 101.
+ *
+ * Errors from `onConnect` are written to `response` as an HTTP error unless
+ * `bubbleErrors` is set.
+ *
+ * @throws {NotFoundError} When no channel is wired at `route`.
+ * @throws When the opening data fails validation.
+ */
 export const runChannelConnect = async ({
   channelId,
   channelObject,
@@ -173,6 +188,13 @@ export const runChannelConnect = async ({
   }
 }
 
+/**
+ * Handles a serverless disconnect event: runs `onDisconnect` with the stored session, then removes the channel from the store.
+ *
+ * A channel already missing from the store is logged and ignored, and an error
+ * from `onDisconnect` is logged rather than thrown, so the channel is always
+ * removed.
+ */
 export const runChannelDisconnect = async ({
   channelId,
   channelStore,
@@ -254,6 +276,16 @@ export const runChannelDisconnect = async ({
   }
 }
 
+/**
+ * Handles one message on a serverless channel, with the session reloaded from `sessionStore` by the `pikkuUserId` stored on connect.
+ *
+ * @param params - The connection and its store.
+ * @param data - The message as received.
+ * @returns The handler's reply. When the handler throws, the error is logged and
+ *   `{ error, errorName }` is returned with the error's message, so the runtime
+ *   can send it to the client. Throw errors whose messages are safe to show.
+ * @throws Whatever the store throws for a channel it does not hold.
+ */
 export const runChannelMessage = async (
   {
     channelId,

@@ -12,6 +12,7 @@ export type RemoteAddonAuth =
       ) => string | Promise<string>
     }
 
+/** Options for `wireRemoteAddon`: the namespace, the contract package, where the addon is deployed and how calls authenticate. */
 export type WireRemoteAddonConfig = {
   /** Consumer-facing namespace, e.g. `registry` → `rpc('registry:getOpenApi')` */
   name: string

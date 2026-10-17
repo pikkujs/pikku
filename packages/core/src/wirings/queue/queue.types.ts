@@ -3,6 +3,7 @@ import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { QueueConfigMapping } from './validate-worker-config.js'
 import type { Safe } from '../../classification/secret-value.js'
 
+/** Worker settings a queue adapter maps onto its backend. Each adapter supports a subset, reported through its {@link QueueConfigMapping}; the rest are ignored with a warning. */
 export interface PikkuWorkerConfig {
   name?: string
   /** Total worker concurrency. */
@@ -26,6 +27,7 @@ export interface PikkuWorkerConfig {
   groupConcurrency?: number | GroupConcurrencyConfig
 }
 
+/** Per-group concurrency limits for a worker, with optional tiers that override the default. */
 export interface GroupConcurrencyConfig {
   /** Limit applied to any group without a matching tier. */
   default: number
@@ -33,11 +35,13 @@ export interface GroupConcurrencyConfig {
   tiers?: Record<string, number>
 }
 
+/** The group a job counts against for {@link PikkuWorkerConfig.groupConcurrency}, such as a tenant. */
 export interface JobGroup {
   id: string
   tier?: string
 }
 
+/** Per-job delivery settings: retries, backoff, dead-lettering, priority and timing. */
 export interface PikkuJobConfig {
   retryAttempts?: number
   /** Milliseconds. */
@@ -55,6 +59,7 @@ export interface PikkuJobConfig {
   delay?: number
 }
 
+/** What {@link validateWorkerConfig} did with a worker's config: the settings the adapter applied, those it ignored, and why. */
 export interface ConfigValidationResult {
   applied: Partial<PikkuWorkerConfig>
   ignored: Partial<PikkuWorkerConfig>
@@ -62,9 +67,11 @@ export interface ConfigValidationResult {
   fallbacks: { [key: string]: any }
 }
 
+/** The lifecycle state of a queue job. */
 export type QueueJobStatus =
   'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 
+/** Bookkeeping a backend keeps about a job: progress, attempts and timestamps. */
 export type QueueJobMetadata = {
   progress?: number | string | object | undefined | boolean
   attemptsMade?: number
@@ -76,6 +83,12 @@ export type QueueJobMetadata = {
   createdAt: Date
 }
 
+/**
+ * A job as handed to {@link runQueueJob}, or returned by {@link QueueService.getJob}.
+ *
+ * `pikkuUserId` here is the producer's signed claim, not a verified id;
+ * {@link runQueueJob} verifies it before the worker sees it.
+ */
 export interface QueueJob<T = any, R = any> {
   id: string
   queueName: string
@@ -87,6 +100,14 @@ export interface QueueJob<T = any, R = any> {
   pikkuUserId?: string
 }
 
+/**
+ * Options for {@link QueueService.add}.
+ *
+ * `pikkuUserId` names the user the job runs on behalf of. It only reaches the
+ * worker when the queue service is wrapped in `SignedQueueService`, which
+ * signs it with `PIKKU_QUEUE_IDENTITY_SECRET`; an unsigned value is dropped
+ * by {@link runQueueJob}.
+ */
 export interface JobOptions {
   priority?: number
   delay?: number
@@ -121,6 +142,16 @@ export type QueueInspection = {
   recent: QueueJobRecord[]
 }
 
+/**
+ * The service functions use to enqueue jobs, available as `queueService` on singleton services.
+ *
+ * `add` resolves to the job id. `data` must be {@link Safe}: a payload with a
+ * `SecretValue` anywhere in it fails to compile, so a secret is not written to
+ * the queue by accident. `getJob` returns `null` on backends that do not keep jobs
+ * (`supportsResults` is then `false`).
+ *
+ * @example snippet: queuePublish
+ */
 export interface QueueService {
   readonly supportsResults: boolean
 
@@ -139,6 +170,7 @@ export interface QueueService {
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
 }
 
+/** A queue adapter's worker side: it registers every wired queue worker with its backend and reports how each worker's config was applied. */
 export interface QueueWorkers {
   name: string
 
@@ -149,6 +181,7 @@ export interface QueueWorkers {
   registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
 }
 
+/** Generated metadata for every wired queue worker, keyed by queue name. */
 export type QueueWorkersMeta = Record<
   string,
   CommonWireMeta & {
@@ -157,6 +190,7 @@ export type QueueWorkersMeta = Record<
   }
 >
 
+/** The configuration {@link wireQueueWorker} takes. An app's generated `wireQueueWorker` narrows the function type to its own services. */
 export type CoreQueueWorker<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
@@ -175,6 +209,7 @@ export type CoreQueueWorker<
   middleware?: PikkuFunctionConfig['middleware']
 }
 
+/** The `queue` part of a worker function's wire: which job is running, the verified `pikkuUserId` of whoever enqueued it (if any), and controls to report progress, fail or discard it. */
 export interface PikkuQueue {
   queueName: string
   jobId: string

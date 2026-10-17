@@ -14,6 +14,12 @@ import type {
   ReconstructedRunState,
 } from '../wirings/workflow/run-timeline.js'
 
+/**
+ * Stores and drives workflow runs, provided as the `workflowService` singleton
+ * service (implementations ship in `@pikku/kysely`, `@pikku/redis` and others,
+ * and an in-memory one in core). It records every step so a run can resume
+ * after a crash or a wait, and serialises work on one run through a lease.
+ */
 export interface WorkflowService {
   wireQueueWorkers?(): void
   createRun(

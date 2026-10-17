@@ -1,3 +1,4 @@
+/** A string interpolated at run time from other nodes' outputs, as `template` builds it. */
 export type TemplateString = {
   $template: {
     parts: string[]
@@ -5,6 +6,11 @@ export type TemplateString = {
   }
 } & { __brand: 'TemplateString' }
 
+/**
+ * Builds a {@link TemplateString} for a graph node's input: each `$0`, `$1`, …
+ * in `templateStr` is replaced at run time by the value of the ref at that
+ * index. An index with no ref resolves to an unknown ref.
+ */
 export function template(
   templateStr: string,
   refs: Array<{ $ref: string; path?: string }>
