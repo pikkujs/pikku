@@ -15,7 +15,7 @@
     "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.6",
-    "next": "15.5.28",
+    "next": "16.4.2",
     "react": "^19",
     "react-dom": "^19",
     "zod": "^4"
