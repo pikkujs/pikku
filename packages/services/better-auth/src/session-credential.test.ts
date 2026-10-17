@@ -47,4 +47,23 @@ describe('session credential', () => {
       assert.equal(await verifySessionCredential(bad, SECRET), null)
     }
   })
+
+  test('accepts the URL-safe alphabet without padding', async () => {
+    const signature = (await sign(TOKEN)).split('.')[1]!
+    const urlSafe = signature
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+    assert.equal(
+      await verifySessionCredential(`${TOKEN}.${urlSafe}`, SECRET),
+      TOKEN
+    )
+  })
+
+  test('rejects a signature that is not base64 at all', async () => {
+    assert.equal(
+      await verifySessionCredential(`${TOKEN}.%%%not*base64`, SECRET),
+      null
+    )
+  })
 })

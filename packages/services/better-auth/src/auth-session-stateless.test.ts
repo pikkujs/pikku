@@ -171,6 +171,18 @@ describe('betterAuthStatelessSession reads the cookie better-auth wrote', () => 
     assert.deepEqual(session, { userId: 'u_target' })
   })
 
+  test('a cookie better-auth chunked across several is reassembled', async () => {
+    const { cookie } = await signUp()
+    const value = /better-auth\.session_data=([^;]+)/.exec(cookie)![1]!
+    const half = Math.floor(value.length / 2)
+    const chunked = cookie.replace(
+      `better-auth.session_data=${value}`,
+      `better-auth.session_data.1=${value.slice(half)}; better-auth.session_data.0=${value.slice(0, half)}`
+    )
+    const session = await resolve(chunked)
+    assert.equal(typeof session?.userId, 'string')
+  })
+
   test('no cookie at all resolves nothing', async () => {
     assert.equal(await resolve(''), null)
   })
