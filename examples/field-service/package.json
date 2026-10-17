@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.85",
+    "@ai-sdk/openai-compatible": "^3.0.71",
     "@pikku/addon-console": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.56",
@@ -15,7 +15,7 @@
     "@pikku/websocket": "^0.12.5",
     "@standard-schema/spec": "^1.1.0",
     "@tanstack/react-query": "^5.104.3",
-    "ai": "^6.0.309",
+    "ai": "^7.0.143",
     "better-auth": "^1.7.10",
     "kysely": "^0.29.6",
     "react": "^19.3.1",
