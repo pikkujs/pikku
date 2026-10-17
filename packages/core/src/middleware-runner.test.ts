@@ -10,6 +10,7 @@ import {
 import { pikkuState, resetPikkuState } from './pikku-state.js'
 import type {
   CorePikkuMiddleware,
+  MiddlewareMetadata,
   MiddlewarePriority,
 } from './middleware/middleware.types.js'
 import { pikkuMiddleware } from './middleware/middleware-factories.js'
@@ -661,5 +662,58 @@ describe('middleware cache is bounded', () => {
       wireMiddleware,
     })
     assert.equal(recomputed.length, 1)
+  })
+})
+
+describe('combineMiddleware package namespaces (#267)', () => {
+  const named = (ns: string | null, name: string, mw: CorePikkuMiddleware) => {
+    pikkuState(ns, 'misc', 'middleware')[name] = [mw]
+  }
+
+  test("an addon's wire middleware named in its metadata is found in the addon's namespace", () => {
+    const gate: CorePikkuMiddleware = async (_s, _w, next) => next()
+    named('@acme/addon', 'gate', gate)
+
+    const result = combineMiddleware('rpc', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'wire', name: 'gate' }],
+      packageName: '@acme/addon',
+    })
+
+    assert.deepEqual(result, [gate])
+  })
+
+  test("a root dispatch does not resolve a name from an addon's namespace", () => {
+    const gate: CorePikkuMiddleware = async (_s, _w, next) => next()
+    named('@acme/addon', 'gate', gate)
+
+    const result = combineMiddleware('rpc', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'wire', name: 'gate' }],
+    })
+
+    assert.deepEqual(result, [])
+  })
+
+  test('the same wire id in two packages keeps two chains', () => {
+    const appGate: CorePikkuMiddleware = async (_s, _w, next) => next()
+    const addonGate: CorePikkuMiddleware = async (_s, _w, next) => next()
+    pikkuState(null, 'middleware', 'tagGroup').auth = [appGate]
+    pikkuState('@acme/addon', 'middleware', 'tagGroup').auth = [addonGate]
+    const uid = Math.random().toString()
+    const wireInheritedMiddleware: MiddlewareMetadata[] = [
+      { type: 'tag', tag: 'auth' },
+    ]
+
+    const addon = combineMiddleware('rpc', uid, {
+      wireInheritedMiddleware,
+      packageName: '@acme/addon',
+    })
+    const app = combineMiddleware('rpc', uid, { wireInheritedMiddleware })
+
+    assert.deepEqual(addon, [addonGate])
+    assert.deepEqual(
+      app,
+      [appGate],
+      "the addon's cached chain must not stand in for the app's"
+    )
   })
 })
