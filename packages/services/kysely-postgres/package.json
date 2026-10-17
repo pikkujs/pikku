@@ -24,7 +24,7 @@
   "dependencies": {
     "@pikku/kysely": "^0.13.35",
     "kysely": "^0.29.6",
-    "kysely-postgres-js": "^3.0.0",
+    "kysely-postgres-js": "^5.0.1",
     "postgres": "^3.4.9"
   },
   "peerDependencies": {

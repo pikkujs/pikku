@@ -310,7 +310,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
       - name: Run binary verifier
         shell: bash
         run: cd verifiers/binary && bun run test
@@ -333,7 +333,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
       - name: Install a SQLite that loads extensions
         if: runner.os == 'macOS'
         run: brew list sqlite >/dev/null 2>&1 || brew install sqlite

@@ -337,10 +337,14 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
 
     const f = find(events, 'RUN_FINISHED')
     assert.ok(f)
-    assert.equal(f.model, 'claude-3-5')
-    assert.equal(f.usage.promptTokens, 100)
-    assert.equal(f.usage.completionTokens, 50)
-    assert.equal(f.usage.totalTokens, 150)
+    assert.deepEqual(f.usage, [
+      {
+        model: 'claude-3-5',
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+      },
+    ])
   })
 
   it('emits RUN_FINISHED exactly once when both usage and done arrive', async () => {
@@ -900,9 +904,9 @@ describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
     const finishes = (events as any[]).filter((e) => e.type === 'RUN_FINISHED')
     assert.equal(finishes.length, 1)
     assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
-    assert.equal(finishes[0].usage.promptTokens, 30)
-    assert.equal(finishes[0].usage.completionTokens, 13)
-    assert.equal(finishes[0].usage.totalTokens, 43)
+    assert.equal(finishes[0].usage[0].inputTokens, 30)
+    assert.equal(finishes[0].usage[0].outputTokens, 13)
+    assert.equal(finishes[0].usage[0].totalTokens, 43)
     const t = types(events)
     assert.ok(
       t.lastIndexOf('TEXT_MESSAGE_CONTENT') < t.indexOf('RUN_FINISHED'),

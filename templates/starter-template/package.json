@@ -43,7 +43,7 @@
     "@pikku/cli": "0.12.191",
     "@pikku/deploy-standalone": "^0.12.26",
     "@types/node": "^26",
-    "oxfmt": "^0.53.0",
+    "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",
     "typescript": "^6.0.3"
   },

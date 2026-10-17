@@ -114,7 +114,7 @@ jobs:
           download-build: 'false'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
       # The @pikku/inspector-go-<platform>-<arch> packages carry only the
       # pikku-inspect binary, which is gitignored, so it is built here before
       # `bun run release` publishes them. Every package is checked up front:
