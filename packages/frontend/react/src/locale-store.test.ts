@@ -180,6 +180,11 @@ test('i18n-debug=0 turns it off explicitly', () => {
   assert.equal(store().isI18nDebug(), false)
 })
 
+test('I18N_DEBUG turns debug mode on under SSR, with no window', () => {
+  process.env.I18N_DEBUG = '1'
+  assert.equal(store().isI18nDebug(), true)
+})
+
 test('a custom detectInitialLocale replaces the default policy', () => {
   install('', { 'app.language': 'de' })
   const s = store({ detectInitialLocale: () => 'ar' })
