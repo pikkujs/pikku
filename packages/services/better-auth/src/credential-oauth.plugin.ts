@@ -1,8 +1,15 @@
-import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
+import {
+  APIError,
+  createAuthEndpoint,
+  sessionMiddleware,
+} from 'better-auth/api'
 import { genericOAuth } from 'better-auth/plugins'
-import { generateState, parseState, setTokenUtil } from 'better-auth/oauth2'
-import { createAuthorizationURL } from '@better-auth/core/oauth2'
-import { APIError } from '@better-auth/core/error'
+import {
+  createAuthorizationURL,
+  generateState,
+  parseState,
+  setTokenUtil,
+} from 'better-auth/oauth2'
 import * as z from 'zod'
 import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
