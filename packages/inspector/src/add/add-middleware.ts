@@ -17,6 +17,10 @@ import {
 import { extractMiddlewareRefs } from '../utils/middleware.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import {
+  MIDDLEWARE_HELPERS,
+  resolveCalleeName,
+} from '../utils/resolve-callee-name.js'
 
 /**
  * Record a middleware group, keeping any registration already stored under the
@@ -161,13 +165,12 @@ function renameTempDefinitions(
 export const addMiddleware: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
-  const { expression, arguments: args } = node
+  const { arguments: args } = node
 
-  if (!ts.isIdentifier(expression)) {
-    return
-  }
+  const callee = resolveCalleeName(node, checker, MIDDLEWARE_HELPERS)
+  if (!callee) return
 
-  if (expression.text === 'pikkuMiddleware') {
+  if (callee === 'pikkuMiddleware') {
     const arg = args[0]
     if (!arg) return
 
@@ -246,7 +249,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuMiddlewareFactory') {
+  if (callee === 'pikkuMiddlewareFactory') {
     const factoryNode = args[0]
     if (!factoryNode) return
 
@@ -270,8 +273,10 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       node: ts.Node
     ): ts.CallExpression | undefined => {
       if (ts.isCallExpression(node)) {
-        const expr = node.expression
-        if (ts.isIdentifier(expr) && expr.text === 'pikkuMiddleware') {
+        if (
+          resolveCalleeName(node, checker, MIDDLEWARE_HELPERS) ===
+          'pikkuMiddleware'
+        ) {
           return node
         }
       }
@@ -364,7 +369,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'addTagMiddleware') {
+  if (callee === 'addTagMiddleware') {
     const tagArg = args[0]
     const middlewareArrayArg = args[1]
 
@@ -471,7 +476,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'addGlobalMiddleware') {
+  if (callee === 'addGlobalMiddleware') {
     const middlewareArrayArg = args[0]
     if (
       !middlewareArrayArg ||
@@ -514,7 +519,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'addHTTPMiddleware') {
+  if (callee === 'addHTTPMiddleware') {
     const patternArg = args[0]
     const middlewareArrayArg = args[1]
 
@@ -622,7 +627,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuChannelMiddleware') {
+  if (callee === 'pikkuChannelMiddleware') {
     const arg = args[0]
     if (!arg) return
 
@@ -673,7 +678,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuChannelMiddlewareFactory') {
+  if (callee === 'pikkuChannelMiddlewareFactory') {
     const factoryNode = args[0]
     if (!factoryNode) return
 
@@ -693,8 +698,10 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       n: ts.Node
     ): ts.CallExpression | undefined => {
       if (ts.isCallExpression(n)) {
-        const expr = n.expression
-        if (ts.isIdentifier(expr) && expr.text === 'pikkuChannelMiddleware') {
+        if (
+          resolveCalleeName(n, checker, MIDDLEWARE_HELPERS) ===
+          'pikkuChannelMiddleware'
+        ) {
           return n
         }
       }
@@ -763,7 +770,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuAgentMiddleware') {
+  if (callee === 'pikkuAgentMiddleware') {
     const arg = args[0]
     if (!arg) return
 
@@ -830,7 +837,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'addChannelMiddleware') {
+  if (callee === 'addChannelMiddleware') {
     const tagArg = args[0]
     const middlewareArrayArg = args[1]
 

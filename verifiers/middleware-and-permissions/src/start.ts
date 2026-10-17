@@ -90,6 +90,21 @@ async function main(): Promise<void> {
       singletonServices
     )
 
+    // Tag middleware registered through an aliased and a namespace import
+    const httpAliasedPassed = await testHTTPWiring(
+      '/aliased',
+      [
+        { name: 'global', type: 'http', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'aliased', type: 'tag', phase: 'before' },
+        { name: 'namespaced', type: 'tag', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices
+    )
+
     // Test wireHTTPRoutes - direct route with group config cascading
     // Note: function's own tags ('function') are NOT applied when wired via wireHTTPRoutes
     // Only group and route tags are merged. Function-level middleware still runs.
@@ -500,6 +515,7 @@ async function main(): Promise<void> {
       priorityPassed &&
       httpTest1Passed &&
       httpTest2Passed &&
+      httpAliasedPassed &&
       httpRoutesDirectPassed &&
       httpRoutesGroupedPassed &&
       schedulerPassed &&
