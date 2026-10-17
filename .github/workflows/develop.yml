@@ -247,10 +247,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 20
-    needs: build
+    needs: [build, inspector-go-build]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
         run: bun run test:e2e
@@ -270,10 +272,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 15
-    needs: build
+    needs: [build, inspector-go-build]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+        with:
+          download-inspector-go: 'true'
       - uses: ./.github/actions/e2e-codegen
       - name: Run CLI e2e tests
         run: bun run test:e2e:cli

@@ -86,20 +86,20 @@ describe('createConfig --config', () => {
       )
     }
 
-    test('defaults to typescript and records it for the helpers', async () => {
+    test('defaults to native and records it for the helpers', async () => {
       const config = await withEnv(undefined, () =>
         configFor(undefined, undefined)
       )
-      assert.equal(config.inspector, 'typescript')
-      assert.equal(getInspectorEngine(), 'typescript')
-    })
-
-    test('the config key selects native', async () => {
-      const config = await withEnv(undefined, () =>
-        configFor('native', undefined)
-      )
       assert.equal(config.inspector, 'native')
       assert.equal(getInspectorEngine(), 'native')
+    })
+
+    test('the config key selects typescript', async () => {
+      const config = await withEnv(undefined, () =>
+        configFor('typescript', undefined)
+      )
+      assert.equal(config.inspector, 'typescript')
+      assert.equal(getInspectorEngine(), 'typescript')
     })
 
     test('PIKKU_INSPECTOR beats the config key', async () => {

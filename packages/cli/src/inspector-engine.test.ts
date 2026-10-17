@@ -3,9 +3,41 @@ import { describe, test } from 'node:test'
 import { resolveInspectorEngine } from './inspector-engine.js'
 
 describe('resolveInspectorEngine', () => {
-  test('defaults to typescript', () => {
-    assert.equal(resolveInspectorEngine(), 'typescript')
-    assert.equal(resolveInspectorEngine({}), 'typescript')
+  test('defaults to native', () => {
+    assert.equal(resolveInspectorEngine(), 'native')
+    assert.equal(resolveInspectorEngine({}), 'native')
+    assert.equal(
+      resolveInspectorEngine({ nativeAvailable: () => true }),
+      'native'
+    )
+  })
+
+  test('the default falls back to typescript without a binary', () => {
+    let warned = false
+    assert.equal(
+      resolveInspectorEngine({
+        nativeAvailable: () => false,
+        onFallback: () => (warned = true),
+      }),
+      'typescript'
+    )
+    assert.equal(warned, true)
+  })
+
+  test('an explicit native never falls back', () => {
+    const nativeAvailable = () => false
+    assert.equal(
+      resolveInspectorEngine({ config: 'native', nativeAvailable }),
+      'native'
+    )
+    assert.equal(
+      resolveInspectorEngine({ env: 'native', nativeAvailable }),
+      'native'
+    )
+    assert.equal(
+      resolveInspectorEngine({ flag: 'native', nativeAvailable }),
+      'native'
+    )
   })
 
   test('config opts into typescript', () => {

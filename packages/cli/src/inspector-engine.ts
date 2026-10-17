@@ -4,18 +4,16 @@ import { z } from 'zod'
  * Which inspector analyses the project:
  *
  * - `native` — the `pikku-inspect` binary from `@pikku/inspector-go`, built on
- *   typescript-go (TypeScript 7). Opt-in.
- * - `typescript` — `@pikku/inspector`, on the TypeScript 6 compiler API. The
- *   default.
+ *   typescript-go (TypeScript 7). The default.
+ * - `typescript` — `@pikku/inspector`, on the TypeScript 6 compiler API.
  *
- * Both produce byte-identical output; the native engine is opt-in until it
- * has run in the wild.
+ * Both produce byte-identical output.
  */
 export const InspectorEngineSchema = z.enum(['native', 'typescript'])
 
 export type InspectorEngine = z.infer<typeof InspectorEngineSchema>
 
-export const DEFAULT_INSPECTOR_ENGINE: InspectorEngine = 'typescript'
+export const DEFAULT_INSPECTOR_ENGINE: InspectorEngine = 'native'
 
 export interface InspectorEngineSources {
   /** `--inspector` */
@@ -24,11 +22,20 @@ export interface InspectorEngineSources {
   env?: string
   /** `inspector` in pikku.config.json */
   config?: string
+  /**
+   * Whether a `pikku-inspect` binary exists for this platform. Consulted only
+   * when no source is set: the default falls back to `typescript` without
+   * one, while an explicit `native` fails at inspection with an error that
+   * names the TypeScript engine.
+   */
+  nativeAvailable?: () => boolean
+  /** Told when the default falls back to `typescript`. */
+  onFallback?: () => void
 }
 
 /**
  * Resolves the engine with precedence flag > env > config > default
- * (`typescript`). The first source that is set is validated against
+ * (`native`, or `typescript` when no binary exists for the platform). The first source that is set is validated against
  * `InspectorEngineSchema`; an invalid value is an error rather than being
  * skipped in favour of the next source.
  */
@@ -36,6 +43,8 @@ export const resolveInspectorEngine = ({
   flag,
   env,
   config,
+  nativeAvailable,
+  onFallback,
 }: InspectorEngineSources = {}): InspectorEngine => {
   const [source, value] = flag
     ? ['--inspector', flag]
@@ -44,7 +53,16 @@ export const resolveInspectorEngine = ({
       : config
         ? ["pikku.config.json's `inspector`", config]
         : [undefined, undefined]
-  if (value === undefined) return DEFAULT_INSPECTOR_ENGINE
+  if (value === undefined) {
+    if (
+      DEFAULT_INSPECTOR_ENGINE === 'native' &&
+      nativeAvailable?.() === false
+    ) {
+      onFallback?.()
+      return 'typescript'
+    }
+    return DEFAULT_INSPECTOR_ENGINE
+  }
   const result = InspectorEngineSchema.safeParse(value)
   if (!result.success) {
     throw new Error(
