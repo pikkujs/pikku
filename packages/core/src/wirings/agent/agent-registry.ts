@@ -5,6 +5,7 @@ import {
   agentSessionScope,
   assertAgentAuthorized,
   assertResourcePrincipalOwner,
+  assertRunBelongsToAgent,
   resolveAgent,
   type RunAgentParams,
 } from './agent-prepare.js'
@@ -60,11 +61,7 @@ export async function approveAgent(
     run.resourceId,
     'run'
   )
-  if (expectedAgentName && run.agentName !== expectedAgentName) {
-    throw new Error(
-      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
-    )
-  }
+  assertRunBelongsToAgent(run, expectedAgentName)
   if (run.status !== 'suspended')
     throw new Error('Run is not suspended: ' + run.status)
 

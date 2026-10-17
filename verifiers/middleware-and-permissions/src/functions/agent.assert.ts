@@ -23,7 +23,7 @@ import { randomUUID } from 'crypto'
 import { pikkuState } from '@pikku/core/state'
 import { unsupportedChannelRemote } from '@pikku/core/channel'
 
-class MockAgentRunner implements AgentRunnerService {
+export class MockAgentRunner implements AgentRunnerService {
   async stream(
     _params: AgentRunnerParams,
     channel: AgentStreamChannel
@@ -84,7 +84,7 @@ class MockAgentRunState implements AgentRunStateService {
   }
 }
 
-class MockAgentStorage implements AgentStorageService {
+export class MockAgentStorage implements AgentStorageService {
   /**
    * Threads this double has actually been asked to create.
    *

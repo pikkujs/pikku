@@ -3678,7 +3678,7 @@ wireMCPResource: <PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuF
 ```ts
 addAgent: (agentName: string, agent: CoreAgent<any, any>, packageName?: string | null) => void
 agent: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: any, wire: any) => Promise<any>; }
-agentApprove: <TAgentMap extends Record<string, { output: any; }>>(_agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
+agentApprove: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
 agentCallOptions: (input: AgentInput) => AgentInput
 export type AgentContentPart =
   | { type: 'text'; text: string }
