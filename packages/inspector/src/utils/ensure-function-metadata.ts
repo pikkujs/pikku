@@ -4,6 +4,7 @@ import { funcIdToTypeName } from './extract-function-name.js'
 import { getCommonWireMetaData } from './get-property-value.js'
 import { resolveMiddleware } from './middleware.js'
 import { resolvePermissions } from './permissions.js'
+import { resolveCalleeName } from './resolve-callee-name.js'
 
 function isVoidLike(type: ts.Type): boolean {
   return !!(
@@ -326,6 +327,8 @@ export function ensureFunctionMetadata(
  * required". Derive `sessionless` from the helper the function was built with —
  * the same rule `addFunctions` applies to named ones (`!== 'pikkuFunc'`).
  */
+const isPikkuFunc = (name: string) => name === 'pikkuFunc'
+
 export function ensureInlineWiringFunction(
   state: InspectorState,
   pikkuFuncId: string,
@@ -350,7 +353,8 @@ export function ensureInlineWiringFunction(
     ts.isCallExpression(funcInitializer) &&
     ts.isIdentifier(funcInitializer.expression)
   ) {
-    meta.sessionless = funcInitializer.expression.text !== 'pikkuFunc'
+    meta.sessionless =
+      resolveCalleeName(funcInitializer, checker, isPikkuFunc) !== 'pikkuFunc'
   }
 }
 

@@ -3,6 +3,10 @@ import type { FunctionServicesMeta } from '@pikku/core/function'
 import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
+import { resolveCalleeName } from '../utils/resolve-callee-name.js'
+
+const isBetterAuth = (name: string) => name === 'betterAuth'
+const isPikkuBetterAuth = (name: string) => name === 'pikkuBetterAuth'
 
 export { AUTH_HANDLER_FUNC_ID } from '../utils/inspector-constants.js'
 
@@ -14,15 +18,14 @@ const DEFAULT_BASE_PATH = '/api/auth'
  * factory body. Supports both `(s) => betterAuth({...})` and
  * `(s) => { ...; return betterAuth({...}) }`.
  */
-const findBetterAuthCall = (node: ts.Node): ts.CallExpression | undefined => {
+const findBetterAuthCall = (
+  node: ts.Node,
+  checker: ts.TypeChecker
+): ts.CallExpression | undefined => {
   let found: ts.CallExpression | undefined
   const visit = (n: ts.Node) => {
     if (found) return
-    if (
-      ts.isCallExpression(n) &&
-      ts.isIdentifier(n.expression) &&
-      n.expression.text === 'betterAuth'
-    ) {
+    if (ts.isCallExpression(n) && resolveCalleeName(n, checker, isBetterAuth)) {
       found = n
       return
     }
@@ -200,13 +203,9 @@ and set password.`
  * `socialProviders` keys, whether email/password is enabled, and the services
  * the factory touches. Exactly one `pikkuBetterAuth` is allowed per codebase.
  */
-export const addAuth: AddWiring = (logger, node, _checker, state) => {
+export const addAuth: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
-
-  const expression = node.expression
-
-  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth')
-    return
+  if (!resolveCalleeName(node, checker, isPikkuBetterAuth)) return
 
   const sourceFile = node.getSourceFile().fileName
 
@@ -272,7 +271,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   let basePath = DEFAULT_BASE_PATH
   let hasCredentials = false
   let cookieCache = false
-  const betterAuthCall = findBetterAuthCall(factory)
+  const betterAuthCall = findBetterAuthCall(factory, checker)
   const config = betterAuthCall?.arguments[0]
 
   if (config && ts.isObjectLiteralExpression(config)) {
