@@ -17,6 +17,7 @@ const STRONG_SECRET = 'a'.repeat(43)
 const WEAK_SECRET = 'dev-remote-secret'
 
 const createSecrets = (secret: string) => ({
+  hasSecret: async (key: string) => key === 'PIKKU_REMOTE_SECRET',
   getSecret: async (key: string) => {
     if (key === 'PIKKU_REMOTE_SECRET') return createSecretValue(secret)
     throw new Error(`Secret ${key} not found`)
@@ -172,5 +173,68 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
   test('a secret of exactly 32 characters is accepted', async () => {
     const session = { userId: 'user-1' }
     assert.deepStrictEqual(await roundTrip('x'.repeat(32), session), session)
+  })
+})
+
+describe('reading PIKKU_REMOTE_SECRET', () => {
+  test('sends an unauthenticated call when no secret is configured', async () => {
+    const headers = await buildRemoteHeaders(
+      createJWT() as any,
+      {
+        hasSecret: async () => false,
+        getSecret: async () => {
+          throw new Error('not found')
+        },
+      } as any,
+      'myFunc'
+    )
+    assert.strictEqual(headers.authorization, undefined)
+  })
+
+  test('sends an unauthenticated call when there is no secrets service', async () => {
+    const headers = await buildRemoteHeaders(
+      createJWT() as any,
+      undefined,
+      'myFunc'
+    )
+    assert.strictEqual(headers.authorization, undefined)
+  })
+
+  test('fails closed when the secrets backend errors on read', async () => {
+    const backendError = new Error('vault unreachable')
+    await assert.rejects(
+      () =>
+        buildRemoteHeaders(
+          createJWT() as any,
+          {
+            hasSecret: async () => true,
+            getSecret: async () => {
+              throw backendError
+            },
+          } as any,
+          'myFunc'
+        ),
+      (err: unknown) =>
+        err instanceof Error &&
+        err.message.includes('PIKKU_REMOTE_SECRET') &&
+        err.cause === backendError
+    )
+  })
+
+  test('fails closed when the secrets backend errors on lookup', async () => {
+    await assert.rejects(
+      () =>
+        buildRemoteHeaders(
+          createJWT() as any,
+          {
+            hasSecret: async () => {
+              throw new Error('vault unreachable')
+            },
+            getSecret: async () => createSecretValue(STRONG_SECRET),
+          } as any,
+          'myFunc'
+        ),
+      /PIKKU_REMOTE_SECRET/
+    )
   })
 })
