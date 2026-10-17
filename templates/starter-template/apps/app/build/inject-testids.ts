@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { PluginObj, NodePath, types as BabelTypes } from '@babel/core'
+import type { PluginObject, NodePath, types as BabelTypes } from '@babel/core'
 
 /**
  * Stamp the addresses browser scenarios use, at compile time.
@@ -72,7 +72,8 @@ const kebab = (name: string) =>
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
     .toLowerCase()
 
-const isInteractive = (tag: string | null): boolean => !!tag && INTERACTIVE.has(tag)
+const isInteractive = (tag: string | null): boolean =>
+  !!tag && INTERACTIVE.has(tag)
 
 const tagName = (node: BabelTypes.JSXOpeningElement['name']): string | null => {
   if (node.type === 'JSXIdentifier') return node.name
@@ -106,7 +107,8 @@ function messageKey(node: BabelTypes.Node | null | undefined): string | null {
   }
   const nested: Array<BabelTypes.Node | null | undefined> = []
   if (node.type === 'JSXExpressionContainer') nested.push(node.expression)
-  if (node.type === 'ConditionalExpression') nested.push(node.consequent, node.alternate)
+  if (node.type === 'ConditionalExpression')
+    nested.push(node.consequent, node.alternate)
   if (node.type === 'LogicalExpression') nested.push(node.left, node.right)
   if (node.type === 'TemplateLiteral') nested.push(...node.expressions)
   if (node.type === 'CallExpression') nested.push(...node.arguments)
@@ -118,17 +120,22 @@ function messageKey(node: BabelTypes.Node | null | undefined): string | null {
 }
 
 /** A literal `name`/`id` — the stable identity a control has when its label is dynamic. */
-function literalIdentity(attributes: BabelTypes.JSXOpeningElement['attributes']): string | null {
-  return literalAttribute(attributes, 'name') ?? literalAttribute(attributes, 'id')
+function literalIdentity(
+  attributes: BabelTypes.JSXOpeningElement['attributes']
+): string | null {
+  return (
+    literalAttribute(attributes, 'name') ?? literalAttribute(attributes, 'id')
+  )
 }
 
 function literalAttribute(
   attributes: BabelTypes.JSXOpeningElement['attributes'],
-  wanted: string,
+  wanted: string
 ): string | null {
   for (const attribute of attributes) {
     if (attribute.type !== 'JSXAttribute') continue
-    const attributeName = attribute.name.type === 'JSXIdentifier' ? attribute.name.name : null
+    const attributeName =
+      attribute.name.type === 'JSXIdentifier' ? attribute.name.name : null
     if (attributeName !== wanted) continue
     if (attribute.value?.type === 'StringLiteral') return attribute.value.value
   }
@@ -140,7 +147,9 @@ function literalAttribute(
  * `<Label htmlFor="email">{m.common__email()}</Label>` next to `<Input id="email" />`, in the
  * same parent. A label pointing at a different id belongs to a different control.
  */
-function siblingLabelKey(element: NodePath<BabelTypes.JSXOpeningElement>): string | null {
+function siblingLabelKey(
+  element: NodePath<BabelTypes.JSXOpeningElement>
+): string | null {
   const parent = element.parentPath.parentPath?.node
   if (parent?.type !== 'JSXElement') return null
   const id = literalAttribute(element.node.attributes, 'id')
@@ -178,8 +187,8 @@ export interface InjectTestIdsOptions {
 
 export default function injectTestIds(
   { types: t }: { types: typeof BabelTypes },
-  options: InjectTestIdsOptions = {},
-): PluginObj {
+  options: InjectTestIdsOptions = {}
+): PluginObject {
   const anchors = options.sourceAnchors === true
   const root = options.root ?? process.cwd()
 
@@ -187,7 +196,9 @@ export default function injectTestIds(
   let anchorPath: string | null = null
   let anchorUsed = false
 
-  const attributeName = (attribute: BabelTypes.JSXOpeningElement['attributes'][number]) =>
+  const attributeName = (
+    attribute: BabelTypes.JSXOpeningElement['attributes'][number]
+  ) =>
     attribute.type === 'JSXAttribute' && attribute.name.type === 'JSXIdentifier'
       ? attribute.name.name
       : null
@@ -201,11 +212,14 @@ export default function injectTestIds(
   const claimed = (element: BabelTypes.JSXOpeningElement) =>
     element.attributes.some(
       (attribute) =>
-        attributeName(attribute) === 'data-testid' || attribute.type === 'JSXSpreadAttribute',
+        attributeName(attribute) === 'data-testid' ||
+        attribute.type === 'JSXSpreadAttribute'
     )
 
   const stamp = (element: BabelTypes.JSXOpeningElement, value: string) => {
-    element.attributes.push(t.jsxAttribute(t.jsxIdentifier('data-testid'), t.stringLiteral(value)))
+    element.attributes.push(
+      t.jsxAttribute(t.jsxIdentifier('data-testid'), t.stringLiteral(value))
+    )
   }
 
   /**
@@ -217,7 +231,11 @@ export default function injectTestIds(
     if (!anchors || !anchorIdentifier) return
     const line = element.loc?.start.line
     if (!line) return
-    if (element.attributes.some((attribute) => attributeName(attribute) === 'data-cloud-src')) {
+    if (
+      element.attributes.some(
+        (attribute) => attributeName(attribute) === 'data-cloud-src'
+      )
+    ) {
       return
     }
     anchorUsed = true
@@ -225,20 +243,29 @@ export default function injectTestIds(
       t.jsxAttribute(
         t.jsxIdentifier('data-cloud-src'),
         t.jsxExpressionContainer(
-          t.binaryExpression('+', t.cloneNode(anchorIdentifier), t.stringLiteral(`:${line}`)),
-        ),
-      ),
+          t.binaryExpression(
+            '+',
+            t.cloneNode(anchorIdentifier),
+            t.stringLiteral(`:${line}`)
+          )
+        )
+      )
     )
   }
 
   /** A component is a PascalCase function — the same rule React itself uses to tell them apart. */
-  const componentName = (path: NodePath<BabelTypes.Function>): string | null => {
+  const componentName = (
+    path: NodePath<BabelTypes.Function>
+  ): string | null => {
     const node = path.node
     if (node.type === 'FunctionDeclaration' && node.id) {
       return /^[A-Z]/.test(node.id.name) ? node.id.name : null
     }
     const parent = path.parent
-    if (parent.type === 'VariableDeclarator' && parent.id.type === 'Identifier') {
+    if (
+      parent.type === 'VariableDeclarator' &&
+      parent.id.type === 'Identifier'
+    ) {
       return /^[A-Z]/.test(parent.id.name) ? parent.id.name : null
     }
     return null
@@ -253,7 +280,10 @@ export default function injectTestIds(
           anchorPath = null
           anchorUsed = false
           if (!anchors || !state.filename) return
-          anchorPath = path.relative(root, state.filename).split(path.sep).join('/')
+          anchorPath = path
+            .relative(root, state.filename)
+            .split(path.sep)
+            .join('/')
           anchorIdentifier = program.scope.generateUidIdentifier('cloudSrc')
         },
         exit(program) {
@@ -261,8 +291,11 @@ export default function injectTestIds(
           program.unshiftContainer(
             'body',
             t.variableDeclaration('const', [
-              t.variableDeclarator(anchorIdentifier, t.stringLiteral(anchorPath)),
-            ]),
+              t.variableDeclarator(
+                anchorIdentifier,
+                t.stringLiteral(anchorPath)
+              ),
+            ])
           )
         },
       },
@@ -275,7 +308,11 @@ export default function injectTestIds(
         let key: string | null = null
         for (const wanted of LABEL_ATTRIBUTES) {
           for (const attribute of path.node.attributes) {
-            if (attributeName(attribute) !== wanted || attribute.type !== 'JSXAttribute') continue
+            if (
+              attributeName(attribute) !== wanted ||
+              attribute.type !== 'JSXAttribute'
+            )
+              continue
             key = messageKey(attribute.value)
             if (key) break
           }
