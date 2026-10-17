@@ -9,3 +9,4 @@ export type {
   CoreScheduledTask,
   ScheduledTasksMeta,
 } from './scheduler.types.js'
+export { pikkuRemoteScheduledJobFunc } from './remote-scheduled-job.js'

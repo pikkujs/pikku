@@ -1,8 +1,8 @@
-import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
-import { isExpectedError } from '../errors/error-handler.js'
-import { isStepLeaseLive } from '../wirings/workflow/workflow-constants.js'
-import { WorkflowStepSupersededError } from '../wirings/workflow/workflow-errors.js'
-import type { SerializedError } from '../errors/serialized-error.js'
+import { PikkuWorkflowService } from './pikku-workflow-service.js'
+import { isExpectedError } from '../../errors/error-handler.js'
+import { isStepLeaseLive } from './workflow-constants.js'
+import { WorkflowStepSupersededError } from './workflow-errors.js'
+import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,
@@ -14,7 +14,7 @@ import type {
   WorkflowStatus,
   WorkflowVersionStatus,
   WorkflowStepOptions,
-} from '../wirings/workflow/workflow.types.js'
+} from './workflow.types.js'
 
 interface InternalStepData {
   rpcName: string | null

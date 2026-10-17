@@ -19,7 +19,7 @@ system saying no, which is information it should be allowed to act on"
 (`virtual-user-target.ts:19-22`).
 
 In `HttpVirtualUser.invokeRaw`, the virtual user signs in first if it is not signed
-in (`packages/core/src/services/http-virtual-users.ts:117-119`). On a 401 it signs
+in (`packages/core/src/wirings/virtual-user/http-virtual-users.ts:117-119`). On a 401 it signs
 in again and retries once (`http-virtual-users.ts:121-126`). The method returns the
 response for every status.
 

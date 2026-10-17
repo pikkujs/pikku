@@ -10,7 +10,7 @@ import {
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   type WebhookJobData,
 } from './webhook-service.js'
-import { InMemoryQueueService } from './in-memory-queue-service.js'
+import { InMemoryQueueService } from '../wirings/queue/in-memory-queue-service.js'
 import { wireQueueWorker } from '../wirings/queue/queue-runner.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { JobOptions } from '../wirings/queue/queue.types.js'

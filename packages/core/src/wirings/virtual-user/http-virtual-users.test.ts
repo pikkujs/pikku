@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpVirtualUsers } from './http-virtual-users.js'
-import { statementSignIn } from './virtual-user-sign-in.js'
+import { statementSignIn } from '../../services/virtual-user-sign-in.js'
 
 /** Stands in for a signed statement: the target accepts exactly this shape. */
 const statementFor = (email: string) => `statement-for:${email}`

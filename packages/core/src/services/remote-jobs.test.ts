@@ -1,19 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BadRequestError, UnauthorizedError } from '../errors/errors.js'
-import { resetPikkuState, setSingletonServices } from '../pikku-state.js'
+import { UnauthorizedError } from '../errors/errors.js'
 import { remoteJobsSecret } from '../middleware/remote-jobs-secret.js'
-import {
-  REMOTE_JOBS_SECRET_HEADER,
-  pikkuRemoteScheduledJobFunc,
-} from './remote-jobs.js'
-
-const silentLogger = {
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-} as any
+import { REMOTE_JOBS_SECRET_HEADER } from './remote-jobs.js'
 
 const wire = (header?: string) =>
   ({
@@ -80,7 +69,8 @@ describe('remoteJobsSecret', () => {
     await remoteJobsSecret(
       {
         variables: {
-          get: () => new Promise((resolve) => setTimeout(() => resolve('s3cret'), 1)),
+          get: () =>
+            new Promise((resolve) => setTimeout(() => resolve('s3cret'), 1)),
         },
       } as any,
       wire('s3cret'),
@@ -89,18 +79,5 @@ describe('remoteJobsSecret', () => {
       }
     )
     assert.equal(reached, true)
-  })
-})
-
-describe('pikkuRemoteScheduledJobFunc', () => {
-  test('acks a task this deployment does not have rather than asking for a retry', async () => {
-    resetPikkuState()
-    setSingletonServices({ logger: silentLogger } as any)
-    await assert.rejects(
-      pikkuRemoteScheduledJobFunc({ logger: silentLogger }, {
-        taskName: 'not-a-task',
-      }),
-      BadRequestError
-    )
   })
 })
