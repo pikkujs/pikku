@@ -20,11 +20,24 @@ export interface BetterAuthInstance extends AuthInstance {
 import { PIKKU_BETTER_AUTH } from './constants.js'
 export { PIKKU_BETTER_AUTH }
 
+/** Builds the app's better-auth instance from its singleton services. */
 export type PikkuBetterAuthFactory<
   I extends BetterAuthInstance = BetterAuthInstance,
   S extends CoreSingletonServices = CoreSingletonServices,
 > = (services: S) => I | Promise<I>
 
+/**
+ * Declares the app's better-auth instance. The CLI reads the call off the
+ * AST to generate the auth route, the session middleware and the secrets; at
+ * runtime the factory runs once, when singleton services are built, and its
+ * instance becomes `services.auth`.
+ *
+ * The returned factory applies the OAuth proxy when the stage configures one,
+ * and gives a stateless app's unset `session.cookieCache.maxAge` a usable
+ * default. Export exactly one per project.
+ *
+ * @example snippet: betterAuthConfig
+ */
 export const pikkuBetterAuth = <
   I extends BetterAuthInstance,
   S extends CoreSingletonServices = CoreSingletonServices,

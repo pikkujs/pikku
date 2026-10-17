@@ -21,6 +21,7 @@ export type StoredSession = { session: any; user: any }
 /** Where `betterAuthStoreSession` looks for the signed session token. */
 export type SessionTransport = 'header' | 'cookie'
 
+/** Options for {@link betterAuthStoreSession}. */
 export type BetterAuthStoreSessionOptions = {
   /**
    * The same storage the app passes better-auth as `secondaryStorage`. Only
@@ -38,10 +39,12 @@ export type BetterAuthStoreSessionOptions = {
   secretId?: string
   /** The app's `advanced.cookiePrefix`. Defaults to better-auth's own `better-auth`. */
   cookiePrefix?: string
+  /** Map the stored `{ user, session }` to the app session. */
   mapSession?: (
     result: StoredSession,
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
+  /** Honour the impersonation header for callers allowed to; off when omitted. */
   impersonation?: ImpersonationOptions
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
@@ -112,6 +115,8 @@ const parseStored = (raw: unknown): StoredSession | null => {
  * entry and the next request finds nothing to resolve. That is the difference
  * from {@link betterAuthStatelessSession}, which cannot see a revocation until
  * its cookie cache ages out.
+ *
+ * @example snippet: betterAuthStoreSession
  */
 export const betterAuthStoreSession = (
   options: BetterAuthStoreSessionOptions
