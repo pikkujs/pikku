@@ -47,13 +47,24 @@ export const stopSingletonServices = async (): Promise<void> => {
   }
 }
 
-/** Wrap server lifecycle hooks so the inspector can discover them. */
+/**
+ * Wrap server lifecycle hooks so the inspector can discover them.
+ *
+ * @example snippet: serverLifecycle
+ */
 export const pikkuServerLifecycle = <
   SS extends CoreSingletonServices = CoreSingletonServices,
 >(
   lifecycle: ServerLifecycle<SS>
 ): ServerLifecycle<SS> => lifecycle
 
+/**
+ * Calls `run` once when the process receives one of `signals` (default
+ * `SIGINT` and `SIGTERM`); later signals are ignored while it runs. Does
+ * nothing outside Node-like runtimes. It does not exit the process.
+ *
+ * @returns A function that removes the handlers.
+ */
 export const onShutdownSignals = (
   run: (signal: NodeJS.Signals) => void | Promise<void>,
   signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
