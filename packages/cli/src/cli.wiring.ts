@@ -420,6 +420,11 @@ wireCLI({
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
           default: false,
         },
+        lazyAddons: {
+          description:
+            "Register wired addons' functions and schemas from an exported loadAddons() instead of at startup (used by per-unit deploy codegen)",
+          default: false,
+        },
       },
     }),
     bootstrap: pikkuCLICommand({

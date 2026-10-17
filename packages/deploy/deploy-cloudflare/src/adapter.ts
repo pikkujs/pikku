@@ -85,6 +85,25 @@ export interface CloudflareProviderAdapterOptions {
   coercion?: boolean
 }
 
+const SERVICES_AFTER_ADDONS = 'createSingletonServicesAfterAddons'
+
+/**
+ * A worker's bootstrap leaves its addons' functions and schemas to
+ * `loadAddons()` (see `lazyAddonRegistration`), so the services factory every
+ * request path builds through runs it first. The namespace import keeps an
+ * eagerly generated bootstrap, which has no such export, bundling.
+ */
+const lazyBootstrapLines = (ctx: EntryGenerationContext): string[] => [
+  `import * as __pikkuBootstrap from '${ctx.bootstrapPath}'`,
+  ``,
+  `const ${SERVICES_AFTER_ADDONS} = async (`,
+  `  ...args: Parameters<typeof ${ctx.servicesVar}>`,
+  `) => {`,
+  `  await (__pikkuBootstrap as { loadAddons?: () => Promise<unknown> }).loadAddons?.()`,
+  `  return ${ctx.servicesVar}(...args)`,
+  `}`,
+]
+
 /**
  * Extracts the unique handler types from a unit's handlers array.
  */
@@ -153,6 +172,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    * `CloudflareProviderAdapterOptions.workflowQueues`.
    */
   readonly workflowQueues: boolean
+  /**
+   * A Worker evaluates its whole bundle inside a startup CPU budget, and an
+   * addon's full surface exceeds it on its own.
+   */
+  readonly lazyAddonRegistration = true
   readonly httpQueueJobs: boolean
   readonly compatDate: string
 
@@ -424,12 +448,12 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
       `export default createCloudflareHandler(`,
-      `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
+      `  { createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices },`,
       `  ${JSON.stringify(handlerTypes)},`,
       `  { httpQueueJobs: ${this.resolveHttpQueueJobs(ctx.unit)} }`,
       `)`,
@@ -487,12 +511,12 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
       `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare/handler'`,
-      `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
+      `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices })`,
       ``,
     ]
 
@@ -529,7 +553,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
     const httpQueueJobs = this.resolveHttpQueueJobs(ctx.unit)
 
-    const factoriesArg = `{ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices }`
+    const factoriesArg = `{ createConfig: ${ctx.configVar}, createSingletonServices: ${SERVICES_AFTER_ADDONS}, createPlatformServices }`
 
     const exportLine = servesMCP
       ? `export default createCloudflareMCPHandler(${factoriesArg}, { ${ctx.mcpServerOption.replace(/,\s*$/, '')} })`
@@ -584,7 +608,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
+      ...lazyBootstrapLines(ctx),
       ``,
       ...this.generateGatewayPlatformServicesBlock(ctx, platform, bindingsMap),
       ``,
@@ -612,7 +636,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     return [
       `const __pikkuFactories = {`,
       `  createConfig: ${ctx.configVar},`,
-      `  createSingletonServices: ${ctx.servicesVar},`,
+      `  createSingletonServices: ${SERVICES_AFTER_ADDONS},`,
       `  createPlatformServices,`,
       `}`,
       ``,
