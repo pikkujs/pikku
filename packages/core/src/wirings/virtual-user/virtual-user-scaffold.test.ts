@@ -21,7 +21,7 @@ import type {
   VirtualUserScheduleRecord,
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
-import { createHttpVirtualUsers } from '../../services/http-virtual-users.js'
+import { createHttpVirtualUsers } from './http-virtual-users.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**

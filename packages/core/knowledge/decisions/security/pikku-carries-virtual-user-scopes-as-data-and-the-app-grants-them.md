@@ -11,7 +11,7 @@ A virtual user's `roles` (and the `app` it signs into) are declared in
 `defineVirtualUsers` and carried on `ResolvedVirtualUser`
 (`packages/core/src/services/virtual-users-service.ts`) into the generated
 `virtualUserConfigs`. Nothing in core reads them to grant anything:
-`createHttpVirtualUsers` (`packages/core/src/services/http-virtual-users.ts`) only
+`createHttpVirtualUsers` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`) only
 signs the virtual user in.
 
 The grant is performed by `provisionVirtualUsers`
