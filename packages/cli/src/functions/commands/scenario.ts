@@ -151,6 +151,8 @@ export const scenarioList = pikkuSessionlessFunc<{}, void>({
   },
 })
 
+const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/
+
 export const scenarioRun = pikkuSessionlessFunc<
   {
     environment: string
@@ -168,6 +170,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     video?: 'off' | 'failed' | 'all'
     apiUrl?: string
     appUrl?: string
+    runId?: string
   },
   void
 >({
@@ -189,8 +192,14 @@ export const scenarioRun = pikkuSessionlessFunc<
       video = 'failed',
       apiUrl,
       appUrl,
+      runId,
     }
   ) => {
+    if (runId !== undefined && !SAFE_RUN_ID.test(runId)) {
+      throw new Error(
+        `--run-id '${runId}' is not a usable run id: letters, digits, '-' and '_' only, starting with a letter or digit.`
+      )
+    }
     if (!SCENARIO_SURFACES.includes(runSurface)) {
       throw new Error(
         `Unknown --run surface '${runSurface}'. Expected one of: ${SCENARIO_SURFACES.join(', ')}.`
@@ -466,7 +475,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // One id for the whole invocation, distinct from a scenario's own runId:
     // reviewing artifacts means opening what `pikku scenario run` just produced,
     // not hunting for one scenario's folder among many.
-    const captureRunId = randomUUID()
+    const captureRunId = runId ?? randomUUID()
     const capture = {
       dir: captureDir,
       runId: captureRunId,
@@ -549,6 +558,11 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
+    if (runId && (await runStore.get(runId))) {
+      throw new Error(
+        `A scenario run '${runId}' already exists — pass a new --run-id.`
+      )
+    }
     const version = await resolveScenarioRunVersion(runStore, config.rootDir)
     try {
       const selection: ScenarioRunSelection = {
