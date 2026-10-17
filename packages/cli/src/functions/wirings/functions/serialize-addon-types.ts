@@ -96,6 +96,8 @@ type AddonFunctionName<Package extends string> =
  * \`mcp: true\` offers every function the addon itself declared as a tool; a list
  * names the functions to offer, checked against the ones the addon publishes.
  * \`expose\` works the same way for \`rpc.exposed\`, and \`false\` exposes none.
+ *
+ * @example snippet: addonWiring
  */
 export const wireAddon = <Package extends string>(
   config: Omit<WireAddonConfig, 'package' | 'mcp' | 'expose'> & {

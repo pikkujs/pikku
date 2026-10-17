@@ -134,6 +134,8 @@ ${
  * services stop, the server stops, afterStop. \`afterStop\` runs once the
  * services are already stopped, so anything that needs a live service goes in
  * \`beforeStop\`.
+ *
+ * @example snippet: serverLifecycle
  */
 export const pikkuServerLifecycle = (
   lifecycle: ServerLifecycle<RequiredSingletonServices>

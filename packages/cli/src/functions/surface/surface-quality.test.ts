@@ -88,11 +88,11 @@ const WIRED_BY_EXAMPLE = [
 const CORE_LEAK = 175
 const UNRESOLVABLE = 1234
 const BARE_ERRORS = 5
-const FUNCTIONS_WITHOUT_EXAMPLE = 18
+const FUNCTIONS_WITHOUT_EXAMPLE = 8
 const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
-const DOCUMENTED_KEYS = 79
+const DOCUMENTED_KEYS = 80
 
 describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
   test('does not name the internals the generated aliases exist to hide', () => {
