@@ -14,7 +14,7 @@ Harden `@pikku/better-auth` for 0.13.
 **Fixes:**
 
 - The package no longer imports `@better-auth/core` or `@better-auth/utils`, which were only devDependencies. Under pnpm, isolated bun or Yarn PnP, `import '@pikku/better-auth'` used to fail at load time.
-- The tarball ships only `dist`, `README.md` and `LICENSE`. The build clears `dist` and the tsbuildinfo first, so modules that were removed (fabric, actor, provision-personas) can no longer ship. Adds a `types` export condition.
+- The tarball ships only `dist`, `README.md` and `LICENSE`. The build clears `dist` and the tsbuildinfo first, so modules that were removed (fabric and the old virtual-user modules) can no longer ship. Adds a `types` export condition.
 - `betterAuthStoreSession` now shares its session handling with the other two middlewares. It never overwrites a session that an earlier middleware set. It stands down when an addon's scope withholds the auth secret. It reads relayed cross-site cookies and reports an impersonation header that nothing is configured to honour. It also accepts storages that return parsed objects, treats a malformed `expiresAt` as expired, and takes a `cookiePrefix`.
 - `betterAuthStatelessSession` recognises `jwe` and `jwt` cookie-cache strategies from the cookie's shape, and takes `cookiePrefix` and `cookieCache: { strategy, version, jwt }`. `pikkuBetterAuth` logs an error at startup when these disagree with the auth config.
 - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` is ignored under `NODE_ENV=production`.
