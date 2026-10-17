@@ -23,6 +23,8 @@ const ALLOWED_FILES = [
   // Applied migrations are history, and the rename migrations must name the
   // column they rename.
   /^(examples|templates)\/[^/]+\/db\/[^/]+\/\d{4}-[^/]*\.sql$/,
+  // The upgrade guide has to name what it renames, or nobody can search for it.
+  /^docs\/MIGRATION\.md$/,
 ]
 
 // The GitHub Actions context property, which is not ours to rename.
