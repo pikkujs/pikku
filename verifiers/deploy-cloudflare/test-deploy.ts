@@ -12,6 +12,8 @@ import {
   existsSync,
   readdirSync,
   statSync,
+  mkdirSync,
+  rmSync,
 } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
@@ -35,8 +37,38 @@ const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
  * pins one-per-function; how units are partitioned is verifiers/deploy-grouping's
  * subject.
  */
+/**
+ * Fixtures the template does not carry: a webhook gateway, and the coercion
+ * map `pikku db migrate` would write for an app with annotated columns. Both
+ * are removed with the config pin below.
+ */
+const GATEWAY_FUNCTION_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'functions',
+  'verifier-gateway.functions.ts'
+)
+const GATEWAY_WIRING_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'wirings',
+  'verifier-gateway.wiring.ts'
+)
+const COERCION_FILE = join(FUNCTIONS_DIR, '.pikku', 'db', 'coercion.gen.ts')
+const COERCION_MAP = { todo: { due_at: 'date', done: 'bool' } }
+const GATEWAY_ROUTE = '/verifier/webhook'
+
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
-const restoreConfig = () => writeFileSync(CONFIG_FILE, originalConfig)
+const restoreConfig = () => {
+  writeFileSync(CONFIG_FILE, originalConfig)
+  for (const fixture of [
+    GATEWAY_FUNCTION_FILE,
+    GATEWAY_WIRING_FILE,
+    COERCION_FILE,
+  ]) {
+    rmSync(fixture, { force: true })
+  }
+}
 process.on('exit', restoreConfig)
 process.on('SIGINT', () => {
   restoreConfig()
@@ -57,6 +89,39 @@ pinnedConfig.deploy = {
 }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
+writeFileSync(
+  GATEWAY_FUNCTION_FILE,
+  `import { pikkuSessionlessFunc } from '#pikku/function'
+
+export const verifierWebhookReply = pikkuSessionlessFunc<
+  { text: string },
+  { text: string }
+>({
+  func: async (_services, { text }) => ({ text: \`echo: \${text}\` }),
+})
+`
+)
+writeFileSync(
+  GATEWAY_WIRING_FILE,
+  `import { wireGateway } from '#pikku/gateway'
+import { verifierWebhookReply } from '../functions/verifier-gateway.functions.js'
+
+wireGateway({
+  name: 'verifier-webhook',
+  type: 'webhook',
+  route: '${GATEWAY_ROUTE}',
+  adapter: {
+    name: 'verifier',
+    parse: (data: any) => ({ senderId: 'verifier', text: data.text, raw: data }),
+    send: async () => {},
+    init: async () => {},
+    close: async () => {},
+  },
+  func: verifierWebhookReply,
+})
+`
+)
+
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
 execSync(`node ${PIKKU_BIN}`, {
@@ -64,6 +129,11 @@ execSync(`node ${PIKKU_BIN}`, {
   stdio: 'pipe',
   timeout: 60_000,
 })
+mkdirSync(join(FUNCTIONS_DIR, '.pikku', 'db'), { recursive: true })
+writeFileSync(
+  COERCION_FILE,
+  `export const coercionMap = ${JSON.stringify(COERCION_MAP, null, 2)} as const\n`
+)
 execSync(
   `node ${PIKKU_BIN} deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json`,
   {
@@ -393,6 +463,76 @@ check('every worker unit has entry.ts', () => {
     if (u === SERVER_UNIT_NAME || u === 'pikku-server-proxy') continue
     if (!existsSync(join(getUnitPath(u), 'entry.ts')))
       throw new Error(`${u} missing entry.ts`)
+  }
+})
+
+// --- wireGateway (#1906) ---
+const manifestGateways = ((deploymentManifest as Record<string, unknown>)
+  ?.gateways ?? []) as Array<{ name: string; route: string; unitName: string }>
+const unitBootstrap = (unitName: string) =>
+  readText(join(getUnitPath(unitName), '.pikku', 'pikku-bootstrap.gen.ts'))
+check('manifest lists the webhook gateway', () => {
+  const gateway = manifestGateways.find((g) => g.name === 'verifier-webhook')
+  if (!gateway)
+    throw new Error('verifier-webhook missing from manifest.gateways')
+  if (gateway.route !== GATEWAY_ROUTE)
+    throw new Error(`Expected route ${GATEWAY_ROUTE}, got ${gateway.route}`)
+})
+check('the gateway unit routes the webhook and holds its handler', () => {
+  const gateway = manifestGateways.find((g) => g.name === 'verifier-webhook')
+  const unit = deploymentManifest?.units?.find(
+    (u) => u.name === gateway?.unitName
+  ) as
+    | {
+        functionIds: string[]
+        handlers: Array<{
+          type: string
+          routes?: Array<{ route: string; method: string }>
+        }>
+      }
+    | undefined
+  if (!unit) throw new Error(`No unit ${gateway?.unitName}`)
+  if (!unit.functionIds.includes('verifierWebhookReply'))
+    throw new Error(`Handler not bundled: ${unit.functionIds.join(', ')}`)
+  const routes = unit.handlers.flatMap((h) => h.routes ?? [])
+  if (!routes.some((r) => r.route === GATEWAY_ROUTE && r.method === 'POST'))
+    throw new Error(`POST ${GATEWAY_ROUTE} not routed`)
+  if (!unitBootstrap(gateway!.unitName).includes('pikku-gateway-wirings.gen'))
+    throw new Error('gateway unit does not import the gateway wiring')
+})
+check('a unit without the gateway does not import its wiring', () => {
+  if (unitBootstrap('greet').includes('pikku-gateway-wirings.gen'))
+    throw new Error('greet imports the gateway wiring')
+})
+
+// --- Column coercion (#1913) ---
+check('a worker entry applies the generated coercion map', () => {
+  const entry = readText(join(getUnitPath('greet'), 'entry.ts'))
+  if (!entry.includes(`import { createCoercionPlugin } from '@pikku/kysely'`))
+    throw new Error('entry does not import createCoercionPlugin')
+  if (
+    !entry.includes(
+      `createCoercionPlugin({ map: ${JSON.stringify(COERCION_MAP)} })`
+    )
+  )
+    throw new Error('entry does not attach the coercion map')
+})
+
+// --- Lazy addon registration (#1497) ---
+// No worker unit in this template wires an addon; verifiers/addon-treeshake
+// checks the deferred imports themselves. Here: every worker bootstrap exports
+// loadAddons() and every worker entry awaits it before building services.
+check('worker entries await loadAddons() from a lazy bootstrap', () => {
+  const workers = unitDirs.filter((u) =>
+    existsSync(join(getUnitPath(u), '.pikku', 'pikku-bootstrap.gen.ts'))
+  )
+  if (workers.length === 0) throw new Error('no worker unit bootstraps')
+  for (const u of workers) {
+    if (u === SERVER_UNIT_NAME) continue
+    if (!unitBootstrap(u).includes('export const loadAddons'))
+      throw new Error(`${u}: bootstrap has no loadAddons`)
+    if (!readText(join(getUnitPath(u), 'entry.ts')).includes('loadAddons?.()'))
+      throw new Error(`${u}: entry does not await loadAddons`)
   }
 })
 
