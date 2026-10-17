@@ -7,6 +7,30 @@ import {
 } from './crypto-utils.js'
 
 /**
+ * An unset secret means remote auth is not configured, so the call goes out
+ * unauthenticated. A secrets backend that fails is a different thing: sending
+ * the call anyway would only earn a 401 from the peer with no hint why.
+ */
+const readRemoteSecret = async (
+  secrets: SecretService | undefined
+): Promise<string | undefined> => {
+  if (!secrets) {
+    return undefined
+  }
+  try {
+    if (!(await secrets.hasSecret('PIKKU_REMOTE_SECRET'))) {
+      return undefined
+    }
+    return (await secrets.getSecret('PIKKU_REMOTE_SECRET')).reveal()
+  } catch (cause) {
+    throw new Error(
+      'Could not read PIKKU_REMOTE_SECRET from the secrets service; refusing to send an unauthenticated remote call',
+      { cause }
+    )
+  }
+}
+
+/**
  * Authorization headers carrying a JWT-signed session and traceId for
  * `pikkuRemoteAuthMiddleware` on the receiving end. Used by every deployment
  * service regardless of transport (HTTP, Lambda Invoke, service bindings).
@@ -23,10 +47,7 @@ export async function buildRemoteHeaders(
     ...(traceId && { 'x-request-id': traceId }),
   }
 
-  let secret: string | undefined
-  try {
-    secret = (await secrets?.getSecret('PIKKU_REMOTE_SECRET'))?.reveal()
-  } catch {}
+  const secret = await readRemoteSecret(secrets)
 
   if (secret && jwt) {
     assertStrongKeyMaterial('PIKKU_REMOTE_SECRET', secret)
