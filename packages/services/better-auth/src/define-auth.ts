@@ -9,7 +9,13 @@ import { applyOAuthProxy } from './oauth-proxy.js'
  * unlinking needs, since better-auth exposes no session-free way to remove an
  * account row.
  */
-export interface BetterAuthInstance extends AuthInstance {}
+export interface BetterAuthInstance extends AuthInstance {
+  /**
+   * The options the instance was built with. Read by the wrappers
+   * `pikkuBetterAuth` applies, and by the auth handler for `basePath`.
+   */
+  options?: Record<string, any>
+}
 
 import { PIKKU_BETTER_AUTH } from './constants.js'
 export { PIKKU_BETTER_AUTH }
@@ -41,8 +47,8 @@ export const pikkuBetterAuth = <
    */
   const wrapped: PikkuBetterAuthFactory<I, S> = async (services) => {
     const built = await factory(services)
-    const instance = await applyOAuthProxy(built, services as any)
-    await applyStatelessCookieCacheDefault(instance, services as any)
+    const instance = await applyOAuthProxy(built, services)
+    await applyStatelessCookieCacheDefault(instance, services)
     return instance
   }
 
@@ -55,6 +61,13 @@ export const pikkuBetterAuth = <
     value: factory,
     enumerable: false,
   })
-  pikkuState(null, 'package', 'authFactory', wrapped as any)
+  // State holds the factory under the base services type; the app's own `S`
+  // is what pikkuServices actually hands it.
+  pikkuState(
+    null,
+    'package',
+    'authFactory',
+    wrapped as (services: CoreSingletonServices) => Promise<I>
+  )
   return wrapped
 }

@@ -27,7 +27,11 @@ const PLACEHOLDER_CLIENT_SECRET = 'oauth-proxy'
 
 type ProxyServices = Pick<CoreSingletonServices, 'logger'> & {
   secrets?: { getSecret(id: string): Promise<{ reveal(): unknown }> }
-  variables?: { get(id: string): Promise<string | undefined | null> }
+  variables?: {
+    get(
+      id: string
+    ): Promise<string | undefined | null> | string | undefined | null
+  }
 }
 
 export interface OAuthProxyConfig {
@@ -170,7 +174,7 @@ export const applyOAuthProxy = async <I extends BetterAuthInstance>(
   const config = await resolveOAuthProxyConfig(services)
   if (!config) return instance
 
-  const options = (instance as any).options ?? {}
+  const options = instance.options ?? {}
   const own = Object.keys(options.socialProviders ?? {}).filter((id) =>
     Object.hasOwn(config.providers, id)
   )

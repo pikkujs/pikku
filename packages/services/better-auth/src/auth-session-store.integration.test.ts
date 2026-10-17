@@ -22,24 +22,7 @@ const signUp = async () => {
     }),
     emailAndPassword: { enabled: true },
     plugins: [bearer()],
-    secondaryStorage: {
-      get: (key) => store.get(key),
-      set: (key, value, ttl) => store.set(key, value, ttl),
-      delete: (key) => store.delete(key),
-      // better-auth 1.7 also requires these two, which SessionStore does not
-      // have. Sign-up never calls them; single-process stand-ins satisfy the
-      // type without pretending to be atomic.
-      getAndDelete: async (key) => {
-        const value = await store.get(key)
-        await store.delete(key)
-        return value
-      },
-      increment: async (key, ttl) => {
-        const next = Number((await store.get(key)) ?? 0) + 1
-        await store.set(key, String(next), ttl)
-        return next
-      },
-    },
+    secondaryStorage: store,
   })
 
   const response = await auth.api.signUpEmail({
