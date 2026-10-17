@@ -8,14 +8,21 @@ import {
 } from '../utils/extract-services.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import {
+  PERMISSION_HELPERS,
+  resolveCalleeName,
+} from '../utils/resolve-callee-name.js'
 
-function isInsidePermissionContainer(node: ts.Node): boolean {
+function isInsidePermissionContainer(
+  node: ts.Node,
+  checker: ts.TypeChecker
+): boolean {
   let current = node.parent
   while (current) {
     if (
       ts.isCallExpression(current) &&
-      ts.isIdentifier(current.expression) &&
-      current.expression.text === 'pikkuPermissionFactory'
+      resolveCalleeName(current, checker, PERMISSION_HELPERS) ===
+        'pikkuPermissionFactory'
     ) {
       return true
     }
@@ -30,17 +37,15 @@ function isInsidePermissionContainer(node: ts.Node): boolean {
 export const addPermission: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
-  const { expression, arguments: args } = node
+  const { arguments: args } = node
 
-  // only handle specific function calls
-  if (!ts.isIdentifier(expression)) {
-    return
-  }
+  const callee = resolveCalleeName(node, checker, PERMISSION_HELPERS)
+  if (!callee) return
 
   // Handle pikkuPermission(...) - individual permission function definition
-  if (expression.text === 'pikkuPermission') {
+  if (callee === 'pikkuPermission') {
     // Skip if nested inside pikkuPermissionFactory — the factory handler extracts services itself
-    if (isInsidePermissionContainer(node)) return
+    if (isInsidePermissionContainer(node, checker)) return
 
     const arg = args[0]
     if (!arg) return
@@ -126,8 +131,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'pikkuAuth') {
-    if (isInsidePermissionContainer(node)) return
+  if (callee === 'pikkuAuth') {
+    if (isInsidePermissionContainer(node, checker)) return
 
     const arg = args[0]
     if (!arg) return
@@ -211,7 +216,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
   }
 
   // Handle pikkuPermissionFactory(...) - permission factory function
-  if (expression.text === 'pikkuPermissionFactory') {
+  if (callee === 'pikkuPermissionFactory') {
     const factoryNode = args[0]
     if (!factoryNode) return
 
@@ -236,8 +241,10 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       node: ts.Node
     ): ts.CallExpression | undefined => {
       if (ts.isCallExpression(node)) {
-        const expr = node.expression
-        if (ts.isIdentifier(expr) && expr.text === 'pikkuPermission') {
+        if (
+          resolveCalleeName(node, checker, PERMISSION_HELPERS) ===
+          'pikkuPermission'
+        ) {
           return node
         }
       }
