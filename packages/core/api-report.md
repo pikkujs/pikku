@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3282 observable things**: 1098 exported names, plus
+**3283 observable things**: 1099 exported names, plus
 2184 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 23 | 23 | 71 |
-| `./http` | 26 | 26 | 58 |
+| `./http` | 27 | 27 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
@@ -2902,6 +2902,7 @@ export type HTTPRouteMap = {
 httpRouter: PathToRegexRouter
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 logRoutes: (logger: Logger) => void
+mergeRequestData: <In = unknown>(...parts: Readonly<Record<string, unknown>>[]) => In
 export class PikkuFetchHTTPRequest< In = unknown, > implements PikkuHTTPRequest<In> {
   constructor(private request: Request, { maxBodySize = DEFAULT_MAX_BODY_SIZE }: PikkuFetchHTTPRequestOptions = {})
   public method(): HTTPMethod
