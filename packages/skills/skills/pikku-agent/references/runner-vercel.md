@@ -24,7 +24,7 @@ const runner = new VercelAgentRunner(
 **Methods:**
 
 - `stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>` — Stream AI responses with tool calls
-- `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming)
+- `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming). Its `object` is `unknown` and unchecked: the runner has no agent, so there is no declared `output` to validate it against
 - `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see the voice reference
 - `generateImage`, `embed`, `embedMany`, `rerank` — the remaining AI SDK surfaces
 - `withApiKey(apiKey)` — returns a **new** runner built from `providerFactory`; returns `this` unchanged when no factory was supplied or the key is blank. This is the per-user-credential path
