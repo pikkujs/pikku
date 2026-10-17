@@ -5,8 +5,10 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import {
   pikkuCredentialOAuth,
+  PLATFORM_USER_EMAIL,
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
+import { BetterAuthCredentialService } from './better-auth-credential.service.js'
 import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
 
 const provider = (
@@ -387,5 +389,76 @@ describe('credentialOAuth plugin', () => {
       1,
       'exactly one account row for the provider'
     )
+  })
+})
+
+describe('the platform user under database-assigned ids', () => {
+  // better-auth drops a non-numeric id under `serial` (and a non-uuid one under
+  // `uuid` on a database that generates them), so the reserved id is only ever
+  // a request. The row has to be found by its reserved email instead.
+  test('serial ids: one platform user, and the credential service finds its token', async () => {
+    const db = emptyDb()
+    const build = (scopeService?: unknown) =>
+      betterAuth({
+        baseURL: 'http://localhost:3000',
+        secret: 'better-auth-test-secret',
+        database: memoryAdapter(db),
+        emailAndPassword: { enabled: true },
+        advanced: { database: { generateId: 'serial' } },
+        plugins: [
+          pikkuCredentialOAuth({
+            config: [provider('shared', 'singleton')],
+            scopeService: scopeService as any,
+          }),
+        ],
+      })
+    let auth = build()
+    const { userId, cookie } = await signUp(auth as any, 'admin@example.com')
+    auth = build(scopeStore({ [userId]: ['admin'] }))
+
+    const restore = stubTokenEndpoint()
+    try {
+      for (let i = 0; i < 2; i++) {
+        const started = await startLink(auth as any, 'shared', cookie)
+        const res = await callback(
+          auth as any,
+          'shared',
+          started.state,
+          started.cookie
+        )
+        assert.equal(res.status, 302)
+      }
+    } finally {
+      restore()
+    }
+
+    const platformUsers = db.user!.filter(
+      (u) => u.email === PLATFORM_USER_EMAIL
+    )
+    assert.equal(platformUsers.length, 1, 'exactly one platform user row')
+    assert.notEqual(String(platformUsers[0]!.id), PLATFORM_USER_ID)
+    const accounts = db.account!.filter((a) => a.providerId === 'shared')
+    assert.equal(accounts.length, 1)
+    assert.equal(String(accounts[0]!.userId), String(platformUsers[0]!.id))
+
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => auth,
+      oauth2Names: ['shared'],
+      singletonOAuth2Names: ['shared'],
+      fallback: {} as any,
+    })
+    assert.deepEqual(await service.get('shared'), { accessToken: 'at-1' })
+    assert.equal(await service.has('shared', 'someone-else'), true)
+  })
+
+  test('before any link, a singleton reads as not linked', async () => {
+    const auth = makeAuth(emptyDb(), [provider('shared', 'singleton')])
+    const service = new BetterAuthCredentialService({
+      getAuth: async () => auth,
+      oauth2Names: ['shared'],
+      singletonOAuth2Names: ['shared'],
+      fallback: {} as any,
+    })
+    assert.equal(await service.get('shared'), null)
   })
 })

@@ -1,6 +1,9 @@
 import type { CredentialService } from '@pikku/core/services'
 import type { BetterAuthInstance } from './define-auth.js'
-import { PLATFORM_USER_ID } from './credential-oauth.plugin.js'
+import {
+  findPlatformUserId,
+  PLATFORM_USER_ID,
+} from './credential-oauth.plugin.js'
 
 export interface BetterAuthCredentialServiceOptions {
   /**
@@ -20,7 +23,11 @@ export interface BetterAuthCredentialServiceOptions {
    * than the caller.
    */
   singletonOAuth2Names?: Iterable<string>
-  /** Owner of singleton credentials. Defaults to the plugin's PLATFORM_USER_ID. */
+  /**
+   * Owner of singleton credentials. Defaults to the platform user
+   * `pikkuCredentialOAuth` creates, found by its reserved email so it resolves
+   * whatever id scheme the database uses.
+   */
   platformUserId?: string
   /**
    * Handles every credential better-auth does not own: API keys, HMAC signers,
@@ -49,6 +56,7 @@ export class BetterAuthCredentialService implements CredentialService {
   private readonly oauth2Names: Set<string>
   private readonly singletonOAuth2Names: Set<string>
   private readonly platformUserId: string
+  private readonly platformUserIdIsExplicit: boolean
   private readonly fallback: CredentialService
 
   constructor(options: BetterAuthCredentialServiceOptions) {
@@ -56,6 +64,7 @@ export class BetterAuthCredentialService implements CredentialService {
     this.oauth2Names = new Set(options.oauth2Names)
     this.singletonOAuth2Names = new Set(options.singletonOAuth2Names ?? [])
     this.platformUserId = options.platformUserId ?? PLATFORM_USER_ID
+    this.platformUserIdIsExplicit = options.platformUserId !== undefined
     this.fallback = options.fallback
   }
 
@@ -97,7 +106,7 @@ export class BetterAuthCredentialService implements CredentialService {
   private async findAccount(
     providerId: string,
     userId: string
-  ): Promise<{ id: string } | undefined> {
+  ): Promise<{ id: string; userId: string } | undefined> {
     const auth = await this.getAuth()
     if (!auth.$context) {
       throw new Error(
@@ -105,9 +114,17 @@ export class BetterAuthCredentialService implements CredentialService {
       )
     }
     const context = await auth.$context
-    return (await context.internalAdapter.findAccounts(userId)).find(
+    const ownerId =
+      userId === PLATFORM_USER_ID && !this.platformUserIdIsExplicit
+        ? await findPlatformUserId(context.internalAdapter)
+        : userId
+    if (!ownerId) {
+      return undefined
+    }
+    const account = (await context.internalAdapter.findAccounts(ownerId)).find(
       (candidate: { providerId: string }) => candidate.providerId === providerId
     )
+    return account ? { id: account.id, userId: ownerId } : undefined
   }
 
   /**
@@ -127,7 +144,7 @@ export class BetterAuthCredentialService implements CredentialService {
     let result: { accessToken?: string } | undefined
     try {
       result = await auth.api.getAccessToken({
-        body: { accountId: account.id, userId },
+        body: { accountId: account.id, userId: account.userId },
       })
     } catch (error) {
       // better-auth throws ACCOUNT_NOT_FOUND rather than returning empty. Only
