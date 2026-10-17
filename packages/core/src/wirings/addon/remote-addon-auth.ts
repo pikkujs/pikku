@@ -5,6 +5,10 @@ import {
   type SecretValue,
 } from '../../classification/secret-value.js'
 
+/**
+ * Where the bearer token for a remote addon call comes from: a per-user credential, a deployment
+ * secret, or a resolver function. `credentialId` needs a wire with credential access.
+ */
 export type RemoteAddonAuthBinding =
   | { credentialId: string }
   | { secretId: string }
@@ -15,6 +19,11 @@ export type RemoteAddonAuthBinding =
       ) => string | SecretValue<string> | Promise<string | SecretValue<string>>
     }
 
+/**
+ * Thrown (401) when a remote addon's token cannot be resolved: the binding needs credential
+ * access the wire lacks, or it resolved to an empty value. The call is refused rather than sent
+ * unauthenticated.
+ */
 export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
   constructor(namespace: string, detail: string) {

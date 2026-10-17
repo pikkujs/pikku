@@ -70,6 +70,11 @@ export interface AgentInterruptResult {
   inFlightTools: string[]
 }
 
+/**
+ * A live run's interrupt handle: the abort signal the model call listens to, plus tracking for
+ * tools still executing when an interrupt lands.
+ * @internal
+ */
 export interface InterruptibleRunHandle {
   readonly signal: AbortSignal
   /** Set at the moment the run is interrupted; `undefined` on a clean run. */

@@ -1,9 +1,15 @@
 const VERSION_SEPARATOR = '@v'
 
+/** The id of one version of a function: `name@v2`. */
 export function formatVersionedId(baseName: string, version: number): string {
   return `${baseName}${VERSION_SEPARATOR}${version}`
 }
 
+/**
+ * Splits `name@vN` into its base name and version. An id with no `@v` suffix,
+ * or whose suffix is not a positive integer, is returned whole with `version:
+ * null`.
+ */
 export function parseVersionedId(id: string): {
   baseName: string
   version: number | null
@@ -20,6 +26,7 @@ export function parseVersionedId(id: string): {
   return { baseName: id.slice(0, idx), version }
 }
 
+/** Whether `id` carries a valid `@vN` version suffix. */
 export function isVersionedId(id: string): boolean {
   return parseVersionedId(id).version !== null
 }

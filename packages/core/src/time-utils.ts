@@ -1,5 +1,6 @@
 type TimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'year'
 
+/** An amount of time in a unit; `value` is negative for the past. A year is 365.25 days. */
 export interface RelativeTimeInput {
   value: number // negative = in the past
   unit: TimeUnit
@@ -14,6 +15,7 @@ const multipliers: Record<TimeUnit, number> = {
   year: Math.round(365.25 * 60 * 60 * 24),
 }
 
+/** Converts a {@link RelativeTimeInput} to milliseconds, rounded to the whole second. */
 export const getRelativeTimeOffset = ({
   value,
   unit,
@@ -21,12 +23,19 @@ export const getRelativeTimeOffset = ({
   return Math.round(value * multipliers[unit]) * 1000
 }
 
+/** The `Date` that is `relativeTime` away from now. */
 export const getRelativeTimeOffsetFromNow = (
   relativeTime: RelativeTimeInput
 ): Date => {
   return new Date(Date.now() + getRelativeTimeOffset(relativeTime))
 }
 
+/**
+ * Normalises a duration to milliseconds: a number is taken as milliseconds already,
+ * a string is parsed by {@link parseDurationString}.
+ *
+ * @throws Error when the string is not a recognised duration.
+ */
 export const getDurationInMilliseconds = (
   duration: string | number
 ): number => {
@@ -36,6 +45,12 @@ export const getDurationInMilliseconds = (
   return parseDurationString(duration)
 }
 
+/**
+ * Parses a duration such as `'500ms'`, `'5s'`, `'10min'`, `'1hour'`, `'2days'`,
+ * `'1week'` or `'1y'` into milliseconds. Whole numbers only, no spaces.
+ *
+ * @throws Error when the string does not match the format.
+ */
 export const parseDurationString = (duration: string): number => {
   const match = duration.match(
     /^(\d+)(ms|milliseconds?|s|sec|seconds?|m|min|minutes?|h|hour|hours?|d|day|days?|w|week|weeks?|y|year|years?)$/

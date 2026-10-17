@@ -11,6 +11,14 @@ import { runQueueJob } from './queue-runner.js'
 const FINISHED_JOBS_KEPT = 100
 
 // knowledge: decisions/internals/the-dev-queue-copies-prod-timing-and-serialization-semantics.md
+/**
+ * A {@link QueueService} that runs jobs in-process, for development and tests.
+ *
+ * Jobs run after a short delay, payloads are JSON round-tripped as a real
+ * backend would, and failed jobs are retried up to `attempts` with the given
+ * backoff. Nothing is persisted, `getJob` always returns `null`, and jobs still
+ * pending when the process exits are lost.
+ */
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults = false
   private jobCounter = 0

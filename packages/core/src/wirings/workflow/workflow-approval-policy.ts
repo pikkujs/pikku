@@ -6,6 +6,12 @@ import type {
   WorkflowApprovalPolicy,
 } from './dsl/workflow-dsl.types.js'
 
+/**
+ * A decision on an approval gate was refused by the gate's declared policy:
+ * the decider lacks its `approverScope`, or is not the permitted approver under
+ * `approvers` (`owner` or `not-initiator`). Responds 403; the refusal is
+ * audited before it is thrown.
+ */
 export class WorkflowApprovalForbiddenError extends ForbiddenError {
   public payload: { reason: string; detail: string }
   constructor(reason: string, detail: string) {

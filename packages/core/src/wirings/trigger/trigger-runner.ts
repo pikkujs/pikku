@@ -14,6 +14,18 @@ import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
+/**
+ * Registers a trigger: the function that runs each time a trigger source of the
+ * same `name` fires. The source is wired separately with
+ * {@link wireTriggerSource} (or {@link wireTriggerWebhookSource}).
+ *
+ * Skipped with a warning when `pikku all` generated no metadata for it, which
+ * usually means the wiring shares a file with the function it wires.
+ *
+ * @param trigger - The trigger's name and the function it runs.
+ *
+ * @example snippet: wireTrigger
+ */
 export const wireTrigger = (trigger: CoreTrigger) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
@@ -31,6 +43,19 @@ export const wireTrigger = (trigger: CoreTrigger) => {
 }
 
 // knowledge: decisions/internals/trigger-declaration-is-split-from-trigger-source.md
+/**
+ * Registers a trigger source: a long-lived function that subscribes to something
+ * outside the app and calls `wire.trigger.invoke(data)` whenever it fires, and
+ * returns its teardown. Its `name` must match a {@link wireTrigger}.
+ *
+ * The source and the triggers it fires run with no user session, so whatever
+ * the source pushes reaches them as untrusted input.
+ *
+ * @param source - The source's name, the function that sets it up, and its input.
+ * @throws Error when a source with the same name is already registered.
+ *
+ * @example snippet: wireTriggerSource
+ */
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {

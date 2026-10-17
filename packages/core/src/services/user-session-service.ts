@@ -1,6 +1,12 @@
 import type { CoreUserSession } from '../types/core.types.js'
 import type { SessionStore } from './session-store.js'
 
+/**
+ * Tracks the session during one invocation. Middleware sets the initial
+ * session; the function's view is frozen when it starts, and
+ * `setSession`/`clearSession` mark it changed so the transport (for example a
+ * cookie middleware) can write it back.
+ */
 export interface SessionService<UserSession extends CoreUserSession> {
   sessionChanged: boolean
   initial: UserSession | undefined
@@ -11,6 +17,10 @@ export interface SessionService<UserSession extends CoreUserSession> {
   get(): UserSession | undefined
 }
 
+/**
+ * The default {@link SessionService}. Writes through to a {@link SessionStore}
+ * when one is configured and the pikku user id is known.
+ */
 export class PikkuSessionService<
   UserSession extends CoreUserSession,
 > implements SessionService<UserSession> {
@@ -76,6 +86,8 @@ export class PikkuSessionService<
  * write the session store. `setInitialSession` is the request-scoped one, for
  * middleware that establishes who the caller is from a credential it was
  * handed.
+ * Runtime adapters that run middleware outside the HTTP runner (such as the
+ * Next.js one) build it with this.
  */
 export function createMiddlewareSessionWireProps<
   UserSession extends CoreUserSession,

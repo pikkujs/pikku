@@ -3,6 +3,7 @@ import type {
   ConfigValidationResult,
 } from './queue.types.js'
 
+/** How a queue adapter supports {@link PikkuWorkerConfig}: the keys it maps (and to what), the keys it cannot honour, and the fallbacks it uses instead. */
 export interface QueueConfigMapping {
   supported: Partial<
     Record<

@@ -26,6 +26,10 @@ export type AssertMCPResourceURIParams<In, URI extends string> =
         keyof In,
       ]
 
+/**
+ * The `mcp` wire handed to a function run over MCP: the resource URI being read, and controls to
+ * notify the client of resource updates or toggle which tools, resources and prompts it lists.
+ */
 export type PikkuMCP<Tools extends string = any> = {
   uri?: string
   sendResourceUpdated: (uri: string) => void
@@ -34,6 +38,7 @@ export type PikkuMCP<Tools extends string = any> = {
   enableTools: (tools: Record<Tools, boolean>) => Promise<boolean>
 }
 
+/** Inspector-generated metadata for MCP resources, keyed by URI. */
 export type MCPResourceMeta = Record<
   string,
   Omit<CoreMCPResource, 'func' | 'middleware'> & {
@@ -50,6 +55,7 @@ export type MCPResourceMeta = Record<
   }
 >
 
+/** Inspector-generated metadata for MCP tools, keyed by name. */
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware'> & {
@@ -66,6 +72,7 @@ export type MCPToolMeta = Record<
   }
 >
 
+/** Inspector-generated metadata for MCP prompts, keyed by name, including their argument list. */
 export type MCPPromptMeta = Record<
   string,
   Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
@@ -87,6 +94,7 @@ export type MCPPromptMeta = Record<
   }
 >
 
+/** The configuration `wireMCPResource` takes. */
 export type CoreMCPResource<
   PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
@@ -145,6 +153,7 @@ export type CoreMCPTool<
   middleware?: PikkuMiddleware[]
 }
 
+/** The configuration `wireMCPPrompt` takes. */
 export type CoreMCPPrompt<
   PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, MCPPromptResponse>
@@ -195,6 +204,7 @@ export type MCPPromptMessage = {
   }
 }
 
+/** What an MCP prompt function returns: the messages that start the conversation. */
 export type MCPPromptResponse = MCPPromptMessage[]
 
 export type MCPResourceMessage = {
@@ -202,6 +212,7 @@ export type MCPResourceMessage = {
   text: string
 }
 
+/** What an MCP resource function returns: one or more text contents, each with its URI. */
 export type MCPResourceResponse = MCPResourceMessage[]
 
 export type MCPToolMessage =
@@ -214,4 +225,5 @@ export type MCPToolMessage =
       data: string // base64
     }
 
+/** What an MCP tool function may return to control its content parts directly; any other output is sent as JSON text. */
 export type MCPToolResponse = MCPToolMessage[]

@@ -99,6 +99,7 @@ export interface ScenarioFailureDetail {
   browser?: ScenarioBrowserFailure[]
 }
 
+/** The outcome of one scenario in a run. */
 export interface ScenarioResult {
   name: string
   /**
@@ -144,6 +145,7 @@ export interface ScenarioSkip {
   reason: string
 }
 
+/** Everything one scenario run produced, scenario by scenario. */
 export interface ScenarioRunReport {
   environment: string
   results: ScenarioResult[]
@@ -158,6 +160,7 @@ export interface ScenarioRunReport {
   hookFailures: string[]
 }
 
+/** The state of a whole scenario run. */
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 
 /**

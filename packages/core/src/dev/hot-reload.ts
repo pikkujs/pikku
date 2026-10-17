@@ -59,6 +59,7 @@ const reloadFailureReason = (error: Error): string => {
   return `  ${error.stack ?? error.message}`
 }
 
+/** Controls a running {@link pikkuDevReloader}. */
 export interface PikkuDevReloaderHandle {
   close: () => void
   /** Re-import every file changed since the last drain (post-codegen, once
@@ -66,6 +67,21 @@ export interface PikkuDevReloaderHandle {
   reimportPending: () => Promise<void>
 }
 
+/**
+ * Watches the source directories and hot-swaps changed function exports into the
+ * running process, for `pikku dev`.
+ *
+ * Each changed `.ts` file (not tests, `.d.ts`, `.gen.ts` or hidden files) is
+ * re-imported after a 50ms debounce; every export that looks like a function
+ * config replaces the registered one, and the HTTP router and middleware,
+ * permission and channel-middleware caches are reset so re-run wirings take
+ * effect. A file that fails to import is logged and the old code is kept.
+ *
+ * Development only: it executes whatever is written to the watched directories.
+ *
+ * @param options - `srcDirectories` to watch and the `logger` reloads report to.
+ * @returns A handle to stop watching and to re-import files after codegen.
+ */
 export async function pikkuDevReloader(
   options: PikkuDevReloaderOptions
 ): Promise<PikkuDevReloaderHandle> {

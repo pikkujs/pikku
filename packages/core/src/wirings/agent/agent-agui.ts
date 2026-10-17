@@ -56,6 +56,15 @@ function resultToString(result: unknown): string {
   }
 }
 
+/**
+ * Wraps an agent stream channel so the events written to it go out as AG-UI protocol events
+ * (`RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, ...) instead of Pikku's own
+ * `AgentStreamEvent`s. `rpc.agent.stream` and `rpc.agent.resume` apply it for you.
+ *
+ * @param inner - The channel the AG-UI events are sent on.
+ * @param options - Thread and run ids to stamp on the events; generated when absent.
+ * @returns A channel that accepts `AgentStreamEvent`s.
+ */
 export function wrapChannelWithAGUI(
   inner: AgentStreamChannel,
   options?: AGUIChannelOptions

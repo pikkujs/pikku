@@ -18,6 +18,21 @@ const REMOTE_RPC_PREFIX = '/remote/rpc/'
 const isRemoteRpcPath = (path: string): boolean =>
   path.toLowerCase().startsWith(REMOTE_RPC_PREFIX)
 
+/**
+ * Authenticates calls between deployments of the same app, on the generated
+ * remote-RPC route. Once `PIKKU_REMOTE_SECRET` is set it requires a
+ * `Bearer` JWT with audience `pikku-remote`; a token bound to a function (`fn`)
+ * is only accepted on that function's `/remote/rpc/<fn>` path, and any session
+ * it carries is decrypted with the secret and set on the wire.
+ *
+ * Without the secret it lets non-remote paths through and refuses
+ * `/remote/rpc/*`, so the remote surface fails closed.
+ *
+ * @throws {UnauthorizedError} On a missing, malformed, mis-addressed or
+ * undecryptable token.
+ * @throws {WeakKeyMaterialError} When the secret is too short to use.
+ * @throws {Error} When the secret is set but no JWT service is configured.
+ */
 export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
   async ({ secrets, jwt }, { http, setInitialSession }, next) => {
     if (!http?.request || !secrets) {

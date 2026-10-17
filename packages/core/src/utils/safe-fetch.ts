@@ -200,6 +200,7 @@ export function setDefaultHostResolver(resolver: HostResolver | undefined) {
   defaultHostResolver = resolver
 }
 
+/** Restrictions {@link safeFetch} and {@link assertFetchableUrl} apply to each URL they visit. */
 export interface SafeFetchOptions {
   /**
    * When set, the host of every hop must appear in this allowlist. When omitted,
@@ -254,6 +255,19 @@ async function assertResolvedHostAllowed(
   }
 }
 
+/**
+ * Synchronous SSRF guard for a single URL: only `http:`/`https:` is accepted, and
+ * the host must be in `allowedHosts` when given, or else must not be a private,
+ * loopback or link-local literal ({@link isPrivateHost}).
+ *
+ * It does not resolve DNS, so a public name pointing at an internal address
+ * passes; {@link safeFetch} adds that check per hop.
+ *
+ * @param url - The URL to check.
+ * @param options - Only `allowedHosts` is read here.
+ * @returns The parsed URL.
+ * @throws TypeError for an unparseable URL; Error for a refused scheme or host.
+ */
 export function assertFetchableUrl(
   url: string,
   options: SafeFetchOptions = {}

@@ -6,6 +6,12 @@ import {
   runScheduledTask,
 } from './scheduler-runner.js'
 
+/**
+ * Runs a scheduled task on behalf of a remote job runner, so a task can be triggered in a deployment unit other than the one that scheduled it.
+ * Generated remote-job wiring calls this; apps do not call it directly.
+ *
+ * @throws {BadRequestError} When the named task is not wired in this unit.
+ */
 export async function pikkuRemoteScheduledJobFunc(
   { logger }: { logger: Logger },
   { taskName }: RemoteScheduledJobData

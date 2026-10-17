@@ -6,11 +6,19 @@ import type {
 } from '../wirings/workflow/scenario-step.types.js'
 import type { CommonWireMeta } from '../types/core.types.js'
 
+/**
+ * The services a function's body uses, as read by the inspector. `optimized`
+ * says whether the list could be determined statically and so can be relied on.
+ */
 export interface FunctionServicesMeta {
   optimized: boolean
   services: string[]
 }
 
+/**
+ * The wire keys a function's body uses, as read by the inspector. `optimized`
+ * says whether the list could be determined statically and so can be relied on.
+ */
 export interface FunctionWiresMeta {
   optimized: boolean
   wires: string[]
@@ -26,6 +34,11 @@ export type PermissionMetadata = {
   inline?: boolean
 }
 
+/**
+ * The part of a function's generated metadata the runtime needs to run it:
+ * schemas, auth, scopes, flags and exposure. The verbose fields live on
+ * {@link FunctionMeta}.
+ */
 export type FunctionRuntimeMeta = {
   pikkuFuncId: string
   inputSchemaName: string | null
@@ -139,6 +152,11 @@ export type FunctionRuntimeMeta = {
   outputHash?: string
 }
 
+/**
+ * Everything codegen records about one function: the runtime fields plus the
+ * source locations, inputs, middleware and call graph that tooling (the
+ * console, deploy planner, coverage) reads.
+ */
 export type FunctionMeta = FunctionRuntimeMeta &
   Partial<
     {
@@ -178,5 +196,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
     } & CommonWireMeta
   >
 
+/** Runtime metadata for every function, keyed by function id. */
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
+/** Full metadata for every function, keyed by function id. */
 export type FunctionsMeta = Record<string, FunctionMeta>

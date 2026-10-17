@@ -7,6 +7,7 @@ export const CHANNEL_RPC_REQUEST = 'pikku-rpc-request'
 export const CHANNEL_RPC_RESPONSE = 'pikku-rpc-response'
 export const CHANNEL_RPC_PENDING = 'pikku-rpc-pending'
 
+/** A request frame asking the peer on a channel to run one of its capabilities. */
 export interface ChannelRPCRequest {
   action: typeof CHANNEL_RPC_REQUEST
   id: string
@@ -15,6 +16,7 @@ export interface ChannelRPCRequest {
   traceId?: string
 }
 
+/** The answer to a {@link ChannelRPCRequest} with the same `id`: a result when `ok`, an error name and message otherwise. */
 export interface ChannelRPCResponse {
   action: typeof CHANNEL_RPC_RESPONSE
   id: string
@@ -98,6 +100,7 @@ export interface ApprovalPolicy {
   approvalDescriptionFn?: (input: unknown) => Promise<string> | string
 }
 
+/** A function one end of a channel offers for the peer to call through `channel.remote`. */
 export type CapabilityHandler = (data: any) => Promise<unknown> | unknown
 
 /**
@@ -110,8 +113,10 @@ export interface CapabilityDef extends ApprovalPolicy {
   execute: CapabilityHandler
 }
 
+/** A capability as registered: a bare handler, which is treated as needing approval, or a {@link CapabilityDef} that says whether it does. */
 export type Capability = CapabilityHandler | CapabilityDef
 
+/** The capabilities one end of a channel answers to, by name. Only names listed here run; anything else the peer asks for is refused. */
 export type Capabilities = Record<string, Capability>
 
 export const isCapabilityDef = (

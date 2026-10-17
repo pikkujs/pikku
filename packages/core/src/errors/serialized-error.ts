@@ -1,3 +1,7 @@
+/**
+ * An error flattened to plain data so it can cross a process, queue or
+ * workflow-step boundary.
+ */
 export interface SerializedError {
   /** What went wrong, carried across a boundary that cannot carry an Error. */
   message: string

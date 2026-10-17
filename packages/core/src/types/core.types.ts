@@ -69,6 +69,10 @@ import type {
   AnalyticsService,
 } from '../analytics/analytics.types.js'
 
+/**
+ * Every transport a function can be wired to; read off `wire.wireType` to see
+ * how the current invocation arrived.
+ */
 export type PikkuWiringTypes =
   | 'http'
   | 'scheduler'
@@ -111,6 +115,10 @@ export interface PostgresConfig {
   prepare?: boolean
 }
 
+/**
+ * The config every Pikku app's `Config` extends. `createConfig` returns it and
+ * it is handed to `createSingletonServices`.
+ */
 export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   logLevel?: LogLevel
   secrets?: {
@@ -123,6 +131,11 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   postgres?: PostgresConfig
 } & Config
 
+/**
+ * The fields Pikku itself reads from a session. Extend it with your own
+ * `UserSession`; the runner only enforces `readonly` and `scopes`, the rest is
+ * carried for you.
+ */
 export interface CoreUserSession {
   /** Who the session belongs to, as your own system identifies them. Pikku only carries it. */
   userId?: string
@@ -152,6 +165,12 @@ export interface AuthInstance {
   $context?: Promise<any>
 }
 
+/**
+ * The services created once at startup and shared by every invocation. Your
+ * `SingletonServices` extends it; only `config`, `logger`, `variables` and
+ * `secrets` are required, every other service is opt-in and the features that
+ * need it fail with `MissingServiceError` or stay inert without it.
+ */
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   schema?: SchemaService
   jwt?: JWTService
@@ -265,6 +284,13 @@ export type GetCredential<TCredentials = Record<string, unknown>> =
         <T = unknown>(name: string): T | null | Promise<T | null>
       }
 
+/**
+ * The second argument of every Pikku function: what this invocation knows
+ * about how it was called. `rpc` and the credential readers are always
+ * present; each transport fills in its own key (`http`, `channel`, `queue`,
+ * `workflow`, …) and leaves the rest undefined, and `session` is typed as
+ * present only for functions that require one.
+ */
 export type PikkuWire<
   In = unknown,
   Out = unknown,
@@ -391,6 +417,10 @@ export type PikkuRawWire = Omit<
     abortScope?: AbortScope
   }
 
+/**
+ * The services a function receives. Today the same as the singleton services;
+ * kept as its own name so function signatures do not depend on that.
+ */
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 
@@ -402,11 +432,20 @@ export type CoreSecretlessSingletonServices<
   Config extends CoreConfig = CoreConfig,
 > = SecretlessServices<CoreSingletonServices<Config>>
 
+/**
+ * The per-invocation services: whatever `Services` adds on top of the singleton
+ * services, minus the session.
+ */
 export type WireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services = CoreServices<SingletonServices>,
 > = Omit<Services, keyof SingletonServices | 'session'>
 
+/**
+ * Your `createSingletonServices` factory: builds the shared services once from
+ * the config. `existingServices` carries services a host has already created,
+ * which the factory should reuse rather than recreate.
+ */
 export type CreateSingletonServices<
   Config extends CoreConfig,
   SingletonServices extends CoreSingletonServices,
@@ -415,6 +454,11 @@ export type CreateSingletonServices<
   existingServices?: Partial<SingletonServices>
 ) => Promise<SingletonServices>
 
+/**
+ * Your `createWireServices` factory: builds the services scoped to one
+ * invocation. A returned service with a `close()` is closed by the runner when
+ * the invocation ends.
+ */
 export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services extends CoreServices<SingletonServices> =
@@ -425,11 +469,19 @@ export type CreateWireServices<
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
 
+/**
+ * Your `createConfig` factory: builds the app config, typically reading from
+ * the `VariablesService`.
+ */
 export type CreateConfig<
   Config extends CoreConfig,
   RemainingArgs extends any[] = unknown[],
 > = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 
+/**
+ * Hooks a server runtime calls around starting and stopping, with the
+ * singleton services.
+ */
 export type ServerLifecycle<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > = {
@@ -439,6 +491,10 @@ export type ServerLifecycle<
   afterStop?: (services: SingletonServices) => void | Promise<void>
 }
 
+/**
+ * The metadata fields shared by every wiring's generated meta entry.
+ * @internal
+ */
 export type CommonWireMeta = {
   pikkuFuncId: string
   packageName?: string
@@ -463,11 +519,16 @@ export type CommonWireMeta = {
  * addon (reader) and the console UI (renderer).
  */
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
+/** How far behind the latest release an outdated dependency is. */
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
 
 /** `dev` = only reachable through devDependencies or build tooling, so never shipped. */
 export type SecurityDependencyType = 'prod' | 'dev'
 
+/**
+ * One advisory affecting an installed package, as written to
+ * `.pikku/audit.json`.
+ */
 export interface SecurityAuditIssue {
   package: string
   severity: SecuritySeverity
@@ -481,6 +542,7 @@ export interface SecurityAuditIssue {
   dependencyType?: SecurityDependencyType
 }
 
+/** One dependency with a newer release available. */
 export interface SecurityAuditUpdate {
   package: string
   current: string
@@ -489,6 +551,7 @@ export interface SecurityAuditUpdate {
   dependencyType?: SecurityDependencyType
 }
 
+/** Counts of the issues by severity and the updates by level. */
 export interface SecurityAuditSummary {
   totalIssues: number
   critical: number
@@ -501,6 +564,10 @@ export interface SecurityAuditSummary {
   patch: number
 }
 
+/**
+ * The whole of `.pikku/audit.json`, written by `pikku audit` and read by the
+ * console.
+ */
 export interface SecurityAuditReport {
   schemaVersion: number
   tool: string

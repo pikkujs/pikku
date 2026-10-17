@@ -2,6 +2,7 @@ import type { Secret } from './data-classification.js'
 
 declare const secretValueBrand: unique symbol
 
+/** The placeholder a `SecretValue` serializes to in JSON and `util.inspect` output. */
 export const REDACTED = '[secret]'
 
 /** Runtime marker, resilient to duplicate copies of core. */
@@ -9,6 +10,10 @@ const SECRET_VALUE = Symbol.for('pikku.secretValue')
 
 const NODE_INSPECT = Symbol.for('nodejs.util.inspect.custom')
 
+/**
+ * Thrown when a `SecretValue` is coerced to a string (template literal, concatenation, `String()`),
+ * which would otherwise write the secret out in the clear. Call `.reveal()` instead.
+ */
 export class SecretCoercionError extends Error {
   constructor() {
     super(
@@ -61,9 +66,11 @@ export class SecretValue<T = string> {
   }
 }
 
+/** Wraps a value in a `SecretValue`, so it redacts when serialized and throws when coerced to a string. */
 export const createSecretValue = <T>(value: T): SecretValue<T> =>
   new SecretValue(value)
 
+/** Whether `value` is a `SecretValue`. Uses a global symbol, so it recognises instances from duplicate copies of core. */
 export const isSecretValue = (value: unknown): value is SecretValue<unknown> =>
   typeof value === 'object' && value !== null && SECRET_VALUE in value
 

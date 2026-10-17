@@ -1,3 +1,7 @@
+/**
+ * The declaration {@link defineSecret} takes. It describes a secret, never its
+ * value: the value lives in the `SecretService` under `secretId`.
+ */
 export type CoreSecret<T = unknown> = {
   /** The key code reads it by: `secrets.getSecret('NAME')`. SCREAMING_SNAKE_CASE. */
   name: string
@@ -26,6 +30,10 @@ export type CoreSecret<T = unknown> = {
   allowedHosts?: string[]
 }
 
+/**
+ * The OAuth 2 provider endpoints and scopes for a secret or credential that is
+ * obtained by an authorization-code flow rather than pasted in.
+ */
 export type OAuth2CredentialConfig = {
   /** Where access/refresh tokens are stored */
   tokenSecretId: string
@@ -43,6 +51,7 @@ export type OAuth2CredentialConfig = {
   additionalParams?: Record<string, string>
 }
 
+/** A secret declaration as recorded in generated meta, with the schema replaced by its name. */
 export type SecretDefinitionMeta = {
   name: string
   displayName: string
@@ -62,8 +71,10 @@ export type SecretDefinitionMeta = {
   sourceFile?: string
 }
 
+/** Secret declarations collected by the CLI, keyed by name. */
 export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
 
+/** Secret declarations as the inspector found them, before de-duplication. */
 export type SecretDefinitions = SecretDefinitionMeta[]
 
 /**

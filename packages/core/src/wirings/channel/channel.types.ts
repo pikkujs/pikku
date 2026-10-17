@@ -7,14 +7,17 @@ import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
 } from '../../middleware/middleware.types.js'
+/** A binary channel frame. */
 export type BinaryData = ArrayBuffer | Uint8Array
 
+/** Middleware that runs around each channel message. Call `next` with the event to pass it on, with several events to fan it out, or with `null` to drop it. */
 export type CorePikkuChannelMiddleware<Services = any, Event = unknown> = (
   services: Services,
   event: Event,
   next: (event: Event | Event[] | null) => Promise<void> | void
 ) => Promise<void> | void
 
+/** Builds a {@link CorePikkuChannelMiddleware} from configuration, so the same middleware can be reused with different settings. */
 export type CorePikkuChannelMiddlewareFactory<
   In = any,
   Services = any,
@@ -27,6 +30,7 @@ import type {
   CorePikkuPermission,
 } from '../../function/functions.types.js'
 
+/** Options for running a channel connection. They mean the same as the matching {@link RunHTTPWiringOptions}. */
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
   respondWith404: boolean
@@ -35,12 +39,14 @@ export type RunChannelOptions = Partial<{
   bubbleErrors: boolean
 }>
 
+/** The connection a channel runner is handed: its id and, when it came over HTTP, the upgrade request and response. */
 export type RunChannelParams<ChannelData> = {
   channelId: string
   request?: PikkuHTTPRequest<ChannelData>
   response?: PikkuHTTPResponse
 }
 
+/** Generated metadata for one channel handler: the function it runs and its resolved middleware. */
 export interface ChannelMessageMeta {
   pikkuFuncId: string
   packageName?: string
@@ -51,6 +57,7 @@ export interface ChannelMessageMeta {
   middleware?: MiddlewareMetadata[]
 }
 
+/** Generated metadata for one wired channel: its route, input schema, handlers and message routing. */
 export interface ChannelMeta {
   name: string
   route: string
@@ -84,8 +91,10 @@ export interface ChannelMeta {
   channelMiddleware?: MiddlewareMetadata[]
 }
 
+/** Generated metadata for every wired channel, keyed by name. */
 export type ChannelsMeta = Record<string, ChannelMeta>
 
+/** The configuration {@link wireChannel} takes. An app's generated `wireChannel` narrows the function, permission and middleware types to its own. */
 export type CoreChannel<
   ChannelData,
   Channel extends string,
@@ -168,6 +177,13 @@ export type CoreChannel<
  */
 export type ChannelRemote = (funcName: string, data?: any) => Promise<any>
 
+/**
+ * The `channel` part of a function's wire when it runs on a channel: the connection's id and opening data, ways to send to and close it, per-connection state, and `remote` to call the peer.
+ *
+ * In serverless runtimes `setState`/`getState` go through the {@link ChannelStore},
+ * so state survives between invocations; elsewhere it lives in memory for the
+ * connection's lifetime.
+ */
 export interface PikkuChannel<
   OpeningData,
   out Out,
@@ -192,12 +208,14 @@ export interface PikkuChannel<
   remote: Remote
 }
 
+/** The runtime side of one connection: how a channel's sends reach the actual socket. */
 export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
   send(message: Out, isBinary?: boolean): Promise<void> | void
   sendBinary(data: BinaryData): Promise<void> | void
   getChannel(): PikkuChannel<OpeningData, Out>
 }
 
+/** Creates the {@link PikkuChannelHandler} for a connection. Serverless runtimes pass one so the channel can send back through the platform's API. */
 export type PikkuChannelHandlerFactory<OpeningData = unknown, Out = unknown> = (
   channelId: string,
   channelName: string,

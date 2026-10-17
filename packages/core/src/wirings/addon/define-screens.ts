@@ -19,8 +19,10 @@ export type AddonAppScreen = AddonScreenBase & {
   app: string
 }
 
+/** One screen an addon ships: either a component the host renders or a static app it serves in a sandboxed iframe. */
 export type AddonScreen = AddonComponentScreen | AddonAppScreen
 
+/** The manifest passed to `defineScreens`: the addon's title, optional icon and its screens. */
 export type ScreensManifest = {
   title: string
   icon?: string

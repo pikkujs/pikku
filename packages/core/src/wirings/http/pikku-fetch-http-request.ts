@@ -7,6 +7,7 @@ import {
 } from '../../errors/errors.js'
 import { mergeRequestData } from './merge-request-data.js'
 
+/** The request body limit, in bytes (10 MiB), applied when a web `Request` is wrapped and no `maxBodySize` is given. A larger body is refused with a 413 before it is fully read. */
 export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024
 
 export type PikkuFetchHTTPRequestOptions = Partial<{

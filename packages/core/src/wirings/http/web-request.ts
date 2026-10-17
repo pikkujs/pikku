@@ -2,6 +2,16 @@ import type { PikkuHTTPRequest } from './http.types.js'
 import type { PikkuHTTPResponse } from './http.types.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 
+/**
+ * Converts a {@link PikkuHTTPRequest} into a web `Request`, for handing it to a library that speaks the fetch API.
+ *
+ * Without `baseUrl` the origin is built from `x-forwarded-proto` and
+ * `x-forwarded-host` (then `host`), which any client can set. Pass `baseUrl`
+ * unless the host sits behind a proxy that overwrites those headers.
+ *
+ * @param req - The request to convert. Its body is streamed, not buffered.
+ * @param baseUrl - The origin to resolve the path against.
+ */
 export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   const proto = req.header('x-forwarded-proto') ?? 'http'
   const host =
@@ -125,6 +135,13 @@ async function readBody(
   return bytes.byteLength === 0 ? null : bytes
 }
 
+/**
+ * Copies a web `Response`'s status, headers, cookies and body onto a {@link PikkuHTTPResponse}.
+ *
+ * This is what happens when a pikku function returns a `Response`. `Content-Length`
+ * and `Transfer-Encoding` are dropped, multiple `Set-Cookie` headers are kept, and an SSE
+ * body is streamed through when the target supports it.
+ */
 export async function applyWebResponse(
   res: PikkuHTTPResponse,
   webResponse: Response

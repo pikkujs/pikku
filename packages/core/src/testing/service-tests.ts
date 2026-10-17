@@ -12,6 +12,10 @@ import type { SessionStore } from '../services/session-store.js'
 import type { LeaseService } from '../services/lease-service.js'
 import type { WorkflowFencingHarness } from './service-tests/workflow-fencing-tests.js'
 
+/**
+ * Input to {@link defineServiceTests}: a backend `name` for the suite titles and a
+ * factory per service the backend implements. Only the services supplied are tested.
+ */
 export interface ServiceTestConfig {
   name: string
   services: {
