@@ -31,8 +31,8 @@
     "skills"
   ],
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "yaml": "^2.9.0"
+    "@types/node": "^25.9.9",
+    "yaml": "^2.9.1"
   },
   "engines": {
     "node": ">=24"

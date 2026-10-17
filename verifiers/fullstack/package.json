@@ -14,8 +14,8 @@
     "@pikku/cli": "workspace:*",
     "@playwright/test": "1.58.2",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
-    "tsx": "^4.23.12"
+    "@types/node": "^25.9.9",
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "tsc": "tsc --noEmit",

@@ -30,7 +30,7 @@
     "@pikku/cli": "*",
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^22",
+    "@types/node": "^25.9.9",
     "zod": "^4"
   },
   "private": true

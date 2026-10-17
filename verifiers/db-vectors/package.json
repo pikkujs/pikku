@@ -11,7 +11,7 @@
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "kysely": "^0.29.5"
+    "kysely": "^0.29.6"
   },
   "devDependencies": {
     "@pikku/bun-server": "workspace:*",
@@ -23,9 +23,9 @@
     "@pikku/schedule": "workspace:*",
     "@pikku/ws": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
-    "tsx": "^4.23.12",
-    "ws": "^8.21.3"
+    "@types/node": "^25.9.9",
+    "tsx": "^4.23.15",
+    "ws": "^8.22.0"
   },
   "scripts": {
     "pikku": "echo 'skip'",

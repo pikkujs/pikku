@@ -39,7 +39,7 @@ export function testIds(): Plugin {
         plugins: [[injectTestIds, { sourceAnchors }]],
       })
       if (!result?.code) return null
-      return { code: result.code, map: result.map }
+      return { code: result.code, map: result.map && JSON.stringify(result.map) }
     },
   }
 }

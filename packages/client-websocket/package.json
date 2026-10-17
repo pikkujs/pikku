@@ -31,7 +31,7 @@
     "prepublishOnly": "bun run build"
   },
   "optionalDependencies": {
-    "ws": "^8.21.3"
+    "ws": "^8.22.0"
   },
   "engines": {
     "node": ">=24"

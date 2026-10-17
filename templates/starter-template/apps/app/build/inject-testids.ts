@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { PluginObj, NodePath, types as BabelTypes } from '@babel/core'
+import type { PluginObject, NodePath, types as BabelTypes } from '@babel/core'
 
 /**
  * Stamp the addresses browser scenarios use, at compile time.
@@ -179,7 +179,7 @@ export interface InjectTestIdsOptions {
 export default function injectTestIds(
   { types: t }: { types: typeof BabelTypes },
   options: InjectTestIdsOptions = {},
-): PluginObj {
+): PluginObject {
   const anchors = options.sourceAnchors === true
   const root = options.root ?? process.cwd()
 

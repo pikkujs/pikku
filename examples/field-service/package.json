@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.48",
+    "@ai-sdk/openai-compatible": "^3.0.70",
     "@pikku/addon-console": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.56",
@@ -14,23 +14,23 @@
     "@pikku/schema-cfworker": "^0.12.8",
     "@pikku/websocket": "^0.12.5",
     "@standard-schema/spec": "^1.1.0",
-    "@tanstack/react-query": "^5.90.2",
-    "ai": "^6.0.0",
-    "better-auth": "^1.7.5",
-    "kysely": "^0.29.5",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "@tanstack/react-query": "^5.104.3",
+    "ai": "^7.0.142",
+    "better-auth": "^1.7.10",
+    "kysely": "^0.29.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "^0.12.190",
-    "@types/node": "^24",
+    "@types/node": "^25.9.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5.0.4",
-    "tsx": "^4.23.12",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "vite": "^7.1.14"
+    "vite": "^8.3.4"
   },
   "scripts": {
     "build": "pikku all && pikku db migrate && tsc --noEmit && tsc --noEmit -p apps/app/tsconfig.json",

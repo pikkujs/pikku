@@ -100,11 +100,11 @@
     "picoquery": "^2.5.0"
   },
   "devDependencies": {
-    "@ag-ui/core": "0.0.57",
+    "@ag-ui/core": "0.0.59",
     "@pikku/deploy": "^0.12.15",
-    "@types/node": "^24.13.3",
+    "@types/node": "^25.9.9",
     "esbuild": "~0.28.2",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "engines": {
     "node": ">=24"

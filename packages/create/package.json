@@ -16,15 +16,15 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.5.2",
-    "chalk": "^6.0.0",
+    "@inquirer/prompts": "^8.7.3",
+    "chalk": "^6.0.1",
     "commander": "^15.0.0",
     "giget": "^3.3.1",
     "nanospinner": "^1.2.2"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
-    "tsx": "^4.23.12"
+    "@types/node": "^25.9.9",
+    "tsx": "^4.23.15"
   },
   "type": "module",
   "exports": {

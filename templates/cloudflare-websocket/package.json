@@ -16,11 +16,11 @@
     "@pikku/core": "^0.12.142"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260815.1",
+    "@cloudflare/workers-types": "^5.20261016.1",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
+    "@types/node": "^25.9.9",
     "@types/ws": "^8",
     "typescript": "^6.0.3",
-    "wrangler": "^4.123.0"
+    "wrangler": "^4.151.0"
   }
 }

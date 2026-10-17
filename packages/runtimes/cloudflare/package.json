@@ -48,15 +48,15 @@
     "@pikku/modelcontextprotocol": "^0.12.17"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.21.3",
-    "@cloudflare/workers-types": "^5.20260815.1",
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/workers-types": "^5.20261016.1",
     "@pikku/core": "^0.12.138",
     "@pikku/kysely": "^0.13.35",
     "@pikku/modelcontextprotocol": "^0.12.17",
-    "@vitest/runner": "^4.1.10",
-    "@vitest/snapshot": "^4.1.10",
-    "kysely": "^0.29.5",
-    "vitest": "^4.1.10"
+    "@vitest/runner": "^4.1.11",
+    "@vitest/snapshot": "^4.1.11",
+    "kysely": "^0.29.6",
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=24"

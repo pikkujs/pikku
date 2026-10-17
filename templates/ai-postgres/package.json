@@ -14,24 +14,24 @@
     "test": "npm run migrate && bash ../functions/run-tests.sh --agent"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.39",
-    "@ai-sdk/openai": "^4.0.42",
+    "@ai-sdk/anthropic": "^4.0.81",
+    "@ai-sdk/openai": "^4.0.95",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/core": "^0.12.142",
     "@pikku/express": "^0.12.17",
     "@pikku/kysely-postgres": "^0.12.27",
     "@pikku/schema-cfworker": "^0.12.8",
-    "kysely": "^0.29.5",
-    "kysely-postgres-js": "^3.0.0",
+    "kysely": "^0.29.6",
+    "kysely-postgres-js": "^5.0.1",
     "postgres": "^3.4.9",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@pikku/cli": "^0.12.190",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24"
+    "@types/node": "^25.9.9"
   },
   "exports": {
     ".": "./src/start.ts"

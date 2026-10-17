@@ -1,0 +1,50 @@
+---
+'@pikku/addon-console': patch
+'@pikku/addon-graph': patch
+'@pikku/ai-deepinfra': patch
+'@pikku/ai-vercel': patch
+'@pikku/assistant-ui': patch
+'@pikku/aws-services': patch
+'@pikku/azure-functions': patch
+'@pikku/better-auth': patch
+'@pikku/browser': patch
+'@pikku/bun-server': patch
+'@pikku/cli': patch
+'@pikku/cloudflare': patch
+'@pikku/code-edit': patch
+'@pikku/core': patch
+'@pikku/deploy': patch
+'@pikku/express': patch
+'@pikku/fastify': patch
+'@pikku/fastify-plugin': patch
+'@pikku/gateway-slack': patch
+'@pikku/inspector': patch
+'@pikku/jose': patch
+'@pikku/knowledge': patch
+'@pikku/kysely': patch
+'@pikku/kysely-bun-sqlite': patch
+'@pikku/kysely-mysql': patch
+'@pikku/kysely-node-sqlite': patch
+'@pikku/kysely-postgres': patch
+'@pikku/kysely-sqlite': patch
+'@pikku/lambda': patch
+'@pikku/migrator-sql': patch
+'@pikku/modelcontextprotocol': patch
+'@pikku/mongodb': patch
+'@pikku/next': patch
+'@pikku/openapi-parser': patch
+'@pikku/pino': patch
+'@pikku/playwright': patch
+'@pikku/queue-bullmq': patch
+'@pikku/queue-pg-boss': patch
+'@pikku/schedule': patch
+'@pikku/skills': patch
+'@pikku/tanstack-start': patch
+'@pikku/uws': patch
+'@pikku/voice-agents': patch
+'@pikku/websocket': patch
+'@pikku/workflow-graph': patch
+'create-pikku': patch
+---
+
+Bump every external dependency to its latest version, majors included. `@pikku/express` reads the request charset through `content-type` 3's named `parse` export; `@pikku/next` admits Next 16 and `@pikku/pino` admits pino 10 as peers; the CLI keeps Better Auth 1.7.10's SQLite schema check quiet while deriving auth migrations; AG-UI `RUN_FINISHED` now reports `usage` as an array of `{ model, inputTokens, outputTokens, totalTokens }` to match `@ag-ui/core`.

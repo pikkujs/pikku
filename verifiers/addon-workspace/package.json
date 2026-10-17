@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@types/node": "^24"
+    "@types/node": "^25.9.9"
   },
   "scripts": {
     "test": "node run.mjs"

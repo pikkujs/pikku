@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import type { CorsOptions, CorsOptionsDelegate } from 'cors'
 import getRawBody from 'raw-body'
-import contentType from 'content-type'
+import { parse as parseContentType } from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
@@ -142,7 +142,7 @@ export class PikkuExpressServer {
       const file = await getRawBody(req, {
         length: req.headers['content-length'],
         limit: configContent.sizeLimit || '1mb',
-        encoding: contentType.parse(req.headers['content-type'] ?? '')
+        encoding: parseContentType(req.headers['content-type'] ?? '')
           .parameters.charset,
       })
 

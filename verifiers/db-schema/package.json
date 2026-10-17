@@ -12,11 +12,11 @@
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "better-auth": "^1.7.5",
+    "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",
-    "kysely": "^0.29.5",
-    "kysely-postgres-js": "^3.0.0",
-    "mysql2": "^3.24.5",
+    "kysely": "^0.29.6",
+    "kysely-postgres-js": "^5.0.1",
+    "mysql2": "^3.24.6",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
@@ -25,8 +25,8 @@
     "@pikku/verifier-db-remote-addon": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^24",
-    "tsx": "^4.23.12",
+    "@types/node": "^25.9.9",
+    "tsx": "^4.23.15",
     "zod": "^4"
   },
   "scripts": {
