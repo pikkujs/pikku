@@ -276,100 +276,43 @@ Go's wall time.
 **Open decision:** ship `vendor-schemas.mjs` with the package, or export the
 Zod conversion from `@pikku/inspector` and have the wrapper do it.
 
-## Known lossy or partial pieces
+## Status
 
-- **addon MCP tools.** `wireAddon({ mcp, mcpEndpoint })` tools and
-  `mcpEndpoints.surfaces` (load-addon-functions-meta.ts) wait for the
-  addWireAddon port: the stand-in does not read `mcp`. No parity project uses it.
-- **workflow helpers as MCP `func`.** `func: workflow('x')` gets a `__temp_`
-  id instead of `workflow:x` / functionType `helper`, because the shared
-  `extractFunctionName` does not port the workflow-helper case yet.
-- **addon functions.** `loadAddonFunctionsMeta` decodes addon
-  `pikku-functions-meta*.gen.json` into the typed `FunctionMeta`. Fields Go has
-  not typed yet are dropped. Fine for the sections above; revisit as groups
-  land.
-- **addon scopes** are not loaded. Secret, variable and credential overrides
-  are.
-- **Stand-in.** `addWireAddon` is a stand-in: it records addon declarations
-  only.
-- **Not ported.** The secret-usage and surface-usage sweeps, and
-  `validateWebhookSourceTriggers`.
+Everything is ported: every visitor group, the secret- and surface-usage
+sweeps, `validateWebhookSourceTriggers`, schema generation, finalize
+(post-process, contract hashes, manifest, workflow finalize, OpenAPI) and the
+standalone helpers (`collectSurface`, `readJsxLiteralText`,
+`readModuleSpecifiers`, `readTsconfigOutDir`, `scanFrontend`, `scanHooks`).
+Both engines produce byte-identical `pikku all` output on every template and
+example, and the parity harness passes `--strict` on them. The Go goldens in
+`testdata/*/inspect.golden.json` pin the fixtures.
 
-## Unported
+### Known differences
 
-### Visitor groups (analyze; must be ported to Go)
-
-| group | TS file | lines |
-|---|---|---|
-| addDefineScreens | add/add-define-screens.ts | 162 |
-| addWireRemoteAddon | add/add-wire-remote-addon.ts | 81 |
-| addWorkflow | add/add-workflow.ts | 481 |
-| addSchedule | add/add-schedule.ts | 120 |
-| addTrigger (+ validateWebhookSourceTriggers) | add/add-trigger.ts | 330 |
-| addGateway | add/add-gateway.ts | 143 |
-| addWorkflowGraph | add/add-workflow-graph.ts | 644 |
-| **total, wholly unported** | | **1961** |
-| addWireAddon (stand-in) | add/add-wire-addon.ts | 271 |
-
-Ported:
-- add-functions.ts (1633)
-- add-http-route.ts (530) and add-http-routes.ts (471)
-- add-queue-worker.ts (117)
-- add-file-extends-core-type.ts (66) and add-file-with-factory.ts (324)
-- add-rpc-invocations.ts (284)
-- add-keyed-wiring.ts (180), add-secret.ts, add-variable.ts and add-credential.ts (191)
-- resolve-versions.ts (235)
-- add-agent.ts (678), add-agent-scorer.ts (83), add-mcp-resource.ts (175), add-mcp-prompt.ts (157) and the MCP tool branch of add-functions.ts; fixture `testdata/agents-mcp`
-- schema-generator.ts (790)
-- load-addon-functions-meta.ts (745), functions and keyed meta only
-- add-middleware.ts (944), add-permission.ts (311), utils/middleware.ts and
-  utils/permissions.ts: `group_middleware.go`, `group_permission.go`,
-  `util_middleware.go` (which also has `resolveChannelMiddleware` /
-  `resolveAgentMiddleware` for the channel and agent groups)
-- add-auth.ts (357): `group_auth.go`. Its `throw` for better-auth's `admin()`
-  is `panic(visit.Abort{...})`, which `analyze.Run` turns into an error.
-- add-approval-description.ts (76)
-- add-channel.ts (784), add-cli.ts (1029): `group_channel.go`, `group_cli.go`
-- add-scope.ts (288, except applyDeclaredScopes, which runs in finalize),
-  add-system-role.ts (162), add-feature-flag.ts (234), add-virtual-users.ts
-  (287), add-feature.ts (293), add-analytics.ts (217), add-outgoing-webhook.ts
-  (120), and the secret- and surface-usage sweeps (`usage_sweeps.go`);
-  addon scope trees via `scope_addon.go`; fixture `testdata/governance`
-
-The TS inspector `src/` is 33542 lines excluding tests, of which `add/` is
-23613 including its tests.
-
-### Finalize (runs in TS on the Go state today)
-
-| step | TS file | lines |
-|---|---|---|
-| computeRequiredSchemas, validateSchemaReferences, stampAuthHandlerServices, aggregateRequiredServices, computeResolvedIOTypes, computeMiddlewareGroupsMeta, computePermissionsGroupsMeta, validateNoSecretAliasServices, registerDerivedOAuth2AppSecrets, validateSecretUsage, computeDiagnostics, validateSchemaWiringSeparation, validateWorkflowGraphAddons, validateScenario{Services,Steps,Features}, validateAgent{Models,ToolReferences,ScorerReferences}, validate{Secret,Variable,Credential}Overrides, validateAddon{Uses,ContentGrants}, validateRemoteAddon{Dependencies,Auth}, validateScopeReferences, validateSystemRoleScopes, validateVirtualUserRoles | utils/post-process.ts | 1898 |
-| computeContractHashes, extractContractsFromMeta, updateManifest, validateContracts | utils/contract-hashes.ts | 389 |
-| loadAddonSchemas | utils/load-addon-functions-meta.ts | (part of 745) |
-| finalizeWorkflows | utils/workflow/graph/finalize-workflows.ts | 130 |
-| finalizeWorkflowHelperTypes, finalizeWorkflowWires | utils/workflow/graph/finalize-workflow-wires.ts | 310 |
-| getFilesAndMethods | utils/get-files-and-methods.ts | 157 |
-| validateSingleStepWorkflows | utils/validate-single-step-workflows.ts | 36 |
-| annotateHttpRouteAuth | utils/annotate-http-route-auth.ts | 53 |
-| validateExposedFunctionsGated | utils/validate-exposed-functions-gated.ts | 131 |
-| validateTagsResolveToMiddleware | utils/validate-tags-resolve-to-middleware.ts | 48 |
-| generateOpenAPISpec | utils/serialize-openapi-json.ts | 277 |
-
-`validateNoSecretAliasServices` takes the checker
-(`utils/secret-alias-services.ts`). It must move into analyze, or record what
-it needs, before finalize can run without a TS program.
-
-### Standalone helpers (compiler API outside inspect())
-
-These become further `pikku-inspect` subcommands in the main.go switch.
-
-| export | TS file | lines |
-|---|---|---|
-| collectSurface | surface/collect-surface.ts | 824 |
-| readJsxLiteralText | utils/read-jsx-literal-text.ts | 154 |
-| readModuleSpecifiers | utils/read-module-specifiers.ts | 33 |
-| readTsconfigOutDir | utils/read-tsconfig-out-dir.ts | 13 |
-| resolveCoreType | utils/resolve-core-type.ts | 35 |
+- **Surface doc union order.** `collectSurface` prints some unions in a
+  different member order from TypeScript (about 31 of 9488 lines of the core
+  surface doc). TypeScript's own order is not stable either: it follows type
+  creation order, which follows file load order, so Node and Bun runs of the
+  TS engine already disagree. `internal/surface/print.go` could reuse
+  `tsutil.TypeToStringAt` / `tsutil.UnionTypesInIdOrder`, but only matches if
+  its sweep makes the same checker calls in the same order.
+- **Throws become errors.** Where the TS visitors throw and abort the whole
+  inspection, Go logs an error with the same message and carries on:
+  - CLI: multiple default commands, invalid choices, a bad parameters
+    pattern, `ref()` without a string literal, an unknown addon namespace;
+  - workflow graphs: non-literal node or config values (`name`, `mode`,
+    `notes`, rpc names). Go skips the value instead.
+- **Channel connect/disconnect without function meta.** TS writes a partial
+  `FunctionMeta`; `state.FunctionMeta` cannot express that shape. It cannot
+  happen in practice, because addFunctions registers those functions first.
+- **`readRequiredParentServices`** reads the generated file with a regex, so
+  it only understands the JSON-at-line-start form codegen writes. TS imports
+  the module.
+- **`scanHooks`** has no `fromClient` parameter; `scanFrontend` does the
+  client import check itself.
+- **Recursive types in OpenAPI.** A route output with a recursive type fails
+  in both engines. TS fails when the spec is serialized; Go fails earlier, in
+  `generateOpenAPISpec`.
 
 ## typescript-go pin
 

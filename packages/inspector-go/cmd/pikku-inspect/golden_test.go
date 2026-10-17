@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -113,8 +114,13 @@ func golden(t *testing.T, root string, res *protocol.Response) []byte {
 	repo, _ := filepath.Abs("../../../..")
 	s := strings.ReplaceAll(string(b), filepath.ToSlash(root), "<fixture>")
 	s = strings.ReplaceAll(s, filepath.ToSlash(repo), "<repo>")
+	// Unique type names hash the type's absolute path, as the TS engine's do,
+	// so they change with the checkout location.
+	s = uniqueTypeHash.ReplaceAllString(s, "${1}_<pathhash>")
 	return []byte(s + "\n")
 }
+
+var uniqueTypeHash = regexp.MustCompile(`\b([A-Za-z_]\w*?)_[0-9a-f]{12}\b`)
 
 func TestGolden(t *testing.T) {
 	testdata, _ := filepath.Abs("../../testdata")

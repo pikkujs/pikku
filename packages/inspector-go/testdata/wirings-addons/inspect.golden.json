@@ -129,7 +129,7 @@
             }
           ],
           [
-            "__object_83eb78702faa",
+            "__object_<pathhash>",
             {
               "originalName": "__object",
               "path": "<fixture>/src/functions.ts"
@@ -156,7 +156,7 @@
             {
               "type": "{ events: never[]; }",
               "references": [
-                "__object_83eb78702faa"
+                "__object_<pathhash>"
               ]
             }
           ]
