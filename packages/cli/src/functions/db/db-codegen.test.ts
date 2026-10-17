@@ -503,10 +503,11 @@ test('an unencrypted column names no key, so the manifest cannot imply protectio
   assert.doesNotMatch(manifest, /"name": \{[^}]*keyId/)
 })
 
-test('coercion.gen.ts says what has to consume it', async () => {
-  // The map is generated complete and correct and then applied by nobody. It
-  // is invisible locally — the dev driver hydrates a TEXT date into a Date on
-  // its own — and fatal on a deployed stage, which returns the raw string.
+test('coercion.gen.ts says where it is applied and warns against applying it twice', async () => {
+  // The map is invisible locally — the dev driver hydrates a TEXT date into a
+  // Date on its own — and fatal on a deployed stage, which returns the raw
+  // string. The hosts that attach it are named so an app does not attach it a
+  // second time to the same instance.
   const dir = mkdtempSync(join(tmpdir(), 'db-codegen-coercion-'))
   mkdirSync(join(dir, 'db'), { recursive: true })
   writeFileSync(
@@ -527,7 +528,10 @@ test('coercion.gen.ts says what has to consume it', async () => {
 
   const generated = readFileSync(coercionFile, 'utf8')
   assert.match(generated, /"created_at": "date"/)
-  assert.match(generated, /Nothing applies this for you/)
+  assert.doesNotMatch(generated, /Nothing applies this for you/)
+  assert.match(generated, /pikku dev/)
+  assert.match(generated, /coercionContributor/)
+  assert.match(generated, /Do not attach it to that instance again/)
   assert.match(generated, /createCoercionPlugin/)
   assert.match(generated, /createSingletonServices/)
 })

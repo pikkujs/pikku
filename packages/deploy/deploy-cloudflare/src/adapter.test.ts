@@ -82,6 +82,92 @@ describe('CloudflareProviderAdapter contributors', () => {
   })
 })
 
+const coercionMap = {
+  todo: { due_at: 'date', done: 'bool', meta: 'json' },
+} as const
+const coercionCtx = { ...(ctx as object), coercionMap } as never
+
+describe('CloudflareProviderAdapter column coercion', () => {
+  test("wraps the platform's kysely with the generated map", () => {
+    const source = new CloudflareProviderAdapter({
+      contributors: [kysely],
+    }).generateEntrySource(coercionCtx)
+
+    assert.match(
+      source,
+      /import { createCoercionPlugin } from '@pikku\/kysely'/
+    )
+    assert.ok(
+      source.indexOf('createCoercionPlugin({ map:') >
+        source.indexOf('services.kysely = new Kysely'),
+      'the map wraps the kysely the other contributor built, so it comes after it'
+    )
+    assert.ok(source.includes(JSON.stringify(coercionMap)))
+  })
+
+  test('stays last when a contributor is registered after it', () => {
+    const source = new CloudflareProviderAdapter({
+      contributors: [{ ...kysely, name: 'other' }, kysely],
+    }).generateServerEntrySource(coercionCtx)
+
+    assert.ok(
+      source.indexOf('createCoercionPlugin({ map:') >
+        source.lastIndexOf('services.kysely = new Kysely')
+    )
+  })
+
+  test('an app with no coercion map gets no plugin and no import', () => {
+    const source = new CloudflareProviderAdapter({
+      contributors: [kysely],
+    }).generateEntrySource(ctx)
+
+    assert.doesNotMatch(source, /createCoercionPlugin|@pikku\/kysely/)
+  })
+
+  test('a platform that applies the map itself can turn it off', () => {
+    const source = new CloudflareProviderAdapter({
+      contributors: [kysely],
+      coercion: false,
+    }).generateEntrySource(coercionCtx)
+
+    assert.doesNotMatch(source, /createCoercionPlugin/)
+  })
+})
+
+describe('CloudflareProviderAdapter addon registration', () => {
+  test('a worker builds its services only after loadAddons()', () => {
+    const adapter = new CloudflareProviderAdapter()
+    assert.equal(adapter.lazyAddonRegistration, true)
+
+    const source = adapter.generateEntrySource(ctx)
+    assert.match(
+      source,
+      /import \* as __pikkuBootstrap from '\.\/\.pikku\/pikku-bootstrap\.gen\.js'/
+    )
+    assert.doesNotMatch(source, /^import '\.\/\.pikku\/pikku-bootstrap/m)
+    assert.ok(
+      source.includes(
+        [
+          '  await (__pikkuBootstrap as { loadAddons?: () => Promise<unknown> }).loadAddons?.()',
+          '  return createSingletonServices(...args)',
+        ].join('\n')
+      )
+    )
+    assert.match(
+      source,
+      /createSingletonServices: createSingletonServicesAfterAddons/
+    )
+  })
+
+  test('the container keeps its eager bootstrap', () => {
+    const source = new CloudflareProviderAdapter().generateServerEntrySource(
+      ctx
+    )
+    assert.match(source, /^import '\.\/\.pikku\/pikku-bootstrap\.gen\.js'/m)
+    assert.doesNotMatch(source, /loadAddons/)
+  })
+})
+
 const inboxUnit = {
   ...(unit as object),
   handlers: [
