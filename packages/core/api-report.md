@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3293 observable things**: 1100 exported names, plus
-2193 members on the classes and interfaces among them, reachable
+**3299 observable things**: 1103 exported names, plus
+2196 members on the classes and interfaces among them, reachable
 through 58 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,14 +14,14 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 178 | 152 | 484 |
+| `./services` | 178 | 152 | 485 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
-| `./queue` | 22 | 22 | 71 |
+| `./queue` | 25 | 25 | 73 |
 | `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
@@ -3076,6 +3076,10 @@ export interface QueueIdentityBinding {
   jobId?: string
   data: unknown
 }
+export type QueueInspection = {
+  counts: QueueJobCounts
+  recent: QueueJobRecord[]
+}
 export interface QueueJob<T = any, R = any> {
   id: string
   queueName: string
@@ -3086,11 +3090,23 @@ export interface QueueJob<T = any, R = any> {
   metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
   pikkuUserId?: string
 }
+export type QueueJobCounts = Record<QueueJobStatus, number>
 export class QueueJobDiscardedError extends PikkuError {
   constructor(jobId: string, reason?: string)
 }
 export class QueueJobFailedError extends PikkuError {
   constructor(jobId: string, reason?: string)
+}
+export type QueueJobRecord = {
+  jobId: string
+  status: QueueJobStatus
+  attemptsMade: number
+  maxAttempts: number
+  createdAt: Date
+  processedAt: Date | null
+  finishedAt: Date | null
+  durationMs: number | null
+  error: string | null
 }
 export type QueueJobStatus =
   'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
@@ -3100,6 +3116,7 @@ export type QueueRegistrationCallback<T = any> = (
 ) => Promise<T>
 export interface QueueService {
   readonly supportsResults: boolean
+  inspect?(queueName: string, opts?: { limit?: number }): Promise<QueueInspection>
   add<T>(queueName: string, data: Safe<T>, options?: JobOptions): Promise<string>
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
 }
@@ -3123,6 +3140,7 @@ export class SignedQueueService implements QueueService {
   get supportsResults(): boolean
   public async add<T>(queueName: string, data: Safe<T>, options?: JobOptions): Promise<string>
   public async getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>
+  public get inspect(): | ((queueName: string, opts?: { limit?: number }) => Promise<QueueInspection>) | undefined
 }
 wireQueueWorker: <InputData = any, OutputData = any, PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>> = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<InputData, OutputData>>>(queueWorker: CoreQueueWorker<PikkuFunctionConfig>) => void
 ```
@@ -5154,6 +5172,7 @@ export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
   async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
   async getJob(): Promise<null>
+  async inspect(queueName: string, opts?: { limit?: number }): Promise<QueueInspection>
 }
 export class InMemorySessionStore< UserSession extends CoreUserSession = CoreUserSession, > implements SessionStore<UserSession> {
   async get(pikkuUserId: string): Promise<UserSession | undefined>
