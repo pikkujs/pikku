@@ -1,5 +1,6 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { BetterAuthInstance } from './define-auth.js'
+import type { StatelessCookieCacheOptions } from './auth-session-stateless.js'
 
 /**
  * A day. Long enough that nobody is signed out mid-task, short enough that a ban
@@ -23,14 +24,68 @@ export const STATELESS_COOKIE_CACHE_MAX_AGE = 60 * 60 * 24
  */
 let statelessSessionInUse = false
 
+/** How each constructed stateless middleware was told to read the cookie. */
+type StatelessCookieReader = {
+  cookiePrefix: string
+  cookieCache: StatelessCookieCacheOptions
+}
+let statelessCookieReaders: StatelessCookieReader[] = []
+
 /** @internal Called by `betterAuthStatelessSession`. */
-export const markStatelessSessionInUse = (): void => {
+export const markStatelessSessionInUse = (
+  reader?: StatelessCookieReader
+): void => {
   statelessSessionInUse = true
+  if (reader) {
+    statelessCookieReaders.push(reader)
+  }
 }
 
 /** @internal Test seam. */
 export const resetStatelessSessionInUse = (): void => {
   statelessSessionInUse = false
+  statelessCookieReaders = []
+}
+
+/**
+ * The stateless middleware reads the cookie with options of its own, because it
+ * never builds the auth instance that holds the real ones. When both exist in
+ * one process, say so if they disagree — otherwise every request is silently
+ * anonymous (another prefix or strategy) or accepts cookies a version bump was
+ * meant to invalidate.
+ */
+const reportStatelessCookieMismatch = (
+  options: any,
+  logger?: CoreSingletonServices['logger']
+): void => {
+  const cookieCache = options?.session?.cookieCache ?? {}
+  const appPrefix = options?.advanced?.cookiePrefix || 'better-auth'
+  for (const reader of statelessCookieReaders) {
+    const problems: string[] = []
+    if (reader.cookiePrefix !== appPrefix) {
+      problems.push(
+        `cookiePrefix is '${reader.cookiePrefix}' but the auth config uses '${appPrefix}'`
+      )
+    }
+    if (
+      reader.cookieCache.strategy &&
+      reader.cookieCache.strategy !== (cookieCache.strategy ?? 'compact')
+    ) {
+      problems.push(
+        `cookieCache.strategy is '${reader.cookieCache.strategy}' but the auth config uses '${cookieCache.strategy ?? 'compact'}'`
+      )
+    }
+    if (cookieCache.version !== undefined && !reader.cookieCache.version) {
+      problems.push(
+        'the auth config sets cookieCache.version but the middleware was given none, so cookies of every version still verify'
+      )
+    }
+    if (problems.length > 0) {
+      logger?.error(
+        `pikku: betterAuthStatelessSession does not read the session cookie the way the auth config writes it: ${problems.join('; ')}. Pass the same values to betterAuthStatelessSession({ cookiePrefix, cookieCache }).`
+      )
+    }
+  }
 }
 
 /**
@@ -107,8 +162,10 @@ export const applyStatelessCookieCacheDefault = async (
 
   if (!statelessSessionInUse) return
 
-  const options = (instance as any)?.options
+  const options = instance.options
   const cookieCache = options?.session?.cookieCache
+
+  reportStatelessCookieMismatch(options, logger)
 
   /* No cookie cache means the stateless middleware can never resolve a session at
      all — a misconfiguration this default would only paper over. Leave it loud. */
@@ -119,7 +176,7 @@ export const applyStatelessCookieCacheDefault = async (
 
   let attributes: { maxAge?: number } | undefined
   try {
-    const context = await (instance as any).$context
+    const context = await instance.$context
     attributes = context?.authCookies?.sessionData?.attributes
   } catch (error: any) {
     logger?.error(
@@ -140,8 +197,8 @@ export const applyStatelessCookieCacheDefault = async (
   attributes.maxAge = maxAge
 
   /* Minted from the same expression, so it carries the same broken default. */
-  const accountAttributes = (await (instance as any).$context)?.authCookies
-    ?.accountData?.attributes
+  const accountAttributes = (await instance.$context)?.authCookies?.accountData
+    ?.attributes
   if (accountAttributes) {
     accountAttributes.maxAge = maxAge
   }

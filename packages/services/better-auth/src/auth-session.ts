@@ -4,18 +4,13 @@ import type {
   CorePikkuMiddleware,
   MiddlewarePriority,
 } from '@pikku/core/middleware'
-import type { BetterAuthInstance } from './define-auth.js'
-import { defaultSession } from './default-session.js'
-import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
-import {
-  resolveImpersonatedSession,
-  warnImpersonationUnconfigured,
-  type ImpersonationOptions,
-} from './auth-session-impersonation.js'
+import type { ImpersonationOptions } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
+import { hasLiveSession, resolveAndSetSession } from './resolve-session.js'
 
-type BetterAuthSessionResult = { user: any; session: any }
+/** The `{ user, session }` better-auth's `getSession` resolves. */
+export type BetterAuthSessionResult = { user: any; session: any }
 
 /**
  * The shape returned by the API Key plugin's `verifyApiKey` endpoint. `key`
@@ -26,7 +21,7 @@ type BetterAuthSessionResult = { user: any; session: any }
  */
 type VerifiedApiKey = { valid: boolean; error: unknown; key: any }
 
-type BetterAuthSessionOptions = {
+export type BetterAuthSessionOptions = {
   /**
    * Map a human/cookie/bearer session (from `getSession`) to the app session.
    * Receives the singleton `services` so callers can enrich the session from
@@ -84,19 +79,13 @@ export const betterAuthSession = (
   return pikkuMiddleware({
     priority,
     func: async (services, wire, next) => {
-      const { http, setSession, getSession } = wire
-      // Check the LIVE session, not the wire's static `session` snapshot: that
-      // snapshot is taken at wire construction and is never updated by a prior
-      // middleware's setSession (which writes the session service, not the
-      // snapshot). Reading it stale makes this middleware re-resolve and clobber
-      // a session another middleware already set (e.g. an app's own
-      // role-enriching betterAuthSession), overwriting it with the default map.
-      const existingSession = getSession ? getSession() : wire.session
-      if (!http?.request || !setSession || existingSession) {
+      const { http, setSession } = wire
+      if (!http?.request || !setSession || (await hasLiveSession(wire))) {
         return next()
       }
       // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
-      if (typeof (services as any).auth !== 'function') {
+      const getAuth = services.auth
+      if (typeof getAuth !== 'function') {
         return next()
       }
       // Capture the narrowed request so deferred closures (the impersonation
@@ -115,16 +104,13 @@ export const betterAuthSession = (
           // silently serving the request anonymously.
           let mapped: CoreUserSession | null | undefined
           try {
-            const auth = (await (services as any).auth()) as BetterAuthInstance
+            const auth = await getAuth()
             const verified = (await auth.api.verifyApiKey({
               body: { key: rawKey },
             })) as VerifiedApiKey | null
 
             if (verified?.valid && verified.key) {
-              mapped = await apiKey.mapKey(
-                verified.key,
-                services as CoreServices
-              )
+              mapped = await apiKey.mapKey(verified.key, services)
             }
           } catch (e: any) {
             services.logger?.warn(
@@ -132,9 +118,7 @@ export const betterAuthSession = (
             )
           }
           if (mapped) {
-            await setSession(
-              await withResolvedScopes(mapped, services as CoreServices)
-            )
+            await setSession(await withResolvedScopes(mapped, services))
           }
           // The api-key header is authoritative for this request — never fall
           // through to getSession (a bare mock session would shadow our scope).
@@ -148,7 +132,7 @@ export const betterAuthSession = (
       // "not logged in" path returns null here — it does not throw.
       let result: BetterAuthSessionResult | null
       try {
-        const auth = (await (services as any).auth()) as BetterAuthInstance
+        const auth = await getAuth()
         // getSession only needs the request headers — build them directly
         // instead of going through toWebRequest(), which (for a POST) would
         // otherwise read the single-use request body just to discard it,
@@ -163,40 +147,15 @@ export const betterAuthSession = (
         throw e
       }
 
-      // mapSession / impersonation hooks are caller code — let their errors
-      // propagate (a thrown claim assertion is a deliberate signal, not a reason
-      // to silently fall back to anonymous and serve a baffling 403).
       if (result?.user) {
-        if (impersonation) {
-          const impersonated = await resolveImpersonatedSession(
-            result,
-            impersonation,
-            services as CoreServices,
-            (name) => request.header(name),
-            mapSession
-          )
-          if (impersonated) {
-            // Scopes resolve for the impersonated userId, not the admin's — an
-            // impersonated session runs as the target, with the target's rights.
-            await setSession(
-              await withResolvedScopes(impersonated, services as CoreServices)
-            )
-            return next()
-          }
-        } else {
-          warnImpersonationUnconfigured(services as CoreServices, (name) =>
-            request.header(name)
-          )
-        }
-        const mapped = mapSession
-          ? await mapSession(result, services as CoreServices)
-          : defaultSession(result)
-        await setSession(
-          await withResolvedScopes(
-            stampVirtualUserFlag(mapped, result.user),
-            services as CoreServices
-          )
-        )
+        await resolveAndSetSession({
+          result,
+          services,
+          getHeader: (name) => request.header(name),
+          setSession,
+          mapSession,
+          impersonation,
+        })
       }
 
       return next()
