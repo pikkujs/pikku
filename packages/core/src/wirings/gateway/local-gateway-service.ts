@@ -1,10 +1,10 @@
-import type { GatewayService } from './gateway-service.js'
-import type { GatewayAdapter } from '../wirings/gateway/gateway.types.js'
-import { pikkuState, getSingletonServices } from '../pikku-state.js'
+import type { GatewayService } from '../../services/gateway-service.js'
+import type { GatewayAdapter } from './gateway.types.js'
+import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import {
   createListenerMessageHandler,
   resolveGatewayAdapter,
-} from '../wirings/gateway/gateway-runner.js'
+} from './gateway-runner.js'
 
 // knowledge: decisions/internals/local-trigger-and-gateway-services-assume-a-single-process.md
 export class LocalGatewayService implements GatewayService {

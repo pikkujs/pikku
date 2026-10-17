@@ -7,7 +7,7 @@ tags: services
 
 # The in-memory workflow service is inline-only and single-process
 
-`InMemoryWorkflowService` (`packages/core/src/services/in-memory-workflow-service.ts`)
+`InMemoryWorkflowService` (`packages/core/src/wirings/workflow/in-memory-workflow-service.ts`)
 calls `super({ ...options, wireQueues: false })` and implements `withRunLease` and
 `withStepLock` as bare `return fn()`. Both look like unfinished work and neither
 is.

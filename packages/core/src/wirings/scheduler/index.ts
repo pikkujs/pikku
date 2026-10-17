@@ -11,3 +11,4 @@ export type {
   ScheduledTaskRun,
   ScheduledTaskRuns,
 } from './scheduler.types.js'
+export { pikkuRemoteScheduledJobFunc } from './remote-scheduled-job.js'

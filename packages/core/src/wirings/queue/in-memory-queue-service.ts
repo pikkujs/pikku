@@ -5,8 +5,8 @@ import type {
   QueueInspection,
   QueueJobRecord,
   QueueJobStatus,
-} from '../wirings/queue/queue.types.js'
-import { runQueueJob } from '../wirings/queue/queue-runner.js'
+} from './queue.types.js'
+import { runQueueJob } from './queue-runner.js'
 
 const FINISHED_JOBS_KEPT = 100
 
