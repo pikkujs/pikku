@@ -18,8 +18,8 @@
     "format:check": "oxfmt --check apps packages"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.81",
-    "@ai-sdk/openai-compatible": "^3.0.59",
+    "@ai-sdk/openai": "^4.0.96",
+    "@ai-sdk/openai-compatible": "^3.0.71",
     "@pikku/addon-admin": "^0.12.13",
     "@pikku/addon-console": "^0.12.63",
     "@pikku/ai-vercel": "^0.12.15",
@@ -36,7 +36,7 @@
     "@pikku/react": "^0.12.16",
     "@pikku/schedule": "^0.12.10",
     "@pikku/schema-cfworker": "^0.12.8",
-    "ai": "^7.0.122",
+    "ai": "^7.0.143",
     "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
@@ -44,7 +44,7 @@
     "@pikku/deploy-standalone": "^0.12.26",
     "@types/node": "^24",
     "oxfmt": "^0.53.0",
-    "oxlint": "^1.78.0",
+    "oxlint": "^1.88.0",
     "typescript": "^6.0.3"
   },
   "overrides": {
@@ -57,5 +57,5 @@
     "@pikku/ws": "0.12.10",
     "typescript": "^6.0.3"
   },
-  "packageManager": "bun@1.4.1"
+  "packageManager": "bun@1.4.3"
 }

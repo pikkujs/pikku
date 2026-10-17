@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.48",
+    "@ai-sdk/openai-compatible": "^2.0.85",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-stripe": "^0.1.8",
     "@pikku/ai-vercel": "workspace:*",
@@ -15,19 +15,19 @@
     "@pikku/schema-cfworker": "^0.12.8",
     "@pikku/websocket": "^0.12.5",
     "@standard-schema/spec": "^1.1.0",
-    "ai": "^6.0.0",
-    "better-auth": "^1.7.5",
-    "kysely": "^0.29.5",
+    "ai": "^6.0.309",
+    "better-auth": "^1.7.10",
+    "kysely": "^0.29.6",
     "zod": "^4"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@pikku/cli": "^0.12.191",
     "@pikku/deploy-standalone": "workspace:*",
     "@pikku/playwright": "workspace:*",
-    "@playwright/test": "^1.50.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "build": "pikku all && pikku db migrate && tsc --noEmit",

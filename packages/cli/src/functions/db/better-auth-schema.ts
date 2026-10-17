@@ -133,14 +133,19 @@ function fakeSecretService() {
 // Better Auth checks its tables against the database the moment it is built,
 // and logs "Database schema mismatch" when they are missing. Here they are
 // always missing: the database is a scratch one the auth migrations are about
-// to run into. The check reaches the database through `connection()` alone,
-// so parking that call keeps the instance quiet without touching the queries
-// the migrator runs.
+// to run into. The check reaches the database through `connection()` on the
+// server dialects and through `introspection` on SQLite, so parking both keeps
+// the instance quiet. The migrator reads `introspection` too, which is why
+// `loadAuthOptions` hands the real kysely back in the options it returns.
 export function withoutAuthSchemaCheck<DB>(kysely: Kysely<DB>): Kysely<DB> {
+  const parked = () => new Promise<never>(() => {})
   return new Proxy(kysely, {
     get: (target, prop) => {
       if (prop === 'connection') {
-        return () => ({ execute: () => new Promise(() => {}) })
+        return () => ({ execute: parked })
+      }
+      if (prop === 'introspection') {
+        return { getSchemas: parked, getTables: parked, getMetadata: parked }
       }
       const value = Reflect.get(target, prop, target)
       return typeof value === 'function' ? value.bind(target) : value
@@ -152,7 +157,7 @@ function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   const variables = new LocalVariablesService()
   const secrets = fakeSecretService()
   const base: Record<string, unknown> = {
-    kysely: withoutAuthSchemaCheck(kysely),
+    kysely,
     logger,
     secrets,
     variables,
@@ -272,7 +277,8 @@ export async function loadAuthOptions(opts: {
   const factory = await loadAuthFactory(sourceFile)
   if (!factory) return null
 
-  const services = schemaServicesStub(opts.kysely, opts.logger) as Record<
+  const schemaOnlyKysely = withoutAuthSchemaCheck(opts.kysely)
+  const services = schemaServicesStub(schemaOnlyKysely, opts.logger) as Record<
     string,
     unknown
   >
@@ -280,7 +286,9 @@ export async function loadAuthOptions(opts: {
 
   const instance = await withoutPluginInitCrashing(() => factory(services))
   const options = (instance as { options?: BetterAuthOptionsLike }).options
-  return options ?? null
+  if (!options) return null
+  if (options.database?.db !== schemaOnlyKysely) return options
+  return { ...options, database: { ...options.database, db: opts.kysely } }
 }
 
 /**
