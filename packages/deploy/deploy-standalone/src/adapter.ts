@@ -461,7 +461,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     if (this.contributors.length === 0) return []
     return collectContributorImports(
       this.contributors,
-      contributorPlatform(ctx)
+      contributorPlatform(ctx),
+      ctx
     )
   }
 

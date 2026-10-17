@@ -115,6 +115,17 @@ export interface EntryGenerationContext {
   }
 
   /**
+   * The column coercion map `pikku db migrate` generated into
+   * `db/coercion.gen.ts`, or undefined when the app has none.
+   *
+   * It travels as data rather than as an import path because the providers
+   * that apply it emit it as a literal into an entry bundled away from the
+   * functions package. It is the same map `pikku dev` attaches, so a deployed
+   * query returns the Date, boolean and parsed JSON values it does locally.
+   */
+  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+
+  /**
    * The app's `pikkuServerLifecycle` export, when it declares one.
    *
    * Only `pikku dev` and `pikku serve` have ever called these hooks, so an app
