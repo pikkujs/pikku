@@ -20,7 +20,7 @@
     "@pikku/schema-cfworker": "workspace:*",
     "ioredis": "^6.0.0",
     "kysely": "^0.29.6",
-    "kysely-postgres-js": "^3.0.0",
+    "kysely-postgres-js": "^5.0.1",
     "mysql2": "^3.24.6",
     "postgres": "^3.4.9",
     "zod": "^4"
