@@ -21,6 +21,7 @@ import {
   testAgentRunWiring,
 } from './functions/agent.assert.js'
 import { testPriorityWiring } from './functions/priority.assert.js'
+import { testGlobalPermissionWiring } from './functions/global-permission.assert.js'
 import { testAgentProviderOptionsMeta } from './functions/agent-provider-options.assert.js'
 
 async function main(): Promise<void> {
@@ -89,6 +90,9 @@ async function main(): Promise<void> {
       ],
       singletonServices
     )
+
+    // A global permission registered in a file nothing else imports
+    const globalPermissionPassed = await testGlobalPermissionWiring()
 
     // Tag middleware registered through an aliased and a namespace import
     const httpAliasedPassed = await testHTTPWiring(
@@ -516,6 +520,7 @@ async function main(): Promise<void> {
       httpTest1Passed &&
       httpTest2Passed &&
       httpAliasedPassed &&
+      globalPermissionPassed &&
       httpRoutesDirectPassed &&
       httpRoutesGroupedPassed &&
       schedulerPassed &&
