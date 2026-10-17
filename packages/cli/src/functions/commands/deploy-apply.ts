@@ -11,6 +11,7 @@ import type { Logger } from '@pikku/core/services'
 import {
   runBuildPipeline,
   describeBuildFailure,
+  describeUnservedGateway,
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
 import { nativeSidecars, servedFrontend } from '../../utils/frontend.js'
@@ -495,10 +496,16 @@ export const deployApply = pikkuSessionlessFunc<
       if (buildFailure) {
         await writeResultFile(resultFile, {
           success: false,
-          errors: buildResult.unroutedWirings.map((r) => ({
-            step: 'route',
-            error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
-          })),
+          errors: [
+            ...buildResult.unroutedWirings.map((r) => ({
+              step: 'route',
+              error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+            })),
+            ...buildResult.unservedGateways.map((g) => ({
+              step: 'gateway',
+              error: describeUnservedGateway(g),
+            })),
+          ],
         })
         throw new PikkuDeployBuildFailedError(buildFailure)
       }
@@ -524,6 +531,10 @@ export const deployApply = pikkuSessionlessFunc<
           ...buildResult.unroutedWirings.map((r) => ({
             step: 'route',
             error: `${r.method} ${r.route} (func ${r.pikkuFuncId})`,
+          })),
+          ...buildResult.unservedGateways.map((g) => ({
+            step: 'gateway',
+            error: describeUnservedGateway(g),
           })),
         ],
         codegenErrors: buildResult.codegenErrors,
