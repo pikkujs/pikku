@@ -11,7 +11,7 @@ tags: core, virtual-users, scenario
 its headers are how "a step expresses an identity no declared virtual user can — an
 impersonation header, or one of the header-shim principals a credential scenario
 invents." `HttpVirtualUser.invokeRaw` passes them to `postRpc`
-(`packages/core/src/services/http-virtual-users.ts`), so they go out on that one call
+(`packages/core/src/wirings/virtual-user/http-virtual-users.ts`), so they go out on that one call
 alongside the virtual user's session.
 
 The option belongs to the scenario author, who writes the steps and is trusted to

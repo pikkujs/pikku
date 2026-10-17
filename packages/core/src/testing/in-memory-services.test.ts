@@ -1,4 +1,4 @@
-import { InMemoryWorkflowService } from '../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from '../wirings/workflow/in-memory-workflow-service.js'
 import { defineServiceTests } from './service-tests.js'
 
 defineServiceTests({

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpVirtualUsers } from './http-virtual-users.js'
-import { statementSignIn } from './virtual-user-sign-in.js'
-import { pikkuState, resetPikkuState } from '../pikku-state.js'
-import type { AgentStepResult } from './agent-runner-service.js'
+import { statementSignIn } from '../../services/virtual-user-sign-in.js'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
+import type { AgentStepResult } from '../../services/agent-runner-service.js'
 
 /**
  * Minimal target app exposing the agent HTTP surface: virtual user sign-in, the agent

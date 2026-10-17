@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import { WorkflowSuspendedException } from './workflow-errors.js'

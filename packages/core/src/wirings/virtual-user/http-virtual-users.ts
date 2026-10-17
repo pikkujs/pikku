@@ -4,22 +4,25 @@ import type {
   ScenarioVirtualUsers,
   ScenarioInvokeOptions,
   ScenarioHttpResponse,
-} from './virtual-users-service.js'
-import { readScenarioHttpResponse } from './virtual-users-service.js'
+} from '../../services/virtual-users-service.js'
+import { readScenarioHttpResponse } from '../../services/virtual-users-service.js'
 import type {
   ConverseOptions,
   ConversationVerdict,
   TargetAgentReply,
   TargetPendingApproval,
-} from '../wirings/virtual-user/conversation/conversation.types.js'
-import { runConversation } from '../wirings/virtual-user/conversation/run-conversation.js'
+} from './conversation/conversation.types.js'
+import { runConversation } from './conversation/run-conversation.js'
 import {
   createCookieJar,
   type ScenarioCookieJar,
-} from './scenario-cookie-jar.js'
-import { authMount, type VirtualUserSignIn } from './virtual-user-sign-in.js'
-import { getSingletonServices } from '../pikku-state.js'
-import { AIProviderNotConfiguredError } from '../errors/errors.js'
+} from '../../services/scenario-cookie-jar.js'
+import {
+  authMount,
+  type VirtualUserSignIn,
+} from '../../services/virtual-user-sign-in.js'
+import { getSingletonServices } from '../../pikku-state.js'
+import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 
 export interface HttpVirtualUsersConfig {
   /**
