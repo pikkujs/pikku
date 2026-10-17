@@ -54,6 +54,7 @@ const expand = ([subpath, dist]: [string, string]): [string, string][] => {
 }
 
 const entryPoints = Object.entries(pkg.exports as Record<string, string>)
+  .filter(([, dist]) => dist.endsWith('.js'))
   .flatMap(expand)
   .map(([subpath, dist]) => ({
     subpath,
