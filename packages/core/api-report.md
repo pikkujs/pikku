@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3286 observable things**: 1100 exported names, plus
-2186 members on the classes and interfaces among them, reachable
+**3290 observable things**: 1103 exported names, plus
+2187 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -18,12 +18,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
-| `./agent` | 52 | 50 | 81 |
+| `./agent` | 54 | 52 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
 | `./queue` | 23 | 23 | 71 |
 | `./http` | 26 | 26 | 58 |
-| `./errors` | 51 | 51 | 24 |
+| `./errors` | 52 | 52 | 25 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 42 | 42 | 13 |
 | `./services/local-meta` | 22 | 2 | 43 |
@@ -3707,6 +3707,8 @@ export interface AgentMessage {
   undelivered?: boolean
   createdAt: Date
 }
+export type AgentOutputSchema<TObject> = StandardSchemaV1<unknown, TObject> &
+  StandardJSONSchemaV1<unknown, TObject>
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
 export type AgentRPCFactory = (
   wire: PikkuRawWire,
@@ -3998,6 +4000,7 @@ export type RunAgentParams = {
   getCredential?: GetCredential
   anonymousOwnerResourceId?: string
 }
+runAgentStructured: <TObject>(agentRunner: AgentRunnerService, { outputSchema, ...params }: Omit<AgentRunnerParams, "outputSchema"> & { outputSchema: AgentOutputSchema<TObject>; }) => Promise<AgentStepResult<TObject> & { object: TObject; }>
 signalRunInterrupt: (runId: string, interruption?: AgentInterruption) => boolean
 export type SpeakableScripts = string[] | Record<string, string>
 SPOKEN_TRANSCRIPT: "voice:transcript"
@@ -4641,6 +4644,9 @@ export type OAuth2Token = {
 
 ```ts
 addError: (error: any, { status, message, mcpCode }: ErrorDetails) => void
+export class AgentOutputValidationError extends PikkuError {
+  constructor(public readonly agentName: string | undefined, public readonly issues: readonly string[])
+}
 export class AIProviderAuthError extends PikkuError {
   constructor(message?: string)
 }
@@ -4801,9 +4807,9 @@ export type AgentsMeta = Record<
     exportedName?: string
   }
 >
-export type AgentStepResult = {
+export type AgentStepResult<TObject = unknown> = {
   text: string
-  object?: unknown
+  object?: TObject
   toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
   toolResults: {
     toolCallId: string

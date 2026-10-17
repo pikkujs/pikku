@@ -48,9 +48,9 @@ export type AgentRunnerResult = {
   usage: { inputTokens: number; outputTokens: number }
 }
 
-export type AgentStepResult = {
+export type AgentStepResult<TObject = unknown> = {
   text: string
-  object?: unknown
+  object?: TObject
   toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
   toolResults: {
     toolCallId: string

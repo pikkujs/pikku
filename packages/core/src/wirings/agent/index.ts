@@ -16,6 +16,8 @@ export type { AgentRPCOptions, AgentRPCFactory } from './agent.types.js'
 export { wrapChannelWithAGUI } from './agent-agui.js'
 export { runAgent, resumeAgentSync } from './agent-runner.js'
 export { resolveModelAlias } from './agent-model-config.js'
+export { runAgentStructured } from './agent-output.js'
+export type { AgentOutputSchema } from './agent-output.js'
 export { streamAgent, resumeAgent, interruptAgent } from './agent-stream.js'
 export {
   voiceInput,
