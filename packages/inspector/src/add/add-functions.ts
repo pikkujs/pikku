@@ -35,6 +35,15 @@ const SCENARIO_STEP_KINDS = new Map<string, ScenarioStepKind>([
   ['pikkuPlatformScenarioStep', 'platform'],
   ['pikkuAddonScenarioStep', 'addon'],
 ])
+
+const PIKKU_FUNC_PATTERN = /pikku.*func/i
+
+const isFunctionHelper = (name: string): boolean =>
+  PIKKU_FUNC_PATTERN.test(name) ||
+  name === 'pikkuScenario' ||
+  name === 'pikkuWebhookReceive' ||
+  SCENARIO_STEP_KINDS.has(name)
+
 import {
   getPropertyValue,
   getArrayPropertyValue,
@@ -48,6 +57,7 @@ import { ErrorCode } from '../error-codes.js'
 import { findPiiPaths } from '../utils/check-pii-output.js'
 import { findClassifiedSinks } from '../utils/check-classified-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
+import { resolveCalleeName } from '../utils/resolve-callee-name.js'
 import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
@@ -513,44 +523,29 @@ export const addFunctions: AddWiring = (
 
   const { expression, arguments: args, typeArguments } = node
 
-  // only handle calls like pikkuFunc(...)
-  if (!ts.isIdentifier(expression)) {
-    return
-  }
-
-  // Match identifiers that contain both "pikku" and "func" (case insensitive),
-  // plus pikkuScenario and the three scenario step wrappers (workflow wrappers
-  // without "func" in their names)
-  const pikkuFuncPattern = /pikku.*func/i
-  if (
-    !pikkuFuncPattern.test(expression.text) &&
-    expression.text !== 'pikkuScenario' &&
-    expression.text !== 'pikkuWebhookReceive' &&
-    !SCENARIO_STEP_KINDS.has(expression.text)
-  ) {
-    return
-  }
+  // Match helpers whose name contains both "pikku" and "func" (case
+  // insensitive), plus pikkuScenario and the three scenario step wrappers
+  // (workflow wrappers without "func" in their names). The callee is matched
+  // by what it resolves to, so an aliased `pikkuFunc` is still a pikkuFunc —
+  // and still requires a session.
+  const callee = resolveCalleeName(node, checker, isFunctionHelper)
+  if (!callee) return
 
   // A scenario step is bundled like any invoked function, but is deliberately
   // never RPC-registered: a step may drive a browser, so exposing it over the
   // network would put a test harness on the public API surface.
-  const scenarioStepKind = SCENARIO_STEP_KINDS.get(expression.text)
+  const scenarioStepKind = SCENARIO_STEP_KINDS.get(callee)
   const isScenarioStep = scenarioStepKind !== undefined
 
   // A scenario's own body. Marked so the codegen partitions and the deploy
   // analyzer can tell it apart from an application workflow without having to
   // reach into the workflow graph.
-  const isScenario = expression.text === 'pikkuScenario'
+  const isScenario = callee === 'pikkuScenario'
 
   // A webhook source's `receive`. Only its source's route runs it, with the
   // raw request, so like a scenario step it is bundled but never RPC-registered.
-  const isWebhookReceive = expression.text === 'pikkuWebhookReceive'
+  const isWebhookReceive = callee === 'pikkuWebhookReceive'
   const notRpc = isScenarioStep || isWebhookReceive
-
-  // only handle calls like pikkuFunc(...)
-  if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
-    return
-  }
 
   if (args.length === 0) return
 
@@ -761,7 +756,7 @@ export const addFunctions: AddWiring = (
       // than a convention nobody reads.
       if (declaredSurfaces.length > 0) {
         logger.error(
-          `• ${expression.text}('${name}') declares ${declaredSurfaces.join('/')} — a ${scenarioStepKind} step has one implementation, declared as \`func\`. Surfaces are how a person drives the system, and nobody drives this one.`
+          `• ${callee}('${name}') declares ${declaredSurfaces.join('/')} — a ${scenarioStepKind} step has one implementation, declared as \`func\`. Surfaces are how a person drives the system, and nobody drives this one.`
         )
         return
       }
@@ -916,7 +911,7 @@ export const addFunctions: AddWiring = (
   // A remote channel capability is a contract with no body: the connected
   // client answers it. Everything past this point reads the handler, so it gets
   // its own path rather than a nullable handler threaded through all of it.
-  if (expression.text === 'pikkuRemoteChannelFunc') {
+  if (callee === 'pikkuRemoteChannelFunc') {
     addRemoteChannelFunc({
       state,
       logger,
@@ -931,8 +926,8 @@ export const addFunctions: AddWiring = (
     return
   }
 
-  const isMCPToolFunc = expression.text === 'pikkuMCPToolFunc'
-  const isListFunc = expression.text === 'pikkuListFunc'
+  const isMCPToolFunc = callee === 'pikkuMCPToolFunc'
+  const isListFunc = callee === 'pikkuListFunc'
   const mcpEnabled = mcp || isMCPToolFunc
 
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
@@ -1046,7 +1041,7 @@ export const addFunctions: AddWiring = (
   // Every other wrapper reads generic[0] as INPUT, so without this guard the
   // connect handler's output generic is mis-recorded as inputSchemaName and the
   // empty WS handshake fails input validation at connect (1008/403).
-  const isChannelConnectionFunc = /ChannelConnection/i.test(expression.text)
+  const isChannelConnectionFunc = /ChannelConnection/i.test(callee)
 
   const capitalizedName = funcIdToTypeName(name)
 
@@ -1176,7 +1171,7 @@ export const addFunctions: AddWiring = (
     pikkuMCPToolFunc: 'MCPToolResponse',
     pikkuMCPPromptFunc: 'MCPPromptResponse',
   }
-  const mcpOutputType = mcpOutputTypes[expression.text]
+  const mcpOutputType = mcpOutputTypes[callee]
   if (mcpOutputType && outputNames[0] !== mcpOutputType) {
     let resolved = false
     const rawSymbol = checker.getSymbolAtLocation(expression)
@@ -1275,7 +1270,7 @@ export const addFunctions: AddWiring = (
     }
   }
 
-  const sessionless = expression.text !== 'pikkuFunc'
+  const sessionless = callee !== 'pikkuFunc'
 
   // ── Classification brand check ─────────────────────────────────────────────
   // Walk the function body's ACTUAL inferred return type looking for classification
@@ -1387,7 +1382,7 @@ export const addFunctions: AddWiring = (
   }
 
   const implementationHash = computeImplementationHash({
-    wrapper: expression.text,
+    wrapper: ts.isIdentifier(expression) ? callee : callee,
     handler,
     objectNode,
     isDirectFunction,
@@ -1435,7 +1430,7 @@ export const addFunctions: AddWiring = (
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
     functionType: 'user',
-    funcWrapper: expression.text,
+    funcWrapper: callee,
     sessionless,
     name,
     services,
@@ -1556,7 +1551,7 @@ export const addFunctions: AddWiring = (
 
   // Workflow functions don't get registered as RPC functions,
   // they are their own type handled by add-workflow
-  if (expression.text.includes('Workflow')) {
+  if (callee.includes('Workflow')) {
     return
   }
 
@@ -1566,7 +1561,7 @@ export const addFunctions: AddWiring = (
     /ChannelConnection/i,
     /ChannelDisconnection/i,
   ]
-  if (nonRPCPatterns.some((pattern) => pattern.test(expression.text))) {
+  if (nonRPCPatterns.some((pattern) => pattern.test(callee))) {
     return
   }
 

@@ -112,10 +112,18 @@ export const addGlobalMiddleware = <
   return middleware
 }
 
-const getMiddlewareByName = (name: string): CorePikkuMiddleware | undefined => {
-  const middlewareStore = pikkuState(null, 'misc', 'middleware')
-  const middleware = middlewareStore[name]
-  return middleware?.[0]
+/**
+ * Wire-level middleware by name, from the namespace of the package whose
+ * metadata named it — the same namespace its tag and HTTP groups resolve from
+ * — and then from the application's, which is never narrower.
+ */
+const getMiddlewareByName = (
+  name: string,
+  packageName: string | null
+): CorePikkuMiddleware | undefined => {
+  const own = pikkuState(packageName, 'misc', 'middleware')[name]?.[0]
+  if (own || packageName === null) return own
+  return pikkuState(null, 'misc', 'middleware')[name]?.[0]
 }
 
 /**
@@ -207,7 +215,10 @@ export const combineMiddleware = (
     packageName?: string | null
   } = {}
 ): readonly CorePikkuMiddleware[] => {
-  const cached = cacheGet(wireType, uid)
+  // A wire id is only unique within its package: an addon's `getUser` and the
+  // application's are different functions with different gates.
+  const cacheKey = packageName === null ? uid : `${packageName}\0${uid}`
+  const cached = cacheGet(wireType, cacheKey)
   if (cached) {
     return cached
   }
@@ -247,7 +258,7 @@ export const combineMiddleware = (
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       } else if (meta.type === 'wire') {
-        const middleware = getMiddlewareByName(meta.name)
+        const middleware = getMiddlewareByName(meta.name, packageName)
         if (middleware) {
           resolved.push(middleware)
         }
@@ -281,7 +292,7 @@ export const combineMiddleware = (
   sortByPriority(resolved)
   return cacheSet(
     wireType,
-    uid,
+    cacheKey,
     freezeDedupe(resolved) as readonly CorePikkuMiddleware[]
   )
 }

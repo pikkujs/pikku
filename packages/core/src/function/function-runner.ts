@@ -389,7 +389,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       if (
         wiringAuth === true ||
         funcConfig.auth === true ||
-        resolveAddonAuth(packageName, addonInstance?.namespace)
+        resolveAddonAuth(funcPackageName, addonInstance?.namespace)
       ) {
         if (!session) {
           throw new MissingSessionError('Authentication required')
@@ -419,8 +419,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     // knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
+    // The function's package, not the wire's: a `ref('ns:fn')` route stays the
+    // app's, and reading the wire's left it outside the addon's floor.
     const addonScopes = resolveAddonScopes(
-      packageName,
+      funcPackageName,
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
@@ -568,7 +570,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   const addonTagMiddleware = resolveAddonTagMiddleware(
-    packageName,
+    funcPackageName,
     addonInstance?.namespace
   )
 
