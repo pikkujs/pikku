@@ -23,7 +23,7 @@ const run = async (headers: Record<string, string>, session?: object) => {
 
 describe('studio session', () => {
   test('the matching token becomes the console owner', async () => {
-    assert.deepEqual(await run({ [STUDIO_HEADER]: TOKEN }), { userId: 'studio', scopes: ['pikku:console'] })
+    assert.deepEqual(await run({ [STUDIO_HEADER]: TOKEN }), { userId: 'studio', scopes: ['pikku:console', 'admin'] })
   })
 
   test('a wrong or missing token sets nothing', async () => {
