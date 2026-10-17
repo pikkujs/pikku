@@ -289,6 +289,7 @@ export interface SerializableInspectorState {
   permissions: {
     definitions: InspectorState['permissions']['definitions']
     instances: InspectorState['permissions']['instances']
+    global?: InspectorState['permissions']['global']
   }
   serviceAggregation: {
     requiredServices: string[]
@@ -523,6 +524,7 @@ export function serializeInspectorState(
     permissions: {
       definitions: state.permissions.definitions,
       instances: state.permissions.instances,
+      global: state.permissions.global,
     },
     serviceAggregation: {
       requiredServices: Array.from(state.serviceAggregation.requiredServices),
@@ -752,6 +754,7 @@ export function deserializeInspectorState(
     permissions: {
       definitions: data.permissions.definitions,
       instances: data.permissions.instances || {},
+      global: data.permissions.global || [],
     },
     serviceAggregation: {
       requiredServices: new Set(data.serviceAggregation.requiredServices),
