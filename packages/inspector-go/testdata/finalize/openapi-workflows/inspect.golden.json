@@ -1,0 +1,3435 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "GetItemInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ListItemsInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "q": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SearchItemsInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SearchItemsOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "item"
+              },
+              "item": {
+                "$ref": "#/definitions/Item"
+              }
+            },
+            "required": [
+              "kind",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "none"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "definitions": {
+          "Item": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "status": {
+                "$ref": "#/definitions/Status"
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attributes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "owner": {
+                "$ref": "#/definitions/Owner"
+              },
+              "kind": {
+                "type": "string",
+                "const": "item"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "price",
+              "status",
+              "note",
+              "createdAt",
+              "attributes",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "Owner": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "manager": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "CountItemsInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "DeleteItemInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orgId"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "DeleteItemOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "boolean",
+        "enum": [
+          false,
+          true
+        ],
+        "definitions": {}
+      },
+      "ArchiveItemInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "NotifyOwnerInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "message"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "NotifyOwnerOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sent"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "PriceCheckInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "PriceCheckOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "price": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ok",
+          "price"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "RestockWorkflowInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "urgent": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "a",
+              "b"
+            ]
+          }
+        },
+        "required": [
+          "itemId",
+          "ids",
+          "urgent",
+          "mode"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "RestockWorkflowOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "Item": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/definitions/Status"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "owner": {
+            "$ref": "#/definitions/Owner"
+          },
+          "kind": {
+            "type": "string",
+            "const": "item"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price",
+          "status",
+          "note",
+          "createdAt",
+          "attributes",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "definitions": {
+          "Status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "Owner": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "manager": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "ItemList": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Item"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page"
+        ],
+        "additionalProperties": false,
+        "definitions": {
+          "Item": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "status": {
+                "$ref": "#/definitions/Status"
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attributes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "owner": {
+                "$ref": "#/definitions/Owner"
+              },
+              "kind": {
+                "type": "string",
+                "const": "item"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "price",
+              "status",
+              "note",
+              "createdAt",
+              "attributes",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "Owner": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "manager": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "CreateItemInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "price"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [
+          [
+            "Item",
+            {
+              "originalName": "Item",
+              "path": "<fixture>/src/types.ts"
+            }
+          ],
+          [
+            "ItemList",
+            {
+              "originalName": "ItemList",
+              "path": "<fixture>/src/types.ts"
+            }
+          ],
+          [
+            "CreateItemInput",
+            {
+              "originalName": "CreateItemInput",
+              "path": "<fixture>/src/types.ts"
+            }
+          ]
+        ],
+        "customTypes": [
+          [
+            "GetItemInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "ListItemsInput",
+            {
+              "type": "{ page?: number | undefined; q?: string | undefined; }",
+              "references": []
+            }
+          ],
+          [
+            "SearchItemsInput",
+            {
+              "type": "{ q: string; }",
+              "references": []
+            }
+          ],
+          [
+            "SearchItemsOutput",
+            {
+              "type": "{ kind: \"item\"; item: Item; } | { kind: \"none\"; reason: string; }",
+              "references": [
+                "Item"
+              ]
+            }
+          ],
+          [
+            "CountItemsInput",
+            {
+              "type": "{}",
+              "references": []
+            }
+          ],
+          [
+            "DeleteItemInput",
+            {
+              "type": "{ id: string; orgId: string; }",
+              "references": []
+            }
+          ],
+          [
+            "DeleteItemOutput",
+            {
+              "type": "false | true",
+              "references": []
+            }
+          ],
+          [
+            "ArchiveItemInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "NotifyOwnerInput",
+            {
+              "type": "{ itemId: string; message: string; }",
+              "references": []
+            }
+          ],
+          [
+            "NotifyOwnerOutput",
+            {
+              "type": "{ sent: boolean; }",
+              "references": []
+            }
+          ],
+          [
+            "PriceCheckInput",
+            {
+              "type": "{ itemId: string; }",
+              "references": []
+            }
+          ],
+          [
+            "PriceCheckOutput",
+            {
+              "type": "{ ok: boolean; price: number; }",
+              "references": []
+            }
+          ],
+          [
+            "RestockWorkflowInput",
+            {
+              "type": "{ itemId: string; ids: string[]; urgent: boolean; mode: \"a\" | \"b\"; }",
+              "references": []
+            }
+          ],
+          [
+            "RestockWorkflowOutput",
+            {
+              "type": "{ done: boolean; }",
+              "references": []
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "getItem": {
+          "pikkuFuncId": "getItem",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "getItem",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "GetItemInput",
+          "outputSchemaName": "Item",
+          "inputs": [
+            "GetItemInput"
+          ],
+          "outputs": [
+            "Item"
+          ],
+          "implementationHash": "51bae6baf728063b",
+          "description": "Fetch an item",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "getItem",
+          "bodyStart": 6,
+          "bodyEnd": 6,
+          "contractHash": "0e885c67c2bb0eff",
+          "inputHash": "5d2b3bff",
+          "outputHash": "dadc2715"
+        },
+        "listItems": {
+          "pikkuFuncId": "listItems",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "listItems",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "ListItemsInput",
+          "outputSchemaName": "ItemList",
+          "inputs": [
+            "ListItemsInput"
+          ],
+          "outputs": [
+            "ItemList"
+          ],
+          "implementationHash": "2d955ec03f603063",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "listItems",
+          "bodyStart": 13,
+          "bodyEnd": 13,
+          "contractHash": "01debbe3b32b63b1",
+          "inputHash": "f19cfa4f",
+          "outputHash": "47316c0c"
+        },
+        "searchItems": {
+          "pikkuFuncId": "searchItems",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "searchItems",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "SearchItemsInput",
+          "outputSchemaName": "SearchItemsOutput",
+          "inputs": [
+            "SearchItemsInput"
+          ],
+          "outputs": [
+            "SearchItemsOutput"
+          ],
+          "implementationHash": "6f2fed6275563589",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "searchItems",
+          "bodyStart": 17,
+          "bodyEnd": 17,
+          "contractHash": "79706a6181fa23b3",
+          "inputHash": "f88bb8da",
+          "outputHash": "d4a38048"
+        },
+        "createItem@v2": {
+          "pikkuFuncId": "createItem@v2",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "createItem",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "CreateItemInput",
+          "outputSchemaName": "Item",
+          "inputs": [
+            "CreateItemInput"
+          ],
+          "outputs": [
+            "Item"
+          ],
+          "implementationHash": "ed83dea64b95595b",
+          "version": 2,
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "createItem",
+          "bodyStart": 22,
+          "bodyEnd": 22,
+          "contractHash": "f90d79cdd5b2a6f6",
+          "inputHash": "ce7e77b1",
+          "outputHash": "6477ff91"
+        },
+        "createItem@v1": {
+          "pikkuFuncId": "createItem@v1",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "createItemV1",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "CreateItemInput",
+          "outputSchemaName": "Item",
+          "inputs": [
+            "CreateItemInput"
+          ],
+          "outputs": [
+            "Item"
+          ],
+          "implementationHash": "4a81691b4414eec5",
+          "version": 1,
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "createItemV1",
+          "bodyStart": 27,
+          "bodyEnd": 27,
+          "contractHash": "f90d79cdd5b2a6f6",
+          "inputHash": "ce7e77b1",
+          "outputHash": "6477ff91"
+        },
+        "ping": {
+          "pikkuFuncId": "ping",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "ping",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "string",
+          "inputs": [],
+          "outputs": [
+            "string"
+          ],
+          "implementationHash": "8ca0886480e52fe8",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "ping",
+          "bodyStart": 31,
+          "bodyEnd": 31,
+          "contractHash": "7670cf035973250d",
+          "inputHash": "257c0a0a",
+          "outputHash": "4f9a6fdc"
+        },
+        "countItems": {
+          "pikkuFuncId": "countItems",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "countItems",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "CountItemsInput",
+          "outputSchemaName": "number",
+          "inputs": [
+            "CountItemsInput"
+          ],
+          "outputs": [
+            "number"
+          ],
+          "implementationHash": "939e724eecccce6a",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "countItems",
+          "bodyStart": 35,
+          "bodyEnd": 35,
+          "contractHash": "26245c33faa5c403",
+          "inputHash": "b210c69e",
+          "outputHash": "87a2dbe4"
+        },
+        "deleteItem@v4": {
+          "pikkuFuncId": "deleteItem@v4",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "deleteItem",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "DeleteItemInput",
+          "outputSchemaName": "DeleteItemOutput",
+          "inputs": [
+            "DeleteItemInput"
+          ],
+          "outputs": [
+            "DeleteItemOutput"
+          ],
+          "implementationHash": "a1bbbd583fb73e64",
+          "version": 4,
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "deleteItem",
+          "bodyStart": 40,
+          "bodyEnd": 40,
+          "contractHash": "b3e4f115b3d09740",
+          "inputHash": "08e17e98",
+          "outputHash": "87d4dacf"
+        },
+        "archiveItem": {
+          "pikkuFuncId": "archiveItem",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "archiveItem",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "ArchiveItemInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "ArchiveItemInput"
+          ],
+          "outputs": [],
+          "implementationHash": "9ea5575d13a1fa6b",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "archiveItem",
+          "bodyStart": 44,
+          "bodyEnd": 44,
+          "contractHash": "035d723bf44c37db",
+          "inputHash": "7cde3846",
+          "outputHash": "48132b2a"
+        },
+        "notifyOwner": {
+          "pikkuFuncId": "notifyOwner",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "notifyOwner",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "NotifyOwnerInput",
+          "outputSchemaName": "NotifyOwnerOutput",
+          "inputs": [
+            "NotifyOwnerInput"
+          ],
+          "outputs": [
+            "NotifyOwnerOutput"
+          ],
+          "implementationHash": "7e3b8f53d659e6b6",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "notifyOwner",
+          "bodyStart": 51,
+          "bodyEnd": 51,
+          "contractHash": "715c6a7d6c9fdff3",
+          "inputHash": "aa9b726b",
+          "outputHash": "5b90bb3c"
+        },
+        "priceCheck": {
+          "pikkuFuncId": "priceCheck",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "priceCheck",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "PriceCheckInput",
+          "outputSchemaName": "PriceCheckOutput",
+          "inputs": [
+            "PriceCheckInput"
+          ],
+          "outputs": [
+            "PriceCheckOutput"
+          ],
+          "implementationHash": "ffc1d7edefee8073",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "priceCheck",
+          "bodyStart": 58,
+          "bodyEnd": 58,
+          "contractHash": "035f1177bbdfd751",
+          "inputHash": "142802d9",
+          "outputHash": "fb3150d7"
+        },
+        "restockWorkflow": {
+          "pikkuFuncId": "restockWorkflow",
+          "functionType": "user",
+          "funcWrapper": "pikkuWorkflowFunc",
+          "sessionless": true,
+          "name": "restockWorkflow",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "wires": {
+            "optimized": true,
+            "wires": [
+              "workflow"
+            ]
+          },
+          "inputSchemaName": "RestockWorkflowInput",
+          "outputSchemaName": "RestockWorkflowOutput",
+          "inputs": [
+            "RestockWorkflowInput"
+          ],
+          "outputs": [
+            "RestockWorkflowOutput"
+          ],
+          "expose": true,
+          "implementationHash": "0ad85d46305da298",
+          "description": "Restock an item",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/workflows.ts",
+          "exportedName": "restockWorkflow",
+          "bodyStart": 10,
+          "bodyEnd": 42,
+          "contractHash": "7297c225d47a4921",
+          "inputHash": "99946238",
+          "outputHash": "d3f89efb"
+        },
+        "workflowStart:restockWorkflow": {
+          "pikkuFuncId": "workflowStart:restockWorkflow",
+          "functionType": "helper",
+          "name": "/restock",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "PriceCheckInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "PriceCheckInput"
+          ],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/wirings.ts",
+          "contractHash": "28a3b887e83e1874",
+          "inputHash": "d40391e2",
+          "outputHash": "380bdcb4"
+        },
+        "workflowStatus:restockWorkflow": {
+          "pikkuFuncId": "workflowStatus:restockWorkflow",
+          "functionType": "helper",
+          "name": "/restock/status",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/wirings.ts",
+          "contractHash": "c050d6eeaaef3f91",
+          "inputHash": "26c1a0ab",
+          "outputHash": "144465d7"
+        },
+        "graphStart:reviewGraph:notify": {
+          "pikkuFuncId": "graphStart:reviewGraph:notify",
+          "functionType": "helper",
+          "name": "/review",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "NotifyOwnerInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "NotifyOwnerInput"
+          ],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/wirings.ts",
+          "contractHash": "62baaa0d68de2ed5",
+          "inputHash": "be269732",
+          "outputHash": "ce33b2b1"
+        },
+        "workflow:restockWorkflow": {
+          "pikkuFuncId": "workflow:restockWorkflow",
+          "functionType": "helper",
+          "name": "nightlyRestock",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "PriceCheckInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "PriceCheckInput"
+          ],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/wirings.ts",
+          "sessionless": true,
+          "contractHash": "d3dbb97041b56fcb",
+          "inputHash": "79427f42",
+          "outputHash": "a4c49053"
+        },
+        "workflowStart:reviewGraph": {
+          "pikkuFuncId": "workflowStart:reviewGraph",
+          "functionType": "helper",
+          "name": "review-queue",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "PriceCheckInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "PriceCheckInput"
+          ],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/wirings.ts",
+          "sessionless": true,
+          "contractHash": "b7b27a637151cad8",
+          "inputHash": "1ec1e507",
+          "outputHash": "2d25a1a9"
+        }
+      },
+      "files": [
+        [
+          "getItem",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "getItem"
+          }
+        ],
+        [
+          "listItems",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "listItems"
+          }
+        ],
+        [
+          "searchItems",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "searchItems"
+          }
+        ],
+        [
+          "createItem@v2",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "createItem"
+          }
+        ],
+        [
+          "createItem@v1",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "createItemV1"
+          }
+        ],
+        [
+          "ping",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "ping"
+          }
+        ],
+        [
+          "countItems",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "countItems"
+          }
+        ],
+        [
+          "deleteItem@v4",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "deleteItem"
+          }
+        ],
+        [
+          "archiveItem",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "archiveItem"
+          }
+        ],
+        [
+          "notifyOwner",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "notifyOwner"
+          }
+        ],
+        [
+          "priceCheck",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "priceCheck"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [
+        [
+          "GetItemInput",
+          {
+            "query": [],
+            "params": [
+              "id"
+            ],
+            "body": []
+          }
+        ],
+        [
+          "ListItemsInput",
+          {
+            "query": [
+              "page",
+              "q"
+            ],
+            "params": [],
+            "body": []
+          }
+        ],
+        [
+          "SearchItemsInput",
+          {
+            "query": [],
+            "params": [],
+            "body": []
+          }
+        ],
+        [
+          "CreateItemInput",
+          {
+            "query": [],
+            "params": [],
+            "body": []
+          }
+        ],
+        [
+          "CountItemsInput",
+          {
+            "query": [],
+            "params": [],
+            "body": []
+          }
+        ],
+        [
+          "DeleteItemInput",
+          {
+            "query": [],
+            "params": [
+              "orgId",
+              "id"
+            ],
+            "body": []
+          }
+        ],
+        [
+          "ArchiveItemInput",
+          {
+            "query": [],
+            "params": [
+              "id"
+            ],
+            "body": [
+              "id"
+            ]
+          }
+        ]
+      ],
+      "meta": {
+        "get": {
+          "/items/:id": {
+            "pikkuFuncId": "getItem",
+            "route": "/items/:id",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "params": [
+              "id"
+            ],
+            "errors": [
+              "NotFoundError",
+              "ForbiddenError",
+              "UnknownCustomError"
+            ],
+            "tags": [
+              "items",
+              "read"
+            ],
+            "requiresSession": false
+          },
+          "/items": {
+            "pikkuFuncId": "listItems",
+            "route": "/items",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "query": [
+              "page",
+              "q"
+            ],
+            "description": "List all items",
+            "requiresSession": false
+          },
+          "/search": {
+            "pikkuFuncId": "searchItems",
+            "route": "/search",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "requiresSession": false
+          },
+          "/ping": {
+            "pikkuFuncId": "ping",
+            "route": "/ping",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "requiresSession": false
+          },
+          "/": {
+            "pikkuFuncId": "countItems",
+            "route": "/",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "requiresSession": false
+          },
+          "/restock/status": {
+            "pikkuFuncId": "workflowStatus:restockWorkflow",
+            "route": "/restock/status",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "get",
+            "requiresSession": false
+          }
+        },
+        "post": {
+          "/items": {
+            "pikkuFuncId": "createItem@v2",
+            "route": "/items",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "post",
+            "requiresSession": true
+          },
+          "/items/:id/archive": {
+            "pikkuFuncId": "archiveItem",
+            "route": "/items/:id/archive",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "post",
+            "params": [
+              "id"
+            ],
+            "requiresSession": true
+          },
+          "/restock": {
+            "pikkuFuncId": "workflowStart:restockWorkflow",
+            "route": "/restock",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "post",
+            "requiresSession": false
+          },
+          "/review": {
+            "pikkuFuncId": "graphStart:reviewGraph:notify",
+            "route": "/review",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "post",
+            "requiresSession": false
+          }
+        },
+        "put": {},
+        "delete": {
+          "/orgs/:orgId/items/:id": {
+            "pikkuFuncId": "deleteItem@v4",
+            "route": "/orgs/:orgId/items/:id",
+            "sourceFile": "<fixture>/src/wirings.ts",
+            "method": "delete",
+            "params": [
+              "orgId",
+              "id"
+            ],
+            "errors": [
+              "NotFoundError"
+            ],
+            "requiresSession": true
+          }
+        },
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [
+        "<fixture>/src/wirings.ts"
+      ],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {
+        "nightlyRestock": {
+          "pikkuFuncId": "workflow:restockWorkflow",
+          "name": "nightlyRestock",
+          "schedule": "0 1 * * *"
+        }
+      },
+      "files": [
+        "<fixture>/src/wirings.ts"
+      ]
+    },
+    "queueWorkers": {
+      "meta": {
+        "review-queue": {
+          "pikkuFuncId": "workflowStart:reviewGraph",
+          "name": "review-queue"
+        },
+        "wf-orchestrator-review-graph": {
+          "name": "wf-orchestrator-review-graph",
+          "pikkuFuncId": "pikkuWorkflowOrchestrator:reviewGraph"
+        },
+        "wf-orchestrator-restock-workflow": {
+          "name": "wf-orchestrator-restock-workflow",
+          "pikkuFuncId": "pikkuWorkflowOrchestrator:restockWorkflow"
+        }
+      },
+      "files": [
+        "<fixture>/src/wirings.ts"
+      ]
+    },
+    "workflows": {
+      "meta": {
+        "restockWorkflow": {
+          "pikkuFuncId": "restockWorkflow",
+          "name": "restockWorkflow",
+          "steps": [
+            {
+              "type": "rpc",
+              "stepName": "Check price",
+              "rpcName": "priceCheck",
+              "outputVar": "check",
+              "inputs": {
+                "itemId": {
+                  "from": "input",
+                  "path": "itemId"
+                }
+              }
+            },
+            {
+              "type": "branch",
+              "branches": [
+                {
+                  "condition": {
+                    "type": "simple",
+                    "expression": "!check.ok"
+                  },
+                  "steps": []
+                }
+              ]
+            },
+            {
+              "type": "branch",
+              "branches": [
+                {
+                  "condition": {
+                    "type": "simple",
+                    "expression": "data.urgent"
+                  },
+                  "steps": [
+                    {
+                      "type": "sleep",
+                      "stepName": "Wait a bit",
+                      "duration": "5s"
+                    },
+                    {
+                      "type": "rpc",
+                      "stepName": "Notify owner",
+                      "rpcName": "notifyOwner",
+                      "inputs": {
+                        "itemId": {
+                          "from": "input",
+                          "path": "itemId"
+                        },
+                        "message": {
+                          "from": "literal",
+                          "value": "urgent"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "elseSteps": [
+                {
+                  "type": "rpc",
+                  "stepName": "Notify later",
+                  "rpcName": "notifyOwner",
+                  "inputs": {
+                    "itemId": {
+                      "from": "input",
+                      "path": "itemId"
+                    },
+                    "message": {
+                      "from": "literal",
+                      "value": "later"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "switch",
+              "expression": "data.mode",
+              "cases": [
+                {
+                  "value": "a",
+                  "steps": [
+                    {
+                      "type": "rpc",
+                      "stepName": "Mode a",
+                      "rpcName": "priceCheck",
+                      "inputs": {
+                        "itemId": {
+                          "from": "literal",
+                          "value": "a"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "defaultSteps": [
+                {
+                  "type": "rpc",
+                  "stepName": "Mode default",
+                  "rpcName": "priceCheck",
+                  "inputs": {
+                    "itemId": {
+                      "from": "literal",
+                      "value": "d"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "parallel",
+              "children": [
+                {
+                  "type": "rpc",
+                  "stepName": "Parallel one",
+                  "rpcName": "priceCheck",
+                  "inputs": {
+                    "itemId": {
+                      "from": "literal",
+                      "value": "1"
+                    }
+                  }
+                },
+                {
+                  "type": "rpc",
+                  "stepName": "Parallel two",
+                  "rpcName": "priceCheck",
+                  "inputs": {
+                    "itemId": {
+                      "from": "literal",
+                      "value": "2"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "fanout",
+              "sourceVar": "data.ids",
+              "itemVar": "id",
+              "mode": "sequential",
+              "body": [
+                {
+                  "type": "rpc",
+                  "stepName": "Check ${id}",
+                  "rpcName": "priceCheck",
+                  "inputs": {
+                    "itemId": {
+                      "from": "item",
+                      "path": "id"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "return",
+              "outputs": {
+                "done": {
+                  "from": "literal",
+                  "value": true
+                }
+              }
+            }
+          ],
+          "dsl": true,
+          "description": "Restock an item",
+          "expose": true
+        }
+      },
+      "files": [
+        [
+          "restockWorkflow",
+          {
+            "path": "<fixture>/src/workflows.ts",
+            "exportedName": "restockWorkflow"
+          }
+        ]
+      ],
+      "graphMeta": {
+        "reviewGraph": {
+          "name": "reviewGraph",
+          "pikkuFuncId": "reviewGraph",
+          "source": "graph",
+          "description": "Review items",
+          "tags": [
+            "review"
+          ],
+          "nodes": {
+            "check": {
+              "nodeId": "check",
+              "rpcName": "priceCheck",
+              "input": {
+                "itemId": "x"
+              },
+              "next": "notify",
+              "stepHash": "178f731027a4"
+            },
+            "notify": {
+              "nodeId": "notify",
+              "rpcName": "notifyOwner",
+              "input": {
+                "itemId": {
+                  "$ref": "check",
+                  "path": "price"
+                },
+                "message": "reviewed"
+              },
+              "stepHash": "b26005563b84"
+            }
+          },
+          "entryNodeIds": [
+            "check"
+          ],
+          "graphHash": "10a3056e4f5f",
+          "wires": {
+            "http": [
+              {
+                "route": "/review",
+                "method": "post",
+                "startNode": "notify"
+              }
+            ],
+            "queue": [
+              {
+                "name": "review-queue",
+                "startNode": "check"
+              }
+            ]
+          }
+        },
+        "restockWorkflow": {
+          "name": "restockWorkflow",
+          "pikkuFuncId": "restockWorkflow",
+          "source": "dsl",
+          "description": "Restock an item",
+          "nodes": {
+            "Check price": {
+              "nodeId": "Check price",
+              "rpcName": "priceCheck",
+              "stepName": "Check price",
+              "next": "step_1",
+              "input": {
+                "itemId": {
+                  "$ref": "trigger",
+                  "path": "itemId"
+                }
+              },
+              "outputVar": "check",
+              "stepHash": "c899c8c70180"
+            },
+            "step_1": {
+              "nodeId": "step_1",
+              "flow": "branch",
+              "branches": [],
+              "next": "step_2"
+            },
+            "step_2": {
+              "nodeId": "step_2",
+              "flow": "branch",
+              "branches": [
+                {
+                  "condition": {
+                    "type": "simple",
+                    "expression": "data.urgent"
+                  },
+                  "entry": "Wait a bit"
+                }
+              ],
+              "elseEntry": "Notify later",
+              "next": "step_3"
+            },
+            "Wait a bit": {
+              "nodeId": "Wait a bit",
+              "flow": "sleep",
+              "stepName": "Wait a bit",
+              "duration": "5s",
+              "next": "Notify owner"
+            },
+            "Notify owner": {
+              "nodeId": "Notify owner",
+              "rpcName": "notifyOwner",
+              "stepName": "Notify owner",
+              "next": "step_3",
+              "input": {
+                "itemId": {
+                  "$ref": "trigger",
+                  "path": "itemId"
+                },
+                "message": "urgent"
+              },
+              "stepHash": "e925ba00d688"
+            },
+            "Notify later": {
+              "nodeId": "Notify later",
+              "rpcName": "notifyOwner",
+              "stepName": "Notify later",
+              "next": "step_3",
+              "input": {
+                "itemId": {
+                  "$ref": "trigger",
+                  "path": "itemId"
+                },
+                "message": "later"
+              },
+              "stepHash": "ce20a1234134"
+            },
+            "step_3": {
+              "nodeId": "step_3",
+              "flow": "switch",
+              "expression": "data.mode",
+              "cases": [
+                {
+                  "value": "a",
+                  "entry": "Mode a"
+                }
+              ],
+              "defaultEntry": "Mode default",
+              "next": "step_4"
+            },
+            "Mode a": {
+              "nodeId": "Mode a",
+              "rpcName": "priceCheck",
+              "stepName": "Mode a",
+              "next": "step_4",
+              "input": {
+                "itemId": "a"
+              },
+              "stepHash": "5f6b7a007e81"
+            },
+            "Mode default": {
+              "nodeId": "Mode default",
+              "rpcName": "priceCheck",
+              "stepName": "Mode default",
+              "next": "step_4",
+              "input": {
+                "itemId": "d"
+              },
+              "stepHash": "189dc3c1e612"
+            },
+            "step_4": {
+              "nodeId": "step_4",
+              "flow": "parallel",
+              "children": [
+                "Parallel one",
+                "Parallel two"
+              ],
+              "next": "step_5"
+            },
+            "Parallel one": {
+              "nodeId": "Parallel one",
+              "rpcName": "priceCheck",
+              "stepName": "Parallel one",
+              "next": "Parallel two",
+              "input": {
+                "itemId": "1"
+              },
+              "stepHash": "583b0568e8c9"
+            },
+            "Parallel two": {
+              "nodeId": "Parallel two",
+              "rpcName": "priceCheck",
+              "stepName": "Parallel two",
+              "input": {
+                "itemId": "2"
+              },
+              "stepHash": "42dafba9d500"
+            },
+            "step_5": {
+              "nodeId": "step_5",
+              "flow": "fanout",
+              "sourceVar": "data.ids",
+              "itemVar": "id",
+              "mode": "sequential",
+              "childEntry": "Check ${id}",
+              "next": "step_6"
+            },
+            "Check ${id}": {
+              "nodeId": "Check ${id}",
+              "rpcName": "priceCheck",
+              "stepName": "Check ${id}",
+              "input": {
+                "itemId": {
+                  "$ref": "$item",
+                  "path": "id"
+                }
+              },
+              "stepHash": "1277d125b6d2"
+            },
+            "step_6": {
+              "nodeId": "step_6",
+              "flow": "return",
+              "outputs": {
+                "done": {
+                  "from": "literal",
+                  "value": true
+                }
+              }
+            }
+          },
+          "entryNodeIds": [
+            "Check price"
+          ],
+          "graphHash": "086ed0963c72",
+          "deterministic": false,
+          "wires": {
+            "http": [
+              {
+                "route": "/restock",
+                "method": "post",
+                "startNode": "Check price"
+              }
+            ],
+            "schedule": [
+              {
+                "cron": "0 1 * * *",
+                "startNode": "Check price"
+              }
+            ]
+          }
+        }
+      },
+      "graphFiles": [
+        [
+          "reviewGraph",
+          {
+            "path": "<fixture>/src/workflows.ts",
+            "exportedName": "reviewGraph"
+          }
+        ]
+      ],
+      "featureFiles": [],
+      "invokedWorkflows": [
+        "restockWorkflow",
+        "reviewGraph"
+      ]
+    },
+    "rpc": {
+      "internalMeta": {
+        "getItem": "getItem",
+        "listItems": "listItems",
+        "searchItems": "searchItems",
+        "createItem": "createItem@v2",
+        "createItem@v2": "createItem@v2",
+        "createItemV1": "createItem@v1",
+        "createItem@v1": "createItem@v1",
+        "ping": "ping",
+        "countItems": "countItems",
+        "deleteItem": "deleteItem@v4",
+        "deleteItem@v4": "deleteItem@v4",
+        "archiveItem": "archiveItem",
+        "notifyOwner": "notifyOwner",
+        "priceCheck": "priceCheck"
+      },
+      "internalFiles": [
+        [
+          "createItem@v2",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "createItem"
+          }
+        ],
+        [
+          "createItem@v1",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "createItemV1"
+          }
+        ],
+        [
+          "deleteItem@v4",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "deleteItem"
+          }
+        ],
+        [
+          "notifyOwner",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "notifyOwner"
+          }
+        ],
+        [
+          "priceCheck",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "priceCheck"
+          }
+        ]
+      ],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [
+        "priceCheck",
+        "notifyOwner",
+        "check",
+        "createItem@v2",
+        "createItem@v1",
+        "deleteItem@v4"
+      ],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": {
+        "manifestVersion": 1,
+        "contracts": {
+          "getItem": {
+            "latest": 1,
+            "versions": {
+              "1": "deadbeefcafe"
+            }
+          },
+          "createItem": {
+            "latest": 3,
+            "versions": {
+              "1": {
+                "inputHash": "aaaa",
+                "outputHash": "bbbb"
+              },
+              "2": {
+                "inputHash": "cccc",
+                "outputHash": "dddd"
+              }
+            }
+          },
+          "deleteItem": {
+            "latest": 2,
+            "versions": {
+              "1": "x1",
+              "2": "x2"
+            }
+          },
+          "listItems": {
+            "latest": 2,
+            "versions": {
+              "2": {
+                "inputHash": "y",
+                "outputHash": "z"
+              }
+            }
+          },
+          "ping": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "p",
+                "outputHash": "q"
+              }
+            }
+          },
+          "goneFunction": {
+            "latest": 1,
+            "versions": {
+              "1": "gone"
+            }
+          }
+        }
+      },
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "getItem": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "5d2b3bff",
+                "outputHash": "dadc2715"
+              }
+            }
+          },
+          "createItem": {
+            "latest": 3,
+            "versions": {
+              "1": {
+                "inputHash": "ce7e77b1",
+                "outputHash": "6477ff91"
+              },
+              "2": {
+                "inputHash": "ce7e77b1",
+                "outputHash": "6477ff91"
+              }
+            }
+          },
+          "deleteItem": {
+            "latest": 4,
+            "versions": {
+              "1": "x1",
+              "2": "x2",
+              "4": {
+                "inputHash": "08e17e98",
+                "outputHash": "87d4dacf"
+              }
+            }
+          },
+          "listItems": {
+            "latest": 2,
+            "versions": {
+              "1": {
+                "inputHash": "f19cfa4f",
+                "outputHash": "47316c0c"
+              },
+              "2": {
+                "inputHash": "y",
+                "outputHash": "z"
+              }
+            }
+          },
+          "ping": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "257c0a0a",
+                "outputHash": "4f9a6fdc"
+              }
+            }
+          },
+          "goneFunction": {
+            "latest": 1,
+            "versions": {
+              "1": "gone"
+            }
+          },
+          "searchItems": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f88bb8da",
+                "outputHash": "d4a38048"
+              }
+            }
+          },
+          "countItems": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "b210c69e",
+                "outputHash": "87a2dbe4"
+              }
+            }
+          },
+          "archiveItem": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "7cde3846",
+                "outputHash": "48132b2a"
+              }
+            }
+          },
+          "notifyOwner": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "aa9b726b",
+                "outputHash": "5b90bb3c"
+              }
+            }
+          },
+          "priceCheck": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "142802d9",
+                "outputHash": "fb3150d7"
+              }
+            }
+          },
+          "restockWorkflow": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "99946238",
+                "outputHash": "d3f89efb"
+              }
+            }
+          },
+          "workflowStart:restockWorkflow": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "d40391e2",
+                "outputHash": "380bdcb4"
+              }
+            }
+          },
+          "workflowStatus:restockWorkflow": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "26c1a0ab",
+                "outputHash": "144465d7"
+              }
+            }
+          },
+          "graphStart:reviewGraph:notify": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "be269732",
+                "outputHash": "ce33b2b1"
+              }
+            }
+          },
+          "workflow:restockWorkflow": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "79427f42",
+                "outputHash": "a4c49053"
+              }
+            }
+          },
+          "workflowStart:reviewGraph": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "1ec1e507",
+                "outputHash": "2d25a1a9"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "PKU861",
+          "message": "Contract for getItem@v1 has changed (recorded: deadbeefcafe, current: 0e885c67c2bb0eff). Existing versions are immutable.",
+          "functionKey": "getItem",
+          "version": 1,
+          "previousHash": "deadbeefcafe",
+          "currentHash": "0e885c67c2bb0eff",
+          "previousInputHash": "deadbeefcafe",
+          "currentInputHash": "5d2b3bff",
+          "previousOutputHash": "deadbeefcafe",
+          "currentOutputHash": "dadc2715"
+        },
+        {
+          "code": "PKU863",
+          "message": "Version 1 for listItems is <= latest (2) but not recorded. Possible merge conflict.",
+          "functionKey": "listItems",
+          "version": 1,
+          "latestVersion": 2
+        },
+        {
+          "code": "PKU861",
+          "message": "Contract for createItem@v2 has changed (recorded: cccc/dddd, current: f90d79cdd5b2a6f6). Existing versions are immutable.",
+          "functionKey": "createItem",
+          "version": 2,
+          "previousHash": "cccc",
+          "currentHash": "f90d79cdd5b2a6f6",
+          "previousInputHash": "cccc",
+          "currentInputHash": "ce7e77b1",
+          "previousOutputHash": "dddd",
+          "currentOutputHash": "6477ff91"
+        },
+        {
+          "code": "PKU861",
+          "message": "Contract for createItem@v1 has changed (recorded: aaaa/bbbb, current: f90d79cdd5b2a6f6). Existing versions are immutable.",
+          "functionKey": "createItem",
+          "version": 1,
+          "previousHash": "aaaa",
+          "currentHash": "f90d79cdd5b2a6f6",
+          "previousInputHash": "aaaa",
+          "currentInputHash": "ce7e77b1",
+          "previousOutputHash": "bbbb",
+          "currentOutputHash": "6477ff91"
+        },
+        {
+          "code": "PKU861",
+          "message": "Contract for ping@v1 has changed (recorded: p/q, current: 7670cf035973250d). Existing versions are immutable.",
+          "functionKey": "ping",
+          "version": 1,
+          "previousHash": "p",
+          "currentHash": "7670cf035973250d",
+          "previousInputHash": "p",
+          "currentInputHash": "257c0a0a",
+          "previousOutputHash": "q",
+          "currentOutputHash": "4f9a6fdc"
+        },
+        {
+          "code": "PKU864",
+          "message": "Version 4 for deleteItem skips versions. Latest is 2, next must be 3.",
+          "functionKey": "deleteItem",
+          "version": 4,
+          "latestVersion": 2,
+          "expectedNextVersion": 3
+        },
+        {
+          "code": "PKU865",
+          "message": "Manifest integrity error for createItem: latest field (3) inconsistent with version keys (max: 2).",
+          "functionKey": "createItem",
+          "latestVersion": 3,
+          "expectedNextVersion": 2
+        }
+      ]
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [
+        "workflowService",
+        "workflowRunService",
+        "schedulerService",
+        "queueService"
+      ],
+      "usedFunctions": [
+        "getItem",
+        "listItems",
+        "searchItems",
+        "createItem@v2",
+        "ping",
+        "countItems",
+        "deleteItem@v4",
+        "archiveItem",
+        "workflowStart:restockWorkflow",
+        "workflowStatus:restockWorkflow",
+        "graphStart:reviewGraph:notify",
+        "workflow:restockWorkflow",
+        "workflowStart:reviewGraph"
+      ],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "getItem": {
+        "inputType": "GetItemInput",
+        "outputType": "Item"
+      },
+      "listItems": {
+        "inputType": "ListItemsInput",
+        "outputType": "ItemList"
+      },
+      "searchItems": {
+        "inputType": "SearchItemsInput",
+        "outputType": "SearchItemsOutput"
+      },
+      "createItem@v2": {
+        "inputType": "CreateItemInput",
+        "outputType": "Item"
+      },
+      "createItem@v1": {
+        "inputType": "CreateItemInput",
+        "outputType": "Item"
+      },
+      "ping": {
+        "inputType": "null",
+        "outputType": "string"
+      },
+      "countItems": {
+        "inputType": "CountItemsInput",
+        "outputType": "number"
+      },
+      "deleteItem@v4": {
+        "inputType": "DeleteItemInput",
+        "outputType": "DeleteItemOutput"
+      },
+      "archiveItem": {
+        "inputType": "ArchiveItemInput",
+        "outputType": "null"
+      },
+      "notifyOwner": {
+        "inputType": "NotifyOwnerInput",
+        "outputType": "NotifyOwnerOutput"
+      },
+      "priceCheck": {
+        "inputType": "PriceCheckInput",
+        "outputType": "PriceCheckOutput"
+      },
+      "restockWorkflow": {
+        "inputType": "RestockWorkflowInput",
+        "outputType": "RestockWorkflowOutput"
+      },
+      "workflowStart:restockWorkflow": {
+        "inputType": "PriceCheckInput",
+        "outputType": "null"
+      },
+      "workflowStatus:restockWorkflow": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "graphStart:reviewGraph:notify": {
+        "inputType": "NotifyOwnerInput",
+        "outputType": "null"
+      },
+      "workflow:restockWorkflow": {
+        "inputType": "PriceCheckInput",
+        "outputType": "null"
+      },
+      "workflowStart:reviewGraph": {
+        "inputType": "PriceCheckInput",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "GetItemInput",
+      "Item",
+      "ListItemsInput",
+      "ItemList",
+      "SearchItemsInput",
+      "SearchItemsOutput",
+      "CreateItemInput",
+      "CountItemsInput",
+      "DeleteItemInput",
+      "DeleteItemOutput",
+      "ArchiveItemInput",
+      "NotifyOwnerInput",
+      "NotifyOwnerOutput",
+      "PriceCheckInput",
+      "PriceCheckOutput",
+      "RestockWorkflowInput",
+      "RestockWorkflowOutput"
+    ],
+    "openAPISpec": {
+      "openapi": "3.1.0",
+      "info": {
+        "title": "Fixture API",
+        "version": "1.2.3",
+        "description": "Finalize parity fixture"
+      },
+      "servers": [
+        {
+          "url": "https://api.example.com",
+          "description": "prod"
+        }
+      ],
+      "paths": {
+        "/items/{id}": {
+          "get": {
+            "description": "This endpoint handles the GET request for the route /items/:id.",
+            "tags": [
+              "items",
+              "read"
+            ],
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Item"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "description": "The client does not have permission to access the requested resource."
+              },
+              "404": {
+                "description": "The server cannot find the requested resource."
+              }
+            }
+          }
+        },
+        "/items": {
+          "get": {
+            "description": "List all items",
+            "tags": [
+              "items"
+            ],
+            "parameters": [
+              {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "q",
+                "in": "query",
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ItemList"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "post": {
+            "description": "This endpoint handles the POST request for the route /items.",
+            "tags": [
+              "items"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Item"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/search": {
+          "get": {
+            "description": "This endpoint handles the GET request for the route /search.",
+            "tags": [
+              "search"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/SearchItemsOutput"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/ping": {
+          "get": {
+            "description": "This endpoint handles the GET request for the route /ping.",
+            "tags": [
+              "ping"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/": {
+          "get": {
+            "description": "This endpoint handles the GET request for the route /.",
+            "tags": [
+              "default"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/restock/status": {
+          "get": {
+            "description": "This endpoint handles the GET request for the route /restock/status.",
+            "tags": [
+              "restock"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response"
+              }
+            }
+          }
+        },
+        "/items/{id}/archive": {
+          "post": {
+            "description": "This endpoint handles the POST request for the route /items/:id/archive.",
+            "tags": [
+              "items"
+            ],
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful response"
+              }
+            }
+          }
+        },
+        "/restock": {
+          "post": {
+            "description": "This endpoint handles the POST request for the route /restock.",
+            "tags": [
+              "restock"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response"
+              }
+            }
+          }
+        },
+        "/review": {
+          "post": {
+            "description": "This endpoint handles the POST request for the route /review.",
+            "tags": [
+              "review"
+            ],
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful response"
+              }
+            }
+          }
+        },
+        "/orgs/{orgId}/items/{id}": {
+          "delete": {
+            "description": "This endpoint handles the DELETE request for the route /orgs/:orgId/items/:id.",
+            "tags": [
+              "orgs"
+            ],
+            "parameters": [
+              {
+                "name": "orgId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/DeleteItemOutput"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "description": "The server cannot find the requested resource."
+              }
+            }
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "SearchItemsOutput": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "item"
+                    ]
+                  },
+                  "item": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "price": {
+                        "type": "number"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "open",
+                          "closed"
+                        ]
+                      },
+                      "note": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "attributes": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      },
+                      "owner": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "manager": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "item"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "price",
+                      "status",
+                      "note",
+                      "createdAt",
+                      "attributes",
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "item"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "none"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "definitions": {
+              "Item": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "owner": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "manager": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "item"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "price",
+                  "status",
+                  "note",
+                  "createdAt",
+                  "attributes",
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              "Status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "Owner": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "manager": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "DeleteItemOutput": {
+            "type": "boolean",
+            "enum": [
+              false,
+              true
+            ],
+            "definitions": {}
+          },
+          "Item": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attributes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "owner": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "manager": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "item"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "price",
+              "status",
+              "note",
+              "createdAt",
+              "attributes",
+              "kind"
+            ],
+            "additionalProperties": false,
+            "definitions": {
+              "Status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "Owner": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "manager": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "ItemList": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "type": "number"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "closed"
+                      ]
+                    },
+                    "note": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "attributes": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "owner": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "manager": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "item"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "price",
+                    "status",
+                    "note",
+                    "createdAt",
+                    "attributes",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "total": {
+                "type": "number"
+              },
+              "page": {
+                "type": "number",
+                "maximum": 100,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "items",
+              "total",
+              "page"
+            ],
+            "additionalProperties": false,
+            "definitions": {
+              "Item": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "owner": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "manager": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "item"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "price",
+                  "status",
+                  "note",
+                  "createdAt",
+                  "attributes",
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              "Status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "Owner": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "manager": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {},
+        "parameters": {},
+        "examples": {},
+        "requestBodies": {},
+        "headers": {},
+        "securitySchemes": {
+          "ApiKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "x-api-key"
+          },
+          "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer"
+          }
+        }
+      },
+      "security": [
+        {
+          "ApiKeyAuth": []
+        },
+        {
+          "BearerAuth": []
+        }
+      ],
+      "tags": [
+        {
+          "name": "items",
+          "description": "Item routes"
+        }
+      ],
+      "externalDocs": {
+        "url": "https://example.com/docs"
+      }
+    },
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "warn",
+      "code": "PKU574",
+      "message": "1 exposed sessionless function carries no permission and no addon gate, so it is reachable by anyone through POST /rpc/:rpcName: restockWorkflow. Add permissions to the function, set `auth: true` if a session is required after all, gate the whole addon with wireAddon({ auth: true }), drop `expose: true` if it was not meant to be callable from outside, or set `auth: false` to declare it public on purpose."
+    }
+  ],
+  "validationPass": {
+    "start": 0,
+    "end": 1
+  }
+}

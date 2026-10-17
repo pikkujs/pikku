@@ -1,0 +1,1205 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "LookupItemInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "LookupItemOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SearchItemsInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "UndocumentedToolInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "a"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "LabelledToolInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ReadNoteInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "SummarisePromptInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "McpResourceInlineIdInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "McpPromptInlinePromptInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": [
+          [
+            "LookupItemInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "LookupItemOutput",
+            {
+              "type": "{ name: string; }",
+              "references": []
+            }
+          ],
+          [
+            "SearchItemsInput",
+            {
+              "type": "{ q: string; }",
+              "references": []
+            }
+          ],
+          [
+            "UndocumentedToolInput",
+            {
+              "type": "{ a: number; }",
+              "references": []
+            }
+          ],
+          [
+            "LabelledToolInput",
+            {
+              "type": "{ text: string; }",
+              "references": []
+            }
+          ],
+          [
+            "MCPToolResponse",
+            {
+              "type": "MCPToolResponse",
+              "references": []
+            }
+          ],
+          [
+            "ReadNoteInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "MCPResourceResponse",
+            {
+              "type": "MCPResourceResponse",
+              "references": []
+            }
+          ],
+          [
+            "SummarisePromptInput",
+            {
+              "type": "{ topic: string; }",
+              "references": []
+            }
+          ],
+          [
+            "MCPPromptResponse",
+            {
+              "type": "MCPPromptResponse",
+              "references": []
+            }
+          ],
+          [
+            "McpResourceInlineIdInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "McpPromptInlinePromptInput",
+            {
+              "type": "{ topic: string; }",
+              "references": []
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "lookupItem": {
+          "pikkuFuncId": "lookupItem",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "lookupItem",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "LookupItemInput",
+          "outputSchemaName": "LookupItemOutput",
+          "inputs": [
+            "LookupItemInput"
+          ],
+          "outputs": [
+            "LookupItemOutput"
+          ],
+          "implementationHash": "41c374cc33048ee1",
+          "description": "Look an item up",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "lookupItem",
+          "bodyStart": 15,
+          "bodyEnd": 15,
+          "contractHash": "6576be451803d55f",
+          "inputHash": "899b3e1f",
+          "outputHash": "56e4aaa2"
+        },
+        "searchItems": {
+          "pikkuFuncId": "searchItems",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "searchItems",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "SearchItemsInput",
+          "outputSchemaName": "string",
+          "inputs": [
+            "SearchItemsInput"
+          ],
+          "outputs": [
+            "string"
+          ],
+          "implementationHash": "db6e9e9384eb082e",
+          "description": "Search",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "renamedTool",
+          "bodyStart": 21,
+          "bodyEnd": 21,
+          "contractHash": "538837b329c389ac",
+          "inputHash": "f88bb8da",
+          "outputHash": "b23574ef"
+        },
+        "undocumentedTool": {
+          "pikkuFuncId": "undocumentedTool",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "name": "undocumentedTool",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "UndocumentedToolInput",
+          "outputSchemaName": "number",
+          "inputs": [
+            "UndocumentedToolInput"
+          ],
+          "outputs": [
+            "number"
+          ],
+          "mcp": true,
+          "implementationHash": "d11ede765ef73733",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "undocumentedTool",
+          "bodyStart": 26,
+          "bodyEnd": 26,
+          "contractHash": "9acddd1fe7006b60",
+          "inputHash": "46b87fb5",
+          "outputHash": "c2a24185"
+        },
+        "labelledTool": {
+          "pikkuFuncId": "labelledTool",
+          "functionType": "user",
+          "funcWrapper": "pikkuMCPToolFunc",
+          "sessionless": true,
+          "name": "labelledTool",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "LabelledToolInput",
+          "outputSchemaName": "MCPToolResponse",
+          "inputs": [
+            "LabelledToolInput"
+          ],
+          "outputs": [
+            "MCPToolResponse"
+          ],
+          "mcp": true,
+          "implementationHash": "19538c453f5b0e45",
+          "title": "Echo",
+          "tags": [
+            "mcp"
+          ],
+          "description": "Echoes the text back",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "labelledTool",
+          "bodyStart": 34,
+          "bodyEnd": 34,
+          "contractHash": "80addabfb439a7f6",
+          "inputHash": "3a042ad5",
+          "outputHash": "9e4def02"
+        },
+        "readNote": {
+          "pikkuFuncId": "readNote",
+          "functionType": "user",
+          "funcWrapper": "pikkuMCPResourceFunc",
+          "sessionless": true,
+          "name": "readNote",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "ReadNoteInput",
+          "outputSchemaName": "MCPResourceResponse",
+          "inputs": [
+            "ReadNoteInput"
+          ],
+          "outputs": [
+            "MCPResourceResponse"
+          ],
+          "implementationHash": "beb1172afa061133",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "readNote",
+          "bodyStart": 38,
+          "bodyEnd": 38,
+          "contractHash": "fd9592e20f8fd2b3",
+          "inputHash": "de581bf1",
+          "outputHash": "1b5191af"
+        },
+        "summarisePrompt": {
+          "pikkuFuncId": "summarisePrompt",
+          "functionType": "user",
+          "funcWrapper": "pikkuMCPPromptFunc",
+          "sessionless": true,
+          "name": "summarisePrompt",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "SummarisePromptInput",
+          "outputSchemaName": "MCPPromptResponse",
+          "inputs": [
+            "SummarisePromptInput"
+          ],
+          "outputs": [
+            "MCPPromptResponse"
+          ],
+          "implementationHash": "0115cb6cc0208952",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "summarisePrompt",
+          "bodyStart": 42,
+          "bodyEnd": 42,
+          "contractHash": "6c9fadf7e37301c7",
+          "inputHash": "406a2903",
+          "outputHash": "853bfa7a"
+        },
+        "mcp:resource:inline/{id}": {
+          "pikkuFuncId": "mcp:resource:inline/{id}",
+          "functionType": "inline",
+          "name": "inline/{id}",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "McpResourceInlineIdInput",
+          "outputSchemaName": "unknown",
+          "inputs": [
+            "McpResourceInlineIdInput"
+          ],
+          "outputs": [
+            "unknown"
+          ],
+          "sourceFile": "<fixture>/src/mcp.ts",
+          "contractHash": "eddf10f1660ff486",
+          "inputHash": "617575c8",
+          "outputHash": "bd8fc0ce"
+        },
+        "mcp:prompt:inline-prompt": {
+          "pikkuFuncId": "mcp:prompt:inline-prompt",
+          "functionType": "inline",
+          "name": "inline-prompt",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": "McpPromptInlinePromptInput",
+          "outputSchemaName": "unknown",
+          "inputs": [
+            "McpPromptInlinePromptInput"
+          ],
+          "outputs": [
+            "unknown"
+          ],
+          "sourceFile": "<fixture>/src/mcp.ts",
+          "contractHash": "4b62b2467a5fbe2b",
+          "inputHash": "78b3eb84",
+          "outputHash": "06953778"
+        }
+      },
+      "files": [
+        [
+          "lookupItem",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "lookupItem"
+          }
+        ],
+        [
+          "searchItems",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "renamedTool"
+          }
+        ],
+        [
+          "undocumentedTool",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "undocumentedTool"
+          }
+        ],
+        [
+          "labelledTool",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "labelledTool"
+          }
+        ],
+        [
+          "readNote",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "readNote"
+          }
+        ],
+        [
+          "summarisePrompt",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "summarisePrompt"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": [
+        "checkout",
+        "reviewFlow",
+        "unnamedGraph",
+        "refFlow"
+      ]
+    },
+    "rpc": {
+      "internalMeta": {
+        "lookupItem": "lookupItem",
+        "searchItems": "searchItems",
+        "undocumentedTool": "undocumentedTool",
+        "labelledTool": "labelledTool",
+        "readNote": "readNote",
+        "summarisePrompt": "summarisePrompt"
+      },
+      "internalFiles": [
+        [
+          "undocumentedTool",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "undocumentedTool"
+          }
+        ],
+        [
+          "labelledTool",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "labelledTool"
+          }
+        ],
+        [
+          "lookupItem",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "lookupItem"
+          }
+        ],
+        [
+          "searchItems",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "renamedTool"
+          }
+        ]
+      ],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [
+        "external",
+        "refFlow"
+      ],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {
+        "notes/{id}": {
+          "pikkuFuncId": "readNote",
+          "uri": "notes/{id}",
+          "title": "Note",
+          "description": "A note",
+          "tags": [
+            "notes"
+          ],
+          "inputSchema": "ReadNoteInput",
+          "outputSchema": "MCPResourceResponse"
+        },
+        "inline/{id}": {
+          "pikkuFuncId": "mcp:resource:inline/{id}",
+          "uri": "inline/{id}",
+          "title": "Inline",
+          "description": "Inline resource",
+          "streaming": true,
+          "inputSchema": "McpResourceInlineIdInput",
+          "outputSchema": "unknown"
+        }
+      },
+      "toolsMeta": {
+        "undocumentedTool": {
+          "pikkuFuncId": "undocumentedTool",
+          "name": "undocumentedTool",
+          "inputSchema": "UndocumentedToolInput",
+          "outputSchema": "number"
+        },
+        "echo-text": {
+          "pikkuFuncId": "labelledTool",
+          "name": "echo-text",
+          "title": "Echo",
+          "description": "Echoes the text back",
+          "tags": [
+            "mcp"
+          ],
+          "inputSchema": "LabelledToolInput",
+          "outputSchema": "MCPToolResponse"
+        }
+      },
+      "promptsMeta": {
+        "summarise": {
+          "pikkuFuncId": "summarisePrompt",
+          "name": "summarise",
+          "description": "Summarise a topic",
+          "inputSchema": "SummarisePromptInput",
+          "outputSchema": "MCPPromptResponse",
+          "arguments": []
+        },
+        "inline-prompt": {
+          "pikkuFuncId": "mcp:prompt:inline-prompt",
+          "name": "inline-prompt",
+          "description": "Inline prompt",
+          "inputSchema": "McpPromptInlinePromptInput",
+          "outputSchema": "unknown",
+          "arguments": []
+        }
+      },
+      "files": [
+        "<fixture>/src/functions.ts",
+        "<fixture>/src/mcp.ts"
+      ],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {
+        "helperAgent": {
+          "name": "helper",
+          "description": "Helps",
+          "goal": "",
+          "model": "openai/gpt-4o",
+          "sourceFile": "<fixture>/src/agents.ts",
+          "exportedName": "helperAgent",
+          "inputSchema": null,
+          "outputSchema": null,
+          "workingMemorySchema": null
+        },
+        "shopAgent": {
+          "name": "shop-assistant",
+          "description": "Answers shopper questions",
+          "role": "assistant",
+          "goal": "Sell things",
+          "model": "openai/gpt-4o",
+          "summary": "Shop bot",
+          "sourceFile": "<fixture>/src/agents.ts",
+          "exportedName": "shopAgent",
+          "maxSteps": 5,
+          "temperature": 0.2,
+          "toolChoice": "auto",
+          "providerOptions": {
+            "openai": {
+              "reasoningEffort": "high",
+              "tags": [
+                "a",
+                1,
+                true,
+                null
+              ],
+              "n": -2
+            },
+            "x-y": {
+              "1": "one"
+            }
+          },
+          "tools": [
+            "lookupItem",
+            "searchItems",
+            "external",
+            "workflow:checkout"
+          ],
+          "agents": [
+            "helperAgent"
+          ],
+          "workflows": [
+            "reviewFlow",
+            "unnamedGraph",
+            "refFlow"
+          ],
+          "scorers": [
+            "answersTheShopper"
+          ],
+          "tags": [
+            "bots"
+          ],
+          "inputSchema": null,
+          "outputSchema": null,
+          "workingMemorySchema": null
+        },
+        "computedAgent": {
+          "name": "computed",
+          "description": "Has computed options",
+          "goal": "",
+          "model": "openai/gpt-4o",
+          "sourceFile": "<fixture>/src/agents.ts",
+          "exportedName": "computedAgent",
+          "maxSteps": "computed as unknown as number",
+          "inputSchema": null,
+          "outputSchema": null,
+          "workingMemorySchema": null
+        }
+      },
+      "files": [
+        [
+          "helperAgent",
+          {
+            "path": "<fixture>/src/agents.ts",
+            "exportedName": "helperAgent"
+          }
+        ],
+        [
+          "shopAgent",
+          {
+            "path": "<fixture>/src/agents.ts",
+            "exportedName": "shopAgent"
+          }
+        ],
+        [
+          "computedAgent",
+          {
+            "path": "<fixture>/src/agents.ts",
+            "exportedName": "computedAgent"
+          }
+        ]
+      ],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {
+        "answersTheShopper": {
+          "name": "answersTheShopper",
+          "description": "Judges answers",
+          "lane": "slow",
+          "sampleRate": 1,
+          "requiresReference": false,
+          "sourceFile": "<fixture>/src/agents.ts",
+          "exportedName": "answersTheShopper"
+        },
+        "namesAProduct": {
+          "name": "namesAProduct",
+          "description": "Names a product",
+          "lane": "fast",
+          "sampleRate": 0.25,
+          "requiresReference": true,
+          "sourceFile": "<fixture>/src/agents.ts",
+          "exportedName": "namesAProduct"
+        }
+      },
+      "files": [
+        [
+          "answersTheShopper",
+          {
+            "path": "<fixture>/src/agents.ts",
+            "exportedName": "answersTheShopper"
+          }
+        ],
+        [
+          "namesAProduct",
+          {
+            "path": "<fixture>/src/agents.ts",
+            "exportedName": "namesAProduct"
+          }
+        ]
+      ]
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "lookupItem": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "899b3e1f",
+                "outputHash": "56e4aaa2"
+              }
+            }
+          },
+          "searchItems": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f88bb8da",
+                "outputHash": "b23574ef"
+              }
+            }
+          },
+          "undocumentedTool": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "46b87fb5",
+                "outputHash": "c2a24185"
+              }
+            }
+          },
+          "labelledTool": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "3a042ad5",
+                "outputHash": "9e4def02"
+              }
+            }
+          },
+          "readNote": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "de581bf1",
+                "outputHash": "1b5191af"
+              }
+            }
+          },
+          "summarisePrompt": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "406a2903",
+                "outputHash": "853bfa7a"
+              }
+            }
+          },
+          "mcp:resource:inline/{id}": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "617575c8",
+                "outputHash": "bd8fc0ce"
+              }
+            }
+          },
+          "mcp:prompt:inline-prompt": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "78b3eb84",
+                "outputHash": "06953778"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [
+        "agentStorage",
+        "agentRunState",
+        "agentRunService",
+        "agentRunner"
+      ],
+      "usedFunctions": [
+        "undocumentedTool",
+        "labelledTool",
+        "helperAgent",
+        "shopAgent",
+        "computedAgent",
+        "readNote",
+        "mcp:resource:inline/{id}",
+        "summarisePrompt",
+        "mcp:prompt:inline-prompt"
+      ],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "lookupItem": {
+        "inputType": "LookupItemInput",
+        "outputType": "LookupItemOutput"
+      },
+      "searchItems": {
+        "inputType": "SearchItemsInput",
+        "outputType": "string"
+      },
+      "undocumentedTool": {
+        "inputType": "UndocumentedToolInput",
+        "outputType": "number"
+      },
+      "labelledTool": {
+        "inputType": "LabelledToolInput",
+        "outputType": "MCPToolResponse"
+      },
+      "readNote": {
+        "inputType": "ReadNoteInput",
+        "outputType": "MCPResourceResponse"
+      },
+      "summarisePrompt": {
+        "inputType": "SummarisePromptInput",
+        "outputType": "MCPPromptResponse"
+      },
+      "mcp:resource:inline/{id}": {
+        "inputType": "McpResourceInlineIdInput",
+        "outputType": "unknown"
+      },
+      "mcp:prompt:inline-prompt": {
+        "inputType": "McpPromptInlinePromptInput",
+        "outputType": "unknown"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "LookupItemInput",
+      "LookupItemOutput",
+      "SearchItemsInput",
+      "UndocumentedToolInput",
+      "LabelledToolInput",
+      "MCPToolResponse",
+      "ReadNoteInput",
+      "MCPResourceResponse",
+      "SummarisePromptInput",
+      "MCPPromptResponse",
+      "McpResourceInlineIdInput",
+      "McpPromptInlinePromptInput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "warn",
+      "message": "MCP tool 'undocumentedTool' is missing a description."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' lists a scorer that is not an inline string: `scorerName`. A scorer is named, not imported, so the name has to be readable from source."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' tools array contains a string literal 'literal'. Use a function reference instead (e.g., import the pikkuFunc variable)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' tools array contains identifier 'notAFunc' that could not be resolved to a pikkuFunc."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' agents array contains a string literal 'other'. Use an agent reference instead (e.g., import the pikkuAgent variable)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' agents array contains identifier 'notAFunc' that could not be resolved to a pikkuAgent."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' workflows array contains a string literal 'bad'. Use a workflow reference instead (e.g., ref('<workflowName>') or import the pikkuWorkflowGraph variable)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI agent 'shop-assistant' workflows array contains identifier 'notAFunc' that could not be resolved to a pikkuWorkflowGraph."
+    },
+    {
+      "level": "critical",
+      "code": "PKU489",
+      "message": "Inline schemas are not supported for 'input' in AI agent 'shop-assistant'.\n  Extract to an exported variable:\n    export const ShopAgentInput = someSchema()\n  Then use: input: ShopAgentInput"
+    },
+    {
+      "level": "critical",
+      "code": "PKU247",
+      "message": "AI agent 'computed' has invalid 'tags' property - must be an array of strings."
+    },
+    {
+      "level": "warn",
+      "code": "PKU156",
+      "message": "AI agent 'computed' has a 'providerOptions' the inspector cannot read statically, so it is missing from the generated metadata. Inline it as an object literal of strings, numbers, booleans, arrays and nested objects."
+    },
+    {
+      "level": "critical",
+      "code": "PKU123",
+      "message": "AI agent 'quiet' is missing a description."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "AI agent is missing the required 'name' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "AI scorer 'badRate' has a sampleRate of 1.5 — it is the fraction of live runs to grade, so it must be between 0 and 1."
+    },
+    {
+      "level": "critical",
+      "code": "PKU123",
+      "message": "AI scorer 'noDesc' is missing the required 'description' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "AI scorer is missing the required 'name' property."
+    },
+    {
+      "level": "warn",
+      "message": "MCP resource 'inline/{id}' has streaming enabled, but streaming is not yet supported."
+    },
+    {
+      "level": "critical",
+      "code": "PKU370",
+      "message": "MCP resource 'untitled' is missing the required 'title' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU220",
+      "message": "MCP resource is missing the required 'uri' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU236",
+      "message": "No valid 'func' property for MCP resource 'nofunc'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU123",
+      "message": "MCP prompt 'undescribed' is missing a description."
+    },
+    {
+      "level": "error",
+      "code": "PKU463",
+      "message": "3 function contracts name a schema that was never generated, so calling them fails at runtime with MissingSchemaError: labelledTool.output → 'MCPToolResponse', readNote.output → 'MCPResourceResponse', summarisePrompt.output → 'MCPPromptResponse'. The usual cause is a named type used as the function's input/output that is declared but not exported — export it, or inline the type at the call site."
+    },
+    {
+      "level": "critical",
+      "code": "PKU153",
+      "message": "AI agent 'shopAgent' (<fixture>/src/agents.ts) references tool 'external', which is not a function in this project."
+    }
+  ],
+  "validationPass": {
+    "start": 22,
+    "end": 23
+  }
+}

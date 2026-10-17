@@ -1,0 +1,640 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "FullInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "FullOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": [
+          [
+            "FullInput",
+            {
+              "type": "{ id: string; }",
+              "references": []
+            }
+          ],
+          [
+            "FullOutput",
+            {
+              "type": "{ ok: boolean; }",
+              "references": []
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "full": {
+          "pikkuFuncId": "full",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "full",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "FullInput",
+          "outputSchemaName": "FullOutput",
+          "inputs": [
+            "FullInput"
+          ],
+          "outputs": [
+            "FullOutput"
+          ],
+          "implementationHash": "cd588e4e1b929b0d",
+          "title": "Full",
+          "tags": [
+            "a",
+            "b"
+          ],
+          "description": "Every node field set",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "full",
+          "bodyStart": 13,
+          "bodyEnd": 13,
+          "contractHash": "1b57d61756987f9b",
+          "inputHash": "f832f668",
+          "outputHash": "8fcd71ec"
+        },
+        "bare": {
+          "pikkuFuncId": "bare",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "bare",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "e7b3718bc862891a",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "bare",
+          "bodyStart": 18,
+          "bodyEnd": 18,
+          "contractHash": "ce41cbe4c3210c30",
+          "inputHash": "4ce089fc",
+          "outputHash": "25245aa4"
+        },
+        "badType": {
+          "pikkuFuncId": "badType",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "badType",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "737fe26dca3ddf11",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "badType",
+          "bodyStart": 23,
+          "bodyEnd": 23,
+          "contractHash": "40ef1dc1306e9513",
+          "inputHash": "04931b38",
+          "outputHash": "8d287d64"
+        },
+        "missing": {
+          "pikkuFuncId": "missing",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "missing",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "633723ad7cdd894a",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "missing",
+          "bodyStart": 28,
+          "bodyEnd": 28,
+          "contractHash": "578f83876f65a53c",
+          "inputHash": "9007a9d8",
+          "outputHash": "4edb4012"
+        },
+        "notLiteral": {
+          "pikkuFuncId": "notLiteral",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "notLiteral",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "480e1e3846d68e23",
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "notLiteral",
+          "bodyStart": 33,
+          "bodyEnd": 33,
+          "contractHash": "a09ca6dddf8de896",
+          "inputHash": "8bf384f2",
+          "outputHash": "838fa5b8"
+        },
+        "emptyTags": {
+          "pikkuFuncId": "emptyTags",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "emptyTags",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "9472a89d43fac780",
+          "tags": [],
+          "isDirectFunction": false,
+          "sourceFile": "<fixture>/src/nodes.ts",
+          "exportedName": "emptyTags",
+          "bodyStart": 39,
+          "bodyEnd": 39,
+          "contractHash": "05c541023992344b",
+          "inputHash": "932580ce",
+          "outputHash": "176a1007"
+        }
+      },
+      "files": [
+        [
+          "full",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "full"
+          }
+        ],
+        [
+          "bare",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "bare"
+          }
+        ],
+        [
+          "badType",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "badType"
+          }
+        ],
+        [
+          "missing",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "missing"
+          }
+        ],
+        [
+          "notLiteral",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "notLiteral"
+          }
+        ],
+        [
+          "emptyTags",
+          {
+            "path": "<fixture>/src/nodes.ts",
+            "exportedName": "emptyTags"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {
+        "full": "full",
+        "bare": "bare",
+        "badType": "badType",
+        "missing": "missing",
+        "notLiteral": "notLiteral",
+        "emptyTags": "emptyTags"
+      },
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {
+        "full": {
+          "name": "full",
+          "displayName": "Full Node",
+          "category": "Things",
+          "type": "trigger",
+          "rpc": "full",
+          "description": "Every node field set",
+          "errorOutput": true,
+          "inputSchemaName": "FullInput",
+          "outputSchemaName": "FullOutput",
+          "tags": [
+            "a",
+            "b"
+          ]
+        },
+        "bare": {
+          "name": "bare",
+          "displayName": "Bare",
+          "category": "Things",
+          "type": "end",
+          "rpc": "bare",
+          "errorOutput": false,
+          "inputSchemaName": null,
+          "outputSchemaName": null
+        },
+        "badType": {
+          "name": "badType",
+          "displayName": "Bad",
+          "category": "Things",
+          "type": "sideways",
+          "rpc": "badType",
+          "errorOutput": false,
+          "inputSchemaName": null,
+          "outputSchemaName": null
+        }
+      },
+      "files": [
+        "<fixture>/src/nodes.ts"
+      ]
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "full": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "f832f668",
+                "outputHash": "8fcd71ec"
+              }
+            }
+          },
+          "bare": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "4ce089fc",
+                "outputHash": "25245aa4"
+              }
+            }
+          },
+          "badType": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "04931b38",
+                "outputHash": "8d287d64"
+              }
+            }
+          },
+          "missing": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "9007a9d8",
+                "outputHash": "4edb4012"
+              }
+            }
+          },
+          "notLiteral": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "8bf384f2",
+                "outputHash": "838fa5b8"
+              }
+            }
+          },
+          "emptyTags": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "932580ce",
+                "outputHash": "176a1007"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [],
+      "usedFunctions": [],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "full": {
+        "inputType": "FullInput",
+        "outputType": "FullOutput"
+      },
+      "bare": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "badType": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "missing": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "notLiteral": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "emptyTags": {
+        "inputType": "null",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "FullInput",
+      "FullOutput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Function 'badType' node config has invalid type 'sideways'. Must be 'trigger', 'action', or 'end'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "Function 'missing' node config is missing the required 'displayName' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "Function 'missing' node config is missing the required 'category' property."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "Function 'missing' node config is missing the required 'type' property."
+    }
+  ],
+  "validationPass": {
+    "start": 4,
+    "end": 4
+  }
+}
