@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisLeaseService, RedisWorkflowService } from '@pikku/redis'
-import { InMemoryTriggerService } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig } from '../../functions/src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'

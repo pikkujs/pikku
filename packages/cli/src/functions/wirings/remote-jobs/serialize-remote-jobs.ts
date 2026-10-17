@@ -41,10 +41,8 @@ export const RemoteScheduledJob = z.object({
  */
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTP } from '${leaf('http')}'
-import {
-  pikkuRemoteQueueJobFunc,
-  pikkuRemoteScheduledJobFunc,
-} from '@pikku/core/services'
+import { pikkuRemoteQueueJobFunc } from '@pikku/core/queue'
+import { pikkuRemoteScheduledJobFunc } from '@pikku/core/scheduler'
 import { remoteJobsSecret } from '@pikku/core/middleware'
 import { RemoteQueueJob, RemoteScheduledJob } from './remote-jobs.schemas.gen.js'
 

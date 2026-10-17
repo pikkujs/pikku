@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { InMemoryTriggerService } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 import { createSingletonServices } from '../src/services.js'
 import { createConfig } from '../src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'
