@@ -20,9 +20,203 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ## 0.13.0 changes
 
-> **TODO (release workstream):** fill in this section when 0.13.0 is cut. Known items so far:
->
-> - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
+Every `@pikku/*` package that was on 0.12.x is 0.13.0, and every internal peer and dependency range is `^0.13.0`. Under 0.x caret rules `^0.12.x` does not admit 0.13.0, so move all of them in one step: a 0.12 runtime or service package next to `@pikku/core` 0.13 fails to install with a peer conflict (npm) or warns and loads two cores (yarn, pnpm). `@pikku/kysely` was already on 0.13.x and moves to its next patch.
+
+`pikku update --update --update-peers` writes the new ranges. Published addons that are not built in the pikku repository have to be regenerated with `@pikku/cli` 0.13 and republished before an app on core 0.13 can install them. Their generated `.pikku` output still imports the removed `@pikku/core/persona`, and their peer range on `@pikku/core` is `^0.12.x`.
+
+The entries below are the breaking changes in 0.13.0 itself. The sections after them list the ones that shipped earlier as 0.12.x patches.
+
+### `@pikku/core/services` no longer exports the in-memory wire services
+
+**What:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, and the remote job runners moved to the wire they run (core 0.13.0, #2146). Nothing is aliased.
+
+| Export                        | Was                    | Now                                       |
+| ----------------------------- | ---------------------- | ----------------------------------------- |
+| `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+| `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+| `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+| `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+| `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+| `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+The `REMOTE_*` constants and the `RemoteQueueJobData` and `RemoteScheduledJobData` types stay on `@pikku/core/services`.
+
+**Why:** importing `@pikku/core/services` for a logger loaded the workflow, queue, trigger and gateway runtimes with it, 102 modules in all. It now loads 40, and `@pikku/core/middleware` loads 23 instead of 50.
+
+```ts
+// before
+import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+
+// after
+import { ConsoleLogger } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+```
+
+`pikku all` regenerates `pikku-local-services.gen.ts` and the remote job inbox with the new paths. Hand-written `start.ts`, server and test bootstrap files need the edit.
+
+**Find:** `rg -n "InMemory(Workflow|Queue|Trigger)Service|LocalGatewayService|pikkuRemote(Queue|Scheduled)JobFunc"`
+
+### `setSession` in middleware now signs the caller in; `setInitialSession` restores a session
+
+**What:** `setSession` means the same in middleware as in a function body (core 0.13.0, #1451). It marks the session changed, so `authCookie` re-issues the cookie, and it writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for that request. The new `setInitialSession` does that: it sets the session the function sees, and marks nothing changed and writes nothing. `clearSession` is now on the middleware wire too.
+
+**Why:** one name had two meanings under one type. Middleware that really signed someone in persisted nothing, and the function only saw the session because of the order in which `freezeInitial` happened to run.
+
+```ts
+// before
+const apiKeyAuth = pikkuMiddleware(
+  async ({ db }, { http, setSession, session }, next) => {
+    if (session) return next()
+    const row = await db.findKey(http?.request?.header('x-api-key'))
+    if (row) await setSession?.({ userId: row.userId })
+    return next()
+  }
+)
+
+// after
+const apiKeyAuth = pikkuMiddleware(
+  async ({ db }, { http, setInitialSession, session }, next) => {
+    if (session) return next()
+    const row = await db.findKey(http?.request?.header('x-api-key'))
+    if (row) setInitialSession?.({ userId: row.userId })
+    return next()
+  }
+)
+```
+
+Middleware that works out who the caller is from a credential they already hold (a cookie, a bearer token, an API key) should move to `setInitialSession`. If it stays on `setSession`, it re-issues the auth cookie and writes the session store on every request, and nothing fails. Middleware that genuinely signs someone in keeps `setSession`, and its session is now persisted. The built-in `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap` and the `@pikku/better-auth` session middleware already use `setInitialSession`.
+
+**Find:** `rg -n "setSession" -g '*middleware*' -g '*auth*'`. Then check every `setSession` inside a `pikkuMiddleware`, `pikkuMiddlewareFactory` or `pikkuChannelMiddleware`.
+
+### Trigger events can name their user; custom trigger services pass it through
+
+**What:** a trigger source can say which user an event belongs to with `trigger.invoke(data, { pikkuUserId })` (core 0.13.0, #1618). The target RPC or workflow then runs as that user, as a queue job or workflow run carrying a `pikkuUserId` does. Without the option nothing changes. `PikkuTrigger` and the new `TriggerInvokeOptions` are exported from `@pikku/core/trigger`.
+
+This only needs a code change if you subclass `PikkuTriggerService`. The `onTrigger` callback that `setupTriggerInstance` receives now takes an optional `options` argument, and a subclass has to pass it on to `onTriggerFire`, or the user never reaches the target.
+
+```ts
+// before
+protected async setupTriggerInstance(name, input, onTrigger: (data: unknown) => Promise<void>) {
+  return myListener(name, input, (data) => this.onTriggerFire(name, targets, data))
+}
+
+// after
+import type { TriggerInvokeOptions } from '@pikku/core/trigger'
+
+protected async setupTriggerInstance(
+  name,
+  input,
+  onTrigger: (data: unknown, options?: TriggerInvokeOptions) => Promise<void>
+) {
+  return myListener(name, input, (data, options) =>
+    this.onTriggerFire(name, targets, data, options)
+  )
+}
+```
+
+A source should pass only a user it established itself, such as the one whose credential it polled with. A `pikkuUserId` that is not a non-empty string drops the event and logs an error.
+
+**Find:** `rg -n "extends PikkuTriggerService|onTriggerFire\("`
+
+### An agent's structured output is validated
+
+**What:** a `pikkuAgent` with an `output` schema now fails its run with `AgentOutputValidationError` when the model's object does not match the schema, instead of returning the malformed object (core 0.13.0, #1823). The error is a 502 and lists the mismatches in `issues`. This covers `rpc.agent.run`, `rpc.agent.approve` and sub-agent calls. The run is marked `failed` and `onError` agent middleware runs, as for any other agent failure. Nothing is retried. Validation uses the app's `SchemaService`, as function input validation does.
+
+A `null` the model sends for an optional field is dropped before validation, so that field now comes back absent rather than `null`. `@pikku/ai-vercel` invites these nulls by making optional properties nullable for OpenAI strict mode. An agent that ends on text with no object is not failed.
+
+`runAgentStructured` (`@pikku/core/agent`) is the typed way to call a runner directly. It returns `object` typed as the schema's output, and it throws when there is no object at all. `AgentStepResult` takes an optional type parameter for `object`, which defaults to `unknown`.
+
+```ts
+// before
+const result = await agentRunner.run({
+  ...params,
+  outputSchema: z.toJSONSchema(Review),
+})
+const review = result.object as Review // unchecked
+
+// after
+import { runAgentStructured } from '@pikku/core/agent'
+const { object: review } = await runAgentStructured(agentRunner, {
+  ...params,
+  outputSchema: Review, // a Standard Schema that converts to JSON Schema, e.g. zod 4
+})
+```
+
+Callers that caught a malformed object downstream now get the error at the agent call. Code that compared an optional output field with `=== null` should check for `undefined`.
+
+**Find:** `rg -n "output:\s" -g '*agent*'` for agents that declare an output schema, and `rg -n "\.object\b.*as |outputSchema"` for direct runner calls.
+
+### `@pikku/better-auth`: `AuthSessionStorage`, and no implicit linking by email
+
+- **`SessionStore` → `AuthSessionStorage`, `InMemorySessionStore` → `InMemoryAuthSessionStorage`** (better-auth 0.13.0, #2147). The old names clashed with `@pikku/core`'s unrelated `SessionStore`. The interface is now better-auth 1.7's `SecondaryStorage` contract, so a custom implementation must add `getAndDelete` and `increment`. `inMemorySessionStore()` and `prefixedSessionStore()` keep their names, and the in-memory store can be passed straight to `secondaryStorage`.
+
+  ```ts
+  // before
+  import type { SessionStore } from '@pikku/better-auth'
+  class RedisAuthStore implements SessionStore {
+    get(key) { … }
+    set(key, value, ttlSeconds) { … }
+    delete(key) { … }
+  }
+
+  // after
+  import type { AuthSessionStorage } from '@pikku/better-auth'
+  class RedisAuthStore implements AuthSessionStorage {
+    get(key) { … }
+    set(key, value, ttlSeconds) { … }
+    delete(key) { … }
+    getAndDelete(key) { … } // read and remove atomically
+    increment(key, ttlSeconds) { … } // returns the new count; an absent key starts at 1
+  }
+  ```
+
+- **`pikkuDelegatedAuth` no longer links an upstream identity to an existing local user with the same email** unless you opt in with `linkExistingUsersByEmail`. The default is `false`. `'non-admins'` refuses anyone holding an `admin` or `pikku:console` scope, and links nobody when there is no ScopeService. `'all'` links anyone. Before, linking by email was implicit, so a user who signed up locally and then signed in upstream now gets a refusal instead of their old account.
+
+  ```ts
+  // after: keep the old behaviour for ordinary users only
+  pikkuDelegatedAuth({
+    linkExistingUsersByEmail: 'non-admins',
+    /* … */
+  })
+  ```
+
+  Opt in only when the upstream verifies email addresses.
+
+- **Dev quick login has no fixed password.** It no longer creates `admin@pikku.dev` with `pikku-dev-password`. Before each quick login it sets the account's password to a random value, so scripts that signed in through `/sign-in/email` with the old password have to use the quick-login route.
+
+**Find:** `rg -n "\b(InMemory)?SessionStore\b|pikkuDelegatedAuth|pikku-dev-password" -g '!node_modules'`. A hit on `SessionStore` from `@pikku/core` is the other, unchanged interface.
+
+### `@pikku/deploy`: `DeploymentManifest.gateways` is required
+
+**What:** `wireGateway` webhook routes now reach the deployment manifest (deploy 0.13.0, #1906). `DeploymentManifest` has a required `gateways: GatewayDefinition[]` field, and a webhook gateway is served from its handler's unit. A contributor's `imports` function now receives the entry context as a second argument, and `collectContributorImports` takes it as a third.
+
+**Why:** the gateway's POST and verify wrappers used to become two units of their own, without the handler's services or meta, and the gateway appeared nowhere in the manifest.
+
+```ts
+// before
+const manifest: DeploymentManifest = { units /* … */ }
+collectContributorImports(contributors, platform)
+
+// after
+import type { DeploymentManifest, GatewayDefinition } from '@pikku/deploy'
+const manifest: DeploymentManifest = { units, gateways: [] /* … */ }
+collectContributorImports(contributors, platform, ctx)
+```
+
+Only code that builds a manifest by hand or writes a provider adapter is affected. Websocket and listener gateways have no unit a multi-unit provider can host, so `pikku deploy plan` and `apply` now fail and name each one, instead of building without it. Single-unit (standalone) deploys are unaffected.
+
+**Find:** `rg -n "DeploymentManifest|collectContributorImports|imports:\s*\("`
+
+### Behaviour changes with no code to change
+
+These need no edit, but they change what runs. Check them against your tests.
+
+- **Global permissions apply** (cli and inspector 0.13.0). A file whose only job was `addGlobalPermission([...])` was never imported by the generated code, so the global gate did not exist. It runs now.
+- **Aliased helpers register** (inspector 0.13.0, #1461). `import { addTagMiddleware as guard }`, `import * as pikku from '#pikku'` and `const guard = addTagMiddleware` used to register nothing. They register now. An aliased `pikkuFunc` (for example `pikkuFunc as pikkuOpenFunc`) now requires a session. A middleware or permission helper used as a value, rather than called directly, is the new error `PKU577`.
+- **`wireAddon` gates follow the function** (core 0.13.0, #1362). An addon's `scopes`, `auth: true` and tag middleware now apply to a `wireHTTP({ func: ref('ns:fn') })` route too, which used to skip them.
+- **Middleware named in metadata is looked up in the package's namespace first** (core 0.13.0, #267), and the middleware chain caches are keyed by package as well as wire id.
+- **Express, Fastify and uWS adapters drop `__proto__`, `constructor` and `prototype` keys** from params, query and body, as the fetch adapter already did, instead of failing with a 422. A key that names an `Object.prototype` member, such as `?toString=1`, now merges like any other key.
+- **`buildRemoteHeaders` fails closed** (`@pikku/core/remote`). When the secrets service errors while reading `PIKKU_REMOTE_SECRET`, the remote call throws instead of going out unauthenticated. A custom `SecretService` must implement `hasSecret`, which the interface already required.
 
 ## How to upgrade
 
