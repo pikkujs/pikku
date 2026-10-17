@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.85",
+    "@ai-sdk/openai-compatible": "^3.0.71",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-stripe": "^0.1.8",
     "@pikku/ai-vercel": "workspace:*",
@@ -15,7 +15,7 @@
     "@pikku/schema-cfworker": "^0.12.8",
     "@pikku/websocket": "^0.12.5",
     "@standard-schema/spec": "^1.1.0",
-    "ai": "^6.0.309",
+    "ai": "^7.0.143",
     "better-auth": "^1.7.10",
     "kysely": "^0.29.6",
     "zod": "^4"
