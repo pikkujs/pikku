@@ -23,6 +23,7 @@ import {
 import { testPriorityWiring } from './functions/priority.assert.js'
 import { testGlobalPermissionWiring } from './functions/global-permission.assert.js'
 import { testAgentProviderOptionsMeta } from './functions/agent-provider-options.assert.js'
+import { testAgentApproveScope } from './functions/agent-approve.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -489,6 +490,9 @@ async function main(): Promise<void> {
       singletonServices
     )
 
+    const agentApproveScopePassed =
+      await testAgentApproveScope(singletonServices)
+
     // Test Internal RPC with external package call
     // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
     // When calling ext:hello, the external package's middleware and permissions also execute
@@ -542,6 +546,7 @@ async function main(): Promise<void> {
       rpcPassed &&
       agentStreamPassed &&
       agentRunPassed &&
+      agentApproveScopePassed &&
       agentProviderOptionsPassed
 
     if (allPassed) {
