@@ -4,7 +4,7 @@ import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { SignJWT, exportSPKI, generateKeyPair } from 'jose'
 
-import { JoseVirtualUserStatementVerifier } from '../../jose/src/jose-virtual-user-statement-verifier.js'
+import { JoseVirtualUserStatementVerifier } from '@pikku/jose'
 import {
   virtualUserCredentialEnvKey,
   parseVirtualUserCredential,
@@ -21,8 +21,12 @@ const recordingLogger = () => {
   const info: string[] = []
   const warn: string[] = []
   return {
-    info: (m: any) => info.push(String(m)),
-    warn: (m: any) => warn.push(String(m)),
+    info: (m: unknown, ..._meta: unknown[]) => {
+      info.push(String(m))
+    },
+    warn: (m: unknown, ..._meta: unknown[]) => {
+      warn.push(String(m))
+    },
     lines: { info, warn },
   }
 }
