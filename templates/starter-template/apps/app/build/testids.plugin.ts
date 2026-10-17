@@ -28,7 +28,8 @@ export function testIds(): Plugin {
     enforce: 'pre',
     async transform(code, id) {
       const file = id.split('?')[0]
-      if (!file || !JSX_FILE.test(file) || file.includes('/node_modules/')) return null
+      if (!file || !JSX_FILE.test(file) || file.includes('/node_modules/'))
+        return null
 
       const result = await babel.transformAsync(code, {
         filename: file,
@@ -39,7 +40,10 @@ export function testIds(): Plugin {
         plugins: [[injectTestIds, { sourceAnchors }]],
       })
       if (!result?.code) return null
-      return { code: result.code, map: result.map }
+      return {
+        code: result.code,
+        map: result.map && JSON.stringify(result.map),
+      }
     },
   }
 }
