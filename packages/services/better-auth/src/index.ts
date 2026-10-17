@@ -6,6 +6,15 @@ export {
 } from './cross-site-cookies.js'
 export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
+export type {
+  BetterAuthSessionOptions,
+  BetterAuthSessionResult,
+} from './auth-session.js'
+export type {
+  ImpersonationOptions,
+  SessionLike,
+  MapSession,
+} from './auth-session-impersonation.js'
 export { withResolvedScopes } from './auth-session-scopes.js'
 export {
   ADMIN_SCOPES,
@@ -65,18 +74,27 @@ export {
 } from './delegated-auth-plugin.js'
 export type {
   DelegatedAuthOptions,
+  DelegatedCredentials,
   UpstreamIdentity,
 } from './delegated-auth-plugin.js'
 export { betterAuthStatelessSession } from './auth-session-stateless.js'
 export { STATELESS_COOKIE_CACHE_MAX_AGE } from './stateless-cookie-default.js'
-export type { BetterAuthStatelessSessionOptions } from './auth-session-stateless.js'
+export type {
+  BetterAuthStatelessSessionOptions,
+  CookieCacheStrategy,
+  StatelessCookieCacheOptions,
+} from './auth-session-stateless.js'
 export { betterAuthStoreSession } from './auth-session-store.js'
 export type {
   BetterAuthStoreSessionOptions,
   SessionTransport,
+  StoredSession,
 } from './auth-session-store.js'
 export { inMemorySessionStore, prefixedSessionStore } from './session-store.js'
-export type { SessionStore, InMemorySessionStore } from './session-store.js'
+export type {
+  AuthSessionStorage,
+  InMemoryAuthSessionStorage,
+} from './session-store.js'
 export { verifySessionCredential } from './session-credential.js'
 export { pikkuBetterAuth, PIKKU_BETTER_AUTH } from './define-auth.js'
 export type {
@@ -84,6 +102,7 @@ export type {
   BetterAuthInstance,
 } from './define-auth.js'
 export { BetterAuthCredentialService } from './better-auth-credential.service.js'
+export type { BetterAuthCredentialServiceOptions } from './better-auth-credential.service.js'
 export { credentialOAuthProviders } from './credential-oauth-providers.js'
 export type {
   CredentialOAuth2Configs,
@@ -92,9 +111,14 @@ export type {
 } from './credential-oauth-providers.js'
 export {
   pikkuCredentialOAuth,
+  findPlatformUserId,
+  PLATFORM_USER_EMAIL,
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
-export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
+export type {
+  CredentialOAuthOptions,
+  CredentialOAuthSession,
+} from './credential-oauth.plugin.js'
 export {
   applyOAuthProxy,
   resolveOAuthProxyConfig,

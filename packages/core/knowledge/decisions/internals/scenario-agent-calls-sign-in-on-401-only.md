@@ -7,7 +7,7 @@ tags: services
 
 # Scenario agent calls retry sign-in only on 401
 
-`HttpVirtualUser.sendAgent` (`packages/core/src/services/http-virtual-users.ts`)
+`HttpVirtualUser.sendAgent` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`)
 sends its request with whatever cookie the jar holds. Only a 401 triggers
 `signOut()`, `login()` and a single retry. The agent calls that go through it
 are the stream and approve paths and `postAgent`. Its sibling `invokeRaw` does

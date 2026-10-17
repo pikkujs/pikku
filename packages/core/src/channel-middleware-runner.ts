@@ -1,11 +1,8 @@
-import type {
-  CoreSingletonServices,
-  PikkuRawWire,
-} from '../../types/core.types.js'
-import type { MiddlewareMetadata } from '../../middleware/middleware.types.js'
-import type { CorePikkuChannelMiddleware } from './channel.types.js'
-import { pikkuState } from '../../pikku-state.js'
-import { freezeDedupe, getTagGroups } from '../../utils.js'
+import type { CoreSingletonServices, PikkuRawWire } from './types/core.types.js'
+import type { MiddlewareMetadata } from './middleware/middleware.types.js'
+import type { CorePikkuChannelMiddleware } from './wirings/channel/channel.types.js'
+import { pikkuState } from './pikku-state.js'
+import { freezeDedupe, getTagGroups } from './utils.js'
 
 export const addChannelMiddleware = (
   tag: string,
@@ -17,12 +14,14 @@ export const addChannelMiddleware = (
   return middleware
 }
 
+/** Like `getMiddlewareByName`: the package's own namespace, then the application's. */
 const getChannelMiddlewareByName = (
-  name: string
+  name: string,
+  packageName: string | null
 ): CorePikkuChannelMiddleware | undefined => {
-  const store = pikkuState(null, 'misc', 'channelMiddleware')
-  const middleware = store[name]
-  return middleware?.[0]
+  const own = pikkuState(packageName, 'misc', 'channelMiddleware')[name]?.[0]
+  if (own || packageName === null) return own
+  return pikkuState(null, 'misc', 'channelMiddleware')[name]?.[0]
 }
 
 const channelMiddlewareCache: Record<
@@ -49,7 +48,7 @@ export const combineChannelMiddleware = (
     packageName?: string | null
   } = {}
 ): readonly CorePikkuChannelMiddleware[] => {
-  const cacheKey = `${wireType}:${uid}`
+  const cacheKey = `${packageName ?? ''}\0${wireType}:${uid}`
   let inherited = channelMiddlewareCache[cacheKey]
   if (!inherited) {
     const resolved: CorePikkuChannelMiddleware[] = []
@@ -64,7 +63,7 @@ export const combineChannelMiddleware = (
             resolved.push(...group)
           }
         } else if (meta.type === 'wire') {
-          const middleware = getChannelMiddlewareByName(meta.name)
+          const middleware = getChannelMiddlewareByName(meta.name, packageName)
           if (middleware) {
             resolved.push(middleware)
           }

@@ -1,8 +1,15 @@
-import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
+import {
+  APIError,
+  createAuthEndpoint,
+  sessionMiddleware,
+} from 'better-auth/api'
 import { genericOAuth } from 'better-auth/plugins'
-import { generateState, parseState, setTokenUtil } from 'better-auth/oauth2'
-import { createAuthorizationURL } from '@better-auth/core/oauth2'
-import { APIError } from '@better-auth/core/error'
+import {
+  createAuthorizationURL,
+  generateState,
+  parseState,
+  setTokenUtil,
+} from 'better-auth/oauth2'
 import * as z from 'zod'
 import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
@@ -18,10 +25,28 @@ const CALLBACK_PATH = '/credential-oauth/callback'
  * sign-in-able: it is created with no credential account of any kind, so no
  * sign-in method can resolve it. Account rows hang off it exactly like a real
  * user's, so storage, refresh and unlink are the same code path.
+ *
+ * This is the id the row is *asked* for. Under `advanced.database.generateId:
+ * 'uuid' | 'serial'` better-auth assigns its own, so the row is always found by
+ * {@link PLATFORM_USER_EMAIL} — see {@link findPlatformUserId}.
  */
 export const PLATFORM_USER_ID = 'pikku-platform'
-const PLATFORM_USER_EMAIL = 'platform@pikku.internal'
 
+/** The reserved address the platform user is found by, whatever its id. */
+export const PLATFORM_USER_EMAIL = 'platform@pikku.internal'
+
+/**
+ * The platform user's actual row id, or `null` before the first singleton
+ * credential has been linked.
+ *
+ * @param internalAdapter - better-auth's `$context.internalAdapter`.
+ */
+export const findPlatformUserId = async (internalAdapter: {
+  findUserByEmail: (email: string) => Promise<{ user: { id: string } } | null>
+}): Promise<string | null> =>
+  (await internalAdapter.findUserByEmail(PLATFORM_USER_EMAIL))?.user.id ?? null
+
+/** Options for {@link pikkuCredentialOAuth}. */
 export interface CredentialOAuthOptions {
   /** Built by `credentialOAuthProviders(CREDENTIAL_OAUTH2_CONFIGS, secrets)`. */
   config: CredentialOAuthProvider[]
@@ -43,6 +68,7 @@ export interface CredentialOAuthOptions {
   ) => boolean | Promise<boolean>
 }
 
+/** The caller {@link CredentialOAuthOptions.canLinkSingleton} is asked about. */
 export interface CredentialOAuthSession {
   user: {
     id: string
@@ -75,6 +101,8 @@ export interface CredentialOAuthSession {
  * provider registration (`context.socialProviders`), which is what supplies the
  * token exchange and the `refreshAccessToken` that `getAccessToken` calls. Only
  * the two identity-bound endpoints are replaced.
+ *
+ * @example snippet: betterAuthCredentialOAuth
  */
 export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
   const base = genericOAuth({ config: options.config })
@@ -94,13 +122,13 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
    * Created on demand rather than at startup: an app with no singleton
    * credentials should never grow a user row it does not use.
    */
-  const ensurePlatformUser = async (ctx: any) => {
-    const existing =
-      await ctx.context.internalAdapter.findUserById(PLATFORM_USER_ID)
+  const ensurePlatformUser = async (ctx: any): Promise<string> => {
+    const adapter = ctx.context.internalAdapter
+    const existing = await findPlatformUserId(adapter)
     if (existing) {
-      return PLATFORM_USER_ID
+      return existing
     }
-    await ctx.context.internalAdapter.createUser(
+    const created = await adapter.createUser(
       {
         id: PLATFORM_USER_ID,
         email: PLATFORM_USER_EMAIL,
@@ -109,7 +137,7 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
       },
       { method: 'credential-oauth' }
     )
-    return PLATFORM_USER_ID
+    return created.id
   }
 
   const link = createAuthEndpoint(
@@ -148,7 +176,7 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
       // silently become that person's, and vanish when they unlinked it.
       let ownerId = session.user.id
       if (config.type === 'singleton') {
-        if (!(await canLinkSingleton(session as any))) {
+        if (!(await canLinkSingleton(session))) {
           throw new APIError('FORBIDDEN', {
             message: `Connecting '${config.providerId}' rebinds it for every user — that is an admin action`,
             code: 'SINGLETON_LINK_FORBIDDEN',

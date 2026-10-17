@@ -6,7 +6,7 @@ import type { Logger } from '../../services/logger.js'
 import type { MetaService } from '../../services/meta-service.js'
 import type { VariablesService } from '../../services/variables-service.js'
 import type { AgentRunnerService } from '../../services/agent-runner-service.js'
-import type { HttpVirtualUsersConfig } from '../../services/http-virtual-users.js'
+import type { HttpVirtualUsersConfig } from './http-virtual-users.js'
 import type {
   ResolvedVirtualUser,
   ScenarioVirtualUsers,

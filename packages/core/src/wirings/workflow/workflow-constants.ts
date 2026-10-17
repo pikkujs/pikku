@@ -1,3 +1,5 @@
+import type { StepStatus } from './workflow.types.js'
+
 export const DEFAULT_STEP_RETRIES = 5
 
 /** Statuses from which a run never advances again on its own. */
@@ -17,6 +19,13 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'cancelled',
   'compensated',
   'compensation_failed',
+])
+
+/** Step statuses that mean the step has not settled yet. */
+export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
+  'pending',
+  'scheduled',
+  'running',
 ])
 
 export const NO_COMPENSATE_STATE_PREFIX = 'noCompensate:'
@@ -118,4 +127,4 @@ export {
   compensationStepName,
   forwardStepName,
   isCompensationStepName,
-} from '../../function/compensation-name.js'
+} from '../../compensation-name.js'

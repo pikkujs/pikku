@@ -40,6 +40,7 @@ import { addAnalytics } from './add/add-analytics.js'
 import { addOutgoingWebhook } from './add/add-outgoing-webhook.js'
 import { addAgentScorer } from './add/add-agent-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
+import { checkIndirectRegistrations } from './add/check-indirect-registrations.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -112,6 +113,7 @@ export const visitSetup = (
   addWireRemoteAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
+  checkIndirectRegistrations(logger, node, checker, state, options)
   addApprovalDescription(logger, node, checker, state, options)
   addWorkflow(logger, node, checker, state, options)
 

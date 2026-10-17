@@ -32,11 +32,26 @@ const skipDirectory = new Set([
 /** A verifier's scratch project, left behind by a run that did not clean up. */
 const isScratchProject = (entry: string) => entry.startsWith('.tmp-')
 
+/**
+ * The parallel unit-test job runs other suites alongside this one, and some
+ * write a fixture inside their own `src/` for the length of a test — the
+ * inspector's, for one. A path listed a moment ago can be gone by the time it
+ * is read, and a file that no longer exists imports nothing.
+ */
+const unlessGone = <T>(read: () => T): T | undefined => {
+  try {
+    return read()
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
 const walk = (dir: string, out: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
+  for (const entry of unlessGone(() => readdirSync(dir)) ?? []) {
     if (skipDirectory.has(entry) || isScratchProject(entry)) continue
     const path = join(dir, entry)
-    if (statSync(path).isDirectory()) walk(path, out)
+    if (unlessGone(() => statSync(path).isDirectory())) walk(path, out)
     else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)
   }
   return out
@@ -62,9 +77,11 @@ describe('no root barrel', () => {
 
     for (const file of walk(repoRoot)) {
       if (isGenerated(file)) continue
+      const text = unlessGone(() => readFileSync(file, 'utf8'))
+      if (text === undefined) continue
       const source = ts.createSourceFile(
         file,
-        readFileSync(file, 'utf8'),
+        text,
         ts.ScriptTarget.Latest,
         true
       )

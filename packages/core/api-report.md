@@ -5,24 +5,24 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3299 observable things**: 1103 exported names, plus
+**3300 observable things**: 1104 exported names, plus
 2196 members on the classes and interfaces among them, reachable
-through 58 entry points.
+through 62 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 176 | 150 | 478 |
+| `./services` | 170 | 144 | 436 |
 | `./virtual-user` | 104 | 102 | 255 |
 | `./scenario` | 50 | 48 | 157 |
 | `./workflow` | 91 | 40 | 151 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
-| `./queue` | 25 | 25 | 73 |
-| `./http` | 26 | 26 | 58 |
+| `./queue` | 26 | 26 | 73 |
+| `./http` | 27 | 27 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./trigger` | 40 | 40 | 11 |
@@ -30,6 +30,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
+| `./services/in-memory-workflow` | 1 | 1 | 35 |
 | `./classification` | 22 | 22 | 14 |
 | `./services/local-content` | 13 | 13 | 19 |
 | `./flag` | 23 | 23 | 8 |
@@ -42,7 +43,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/local` | 3 | 3 | 18 |
 | `./utils` | 22 | 19 | 2 |
 | `./workflow/timeline` | 9 | 4 | 16 |
-| `./scheduler` | 9 | 9 | 8 |
+| `./scheduler` | 10 | 10 | 8 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./services/file-scenario-run-store` | 4 | 4 | 12 |
 | `./addon` | 13 | 13 | 2 |
@@ -64,11 +65,14 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./schema` | 6 | 6 | 0 |
 | `./testing` | 4 | 4 | 2 |
 | `./dev` | 4 | 4 | 2 |
+| `./services/in-memory-queue` | 1 | 1 | 4 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
 | `./node` | 3 | 3 | 0 |
+| `./services/local-gateway` | 1 | 1 | 2 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
+| `./services/in-memory-trigger` | 1 | 1 | 1 |
 | `./remote` | 1 | 1 | 0 |
 | `./lifecycle` | 3 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
@@ -2898,6 +2902,7 @@ export type HTTPRouteMap = {
 httpRouter: PathToRegexRouter
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 logRoutes: (logger: Logger) => void
+mergeRequestData: <In = unknown>(...parts: Readonly<Record<string, unknown>>[]) => In
 export class PikkuFetchHTTPRequest< In = unknown, > implements PikkuHTTPRequest<In> {
   constructor(private request: Request, { maxBodySize = DEFAULT_MAX_BODY_SIZE }: PikkuFetchHTTPRequestOptions = {})
   public method(): HTTPMethod
@@ -3052,6 +3057,7 @@ export interface PikkuQueue {
   fail: (reason?: string) => Promise<void>
   discard: (reason?: string) => Promise<void>
 }
+pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
 export interface PikkuWorkerConfig {
   name?: string
   batchSize?: number
@@ -3162,6 +3168,7 @@ export type CoreScheduledTask<
 }
 getScheduledTasks: () => Map<string, CoreScheduledTask>
 logSchedulers: (logger: Logger) => void
+pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
 runScheduledTask: ({ name, session, traceId, }: RunScheduledTasksParams) => Promise<void>
 export class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string)
@@ -5179,19 +5186,10 @@ export class InMemoryLeaseService implements LeaseService {
   async release(lease: Lease): Promise<void>
   async get(key: string): Promise<Lease | null>
 }
-export class InMemoryQueueService implements QueueService {
-  readonly supportsResults: false
-  async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
-  async getJob(): Promise<null>
-  async inspect(queueName: string, opts?: { limit?: number }): Promise<QueueInspection>
-}
 export class InMemorySessionStore< UserSession extends CoreUserSession = CoreUserSession, > implements SessionStore<UserSession> {
   async get(pikkuUserId: string): Promise<UserSession | undefined>
   async set(pikkuUserId: string, session: UserSession): Promise<void>
   async clear(pikkuUserId: string): Promise<void>
-}
-export class InMemoryTriggerService extends PikkuTriggerService {
-  async start(): Promise<void>
 }
 export class InMemoryTriggerSourceStore implements TriggerSourceStore {
   async syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
@@ -5200,43 +5198,6 @@ export class InMemoryTriggerSourceStore implements TriggerSourceStore {
   async recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
   async setTriggerSourceEnabled(name: string, enabled: boolean): Promise<void>
   async deleteTriggerSource(name: string): Promise<void>
-}
-export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
-  constructor(options: WorkflowQueueOptions = {})
-  protected async createRunImpl(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
-  protected override async scheduleSleep(runId: string, stepId: string, duration: number): Promise<boolean>
-  async getRun(id: string): Promise<WorkflowRun | null>
-  async getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
-  protected async updateRunStatusImpl(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
-  protected async insertStepStateImpl(runId: string, stepName: string, rpcName: string | null, data: any, stepOptions?: WorkflowStepOptions, fromStepName?: string): Promise<StepState>
-  async getStepState(runId: string, stepName: string): Promise<StepState>
-  protected async setStepRunningImpl(stepId: string): Promise<void>
-  public override async refreshStepLease(stepId: string, leaseMs: number | null, attempt?: number): Promise<boolean>
-  protected async setStepScheduledImpl(stepId: string): Promise<void>
-  protected async setStepResultImpl(stepId: string, result: any, attempt?: number): Promise<void>
-  protected async setStepErrorImpl(stepId: string, error: Error, attempt?: number): Promise<void>
-  protected async setStepChildRunIdImpl(stepId: string, childRunId: string): Promise<void>
-  protected async createRetryAttemptImpl(failedStepId: string, status: 'pending' | 'running'): Promise<StepState>
-  protected async findUndispatchedSteps(before: Date, limit: number): Promise<Array<{ runId: string; stepId: string }>>
-  protected async findStalledRunIds(before: Date, limit: number): Promise<string[]>
-  async listRuns(options?: { workflowName?: string; status?: string; limit?: number; offset?: number }): Promise<WorkflowRun[]>
-  async getRunSteps(runId: string): Promise< Array<StepState & { stepName: string; rpcName?: string; data?: any }> >
-  async getDistinctWorkflowNames(): Promise<string[]>
-  async deleteRun(id: string): Promise<boolean>
-  async withRunLease<T>(_id: string, fn: () => Promise<T>): Promise<T>
-  async withStepLock<T>(_runId: string, _stepName: string, fn: () => Promise<T>): Promise<T>
-  async close(): Promise<void>
-  async getCompletedGraphState(runId: string): Promise<{ completedNodeIds: string[]; failedNodeIds: string[]; branchKeys: Record<string, string> }>
-  protected override async listStepStates(runId: string): Promise<Array<StepState & { stepName: string }>>
-  async getStepInstances(runId: string): Promise< Array<{ stepName: string; status: StepStatus; fromStepName?: string; leaseExpiresAt?: Date }> >
-  async getNodeResults(runId: string, nodeIds: string[]): Promise<Record<string, any>>
-  async setBranchKey(runId: string, nodeId: string, branchKey: string): Promise<void>
-  protected async setBranchTakenImpl(stepId: string, branchKey: string): Promise<void>
-  protected async updateRunStateImpl(runId: string, name: string, value: unknown): Promise<void>
-  async getRunState(runId: string): Promise<Record<string, unknown>>
-  protected async upsertWorkflowVersionImpl(name: string, graphHash: string, graph: any, source: string, status?: WorkflowVersionStatus): Promise<void>
-  protected async updateWorkflowVersionStatusImpl(name: string, graphHash: string, status: WorkflowVersionStatus): Promise<void>
-  async getWorkflowVersion(name: string, graphHash: string): Promise<{ graph: any; source: string } | null>
 }
 export type IsSystemRole = (name: string) => boolean | Promise<boolean>
 isTestRun: () => boolean
@@ -5284,10 +5245,6 @@ export class LocalCredentialService implements CredentialService {
 }
 export class LocalEmailService implements EmailService {
   async send(input: SendEmailInput): Promise<SendEmailResult>
-}
-export class LocalGatewayService implements GatewayService {
-  async start(): Promise<void>
-  async stop(): Promise<void>
 }
 export class LocalSecretService implements SecretService {
   constructor(private variables: VariablesService = new LocalVariablesService())
@@ -5433,8 +5390,6 @@ export class PikkuCredentialWireService {
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
   getScoped(allowedNames: string[]): Record<string, unknown> | Promise<Record<string, unknown>>
 }
-pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
-pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
 export class PikkuSessionService< UserSession extends CoreUserSession, > implements SessionService<UserSession> {
   public sessionChanged: boolean
   public initial: UserSession | undefined
@@ -6144,6 +6099,76 @@ export interface ServiceMeta {
   expandedProperties: Record<string, string>
 }
 export type ServicesMetaRecord = Record<string, ServiceMeta>
+```
+
+## ./services/in-memory-queue
+
+```ts
+export class InMemoryQueueService implements QueueService {
+  readonly supportsResults: false
+  async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
+  async getJob(): Promise<null>
+  async inspect(queueName: string, opts?: { limit?: number }): Promise<QueueInspection>
+}
+```
+
+## ./services/in-memory-trigger
+
+```ts
+export class InMemoryTriggerService extends PikkuTriggerService {
+  async start(): Promise<void>
+}
+```
+
+## ./services/in-memory-workflow
+
+```ts
+export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
+  constructor(options: WorkflowQueueOptions = {})
+  protected async createRunImpl(workflowName: string, input: any, inline: boolean, graphHash: string, wire: WorkflowRunWire, options?: { deterministic?: boolean; plannedSteps?: WorkflowPlannedStep[] }): Promise<string>
+  protected override async scheduleSleep(runId: string, stepId: string, duration: number): Promise<boolean>
+  async getRun(id: string): Promise<WorkflowRun | null>
+  async getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
+  protected async updateRunStatusImpl(id: string, status: WorkflowStatus, output?: any, error?: SerializedError): Promise<void>
+  protected async insertStepStateImpl(runId: string, stepName: string, rpcName: string | null, data: any, stepOptions?: WorkflowStepOptions, fromStepName?: string): Promise<StepState>
+  async getStepState(runId: string, stepName: string): Promise<StepState>
+  protected async setStepRunningImpl(stepId: string): Promise<void>
+  public override async refreshStepLease(stepId: string, leaseMs: number | null, attempt?: number): Promise<boolean>
+  protected async setStepScheduledImpl(stepId: string): Promise<void>
+  protected async setStepResultImpl(stepId: string, result: any, attempt?: number): Promise<void>
+  protected async setStepErrorImpl(stepId: string, error: Error, attempt?: number): Promise<void>
+  protected async setStepChildRunIdImpl(stepId: string, childRunId: string): Promise<void>
+  protected async createRetryAttemptImpl(failedStepId: string, status: 'pending' | 'running'): Promise<StepState>
+  protected async findUndispatchedSteps(before: Date, limit: number): Promise<Array<{ runId: string; stepId: string }>>
+  protected async findStalledRunIds(before: Date, limit: number): Promise<string[]>
+  async listRuns(options?: { workflowName?: string; status?: string; limit?: number; offset?: number }): Promise<WorkflowRun[]>
+  async getRunSteps(runId: string): Promise< Array<StepState & { stepName: string; rpcName?: string; data?: any }> >
+  async getDistinctWorkflowNames(): Promise<string[]>
+  async deleteRun(id: string): Promise<boolean>
+  async withRunLease<T>(_id: string, fn: () => Promise<T>): Promise<T>
+  async withStepLock<T>(_runId: string, _stepName: string, fn: () => Promise<T>): Promise<T>
+  async close(): Promise<void>
+  async getCompletedGraphState(runId: string): Promise<{ completedNodeIds: string[]; failedNodeIds: string[]; branchKeys: Record<string, string> }>
+  protected override async listStepStates(runId: string): Promise<Array<StepState & { stepName: string }>>
+  async getStepInstances(runId: string): Promise< Array<{ stepName: string; status: StepStatus; fromStepName?: string; leaseExpiresAt?: Date }> >
+  async getNodeResults(runId: string, nodeIds: string[]): Promise<Record<string, any>>
+  async setBranchKey(runId: string, nodeId: string, branchKey: string): Promise<void>
+  protected async setBranchTakenImpl(stepId: string, branchKey: string): Promise<void>
+  protected async updateRunStateImpl(runId: string, name: string, value: unknown): Promise<void>
+  async getRunState(runId: string): Promise<Record<string, unknown>>
+  protected async upsertWorkflowVersionImpl(name: string, graphHash: string, graph: any, source: string, status?: WorkflowVersionStatus): Promise<void>
+  protected async updateWorkflowVersionStatusImpl(name: string, graphHash: string, status: WorkflowVersionStatus): Promise<void>
+  async getWorkflowVersion(name: string, graphHash: string): Promise<{ graph: any; source: string } | null>
+}
+```
+
+## ./services/local-gateway
+
+```ts
+export class LocalGatewayService implements GatewayService {
+  async start(): Promise<void>
+  async stop(): Promise<void>
+}
 ```
 
 ## ./services/v8-coverage

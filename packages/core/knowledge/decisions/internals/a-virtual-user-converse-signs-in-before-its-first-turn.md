@@ -7,7 +7,7 @@ tags: services, virtual-users, agents
 
 # A virtual user's converse signs in before its first turn
 
-`HttpVirtualUser.converse` (`packages/core/src/services/http-virtual-users.ts`)
+`HttpVirtualUser.converse` (`packages/core/src/wirings/virtual-user/http-virtual-users.ts`)
 calls `this.login()` when `signedIn` is false, before it starts the run. Only
 then does it send the agent request.
 

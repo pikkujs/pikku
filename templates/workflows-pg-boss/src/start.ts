@@ -6,7 +6,8 @@ import {
   PgKyselyWorkflowService,
 } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
-import { InMemoryTriggerService, ConsoleLogger } from '@pikku/core/services'
+import { ConsoleLogger } from '@pikku/core/services'
+import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig, connectionString } from './config.js'
 import '#pikku/pikku-bootstrap.gen.js'

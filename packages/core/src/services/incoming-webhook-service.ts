@@ -1,10 +1,10 @@
 import type { QueueService } from '../wirings/queue/queue.types.js'
 import { DEFAULT_WEBHOOK_RETRIES } from './webhook-service.js'
-import {
-  PIKKU_INCOMING_WEBHOOK_QUEUE_NAME,
-  type TriggerEvent,
-  type WebhookRequest,
-  type WebhookSourceJob,
+import { PIKKU_INCOMING_WEBHOOK_QUEUE_NAME } from './incoming-webhook-queue.js'
+import type {
+  TriggerEvent,
+  WebhookRequest,
+  WebhookSourceJob,
 } from '../wirings/trigger/webhook-source.types.js'
 
 export type IncomingWebhookAttempt = {

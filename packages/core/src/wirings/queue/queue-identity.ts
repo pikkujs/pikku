@@ -6,6 +6,7 @@ import {
 } from '../../crypto-utils.js'
 import type { Logger } from '../../services/logger.js'
 import type { SecretService } from '../../services/secret-service.js'
+import { stableStringify } from '../../utils/stable-stringify.js'
 
 export const QUEUE_IDENTITY_SECRET_NAME = 'PIKKU_QUEUE_IDENTITY_SECRET'
 
@@ -30,27 +31,13 @@ interface QueueIdentityClaim {
   j?: string
 }
 
-const stableStringify = (value: unknown): string => {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value) ?? 'null'
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`
-  }
-  const record = value as Record<string, unknown>
-  const keys = Object.keys(record).sort()
-  return `{${keys
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
-    .join(',')}}`
-}
-
 /**
  * Round-trips through JSON first so the producer hashes exactly what the
  * transport will deliver, then sorts keys so property order cannot change the
  * digest.
  */
 const canonicalizePayload = (data: unknown): string =>
-  stableStringify(JSON.parse(JSON.stringify(data ?? null)))
+  stableStringify(JSON.parse(JSON.stringify(data ?? null))) ?? 'null'
 
 const signingPayload = (encodedClaim: string, data: unknown): string =>
   `${QUEUE_IDENTITY_CLAIM_VERSION}.${encodedClaim}.${canonicalizePayload(data)}`

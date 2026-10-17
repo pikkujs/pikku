@@ -7,8 +7,8 @@ tags: services
 
 # Local trigger and gateway services assume a single process
 
-`InMemoryTriggerService` (`packages/core/src/services/in-memory-trigger-service.ts`)
-and `LocalGatewayService` (`packages/core/src/services/local-gateway-service.ts`)
+`InMemoryTriggerService` (`packages/core/src/wirings/trigger/in-memory-trigger-service.ts`)
+and `LocalGatewayService` (`packages/core/src/wirings/gateway/local-gateway-service.ts`)
 start every registered trigger source and every listener gateway
 unconditionally. There is no claiming, no lease, no leader election: whoever
 boots, listens.

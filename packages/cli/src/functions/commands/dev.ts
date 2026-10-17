@@ -19,10 +19,10 @@ import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
   InMemoryTriggerSourceStore,
-  InMemoryWorkflowService,
   LocalEmailService,
   spy,
 } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'

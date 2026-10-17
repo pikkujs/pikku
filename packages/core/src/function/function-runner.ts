@@ -1,10 +1,13 @@
 import { beginChanges } from './abort-scope.js'
-import { forwardStepName, isCompensationStepName } from './compensation-name.js'
+import {
+  forwardStepName,
+  isCompensationStepName,
+} from '../compensation-name.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
-} from '../wirings/channel/channel-middleware-runner.js'
+} from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
 import { withoutSecrets } from '../services/secretless.js'
 import { getCreateWireServices, pikkuState } from '../pikku-state.js'
@@ -386,7 +389,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       if (
         wiringAuth === true ||
         funcConfig.auth === true ||
-        resolveAddonAuth(packageName, addonInstance?.namespace)
+        resolveAddonAuth(funcPackageName, addonInstance?.namespace)
       ) {
         if (!session) {
           throw new MissingSessionError('Authentication required')
@@ -416,8 +419,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     // knowledge: decisions/security/addon-scopes-are-resolved-where-the-function-runs.md
+    // The function's package, not the wire's: a `ref('ns:fn')` route stays the
+    // app's, and reading the wire's left it outside the addon's floor.
     const addonScopes = resolveAddonScopes(
-      packageName,
+      funcPackageName,
       addonInstance?.namespace
     )
     const functionScopes = funcConfig.scopes ?? funcMeta.scopes
@@ -565,7 +570,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   const addonTagMiddleware = resolveAddonTagMiddleware(
-    packageName,
+    funcPackageName,
     addonInstance?.namespace
   )
 

@@ -25,7 +25,8 @@ const identityFor = (
 
 const makeAuth = (
   db: Record<string, any[]>,
-  opts: Partial<DelegatedAuthOptions> = {}
+  opts: Partial<DelegatedAuthOptions> = {},
+  scopesByUser: Record<string, string[]> = {}
 ) => {
   const stored: Array<{ userId: string; identity: UpstreamIdentity }> = []
   // Stands in for the app's ScopeService: roles are pikku grants, not a column.
@@ -36,6 +37,7 @@ const makeAuth = (
     addUserToRole: async (userId: string, role: string) => {
       roles.push({ userId, role })
     },
+    resolveScopes: async (userId: string) => scopesByUser[userId] ?? [],
   } as any
   const auth = betterAuth({
     baseURL: 'http://localhost:3000',
@@ -149,7 +151,7 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
     ])
   })
 
-  test('links a delegated account to an existing email row without one', async () => {
+  test('with linkExistingUsersByEmail: all, links a delegated account to an existing email row without one', async () => {
     const db: Record<string, any[]> = {
       user: [
         {
@@ -164,7 +166,7 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
       session: [],
       account: [],
     }
-    const { auth, stored } = makeAuth(db)
+    const { auth, stored } = makeAuth(db, { linkExistingUsersByEmail: 'all' })
 
     const res = await signInDelegated(auth, {
       email: 'jane@corp.com',
@@ -204,7 +206,7 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
         },
       ],
     }
-    const { auth, stored } = makeAuth(db)
+    const { auth, stored } = makeAuth(db, { linkExistingUsersByEmail: 'all' })
 
     const res = await signInDelegated(auth, {
       email: 'jane@corp.com',
@@ -232,7 +234,7 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
       session: [],
       account: [],
     }
-    const { auth } = makeAuth(db)
+    const { auth } = makeAuth(db, { linkExistingUsersByEmail: 'all' })
     const res = await signInDelegated(auth, {
       email: 'jane@corp.com',
       password: 'hunter2',
@@ -416,5 +418,77 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
     assert.equal(res.status, 200)
     assert.equal(warnings.length, 1)
     assert.match(warnings[0]!, /no ScopeService/)
+  })
+
+  describe('linking an existing user by email', () => {
+    const existingJane = (): Record<string, any[]> => ({
+      user: [
+        {
+          id: 'u-jane',
+          email: 'jane@corp.com',
+          name: 'Jane',
+          emailVerified: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      session: [],
+      account: [],
+    })
+    const signIn = (auth: ReturnType<typeof makeAuth>['auth']) =>
+      signInDelegated(auth, { email: 'jane@corp.com', password: 'hunter2' })
+
+    test('is refused by default, even for an email the upstream returned', async () => {
+      const db = existingJane()
+      const { auth, stored } = makeAuth(db)
+      const res = await signIn(auth)
+      assert.equal(res.status, 401)
+      assert.match((await res.json()).message ?? '', /already used/)
+      assert.equal(db.account!.length, 0)
+      assert.equal(stored.length, 0)
+    })
+
+    test("'non-admins' links a user holding no operator scope", async () => {
+      const db = existingJane()
+      const { auth } = makeAuth(
+        db,
+        { linkExistingUsersByEmail: 'non-admins' },
+        { 'u-jane': ['orders:read'] }
+      )
+      assert.equal((await signIn(auth)).status, 200)
+      assert.equal(db.account![0]?.userId, 'u-jane')
+    })
+
+    for (const scope of ['admin', 'admin:users:list', 'pikku:console', '*']) {
+      test(`'non-admins' refuses a user holding ${scope}`, async () => {
+        const db = existingJane()
+        const { auth } = makeAuth(
+          db,
+          { linkExistingUsersByEmail: 'non-admins' },
+          { 'u-jane': [scope] }
+        )
+        assert.equal((await signIn(auth)).status, 401)
+        assert.equal(db.account!.length, 0)
+      })
+    }
+
+    test("'non-admins' links nobody without a ScopeService", async () => {
+      const db = existingJane()
+      const { auth } = makeAuth(db, {
+        linkExistingUsersByEmail: 'non-admins',
+        scopeService: undefined,
+      })
+      assert.equal((await signIn(auth)).status, 401)
+    })
+
+    test("'all' links an administrator", async () => {
+      const db = existingJane()
+      const { auth } = makeAuth(
+        db,
+        { linkExistingUsersByEmail: 'all' },
+        { 'u-jane': ['admin'] }
+      )
+      assert.equal((await signIn(auth)).status, 200)
+    })
   })
 })

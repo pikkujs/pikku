@@ -1,7 +1,7 @@
 import { getAllPackageStates } from './pikku-state.js'
 import { clearMiddlewareCache } from './middleware-runner.js'
 import { clearPermissionsCache } from './permissions.js'
-import { clearChannelMiddlewareCache } from './wirings/channel/channel-middleware-runner.js'
+import { clearChannelMiddlewareCache } from './channel-middleware-runner.js'
 
 /**
  * Clears all runtime caches between test scenarios without touching registered
