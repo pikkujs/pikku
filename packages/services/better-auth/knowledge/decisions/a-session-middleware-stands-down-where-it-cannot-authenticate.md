@@ -20,7 +20,7 @@ Global middleware is application-wide, so it also runs on dispatches contributed
 by an addon. An addon runs with a `ScopedSecretService` whose namespace is
 deliberately not granted the host application's auth secret, and it builds its
 own singleton services rather than inheriting the host's better-auth instance.
-Neither absence is a misconfiguration: they are what scoping is *for*. Treating
+Neither absence is a misconfiguration: they are what scoping is _for_. Treating
 them as errors turned every addon dispatch into a failed call — an MCP tool
 invocation coming back as an error the caller could do nothing about.
 
@@ -28,7 +28,7 @@ Standing down also leaves the chain intact, so a bearer-token middleware further
 along can still authenticate the same request.
 
 The distinction is kept sharp on the secret path: `isSecretNotFound` still logs,
-because a secret that is *missing* in the root namespace really is a
+because a secret that is _missing_ in the root namespace really is a
 misconfiguration, and a genuine failure — the secret store being unreachable —
 still rejects.
 
