@@ -23,7 +23,12 @@ const INSPECTOR = path.dirname(
 const requireFromInspector = createRequire(INSPECTOR + '/package.json')
 const importFromInspector = (spec) => import(pathToFileURL(requireFromInspector.resolve(spec)).href)
 
-const { register } = await importFromInspector('tsx/esm/api')
+// Bun imports TypeScript itself, and tsx's unregister() never settles under
+// it — which is the runtime behind `node` in Pikku Studio. tsx is only for Node.
+const register =
+  typeof Bun === 'undefined'
+    ? (await importFromInspector('tsx/esm/api')).register
+    : () => () => {}
 const z = await importFromInspector('zod')
 const { zodToTypeText } = await import(pathToFileURL(INSPECTOR + '/dist/utils/zod-to-type-text.js').href)
 const { findZodTransform } = await import(pathToFileURL(INSPECTOR + '/dist/utils/find-zod-transform.js').href)
