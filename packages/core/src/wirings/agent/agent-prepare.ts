@@ -102,6 +102,22 @@ export function assertResourcePrincipalOwner(
   }
 }
 
+/**
+ * Refuses a run that belongs to a different agent than the one a route was
+ * built for. Ownership is checked first, so only the run's owner learns which
+ * agent it belongs to.
+ */
+export function assertRunBelongsToAgent(
+  run: { runId: string; agentName: string },
+  expectedAgentName: string | undefined
+): void {
+  if (expectedAgentName && run.agentName !== expectedAgentName) {
+    throw new ForbiddenError(
+      `Run ${run.runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
+    )
+  }
+}
+
 export function agentSessionScope(agentName: string): SessionScope {
   return resolveAgent(agentName).agent.sessionScope ?? 'user'
 }

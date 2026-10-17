@@ -30,6 +30,7 @@ import {
   resolveOwnerResourceId,
   agentSessionScope,
   assertResourcePrincipalOwner,
+  assertRunBelongsToAgent,
   assertAgentAuthorized,
   type RunAgentParams,
 } from './agent-prepare.js'
@@ -449,11 +450,7 @@ export async function resumeAgentSync(
     run.resourceId,
     'run'
   )
-  if (expectedAgentName && run.agentName !== expectedAgentName) {
-    throw new Error(
-      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
-    )
-  }
+  assertRunBelongsToAgent(run, expectedAgentName)
   if (run.status !== 'suspended') {
     throw new Error(`Run ${runId} is not suspended (status: ${run.status})`)
   }

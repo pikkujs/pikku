@@ -123,6 +123,8 @@ export const agentResume = () => {
 
 /**
  * A ready-made function that answers every pending approval for a run at once.
+ * Only runs of the agent named here are accepted: a run that belongs to any
+ * other agent is refused with a 403, even when the caller owns it.
  *
  * @example snippet: agentApproval
  */
