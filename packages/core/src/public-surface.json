@@ -192,6 +192,7 @@
     "fetchData",
     "httpRouter",
     "logRoutes",
+    "mergeRequestData",
     "toWebRequest",
     "wireHTTP",
     "wireHTTPRoutes"

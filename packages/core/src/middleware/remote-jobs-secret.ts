@@ -4,15 +4,7 @@ import {
   REMOTE_JOBS_SECRET_VARIABLE,
 } from '../services/remote-jobs.js'
 import { pikkuMiddleware } from './middleware-factories.js'
-
-const constantTimeEqual = (a: string, b: string): boolean => {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return result === 0
-}
+import { timingSafeStringEqual } from '../utils/hmac.js'
 
 /**
  * Guards the remote job inbox. Fails closed: an unset secret rejects every
@@ -26,7 +18,7 @@ export const remoteJobsSecret = pikkuMiddleware(
     if (
       !expected ||
       typeof provided !== 'string' ||
-      !constantTimeEqual(provided, expected)
+      !timingSafeStringEqual(provided, expected)
     ) {
       throw new UnauthorizedError('invalid dispatch secret')
     }
