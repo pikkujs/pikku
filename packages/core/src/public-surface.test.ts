@@ -14,7 +14,12 @@ const expected: Record<string, string[]> = JSON.parse(
   readFileSync(join(srcRoot, 'public-surface.json'), 'utf-8')
 )
 
-const subpaths = packageJson.exports as Record<string, string>
+// `./package.json` is metadata, not a module, so only code entry points count.
+const subpaths = Object.fromEntries(
+  Object.entries(packageJson.exports as Record<string, string>).filter(
+    ([, target]) => target.endsWith('.js')
+  )
+)
 
 /**
  * `exports` entries, with a wildcard subpath replaced by the files it matches.
