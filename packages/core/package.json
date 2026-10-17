@@ -12,14 +12,15 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.type-tests.json",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "ncu": "npx npm-check-updates",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "bun run build",
-    "api-report": "tsx scripts/generate-api-report.mts"
+    "api-report": "tsx scripts/generate-api-report.mts",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "sideEffects": [
     "./dist/errors/errors.js",
@@ -31,6 +32,7 @@
     "./dist/wirings/workflow/workflow-errors.js",
     "./dist/wirings/workflow/workflow-run-ownership.js"
   ],
+  "types": "./dist/bootstrap-compat/root.d.ts",
   "exports": {
     ".": "./dist/bootstrap-compat/root.js",
     "./types": "./dist/types/index.js",
@@ -89,15 +91,26 @@
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",
-    "./dev": "./dist/dev/hot-reload.js"
+    "./dev": "./dist/dev/hot-reload.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
     "cookie": "^2.0.1",
-    "json-schema": "^0.4.0",
     "path-to-regexp": "^8.4.2",
     "picoquery": "^2.5.0"
+  },
+  "peerDependencies": {
+    "esbuild": ">=0.28.2 <1"
+  },
+  "peerDependenciesMeta": {
+    "esbuild": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@ag-ui/core": "0.0.57",
