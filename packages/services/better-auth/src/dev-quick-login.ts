@@ -6,8 +6,15 @@ import { ADMIN_SCOPE_ROOT, CONSOLE_SCOPE_ROOT } from './auth-scopes.js'
 export const DEV_QUICK_LOGIN_USER = {
   name: 'Dev Admin',
   email: 'admin@pikku.dev',
-  password: 'pikku-dev-password',
 }
+
+/**
+ * Minted per process and never shown to anyone. Quick login rewrites the dev
+ * admin's password to this before every sign-in, so the account carries no
+ * credential that outlives the process — a copied dev database or a stage that
+ * shares it cannot be signed into through `/sign-in/email`.
+ */
+const DEV_QUICK_LOGIN_PASSWORD = `${crypto.randomUUID()}${crypto.randomUUID()}`
 
 export const DEV_QUICK_LOGIN_SUBPATH = '/dev/quick-login'
 
@@ -27,7 +34,7 @@ const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 export const devQuickLoginEnabled = (): boolean => {
   if (typeof process === 'undefined') return false
   // Never in production, whatever the flag says. Quick login provisions a
-  // fixed-credential root-admin account; `pikku serve`/`pikku dev` default the
+  // root-admin account; `pikku serve`/`pikku dev` default the
   // flag on, so a deploy that inherits that env must not carry the account with
   // it. This is the last line behind the loopback gate, not a replacement for
   // it.
@@ -60,6 +67,14 @@ const hostnameOf = (hostHeader: string): string => {
   }
 }
 
+const originHostname = (origin: string): string => {
+  try {
+    return new URL(origin).hostname
+  } catch {
+    return ''
+  }
+}
+
 export const isDevQuickLoginRequest = (
   request: Request,
   basePath: string
@@ -84,11 +99,61 @@ export const isDevQuickLoginRequest = (
   for (const marker of PROXY_MARKERS) {
     if (request.headers.get(marker)) return false
   }
-  return LOCAL_HOSTNAMES.has(hostnameOf(request.headers.get('host') ?? ''))
+  if (!LOCAL_HOSTNAMES.has(hostnameOf(request.headers.get('host') ?? ''))) {
+    return false
+  }
+  // The Host header is the client's to write, so it cannot prove locality on
+  // its own. What a browser adds can at least prove the request was not sent by
+  // another site: a page elsewhere posting to localhost carries its own Origin
+  // and `Sec-Fetch-Site: cross-site`, and is refused.
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return false
+  const origin = request.headers.get('origin')
+  if (origin !== null && !LOCAL_HOSTNAMES.has(originHostname(origin))) {
+    return false
+  }
+  return true
 }
 
 /**
- * Signs the dev user up (idempotently) and grants it the roots in
+ * Creates the dev admin if it is missing and sets its password to this
+ * process's {@link DEV_QUICK_LOGIN_PASSWORD}, so the sign-in that follows works
+ * and no earlier password — including the fixed one older versions used —
+ * keeps working afterwards.
+ */
+const ensureDevAdminCredential = async (
+  auth: BetterAuthInstance
+): Promise<string> => {
+  const { name, email } = DEV_QUICK_LOGIN_USER
+  const ctx = await auth.$context
+  const adapter = ctx.internalAdapter
+  const hash = await ctx.password.hash(DEV_QUICK_LOGIN_PASSWORD)
+
+  const found = await adapter.findUserByEmail(email)
+  const user =
+    found?.user ??
+    (await adapter.createUser(
+      { name, email, emailVerified: true },
+      { method: 'dev-quick-login' }
+    ))
+
+  const accounts: Array<{ providerId: string }> = await adapter.findAccounts(
+    user.id
+  )
+  if (accounts.some((account) => account.providerId === 'credential')) {
+    await adapter.updatePassword(user.id, hash)
+  } else {
+    await adapter.linkAccount({
+      userId: user.id,
+      providerId: 'credential',
+      accountId: user.id,
+      password: hash,
+    })
+  }
+  return user.id
+}
+
+/**
+ * Ensures the dev user and its credential, and grants it the roots in
  * {@link DEV_QUICK_LOGIN_SCOPE_ROOTS}, which between them cover every `admin:*`
  * capability the framework gates on and every `pikku:console:*` one the console
  * does.
@@ -102,10 +167,8 @@ const ensureDevAdmin = async (
   logger: Logger | undefined,
   scopeService: ScopeService | undefined
 ): Promise<void> => {
-  const { name, email, password } = DEV_QUICK_LOGIN_USER
-  try {
-    await auth.api.signUpEmail({ body: { name, email, password } })
-  } catch {}
+  const { email } = DEV_QUICK_LOGIN_USER
+  const userId = await ensureDevAdminCredential(auth)
   if (!scopeService) {
     logger?.warn?.(
       `dev quick login: no ScopeService registered, so ${email} holds no admin or console scope`
@@ -113,15 +176,10 @@ const ensureDevAdmin = async (
     return
   }
   try {
-    const ctx = await auth.$context
-    const found = await ctx?.internalAdapter?.findUserByEmail?.(email)
-    if (!found?.user) {
-      return
-    }
-    const held = await scopeService.listUserScopes(found.user.id)
+    const held = await scopeService.listUserScopes(userId)
     for (const root of DEV_QUICK_LOGIN_SCOPE_ROOTS) {
       if (!held.includes(root)) {
-        await scopeService.addScopeToUser(found.user.id, root)
+        await scopeService.addScopeToUser(userId, root)
       }
     }
   } catch (error) {
@@ -147,9 +205,11 @@ export const handleDevQuickLogin = async (
     return new Response('Method Not Allowed', { status: 405 })
   }
   await ensureDevAdmin(auth, logger, scopeService)
-  const { email, password } = DEV_QUICK_LOGIN_USER
   return (await auth.api.signInEmail({
-    body: { email, password },
+    body: {
+      email: DEV_QUICK_LOGIN_USER.email,
+      password: DEV_QUICK_LOGIN_PASSWORD,
+    },
     headers: request.headers,
     asResponse: true,
   })) as Response
