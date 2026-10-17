@@ -1,6 +1,7 @@
 export type {
   AgentDefinition,
   ChannelDefinition,
+  GatewayDefinition,
   DeploymentHandler,
   DeploymentManifest,
   DeploymentUnit,

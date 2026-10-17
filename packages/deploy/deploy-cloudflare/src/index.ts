@@ -50,6 +50,7 @@ export type {
 } from './adapter.js'
 export const createAdapter = (options: CloudflareProviderAdapterOptions = {}) =>
   new CloudflareProviderAdapter(options)
+export { coercionContributor } from './coercion-contributor.js'
 export type { CloudflareInfraManifest } from './infra-manifest.js'
 
 // Types

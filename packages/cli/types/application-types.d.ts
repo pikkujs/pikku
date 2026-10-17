@@ -19,6 +19,10 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
    *  so .deploy/ bootstrap files don't emit package-name imports that the bundler
    *  can't resolve from outside the workspace. */
   forceRelativeImports?: boolean
+  /** When true, the bootstrap imports each wired addon's functions and schemas
+   *  from an exported `loadAddons()` rather than at module load (--lazy-addons).
+   *  Per-unit deploy codegen sets it for providers that cap startup CPU. */
+  lazyAddons?: boolean
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
