@@ -971,7 +971,7 @@ test('${name} addon', async () => {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 
 export interface Config extends CoreConfig {}
 export interface UserSession extends CoreUserSession {}

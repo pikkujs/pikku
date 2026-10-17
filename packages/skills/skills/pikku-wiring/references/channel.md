@@ -44,7 +44,7 @@ permissions were removed in #972. Authorization lives on the function's own
 ### `pikkuChannelMiddleware(fn)`
 
 ```typescript
-import { pikkuChannelMiddleware } from '@pikku/core'
+import { pikkuChannelMiddleware } from '@pikku/core/middleware'
 
 const middleware = pikkuChannelMiddleware(async (services, event, next) => {
   // Transform or filter events before/after
