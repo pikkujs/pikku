@@ -42,11 +42,17 @@ type Program struct {
 	release     func()
 }
 
+// Release returns the checker to its pool and drops the program and checker,
+// so the garbage collector can take them while the caller still holds p.
+// Source files stay in the Cache for the next program to reuse.
 func (p *Program) Release() {
 	if p.release != nil {
 		p.release()
 		p.release = nil
 	}
+	p.Program = nil
+	p.Checker = nil
+	p.ProjectFiles = nil
 }
 
 // Create builds the program and checker. cache may be nil.

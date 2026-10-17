@@ -8,6 +8,7 @@ package analyze
 import (
 	"encoding/json"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -64,36 +65,44 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 		ctx.Sweep(visit.PhaseRoutes, prog.ProjectFiles)
 		ctx.ValidateWebhookSourceTriggers()
 		ctx.ResolveLatestVersions()
-		if sc := req.Options.SchemaConfig; sc != nil {
-			out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)
-			if err != nil {
-				return nil, &protocol.Failure{Message: err.Error(), Diagnostics: log.Entries()}
-			}
-			st.Schemas = out
-		}
 	}
 
 	ctx.FinishCoreTypeProperties()
 	ctx.FinishServiceTypes()
 
+	stats := protocol.Stats{
+		Files:          len(req.RouteFiles),
+		ProjectFiles:   len(prog.ProjectFiles),
+		FilesReused:    prog.FilesReused,
+		Types:          prog.TypeCount(),
+		Instantiations: prog.InstantiationCount(),
+		Symbols:        prog.SymbolCount(),
+	}
+
+	if sc := req.Options.SchemaConfig; sc != nil && !req.Options.SetupOnly {
+		// Schema generation starts Node for the Zod schemas and builds a
+		// program of its own. Nothing reads the analysis checker from here
+		// on, and it is most of the heap, so it goes first.
+		prog.Release()
+		debug.FreeOSMemory()
+		out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)
+		if err != nil {
+			return nil, &protocol.Failure{Message: err.Error(), Diagnostics: log.Entries()}
+		}
+		st.Schemas = out
+	}
+
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
+	stats.CpuMs = processCPUMs()
+	stats.WallMs = int(time.Since(start).Milliseconds())
+	stats.HeapUsedMb = int(mem.HeapAlloc >> 20)
 	return &protocol.Response{
 		Protocol:    protocol.Version,
 		Finalized:   false,
 		State:       st,
 		Diagnostics: log.Entries(),
-		Stats: protocol.Stats{
-			Files:          len(req.RouteFiles),
-			ProjectFiles:   len(prog.ProjectFiles),
-			FilesReused:    prog.FilesReused,
-			Types:          prog.TypeCount(),
-			Instantiations: prog.InstantiationCount(),
-			Symbols:        prog.SymbolCount(),
-			CpuMs:          processCPUMs(),
-			WallMs:         int(time.Since(start).Milliseconds()),
-			HeapUsedMb:     int(mem.HeapAlloc >> 20),
-		},
+		Stats:       stats,
 	}, nil
 }
 
