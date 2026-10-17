@@ -46,6 +46,10 @@ session, the credentials and the RPC depth for you.
   schema on a tool-calling agent is silently inert. The pairing that wants it is
   reading an image or a document into typed data — one tool-free agent, an
   `output` schema, and the picture passed as an `attachments` entry.
+- **An `output` the model returns is validated.** The run fails with
+  `AgentOutputValidationError` (502, `issues` lists what did not match) rather
+  than handing back a malformed object; there is no retry. A `null` the model
+  sends for an optional field comes back absent, so `.optional()` holds.
 - **`auth` defaults to `false`**, because agents are normally invoked from an
   already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced
   either way — see `pikku-permissions`.

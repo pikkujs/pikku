@@ -376,6 +376,7 @@
   "./errors": [
     "AIProviderAuthError",
     "AIProviderNotConfiguredError",
+    "AgentOutputValidationError",
     "BadGatewayError",
     "BadRequestError",
     "ConflictError",
