@@ -31,6 +31,7 @@ import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import { getDeadGenFilePatterns } from './bundler/bundler.js'
 import { verifyUnitsRuntime } from './runtime-verifier.js'
+import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
 import {
@@ -666,6 +667,13 @@ export async function runBuildPipeline(options: {
     logger.info('Bundling...')
     const serverlessEntryFiles = new Map<string, string>()
     const serverEntryFiles = new Map<string, string>()
+    const coercionMap = readCoercionMap(
+      join(
+        options.outDir ?? join(projectDir, '.pikku'),
+        'db',
+        'coercion.gen.ts'
+      )
+    )
 
     for (const unit of manifest.units) {
       const pikkuDir = unitPikkuDirs.get(unit.name)
@@ -679,6 +687,7 @@ export async function runBuildPipeline(options: {
       const ctx = {
         ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
+        coercionMap,
       }
       const source =
         unit.target === 'server'

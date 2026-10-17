@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
 import {
@@ -578,6 +578,28 @@ function emitClassificationMap(tables: TableSchema[]): string {
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+const COERCION_MAP_LITERAL = /export const coercionMap = (\{[\s\S]*\}) as const/
+
+/**
+ * The map a previous `pikku db migrate` wrote into `coercion.gen.ts`, read back
+ * as data for a deploy entry that has to carry it as a literal. Undefined when
+ * the file is absent or maps no column. The literal is JSON by construction —
+ * see where `coercionBody` is assembled below.
+ */
+export function readCoercionMap(coercionFile: string): CoercionMap | undefined {
+  if (!existsSync(coercionFile)) return undefined
+  const literal = COERCION_MAP_LITERAL.exec(
+    readFileSync(coercionFile, 'utf8')
+  )?.[1]
+  if (!literal) {
+    throw new Error(
+      `${coercionFile} does not hold the coercion map \`pikku db migrate\` writes. Re-run it to regenerate the file.`
+    )
+  }
+  const map = JSON.parse(literal) as CoercionMap
+  return Object.keys(map).length > 0 ? map : undefined
+}
 
 export interface CodegenOptions {
   outFile: string
