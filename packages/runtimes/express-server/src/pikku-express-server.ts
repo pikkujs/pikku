@@ -5,15 +5,12 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import type { CorsOptions, CorsOptionsDelegate } from 'cors'
 import getRawBody from 'raw-body'
-import contentType from 'content-type'
+import { parse as parseContentType } from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
 import type { CoreConfig } from '@pikku/core/types'
-import {
-  onShutdownSignals,
-  stopSingletonServices,
-} from '@pikku/core/lifecycle'
+import { onShutdownSignals, stopSingletonServices } from '@pikku/core/lifecycle'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
 import { pikkuState } from '@pikku/core/state'
 import type { JWTService, Logger } from '@pikku/core/services'
@@ -142,8 +139,8 @@ export class PikkuExpressServer {
       const file = await getRawBody(req, {
         length: req.headers['content-length'],
         limit: configContent.sizeLimit || '1mb',
-        encoding: contentType.parse(req.headers['content-type'] ?? '')
-          .parameters.charset,
+        encoding: parseContentType(req.headers['content-type'] ?? '').parameters
+          .charset,
       })
 
       const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))
