@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url'
 import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
-import { InMemoryWorkflowService } from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { rpcService } from '@pikku/core/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'

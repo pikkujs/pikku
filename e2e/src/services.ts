@@ -3,10 +3,10 @@ import {
   LocalSecretService,
   LocalVariablesService,
   LocalCredentialService,
-  InMemoryQueueService,
   isTestRun,
   stub,
 } from '@pikku/core/services'
+import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'
 import type { EmailService } from '@pikku/core/services'
 import { existsSync } from 'node:fs'
 import { openSqliteDatabase } from './sqlite-database.js'
