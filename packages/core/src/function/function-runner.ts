@@ -103,6 +103,15 @@ async function resolveSession(
   }
 }
 
+/**
+ * Registers a function's config under its id so wirings can run it by name.
+ * Generated code calls this for every function codegen found; an app rarely
+ * needs to. Registering the same id again replaces the earlier config.
+ *
+ * @param funcName - The function id, as it appears in the generated metadata.
+ * @param funcConfig - The object a `pikkuFunc` / `pikkuSessionlessFunc` returned.
+ * @param packageName - The addon package it belongs to; `null` for the app.
+ */
 export const addFunction = (
   funcName: string,
   funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>,
@@ -118,6 +127,10 @@ export const getFunctionNames = (
   return Object.keys(functionsMeta)
 }
 
+/**
+ * Every function id with generated metadata: the app's own, then each addon's
+ * prefixed with the namespace it was wired under (`ns:name`).
+ */
 export const getAllFunctionNames = (): string[] => {
   const functions: string[] = []
 
@@ -135,6 +148,34 @@ export const getAllFunctionNames = (): string[] => {
   return functions
 }
 
+/**
+ * Runs one registered function the way every wiring does. Each transport's
+ * runner (HTTP, channel, queue, scheduler, RPC, MCP, CLI, workflow, agent)
+ * ends up here; an app calls it directly only when it is building its own
+ * transport.
+ *
+ * In order, it: resolves the function (falling back from `name@vN` to the
+ * unversioned name, and into an addon for `ns:name`), runs the combined
+ * middleware, resolves the session, enforces auth, `readonly`, scopes and the
+ * feature flag, reads `data()`, applies schema defaults and validation, runs
+ * global and function permissions, builds and finally closes the wire
+ * services, and calls the function. The function and its permissions receive
+ * services whose `secrets` throws on access — they read secrets through the
+ * declared typed wrappers instead.
+ *
+ * @param wireType - The transport, recorded on `wire.wireType` if unset.
+ * @param wireId - The wiring's id (route, queue name, …), recorded on
+ * `wire.wireId` if unset. Middleware registered against it is applied.
+ * @param funcName - The registered function id.
+ * @returns Whatever the function returns.
+ * @throws {MissingSessionError} A session is required and none resolved.
+ * @throws {ReadonlySessionError} A readonly session called a mutating function.
+ * @throws {MissingScopeError} The session lacks a required scope.
+ * @throws {FeatureUnavailableError} The function's feature flag is off.
+ * @throws {ForbiddenError} A permission refused the call.
+ * @throws {Error} The function or its metadata is not registered. Errors thrown
+ * by validation, middleware and the function itself propagate unchanged.
+ */
 export const runPikkuFunc = async <In = any, Out = any>(
   wireType: PikkuWiringTypes,
   wireId: string,

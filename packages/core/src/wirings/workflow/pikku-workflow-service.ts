@@ -133,6 +133,7 @@ import {
   sweepUndispatchedSteps,
 } from './workflow-recovery.js'
 
+/** The workflow engine; subclasses supply storage. Leases serialise runs and step claims over a shared store. */
 export abstract class PikkuWorkflowService implements WorkflowService {
   private runExtension?: WorkflowRunExtension
 

@@ -79,6 +79,18 @@ const deriveKey = async (
   )
 }
 
+/**
+ * Encrypts a JSON-serialisable value with AES-256-GCM under a key derived from
+ * `secret` by PBKDF2-SHA256 (600,000 iterations, fresh random 16-byte salt).
+ *
+ * Meant for low-entropy secrets such as passphrases; for high-entropy key material
+ * use {@link encryptWithKeyMaterial}, which skips the deliberately slow KDF.
+ *
+ * @param secret - The passphrase the key is derived from.
+ * @param value - Any value `JSON.stringify` accepts.
+ * @returns A base64url token of `salt || iv || ciphertext+tag`.
+ * @throws Error when WebCrypto is not available in the runtime.
+ */
 export const encryptJSON = async (
   secret: string,
   value: unknown
@@ -105,6 +117,16 @@ export const encryptJSON = async (
   return toBase64Url(out)
 }
 
+/**
+ * Reverses {@link encryptJSON}: re-derives the key from `secret` and the salt in
+ * the token, then decrypts and parses the JSON.
+ *
+ * @param secret - The passphrase the token was encrypted with.
+ * @param token - The base64url token `encryptJSON` returned.
+ * @returns The parsed value, cast to `T` without validation.
+ * @throws Error on a truncated token; the WebCrypto `OperationError` when the
+ *   secret is wrong or the token was tampered with (the GCM tag fails).
+ */
 export const decryptJSON = async <T>(
   secret: string,
   token: string
@@ -132,8 +154,17 @@ export const decryptJSON = async <T>(
  */
 export const REMOTE_SESSION_INFO = 'pikku:remote-session'
 
+/** Shortest key material, in characters, that the `*WithKeyMaterial` helpers accept. */
 export const MIN_KEY_MATERIAL_LENGTH = 32
 
+/**
+ * Refuses key material shorter than {@link MIN_KEY_MATERIAL_LENGTH}. HKDF does no
+ * stretching, so a short secret would be brute-forceable.
+ *
+ * @param name - The secret's name, used in the error message (the value is never included).
+ * @param keyMaterial - The material to check.
+ * @throws WeakKeyMaterialError when the material is too short.
+ */
 export const assertStrongKeyMaterial = (
   name: string,
   keyMaterial: string
@@ -174,6 +205,20 @@ const expandKeyMaterial = async (
   )
 }
 
+/**
+ * Encrypts a JSON-serialisable value with AES-256-GCM under a key expanded from
+ * high-entropy key material by HKDF-SHA256, with a fresh random salt per call.
+ *
+ * `info` domain-separates the derived key, so the same deployment secret used for
+ * two purposes (e.g. {@link REMOTE_SESSION_INFO}) yields two unrelated keys.
+ *
+ * @param name - The key material's name, for the weak-key error.
+ * @param keyMaterial - At least {@link MIN_KEY_MATERIAL_LENGTH} characters.
+ * @param info - The HKDF context string; decryption must pass the same one.
+ * @param value - Any value `JSON.stringify` accepts.
+ * @returns A base64url token of `salt || iv || ciphertext+tag`.
+ * @throws WeakKeyMaterialError when `keyMaterial` is too short.
+ */
 export const encryptWithKeyMaterial = async (
   name: string,
   keyMaterial: string,
@@ -202,6 +247,18 @@ export const encryptWithKeyMaterial = async (
   return toBase64Url(out)
 }
 
+/**
+ * Reverses {@link encryptWithKeyMaterial}.
+ *
+ * @param name - The key material's name, for the weak-key error.
+ * @param keyMaterial - The material the token was encrypted under.
+ * @param info - The same HKDF context string used to encrypt.
+ * @param token - The base64url token to decrypt.
+ * @returns The parsed value, cast to `T` without validation.
+ * @throws WeakKeyMaterialError when `keyMaterial` is too short; Error on a
+ *   truncated token; the WebCrypto `OperationError` when the key, `info` or
+ *   token is wrong.
+ */
 export const decryptWithKeyMaterial = async <T>(
   name: string,
   keyMaterial: string,
@@ -226,9 +283,11 @@ export const decryptWithKeyMaterial = async <T>(
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
 
+/** UTF-8 encodes a string and returns it as unpadded base64url. An encoding, not encryption. */
 export const encodeBase64UrlText = (value: string): string =>
   toBase64Url(encoder.encode(value))
 
+/** Decodes unpadded (or padded) base64url back to a UTF-8 string. */
 export const decodeBase64UrlText = (value: string): string =>
   decoder.decode(fromBase64Url(value))
 
@@ -350,6 +409,12 @@ const decryptWithCryptoKey = async <T>(
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
 
+/**
+ * Generates a random 256-bit data-encryption key for envelope encryption.
+ *
+ * @returns The raw key as base64url. It is plaintext key material: wrap it with
+ *   {@link wrapDEK} before storing it.
+ */
 export const generateDEK = async (): Promise<string> => {
   const raw = globalThis.crypto.getRandomValues(new Uint8Array(32))
   return toBase64Url(raw)
@@ -367,6 +432,14 @@ export const generateKEKSalt = (): string => {
   return toBase64Url(crypto.getRandomValues(new Uint8Array(SALT_BYTES)))
 }
 
+/**
+ * Derives the AES-256-GCM key-encryption key from a passphrase and a salt from
+ * {@link generateKEKSalt}, by PBKDF2-SHA256 (600,000 iterations). The key is
+ * non-extractable.
+ *
+ * @param passphrase - The deployment's master passphrase.
+ * @param salt - The base64url salt stored beside the wrapped DEKs.
+ */
 export const deriveKEK = async (
   passphrase: string,
   salt: string
@@ -382,6 +455,7 @@ export const deriveKEK = async (
 const asWrapped = (ciphertext: string): WrappedValue =>
   ciphertext as WrappedValue
 
+/** Encrypts a plaintext DEK under the KEK (AES-GCM, random IV) so it can be stored. */
 export const wrapDEK = async (
   kek: CryptoKey,
   plaintextDEK: string
@@ -389,6 +463,11 @@ export const wrapDEK = async (
   return asWrapped(await encryptWithCryptoKey(kek, plaintextDEK))
 }
 
+/**
+ * Decrypts a DEK wrapped by {@link wrapDEK}.
+ *
+ * @throws Error on a truncated token; the WebCrypto `OperationError` when the KEK is wrong.
+ */
 export const unwrapDEK = async (
   kek: CryptoKey,
   wrappedDEK: string
@@ -416,11 +495,20 @@ const decryptWithDEK = async <T>(
   )
 }
 
+/** The two values {@link envelopeEncrypt} returns; both are needed to decrypt and both are safe to store. */
 export interface EnvelopeEncryptResult {
   ciphertext: WrappedValue
   wrappedDEK: WrappedValue
 }
 
+/**
+ * Envelope-encrypts a value: a fresh DEK encrypts the value, and the KEK encrypts
+ * the DEK. Rotating the KEK then only needs {@link envelopeRewrap} on each
+ * wrapped DEK, not re-encryption of the data.
+ *
+ * @param kek - The key-encryption key from {@link deriveKEK}.
+ * @param value - Any value `JSON.stringify` accepts.
+ */
 export const envelopeEncrypt = async (
   kek: CryptoKey,
   value: unknown
@@ -450,6 +538,11 @@ export const envelopeDecrypt = async <T>(
   return decryptWithDEK<T>(dek, ciphertext)
 }
 
+/**
+ * Re-wraps a DEK under a new KEK for key rotation. The data ciphertext is unchanged.
+ *
+ * @throws The WebCrypto `OperationError` when `oldKEK` did not wrap this DEK.
+ */
 export const envelopeRewrap = async (
   oldKEK: CryptoKey,
   newKEK: CryptoKey,

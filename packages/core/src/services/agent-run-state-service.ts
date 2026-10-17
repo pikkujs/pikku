@@ -4,10 +4,18 @@ import type {
 } from '../wirings/agent/agent.types.js'
 import type { AgentRunScore } from '../wirings/agent-scorer/agent-scorer.types.js'
 
+/** A run as it is first recorded; the store assigns the `runId`. */
 export type CreateRunInput = Omit<AgentRunState, 'runId'>
 
+/** A scorer's grade as it is saved; the store stamps `createdAt`. */
 export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
 
+/**
+ * Persists agent runs between steps, so a run that stops for a tool approval
+ * can be resumed later, possibly by another process. Implementations must make
+ * {@link AgentRunStateService.resolveApproval} atomic: it is what stops one
+ * approval from executing a tool twice.
+ */
 export interface AgentRunStateService {
   createRun(run: CreateRunInput): Promise<string>
   updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>

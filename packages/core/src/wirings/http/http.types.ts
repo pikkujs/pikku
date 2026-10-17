@@ -16,6 +16,7 @@ type ExtractHTTPWiringParams<S extends string> =
       ? Param
       : never
 
+/** Resolves to `unknown` when every `:param` in a route is a key of `In`, and to a descriptive error tuple otherwise, so a mismatch fails to compile. */
 export type AssertHTTPWiringParams<In, HTTPWiring extends string> =
   ExtractHTTPWiringParams<HTTPWiring> extends keyof In
     ? unknown
@@ -26,6 +27,17 @@ export type AssertHTTPWiringParams<In, HTTPWiring extends string> =
         keyof In,
       ]
 
+/**
+ * Per-request options for {@link fetch} and {@link fetchData}.
+ *
+ * - `skipUserSession` – do not resolve a session; throws for a route that requires auth.
+ * - `respondWith404` – write a 404 for an unmatched route (default `true`); `false` lets the host fall through to its own handlers.
+ * - `logWarningsForStatusCodes` – error statuses to log as warnings.
+ * - `coerceDataFromSchema` – coerce query and path strings to the schema's types (default `true`).
+ * - `bubbleErrors` – rethrow after writing the error response.
+ * - `exposeErrors` – include messages and stacks of 5xx errors; ignored in production.
+ * - `generateRequestId` – produce a trace ID when neither `traceId` nor `x-request-id` is present.
+ */
 export type RunHTTPWiringOptions = Partial<{
   skipUserSession: boolean
   respondWith404: boolean
@@ -40,6 +52,7 @@ export type RunHTTPWiringOptions = Partial<{
   maxBodySize: number
 }>
 
+/** The HTTP methods a route can be wired to, in lower case. */
 export type HTTPMethod =
   'post' | 'get' | 'delete' | 'patch' | 'head' | 'put' | 'options'
 
@@ -47,6 +60,7 @@ export type HTTPHeadersSchema = StandardSchemaV1<
   Record<string, string | string[] | undefined>
 >
 
+/** Options shared by a single route and a route in a group. */
 export type HTTPRouteBaseConfig = {
   /** How the body is serialised. Defaults to JSON; `xml` is for routes a caller you do not control insists on. */
   contentType?: 'xml' | 'json'
@@ -87,6 +101,7 @@ export interface PikkuHTTPAuthInfo {
   extra?: Record<string, unknown>
 }
 
+/** The HTTP part of a wire: the request and response a function was invoked with, when it was invoked over HTTP. */
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
@@ -94,6 +109,7 @@ export interface PikkuHTTP<In = unknown> {
   authInfo?: PikkuHTTPAuthInfo
 }
 
+/** A parsed query string. Depending on the adapter's parser a value may be a string, an array, or a nested object. */
 export type PikkuQuery<T = Record<string, string | undefined>> = Record<
   string,
   string | T | null | Array<T | null>
@@ -195,6 +211,7 @@ type HTTPWiringMethod<In> =
       sse?: undefined
     }
 
+/** The configuration {@link wireHTTP} takes. The generated `wireHTTP` in an app narrows the function, permission and middleware types to the app's own. */
 export type CoreHTTPFunctionWiring<
   In,
   Out,
@@ -252,8 +269,15 @@ export type HTTPWiringMeta = CommonWireMeta & {
   sse?: true
   groupBasePath?: string
 }
+/** Generated metadata for every wired route, keyed by method and then route. */
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 
+/**
+ * The request interface every runtime adapter implements, so functions and middleware read requests the same way on every host.
+ *
+ * `data()` merges path params, query and body into the function's input.
+ * `params()` is empty until a route has matched.
+ */
 export interface PikkuHTTPRequest<In = unknown> {
   method(): HTTPMethod
   path(): string
@@ -268,6 +292,7 @@ export interface PikkuHTTPRequest<In = unknown> {
   query(): PikkuQuery
 }
 
+/** The response interface every runtime adapter implements. Methods return `this` so calls can be chained; the optional members exist only on adapters that support streaming. */
 export interface PikkuHTTPResponse<Out = unknown> {
   readonly statusCode: number
   status(code: number): this
@@ -331,10 +356,12 @@ export type HTTPRoutesGroupConfig<
   middleware?: PikkuMiddleware[]
 }
 
+/** A map of named routes, route groups and nested maps, as accepted by {@link defineHTTPRoutes} and {@link wireHTTPRoutes}. Keys are labels only and never form part of a path. */
 export type HTTPRouteMap = {
   [key: string]: HTTPRouteConfig | HTTPRouteMap | HTTPRouteContract
 }
 
+/** A route group returned by {@link defineHTTPRoutes}: group options plus its routes, with the route map's type preserved. */
 export type HTTPRouteContract<T extends HTTPRouteMap = HTTPRouteMap> =
   HTTPRoutesGroupConfig & {
     routes: T

@@ -5,6 +5,11 @@ import type {
 } from './channel.types.js'
 import { channelRemote, releaseChannelHostRPC } from './channel-host-rpc.js'
 
+/**
+ * Base class for a runtime's {@link PikkuChannelHandler}. A runtime implements `send` and `sendBinary`; this builds the {@link PikkuChannel} on top, with in-memory state and `remote`.
+ *
+ * Closing the channel fails any `remote` calls still waiting on the peer.
+ */
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,
   Out = unknown,

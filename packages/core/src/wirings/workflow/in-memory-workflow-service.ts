@@ -23,6 +23,11 @@ interface InternalStepData {
 }
 
 // knowledge: decisions/internals/the-in-memory-workflow-service-is-inline-only-and-single-process.md
+/**
+ * A workflow service that keeps runs, steps and state in memory and runs every
+ * step inline. For tests and local development: nothing survives a restart, and
+ * it does not wire workflow queues or coordinate with another process.
+ */
 export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService

@@ -4,6 +4,14 @@ import type { CorePikkuChannelMiddleware } from './wirings/channel/channel.types
 import { pikkuState } from './pikku-state.js'
 import { freezeDedupe, getTagGroups } from './utils.js'
 
+/**
+ * Registers channel middleware for every channel carrying `tag`. It wraps each
+ * message the channel sends. Registering the same tag again replaces its
+ * group rather than appending to it.
+ *
+ * @returns The middleware it was given.
+ * @example snippet: addChannelMiddleware
+ */
 export const addChannelMiddleware = (
   tag: string,
   middleware: CorePikkuChannelMiddleware[],
@@ -35,6 +43,12 @@ export const clearChannelMiddlewareCache = () => {
   }
 }
 
+/**
+ * Resolves the channel middleware for one wiring: the tag and named middleware
+ * its metadata inherits, then the wiring's own, de-duplicated. The inherited
+ * part is cached per wiring.
+ * @internal
+ */
 export const combineChannelMiddleware = (
   wireType: string,
   uid: string,

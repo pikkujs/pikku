@@ -78,6 +78,10 @@ import type {
 } from '../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 
+/**
+ * The shape of one package's registry, as read and written by `pikkuState`.
+ * @internal
+ */
 export interface PikkuPackageState {
   function: {
     meta: FunctionsMeta

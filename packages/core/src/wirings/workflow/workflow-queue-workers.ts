@@ -1,6 +1,7 @@
 import { getSingletonServices } from '../../pikku-state.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 
+/** The job the workflow step-worker queue carries: one step of one run. */
 export interface WorkflowStepInput {
   runId: string
   stepName: string
@@ -9,10 +10,12 @@ export interface WorkflowStepInput {
   fromStepName?: string
 }
 
+/** The job the workflow orchestrator queue carries: a run to advance. */
 export interface PikkuWorkflowOrchestratorInput {
   runId: string
 }
 
+/** The job that wakes a run when a `sleep` step's duration has passed. */
 export interface PikkuWorkflowSleeperInput {
   runId: string
   stepId: string

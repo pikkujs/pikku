@@ -54,6 +54,7 @@ export type VirtualUserStatementMint = (
   virtualUser: ResolvedVirtualUser
 ) => string | Promise<string>
 
+/** Options for {@link statementSignIn}. */
 export interface StatementSignInOptions {
   apiUrl: string
   /** Default `/auth/sign-in/virtual-user`. */

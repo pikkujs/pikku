@@ -2,6 +2,13 @@ import { PikkuTriggerService } from './pikku-trigger-service.js'
 import { getSingletonServices } from '../../pikku-state.js'
 
 // knowledge: decisions/internals/local-trigger-and-gateway-services-assume-a-single-process.md
+/**
+ * Runs every wired trigger source in this process. `start` sets up each source
+ * that has at least one `wireTrigger` listening and logs, rather than throws, a
+ * source that fails to start; `stop` tears them all down.
+ *
+ * Single-process only: a second instance would start every source again.
+ */
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void> {
     const singletonServices = getSingletonServices()

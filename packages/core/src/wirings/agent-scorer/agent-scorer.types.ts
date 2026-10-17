@@ -31,6 +31,7 @@ export interface ScorerInput {
   }
 }
 
+/** What a scorer returns: a 0..1 score, an optional reason and metadata. */
 export interface ScorerOutput {
   /** 0..1, so grades are comparable across scorers. */
   score: number
@@ -82,6 +83,10 @@ export type ScorerJudgeConfig = {
   prompt?: (input: ScorerInput) => string
 }
 
+/**
+ * A scorer: a heuristic `score` function (from `pikkuAgentScorer`) or an LLM `judge`
+ * (from `pikkuAgentJudge`), with its lane and live sample rate.
+ */
 export type PikkuAgentScorer<Services = any> = {
   name: string
   description: string
@@ -100,6 +105,7 @@ export type PikkuAgentScorer<Services = any> = {
   judge?: ScorerJudgeConfig
 }
 
+/** Inspector-generated metadata for every scorer, keyed by name. */
 export type ScorerMeta = Record<
   string,
   {
@@ -118,6 +124,7 @@ export type ScoreJob = ScorerInput & {
   scorerName: string
 }
 
+/** A stored grade of one run by one scorer. */
 export type AgentRunScore = {
   runId: string
   scorerName: string

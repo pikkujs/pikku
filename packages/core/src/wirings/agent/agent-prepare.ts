@@ -41,6 +41,10 @@ import {
 } from './agent-memory.js'
 import { resolveModelConfig } from './agent-model-config.js'
 
+/**
+ * Per-request context for running an agent: the caller's session, credential access and, for
+ * a sessionless request, the minted anonymous owner id.
+ */
 export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
@@ -120,6 +124,10 @@ export function sessionPrincipals(
   )
 }
 
+/**
+ * Whether a stored thread or run `resourceId` belongs to `principal`: it is the principal itself
+ * or one of its `principal:` sub-partitions.
+ */
 export function isOwnedByPrincipal(
   storedResourceId: string,
   principal: string
@@ -130,12 +138,23 @@ export function isOwnedByPrincipal(
   )
 }
 
+/**
+ * The principals (user id, then org id) a session may list threads for. Pass it as the `owners`
+ * filter to `AgentRunService.listThreads`; an empty array, for a missing session, matches nothing.
+ */
 export function threadOwnerConstraint(
   session: { userId?: string; orgId?: string } | undefined
 ): string[] {
   return sessionPrincipals(session)
 }
 
+/**
+ * Whether `session` may read the thread or run stored under `storedResourceId`: true only when the
+ * resource belongs to the session's user or org. A missing session is always refused.
+ *
+ * Use it before returning a thread over the wire; answering "not found" for both a missing and a
+ * forbidden thread avoids revealing which threads exist.
+ */
 export function canAccessThread(
   storedResourceId: string,
   session: { userId?: string; orgId?: string } | undefined
@@ -172,6 +191,10 @@ export const agentCallOptions = (input: AgentInput): AgentInput => ({
   ...(input.context ? { context: input.context } : {}),
 })
 
+/**
+ * Options for a streamed run: which tool calls need approval (`'all'`, only tools that declare it,
+ * or none) and a callback receiving the run id once it is created.
+ */
 export type StreamAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
   onRunCreated?: (runId: string) => void
@@ -190,6 +213,10 @@ export const CREDENTIAL_REQUIRED: unique symbol = Symbol(
   'pikku.ai.credentialRequired'
 )
 
+/**
+ * Raised when a tool call needs a human's approval before it runs. The run is suspended with the
+ * call recorded in `pendingApprovals`, and resumes through `agentResume` or `agentApprove`.
+ */
 export class ToolApprovalRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
@@ -219,6 +246,11 @@ export class ToolApprovalRequired extends PikkuError {
   }
 }
 
+/**
+ * Raised when a tool needs a credential the user has not connected. The run is suspended and the
+ * client is sent the credential's name, type and connect URL. Only requests pikku itself produced
+ * are honoured, so tool output cannot forge one.
+ */
 export class ToolCredentialRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string

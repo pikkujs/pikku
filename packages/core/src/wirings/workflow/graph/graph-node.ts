@@ -37,6 +37,11 @@ type InputWithRefs<T> = {
   [K in keyof T]: T[K] | TypedRef<T[K]>
 }
 
+/**
+ * Builds a typed graph-node map for a set of RPCs: given a node-id → RPC-name
+ * map and per-node settings, returns the {@link GraphNodeConfig} for every node,
+ * with refs typed against each RPC's input and output.
+ */
 export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
   return <const FuncMap extends Record<string, keyof RPCMap & string>>(
     funcMap: FuncMap,

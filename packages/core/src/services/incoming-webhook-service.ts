@@ -7,11 +7,19 @@ import type {
   WebhookSourceJob,
 } from '../wirings/trigger/webhook-source.types.js'
 
+/**
+ * One dispatch of a received webhook event to a trigger, and the error if it
+ * failed.
+ */
 export type IncomingWebhookAttempt = {
   trigger: string
   error?: string
 }
 
+/**
+ * A received webhook event as a store-backed {@link IncomingWebhookService}
+ * records it.
+ */
 export type IncomingWebhookReceiptRecord = {
   receiptId: string
   source: string

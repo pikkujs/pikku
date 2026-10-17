@@ -22,6 +22,7 @@ const TERMINAL: ReadonlySet<string> = new Set<WorkflowStatus>([
 
 const DEFAULT_POLL_INTERVAL_MS = 500
 
+/** What `streamWorkflowRunStatus` streams, to whom, and how much detail it includes. */
 export interface WorkflowStatusStreamParams {
   workflowRunService: WorkflowRunService
   runId: string

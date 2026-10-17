@@ -27,6 +27,23 @@ const registeredHandler = (handler: unknown): HandlerConfig => {
     : (candidate.func as HandlerConfig)
 }
 
+/**
+ * Wires a realtime channel (a WebSocket, or a serverless equivalent) to a route.
+ *
+ * `onConnect` runs once when a client connects, `onDisconnect` once when it
+ * leaves, and each message goes to the `onMessageWiring` handler its routing key
+ * selects, or to `onMessage` when none matches. A channel requires a session
+ * unless it sets `auth: false`. The session is established on connect, by the
+ * `middleware` on the channel and the HTTP middleware registered for `'*'`
+ * (which runs on the upgrade), and every handler then sees it.
+ *
+ * Registration needs the metadata `pikku` generates for the channel. When none is
+ * found the wiring is skipped with a warning rather than throwing.
+ *
+ * @param channel - The channel's name, route, lifecycle and message handlers, and middleware.
+ *
+ * @example snippet: wireChannel
+ */
 export const wireChannel = <
   In,
   Channel extends string,
@@ -118,6 +135,11 @@ const getMatchingChannelConfig = (path: string) => {
   }
 }
 
+/**
+ * Matches a route to a wired channel and validates its opening data against the channel's input schema.
+ * @throws {NotFoundError} When no channel is wired at `route`.
+ * @internal
+ */
 export const openChannel = async ({
   route,
   coerceDataFromSchema = true,

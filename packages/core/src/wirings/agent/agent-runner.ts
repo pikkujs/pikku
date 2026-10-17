@@ -87,6 +87,24 @@ function extractStructuredAssistantOutput(object: unknown): {
   }
 }
 
+/**
+ * Runs an agent to completion: loads the thread, applies agent middleware, calls the model step by
+ * step (up to the agent's `maxSteps`) and persists the messages and run state.
+ *
+ * Before anything runs, the agent's `auth`, `scopes` and `permissions` are checked against the
+ * session, and `input.resourceId` is partitioned under the session principal (or an anonymous id
+ * minted per request), so a caller cannot address another user's thread.
+ *
+ * @param agentName - The agent to run.
+ * @param input - The user message, thread and resource ids, and optional model overrides.
+ * @param params - The caller's session and credential access.
+ * @param agentSessionMap - Sub-agent session ids, shared across delegated calls in one run.
+ * @returns The run's text or structured output, its steps and usage. A run that needs approval or
+ * a credential, or names RPCs that are not registered, returns `status: 'suspended'` instead.
+ * @throws MissingSessionError when the agent requires auth and there is no session; ForbiddenError
+ * for a scope or permission failure or a thread owned by someone else; AIProviderNotConfiguredError
+ * when no `agentRunner` service is set.
+ */
 export async function runAgent(
   agentName: string,
   input: AgentInput,
@@ -396,6 +414,21 @@ export async function runAgent(
   }
 }
 
+/**
+ * Answers pending approvals on a suspended run and runs it to completion without streaming. Backs
+ * `rpc.agent.approve`.
+ *
+ * Only the run's owner may resume it, and the agent is re-authorized. Each approval is claimed
+ * atomically, so concurrent callers cannot run the same tool twice.
+ *
+ * @param runId - The suspended run.
+ * @param approvals - The decision for each pending tool call.
+ * @param params - The caller's session.
+ * @param expectedAgentName - When given, the run must belong to this agent.
+ * @returns The run's final output, or `status: 'suspended'` again if more approvals are needed.
+ * @throws ForbiddenError when the caller does not own the run; Error when the run is missing, not
+ * suspended, belongs to another agent, or every approval was already claimed.
+ */
 export async function resumeAgentSync(
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],

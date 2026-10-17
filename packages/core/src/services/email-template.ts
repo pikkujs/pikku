@@ -16,6 +16,10 @@ export interface EmailTemplateHashes {
   textHash: string
 }
 
+/**
+ * One compiled template: its HTML, subject and text sources, the variables it
+ * reads, and per-locale content hashes.
+ */
 export interface EmailTemplateAssets {
   html: string
   subject: string
@@ -24,6 +28,10 @@ export interface EmailTemplateAssets {
   hashes: Record<string, EmailTemplateHashes>
 }
 
+/**
+ * Everything `pikku emails` generates for rendering: the theme, locale strings,
+ * partials and templates.
+ */
 export interface EmailAssets {
   theme: Record<string, unknown>
   locales: Record<string, Record<string, unknown>>
@@ -31,12 +39,16 @@ export interface EmailAssets {
   templates: Record<string, EmailTemplateAssets>
 }
 
+/**
+ * Which template to render, in which locale (default `en`), with which data.
+ */
 export interface RenderEmailRequest {
   name: string
   locale?: string
   data?: Record<string, unknown>
 }
 
+/** A rendered email ready to send. */
 export interface RenderedEmailResult {
   locale: string
   subject: string
@@ -182,6 +194,18 @@ const renderTemplate = (
   return substitute(composed, context, escape, slot)
 }
 
+/**
+ * Renders a template from the generated email assets. Normally called through
+ * the typed wrapper in `pikku-emails.gen.ts`.
+ *
+ * `{{ value }}` is HTML-escaped in the HTML body; `{{{ value }}}` is written
+ * raw. Theme and locale strings (`theme.*`, `t.*`) are trusted and may contain
+ * placeholders of their own; caller data is substituted in a single pass and
+ * never re-read as a template, so it cannot inject markup or further
+ * placeholders.
+ *
+ * @throws Error when the template or the locale is unknown
+ */
 export const renderEmail = (
   { theme, locales, partials, templates }: EmailAssets,
   { name, locale: requestedLocale, data }: RenderEmailRequest

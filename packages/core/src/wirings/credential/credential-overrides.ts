@@ -15,6 +15,7 @@ export type CredentialOverride =
       mode?: 'singleton' | 'wire'
     }
 
+/** Per-credential overrides for a wired package, keyed by the name the package declared. */
 export type CredentialOverrides = Record<string, CredentialOverride>
 
 /** The rename half, in the `Record<string, string>` shape the alias path wants. */

@@ -19,6 +19,11 @@ import type {
 import { pipeline } from 'stream/promises'
 import { Transform, type Readable } from 'stream'
 
+/**
+ * Configuration for {@link LocalContent}: the directory files are stored in,
+ * the URL prefixes uploads and reads are served under, the origin to prefix
+ * URLs with, and the largest accepted upload (for example `10mb`).
+ */
 export interface LocalContentConfig {
   localFileUploadPath: string
   uploadUrlPrefix: string
@@ -51,13 +56,25 @@ export const signedContentPath = (urlOrPath: string): string => {
   }
 }
 
+/**
+ * The leading URL segment that marks public content. A private bucket cannot
+ * use this name.
+ */
 export const PUBLIC_URL_SEGMENT = '_public'
 
+/**
+ * Every {@link ContentVisibility}, also the names of the two directories under
+ * the content root.
+ */
 export const CONTENT_VISIBILITIES: readonly ContentVisibility[] = [
   'private',
   'public',
 ]
 
+/**
+ * A content URL path split into the visibility it names and the
+ * `<bucket>/<key>` remainder.
+ */
 export type ContentUrlPath = {
   visibility: ContentVisibility
   rest: string
@@ -103,6 +120,7 @@ export const resolveVisibilityPath = (
   return target
 }
 
+/** The file a content request resolves to, and whether it is public. */
 export type ContentRequestTarget = {
   path: string
   visibility: ContentVisibility
@@ -154,12 +172,21 @@ export const resolveContentRequestTarget = async (
 /** How long a presigned upload URL stays valid. Short, like an S3 PUT URL. */
 const UPLOAD_URL_TTL_MS = 15 * 60 * 1000
 
+/**
+ * Thrown by {@link streamUploadToFile} when an upload passes its byte limit.
+ */
 export class UploadTooLargeError extends Error {
   constructor() {
     super('content_too_large')
   }
 }
 
+/**
+ * Parses a size such as `512kb` or `10mb` (binary units; no unit means bytes)
+ * into bytes.
+ *
+ * @throws Error when the string is not a size
+ */
 export const parseContentSizeLimit = (sizeLimit: string): number => {
   const match = /^(\d+(?:\.\d+)?)(b|kb|mb|gb)?$/i.exec(sizeLimit.trim())
   if (!match) {
@@ -177,6 +204,14 @@ export const parseContentSizeLimit = (sizeLimit: string): number => {
   return Number(match[1]) * multiplier
 }
 
+/**
+ * Streams an upload to `targetPath`, writing to a temporary file that is
+ * renamed into place only once the whole body arrived, so a failed or oversized
+ * upload never leaves a partial file behind.
+ *
+ * @returns the number of bytes written
+ * @throws UploadTooLargeError when the body passes `maxBytes`
+ */
 export const streamUploadToFile = async (
   source: AsyncIterable<Uint8Array>,
   targetPath: string,
@@ -209,6 +244,16 @@ export const streamUploadToFile = async (
   }
 }
 
+/**
+ * A {@link ContentService} that stores files on local disk, for development and
+ * single-server deployments. Private and public files live in separate
+ * directories; URLs for private files are signed with the given `JWTService`
+ * and checked by {@link createLocalContentRequestHandler}, and upload URLs
+ * expire after 15 minutes. Keys that would escape the content root are
+ * rejected.
+ *
+ * @throws Error from the constructor when no `JWTService` is given
+ */
 export class LocalContent implements ContentService {
   constructor(
     private config: LocalContentConfig,
