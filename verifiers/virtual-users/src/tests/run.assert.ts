@@ -168,7 +168,11 @@ describe('a scheduled virtual user run signs in and uses the app', () => {
     const [run] = await world.virtualUserRunStore.list({
       virtualUserId: 'guest',
     })
-    assert.equal(run!.status, 'completed', run!.error ?? undefined)
+    assert.equal(
+      run!.status,
+      'completed',
+      run!.error ?? 'the run did not complete'
+    )
     const steps = await world.virtualUserRunStore.steps(run!.runId)
     const call = steps.find((s) => s.action.kind === 'call')!
     assert.equal(call.status, 200, 'the authenticated call succeeded')
