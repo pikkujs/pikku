@@ -1,7 +1,7 @@
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector/state'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { Logger } from '@pikku/core/services'
 
 export const serializeQueueMap = (
@@ -10,10 +10,10 @@ export const serializeQueueMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   queueWorkersMeta: QueueWorkersMeta,
-  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
+  customTypesFile: string
 ) => {
   const requiredTypes = new Set<string>()
-  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedQueues = generateQueues(
     queueWorkersMeta,
     resolvedIOTypes,
@@ -28,12 +28,19 @@ export const serializeQueueMap = (
     requiredTypes
   )
 
+  const customTypesImport = serializeCustomTypesImport(
+    relativeToPath,
+    customTypesFile,
+    packageMappings,
+    typesMap
+  )
+
   return `/**
  * This provides the structure needed for typescript to be aware of Queue workers and their input/output types
  */
 
 ${serializedImportMap}
-${serializedCustomTypes}
+${customTypesImport}
 
 import type { QueueJob } from '@pikku/core/queue'
 import type { Safe } from '@pikku/core/classification'

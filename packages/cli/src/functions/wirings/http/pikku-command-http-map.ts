@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedHTTPWiringsMap } from './serialize-typed-http-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 
 export const pikkuHTTPMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -21,7 +22,14 @@ export const pikkuHTTPMap = pikkuSessionlessFunc<void, void>({
       http.metaInputTypes,
       resolvedIOTypes,
       rpcInternalMapDeclarationFile,
+      config.customTypesDeclarationFile,
       rpc?.wireAddonDeclarations
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
     )
     await writeFileInDir(logger, httpMapDeclarationFile, content)
   },

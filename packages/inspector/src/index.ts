@@ -43,8 +43,10 @@ export {
 } from './utils/resolve-deploy-target.js'
 export {
   generateCustomTypes,
+  customTypeNames,
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
+export type { GenerateCustomTypesOptions } from './utils/custom-types-generator.js'
 export { unresolvedSchemaReferences } from './utils/post-process.js'
 export type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 export {

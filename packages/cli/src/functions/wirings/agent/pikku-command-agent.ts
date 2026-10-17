@@ -4,6 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 import { serializeAgentMap } from './serialize-agent-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 import { serializeModelAliases } from './serialize-model-aliases.js'
 
 export const pikkuAgent = pikkuSessionlessFunc<void, boolean | undefined>({
@@ -96,6 +97,12 @@ ${importStatement}
 pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AgentsMeta)`,
     })
 
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
+    )
     await writeFileInDir(
       logger,
       agentMapDeclarationFile,
@@ -104,7 +111,8 @@ pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', meta
         agentMapDeclarationFile,
         packageMappings,
         functions.typesMap,
-        agents.agentsMeta
+        agents.agentsMeta,
+        config.customTypesDeclarationFile
       )
     )
 

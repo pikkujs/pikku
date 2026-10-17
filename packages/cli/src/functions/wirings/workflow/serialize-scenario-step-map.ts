@@ -9,7 +9,7 @@
  */
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector/state'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
 
 /**
@@ -28,7 +28,8 @@ export const serializeScenarioStepMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  functionsMeta: FunctionsMeta
+  functionsMeta: FunctionsMeta,
+  customTypesFile: string
 ) => {
   const requiredTypes = new Set<string>()
 
@@ -59,9 +60,6 @@ export const serializeScenarioStepMap = (
   stepsStr += '};'
 
   const hasAny = steps.length > 0
-  const serializedCustomTypes = hasAny
-    ? generateCustomTypes(typesMap, requiredTypes)
-    : ''
 
   const serializedImportMap = hasAny
     ? serializeImportMap(
@@ -73,10 +71,14 @@ export const serializeScenarioStepMap = (
       )
     : ''
 
-  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
-    .split('\n')
-    .filter((line) => !line.startsWith('import '))
-    .join('\n')
+  const customTypesImport = hasAny
+    ? serializeCustomTypesImport(
+        relativeToPath,
+        customTypesFile,
+        packageMappings,
+        typesMap
+      )
+    : ''
 
   return `/**
  * Scenario step map: the names \`scenario.given/when/then\` accepts, with
@@ -84,7 +86,7 @@ export const serializeScenarioStepMap = (
  */
 
 ${serializedImportMap}
-${serializedCustomTypesDeclarationsOnly}
+${customTypesImport}
 
 interface ScenarioStepHandler<I, O> {
     input: I;

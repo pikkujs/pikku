@@ -21,6 +21,7 @@ export {
   resolveDeployTarget,
 } from './utils/resolve-deploy-target.js'
 export {
+  customTypeNames,
   generateCustomTypes,
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'

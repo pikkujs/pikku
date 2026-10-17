@@ -352,6 +352,12 @@ const _getPikkuCLIConfig = async (
     if (!result.schemaDirectory) {
       result.schemaDirectory = join(result.outDir, 'schemas')
     }
+    if (!result.customTypesDeclarationFile) {
+      result.customTypesDeclarationFile = join(
+        result.outDir,
+        'pikku-custom-types.gen.d.ts'
+      )
+    }
 
     // Functions
     if (!result.functionsFile) {

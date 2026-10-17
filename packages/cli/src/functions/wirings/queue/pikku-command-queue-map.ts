@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeQueueMap } from './serialize-queue-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 
 export const pikkuCommandQueueMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -15,7 +16,14 @@ export const pikkuCommandQueueMap = pikkuSessionlessFunc<void, void>({
       packageMappings,
       functions.typesMap,
       queueWorkers.meta,
-      resolvedIOTypes
+      resolvedIOTypes,
+      config.customTypesDeclarationFile
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
     )
     await writeFileInDir(logger, queueMapDeclarationFile, content)
   },

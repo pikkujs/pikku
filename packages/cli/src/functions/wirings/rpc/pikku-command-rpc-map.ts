@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
@@ -33,9 +34,16 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       rpc.internalMeta,
       resolvedIOTypes,
+      config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
       agentMapPath
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
     )
     await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
   },
@@ -76,9 +84,16 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       rpc.exposedMeta,
       resolvedIOTypes,
+      config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
       agentMapPath
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
     )
     await writeFileInDir(logger, rpcMapDeclarationFile, content)
   },
@@ -123,9 +138,16 @@ export const pikkuRPCRemoteMap = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       rpc.remoteMeta,
       resolvedIOTypes,
+      config.customTypesDeclarationFile,
       rpc.wireAddonDeclarations,
       workflowMapPath,
       agentMapPath
+    )
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      functions.typesMap
     )
     await writeFileInDir(logger, rpcRemoteMapDeclarationFile, content)
   },

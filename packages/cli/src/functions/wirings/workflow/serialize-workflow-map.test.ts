@@ -43,7 +43,8 @@ const serializeWithNode = (nodeId: string) =>
     {} as WorkflowsMeta,
     {
       aScenario: { nodes: { [nodeId]: { rpcName: 'readsThing' } } },
-    } as unknown as SerializedWorkflowGraphs
+    } as unknown as SerializedWorkflowGraphs,
+    '.pikku/pikku-custom-types.gen.d.ts'
   )
 
 describe('serializeWorkflowMap', () => {
