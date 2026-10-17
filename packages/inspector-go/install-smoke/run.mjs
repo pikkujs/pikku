@@ -3,7 +3,7 @@
 // and checks that the native engine's binary for this platform came with it.
 //
 // The branch's @pikku/cli, @pikku/inspector, @pikku/inspector-go and its
-// platform packages are packed with `npm pack` (what `changeset publish`
+// platform packages, and every workspace package they depend on, are packed with `npm pack` (what `changeset publish`
 // ships) at a prerelease version, served by a local registry that proxies
 // everything else to npm, and installed into an empty project with each of
 // bun's linkers. For each install it checks that:
@@ -46,12 +46,38 @@ const host = `${process.platform}-${process.arch}`
 const platformDirs = PLATFORMS.map(
   (p) => `packages/inspector-go/npm/${targetName(p)}`
 )
-const dirs = [
-  'packages/cli',
-  'packages/inspector',
-  'packages/inspector-go',
-  ...platformDirs,
+// Every workspace package the CLI reaches through its dependencies is packed
+// too: the branch's CLI can import a subpath that a published dependency does
+// not export yet.
+const WORKSPACE_GROUPS = [
+  'packages',
+  'packages/addon',
+  'packages/frontend',
+  'packages/services',
+  'packages/gateways',
+  'packages/runtimes',
+  'packages/deploy',
 ]
+const workspaceDirs = new Map()
+for (const group of WORKSPACE_GROUPS) {
+  for (const entry of readdirSync(join(repo, group), { withFileTypes: true })) {
+    const pj = join(repo, group, entry.name, 'package.json')
+    if (!entry.isDirectory() || !existsSync(pj)) continue
+    const m = JSON.parse(readFileSync(pj, 'utf8'))
+    if (!m.private) workspaceDirs.set(m.name, `${group}/${entry.name}`)
+  }
+}
+const reached = ['packages/cli', 'packages/inspector', 'packages/inspector-go']
+for (let i = 0; i < reached.length; i++) {
+  const m = JSON.parse(
+    readFileSync(join(repo, reached[i], 'package.json'), 'utf8')
+  )
+  for (const dep of Object.keys(m.dependencies ?? {})) {
+    const dir = workspaceDirs.get(dep)
+    if (dir && !reached.includes(dir)) reached.push(dir)
+  }
+}
+const dirs = [...reached, ...platformDirs]
 
 const fail = (message) => {
   console.error(`✗ ${message}`)
