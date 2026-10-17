@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { createHMAC } from '@better-auth/utils/hmac'
+import { makeSignature } from 'better-auth/crypto'
 import { verifySessionCredential } from './session-credential.js'
 
 const SECRET = 'test-secret'
 const TOKEN = 'sess_abc'
 
 const sign = async (token: string, secret = SECRET) =>
-  `${token}.${await createHMAC('SHA-256', 'base64urlnopad').sign(secret, token)}`
+  `${token}.${await makeSignature(token, secret)}`
 
 describe('session credential', () => {
   test('recovers the token from a signed value', async () => {

@@ -11,12 +11,18 @@
   "license": "MIT",
   "module": "dist/index.js",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "tsc": "tsc && tsc -p tsconfig.tests.json",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -b",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
@@ -43,7 +49,14 @@
     "nanostores": "^1.5.5"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./constants": "./dist/constants.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
+    },
+    "./package.json": "./package.json"
   }
 }
