@@ -47,6 +47,14 @@ export class LambdaEventHubService<
     }
   }
 
+  async onChannelOpened(): Promise<void> {
+    this.logger.warn(
+      'LambdaEventHubService cannot deliver to an SSE stream: a published event will not reach it. Use WebSocket, or deploy the SSE route to a server target.'
+    )
+  }
+
+  async onChannelClosed(): Promise<void> {}
+
   private async sendMessages(
     channelIds: string[],
     fromChannelId: string,

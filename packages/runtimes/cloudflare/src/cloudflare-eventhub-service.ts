@@ -147,6 +147,12 @@ export class CloudflareEventHubService<
     }
   }
 
+  public async onChannelOpened(): Promise<void> {
+    this.logger.warn(
+      'CloudflareEventHubService cannot deliver to an SSE stream: a published event will not reach it. Use WebSocket, or deploy the SSE route to a server target.'
+    )
+  }
+
   /**
    * Handles cleanup when a channel is closed.
    */

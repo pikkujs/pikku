@@ -1380,6 +1380,22 @@ function routeOfSyntheticHttpBridge(funcId: string): string {
  * and the stage 404s it while every worker reports healthy. Checked against the
  * finished manifest so it holds however a route came to be dropped.
  */
+export function serverlessSseRoutes(
+  units: DeploymentUnit[]
+): Array<{ unitName: string; route: HttpRouteInfo }> {
+  const found: Array<{ unitName: string; route: HttpRouteInfo }> = []
+  for (const unit of units) {
+    if (unit.target !== 'serverless') continue
+    for (const handler of unit.handlers) {
+      if (handler.type !== 'fetch') continue
+      for (const route of handler.routes) {
+        if (route.sse) found.push({ unitName: unit.name, route })
+      }
+    }
+  }
+  return found
+}
+
 export function unroutedHttpWirings(
   httpMeta: HTTPWiringsMeta,
   units: DeploymentUnit[]
@@ -1433,6 +1449,7 @@ function collectHttpRoutes(
           method: method.toUpperCase(),
           route: routeMeta.route,
           pikkuFuncId: funcId,
+          ...(routeMeta.sse && { sse: true as const }),
         })
       }
     }

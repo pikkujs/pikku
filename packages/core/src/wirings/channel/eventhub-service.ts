@@ -1,3 +1,5 @@
+import type { PikkuChannelHandler } from './channel.types.js'
+
 export interface EventHubService<Topics extends Record<string, any>> {
   subscribe<T extends keyof Topics>(
     topic: T,
@@ -13,4 +15,8 @@ export interface EventHubService<Topics extends Record<string, any>> {
     data: Topics[T],
     isBinary?: boolean
   ): Promise<void> | void
+
+  onChannelOpened(channelHandler: PikkuChannelHandler): Promise<void> | void
+
+  onChannelClosed(channelId: string): Promise<void> | void
 }

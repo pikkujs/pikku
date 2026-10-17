@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyzeDeployment as analyzeUnpinned,
   toSafeKebab,
+  serverlessSseRoutes,
   unroutedHttpWirings,
 } from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
@@ -1329,6 +1330,38 @@ describe('analyzeDeployment - routes wired to an inline func', () => {
       'OPTIONS /rpc/:rpcName',
       'POST /rpc/:rpcName',
     ])
+  })
+})
+
+describe('serverlessSseRoutes', () => {
+  const stateWithSse = (deploy?: 'server'): InspectorState => {
+    const state = stateWithInlineHttpFuncs()
+    state.http.meta.post!['/agents/shop']!.sse = true
+    if (deploy) state.functions.meta['http:post:/agents/shop']!.deploy = deploy
+    return state
+  }
+
+  test('names an SSE route on a serverless unit and marks it in the manifest', () => {
+    const manifest = analyzeDeployment(stateWithSse(), { projectId: 'test' })
+    const found = serverlessSseRoutes(manifest.units)
+    assert.deepEqual(
+      found.map((f) => [f.route.method, f.route.route, f.route.sse]),
+      [['POST', '/agents/shop', true]]
+    )
+  })
+
+  test('is silent once the route is on a server target', () => {
+    const manifest = analyzeDeployment(stateWithSse('server'), {
+      projectId: 'test',
+    })
+    assert.deepEqual(serverlessSseRoutes(manifest.units), [])
+  })
+
+  test('leaves a route that is not SSE unmarked', () => {
+    const manifest = analyzeDeployment(stateWithInlineHttpFuncs(), {
+      projectId: 'test',
+    })
+    assert.deepEqual(serverlessSseRoutes(manifest.units), [])
   })
 })
 

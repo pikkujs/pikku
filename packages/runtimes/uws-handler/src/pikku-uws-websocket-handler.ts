@@ -108,7 +108,7 @@ export const pikkuWebsocketHandler = ({
         ws.close()
       })
       Promise.all([
-        eventHub.onChannelOpened(channelHandler.channelId, ws),
+        eventHub.registerSocket(channelHandler.channelId, ws),
         channelHandler.open(),
       ]).catch((error: unknown) => {
         logger?.error(`Error opening websocket channel: ${error}`)

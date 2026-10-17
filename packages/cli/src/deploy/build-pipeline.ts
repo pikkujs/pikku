@@ -11,7 +11,11 @@ import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
 
-import { analyzeDeployment, unroutedHttpWirings } from './analyzer/index.js'
+import {
+  analyzeDeployment,
+  serverlessSseRoutes,
+  unroutedHttpWirings,
+} from './analyzer/index.js'
 import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest, HttpRouteInfo } from '@pikku/deploy'
@@ -395,6 +399,12 @@ export async function runBuildPipeline(options: {
     globalHTTPPrefix: options.globalHTTPPrefix,
     workflowQueues,
   })
+
+  for (const { unitName, route } of serverlessSseRoutes(manifest.units)) {
+    logger.info(
+      `Warning: SSE route ${route.method} ${route.route} (unit "${unitName}") holds a connection open on a serverless target: a published event will not reach it and it costs more than a WebSocket. Use a WebSocket channel, poll, or deploy it to a server target.`
+    )
+  }
 
   const unroutedWirings = provider.singleUnit
     ? []
