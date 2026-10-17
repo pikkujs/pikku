@@ -7,7 +7,7 @@
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/inspector": "workspace:*",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "pg": "^8.23.1",
     "tsx": "^4.23.15"
   },

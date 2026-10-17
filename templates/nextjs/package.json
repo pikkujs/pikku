@@ -30,7 +30,7 @@
   "devDependencies": {
     "@pikku/cli": "^0.12.191",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8",

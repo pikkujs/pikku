@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "@types/ws": "^8"
   },
   "exports": {

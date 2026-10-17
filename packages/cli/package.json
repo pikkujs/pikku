@@ -94,7 +94,7 @@
     "@playwright/test": "^1.64.1",
     "@standard-schema/spec": "^1.1.0",
     "@types/istanbul-lib-instrument": "^1.7.8",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "@types/semver": "^7.8.0",
     "@types/ws": "^8",
