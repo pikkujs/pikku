@@ -4,14 +4,7 @@ import {
   pikkuMiddleware,
   pikkuMiddlewareFactory,
 } from './middleware-factories.js'
-const constantTimeEqual = (a: string, b: string): boolean => {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return result === 0
-}
+import { timingSafeStringEqual } from '../utils/hmac.js'
 
 /**
  * Validates a bearer token: JWT-decoded by default, or compared in constant
@@ -65,7 +58,7 @@ export const authBearer = pikkuMiddlewareFactory<{
               .catch(() => undefined)
             expected = stored?.reveal()
           }
-          if (expected && constantTimeEqual(bearerToken, expected)) {
+          if (expected && timingSafeStringEqual(bearerToken, expected)) {
             userSession = token.userSession
           }
         } else if (jwtService) {
