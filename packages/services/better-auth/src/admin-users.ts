@@ -1,8 +1,12 @@
 import type { BetterAuthInstance } from './define-auth.js'
 
+/**
+ * Resolves the better-auth instance — `services.auth`. `undefined` when the app
+ * wires no auth, which every operation here refuses with an error.
+ */
 export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
 
-/**
+/*
  * User administration against better-auth's internal adapter.
  *
  * These are the capabilities better-auth's `admin()` plugin exposed as HTTP
@@ -17,7 +21,7 @@ export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
  * They live here rather than in `@pikku/addon-admin` so a host can drive the
  * same operations from its own functions without taking the addon.
  *
- * Ban state is written here but enforced by the {@link ban} plugin, which must
+ * Ban state is written here but enforced by the `pikkuBan` plugin, which must
  * be wired for the columns to exist.
  */
 /**
@@ -72,6 +76,8 @@ const assertPasswordLength = (ctx: any, password: string) => {
  * across them, so a failed link deletes the user it was for. Without that, the
  * caller is left with a passwordless user and every retry fails on the
  * duplicate email instead.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const createAuthUser = async (
   auth: AuthGetter,
@@ -123,6 +129,8 @@ export const createAuthUser = async (
 /**
  * Set a user's password, creating their credential account if they signed up
  * through a social provider and never had one.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const setAuthUserPassword = async (
   auth: AuthGetter,
@@ -159,6 +167,8 @@ export const setAuthUserPassword = async (
 /**
  * Ban or unban a user. Banning also signs them out everywhere, so the ban takes
  * effect immediately rather than when their current session expires.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const setAuthUserBanned = async (
   auth: AuthGetter,
@@ -198,7 +208,11 @@ export const setAuthUserBanned = async (
   await ctx.internalAdapter.deleteUserSessions(userId)
 }
 
-/** Delete a user along with their sessions and linked accounts. */
+/**
+ * Delete a user along with their sessions and linked accounts.
+ *
+ * @example snippet: betterAuthUserAdmin
+ */
 export const deleteAuthUser = async (
   auth: AuthGetter,
   userId: string
@@ -210,7 +224,11 @@ export const deleteAuthUser = async (
   await ctx.internalAdapter.deleteUser(userId)
 }
 
-/** Sign a user out of every device, leaving the account intact. */
+/**
+ * Sign a user out of every device, leaving the account intact.
+ *
+ * @example snippet: betterAuthUserAdmin
+ */
 export const revokeAuthUserSessions = async (
   auth: AuthGetter,
   userId: string
@@ -233,6 +251,8 @@ export const revokeAuthUserSessions = async (
  * only place they are assembled. `email` is not checked against the directory
  * first: the plugin refuses an unknown address itself, and looking it up here
  * would only turn one authoritative answer into two that can disagree.
+ *
+ * @example snippet: betterAuthUserAdmin
  */
 export const sendAuthUserSignInLink = async (
   auth: AuthGetter,

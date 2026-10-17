@@ -43,11 +43,15 @@ export type StatelessCookieCacheOptions = {
   jwt?: GetCookieCacheConfig['jwt']
 }
 
+/** Options for {@link betterAuthStatelessSession}. */
 export type BetterAuthStatelessSessionOptions = {
+  /** Secret the cookie is signed with. Defaults to `BETTER_AUTH_SECRET`. */
   secretId?: string
   /** The app's `advanced.cookiePrefix`. Defaults to better-auth's own `better-auth`. */
   cookiePrefix?: string
+  /** How the app's `session.cookieCache` writes the cookie. */
   cookieCache?: StatelessCookieCacheOptions
+  /** Map the cached `{ user, session }` to the app session. */
   mapSession?: (
     result: CachedSession,
     services: CoreServices
@@ -137,6 +141,8 @@ const strategyOf = (value: string): CookieCacheStrategy => {
  * resolved per request (see {@link withResolvedScopes}), which costs a query.
  * That is the price of grants that take effect immediately; leave the service
  * unregistered, or have `mapSession` set `scopes` itself, to stay query-free.
+ *
+ * @example snippet: betterAuthStatelessSession
  */
 export const betterAuthStatelessSession = (
   options: BetterAuthStatelessSessionOptions = {}

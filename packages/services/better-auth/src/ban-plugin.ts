@@ -1,6 +1,7 @@
 import { APIError } from 'better-auth/api'
 import type { BetterAuthPlugin } from 'better-auth'
 
+/** Options for {@link pikkuBan}. */
 export interface BanPluginOptions {
   /** Message returned to a banned user attempting to sign in. */
   message?: string
@@ -8,6 +9,12 @@ export interface BanPluginOptions {
 
 const DEFAULT_MESSAGE =
   'You have been banned from this application. Please contact support if you believe this is an error.'
+
+/**
+ * The plugin's id, exported because callers that write the `banned` column have
+ * to know whether the column exists — `ctx.hasPlugin(BAN_PLUGIN_ID)`.
+ */
+export const BAN_PLUGIN_ID = 'pikku-ban'
 
 /**
  * The ban half of better-auth's `admin()` plugin, without the rest of it.
@@ -27,13 +34,9 @@ const DEFAULT_MESSAGE =
  * An expired ban lapses on the next sign-in attempt rather than being swept: the
  * only moment the value matters is the moment a session is created, so that is
  * where it is settled.
+ *
+ * @example snippet: betterAuthConfig
  */
-/**
- * The plugin's id, exported because callers that write the `banned` column have
- * to know whether the column exists — `ctx.hasPlugin(BAN_PLUGIN_ID)`.
- */
-export const BAN_PLUGIN_ID = 'pikku-ban'
-
 export const pikkuBan = (options: BanPluginOptions = {}): BetterAuthPlugin => ({
   id: BAN_PLUGIN_ID,
   schema: {
