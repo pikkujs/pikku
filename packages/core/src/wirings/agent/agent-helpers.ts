@@ -119,17 +119,18 @@ export function agentInterrupt(): {
  * Builds a function config that answers a batch of pending tool approvals and runs the suspended
  * agent to completion without streaming, through `rpc.agent.approve`.
  *
- * Ownership, re-authorization and the once-only claim behave as for `agentResume`. `agentName`
- * only types the result: it is not checked against the run, so the route accepts approvals for
- * any run the caller owns.
+ * Ownership, re-authorization and the once-only claim behave as for `agentResume`. The route is
+ * scoped to `agentName`: a run that belongs to any other agent is refused with a `ForbiddenError`
+ * (403), even when the caller owns it.
  *
- * @param _agentName - The agent whose output type the result carries.
+ * @param agentName - The agent this route answers approvals for; also types the result.
  * @returns A `{ func }` taking `{ runId, approvals }`.
+ * @throws ForbiddenError when the run belongs to a different agent.
  * @throws Error when every approval in the batch was already resolved by another caller.
  * @example snippet: agentApproval
  */
 export function agentApprove<TAgentMap extends Record<string, { output: any }>>(
-  _agentName: string & keyof TAgentMap
+  agentName: string & keyof TAgentMap
 ): {
   func: (
     services: any,
@@ -149,7 +150,7 @@ export function agentApprove<TAgentMap extends Record<string, { output: any }>>(
       },
       { rpc }: any
     ) => {
-      return rpc.agent.approve(data.runId, data.approvals)
+      return rpc.agent.approve(data.runId, data.approvals, agentName)
     },
   }
 }
