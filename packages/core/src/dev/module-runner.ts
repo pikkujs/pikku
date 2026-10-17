@@ -11,9 +11,15 @@ let transformSync: EsbuildTransform | undefined
 
 const loadTransform = async (): Promise<EsbuildTransform> => {
   if (transformSync) return transformSync
-  // esbuild is a dev-only dependency hoisted from @pikku/cli at runtime; the
-  // `./dev` export is dev-only so it is never loaded in production runtimes.
-  const esbuild = await import('esbuild')
+  // esbuild is an optional peer: only the dev-only `./dev` export needs it, so
+  // production installs never have to carry it.
+  const esbuild = await import('esbuild').catch((e: unknown) => {
+    if ((e as { code?: string })?.code !== 'ERR_MODULE_NOT_FOUND') throw e
+    throw new Error(
+      "@pikku/core/dev needs the optional peer dependency 'esbuild'. Install it in your project (npm install -D esbuild).",
+      { cause: e }
+    )
+  })
   transformSync = esbuild.transformSync
   return transformSync
 }
