@@ -9,4 +9,6 @@
 
 Behaviour change for the Express, Fastify and uWS adapters: a request whose params, query or body carries a `__proto__`, `constructor` or `prototype` key now has that key dropped, as the fetch adapter already did, instead of being rejected with a 422 "Conflicting values" error.
 
+All four adapters (fetch included) now check for a conflict only against keys the merge itself has set, using `Object.hasOwn`. A request key that names an `Object.prototype` member, such as `?toString=1` or `hasOwnProperty`, used to collide with the inherited member and fail with a 422; it is now merged like any other key.
+
 These adapters need an `@pikku/core` that exports `mergeRequestData`.
