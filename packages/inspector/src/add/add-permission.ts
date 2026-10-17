@@ -1,7 +1,12 @@
 import * as ts from 'typescript'
 import type { FunctionWiresMeta } from '@pikku/core/function'
 import type { AddWiring } from '../types.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import { relative } from 'node:path'
+import {
+  extractFunctionName,
+  isNamedExport,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import {
   extractServicesFromFunction,
   extractUsedWires,
@@ -32,7 +37,40 @@ function isInsidePermissionContainer(
 }
 
 /**
- * Inspect pikkuPermission, pikkuAuth, and pikkuPermissionFactory definitions.
+ * The id of a permission written inline in an `addGlobalPermission([...])`
+ * array, which has no variable to be named after. Derived from where it sits,
+ * so the registration and the definition agree on it without either having to
+ * be visited first.
+ */
+function inlineGlobalPermissionId(
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  rootDir: string
+): string | undefined {
+  const array = node.parent
+  if (!array || !ts.isArrayLiteralExpression(array)) return undefined
+  const call = array.parent
+  if (
+    !call ||
+    !ts.isCallExpression(call) ||
+    call.arguments[0] !== array ||
+    resolveCalleeName(call, checker, PERMISSION_HELPERS) !==
+      'addGlobalPermission'
+  ) {
+    return undefined
+  }
+  const sourceFile = node.getSourceFile()
+  return makeContextBasedId(
+    'global',
+    'permission',
+    relative(rootDir, sourceFile.fileName),
+    String(node.getStart())
+  )
+}
+
+/**
+ * Inspect pikkuPermission, pikkuAuth and pikkuPermissionFactory definitions,
+ * and addGlobalPermission registrations.
  */
 export const addPermission: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
@@ -102,11 +140,15 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       ) {
         pikkuFuncId = node.parent.name.text
       } else {
-        logger.error(
-          `• pikkuPermission() must be assigned to a variable or object property. ` +
-            `Extract it to a const: const myPermission = pikkuPermission(...)`
-        )
-        return
+        const globalId = inlineGlobalPermissionId(node, checker, state.rootDir)
+        if (!globalId) {
+          logger.error(
+            `• pikkuPermission() must be assigned to a variable or object property. ` +
+              `Extract it to a const: const myPermission = pikkuPermission(...)`
+          )
+          return
+        }
+        pikkuFuncId = globalId
       }
     }
     const dataParam = actualHandler.parameters[1]
@@ -191,11 +233,15 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       ) {
         pikkuFuncId = node.parent.name.text
       } else {
-        logger.error(
-          `• pikkuAuth() must be assigned to a variable or object property. ` +
-            `Extract it to a const: const myAuth = pikkuAuth(...)`
-        )
-        return
+        const globalId = inlineGlobalPermissionId(node, checker, state.rootDir)
+        if (!globalId) {
+          logger.error(
+            `• pikkuAuth() must be assigned to a variable or object property. ` +
+              `Extract it to a const: const myAuth = pikkuAuth(...)`
+          )
+          return
+        }
+        pikkuFuncId = globalId
       }
     }
     state.permissions.definitions[pikkuFuncId] = {
@@ -314,5 +360,87 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       `• Found permission factory with services: ${services.services.join(', ')}`
     )
     return
+  }
+  if (callee === 'addGlobalPermission') {
+    const permissionsArg = args[0]
+    const sourceFile = node.getSourceFile().fileName
+    let entries: readonly ts.Expression[] | undefined
+    if (permissionsArg && ts.isArrayLiteralExpression(permissionsArg)) {
+      entries = permissionsArg.elements
+    } else if (permissionsArg && ts.isObjectLiteralExpression(permissionsArg)) {
+      entries = permissionsArg.properties.flatMap((p) =>
+        ts.isPropertyAssignment(p)
+          ? [p.initializer]
+          : ts.isShorthandPropertyAssignment(p)
+            ? [p.name]
+            : []
+      )
+    }
+    if (!entries) {
+      logger.warn(
+        `• addGlobalPermission(...) in ${sourceFile} is not given a literal array or object, so the services its permissions use cannot be seen.`
+      )
+    }
+
+    const definitionIds = (entries ?? []).flatMap((entry) => {
+      if (ts.isIdentifier(entry)) {
+        const { pikkuFuncId } = extractFunctionName(
+          entry,
+          checker,
+          state.rootDir
+        )
+        return [pikkuFuncId.startsWith('__temp_') ? entry.text : pikkuFuncId]
+      }
+      if (ts.isCallExpression(entry)) {
+        const inline = inlineGlobalPermissionId(entry, checker, state.rootDir)
+        if (inline) return [inline]
+        if (
+          ts.isPropertyAssignment(entry.parent) &&
+          ts.isIdentifier(entry.parent.name) &&
+          resolveCalleeName(entry, checker, PERMISSION_HELPERS)
+        ) {
+          return [entry.parent.name.text]
+        }
+        const { pikkuFuncId } = extractFunctionName(
+          entry.expression,
+          checker,
+          state.rootDir
+        )
+        return pikkuFuncId.startsWith('__temp_') &&
+          ts.isIdentifier(entry.expression)
+          ? [entry.expression.text]
+          : [pikkuFuncId]
+      }
+      return []
+    })
+
+    let exportName: string | null = null
+    const parent = node.parent
+    if (
+      ts.isArrowFunction(parent) &&
+      parent.parameters.length === 0 &&
+      ts.isVariableDeclaration(parent.parent) &&
+      ts.isIdentifier(parent.parent.name) &&
+      isNamedExport(parent.parent, checker)
+    ) {
+      exportName = parent.parent.name.text
+    }
+
+    const position = node.getStart()
+    if (
+      !state.permissions.global.some(
+        (g) => g.sourceFile === sourceFile && g.position === position
+      )
+    ) {
+      state.permissions.global.push({
+        sourceFile,
+        position,
+        exportName,
+        definitionIds,
+      })
+    }
+    logger.debug(
+      `• Found global permissions in ${sourceFile}: [${definitionIds.join(', ')}]`
+    )
   }
 }
