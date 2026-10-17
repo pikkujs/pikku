@@ -22,10 +22,11 @@ const createHTTPState = (): InspectorHTTPState => ({
 })
 
 describe('serializePermissionsImports', () => {
-  test('emits nothing — permissions are function-scoped, not group-registered', () => {
+  test('emits nothing when no file registers a global permission', () => {
     const permissionsState: InspectorPermissionState = {
       definitions: {},
       instances: {},
+      global: [],
     }
 
     const result = serializePermissionsImports(
@@ -38,7 +39,7 @@ describe('serializePermissionsImports', () => {
     assert.strictEqual(result, '')
   })
 
-  test('emits nothing even when individual permission definitions exist', () => {
+  test('emits nothing for function-scoped permission definitions', () => {
     const permissionsState: InspectorPermissionState = {
       definitions: {
         adminPermission: {
@@ -49,6 +50,7 @@ describe('serializePermissionsImports', () => {
         },
       },
       instances: {},
+      global: [],
     }
 
     const result = serializePermissionsImports(
@@ -59,5 +61,38 @@ describe('serializePermissionsImports', () => {
     )
 
     assert.strictEqual(result, '')
+  })
+
+  test('imports every file that calls addGlobalPermission', () => {
+    const result = serializePermissionsImports(
+      '/test/.pikku/permissions/pikku-permissions.gen.ts',
+      {
+        definitions: {},
+        instances: {},
+        global: [
+          {
+            sourceFile: '/test/src/security.ts',
+            position: 0,
+            exportName: null,
+            definitionIds: [],
+          },
+          {
+            sourceFile: '/test/src/admin-gate.ts',
+            position: 0,
+            exportName: 'adminGate',
+            definitionIds: [],
+          },
+        ],
+      },
+      createHTTPState(),
+      {}
+    )
+
+    assert.match(result, /^import '\.\.\/\.\.\/src\/security\.js'$/m)
+    assert.match(
+      result,
+      /^import \{ adminGate \} from '\.\.\/\.\.\/src\/admin-gate\.js'$/m
+    )
+    assert.match(result, /^adminGate\(\)$/m)
   })
 })
