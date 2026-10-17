@@ -498,7 +498,6 @@
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
         "cookie": "^2.0.1",
-        "json-schema": "^0.4.0",
         "path-to-regexp": "^8.4.2",
         "picoquery": "^2.5.0",
       },
@@ -509,6 +508,12 @@
         "esbuild": "~0.28.2",
         "tsx": "^4.23.15",
       },
+      "peerDependencies": {
+        "esbuild": ">=0.28.2 <1",
+      },
+      "optionalPeers": [
+        "esbuild",
+      ],
     },
     "packages/create": {
       "name": "create-pikku",
