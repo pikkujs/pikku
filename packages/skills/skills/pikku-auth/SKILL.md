@@ -22,7 +22,7 @@ They are separate gates, and confusing them is the most common mistake in a
 Pikku app.
 
 **Authentication** answers _who is calling_. It happens in middleware, before the
-function runs, and ends in a call to `setSession`.
+function runs, and ends in a call to `setInitialSession`.
 
 **Authorization** answers _may this caller do this_. It is declared on the
 function — `scopes` and `permissions` — never checked inside its body. All of it is

@@ -81,7 +81,7 @@ async function run(opts: {
           ),
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
     session: opts.existingSession,
     getSession: () => opts.live,
   }

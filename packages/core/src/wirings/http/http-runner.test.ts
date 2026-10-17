@@ -18,6 +18,7 @@ import {
 } from '../channel/local/local-channel-runner.test.js'
 import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
+import { authCookie } from '../../middleware/auth-cookie.js'
 
 const sessionMiddleware: CorePikkuMiddleware = async (services, wire, next) => {
   await wire.setSession?.({ userId: 'test' } as any)
@@ -234,6 +235,92 @@ describe('fetch', () => {
         }),
       error
     )
+  })
+})
+
+// knowledge: decisions/security/set-session-persists-and-set-initial-session-does-not.md
+describe('setSession from middleware', () => {
+  const COOKIE = authCookie({
+    name: 'session',
+    expiresIn: { value: 1, unit: 'day' },
+    options: {},
+  })
+
+  let stored: Map<string, unknown>
+
+  beforeEach(() => {
+    resetPikkuState()
+    httpRouter.reset()
+    stored = new Map()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { info: () => {}, warn: () => {}, error: () => {} },
+      sessionStore: {
+        get: async (id: string) => stored.get(id),
+        set: async (id: string, session: unknown) => {
+          stored.set(id, session)
+        },
+        clear: async (id: string) => {
+          stored.delete(id)
+        },
+      },
+      jwt: {
+        encode: async (_expiresIn: unknown, session: unknown) =>
+          `jwt.${JSON.stringify(session)}`,
+        decode: async (token: string) =>
+          token === 'existing' ? { userId: 'cookie-user' } : undefined,
+      },
+    } as any)
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async () => ({}),
+    } as any)
+  })
+
+  // Middleware is combined once per route, so each test wires its own.
+  const wireWith = (route: string, middleware: CorePikkuMiddleware[]) => {
+    let seen: unknown
+    const func = async (_services: any, _data: any, wire: any) => {
+      seen = wire.session
+      return { ok: true }
+    }
+    setHTTPFunctionMap(func)
+    const meta = pikkuState(null, 'http', 'meta')
+    meta.get[route] = { ...meta.get.test, route } as any
+    wireHTTP({ route, method: 'get', func: { func, middleware } })
+    httpRouter.initialize()
+    return () => seen
+  }
+
+  test('persists the session and re-issues the cookie, as it does from a function body', async () => {
+    const signIn: CorePikkuMiddleware = async (_services, wire, next) => {
+      await wire.setSession?.({ userId: 'signed-in' } as any)
+      await next()
+    }
+    const seen = wireWith('sign-in', [COOKIE, signIn])
+
+    const result = await fetch(new Request('http://localhost/sign-in'))
+
+    assert.strictEqual(result.status, 200)
+    assert.deepStrictEqual(seen(), { userId: 'signed-in' })
+    assert.deepStrictEqual(stored.get('signed-in'), { userId: 'signed-in' })
+    assert.match(
+      result.headers.get('set-cookie') ?? '',
+      /^session=jwt\.%7B%22userId%22%3A%22signed-in%22%7D/
+    )
+  })
+
+  test('setInitialSession reaches the function body without persisting or re-issuing', async () => {
+    const seen = wireWith('restore', [COOKIE])
+
+    const result = await fetch(
+      new Request('http://localhost/restore', {
+        headers: { cookie: 'session=existing' },
+      })
+    )
+
+    assert.strictEqual(result.status, 200)
+    assert.deepStrictEqual(seen(), { userId: 'cookie-user' })
+    assert.strictEqual(stored.size, 0)
+    assert.strictEqual(result.headers.get('set-cookie'), null)
   })
 })
 

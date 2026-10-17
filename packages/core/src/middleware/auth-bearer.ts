@@ -28,10 +28,10 @@ export const authBearer = pikkuMiddlewareFactory<{
   pikkuMiddleware(
     async (
       { jwt: jwtService, secrets },
-      { http, setSession, session },
+      { http, setInitialSession, session },
       next
     ) => {
-      if (!http?.request || !setSession || session) {
+      if (!http?.request || !setInitialSession || session) {
         return next()
       }
 
@@ -66,7 +66,7 @@ export const authBearer = pikkuMiddlewareFactory<{
         }
 
         if (userSession) {
-          await setSession?.(userSession)
+          setInitialSession?.(userSession)
         }
       }
 

@@ -15,7 +15,7 @@ const GRANTS: Record<string, string[]> = {
 }
 
 /**
- * Drives the middleware end to end so each path that reaches `setSession` is
+ * Drives the middleware end to end so each path that reaches `setInitialSession` is
  * exercised through the real code, not a stub.
  */
 async function run(opts: {
@@ -66,7 +66,7 @@ async function run(opts: {
         headers: () => ({}),
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
     session: undefined,
   }
 

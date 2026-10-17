@@ -522,8 +522,8 @@ const platformUserId = async (
 }
 
 export const virtualUserPlatformSession = pikkuMiddleware(
-  async ({ auth }, { setSession }, next) => {
-    await setSession?.({
+  async ({ auth }, { setInitialSession }, next) => {
+    setInitialSession?.({
       userId: await platformUserId(auth),
       scopes: ['virtualUser:run'],
     } as Session)

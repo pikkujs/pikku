@@ -61,7 +61,7 @@ const roundTrip = async (secret: string, session: unknown) => {
       http: {
         request: createRequest({ authorization: headers.authorization! }),
       },
-      setSession: async (s: unknown) => {
+      setInitialSession: async (s: unknown) => {
         received = s
       },
     } as any,
@@ -92,7 +92,7 @@ describe('remote RPC session round trip', () => {
           http: {
             request: createRequest({ authorization: headers.authorization! }),
           },
-          setSession: async () => {},
+          setInitialSession: async () => {},
         } as any,
         async () => {}
       )
@@ -162,7 +162,7 @@ describe('PIKKU_REMOTE_SECRET strength', () => {
             http: {
               request: createRequest({ authorization: headers.authorization! }),
             },
-            setSession: async () => {},
+            setInitialSession: async () => {},
           } as any,
           async () => {}
         ),

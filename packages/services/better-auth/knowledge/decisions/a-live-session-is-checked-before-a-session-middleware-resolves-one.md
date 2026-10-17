@@ -8,7 +8,7 @@ tags: better-auth, session, middleware
 # A live session is checked before a session middleware resolves one
 
 The wire's `session` property is a snapshot taken when the wire is built. A
-`setSession` call from an earlier middleware writes the session service and does
+`setInitialSession` call from an earlier middleware writes the session service and does
 not update that snapshot. A middleware that reads the snapshot therefore sees no
 session, resolves its own, and overwrites the one already set.
 

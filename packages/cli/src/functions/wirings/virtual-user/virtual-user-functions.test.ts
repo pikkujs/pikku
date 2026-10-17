@@ -145,7 +145,7 @@ describe('serializeVirtualUserFunctions', () => {
     )
     assert.match(
       out,
-      /async \(\{ auth \}, \{ setSession \}, next\) => \{\n\s+await setSession\?\.\(\{\n\s+userId: await platformUserId\(auth\),\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
+      /async \(\{ auth \}, \{ setInitialSession \}, next\) => \{\n\s+setInitialSession\?\.\(\{\n\s+userId: await platformUserId\(auth\),\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
     )
     // Attached to the task's own middleware — tag middleware over `/rpc` cannot
     // set a session at all.

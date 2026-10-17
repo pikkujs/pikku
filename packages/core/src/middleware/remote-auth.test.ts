@@ -420,7 +420,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest({ authorization: 'Bearer valid-token' }),
           },
-          setSession: async (session: any) => {
+          setInitialSession: async (session: any) => {
             receivedSession = session
           },
         } as any,
@@ -447,7 +447,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
                   authorization: 'Bearer valid-token',
                 }),
               },
-              setSession: async () => {},
+              setInitialSession: async () => {},
             } as any,
             async () => {}
           ),
@@ -455,7 +455,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
       )
     })
 
-    test('should skip setSession when setSession is not available', async () => {
+    test('should skip setInitialSession when setInitialSession is not available', async () => {
       const encryptedSession = await encryptWithKeyMaterial(
         'PIKKU_REMOTE_SECRET',
         TEST_SECRET,
@@ -487,14 +487,14 @@ describe('pikkuRemoteAuthMiddleware', () => {
       assert.strictEqual(nextCalled, true)
     })
 
-    test('should skip setSession when decrypted.session is falsy', async () => {
+    test('should skip setInitialSession when decrypted.session is falsy', async () => {
       const encryptedSession = await encryptWithKeyMaterial(
         'PIKKU_REMOTE_SECRET',
         TEST_SECRET,
         REMOTE_SESSION_INFO,
         { session: null }
       )
-      let setSessionCalled = false
+      let setInitialSessionCalled = false
 
       await pikkuRemoteAuthMiddleware(
         {
@@ -508,18 +508,18 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest({ authorization: 'Bearer valid-token' }),
           },
-          setSession: async () => {
-            setSessionCalled = true
+          setInitialSession: async () => {
+            setInitialSessionCalled = true
           },
         } as any,
         async () => {}
       )
 
-      assert.strictEqual(setSessionCalled, false)
+      assert.strictEqual(setInitialSessionCalled, false)
     })
 
-    test('should not call setSession when no session in payload', async () => {
-      let setSessionCalled = false
+    test('should not call setInitialSession when no session in payload', async () => {
+      let setInitialSessionCalled = false
       let nextCalled = false
 
       await pikkuRemoteAuthMiddleware(
@@ -531,8 +531,8 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest({ authorization: 'Bearer valid-token' }),
           },
-          setSession: async () => {
-            setSessionCalled = true
+          setInitialSession: async () => {
+            setInitialSessionCalled = true
           },
         } as any,
         async () => {
@@ -540,7 +540,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
         }
       )
 
-      assert.strictEqual(setSessionCalled, false)
+      assert.strictEqual(setInitialSessionCalled, false)
       assert.strictEqual(nextCalled, true)
     })
   })
