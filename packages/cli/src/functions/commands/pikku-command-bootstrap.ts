@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   serializeLoadAddons,
@@ -29,7 +28,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       if (decl.remote) continue
       const bootstrapSpecifier = `${decl.package}/.pikku/pikku-bootstrap.gen.js`
       const split = config.lazyAddons
-        ? readAddonBootstrap(
+        ? await readAddonBootstrap(
             stateBeforeBootstrap.rootDir,
             decl.file,
             decl.package,
@@ -149,13 +148,18 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   },
 })
 
-const readAddonBootstrap = (
+const readAddonBootstrap = async (
   rootDir: string,
   declFile: string | undefined,
   packageName: string,
   bootstrapSpecifier: string
 ) => {
   try {
+    // Dynamic, like the other inspector uses in this package: a static import
+    // would load the TypeScript compiler on every command, `pikku --help`
+    // included (startup-imports.test.ts).
+    const { addonResolutionDirs, createAddonResolver } =
+      await import('@pikku/inspector')
     const path = createAddonResolver(
       addonResolutionDirs(rootDir, declFile)
     ).resolve(bootstrapSpecifier)
