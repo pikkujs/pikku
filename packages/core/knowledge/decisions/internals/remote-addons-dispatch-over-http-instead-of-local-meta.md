@@ -14,9 +14,9 @@ package is installed as a **devDependency**, contributing types only, and the
 handlers run on the host at `serverUrl`. `pikku verify` enforces the
 devDependency placement.
 
-`ContextAwareRPCService.invokeAddonFunction` in `rpc-runner.ts` therefore checks
+`ContextAwareRPCService.resolveAddonFunction` in `rpc-runner.ts` therefore checks
 `resolved.addonConfig?.remote` _before_ it looks for local function meta, and
-routes to `invokeRemoteAddonFunction`. That method POSTs the addon's own function
+`executeAddonFunction` routes the remote call to `invokeRemoteAddonFunction`. That method POSTs the addon's own function
 name — the bare name, not the namespaced `ns:fn` form, optionally remapped by
 `remoteName` — to `${serverUrl}/remote/rpc/:rpcName`, authenticating as a client
 with the token bound in `wireRemoteAddon({ auth })`. There is no local meta entry
