@@ -150,6 +150,7 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   setSession: (session: UserSession) => Promise<void> | void
+  setInitialSession: (session: UserSession) => void
   clearSession: () => Promise<void> | void
   getSession: () => Promise<UserSession> | UserSession | undefined
   hasSessionChanged: () => boolean
@@ -345,6 +346,7 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   setSession: (session: UserSession) => Promise<void> | void
+  setInitialSession: (session: UserSession) => void
   clearSession: () => Promise<void> | void
   getSession: () => Promise<UserSession> | UserSession | undefined
   hasSessionChanged: () => boolean
@@ -4934,7 +4936,7 @@ export interface CoverageService {
   stop(): Promise<void>
 }
 createInvocationAudit: (service: AuditService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined) => AuditLog
-createMiddlewareSessionWireProps: <UserSession extends CoreUserSession>(session: SessionService<UserSession>) => { session: UserSession | undefined; setSession: (s: UserSession) => void; getSession: () => UserSession | undefined; hasSessionChanged: () => boolean; }
+createMiddlewareSessionWireProps: <UserSession extends CoreUserSession>(session: SessionService<UserSession>) => { setSession: (s: UserSession) => void | Promise<void>; setInitialSession: (s: UserSession) => void; clearSession: () => void | Promise<void>; getSession: () => UserSession | undefined; hasSessionChanged: () => boolean; session: UserSession | undefined; }
 export type CreateRunInput = Omit<AgentRunState, 'runId'>
 createStubProxy: (tracker: StubTracker) => Record<string, unknown>
 export type CredentialMeta = {

@@ -103,8 +103,8 @@ export const betterAuthStoreSession = (
 
   return pikkuMiddleware({
     priority,
-    func: async (services, { http, setSession, session }, next) => {
-      if (!http?.request || !setSession || session) {
+    func: async (services, { http, setInitialSession, session }, next) => {
+      if (!http?.request || !setInitialSession || session) {
         return next()
       }
       const request = http.request
@@ -166,7 +166,7 @@ export const betterAuthStoreSession = (
           mapSession
         )
         if (impersonated) {
-          await setSession(
+          setInitialSession(
             await withResolvedScopes(impersonated, services as CoreServices)
           )
           return next()
@@ -177,7 +177,7 @@ export const betterAuthStoreSession = (
         ? await mapSession(stored, services as CoreServices)
         : defaultSession(stored)
 
-      await setSession(
+      setInitialSession(
         await withResolvedScopes(
           stampVirtualUserFlag(mapped, stored.user),
           services as CoreServices

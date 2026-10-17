@@ -61,7 +61,7 @@ const resolve = async (
         headers: () => headers,
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
   }
   await betterAuthStoreSession({ store: () => store })(
     services,

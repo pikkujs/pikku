@@ -55,7 +55,7 @@ async function run(opts: {
         headers: () => ({}),
       },
     },
-    setSession: (s: any) => captured.push(s),
+    setInitialSession: (s: any) => captured.push(s),
     session: undefined,
   }
   const mw = betterAuthSession({

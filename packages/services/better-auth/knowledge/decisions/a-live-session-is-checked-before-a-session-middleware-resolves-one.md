@@ -8,7 +8,7 @@ tags: better-auth, session, middleware
 # A live session is checked before a session middleware resolves one
 
 The wire's `session` property is a snapshot taken when the wire is built. A
-`setSession` call from an earlier middleware writes the session service and does
+`setInitialSession` call from an earlier middleware writes the session service and does
 not update that snapshot. A middleware that reads the snapshot therefore sees no
 session, resolves its own, and overwrites the one already set.
 
@@ -19,7 +19,7 @@ when a session already exists.
 
 `betterAuthStatelessSession` does the same check: `session || getSession?.()`.
 
-`betterAuthStoreSession` checks only the snapshot (`!http?.request || !setSession
+`betterAuthStoreSession` checks only the snapshot (`!http?.request || !setInitialSession
 || session`). It does not call `getSession`, so it does not get this protection
 in the same form. See
 [the store middleware question](../../../../core/knowledge/questions/does-the-store-session-match-the-other-two.md).

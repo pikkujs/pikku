@@ -84,15 +84,15 @@ export const betterAuthSession = (
   return pikkuMiddleware({
     priority,
     func: async (services, wire, next) => {
-      const { http, setSession, getSession } = wire
+      const { http, setInitialSession, getSession } = wire
       // Check the LIVE session, not the wire's static `session` snapshot: that
       // snapshot is taken at wire construction and is never updated by a prior
-      // middleware's setSession (which writes the session service, not the
+      // middleware's setInitialSession (which writes the session service, not the
       // snapshot). Reading it stale makes this middleware re-resolve and clobber
       // a session another middleware already set (e.g. an app's own
       // role-enriching betterAuthSession), overwriting it with the default map.
       const existingSession = getSession ? getSession() : wire.session
-      if (!http?.request || !setSession || existingSession) {
+      if (!http?.request || !setInitialSession || existingSession) {
         return next()
       }
       // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
@@ -132,7 +132,7 @@ export const betterAuthSession = (
             )
           }
           if (mapped) {
-            await setSession(
+            setInitialSession(
               await withResolvedScopes(mapped, services as CoreServices)
             )
           }
@@ -178,7 +178,7 @@ export const betterAuthSession = (
           if (impersonated) {
             // Scopes resolve for the impersonated userId, not the admin's — an
             // impersonated session runs as the target, with the target's rights.
-            await setSession(
+            setInitialSession(
               await withResolvedScopes(impersonated, services as CoreServices)
             )
             return next()
@@ -191,7 +191,7 @@ export const betterAuthSession = (
         const mapped = mapSession
           ? await mapSession(result, services as CoreServices)
           : defaultSession(result)
-        await setSession(
+        setInitialSession(
           await withResolvedScopes(
             stampVirtualUserFlag(mapped, result.user),
             services as CoreServices

@@ -14,7 +14,7 @@ still decodes to a truthy `{ iat, exp }` that "the runner accepts", and it guard
 against that.
 
 `authBearer` (`packages/core/src/middleware/auth-bearer.ts`) has no such check.
-In JWT mode it calls `jwtService.decode(bearerToken)` and calls `setSession` on
+In JWT mode it calls `jwtService.decode(bearerToken)` and calls `setInitialSession` on
 any truthy result. Its test only covers a `null` decode.
 
 What is asked: should a bearer token that decodes to `{ iat, exp }` alone be

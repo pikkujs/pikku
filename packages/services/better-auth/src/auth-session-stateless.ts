@@ -87,10 +87,14 @@ export const betterAuthStatelessSession = (
 
   return pikkuMiddleware({
     priority,
-    func: async (services, { http, setSession, session, getSession }, next) => {
+    func: async (
+      services,
+      { http, setInitialSession, session, getSession },
+      next
+    ) => {
       // `session` is a snapshot taken when the wire props were built and is
       // never updated; `getSession()` is the live value the chain has resolved.
-      if (!http?.request || !setSession || session || getSession?.()) {
+      if (!http?.request || !setInitialSession || session || getSession?.()) {
         return next()
       }
       const request = http.request
@@ -153,7 +157,7 @@ export const betterAuthStatelessSession = (
             mapSession
           )
           if (impersonated) {
-            await setSession(
+            setInitialSession(
               await withResolvedScopes(impersonated, services as CoreServices)
             )
             return next()
@@ -166,7 +170,7 @@ export const betterAuthStatelessSession = (
         const mapped = mapSession
           ? await mapSession(cached, services as CoreServices)
           : defaultSession(cached)
-        await setSession(
+        setInitialSession(
           await withResolvedScopes(
             stampVirtualUserFlag(mapped, cached.user),
             services as CoreServices

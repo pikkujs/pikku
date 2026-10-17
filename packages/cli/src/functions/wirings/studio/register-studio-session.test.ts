@@ -1,6 +1,10 @@
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
-import { registerStudioSession, studioSession, STUDIO_HEADER } from './register-studio-session.js'
+import {
+  registerStudioSession,
+  studioSession,
+  STUDIO_HEADER,
+} from './register-studio-session.js'
 
 const TOKEN = 'a'.repeat(40)
 
@@ -9,7 +13,7 @@ const run = async (headers: Record<string, string>, session?: object) => {
   const wire = {
     http: { request: { header: (name: string) => headers[name] ?? null } },
     session,
-    setSession: (s: unknown) => {
+    setInitialSession: (s: unknown) => {
       set = s
     },
   }
@@ -23,7 +27,10 @@ const run = async (headers: Record<string, string>, session?: object) => {
 
 describe('studio session', () => {
   test('the matching token becomes the console owner', async () => {
-    assert.deepEqual(await run({ [STUDIO_HEADER]: TOKEN }), { userId: 'studio', scopes: ['pikku:console'] })
+    assert.deepEqual(await run({ [STUDIO_HEADER]: TOKEN }), {
+      userId: 'studio',
+      scopes: ['pikku:console'],
+    })
   })
 
   test('a wrong or missing token sets nothing', async () => {
@@ -33,7 +40,10 @@ describe('studio session', () => {
   })
 
   test('an existing session is left alone', async () => {
-    assert.equal(await run({ [STUDIO_HEADER]: TOKEN }, { userId: 'real' }), undefined)
+    assert.equal(
+      await run({ [STUDIO_HEADER]: TOKEN }, { userId: 'real' }),
+      undefined
+    )
   })
 
   test('is only registered with a long enough token', () => {

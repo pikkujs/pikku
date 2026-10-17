@@ -125,7 +125,7 @@ describe('serializeVirtualUserFunctions', () => {
     )
     assert.match(
       out,
-      /setSession\?\.\(\{\n\s+userId: PLATFORM_USER_ID,\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
+      /setInitialSession\?\.\(\{\n\s+userId: PLATFORM_USER_ID,\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
     )
     // Attached to the task's own middleware — tag middleware over `/rpc` cannot
     // set a session at all.
