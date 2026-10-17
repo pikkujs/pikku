@@ -28,6 +28,7 @@ import {
 } from './dev-virtual-users.js'
 import type { DevSignInVirtualUser } from './dev-virtual-users.js'
 
+/** Options for {@link pikkuVirtualUser}. */
 export interface VirtualUserPluginOptions {
   /**
    * The opt-in that enables sign-in outside `pikku dev`, when the caller has
@@ -83,6 +84,10 @@ export interface VirtualUserPluginOptions {
   credentials?: VirtualUserCredentialsOptions
 }
 
+/**
+ * Upstream credentials a virtual user carries, read from
+ * `VIRTUAL_USER_CREDENTIAL_<ADDRESS>_<NAME>` variables at each sign-in.
+ */
 export interface VirtualUserCredentialsOptions {
   /** Credential names to look up, as the addon declares them (`defineCredential({ name })`). */
   names: string[]
@@ -157,6 +162,8 @@ const storeVirtualUserCredentials = async (
  * Non-virtual-user rows are refused, and rows are created only under
  * `pikku dev`. With the gate shut none of the sign-in endpoints is registered:
  * production has no route to refuse and no handler to reach.
+ *
+ * @example snippet: betterAuthConfig
  */
 export const pikkuVirtualUser = (
   options: VirtualUserPluginOptions = {}
