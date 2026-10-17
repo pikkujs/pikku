@@ -5,6 +5,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 /** @type {import('next').NextConfig} */
+// Next 16 builds with Turbopack by default, which does not map the `.js`
+// specifiers of the ESM sources to their `.ts` files. The build and dev scripts
+// pass --webpack so the extensionAlias below keeps applying.
 const nextConfig = {
   webpack: (config) => {
     config.resolve.extensionAlias = {
