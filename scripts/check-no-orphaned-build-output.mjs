@@ -5,7 +5,7 @@
 // Why: `tsc -b` never deletes what it emitted for a file that has since been
 // removed or renamed, so a long-lived `dist/` keeps the old modules. CI
 // publishes from a fresh checkout and is unaffected, but a local publish ships
-// them: @pikku/core once carried 34 persona/actor-flow files that no source
+// them: @pikku/core once carried 34 files from the old virtual-user modules that no source
 // produced any more. `npm pack` includes whatever is on disk, so the check runs
 // against its file list, after the build and before `changeset publish`.
 //
