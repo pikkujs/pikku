@@ -36,6 +36,9 @@
     // for rustc only to say whether this machine can build what it wrote.
     "rustfmt",
     "rustc",
+    // The Go toolchain that compiles pikku-inspect. `build-go.mjs` skips the
+    // native build when it is absent and the CLI falls back to TypeScript.
+    "go",
   ],
 
   // Build output and generated sources are not hand-authored, and their

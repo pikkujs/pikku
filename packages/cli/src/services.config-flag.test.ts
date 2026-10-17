@@ -5,7 +5,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { createConfig } from './services.js'
-import { getInspectorEngine } from './inspector-engine.js'
+import {
+  getInspectorEngine,
+  nativeInspectorAvailable,
+} from './inspector-engine.js'
 
 describe('createConfig --config', () => {
   const tempDirs: string[] = []
@@ -86,12 +89,13 @@ describe('createConfig --config', () => {
       )
     }
 
-    test('defaults to native and records it for the helpers', async () => {
+    test('defaults to native, or typescript without a binary, and records it for the helpers', async () => {
+      const expected = nativeInspectorAvailable() ? 'native' : 'typescript'
       const config = await withEnv(undefined, () =>
         configFor(undefined, undefined)
       )
-      assert.equal(config.inspector, 'native')
-      assert.equal(getInspectorEngine(), 'native')
+      assert.equal(config.inspector, expected)
+      assert.equal(getInspectorEngine(), expected)
     })
 
     test('the config key selects typescript', async () => {
