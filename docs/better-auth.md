@@ -26,8 +26,9 @@ credential, or the dispatch is an addon's whose scope withholds the auth secret.
 | `betterAuthStoreSession({ store })` | Better Auth's `secondaryStorage`                         | no                             | on the next request                  |
 
 The CLI generates `betterAuthSession()` or, when `session.cookieCache` is
-enabled, `betterAuthStatelessSession()`. To pass options, register your own
-globally and the CLI leaves its default out.
+enabled, `betterAuthStatelessSession()`, both at `lowest` priority. To pass
+other options, register your own globally: it runs first, and the generated one
+then does nothing.
 
 ### The stateless cookie
 
@@ -49,6 +50,11 @@ betterAuthStatelessSession({
   },
 })
 ```
+
+The generated middleware is given `cookiePrefix`, `strategy` and `version`
+when they are string literals in your `betterAuth({ ... })` call. When one is
+not, the CLI warns, and you register the middleware yourself as above. `jwt`
+options are never passed through.
 
 If both the stateless middleware and `pikkuBetterAuth` run in one process,
 `pikkuBetterAuth` logs an error at startup when these values disagree with the
