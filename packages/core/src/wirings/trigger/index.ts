@@ -46,4 +46,6 @@ export type {
   CorePikkuTriggerFunction,
   CorePikkuTriggerFunctionConfig,
   CoreTrigger,
+  PikkuTrigger,
+  TriggerInvokeOptions,
 } from './trigger.types.js'

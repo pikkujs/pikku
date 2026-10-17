@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3282 observable things**: 1098 exported names, plus
-2184 members on the classes and interfaces among them, reachable
+**3286 observable things**: 1100 exported names, plus
+2186 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -25,7 +25,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 26 | 26 | 58 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
-| `./trigger` | 40 | 40 | 11 |
+| `./trigger` | 42 | 42 | 13 |
 | `./services/local-meta` | 22 | 2 | 43 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
@@ -3178,7 +3178,7 @@ export type CorePikkuTriggerFunction<
 > = (
   services: Services,
   input: TInput,
-  wire: { trigger: { invoke: (data: TOutput) => void } }
+  wire: { trigger: PikkuTrigger<TOutput> }
 ) => Promise<() => void | Promise<void>>
 export type CorePikkuTriggerFunctionConfig<
   TInput = unknown,
@@ -3229,14 +3229,17 @@ export type OrphanedWebhookRegistration = {
   label: string
 }
 PIKKU_INCOMING_WEBHOOK_QUEUE_NAME: "pikku-incoming-webhooks"
+export interface PikkuTrigger<TOutput = unknown> {
+  invoke: (data: TOutput, options?: TriggerInvokeOptions) => void
+}
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers: Map<string, TriggerInstance>
   abstract start(): Promise<void>
   async stop(): Promise<void>
   protected getTriggerTargets(): Map<string, TriggerTarget[]>
   protected getTriggerSources(): Map<string, { input?: unknown }>
-  protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown) => Promise<void>): Promise<TriggerInstance>
-  protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
+  protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown, options?: TriggerInvokeOptions) => Promise<void>): Promise<TriggerInstance>
+  protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown, options?: TriggerInvokeOptions): Promise<void>
 }
 receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<void | { received: number; }>
 reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
@@ -3248,6 +3251,9 @@ export type TriggerEvent<Name extends string = string, Data = unknown> = {
   name: Name
   id?: string
   data: Data
+}
+export interface TriggerInvokeOptions {
+  pikkuUserId?: string
 }
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 export type TriggerSourceMeta = Record<
