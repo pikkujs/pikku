@@ -55,17 +55,22 @@ export const createAuthHandler = (): {
     if (!request) {
       return
     }
-    const auth = (await (services as any).auth()) as BetterAuthInstance
+    if (!services.auth) {
+      throw new Error(
+        'createAuthHandler: services.auth is missing — register the better-auth factory with pikkuBetterAuth'
+      )
+    }
+    const auth: BetterAuthInstance = await services.auth()
     const webRequest = toWebRequest(request)
     // /get-session, sign-out and /update-user all read the session off Cookie.
     mergeRelayedCookies(webRequest.headers)
-    const basePath = (auth as any).options?.basePath ?? '/api/auth'
+    const basePath = auth.options?.basePath ?? '/api/auth'
     const response = isDevQuickLoginRequest(webRequest, basePath)
       ? await handleDevQuickLogin(
           auth,
           webRequest,
-          (services as any).logger,
-          (services as any).scopeService
+          services.logger,
+          services.scopeService
         )
       : await auth.handler(webRequest)
     return crossSiteCookies() ? rewriteSetCookies(response) : response

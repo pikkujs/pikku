@@ -7,12 +7,14 @@ tags: [better-auth, session, addons, middleware]
 
 # A session middleware stands down where it cannot authenticate
 
-Both `betterAuthSession` and `betterAuthStatelessSession` return `next()`
+Every better-auth session middleware returns `next()`
 without doing anything when the thing they need is not in scope:
 
 - `betterAuthSession` when `services.auth` is not a function.
-- `betterAuthStatelessSession` when reading `BETTER_AUTH_SECRET` throws
-  `Access denied to secret key` — which `isSecretForbidden` recognises.
+- `betterAuthStatelessSession` and `betterAuthStoreSession` when reading
+  `BETTER_AUTH_SECRET` throws `Access denied to secret key` — which
+  `isSecretForbidden` recognises. Both read it through `readSessionSecret` in
+  `resolve-session.ts`.
 
 Global middleware is application-wide, so it also runs on dispatches contributed
 by an addon. An addon runs with a `ScopedSecretService` whose namespace is

@@ -191,6 +191,6 @@ export const userHoldsScopes = async (
   resolvedUserHoldsScopes(
     userId,
     required,
-    (services as any).scopeService as ScopeService | undefined,
+    services.scopeService,
     services.logger
   )
