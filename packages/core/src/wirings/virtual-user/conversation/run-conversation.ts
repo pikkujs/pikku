@@ -95,7 +95,10 @@ function msg(role: AgentMessage['role'], content: string): AgentMessage {
 }
 
 /** Read a structured `run` result, falling back to parsing JSON from text. */
-function readObject<T>(result: { object?: unknown; text?: string }): T | null {
+export function readObject<T>(result: {
+  object?: unknown
+  text?: string
+}): T | null {
   if (result.object && typeof result.object === 'object') {
     return result.object as T
   }
