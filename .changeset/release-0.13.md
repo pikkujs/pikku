@@ -1,0 +1,70 @@
+---
+'create-pikku': minor
+'pikku': minor
+'@pikku/addon-admin': minor
+'@pikku/addon-console': minor
+'@pikku/addon-graph': minor
+'@pikku/ai-deepinfra': minor
+'@pikku/ai-vercel': minor
+'@pikku/ai-voice': minor
+'@pikku/assistant-ui': minor
+'@pikku/aws-services': minor
+'@pikku/azure-functions': minor
+'@pikku/backblaze': minor
+'@pikku/better-auth': minor
+'@pikku/browser': minor
+'@pikku/bun-server': minor
+'@pikku/cli': minor
+'@pikku/cloudflare': minor
+'@pikku/code-edit': minor
+'@pikku/core': minor
+'@pikku/deploy': minor
+'@pikku/deploy-azure': minor
+'@pikku/deploy-cloudflare': minor
+'@pikku/deploy-serverless': minor
+'@pikku/deploy-standalone': minor
+'@pikku/express': minor
+'@pikku/express-middleware': minor
+'@pikku/fastify': minor
+'@pikku/fastify-plugin': minor
+'@pikku/fetch': minor
+'@pikku/gateway-slack': minor
+'@pikku/inspector': minor
+'@pikku/jose': minor
+'@pikku/knowledge': minor
+'@pikku/kysely-bun-sqlite': minor
+'@pikku/kysely-mysql': minor
+'@pikku/kysely-node-sqlite': minor
+'@pikku/kysely-postgres': minor
+'@pikku/kysely-sqlite': minor
+'@pikku/lambda': minor
+'@pikku/migrator-sql': minor
+'@pikku/modelcontextprotocol': minor
+'@pikku/mongodb': minor
+'@pikku/next': minor
+'@pikku/node-http-server': minor
+'@pikku/openapi-parser': minor
+'@pikku/openapi-to-zod-schema': minor
+'@pikku/paraglide': minor
+'@pikku/pino': minor
+'@pikku/playwright': minor
+'@pikku/queue-bullmq': minor
+'@pikku/queue-nats': minor
+'@pikku/queue-pg-boss': minor
+'@pikku/react': minor
+'@pikku/redis': minor
+'@pikku/schedule': minor
+'@pikku/schema-ajv': minor
+'@pikku/schema-cfworker': minor
+'@pikku/skills': minor
+'@pikku/tanstack-start': minor
+'@pikku/uws': minor
+'@pikku/uws-handler': minor
+'@pikku/websocket': minor
+'@pikku/workflow-graph': minor
+'@pikku/ws': minor
+---
+
+Pikku 0.13.0. Every `@pikku/*` package on 0.12.x moves to 0.13.0 together, so one minor names a set that is built, tested and released against each other; internal ranges move to `^0.13.0`. `@pikku/kysely` (already on 0.13.x) and the 0.0.x packages take a patch.
+
+The breaking changes collected since 0.12.0, including the ones in this release (the `@pikku/core/services` import moves, `setSession` / `setInitialSession`, agent output validation, the `@pikku/better-auth` `AuthSessionStorage` rename and `linkExistingUsersByEmail`, and `DeploymentManifest.gateways`), are listed with before/after code and a search pattern in [docs/MIGRATION.md](https://github.com/pikkujs/pikku/blob/main/docs/MIGRATION.md).
