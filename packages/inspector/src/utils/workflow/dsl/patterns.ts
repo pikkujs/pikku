@@ -36,13 +36,7 @@ export function isWorkflowDoCall(
   )
 }
 
-/**
- * Placeholder recorded when a scenario step's target isn't a static string
- * literal. The step is kept rather than dropped so post-processing can raise
- * PKU678 against it — a dropped step is the silent-failure mode this repo has
- * hit repeatedly on workflow graph round-trips.
- */
-export const DYNAMIC_SCENARIO_STEP_TARGET = '<dynamic>'
+export { DYNAMIC_SCENARIO_STEP_TARGET } from '../../inspector-constants.js'
 
 const SCENARIO_STEP_PHASES = ['given', 'when', 'then'] as const
 

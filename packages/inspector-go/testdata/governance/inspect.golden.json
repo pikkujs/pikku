@@ -1,0 +1,862 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "analytics": [
+      {
+        "file": "<fixture>/src/analytics.ts",
+        "variable": "events",
+        "events": [
+          "signed_up",
+          "checkout started",
+          "page_viewed",
+          "custom"
+        ],
+        "props": {
+          "signed_up": {
+            "plan": "z.enum(['free', 'pro'])",
+            "seats": "z.number()"
+          },
+          "checkout started": {}
+        }
+      },
+      {
+        "file": "<fixture>/src/analytics.ts",
+        "variable": "renamedEvents",
+        "events": [
+          "hidden"
+        ],
+        "props": {
+          "hidden": {}
+        }
+      }
+    ],
+    "outgoingWebhooks": [
+      {
+        "file": "<fixture>/src/analytics.ts",
+        "variable": "orderPlaced",
+        "event": "order.placed",
+        "title": "Order placed",
+        "description": "When an order is placed",
+        "payload": {
+          "id": "z.string()",
+          "total": "z.number()"
+        }
+      },
+      {
+        "file": "<fixture>/src/analytics.ts",
+        "variable": "orderShipped",
+        "event": "order.shipped",
+        "title": "Shipped"
+      }
+    ],
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {},
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": []
+      },
+      "meta": {},
+      "files": [],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [
+        [
+          "checkoutFeature",
+          {
+            "path": "<fixture>/src/features.ts",
+            "exportedName": "checkoutFeature",
+            "entries": [
+              {
+                "scenario": "checkout"
+              },
+              {
+                "scenario": "refund",
+                "data": {
+                  "amount": -5,
+                  "ok": true,
+                  "nothing": null,
+                  "list": [
+                    1,
+                    "two",
+                    16
+                  ],
+                  "nested": {
+                    "a": "b"
+                  }
+                }
+              },
+              {
+                "scenario": "refund"
+              }
+            ],
+            "unresolvedEntries": 3,
+            "mentions": [
+              "checkout",
+              "refund",
+              "refund",
+              "refund"
+            ],
+            "unnamedEntries": 2,
+            "hasBefore": true,
+            "hasAfter": true,
+            "document": false,
+            "name": "Checkout",
+            "description": "Paying",
+            "tags": [
+              "money",
+              "core"
+            ]
+          }
+        ],
+        [
+          "bare",
+          {
+            "path": "<fixture>/src/features.ts",
+            "exportedName": "bare",
+            "entries": [],
+            "unresolvedEntries": 0,
+            "mentions": [],
+            "unnamedEntries": 0,
+            "hasBefore": false,
+            "hasAfter": false
+          }
+        ]
+      ],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {},
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {
+        "<fixture>/src/secrets.ts": {
+          "keys": [
+            "A",
+            "B",
+            "STRIPE_KEY",
+            "TEMPLATE_KEY"
+          ],
+          "dynamic": [
+            "14:key",
+            "15:secrets.getSecret()",
+            "16:key",
+            "17:keys",
+            "18:secrets.getSecrets()"
+          ]
+        },
+        "<fixture>/src/sub/usage.ts": {
+          "keys": [
+            "SUB_KEY"
+          ],
+          "dynamic": []
+        }
+      }
+    },
+    "surfaceUsage": {
+      "#pikku/workflow": {
+        "Hooks": {
+          "imports": 1,
+          "seenIn": [
+            "src"
+          ],
+          "files": [
+            "src/secrets.ts"
+          ]
+        },
+        "a": {
+          "imports": 2,
+          "seenIn": [
+            "src",
+            "@fixture/sub"
+          ],
+          "files": [
+            "src/secrets.ts",
+            "src/sub/usage.ts"
+          ]
+        },
+        "b": {
+          "imports": 1,
+          "seenIn": [
+            "src"
+          ],
+          "files": [
+            "src/secrets.ts"
+          ]
+        }
+      },
+      "#pikku/rpc": {
+        "x": {
+          "imports": 1,
+          "seenIn": [
+            "src"
+          ],
+          "files": [
+            "src/secrets.ts"
+          ]
+        },
+        "y": {
+          "imports": 1,
+          "seenIn": [
+            "src"
+          ],
+          "files": [
+            "src/secrets.ts"
+          ]
+        },
+        "thing": {
+          "imports": 1,
+          "seenIn": [
+            "@fixture/sub"
+          ],
+          "files": [
+            "src/sub/usage.ts"
+          ]
+        }
+      }
+    },
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [
+        {
+          "name": "admin",
+          "displayName": "Admin",
+          "sourceFile": "<fixture>/src/generated.gen.ts",
+          "origin": {
+            "kind": "generated"
+          }
+        },
+        {
+          "name": "orders",
+          "description": "dup root",
+          "sourceFile": "<fixture>/src/generated.gen.ts",
+          "origin": {
+            "kind": "generated"
+          }
+        },
+        {
+          "name": "billing",
+          "displayName": "Billing",
+          "description": "Money",
+          "scopes": {
+            "7": {
+              "description": "numeric key"
+            },
+            "invoices": {
+              "displayName": "Invoices",
+              "scopes": {
+                "read": {},
+                "write": {
+                  "description": "Write"
+                }
+              }
+            }
+          },
+          "sourceFile": "<fixture>/src/scopes.ts",
+          "origin": {
+            "kind": "app"
+          }
+        },
+        {
+          "name": "orders",
+          "sourceFile": "<fixture>/src/scopes.ts",
+          "origin": {
+            "kind": "app"
+          }
+        },
+        {
+          "name": "reports",
+          "sourceFile": "<fixture>/src/scopes.ts",
+          "scopes": {
+            "view": {}
+          }
+        }
+      ],
+      "files": [
+        "<fixture>/src/generated.gen.ts",
+        "<fixture>/src/scopes.ts"
+      ],
+      "declared": [
+        [
+          "billing:invoices:read",
+          "<fixture>/src/scopes.ts"
+        ],
+        [
+          "reports:view",
+          "<fixture>/src/scopes.ts"
+        ]
+      ]
+    },
+    "systemRoles": {
+      "definitions": [
+        {
+          "name": "admin",
+          "displayName": "Admin",
+          "scopes": [
+            "billing",
+            "orders"
+          ],
+          "sourceFile": "<fixture>/src/scopes.ts"
+        },
+        {
+          "name": "viewer",
+          "description": "Read only",
+          "scopes": [],
+          "sourceFile": "<fixture>/src/scopes.ts"
+        },
+        {
+          "name": "broken",
+          "scopes": [],
+          "sourceFile": "<fixture>/src/scopes.ts"
+        }
+      ],
+      "files": [
+        "<fixture>/src/scopes.ts"
+      ]
+    },
+    "featureFlags": {
+      "definitions": [
+        {
+          "name": "newCheckout",
+          "description": "New checkout",
+          "anyOf": [
+            "billing",
+            "orders"
+          ],
+          "sourceFile": "<fixture>/src/flags.ts"
+        },
+        {
+          "name": "killSwitch",
+          "sourceFile": "<fixture>/src/flags.ts"
+        },
+        {
+          "name": "shared",
+          "description": "Shared body",
+          "anyOf": [
+            "billing"
+          ],
+          "sourceFile": "<fixture>/src/flags.ts"
+        },
+        {
+          "name": "aliased",
+          "description": "Shared body",
+          "anyOf": [
+            "billing"
+          ],
+          "sourceFile": "<fixture>/src/flags.ts"
+        },
+        {
+          "name": "notArray",
+          "sourceFile": "<fixture>/src/flags.ts"
+        }
+      ],
+      "files": [
+        "<fixture>/src/flags.ts"
+      ]
+    },
+    "virtualUsers": {
+      "definitions": [
+        {
+          "id": "gen",
+          "name": "Generated",
+          "roles": [],
+          "goals": [],
+          "tags": [],
+          "runnable": true,
+          "sourceFile": "<fixture>/src/generated.gen.ts"
+        },
+        {
+          "id": "alice",
+          "name": "Alice",
+          "roles": [
+            "admin"
+          ],
+          "goals": [
+            "ship it"
+          ],
+          "tags": [
+            "vip",
+            "tmpl"
+          ],
+          "runnable": false,
+          "sourceFile": "<fixture>/src/virtual-users.ts",
+          "jobTitle": "CEO",
+          "description": "Boss",
+          "avatarUrl": "https://x/y.png",
+          "personality": "brisk",
+          "app": "web",
+          "disposition": "careless",
+          "tuning": {
+            "moves": {
+              "continue": 3,
+              "suspend": 0.5,
+              "resume": 1e+21,
+              "abandon": 0
+            },
+            "temperature": 1.5,
+            "repeatRate": 0.25,
+            "emptyMemory": true,
+            "readOnly": false,
+            "instructions": "Be quick"
+          },
+          "fixtures": [
+            "seed"
+          ],
+          "environments": [
+            "local",
+            "staging"
+          ],
+          "account": {
+            "provider": "google"
+          },
+          "linkedAccounts": {
+            "github": {
+              "provider": "github"
+            },
+            "mail": {}
+          }
+        },
+        {
+          "id": "bob",
+          "name": "Bob",
+          "roles": [],
+          "goals": [],
+          "tags": [],
+          "runnable": false,
+          "sourceFile": "<fixture>/src/virtual-users.ts"
+        },
+        {
+          "id": "carol",
+          "name": "Carol",
+          "roles": [],
+          "goals": [],
+          "tags": [],
+          "runnable": true,
+          "sourceFile": "<fixture>/src/virtual-users.ts",
+          "account": {}
+        }
+      ],
+      "files": [
+        "<fixture>/src/virtual-users.ts"
+      ]
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {}
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [
+        "scopeService",
+        "featureFlags",
+        "analyticsService"
+      ],
+      "usedFunctions": [],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {},
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "error",
+      "message": "Analytics event 'signed_up' is declared twice: <fixture>/src/analytics.ts and <fixture>/src/analytics.ts. An event name belongs to one declaration."
+    },
+    {
+      "level": "error",
+      "message": "defineAnalyticsEvents in <fixture>/src/analytics.ts declares no events. Remove it or add one."
+    },
+    {
+      "level": "error",
+      "message": "defineAnalyticsEvents in <fixture>/src/analytics.ts must be called with an object literal keyed by event name, so the generated ingest knows what to union."
+    },
+    {
+      "level": "error",
+      "message": "Webhook event 'order.placed' is declared twice: <fixture>/src/analytics.ts and <fixture>/src/analytics.ts. An event belongs to one defineOutgoingWebhook."
+    },
+    {
+      "level": "error",
+      "message": "defineOutgoingWebhook 'missingTitle' in <fixture>/src/analytics.ts needs 'event' and 'title' as string literals, so they can be listed without running the app."
+    },
+    {
+      "level": "error",
+      "message": "defineOutgoingWebhook 'private' in <fixture>/src/analytics.ts is assigned to 'privateHook', which the module does not export. The generated webhook types import it by name, so export it."
+    },
+    {
+      "level": "error",
+      "message": "defineOutgoingWebhook in <fixture>/src/analytics.ts must be called with an object literal: { event, title, payload }."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "A pikkuFeature() must be assigned to an export — the export identifier is the feature's id."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'empty' declares 'anyOf: []'. An empty list satisfies nobody: omit 'anyOf' for a pure switch, or name the scopes that reveal it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'notArray' must declare 'anyOf' as an array literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'computedScope' lists a scope that is not a string literal. Scopes are extracted by AST, so a computed value cannot be checked against the declared set."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'computedScope' declares 'anyOf: []'. An empty list satisfies nobody: omit 'anyOf' for a pure switch, or name the scopes that reveal it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'flag:colon' contains the ':' separator. ':' delimits scope ids; a flag named like a scope reads as one."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Feature flag 'unknownBody' must be an object literal, or a variable holding one. 'anyOf' is extracted by AST, so a value this file cannot see would declare the flag with no capability constraint."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope segment 'bad:seg' in 'billing' contains the ':' separator. Nest scopes with the 'scopes' property instead of embedding ':' in a name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope segment '*' in 'billing' is the wildcard. '*' is reserved for granting a scope and its descendants, and cannot be declared."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope 'billing' contains an empty segment."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Nested scope 'notObject' in 'billing' must be an object literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU118",
+      "message": "A scope is declared with a key that is not a literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope segment 'a:b' in 'a:b' contains the ':' separator. Nest scopes with the 'scopes' property instead of embedding ':' in a name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope 'plain' must be an object literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope 'bad::id' contains an empty segment."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Scope segment '*' in '*' is the wildcard. '*' is reserved for granting a scope and its descendants, and cannot be declared."
+    },
+    {
+      "level": "critical",
+      "code": "PKU118",
+      "message": "declareScopes takes string literal scope ids."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "System role 'broken' lists a scope that is not a string literal. Scopes are extracted by AST, so a computed value cannot be checked against the declared set."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "System role 'noScopes' has no 'scopes'. A role that grants nothing should say so with 'scopes: []'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "System role 'wrongShape' must declare 'scopes' as an array literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "System role 'role:colon' contains the ':' separator. ':' delimits scope ids; a role named like a scope reads as one."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "A system role is declared with an empty name."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "System role 'notObj' must be an object literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'alice' linked account 'bad' must be an object literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'noName' needs a literal 'name' — a virtual user is a person, and the console has nothing to show without one."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'badDisposition' has an unknown disposition 'grumpy'. One of: realistic, careless, newcomer, stale, auditor, adversarial, accountable"
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'badTuning': tuning.moves.continue must not be negative (got -1)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'badTuning': tuning.temperature must be between 0 and 2 (got 3)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'badTuning': tuning.reReadRate must be between 0 and 1 (got -0.5)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "VirtualUser 'notObj' must be an object literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU585",
+      "message": "Only one defineVirtualUsers(...) is allowed per codebase, so there is one place to read the declarations from and one place to add to. Found a second call in <fixture>/src/virtual-users.ts. Declare them all in one call."
+    },
+    {
+      "level": "critical",
+      "code": "PKU585",
+      "message": "Only one defineVirtualUsers(...) is allowed per codebase, so there is one place to read the declarations from and one place to add to. Found a second in <fixture>/src/zz-virtual-users-again.ts (first: <fixture>/src/virtual-users.ts). Declare them all in one call."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "defineVirtualUsers() needs an inline object — virtual users are read statically, never evaluated."
+    },
+    {
+      "level": "warn",
+      "code": "PKU951",
+      "message": "src/secrets.ts reads 'A', 'B', 'STRIPE_KEY', 'TEMPLATE_KEY', which no defineSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it."
+    },
+    {
+      "level": "warn",
+      "code": "PKU952",
+      "message": "src/secrets.ts reads a secret with a non-literal key (14:key, 15:secrets.getSecret(), 16:key, 17:keys, 18:secrets.getSecrets()). The deployment cannot narrow its secret scope around a key it cannot see."
+    },
+    {
+      "level": "warn",
+      "code": "PKU951",
+      "message": "src/sub/usage.ts reads 'SUB_KEY', which no defineSecret declares. Declare it so it is validated at deploy time and shown to whoever has to provision it."
+    }
+  ],
+  "validationPass": {
+    "start": 40,
+    "end": 43
+  }
+}

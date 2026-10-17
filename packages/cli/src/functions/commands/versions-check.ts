@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/lite'
 
 function hashArrow(prev: string | undefined, curr: string | undefined): string {
   const p = (prev ?? 'unknown').slice(0, 8)

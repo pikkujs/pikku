@@ -54,6 +54,8 @@ export interface SerializableInspectorState {
   addonRequiredParentServices: string[]
   addonCreatedServices: string[]
   addonServicesFactorySeen: boolean
+  analytics?: InspectorState['analytics']
+  outgoingWebhooks?: InspectorState['outgoingWebhooks']
   addonServerlessIncompatible: Array<[string, string[]]>
   configFactories: Array<
     [
@@ -98,6 +100,7 @@ export interface SerializableInspectorState {
     meta: InspectorState['functions']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
     approvalDescriptions: InspectorState['functions']['approvalDescriptions']
+    dynamicImportIds?: string[]
   }
   http: {
     metaInputTypes: Array<
@@ -230,6 +233,7 @@ export interface SerializableInspectorState {
   scopes: {
     definitions: InspectorState['scopes']['definitions']
     files: string[]
+    declared?: Array<[string, string]>
   }
   systemRoles: {
     definitions: InspectorState['systemRoles']['definitions']
@@ -294,6 +298,7 @@ export interface SerializableInspectorState {
     allSingletonServices: string[]
     allWireServices: string[]
   }
+  serviceTypes?: InspectorState['serviceTypes']
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
   middlewareGroupsMeta: InspectorState['middlewareGroupsMeta']
   permissionsGroupsMeta: InspectorState['permissionsGroupsMeta']
@@ -311,7 +316,7 @@ export interface SerializableInspectorState {
  * Omits typesLookup (not needed for filtering/generation) and converts Maps/Sets to arrays
  */
 export function serializeInspectorState(
-  state: InspectorState
+  state: Omit<InspectorState, 'typesLookup'>
 ): SerializableInspectorState {
   // Helper to serialize TypesMap
   const serializeTypesMap = (
@@ -354,6 +359,8 @@ export function serializeInspectorState(
     addonRequiredParentServices: state.addonRequiredParentServices,
     addonCreatedServices: state.addonCreatedServices,
     addonServicesFactorySeen: state.addonServicesFactorySeen,
+    analytics: state.analytics,
+    outgoingWebhooks: state.outgoingWebhooks,
     addonServerlessIncompatible: Array.from(
       state.addonServerlessIncompatible.entries()
     ),
@@ -372,6 +379,7 @@ export function serializeInspectorState(
       meta: state.functions.meta,
       files: Array.from(state.functions.files.entries()),
       approvalDescriptions: state.functions.approvalDescriptions,
+      dynamicImportIds: Array.from(state.functions.dynamicImportIds ?? []),
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -475,6 +483,9 @@ export function serializeInspectorState(
     scopes: {
       definitions: state.scopes.definitions,
       files: Array.from(state.scopes.files),
+      declared: state.scopes.declared
+        ? Array.from(state.scopes.declared.entries())
+        : undefined,
     },
     systemRoles: {
       definitions: state.systemRoles.definitions,
@@ -521,6 +532,7 @@ export function serializeInspectorState(
       allSingletonServices: state.serviceAggregation.allSingletonServices,
       allWireServices: state.serviceAggregation.allWireServices,
     },
+    serviceTypes: state.serviceTypes,
     resolvedIOTypes: state.resolvedIOTypes,
     middlewareGroupsMeta: state.middlewareGroupsMeta,
     permissionsGroupsMeta: state.permissionsGroupsMeta,
@@ -579,6 +591,8 @@ export function deserializeInspectorState(
     addonRequiredParentServices: data.addonRequiredParentServices || [],
     addonCreatedServices: data.addonCreatedServices || [],
     addonServicesFactorySeen: data.addonServicesFactorySeen ?? false,
+    analytics: data.analytics,
+    outgoingWebhooks: data.outgoingWebhooks,
     addonServerlessIncompatible: new Map(
       data.addonServerlessIncompatible || []
     ),
@@ -598,7 +612,7 @@ export function deserializeInspectorState(
       meta: data.functions.meta,
       files: new Map(data.functions.files),
       approvalDescriptions: (data.functions as any).approvalDescriptions || {},
-      dynamicImportIds: new Set(),
+      dynamicImportIds: new Set(data.functions.dynamicImportIds ?? []),
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),
@@ -700,6 +714,9 @@ export function deserializeInspectorState(
     scopes: {
       definitions: data.scopes?.definitions || [],
       files: new Set(data.scopes?.files || []),
+      declared: data.scopes?.declared
+        ? new Map(data.scopes.declared)
+        : undefined,
     },
     systemRoles: {
       definitions: data.systemRoles?.definitions || [],
@@ -744,6 +761,7 @@ export function deserializeInspectorState(
       allSingletonServices: data.serviceAggregation.allSingletonServices,
       allWireServices: data.serviceAggregation.allWireServices,
     },
+    serviceTypes: data.serviceTypes,
     resolvedIOTypes: data.resolvedIOTypes || {},
     middlewareGroupsMeta: data.middlewareGroupsMeta || {
       definitions: {},

@@ -5,7 +5,8 @@ import {
   PROBLEM_REASON,
   runMocksCheck,
 } from '../mocks/run-check.js'
-import { frontendFiles, scanFrontend } from '../mocks/stub-scan.js'
+import { frontendFiles } from '../mocks/stub-scan.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
 
 const configOf = (dir: string): { outDir: string; client?: string } => {

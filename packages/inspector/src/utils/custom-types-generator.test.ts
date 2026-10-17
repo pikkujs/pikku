@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
 import {
+  customTypeNames,
   generateCustomTypes,
   sanitizeTypeName,
 } from './custom-types-generator.js'
@@ -120,5 +121,56 @@ describe('sanitizeTypeName — valid JS identifier', () => {
 
   test('leaves an already-valid identifier unchanged', () => {
     assert.equal(sanitizeTypeName('UserEmail'), 'UserEmail')
+  })
+})
+
+describe('generateCustomTypes — import paths', () => {
+  const withSourceType = () => {
+    const tm = makeTypesMap({
+      CreateOrderInput: {
+        type: '{ address: ShippingAddress }',
+        references: ['ShippingAddress'],
+      },
+    })
+    tm.addType('ShippingAddress', '/proj/src/checkout.types.ts')
+    return tm
+  }
+
+  test('imports by absolute path when no resolver is given', () => {
+    const result = generateCustomTypes(withSourceType(), new Set())
+    assert.match(
+      result,
+      /import type \{ ShippingAddress \} from '\/proj\/src\/checkout\.types\.ts'/
+    )
+  })
+
+  test('imports through resolveImportPath when one is given', () => {
+    const result = generateCustomTypes(withSourceType(), new Set(), {
+      resolveImportPath: (path) =>
+        path.replace('/proj/', '../').replace(/\.ts$/, '.js'),
+    })
+    assert.match(
+      result,
+      /import type \{ ShippingAddress \} from '\.\.\/src\/checkout\.types\.js'/
+    )
+    assert.doesNotMatch(result, /from '\//)
+  })
+})
+
+describe('customTypeNames', () => {
+  test('lists exactly the names generateCustomTypes declares', () => {
+    const tm = makeTypesMap({
+      Zed: { type: '{ z: string }', references: [] },
+      Alpha: { type: '{ a: string }', references: [] },
+      'Add subscriber': { type: '{ email: string }', references: [] },
+      SelfNamed: { type: 'SelfNamed', references: [] },
+      Indexed: { type: "Foo[Name]['input']", references: [] },
+    })
+    const declared = Array.from(
+      generateCustomTypes(tm, new Set()).matchAll(/^export type (\w+) =/gm),
+      ([, name]) => name
+    )
+    assert.deepEqual(customTypeNames(tm), declared)
+    assert.deepEqual(declared, ['Add_subscriber', 'Alpha', 'Zed'])
   })
 })

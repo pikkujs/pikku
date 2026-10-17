@@ -1,6 +1,7 @@
 import type { AgentsMeta } from '@pikku/core/agent'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
+import type { TypesMap } from '@pikku/inspector'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { Logger } from '@pikku/core/services'
 
 export const serializeAgentMap = (
@@ -8,16 +9,14 @@ export const serializeAgentMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  agentsMeta: AgentsMeta
+  agentsMeta: AgentsMeta,
+  customTypesFile: string
 ) => {
   const requiredTypes = new Set<string>()
 
   const serializedAgents = generateAgents(agentsMeta, typesMap, requiredTypes)
 
   const hasAny = Object.keys(agentsMeta).length > 0
-  const serializedCustomTypes = hasAny
-    ? generateCustomTypes(typesMap, requiredTypes)
-    : ''
 
   const serializedImportMap = hasAny
     ? serializeImportMap(
@@ -29,12 +28,21 @@ export const serializeAgentMap = (
       )
     : ''
 
+  const customTypesImport = hasAny
+    ? serializeCustomTypesImport(
+        relativeToPath,
+        customTypesFile,
+        packageMappings,
+        typesMap
+      )
+    : ''
+
   return `/**
  * Agent type map with output types for each agent
  */
 
 ${serializedImportMap}
-${serializedCustomTypes}
+${customTypesImport}
 
 interface AgentHandler<O> {
     output: O;

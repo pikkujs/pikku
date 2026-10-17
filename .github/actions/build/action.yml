@@ -38,6 +38,11 @@ runs:
         key: ts-build-v3-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
           ts-build-v3-
+    # pikku-inspect is built by its own job in parallel with this one
+    # (inspector-go-build); codegen here runs on the default TypeScript engine.
+    - name: Skip the Go build
+      shell: bash
+      run: echo "PIKKU_INSPECTOR_GO_SKIP_BUILD=1" >> "$GITHUB_ENV"
     - name: Build packages
       shell: bash
       run: |

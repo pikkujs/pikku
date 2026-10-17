@@ -1,0 +1,1534 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [
+      [
+        "shop",
+        [
+          "socketService"
+        ]
+      ]
+    ],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {
+      "OnPushInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ChatHandlerInput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ReceiveOutput": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "not": {}
+            }
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "additionalProperties": false,
+        "definitions": {}
+      },
+      "ChargeInput": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "functions": {
+      "typesMap": {
+        "map": [
+          [
+            "ChargeInput",
+            {
+              "originalName": "ChargeInput",
+              "path": "<fixture>/node_modules/@fixture/shop-addon/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+            }
+          ],
+          [
+            "ChargeOutput",
+            {
+              "originalName": "ChargeOutput",
+              "path": "<fixture>/node_modules/@fixture/shop-addon/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+            }
+          ],
+          [
+            "ListChargesInput",
+            {
+              "originalName": "ListChargesInput",
+              "path": "<fixture>/node_modules/@fixture/shop-addon/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+            }
+          ],
+          [
+            "__object_<pathhash>",
+            {
+              "originalName": "__object",
+              "path": "<fixture>/src/functions.ts"
+            }
+          ]
+        ],
+        "customTypes": [
+          [
+            "OnPushInput",
+            {
+              "type": "{ ref: string; }",
+              "references": []
+            }
+          ],
+          [
+            "ChatHandlerInput",
+            {
+              "type": "{ text: string; }",
+              "references": []
+            }
+          ],
+          [
+            "ReceiveOutput",
+            {
+              "type": "{ events: never[]; }",
+              "references": [
+                "__object_<pathhash>"
+              ]
+            }
+          ]
+        ]
+      },
+      "meta": {
+        "nightly": {
+          "pikkuFuncId": "nightly",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "nightly",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "23d1216e6f46ced0",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "nightly",
+          "bodyStart": 3,
+          "bodyEnd": 3,
+          "contractHash": "b2ea6b87dd1342db",
+          "inputHash": "87715231",
+          "outputHash": "8ff3833b"
+        },
+        "onPush": {
+          "pikkuFuncId": "onPush",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "onPush",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "OnPushInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "OnPushInput"
+          ],
+          "outputs": [],
+          "implementationHash": "23d1216e6f46ced0",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "onPush",
+          "bodyStart": 5,
+          "bodyEnd": 5,
+          "contractHash": "b04dcf43a992769f",
+          "inputHash": "2ed4f658",
+          "outputHash": "2b98c581"
+        },
+        "sourceFunc": {
+          "pikkuFuncId": "sourceFunc",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "sourceFunc",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "23d1216e6f46ced0",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "sourceFunc",
+          "bodyStart": 7,
+          "bodyEnd": 7,
+          "contractHash": "b413f914f73d2619",
+          "inputHash": "da96745f",
+          "outputHash": "e8ab99ce"
+        },
+        "chatHandler": {
+          "pikkuFuncId": "chatHandler",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "chatHandler",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": "ChatHandlerInput",
+          "outputSchemaName": null,
+          "inputs": [
+            "ChatHandlerInput"
+          ],
+          "outputs": [],
+          "implementationHash": "23d1216e6f46ced0",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "chatHandler",
+          "bodyStart": 9,
+          "bodyEnd": 9,
+          "contractHash": "9643235726d00f0d",
+          "inputHash": "7e0687c0",
+          "outputHash": "98471fd8"
+        },
+        "receive": {
+          "pikkuFuncId": "receive",
+          "functionType": "user",
+          "funcWrapper": "pikkuWebhookReceive",
+          "sessionless": true,
+          "name": "receive",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": "ReceiveOutput",
+          "inputs": [],
+          "outputs": [
+            "ReceiveOutput"
+          ],
+          "auth": false,
+          "webhookReceive": true,
+          "implementationHash": "0b151bbf9e72dda5",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "receive",
+          "bodyStart": 11,
+          "bodyEnd": 11
+        },
+        "notAReceiver": {
+          "pikkuFuncId": "notAReceiver",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "sessionless": true,
+          "name": "notAReceiver",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "implementationHash": "23d1216e6f46ced0",
+          "isDirectFunction": true,
+          "sourceFile": "<fixture>/src/functions.ts",
+          "exportedName": "notAReceiver",
+          "bodyStart": 12,
+          "bodyEnd": 12,
+          "contractHash": "dfaf38583217d333",
+          "inputHash": "162b36de",
+          "outputHash": "342eeba0"
+        },
+        "gateway__whatsapp__post": {
+          "pikkuFuncId": "gateway__whatsapp__post",
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "sessionless": true,
+          "contractHash": "2705825aa54cea2c",
+          "inputHash": "dedb796f",
+          "outputHash": "da68d7e9"
+        },
+        "gateway__whatsapp__verify": {
+          "pikkuFuncId": "gateway__whatsapp__verify",
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "sessionless": true,
+          "contractHash": "143556c64763c21f",
+          "inputHash": "39cc4fce",
+          "outputHash": "717ae0a7"
+        },
+        "gateway:chat-ws": {
+          "pikkuFuncId": "gateway:chat-ws",
+          "functionType": "inline",
+          "name": "chat-ws",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/gateway.ts",
+          "sessionless": true,
+          "contractHash": "1b07f18b78268cfd",
+          "inputHash": "8630affb",
+          "outputHash": "f904d622"
+        },
+        "scheduler:inline-job": {
+          "pikkuFuncId": "scheduler:inline-job",
+          "functionType": "inline",
+          "name": "inline-job",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/schedule.ts",
+          "sessionless": true,
+          "contractHash": "234b9f0933fcb3c3",
+          "inputHash": "147cba61",
+          "outputHash": "9a51b372"
+        },
+        "trigger:plain": {
+          "pikkuFuncId": "trigger:plain",
+          "functionType": "inline",
+          "name": "plain",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/triggers.ts",
+          "sessionless": true,
+          "contractHash": "d23a6d0d7a5614b4",
+          "inputHash": "7845e758",
+          "outputHash": "78c6949a"
+        },
+        "trigger-webhook:github:check": {
+          "pikkuFuncId": "trigger-webhook:github:check",
+          "functionType": "inline",
+          "name": "github:check",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/triggers.ts",
+          "sessionless": true,
+          "contractHash": "5c982870d8881df0",
+          "inputHash": "04380f3e",
+          "outputHash": "e63c50af"
+        }
+      },
+      "files": [
+        [
+          "nightly",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "nightly"
+          }
+        ],
+        [
+          "onPush",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "onPush"
+          }
+        ],
+        [
+          "sourceFunc",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "sourceFunc"
+          }
+        ],
+        [
+          "chatHandler",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "chatHandler"
+          }
+        ],
+        [
+          "receive",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "receive"
+          }
+        ],
+        [
+          "notAReceiver",
+          {
+            "path": "<fixture>/src/functions.ts",
+            "exportedName": "notAReceiver"
+          }
+        ]
+      ],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {
+          "/gateways/whatsapp": {
+            "pikkuFuncId": "gateway__whatsapp__verify",
+            "route": "/gateways/whatsapp",
+            "method": "get",
+            "requiresSession": false
+          }
+        },
+        "post": {
+          "/gateways/whatsapp": {
+            "pikkuFuncId": "gateway__whatsapp__post",
+            "route": "/gateways/whatsapp",
+            "method": "post",
+            "requiresSession": false
+          }
+        },
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [
+        "<fixture>/src/gateway.ts"
+      ],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {
+        "whatsapp": {
+          "pikkuFuncId": "chatHandler",
+          "name": "whatsapp",
+          "type": "webhook",
+          "route": "/gateways/whatsapp",
+          "platform": "whatsapp",
+          "auth": false,
+          "gateway": true,
+          "tags": [
+            "chat"
+          ]
+        },
+        "chat-ws": {
+          "pikkuFuncId": "gateway:chat-ws",
+          "name": "chat-ws",
+          "type": "websocket",
+          "gateway": true,
+          "description": "Live chat"
+        },
+        "listener": {
+          "pikkuFuncId": "chatHandler",
+          "name": "listener",
+          "type": "listener",
+          "gateway": true
+        }
+      },
+      "files": [
+        "<fixture>/src/gateway.ts"
+      ]
+    },
+    "triggers": {
+      "meta": {
+        "github:push": {
+          "pikkuFuncId": "onPush",
+          "name": "github:push",
+          "tags": [
+            "github"
+          ]
+        },
+        "github:deleted": {
+          "pikkuFuncId": "onPush",
+          "name": "github:deleted"
+        },
+        "plain": {
+          "pikkuFuncId": "trigger:plain",
+          "name": "plain"
+        }
+      },
+      "sourceMeta": {
+        "poller": {
+          "name": "poller",
+          "pikkuFuncId": "sourceFunc"
+        }
+      },
+      "webhookSourceMeta": {
+        "shop-stripe": {
+          "name": "shop-stripe",
+          "method": "post",
+          "route": "/webhooks/shop-stripe",
+          "events": [
+            "charge.succeeded"
+          ],
+          "receive": "shop:receiveHook",
+          "check": "other:check"
+        },
+        "shop-connect": {
+          "name": "shop-connect",
+          "method": [
+            "post",
+            "put"
+          ],
+          "route": "/webhooks/shop-connect",
+          "events": [],
+          "receive": "shop:receiveHook",
+          "setup": "shop:charge"
+        },
+        "bare": {
+          "name": "bare",
+          "method": "post",
+          "route": "/webhooks/bare",
+          "events": [
+            "a"
+          ],
+          "receive": "bare:ping"
+        },
+        "github": {
+          "name": "github",
+          "method": "post",
+          "route": "/webhooks/github",
+          "events": [
+            "push",
+            "release"
+          ],
+          "receive": "receive",
+          "check": "trigger-webhook:github:check",
+          "setup": "shop:charge",
+          "teardown": "missing:fn"
+        },
+        "my-hook_source": {
+          "name": "my-hook_source",
+          "method": [
+            "post",
+            "put"
+          ],
+          "route": "/hooks/custom",
+          "events": [],
+          "receive": "notAReceiver"
+        },
+        "no-verify": {
+          "name": "no-verify",
+          "method": "get",
+          "route": "/webhooks/no-verify",
+          "events": [],
+          "receive": "receive"
+        }
+      },
+      "files": [
+        "<fixture>/src/triggers.ts"
+      ]
+    },
+    "scheduledTasks": {
+      "meta": {
+        "nightly": {
+          "pikkuFuncId": "nightly",
+          "name": "nightly",
+          "schedule": "0 0 * * *",
+          "summary": "Nightly job",
+          "description": "Runs at midnight",
+          "tags": [
+            "jobs",
+            "cron"
+          ]
+        },
+        "inline-job": {
+          "pikkuFuncId": "scheduler:inline-job",
+          "name": "inline-job",
+          "schedule": "*/5 * * * *"
+        },
+        "numeric": {
+          "pikkuFuncId": "nightly",
+          "name": "numeric",
+          "schedule": "60"
+        }
+      },
+      "files": [
+        "<fixture>/src/schedule.ts"
+      ]
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {
+        "nightly": "nightly",
+        "onPush": "onPush",
+        "sourceFunc": "sourceFunc",
+        "chatHandler": "chatHandler",
+        "notAReceiver": "notAReceiver"
+      },
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [
+        "shop:charge",
+        "missing:fn"
+      ],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [
+        "shop",
+        "bare",
+        "unbuilt",
+        "missing",
+        "registry",
+        "public",
+        "custom"
+      ],
+      "wireAddonDeclarations": [
+        [
+          "shop",
+          {
+            "package": "@fixture/shop-addon",
+            "ui": true,
+            "file": "<fixture>/src/addons.ts",
+            "mcp": [
+              "charge",
+              "listCharges",
+              "nope"
+            ],
+            "mcpEndpoint": true,
+            "expose": [
+              "charge",
+              "ghost"
+            ],
+            "auth": true,
+            "tags": [
+              "addon"
+            ],
+            "scopes": [
+              "zeta",
+              "admin"
+            ],
+            "uses": {
+              "kysely": "db"
+            },
+            "secretOverrides": {
+              "STRIPE_KEY": "SHOP_STRIPE_KEY"
+            },
+            "variableOverrides": {
+              "CURRENCY": "SHOP_CURRENCY"
+            },
+            "credentialOverrides": {
+              "stripeOAuth": {
+                "name": "shopStripe",
+                "mode": "wire"
+              },
+              "apiToken": "shopToken"
+            },
+            "secretGrants": [
+              "A"
+            ],
+            "credentialGrants": [
+              "B"
+            ],
+            "globalSecrets": "true as any",
+            "contentBucket": "shop-content",
+            "contentGrants": {
+              "images": "read"
+            }
+          }
+        ],
+        [
+          "bare",
+          {
+            "package": "@fixture/bare-addon",
+            "ui": true,
+            "file": "<fixture>/src/addons.ts",
+            "mcp": true,
+            "mcpEndpoint": "/mcp/bare-tools"
+          }
+        ],
+        [
+          "unbuilt",
+          {
+            "package": "@fixture/unbuilt",
+            "file": "<fixture>/src/addons.ts"
+          }
+        ],
+        [
+          "missing",
+          {
+            "package": "@fixture/not-installed",
+            "file": "<fixture>/src/addons.ts"
+          }
+        ],
+        [
+          "registry",
+          {
+            "package": "@fixture/registry",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": true,
+            "authCredentialId": "registryToken"
+          }
+        ],
+        [
+          "public",
+          {
+            "package": "@fixture/public",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": false
+          }
+        ],
+        [
+          "custom",
+          {
+            "package": "@fixture/custom",
+            "file": "<fixture>/src/addons.ts",
+            "remote": true,
+            "hasAuth": true
+          }
+        ]
+      ],
+      "wireAddonFiles": [
+        "<fixture>/src/addons.ts"
+      ]
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {
+        "shop:charge": {
+          "pikkuFuncId": "shop:charge",
+          "name": "shop:charge",
+          "description": "Charge a card",
+          "tags": [
+            "payments"
+          ],
+          "inputSchema": "ChargeInput",
+          "outputSchema": "ChargeOutput",
+          "surface": "shop"
+        },
+        "shop:listCharges": {
+          "pikkuFuncId": "shop:listCharges",
+          "name": "shop:listCharges",
+          "description": "listCharges",
+          "inputSchema": "ListChargesInput",
+          "outputSchema": null,
+          "surface": "shop"
+        },
+        "bare:ping": {
+          "pikkuFuncId": "bare:ping",
+          "name": "bare:ping",
+          "description": "ping",
+          "inputSchema": null,
+          "outputSchema": null,
+          "surface": "bare"
+        }
+      },
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {
+        "shop": "/mcp/shop",
+        "bare": "/mcp/bare-tools"
+      }
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [
+        {
+          "name": "stripeKey",
+          "displayName": "Stripe key",
+          "secretId": "SHOP_STRIPE_KEY",
+          "schema": "StripeKey"
+        },
+        {
+          "name": "legacy",
+          "displayName": "Legacy key",
+          "secretId": "legacy"
+        },
+        {
+          "name": "[object Object]App",
+          "displayName": "Stripe OAuth App",
+          "description": "OAuth2 app client id and secret for Stripe.",
+          "optional": true,
+          "oauth2": {
+            "tokenUrl": "https://x"
+          }
+        }
+      ],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [
+        {
+          "name": {
+            "name": "shopStripe",
+            "mode": "wire"
+          },
+          "displayName": "Stripe",
+          "type": "wire",
+          "oauth2": {
+            "tokenUrl": "https://x"
+          }
+        },
+        {
+          "name": "shopToken",
+          "type": "singleton"
+        },
+        {
+          "name": "githubWebhookSecret",
+          "displayName": "github webhook secret",
+          "description": "GitHub signing secret",
+          "type": "singleton",
+          "schema": {
+            "type": "string"
+          },
+          "sourceFile": "<fixture>/src/triggers.ts"
+        },
+        {
+          "name": "customSecret",
+          "displayName": "my-hook_source webhook secret",
+          "type": "singleton",
+          "schema": {
+            "type": "string"
+          },
+          "sourceFile": "<fixture>/src/triggers.ts"
+        }
+      ],
+      "files": [
+        "<fixture>/src/triggers.ts"
+      ]
+    },
+    "scopes": {
+      "definitions": [
+        {
+          "name": "payments",
+          "displayName": "Payments",
+          "scopes": {
+            "read": {},
+            "charge": {}
+          },
+          "origin": {
+            "kind": "addon",
+            "package": "@fixture/shop-addon",
+            "displayName": "Payments addon"
+          }
+        }
+      ],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [
+        {
+          "name": "currency",
+          "variableId": "SHOP_CURRENCY"
+        },
+        {
+          "name": "region",
+          "variableId": "region"
+        }
+      ],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "nightly": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "87715231",
+                "outputHash": "8ff3833b"
+              }
+            }
+          },
+          "onPush": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "2ed4f658",
+                "outputHash": "2b98c581"
+              }
+            }
+          },
+          "sourceFunc": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "da96745f",
+                "outputHash": "e8ab99ce"
+              }
+            }
+          },
+          "chatHandler": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "7e0687c0",
+                "outputHash": "98471fd8"
+              }
+            }
+          },
+          "notAReceiver": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "162b36de",
+                "outputHash": "342eeba0"
+              }
+            }
+          },
+          "gateway__whatsapp__post": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "dedb796f",
+                "outputHash": "da68d7e9"
+              }
+            }
+          },
+          "gateway__whatsapp__verify": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "39cc4fce",
+                "outputHash": "717ae0a7"
+              }
+            }
+          },
+          "gateway:chat-ws": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "8630affb",
+                "outputHash": "f904d622"
+              }
+            }
+          },
+          "scheduler:inline-job": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "147cba61",
+                "outputHash": "9a51b372"
+              }
+            }
+          },
+          "trigger:plain": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "7845e758",
+                "outputHash": "78c6949a"
+              }
+            }
+          },
+          "trigger-webhook:github:check": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "04380f3e",
+                "outputHash": "e63c50af"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [
+        "scopeService",
+        "credentialService"
+      ],
+      "usedFunctions": [
+        "shop:receiveHook",
+        "other:check",
+        "shop:charge",
+        "bare:ping",
+        "chatHandler",
+        "gateway:chat-ws",
+        "nightly",
+        "scheduler:inline-job",
+        "onPush",
+        "trigger:plain",
+        "receive",
+        "trigger-webhook:github:check",
+        "missing:fn",
+        "notAReceiver"
+      ],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "nightly": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "onPush": {
+        "inputType": "OnPushInput",
+        "outputType": "null"
+      },
+      "sourceFunc": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "chatHandler": {
+        "inputType": "ChatHandlerInput",
+        "outputType": "null"
+      },
+      "receive": {
+        "inputType": "null",
+        "outputType": "ReceiveOutput"
+      },
+      "notAReceiver": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "gateway__whatsapp__post": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "gateway__whatsapp__verify": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "gateway:chat-ws": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "scheduler:inline-job": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "trigger:plain": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "trigger-webhook:github:check": {
+        "inputType": "null",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [
+      "OnPushInput",
+      "ChatHandlerInput",
+      "ReceiveOutput"
+    ],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {
+      "shop": {
+        "charge": {
+          "pikkuFuncId": "charge",
+          "functionType": "user",
+          "funcWrapper": "pikkuFunc",
+          "sessionless": false,
+          "inputSchemaName": "ChargeInput",
+          "outputSchemaName": "ChargeOutput",
+          "description": "Charge a card",
+          "mcp": true,
+          "tags": [
+            "payments"
+          ],
+          "expose": true,
+          "customField": {
+            "kept": [
+              1,
+              2
+            ]
+          }
+        },
+        "refund": {
+          "pikkuFuncId": "refund",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "title": "Refund a charge",
+          "mcp": false
+        },
+        "listCharges": {
+          "pikkuFuncId": "listCharges",
+          "functionType": "user",
+          "funcWrapper": "pikkuSessionlessFunc",
+          "inputSchemaName": "ListChargesInput",
+          "outputSchemaName": null
+        },
+        "receiveHook": {
+          "pikkuFuncId": "receiveHook",
+          "functionType": "user",
+          "funcWrapper": "pikkuWebhookReceive",
+          "webhookReceive": true,
+          "inputSchemaName": null,
+          "outputSchemaName": null
+        }
+      },
+      "bare": {
+        "ping": {
+          "pikkuFuncId": "ping",
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "mcp": true
+        }
+      }
+    },
+    "screensManifest": {
+      "title": "Admin",
+      "icon": "gear",
+      "file": "<fixture>/src/screens.ts",
+      "screens": [
+        {
+          "path": "/users",
+          "title": "Users",
+          "nav": true,
+          "scopes": [
+            "admin"
+          ],
+          "component": "./screens/users.js"
+        },
+        {
+          "path": "/docs",
+          "title": "Docs",
+          "app": "docs-app"
+        },
+        {
+          "path": "/scopes",
+          "title": "Scopes",
+          "app": "y"
+        }
+      ]
+    },
+    "addonScreens": {
+      "shop": {
+        "title": "Payments",
+        "icon": "card",
+        "screens": [
+          {
+            "path": "/charges",
+            "title": "Charges",
+            "component": "./screens/charges.js",
+            "scopes": [
+              "payments:read"
+            ]
+          }
+        ],
+        "scopes": [
+          "admin",
+          "payments:read",
+          "zeta"
+        ]
+      }
+    },
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {
+        "shop": {
+          "shopRoutes": {
+            "basePath": "/shop",
+            "tags": [],
+            "routes": {
+              "charge": {
+                "method": "post",
+                "route": "/charge",
+                "func": {
+                  "pikkuFuncId": "shop:charge",
+                  "packageName": "@fixture/shop-addon"
+                }
+              },
+              "nested": {
+                "routes": {
+                  "refund": {
+                    "method": "post",
+                    "route": "/refund",
+                    "func": {
+                      "pikkuFuncId": "shop:refund",
+                      "packageName": "@other/pkg"
+                    }
+                  }
+                }
+              },
+              "group": {
+                "list": {
+                  "method": "get",
+                  "route": "/charges",
+                  "func": {
+                    "pikkuFuncId": "x:listCharges",
+                    "packageName": "@fixture/shop-addon"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "addonCli": {
+        "shop": {
+          "shopCommands": {
+            "charge": {
+              "pikkuFuncId": "shop:charge",
+              "positionals": [],
+              "options": {},
+              "packageName": "@fixture/shop-addon"
+            },
+            "admin": {
+              "subcommands": {
+                "refund": {
+                  "pikkuFuncId": "shop:refund",
+                  "packageName": "@fixture/shop-addon"
+                }
+              }
+            }
+          }
+        }
+      },
+      "addonChannel": {
+        "shop": {
+          "shopChannel": {
+            "charge": {
+              "pikkuFuncId": "shop:charge",
+              "packageName": "@fixture/shop-addon"
+            },
+            "refund": {
+              "pikkuFuncId": "shop:refund",
+              "packageName": "@x/y"
+            }
+          }
+        }
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "critical",
+      "code": "PKU344",
+      "message": "wireAddon's expose must be true, false or an array of string literals, got: someList"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's component must be () => import('<literal>'), got: (() => null) as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A defineScreens screen needs a literal path and title, and either a lazy component or an app: { path: '/bad', title: 'Bad', component: (() => null) as any }"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "Screen '/both' sets both component and app; a screen is one or the other"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A screen's scopes must be an array of string literals, got: [1 as any]"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A defineScreens screen must be an object literal, got: { title: 'No path', app: 'z' } as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU345",
+      "message": "A defineScreens screen must be an object literal, got: 'not-an-object' as any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU348",
+      "message": "@fixture/shop-addon needs email, but wireAddon('shop') does not map it. Wire email and add uses: { 'email': '<name>' } to this wireAddon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU341",
+      "message": "wireAddon('shop') lists 'nope' under mcp, but @fixture/shop-addon publishes no such function."
+    },
+    {
+      "level": "critical",
+      "code": "PKU343",
+      "message": "wireAddon('shop') lists 'ghost' under expose, but @fixture/shop-addon publishes no such function."
+    },
+    {
+      "level": "critical",
+      "code": "PKU346",
+      "message": "wireAddon('bare') sets ui: true, but @fixture/bare-addon declares no screens. Add a defineScreens call to the package, or drop ui."
+    },
+    {
+      "level": "warn",
+      "message": "wireAddon('unbuilt') (declared in src/addons.ts): @fixture/unbuilt is installed at <fixture>/node_modules/@fixture/unbuilt but has not been built — its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <fixture>/node_modules/@fixture/unbuilt."
+    },
+    {
+      "level": "warn",
+      "message": "wireAddon('missing') (declared in src/addons.ts) names @fixture/not-installed, which is not installed where it can be resolved — tried <fixture>. Add \"@fixture/not-installed\": \"workspace:*\" (or a version) to the dependencies of <fixture>/package.json and run install."
+    },
+    {
+      "level": "critical",
+      "code": "PKU236",
+      "message": "No valid 'func' property for gateway 'nofunc'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU247",
+      "message": "Scheduler 'numeric' has invalid 'tags' property - must be an array of strings."
+    },
+    {
+      "level": "critical",
+      "code": "PKU236",
+      "message": "No valid 'func' property for scheduled task 'no-func'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU236",
+      "message": "No valid 'func' property for trigger 'nofunc'."
+    },
+    {
+      "level": "warn",
+      "message": "Webhook source 'github': addon function metadata for 'missing:fn' is not available yet."
+    },
+    {
+      "level": "critical",
+      "code": "PKU111",
+      "message": "wireTriggerWebhookSource in <fixture>/src/triggers.ts needs 'name' as a string literal."
+    },
+    {
+      "level": "error",
+      "message": "Webhook source 'my-hook_source' receives with 'notAReceiver', a pikkuSessionlessFunc. Declare it with pikkuWebhookReceive so it is never callable as an RPC."
+    },
+    {
+      "level": "error",
+      "message": "Trigger 'github:deleted' listens for 'deleted', which webhook source 'github' does not declare. Declared: push, release."
+    },
+    {
+      "level": "warn",
+      "code": "PKU575",
+      "message": "wireAddon('shop') declares tag 'addon', but no addTagMiddleware('addon', …) registers anything for it. The tag resolves to an empty middleware list, so it applies no gate to the addon at all. Register middleware for it, or drop the tag if it is only meant to group and document."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Secret grant 'A' in addon 'shop' (@fixture/shop-addon) targets a secret that does not exist. Available secrets: SHOP_STRIPE_KEY, legacy, [object Object]App"
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Credential override 'stripeOAuth' -> 'shopStripe' in addon 'shop' (@fixture/shop-addon) targets a credential that does not exist. Available credentials: [object Object], shopToken, githubWebhookSecret, customSecret"
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Credential grant 'B' in addon 'shop' (@fixture/shop-addon) targets a credential that does not exist. Available credentials: [object Object], shopToken, githubWebhookSecret, customSecret"
+    },
+    {
+      "level": "critical",
+      "code": "PKU347",
+      "message": "Addon 'shop' uses 'kysely' as 'db', but no addon is wired under the name 'db'. Wired: shop, bare, unbuilt, missing, registry, public, custom"
+    },
+    {
+      "level": "critical",
+      "code": "PKU349",
+      "message": "Addon 'shop' grants content under 'images', but 'images' is not the content bucket of any wired addon. Buckets: shop-content, bare, unbuilt, missing, registry, public, custom"
+    },
+    {
+      "level": "critical",
+      "code": "PKU340",
+      "message": "Addon 'missing' ('@fixture/not-installed') is wired with wireAddon but cannot be resolved from <fixture> — every ref('missing:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of <fixture>/package.json and install, or remove the wireAddon call."
+    },
+    {
+      "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'registry' ('@fixture/registry') is wired with wireRemoteAddon but is not in the \"devDependencies\" of <fixture>/package.json. Add '@fixture/registry' to \"devDependencies\" (types only)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'public' ('@fixture/public') is wired with wireRemoteAddon but is not in the \"devDependencies\" of <fixture>/package.json. Add '@fixture/public' to \"devDependencies\" (types only)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU338",
+      "message": "Remote addon 'custom' ('@fixture/custom') is wired with wireRemoteAddon but is not in the \"devDependencies\" of <fixture>/package.json. Add '@fixture/custom' to \"devDependencies\" (types only)."
+    },
+    {
+      "level": "critical",
+      "code": "PKU339",
+      "message": "Remote addon 'registry' binds auth.credentialId 'registryToken', but no such credential is wired. Available credentials: [object Object], shopToken, githubWebhookSecret, customSecret"
+    }
+  ],
+  "validationPass": {
+    "start": 21,
+    "end": 32
+  }
+}

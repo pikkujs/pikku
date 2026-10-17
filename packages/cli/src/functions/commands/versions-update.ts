@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/lite'
 import { saveManifest } from '../../utils/contract-versions.js'
 
 export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({

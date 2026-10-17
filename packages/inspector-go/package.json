@@ -1,0 +1,65 @@
+{
+  "name": "@pikku/inspector-go",
+  "version": "0.12.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/inspector-go"
+  },
+  "description": "Native inspector engine for Pikku, opt-in through `inspector: \"native\"` — runs analysis and finalize in the pikku-inspect binary, built on typescript-go",
+  "author": "yasser.fadl@gmail.com",
+  "license": "BUSL-1.1",
+  "type": "module",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./protocol/*.json": "./protocol/*.json"
+  },
+  "files": [
+    "dist",
+    "protocol",
+    "scripts/vendor-schemas.mjs",
+    "LICENSE"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc -b && node scripts/build-go.mjs",
+    "build:go": "node scripts/build-go.mjs --strict",
+    "build:go:all": "node scripts/build-go.mjs --all",
+    "check:binaries": "node scripts/check-platform-binary.mjs --all",
+    "check:tsgo-pin": "bash scripts/check-tsgo-pin.sh",
+    "parity": "bun parity/parity.ts",
+    "ncu": "npx npm-check-updates",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@pikku/inspector": "^0.12.106"
+  },
+  "optionalDependencies": {
+    "@pikku/inspector-go-darwin-arm64": "0.12.0",
+    "@pikku/inspector-go-darwin-x64": "0.12.0",
+    "@pikku/inspector-go-linux-arm64": "0.12.0",
+    "@pikku/inspector-go-linux-x64": "0.12.0",
+    "@pikku/inspector-go-win32-x64": "0.12.0"
+  },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.142"
+  },
+  "devDependencies": {
+    "@pikku/core": "^0.12.142",
+    "@types/node": "^24.13.3",
+    "ajv": "^8.20.0",
+    "tinyglobby": "^0.2.17"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

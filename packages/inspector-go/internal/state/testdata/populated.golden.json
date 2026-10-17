@@ -1,0 +1,308 @@
+{
+  "rootDir": "/root/ x<&>",
+  "singletonServicesTypeImportMap": [
+    [
+      "/s.ts",
+      [
+        {
+          "variable": "S",
+          "type": "S",
+          "typePath": null
+        }
+      ]
+    ]
+  ],
+  "wireServicesTypeImportMap": [],
+  "userSessionTypeImportMap": [],
+  "configTypeImportMap": [],
+  "singletonServicesFactories": [],
+  "wireServicesFactories": [],
+  "wireServicesMeta": [],
+  "addonRequiredParentServices": [],
+  "addonCreatedServices": [],
+  "addonServicesFactorySeen": false,
+  "addonServerlessIncompatible": [],
+  "configFactories": [],
+  "serverLifecycleFactories": [],
+  "filesAndMethods": {},
+  "filesAndMethodsErrors": [],
+  "schemaLookup": [],
+  "schemas": {
+    "2": [
+      true,
+      null
+    ],
+    "10": 1,
+    "b": {
+      "x": " \u0007\"\\é😀",
+      "n": 1.5e-7,
+      "big": 1e+21
+    }
+  },
+  "functions": {
+    "typesMap": {
+      "map": [
+        [
+          "Foo",
+          {
+            "originalName": "Foo",
+            "path": "/a/foo.ts"
+          }
+        ]
+      ],
+      "customTypes": [
+        [
+          "Bar",
+          {
+            "type": "{a:string}",
+            "references": [
+              "Foo"
+            ]
+          }
+        ]
+      ]
+    },
+    "meta": {
+      "z": {
+        "pikkuFuncId": "z",
+        "functionType": "user",
+        "name": "z",
+        "services": {
+          "optimized": true,
+          "services": [
+            "a"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "Foo",
+        "inputs": [],
+        "outputs": [
+          "Foo"
+        ],
+        "expose": true,
+        "tags": [
+          "t"
+        ]
+      }
+    },
+    "files": [],
+    "approvalDescriptions": {},
+    "dynamicImportIds": []
+  },
+  "http": {
+    "metaInputTypes": [],
+    "meta": {
+      "get": {
+        "/a/:id": {
+          "pikkuFuncId": "z",
+          "route": "/a/:id",
+          "sourceFile": "/f.ts",
+          "method": "get",
+          "params": [
+            "id"
+          ]
+        }
+      },
+      "post": {},
+      "put": {},
+      "delete": {},
+      "head": {},
+      "patch": {},
+      "options": {}
+    },
+    "files": [
+      "/f.ts"
+    ],
+    "routeMiddleware": []
+  },
+  "channels": {
+    "files": [],
+    "meta": {}
+  },
+  "gateways": {
+    "meta": {},
+    "files": []
+  },
+  "triggers": {
+    "meta": {},
+    "sourceMeta": {},
+    "webhookSourceMeta": {},
+    "files": []
+  },
+  "scheduledTasks": {
+    "meta": {},
+    "files": []
+  },
+  "queueWorkers": {
+    "meta": {},
+    "files": []
+  },
+  "workflows": {
+    "meta": {},
+    "files": [],
+    "graphMeta": {},
+    "graphFiles": [],
+    "featureFiles": [],
+    "invokedWorkflows": []
+  },
+  "rpc": {
+    "internalMeta": {},
+    "internalFiles": [],
+    "exposedMeta": {},
+    "exposedFiles": [],
+    "remoteMeta": {},
+    "remoteFiles": [],
+    "invokedFunctions": [],
+    "invokedFunctionsByFile": [
+      [
+        "/f.ts",
+        [
+          "z"
+        ]
+      ]
+    ],
+    "usedAddons": [],
+    "wireAddonDeclarations": [],
+    "wireAddonFiles": []
+  },
+  "mcpEndpoints": {
+    "resourcesMeta": {},
+    "toolsMeta": {},
+    "promptsMeta": {},
+    "files": [],
+    "surfaces": {}
+  },
+  "agents": {
+    "agentsMeta": {},
+    "files": [],
+    "invokedAgentsByFile": []
+  },
+  "scorers": {
+    "scorersMeta": {},
+    "files": []
+  },
+  "cli": {
+    "meta": {
+      "programs": {},
+      "renderers": {}
+    },
+    "files": []
+  },
+  "nodes": {
+    "meta": {},
+    "files": []
+  },
+  "auth": {
+    "providers": [],
+    "plugins": [],
+    "files": [],
+    "definition": null
+  },
+  "secrets": {
+    "definitions": [],
+    "files": [],
+    "usage": {
+      "/f.ts": {
+        "keys": [
+          "K"
+        ],
+        "dynamic": []
+      }
+    }
+  },
+  "surfaceUsage": {
+    "#pikku/x": {
+      "y": {
+        "imports": 2,
+        "seenIn": [
+          "src"
+        ],
+        "files": [
+          "a.ts"
+        ]
+      }
+    }
+  },
+  "credentials": {
+    "definitions": [],
+    "files": []
+  },
+  "scopes": {
+    "definitions": [],
+    "files": []
+  },
+  "systemRoles": {
+    "definitions": [],
+    "files": []
+  },
+  "featureFlags": {
+    "definitions": [],
+    "files": []
+  },
+  "virtualUsers": {
+    "definitions": [],
+    "files": []
+  },
+  "variables": {
+    "definitions": [],
+    "files": []
+  },
+  "manifest": {
+    "initial": null,
+    "current": null,
+    "errors": []
+  },
+  "middleware": {
+    "definitions": {},
+    "instances": {},
+    "globalFiles": [],
+    "tagMiddleware": []
+  },
+  "channelMiddleware": {
+    "definitions": {},
+    "instances": {},
+    "tagMiddleware": []
+  },
+  "agentMiddleware": {
+    "definitions": {}
+  },
+  "permissions": {
+    "definitions": {},
+    "instances": {}
+  },
+  "serviceAggregation": {
+    "requiredServices": [],
+    "usedFunctions": [],
+    "usedMiddleware": [],
+    "usedPermissions": [],
+    "allSingletonServices": [],
+    "allWireServices": []
+  },
+  "resolvedIOTypes": {},
+  "middlewareGroupsMeta": {
+    "definitions": {},
+    "instances": {},
+    "httpGroups": {},
+    "tagGroups": {},
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagGroups": {}
+    }
+  },
+  "permissionsGroupsMeta": {
+    "definitions": {}
+  },
+  "requiredSchemas": [],
+  "openAPISpec": null,
+  "diagnostics": [],
+  "addonFunctions": {},
+  "exportedContracts": {
+    "http": {},
+    "cli": {},
+    "channel": {},
+    "addonHttp": {},
+    "addonCli": {},
+    "addonChannel": {}
+  }
+}

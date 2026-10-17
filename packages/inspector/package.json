@@ -18,10 +18,20 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./lite": {
+      "types": "./dist/lite.d.ts",
+      "import": "./dist/lite.js",
+      "default": "./dist/lite.js"
+    },
     "./schema-generator": {
       "types": "./dist/schema-generator.d.ts",
       "import": "./dist/schema-generator.js",
       "default": "./dist/schema-generator.js"
+    },
+    "./finalize": {
+      "types": "./dist/finalize.d.ts",
+      "import": "./dist/finalize.js",
+      "default": "./dist/finalize.js"
     },
     "./surface": {
       "types": "./dist/surface/collect-surface.d.ts",

@@ -5,11 +5,11 @@ import type { AddonsMeta } from '../wirings/functions/serialize-addon-types.js'
 import { projectAddonMockSources, readAddonsMeta } from './addon-mocks.js'
 import { diffMocks } from './diff.js'
 import { readMocks } from './read.js'
+import { scanFrontend } from '../../inspector-helpers.js'
 import {
   callIndex,
   checkStubs,
   frontendFiles,
-  scanFrontend,
   type StubCheck,
   type StubProblemKind,
 } from './stub-scan.js'

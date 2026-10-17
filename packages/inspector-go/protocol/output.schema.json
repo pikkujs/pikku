@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pikku.dev/schemas/inspector-go/protocol/1/output.json",
+  "title": "pikku-inspect --stdin output",
+  "description": "What `pikku-inspect --stdin` writes to stdout when it exits 0: a finalized state, or `error` with the diagnostics logged before the failure. Mirrors InspectorGoOutput in src/protocol.ts. stderr is free-form and passed through to the user.",
+  "type": "object",
+  "required": ["protocol", "finalized", "diagnostics", "stats"],
+  "additionalProperties": false,
+  "if": { "not": { "required": ["error"] } },
+  "then": { "required": ["state"] },
+  "properties": {
+    "protocol": {
+      "description": "Protocol version. The wrapper rejects any other.",
+      "const": 1
+    },
+    "finalized": {
+      "description": "True: the binary always runs finalize. False only alongside `error`.",
+      "type": "boolean"
+    },
+    "state": {
+      "description": "A SerializableInspectorState (packages/inspector/src/utils/serialize-inspector-state.ts), read with deserializeInspectorState. Absent when `error` is set.",
+      "type": "object",
+      "required": ["rootDir"],
+      "properties": {
+        "rootDir": { "type": "string" }
+      }
+    },
+    "diagnostics": {
+      "description": "Every message the TypeScript engine would have sent to its logger, in order. Replayed into the CLI logger.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/diagnostic" }
+    },
+    "stats": {
+      "type": "object",
+      "required": [
+        "files",
+        "projectFiles",
+        "types",
+        "symbols",
+        "wallMs",
+        "heapUsedMb"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "description": "Source files in the program, node_modules and lib included.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "projectFiles": {
+          "description": "Files under rootDir the inspector swept.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "types": { "type": "integer", "minimum": 0 },
+        "instantiations": { "type": "integer", "minimum": 0 },
+        "symbols": { "type": "integer", "minimum": 0 },
+        "cpuMs": { "type": "number", "minimum": 0 },
+        "wallMs": { "type": "number", "minimum": 0 },
+        "heapUsedMb": { "type": "number", "minimum": 0 }
+      }
+    },
+    "error": {
+      "description": "Set when the inspection failed after it began logging (a schema that could not be generated, a fatal analysis error). The wrapper replays `diagnostics`, then throws this message.",
+      "type": "string"
+    },
+    "validationPass": {
+      "description": "Present when the binary ran finalize's validation pass: the diagnostics logged between logger.beginValidationPass() and logger.endValidationPass(), as indices [start, end) into `diagnostics`. The wrapper replays the bracket around them.",
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "definitions": {
+    "diagnostic": {
+      "type": "object",
+      "required": ["level", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": ["critical", "error", "warn", "info", "debug"]
+        },
+        "code": {
+          "description": "An ErrorCode value, e.g. PKU123. A coded error or warn becomes a tracked diagnostic.",
+          "type": "string",
+          "pattern": "^PKU[0-9]+$"
+        },
+        "message": { "type": "string" }
+      },
+      "if": { "properties": { "level": { "const": "critical" } } },
+      "then": { "required": ["level", "code", "message"] }
+    }
+  }
+}

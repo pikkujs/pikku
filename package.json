@@ -9,6 +9,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
+      "packages/inspector-go/npm/*",
       "packages/addon/*",
       "packages/frontend/*",
       "packages/services/*",

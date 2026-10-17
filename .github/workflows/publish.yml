@@ -115,6 +115,19 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
+      # The @pikku/inspector-go-<platform>-<arch> packages carry only the
+      # pikku-inspect binary, which is gitignored, so it is built here before
+      # `bun run release` publishes them. Every package is checked up front:
+      # each one's prepublishOnly checks it too, but only as npm reaches it, by
+      # which time packages before it in the run are already on npm.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: packages/inspector-go/go.mod
+          cache-dependency-path: packages/inspector-go/**/go.sum
+      - name: Cross-compile pikku-inspect into its platform packages
+        run: node packages/inspector-go/scripts/build-go.mjs --all
+      - name: Check every platform package has its binary
+        run: node packages/inspector-go/scripts/check-platform-binary.mjs --all
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1

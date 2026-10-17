@@ -1,4 +1,6 @@
-export { inspect, getInitialInspectorState } from './inspector.js'
+export { inspect, analyzeProgram } from './inspector.js'
+export { getInitialInspectorState } from './initial-state.js'
+export { finalizeInspectorState } from './finalize.js'
 export type { TypesMap } from './types-map.js'
 export type {
   AddonConfig,
@@ -13,6 +15,7 @@ export type {
   InspectorMiddlewareState,
   InspectorOptions,
   InspectorPermissionState,
+  InspectorServiceTypes,
   InspectorState,
   MetaInputTypes,
   MiddlewareGroupMeta,
@@ -22,7 +25,7 @@ export type {
 export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
-export { AUTH_HANDLER_FUNC_ID } from './add/add-auth.js'
+export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
 export {
   SCENARIO_INSTRUMENTATION_FUNCTIONS,
   isScenarioInstrumentationFunction,
@@ -40,8 +43,10 @@ export {
 } from './utils/resolve-deploy-target.js'
 export {
   generateCustomTypes,
+  customTypeNames,
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
+export type { GenerateCustomTypesOptions } from './utils/custom-types-generator.js'
 export { unresolvedSchemaReferences } from './utils/post-process.js'
 export type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 export {
@@ -62,14 +67,13 @@ export {
   deserializeDslWorkflow,
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
-} from './utils/workflow/dsl/index.js'
+} from './utils/workflow/dsl/deserialize-dsl-workflow.js'
 export { getFilesAndMethods } from './utils/get-files-and-methods.js'
 export { resolveFunctionMeta } from './utils/resolve-function-meta.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
 } from './utils/workflow/graph/index.js'
-export { resolveCoreType } from './utils/resolve-core-type.js'
 export { readModuleSpecifiers } from './utils/read-module-specifiers.js'
 export { readJsxLiteralText } from './utils/read-jsx-literal-text.js'
 export { readTsconfigOutDir } from './utils/read-tsconfig-out-dir.js'

@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/cli"
   },
-  "description": "Pikku CLI — code generation, dev server, migrations and deployment",
+  "description": "Pikku CLI \u2014 code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -37,7 +37,6 @@
     "@electric-sql/pglite": "0.5.10",
     "@electric-sql/pglite-pgvector": "0.0.11",
     "@jridgewell/trace-mapping": "^0.3.31",
-    "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
     "@pikku/ai-vercel": "^0.12.15",
     "@pikku/better-auth": "^0.12.56",
     "@pikku/bun-server": "^0.12.14",
@@ -47,6 +46,7 @@
     "@pikku/deploy-standalone": "^0.12.26",
     "@pikku/fetch": "^0.12.12",
     "@pikku/inspector": "^0.12.106",
+    "@pikku/inspector-go": "^0.12.0",
     "@pikku/knowledge": "^0.12.20",
     "@pikku/kysely": "^0.13.38",
     "@pikku/migrator-sql": "^0.12.8",
@@ -73,7 +73,6 @@
     "semver": "^7.8.5",
     "sqlite-vec": "0.1.9",
     "tinyglobby": "^0.2.17",
-    "ts-json-schema-generator": "2.9.1-next.18",
     "tsx": "^4.23.15",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
@@ -98,6 +97,7 @@
     "@types/pg": "^8.23.1",
     "@types/semver": "^7.8.0",
     "@types/ws": "^8",
+    "ts-json-schema-generator": "2.9.1-next.18",
     "ws": "^8.22.0"
   },
   "files": [

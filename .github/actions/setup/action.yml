@@ -8,6 +8,12 @@ inputs:
   download-build:
     description: Whether to download build output artifact
     default: 'true'
+  download-inspector-go:
+    description: >-
+      Download the pikku-inspect binaries from the inspector-go-build job into
+      their platform packages, for jobs that run the native inspector engine.
+      Such a job must also need inspector-go-build.
+    default: 'false'
   enable-yarn:
     description: >-
       Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
@@ -32,6 +38,11 @@ runs:
       uses: ./.github/actions/download-tar
       with:
         name: build-output
+    - name: Download pikku-inspect
+      if: ${{ inputs.download-inspector-go == 'true' }}
+      uses: ./.github/actions/download-tar
+      with:
+        name: pikku-inspect
     # A dependency whose postinstall downloads a release binary (serverless,
     # workerd, esbuild) fails the whole install when that fetch blips, and the
     # job then reads as a broken pull request. Bun resumes from what it

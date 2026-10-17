@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pikku.dev/schemas/inspector-go/protocol/1/input.json",
+  "title": "pikku-inspect --stdin input",
+  "description": "What @pikku/inspector-go writes to the stdin of `pikku-inspect --stdin`. Mirrors InspectorGoInput in src/protocol.ts.",
+  "type": "object",
+  "required": ["routeFiles", "options"],
+  "additionalProperties": false,
+  "properties": {
+    "routeFiles": {
+      "description": "Absolute paths of the source files to inspect.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "options": {
+      "description": "The InspectorOptions analysis reads (InspectorGoAnalysisOptions). Everything else is consumed by finalize on the TypeScript side. Unset options are omitted.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tsconfig": {
+          "description": "Absolute path of the tsconfig the program is built from.",
+          "type": "string"
+        },
+        "rootDir": {
+          "description": "Absolute project root; files outside it are not swept.",
+          "type": "string"
+        },
+        "setupOnly": {
+          "description": "Run only the setup sweep (factories, wireAddon, config), skipping functions, routes and schemas.",
+          "type": "boolean"
+        },
+        "openAPI": {
+          "description": "Read by the Go finalize only: InspectorOptions.openAPI. When set, finalize generates the OpenAPI spec.",
+          "type": "object",
+          "properties": {
+            "additionalInfo": { "type": "object" }
+          }
+        },
+        "manifest": {
+          "description": "Read by the Go finalize only: the versions.pikku.json contents (InspectorOptions.manifest).",
+          "type": "object"
+        },
+        "modelAliases": {
+          "description": "Read by the Go finalize only: the \"models\" table of pikku.config.json, alias -> provider/model.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "strictMeta": {
+          "description": "Read by the Go finalize only: report agent tools without a description.",
+          "type": "boolean"
+        },
+        "types": {
+          "description": "Type names the user configured in pikku.config.json.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "configFileType": {
+              "type": "string"
+            },
+            "userSessionType": {
+              "type": "string"
+            },
+            "singletonServicesFactoryType": {
+              "type": "string"
+            },
+            "wireServicesFactoryType": {
+              "type": "string"
+            }
+          }
+        },
+        "schemaConfig": {
+          "description": "Present when JSON schemas are generated from the function types.",
+          "type": "object",
+          "properties": {
+            "tsconfig": {
+              "type": "string"
+            },
+            "schemasFromTypes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "additionalProperties": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "vendorScript": {
+              "type": "string",
+              "description": "The Node script that converts Zod schemas to JSON Schema."
+            },
+            "cacheDir": {
+              "type": "string"
+            }
+          }
+        },
+        "isAddon": {
+          "description": "The project is an addon, so transports and some contracts are banned.",
+          "type": "boolean"
+        },
+        "tags": {
+          "description": "Tags added to every function.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "classificationCheck": {
+          "description": "Require every function to declare a data classification.",
+          "type": "boolean"
+        },
+        "allow": {
+          "description": "Opt-outs of individual analysis checks.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

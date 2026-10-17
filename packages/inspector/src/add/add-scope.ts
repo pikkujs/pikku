@@ -169,27 +169,7 @@ const addDeclareScopes = (
   state.scopes.files.add(sourceFile)
 }
 
-/**
- * Folds `declareScopes` ids into `state.scopes.definitions`. An id the
- * definitions already hold (an addon's tree, a `defineScope`) is left alone;
- * a missing one is added as a bare node under its root, creating the root when
- * nothing declared it.
- */
-export const applyDeclaredScopes = (state: Parameters<AddWiring>[3]): void => {
-  for (const [id, sourceFile] of state.scopes.declared ?? []) {
-    const [rootName, ...rest] = id.split(SEPARATOR)
-    let root = state.scopes.definitions.find((d) => d.name === rootName)
-    if (!root) {
-      root = { name: rootName!, sourceFile }
-      state.scopes.definitions.push(root)
-    }
-    let level: { scopes?: Record<string, ScopeNodeMeta> } = root
-    for (const segment of rest) {
-      level.scopes ??= {}
-      level = level.scopes[segment] ??= {}
-    }
-  }
-}
+export { applyDeclaredScopes } from '../utils/apply-declared-scopes.js'
 
 export const addScope: AddWiring = (logger, node, checker, state, _options) => {
   if (!ts.isCallExpression(node)) {

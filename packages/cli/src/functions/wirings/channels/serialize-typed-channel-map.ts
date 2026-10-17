@@ -2,7 +2,8 @@ import type { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes, resolveFunctionMeta } from '@pikku/inspector'
+import { resolveFunctionMeta } from '@pikku/inspector/lite'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
 
 export const serializeTypedChannelsMap = (
@@ -13,7 +14,8 @@ export const serializeTypedChannelsMap = (
   functionsMeta: FunctionsMeta,
   addonFunctions: Record<string, FunctionsMeta>,
   channelsMeta: ChannelsMeta,
-  rpcInternalMapDeclarationFile: string
+  rpcInternalMapDeclarationFile: string,
+  customTypesFile: string
 ): string => {
   const { channels, requiredTypes } = generateChannels(
     logger,
@@ -22,13 +24,6 @@ export const serializeTypedChannelsMap = (
     addonFunctions,
     channelsMeta
   )
-  typesMap.customTypes.forEach(({ references }) => {
-    for (const reference of references) {
-      if (reference !== '__object' && !reference.startsWith('__object_')) {
-        requiredTypes.add(reference)
-      }
-    }
-  })
 
   const needsFlattenedRPCMap = Array.from(requiredTypes).some((t) =>
     t.includes('FlattenedRPCMap')
@@ -51,7 +46,12 @@ export const serializeTypedChannelsMap = (
   const rpcMapImport = needsFlattenedRPCMap
     ? `import type { FlattenedRPCMap } from '${getFileImportRelativePath(relativeToPath, rpcInternalMapDeclarationFile, packageMappings)}'`
     : ''
-  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
+  const customTypesImport = serializeCustomTypesImport(
+    relativeToPath,
+    customTypesFile,
+    packageMappings,
+    typesMap
+  )
 
   return `/**
  * This provides the structure needed for TypeScript to be aware of channels
@@ -59,7 +59,7 @@ export const serializeTypedChannelsMap = (
 
 ${imports}
 ${rpcMapImport}
-${serializedCustomTypes}
+${customTypesImport}
 
 interface ChannelHandler<I, O> {
     input: I;

@@ -24,13 +24,21 @@ import {
 } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
-  inspect,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
-} from '@pikku/inspector'
+} from '@pikku/inspector/lite'
+import { inspect as inspectWithGo } from '@pikku/inspector-go'
+import { loadTypeScriptHelpers } from './inspector-helpers.js'
+import {
+  getInspectorEngine,
+  nativeInspectorAvailable,
+  resolveInspectorEngine,
+  setInspectorEngine,
+  type InspectorEngine,
+} from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
@@ -67,6 +75,19 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   wiresNotDestructured: 'error',
   functionDynamicImport: 'warn',
 }
+
+/**
+ * The inspect function for an engine. The native engine ignores `oldProgram`:
+ * the binary keeps no program between runs.
+ */
+// The TypeScript engine is imported on first use, so a native run never loads
+// the compiler.
+const inspectorFor = async (
+  engine: InspectorEngine
+): Promise<typeof inspectWithGo> =>
+  engine === 'native'
+    ? inspectWithGo
+    : (await import('@pikku/inspector')).inspect
 
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
@@ -225,9 +246,22 @@ export const createConfig: CreateConfig<
   // preserved (getPikkuCLIConfig already resolves relative --outDir to
   // an absolute path and recomputes all derived *File/*Dir paths).
   const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
+  const inspector = resolveInspectorEngine({
+    flag: (data as { inspector?: string }).inspector,
+    env: process.env.PIKKU_INSPECTOR,
+    config: cliConfig.inspector,
+    nativeAvailable: nativeInspectorAvailable,
+    onFallback: () =>
+      logger.warn(
+        'No pikku-inspect binary for this platform; using the TypeScript inspector. Reinstall with optional dependencies, or set "inspector": "typescript" in pikku.config.json to silence this.'
+      ),
+  })
+  setInspectorEngine(inspector)
+  if (inspector === 'typescript') await loadTypeScriptHelpers()
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
+    inspector,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data, cliConfig),
     preloadedInspectorState,
@@ -384,6 +418,9 @@ export const createSingletonServices: CreateSingletonServices<
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
       const tsGenerationAtInspect = getTsWriteGeneration()
+      const inspect = await inspectorFor(
+        config.inspector ?? getInspectorEngine()
+      )
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
@@ -448,7 +485,7 @@ export const createSingletonServices: CreateSingletonServices<
         processDiagnostics(unfilteredState.diagnostics, config.lint)
       }
 
-      if (stateOutput && 'typesLookup' in unfilteredState) {
+      if (stateOutput) {
         try {
           logger.info(`Saving inspector state to ${stateOutput}`)
           const serialized = serializeInspectorState(unfilteredState)

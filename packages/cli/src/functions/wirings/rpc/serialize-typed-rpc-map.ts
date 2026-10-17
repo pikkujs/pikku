@@ -1,6 +1,6 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector'
+import { serializeCustomTypesImport } from '../../../utils/custom-types-file.js'
 import type { Logger } from '@pikku/core/services'
 
 type WireAddonDeclarations = Map<
@@ -15,12 +15,12 @@ export const serializeTypedRPCMap = (
   typesMap: TypesMap,
   rpcMeta: Record<string, string>,
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
+  customTypesFile: string,
   wireAddonDeclarations?: WireAddonDeclarations,
   workflowMapPath?: string,
   agentMapPath?: string
 ) => {
   const requiredTypes = new Set<string>()
-  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedRPCs = generateRPCs(rpcMeta, resolvedIOTypes, requiredTypes)
 
   const mcpTypes = [
@@ -45,11 +45,6 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
-  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
-    .split('\n')
-    .filter((line) => !line.startsWith('import '))
-    .join('\n')
-
   const addonImports = generateAddonImports(
     wireAddonDeclarations,
     relativeToPath
@@ -57,13 +52,20 @@ export const serializeTypedRPCMap = (
 
   const mergedRPCMap = generateMergedRPCMap(wireAddonDeclarations)
 
+  const customTypesImport = serializeCustomTypesImport(
+    relativeToPath,
+    customTypesFile,
+    packageMappings,
+    typesMap
+  )
+
   return `/**
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
 ${mcpImport}
 ${serializedImportMap}
-${serializedCustomTypesDeclarationsOnly}
+${customTypesImport}
 
 interface RPCHandler<I, O> {
     input: I;

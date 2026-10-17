@@ -1,0 +1,508 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [],
+    "wireServicesFactories": [],
+    "wireServicesMeta": [],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {},
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreSingletonServices found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method",
+        []
+      ],
+      [
+        "No CreateSingletonServices found",
+        []
+      ],
+      [
+        "No CreateWireServices found",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {},
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": []
+      },
+      "meta": {
+        "scheduler:banned": {
+          "pikkuFuncId": "scheduler:banned",
+          "functionType": "inline",
+          "name": "banned",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/addon.ts",
+          "contractHash": "0baefdb92f4eddfc",
+          "inputHash": "a029d654",
+          "outputHash": "0bdf0387"
+        },
+        "trigger:banned": {
+          "pikkuFuncId": "trigger:banned",
+          "functionType": "inline",
+          "name": "banned",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/addon.ts",
+          "contractHash": "053cee32e254fe39",
+          "inputHash": "870d4ef6",
+          "outputHash": "8d4bbb95"
+        },
+        "http:get:/x": {
+          "pikkuFuncId": "http:get:/x",
+          "functionType": "inline",
+          "name": "/x",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/addon.ts",
+          "contractHash": "822955695e811d64",
+          "inputHash": "745d65a3",
+          "outputHash": "b35de740"
+        },
+        "cli:cli:permissions": {
+          "pikkuFuncId": "cli:cli:permissions",
+          "functionType": "inline",
+          "name": "permissions",
+          "services": {
+            "optimized": false,
+            "services": []
+          },
+          "inputSchemaName": null,
+          "outputSchemaName": null,
+          "inputs": [],
+          "outputs": [],
+          "sourceFile": "<fixture>/src/addon.ts",
+          "contractHash": "576aa5909b360f16",
+          "inputHash": "bd417acc",
+          "outputHash": "29e8a234"
+        }
+      },
+      "files": [],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {
+          "/x": {
+            "pikkuFuncId": "http:get:/x",
+            "route": "/x",
+            "sourceFile": "<fixture>/src/addon.ts",
+            "method": "get",
+            "requiresSession": false
+          }
+        },
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [
+        "<fixture>/src/addon.ts"
+      ],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {
+        "banned": {
+          "pikkuFuncId": "trigger:banned",
+          "name": "banned"
+        }
+      },
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": [
+        "<fixture>/src/addon.ts"
+      ]
+    },
+    "scheduledTasks": {
+      "meta": {
+        "banned": {
+          "pikkuFuncId": "scheduler:banned",
+          "name": "banned",
+          "schedule": "* * * * *"
+        }
+      },
+      "files": [
+        "<fixture>/src/addon.ts"
+      ]
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {},
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [
+        "nested"
+      ],
+      "wireAddonDeclarations": [
+        [
+          "nested",
+          {
+            "package": "@fixture/nested",
+            "file": "<fixture>/src/addon.ts"
+          }
+        ]
+      ],
+      "wireAddonFiles": [
+        "<fixture>/src/addon.ts"
+      ]
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {
+          "scheduler:banned": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "a029d654",
+                "outputHash": "0bdf0387"
+              }
+            }
+          },
+          "trigger:banned": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "870d4ef6",
+                "outputHash": "8d4bbb95"
+              }
+            }
+          },
+          "http:get:/x": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "745d65a3",
+                "outputHash": "b35de740"
+              }
+            }
+          },
+          "cli:cli:permissions": {
+            "latest": 1,
+            "versions": {
+              "1": {
+                "inputHash": "bd417acc",
+                "outputHash": "29e8a234"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {}
+    },
+    "serviceAggregation": {
+      "requiredServices": [],
+      "usedFunctions": [
+        "scheduler:banned",
+        "trigger:banned",
+        "http:get:/x",
+        "cli:cli:permissions"
+      ],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": null,
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {
+      "scheduler:banned": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "trigger:banned": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "http:get:/x": {
+        "inputType": "null",
+        "outputType": "null"
+      },
+      "cli:cli:permissions": {
+        "inputType": "null",
+        "outputType": "null"
+      }
+    },
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "exportedContracts": {
+      "http": {
+        "routes": {
+          "basePath": "/api",
+          "tags": [],
+          "routes": {
+            "list": {
+              "auth": null,
+              "contentType": null,
+              "method": "get",
+              "route": "/list",
+              "sse": null,
+              "timeout": null,
+              "func": {
+                "pikkuFuncId": "__temp_42751f7bb8a0ce11"
+              }
+            }
+          }
+        },
+        "clean": {
+          "basePath": "",
+          "tags": [],
+          "routes": {
+            "list": {
+              "auth": null,
+              "contentType": null,
+              "method": "get",
+              "route": "/list",
+              "sse": null,
+              "timeout": null,
+              "func": {
+                "pikkuFuncId": "__temp_676f75a53c042094"
+              }
+            }
+          }
+        }
+      },
+      "cli": {
+        "cli": {
+          "permissions": {
+            "pikkuFuncId": "cli:cli:permissions",
+            "positionals": [],
+            "options": {}
+          }
+        }
+      },
+      "channel": {
+        "channel": {}
+      },
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "warn",
+      "message": "wireAddon('nested') (declared in src/addon.ts) names @fixture/nested, which is not installed where it can be resolved — tried <fixture>. Add \"@fixture/nested\": \"workspace:*\" (or a version) to the dependencies of <fixture>/package.json and run install."
+    },
+    {
+      "level": "critical",
+      "code": "PKU920",
+      "message": "Addons must not call 'wireScheduler'. Declare contracts with define* and export functions; the consuming app wires them via refHTTP / refChannel / refCLI."
+    },
+    {
+      "level": "critical",
+      "code": "PKU920",
+      "message": "Addons must not call 'wireTrigger'. Declare contracts with define* and export functions; the consuming app wires them via refHTTP / refChannel / refCLI."
+    },
+    {
+      "level": "critical",
+      "code": "PKU920",
+      "message": "Addons must not call 'wireHTTP'. Declare contracts with define* and export functions; the consuming app wires them via refHTTP / refChannel / refCLI."
+    },
+    {
+      "level": "critical",
+      "code": "PKU920",
+      "message": "Addons must not call 'wireAddon'. Declare contracts with define* and export functions; the consuming app wires them via refHTTP / refChannel / refCLI."
+    },
+    {
+      "level": "critical",
+      "code": "PKU921",
+      "message": "Addon contract 'defineHTTPRoutes' must not declare middleware or permissions — these are applied by the consuming app, not the addon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU921",
+      "message": "Addon contract 'defineChannelRoutes' must not declare middleware or permissions — these are applied by the consuming app, not the addon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU559",
+      "message": "No function metadata found for channel handler '__temp_016bae58a5599cdf' on route 'chat'. If this is an inline function, it must be exported for the inspector to discover it."
+    },
+    {
+      "level": "critical",
+      "code": "PKU921",
+      "message": "Addon contract 'defineCLICommands' must not declare middleware or permissions — these are applied by the consuming app, not the addon."
+    },
+    {
+      "level": "critical",
+      "code": "PKU340",
+      "message": "Addon 'nested' ('@fixture/nested') is wired with wireAddon but cannot be resolved from <fixture> — every ref('nested:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of <fixture>/package.json and install, or remove the wireAddon call."
+    }
+  ],
+  "validationPass": {
+    "start": 9,
+    "end": 10
+  }
+}

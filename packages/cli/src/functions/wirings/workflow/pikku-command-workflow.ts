@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode, resolveCoreType } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/lite'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
@@ -8,6 +8,7 @@ import { serializeVirtualUsers } from './serialize-virtual-users.js'
 import { resolveVirtualUsers } from '../../../utils/resolve-virtual-users.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
@@ -67,18 +68,12 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
 
     if (hasWorkflows) {
-      const fallbackType = visitState.typesLookup
-        ? resolveCoreType(
-            visitState.typesLookup,
-            visitState.singletonServicesTypeImportMap
-          )
-        : undefined
+      // A setup-only state has no service aggregation; the inspector still
+      // resolves the SingletonServices type's keys into serviceTypes.
       const singletonServices =
         visitState.serviceAggregation.allSingletonServices.length > 0
           ? visitState.serviceAggregation.allSingletonServices
-          : (fallbackType
-              ?.getProperties()
-              .map((symbol) => symbol.getName()) ?? [])
+          : (visitState.serviceTypes?.singletonServices ?? [])
       const hasWorkflowState = singletonServices.includes('workflowService')
       if (!hasWorkflowState) {
         logger.critical(
@@ -272,6 +267,13 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
+    await writeCustomTypesFile(
+      logger,
+      config.customTypesDeclarationFile,
+      packageMappings,
+      typesMap
+    )
+
     // Rides the workflow command rather than getting its own codegen node, so
     // it can't drift out of the two hand-maintained ordering lists.
     await writeFileInDir(
@@ -282,7 +284,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         config.scenarioStepMapDeclarationFile,
         packageMappings,
         typesMap,
-        functionState.meta
+        functionState.meta,
+        config.customTypesDeclarationFile
       )
     )
 
@@ -349,6 +352,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
             functionState.meta,
             workflows.meta,
             workflows.graphMeta,
+            config.customTypesDeclarationFile,
             visitState.rpc?.wireAddonDeclarations
           )
     )

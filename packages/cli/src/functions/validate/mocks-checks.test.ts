@@ -94,7 +94,7 @@ describe('validate and mocks', () => {
         "export const S = () => usePikkuQuery('nothing:here')\n",
     })
     try {
-      assert.strictEqual(usesMocks(root), false)
+      assert.strictEqual(await usesMocks(root), false)
       assert.ok(!(await ids(root)).some((id) => id.startsWith('mocks:')))
     } finally {
       await rm(root, { recursive: true, force: true })

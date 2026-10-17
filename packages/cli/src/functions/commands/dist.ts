@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { cp, mkdir, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
-import { readTsconfigOutDir } from '@pikku/inspector'
+import { readTsconfigOutDir } from '../../inspector-helpers.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
