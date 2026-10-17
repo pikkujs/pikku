@@ -31,7 +31,6 @@ export const createSingletonServices = pikkuAddonServices(
       metaService: existingMetaService,
       agentRunner,
       schedulerService,
-      queueService,
       agentRunService,
       workflowService,
       workflowRunService,
@@ -41,7 +40,6 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       coverageService,
       webhookService,
-      incomingWebhookService,
       auth,
     }
   ) => {
@@ -136,11 +134,9 @@ export const createSingletonServices = pikkuAddonServices(
       deploymentService,
       agentRunner,
       schedulerService,
-      queueService,
       credentialService,
       coverageService,
       webhookService,
-      incomingWebhookService,
       codeEditService,
       stateDiffService,
       dbSchemaService,

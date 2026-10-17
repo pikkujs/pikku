@@ -5,8 +5,8 @@ import { pikkuFunc } from '#pikku/addon/function'
  * Incoming webhook receipts, newest first.
  *
  * Empty rather than an error when no `incomingWebhookService` is wired, for the
- * same reason `listWebhookDeliveries` is: webhook sources are opt-in, and the
- * console lists the page on every project.
+ * same reason `listWebhookDeliveries` is: webhook sources are opt-in, and an admin
+ * screen lists the page on every app.
  */
 export const listIncomingWebhookReceipts = pikkuFunc<
   { source?: string; limit?: number },
@@ -16,7 +16,7 @@ export const listIncomingWebhookReceipts = pikkuFunc<
   description:
     'Lists received webhook events (most recent first), optionally for one source. Empty when the app wires no incoming webhook service or keeps no receipts.',
   expose: true,
-  scopes: ['pikku:console:wirings:read'],
+  scopes: ['admin:webhooks:read'],
   func: async ({ incomingWebhookService }, input) => {
     if (!incomingWebhookService) {
       return []

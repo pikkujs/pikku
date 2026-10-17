@@ -77,6 +77,32 @@ defineScope({
           },
         },
       },
+      schedules: {
+        description: 'Scheduled tasks',
+        scopes: {
+          read: {
+            description:
+              'See when each scheduled task last ran, how it went, and when it runs next',
+          },
+        },
+      },
+      queues: {
+        description: 'Background job queues',
+        scopes: {
+          read: {
+            description:
+              'See how many jobs are waiting, running and failed, and the recent ones',
+          },
+        },
+      },
+      webhooks: {
+        description: 'Webhooks received from other services',
+        scopes: {
+          read: {
+            description: 'See each received webhook and what became of it',
+          },
+        },
+      },
       audit: {
         description: 'The audit trail',
         scopes: {
