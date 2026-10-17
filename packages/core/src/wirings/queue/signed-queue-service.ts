@@ -6,7 +6,12 @@ import {
   signQueueIdentity,
   warnQueueIdentitySecretMissing,
 } from './queue-identity.js'
-import type { JobOptions, QueueJob, QueueService } from './queue.types.js'
+import type {
+  JobOptions,
+  QueueInspection,
+  QueueJob,
+  QueueService,
+} from './queue.types.js'
 
 /**
  * Wraps any {@link QueueService} so `JobOptions.pikkuUserId` leaves the process
@@ -56,5 +61,14 @@ export class SignedQueueService implements QueueService {
     jobId: string
   ): Promise<QueueJob<T, R> | null> {
     return this.queueService.getJob<T, R>(queueName, jobId)
+  }
+
+  public get inspect():
+    | ((
+        queueName: string,
+        opts?: { limit?: number }
+      ) => Promise<QueueInspection>)
+    | undefined {
+    return this.queueService.inspect?.bind(this.queueService)
   }
 }

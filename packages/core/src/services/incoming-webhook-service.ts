@@ -82,4 +82,11 @@ export class IncomingWebhookService {
   }): Promise<IncomingWebhookReceiptRecord[]> {
     return []
   }
+
+  /** Null when nothing is stored or no receipt has this id. */
+  public async getReceipt(
+    _receiptId: string
+  ): Promise<IncomingWebhookReceiptRecord | null> {
+    return null
+  }
 }

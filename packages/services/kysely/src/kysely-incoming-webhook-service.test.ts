@@ -166,4 +166,19 @@ describe('KyselyIncomingWebhookService', () => {
     assert.equal(a.length, 1)
     assert.equal(a[0]!.source, 'a')
   })
+
+  test('getReceipt() reads one receipt back by id, and misses an unknown id', async () => {
+    const { service } = await setup()
+    await service.accept({
+      source: 'shop',
+      request,
+      events: [{ name: 'paid', id: 'evt_1', data: {} }],
+    })
+    const [{ receiptId }] = (await service.listReceipts()) as [any]
+
+    const receipt = await service.getReceipt(receiptId)
+    assert.equal(receipt!.receiptId, receiptId)
+    assert.equal(receipt!.providerEventId, 'evt_1')
+    assert.equal(await service.getReceipt('missing'), null)
+  })
 })

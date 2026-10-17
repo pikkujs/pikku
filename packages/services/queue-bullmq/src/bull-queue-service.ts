@@ -1,7 +1,13 @@
 import type { ConnectionOptions, JobsOptions } from 'bullmq'
 import type Bull from 'bullmq'
 import { Queue, QueueEvents } from 'bullmq'
-import type { QueueJob, QueueService } from '@pikku/core/queue'
+import type {
+  QueueInspection,
+  QueueJob,
+  QueueJobRecord,
+  QueueJobStatus,
+  QueueService,
+} from '@pikku/core/queue'
 import type { JobOptions } from '@pikku/core/queue'
 import { mapBullJobToQueueJob } from './utils.js'
 
@@ -43,6 +49,30 @@ export const mapPikkuJobToBull = (options?: JobOptions): JobsOptions => {
 
   return bullOptions
 }
+
+const INSPECTED_STATES: QueueJobStatus[] = [
+  'waiting',
+  'active',
+  'delayed',
+  'completed',
+  'failed',
+]
+
+export const mapBullJobToRecord = (
+  job: Bull.Job,
+  status: QueueJobStatus
+): QueueJobRecord => ({
+  jobId: job.id!,
+  status,
+  attemptsMade: job.attemptsMade,
+  maxAttempts: job.opts.attempts ?? 1,
+  createdAt: new Date(job.timestamp),
+  processedAt: job.processedOn ? new Date(job.processedOn) : null,
+  finishedAt: job.finishedOn ? new Date(job.finishedOn) : null,
+  durationMs:
+    job.finishedOn && job.processedOn ? job.finishedOn - job.processedOn : null,
+  error: job.failedReason || null,
+})
 
 /**
  * Bull/Redis queue service implementation
@@ -103,6 +133,30 @@ export class BullQueueService implements QueueService {
       throw new Error(`Failed to add job to queue '${queueName}'.`)
     }
     return bullJob.id
+  }
+
+  async inspect(
+    queueName: string,
+    opts?: { limit?: number }
+  ): Promise<QueueInspection> {
+    const queue = await this.createQueue(queueName)
+    const limit = opts?.limit ?? 50
+    const counts = (await queue.getJobCounts(
+      ...INSPECTED_STATES
+    )) as QueueInspection['counts']
+    const recent = (
+      await Promise.all(
+        INSPECTED_STATES.map(async (status) =>
+          (await queue.getJobs([status], 0, limit - 1)).map((job) =>
+            mapBullJobToRecord(job, status)
+          )
+        )
+      )
+    )
+      .flat()
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit)
+    return { counts, recent }
   }
 
   /**

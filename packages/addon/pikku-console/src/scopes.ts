@@ -90,6 +90,10 @@ defineScope({
               manage: {
                 description: 'Delete scenario runs and their artifacts',
               },
+              run: {
+                description:
+                  'Start a scenario run against the local copy, as `pikku scenario run` does',
+              },
             },
           },
           agents: {

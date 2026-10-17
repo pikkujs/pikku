@@ -101,8 +101,34 @@ export interface JobOptions {
   group?: JobGroup
 }
 
+export type QueueJobCounts = Record<QueueJobStatus, number>
+
+export type QueueJobRecord = {
+  jobId: string
+  status: QueueJobStatus
+  attemptsMade: number
+  maxAttempts: number
+  createdAt: Date
+  processedAt: Date | null
+  finishedAt: Date | null
+  durationMs: number | null
+  error: string | null
+}
+
+export type QueueInspection = {
+  counts: QueueJobCounts
+  /** Newest first. */
+  recent: QueueJobRecord[]
+}
+
 export interface QueueService {
   readonly supportsResults: boolean
+
+  /** Live counts and recent jobs for one queue. Absent on a queue service that cannot inspect its backlog. */
+  inspect?(
+    queueName: string,
+    opts?: { limit?: number }
+  ): Promise<QueueInspection>
 
   add<T>(
     queueName: string,

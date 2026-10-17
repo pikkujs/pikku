@@ -19,6 +19,9 @@ export const createSingletonServices = pikkuAddonServices(
       auth,
       featureFlags,
       triggerSourceStore,
+      schedulerService,
+      queueService,
+      incomingWebhookService,
     }
   ) => ({
     scopeService,
@@ -27,5 +30,8 @@ export const createSingletonServices = pikkuAddonServices(
     auth,
     featureFlags,
     triggerSourceStore,
+    schedulerService,
+    queueService,
+    incomingWebhookService,
   })
 )
