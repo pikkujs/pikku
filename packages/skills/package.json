@@ -16,19 +16,22 @@
   "scripts": {
     "embed": "bun run scripts/embed.ts",
     "tsc": "bun run embed && tsc",
-    "build": "bun run embed && tsc -b",
+    "build": "bun run clean && bun run embed && tsc -b",
     "ncu": "npx npm-check-updates",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "skills"
+    "skills",
+    "!dist/**/*.tsbuildinfo"
   ],
   "devDependencies": {
     "@types/node": "^26.6.5",

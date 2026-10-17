@@ -15,10 +15,11 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@pikku/core": "^0.12.108",
@@ -29,6 +30,11 @@
     "node": ">=24"
   },
   "exports": {
-    ".": "./dist/index.js"
-  }
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ]
 }

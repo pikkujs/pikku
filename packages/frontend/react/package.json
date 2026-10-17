@@ -36,16 +36,22 @@
         "types": "./dist/cjs/i18n-jsx/jsx-dev-runtime.d.ts",
         "default": "./dist/cjs/i18n-jsx/jsx-dev-runtime.js"
       }
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
     "tsc:tests": "tsc -p tsconfig.test.json",
     "test": "node --test src/*.test.ts",
     "build:esm": "tsc -p tsconfig.test.json && tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run build:esm && bun run build:cjs",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && bun run build:esm && bun run build:cjs",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@pikku/fetch": "^0.12.11"
