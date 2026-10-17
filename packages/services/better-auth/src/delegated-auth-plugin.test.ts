@@ -43,7 +43,7 @@ const makeAuth = (
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      pikkuVirtualUser({ secret: undefined }),
+      pikkuVirtualUser(),
       pikkuDelegatedAuth({
         scopeService,
         authenticate: async ({ email, password, apiKey }) => {
@@ -64,7 +64,7 @@ const makeAuth = (
 }
 
 const signInDelegated = (
-  auth: ReturnType<typeof betterAuth>,
+  auth: ReturnType<typeof makeAuth>['auth'],
   body: Record<string, unknown>
 ) =>
   auth.handler(
