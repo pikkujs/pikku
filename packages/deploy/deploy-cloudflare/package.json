@@ -10,13 +10,19 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "tsc": "tsc --noEmit",
-    "test": "node --test --import tsx src/*.test.ts"
+    "test": "node --test --import tsx src/*.test.ts",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "license": "MIT",
   "dependencies": {
     "@pikku/deploy": "^0.12.15"

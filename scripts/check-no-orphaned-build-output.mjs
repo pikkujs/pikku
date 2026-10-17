@@ -27,7 +27,12 @@ const SKIP_DIRS = new Set([
   '.pikku',
   '.next',
 ])
+// A hand-written or generated declaration copied into the outDir (an addon's
+// `types/*.d.ts`, the `.pikku/**/*.gen.d.ts` maps) is its own source.
 const SOURCE_EXTS = [
+  '.d.ts',
+  '.d.mts',
+  '.d.cts',
   '.ts',
   '.tsx',
   '.mts',

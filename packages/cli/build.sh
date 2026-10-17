@@ -337,6 +337,18 @@ done
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
 
+# The tolerated pass compiled the bootstrap CLI's .pikku tree, including leaf
+# indexes the local CLI's codegen no longer writes (`.pikku/node/index.ts`). tsc
+# never deletes what it emitted, so drop the output whose source is gone before
+# it is packed (`check:orphaned-build-output` fails on it).
+while IFS= read -r -d '' out; do
+  stem=${out#dist/}
+  stem=${stem%.map}
+  stem=${stem%.js}
+  stem=${stem%.d.ts}
+  [ -e "$stem.ts" ] || [ -e "$stem.d.ts" ] || rm -f -- "$out"
+done < <(find dist/.pikku -type f \( -name '*.js' -o -name '*.d.ts' -o -name '*.map' \) -print0)
+
 # tsc does not carry a source file's mode across, so the file `bin.pikku` points
 # at comes out non-executable and every `npx pikku` exits 126.
 chmod +x dist/bin/pikku.js

@@ -22,15 +22,21 @@
     },
     "./vite": {
       "import": "./dist/esm/vite.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
     "test": "tsx --test src/*.test.ts",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run build:esm && bun run build:cjs",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && bun run build:esm && bun run build:cjs",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
     "vite": "^5 || ^6 || ^7 || ^8"

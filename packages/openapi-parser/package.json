@@ -15,13 +15,19 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "test": "node --import tsx --test src/**/*.test.ts",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "dependencies": {
     "yaml": "^2.9.1",
     "zod": "^4"

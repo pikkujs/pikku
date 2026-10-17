@@ -15,13 +15,19 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && tsc -b",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "engines": {
     "node": ">=24"
   },
   "exports": {
-    ".": "./dist/index.js"
-  }
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ]
 }

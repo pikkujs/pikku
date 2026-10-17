@@ -14,14 +14,20 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "test": "node --import tsx --test src/**/*.test.ts",
     "harness": "node --import tsx harness/run.ts",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "dependencies": {
     "@pikku/openapi-to-zod-schema": "^0.12.7",
     "to-json-schema": "^0.2.5",
