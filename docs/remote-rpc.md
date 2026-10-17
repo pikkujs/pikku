@@ -136,13 +136,13 @@ contracts and export functions; the consuming app does the wiring).
 
 ## Key files
 
-| File                                                                | Responsibility                                                                      |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `packages/core/src/wirings/rpc/wire-remote-addon.ts`                | the `wireRemoteAddon` primitive + `RemoteAddonAuth`                                 |
-| `packages/core/src/wirings/rpc/rpc-runner.ts`                       | `invokeAddonFunction` → `invokeRemoteAddonFunction` (HTTP dispatch); `rpc.remote()` |
-| `packages/core/src/wirings/rpc/remote-addon-auth.ts`                | `resolveRemoteAddonToken` (credential/secret/custom; fails closed)                  |
-| `packages/core/src/middleware/remote-auth.ts`                       | `pikkuRemoteAuthMiddleware` — the **mesh** trust gate                               |
-| `packages/runtimes/*/src/*-deployment-service.ts`                   | per-runtime `deploymentService.invoke` (service binding / lambda / queue)           |
-| `packages/cli/src/functions/wirings/rpc/serialize-remote-rpc.ts`    | the generated **mesh** `/remote/rpc/:rpcName` handler (`pikkuRemoteAuthMiddleware`) |
-| `packages/cli/src/functions/wirings/rpc/serialize-typed-rpc-map.ts` | picks `.remote.gen` vs `.internal.gen` per addon namespace                          |
-| `packages/inspector/src/utils/post-process.ts`                      | `validateRemoteAddonDependencies` (PKU338) + `validateRemoteAddonAuth` (PKU339)     |
+| File                                                                | Responsibility                                                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `packages/core/src/wirings/addon/wire-remote-addon.ts`              | the `wireRemoteAddon` primitive + `RemoteAddonAuth`                                  |
+| `packages/core/src/wirings/rpc/rpc-runner.ts`                       | `executeAddonFunction` → `invokeRemoteAddonFunction` (HTTP dispatch); `rpc.remote()` |
+| `packages/core/src/wirings/addon/remote-addon-auth.ts`              | `resolveRemoteAddonToken` (credential/secret/custom; fails closed)                   |
+| `packages/core/src/middleware/remote-auth.ts`                       | `pikkuRemoteAuthMiddleware` — the **mesh** trust gate                                |
+| `packages/runtimes/*/src/*-deployment-service.ts`                   | per-runtime `deploymentService.invoke` (service binding / lambda / queue)            |
+| `packages/cli/src/functions/wirings/rpc/serialize-remote-rpc.ts`    | the generated **mesh** `/remote/rpc/:rpcName` handler (`pikkuRemoteAuthMiddleware`)  |
+| `packages/cli/src/functions/wirings/rpc/serialize-typed-rpc-map.ts` | picks `.remote.gen` vs `.internal.gen` per addon namespace                           |
+| `packages/inspector/src/utils/post-process.ts`                      | `validateRemoteAddonDependencies` (PKU338) + `validateRemoteAddonAuth` (PKU339)      |
