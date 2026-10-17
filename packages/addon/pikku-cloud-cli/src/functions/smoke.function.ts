@@ -23,7 +23,7 @@ import { headSha, isWorkingTreeClean } from '@pikku/cli/addon-support'
 import { added, changed, dim, removed } from '@pikku/cli/addon-support'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 
-const DEFAULT_BUN_VERSION = 'bun@1.4.0'
+const DEFAULT_BUN_VERSION = 'bun@1.4.3'
 const DEFAULT_STEP_TIMEOUT_SECONDS = 300
 const DEFAULT_STARTUP_TIMEOUT_SECONDS = 60
 const DEV_LOG_TAIL_BYTES = 16_000
@@ -760,7 +760,7 @@ export const CloudSmoke = pikkuSessionlessFunc({
         steps,
         failure: `Unsupported packageManager for Pikku Studio Cloud smoke: ${packageManager}`,
         logTail:
-          'Pikku Studio Cloud is bun-only, so smoke runs the same way the build container does. Declare "packageManager": "bun@1.4.0" in package.json.',
+          'Pikku Studio Cloud is bun-only, so smoke runs the same way the build container does. Declare "packageManager": "bun@1.4.3" in package.json.',
       }
       process.exitCode = 1
       return result
