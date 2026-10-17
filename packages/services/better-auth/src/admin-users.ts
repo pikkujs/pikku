@@ -45,7 +45,9 @@ const context = async (auth: AuthGetter) => {
       'User management requires better-auth to be wired (services.auth is missing)'
     )
   }
-  return (await auth()).$context as any
+  return await (
+    await auth()
+  ).$context
 }
 
 const assertPasswordLength = (ctx: any, password: string) => {
@@ -241,7 +243,7 @@ export const sendAuthUserSignInLink = async (
       'Sign-in links require better-auth to be wired (services.auth is missing)'
     )
   }
-  const instance = (await auth()) as any
+  const instance = await auth()
   if (typeof instance.api?.signInMagicLink !== 'function') {
     throw new Error(
       'Sign-in links require the magicLink() plugin to be wired into better-auth'

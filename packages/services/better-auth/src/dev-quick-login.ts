@@ -113,7 +113,7 @@ const ensureDevAdmin = async (
     return
   }
   try {
-    const ctx = await (auth as any).$context
+    const ctx = await auth.$context
     const found = await ctx?.internalAdapter?.findUserByEmail?.(email)
     if (!found?.user) {
       return

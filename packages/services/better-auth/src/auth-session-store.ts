@@ -5,26 +5,39 @@ import type {
   MiddlewarePriority,
 } from '@pikku/core/middleware'
 import { getSessionCookie } from 'better-auth/cookies'
-import {
-  resolveImpersonatedSession,
-  type ImpersonationOptions,
-} from './auth-session-impersonation.js'
-import { defaultSession } from './default-session.js'
-import { stampVirtualUserFlag } from './stamp-virtual-user-flag.js'
-import { withResolvedScopes } from './auth-session-scopes.js'
+import type { ImpersonationOptions } from './auth-session-impersonation.js'
+import { mergeRelayedCookies } from './cross-site-cookies.js'
 import { verifySessionCredential } from './session-credential.js'
-import type { SessionStore } from './session-store.js'
-import { isSecretNotFound } from './secret-not-found.js'
+import type { AuthSessionStorage } from './session-store.js'
+import {
+  hasLiveSession,
+  readSessionSecret,
+  resolveAndSetSession,
+} from './resolve-session.js'
 
-type StoredSession = { session: any; user: any }
+/** The `{ session, user }` better-auth writes under a session token. */
+export type StoredSession = { session: any; user: any }
 
+/** Where `betterAuthStoreSession` looks for the signed session token. */
 export type SessionTransport = 'header' | 'cookie'
 
 export type BetterAuthStoreSessionOptions = {
-  store: (services: CoreServices) => SessionStore | Promise<SessionStore>
+  /**
+   * The same storage the app passes better-auth as `secondaryStorage`. Only
+   * `get` is called here.
+   */
+  store: (
+    services: CoreServices
+  ) =>
+    Pick<AuthSessionStorage, 'get'> | Promise<Pick<AuthSessionStorage, 'get'>>
+  /** Which transports may carry the token. Defaults to both. */
   transports?: readonly SessionTransport[]
+  /** Header carrying `Bearer <token>`. Defaults to `authorization`. */
   headerName?: string
+  /** Secret the token is signed with. Defaults to `BETTER_AUTH_SECRET`. */
   secretId?: string
+  /** The app's `advanced.cookiePrefix`. Defaults to better-auth's own `better-auth`. */
+  cookiePrefix?: string
   mapSession?: (
     result: StoredSession,
     services: CoreServices
@@ -46,13 +59,28 @@ const bearerCredential = (raw: string | undefined | null): string | null => {
   return match?.[1]?.trim() || null
 }
 
+/** A malformed expiry fails closed: it reads as already expired. */
 const notExpired = (stored: StoredSession, now: number): boolean => {
   const expiresAt = stored.session?.expiresAt
   if (expiresAt === undefined || expiresAt === null) {
     return true
   }
   const at = new Date(expiresAt).getTime()
-  return Number.isNaN(at) || at > now
+  return !Number.isNaN(at) && at > now
+}
+
+/**
+ * better-auth writes a JSON string, but a storage that serialises for itself
+ * (an object store, a Redis client with JSON mode) hands the object back.
+ */
+const parseStored = (raw: unknown): StoredSession | null => {
+  if (raw === null || raw === undefined || raw === '') {
+    return null
+  }
+  const value = typeof raw === 'string' ? JSON.parse(raw) : raw
+  return typeof value === 'object' && value !== null
+    ? (value as StoredSession)
+    : null
 }
 
 /**
@@ -95,6 +123,7 @@ export const betterAuthStoreSession = (
     transports = ['header', 'cookie'] as const,
     headerName = 'authorization',
     secretId = 'BETTER_AUTH_SECRET',
+    cookiePrefix,
     priority,
   } = options
 
@@ -103,36 +132,27 @@ export const betterAuthStoreSession = (
 
   return pikkuMiddleware({
     priority,
-    func: async (services, { http, setSession, session }, next) => {
-      if (!http?.request || !setSession || session) {
+    func: async (services, wire, next) => {
+      const { http, setSession } = wire
+      if (!http?.request || !setSession || (await hasLiveSession(wire))) {
         return next()
       }
       const request = http.request
+      const headers = mergeRelayedCookies(new Headers(request.headers()))
 
       const credential =
-        (headerEnabled ? bearerCredential(request.header(headerName)) : null) ??
-        (cookieEnabled
-          ? getSessionCookie(new Headers(request.headers()))
-          : null)
+        (headerEnabled ? bearerCredential(headers.get(headerName)) : null) ??
+        (cookieEnabled ? getSessionCookie(headers, { cookiePrefix }) : null)
 
       if (!credential) {
         return next()
       }
 
-      let secret: string | undefined
-      try {
-        secret = (
-          await (services as any).secrets?.getSecret(secretId)
-        )?.reveal()
-      } catch (e: any) {
-        if (!isSecretNotFound(e)) {
-          throw e
-        }
-        services.logger?.error(
-          `betterAuthStoreSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`
-        )
-        return next()
-      }
+      const secret = await readSessionSecret(
+        services,
+        secretId,
+        'betterAuthStoreSession'
+      )
       if (!secret) {
         return next()
       }
@@ -144,8 +164,7 @@ export const betterAuthStoreSession = (
 
       let stored: StoredSession | null
       try {
-        const raw = await (await store(services as CoreServices)).get(token)
-        stored = raw ? (JSON.parse(raw) as StoredSession) : null
+        stored = parseStored(await (await store(services)).get(token))
       } catch (e: any) {
         services.logger?.error(
           `better-auth store session read failed: ${e?.message ?? e}`
@@ -157,32 +176,14 @@ export const betterAuthStoreSession = (
         return next()
       }
 
-      if (impersonation) {
-        const impersonated = await resolveImpersonatedSession(
-          stored,
-          impersonation,
-          services as CoreServices,
-          (name) => request.header(name),
-          mapSession
-        )
-        if (impersonated) {
-          await setSession(
-            await withResolvedScopes(impersonated, services as CoreServices)
-          )
-          return next()
-        }
-      }
-
-      const mapped = mapSession
-        ? await mapSession(stored, services as CoreServices)
-        : defaultSession(stored)
-
-      await setSession(
-        await withResolvedScopes(
-          stampVirtualUserFlag(mapped, stored.user),
-          services as CoreServices
-        )
-      )
+      await resolveAndSetSession({
+        result: stored,
+        services,
+        getHeader: (name) => headers.get(name),
+        setSession,
+        mapSession,
+        impersonation,
+      })
 
       return next()
     },
