@@ -501,6 +501,8 @@ export async function runBuildPipeline(options: {
     logger.info(
       `Bundled standalone${bundleErrors.length > 0 ? ` (${bundleErrors.length} errors)` : ''}`
     )
+  } else if (manifest.units.length === 0) {
+    logger.info('No backend units found, skipping codegen and bundling')
   } else {
     // Multi-unit mode: per-function decomposition
     const serverlessUnits = manifest.units.filter(
@@ -511,20 +513,6 @@ export async function runBuildPipeline(options: {
     logger.info(
       `Found ${manifest.units.length} units (${serverlessUnits.length} serverless, ${serverUnits.length} server), ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
     )
-
-    if (manifest.units.length === 0) {
-      return {
-        manifest,
-        providerDir,
-        deploymentManifestPath,
-        infraPath,
-        projectId,
-        bundled: [],
-        bundleErrors: [],
-        codegenErrors: [],
-        unroutedWirings,
-      }
-    }
 
     // Step 2: Per-unit filtered codegen (serverless units only)
     // Server units share a single codegen pass (step 2b).

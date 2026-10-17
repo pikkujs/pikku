@@ -194,6 +194,41 @@ describe('deploy plan bundle failures', () => {
   })
 })
 
+describe('deploy plan without backend units', () => {
+  test('writes a successful result file and an empty manifest', async () => {
+    writeFileSync(
+      join(root, 'multi-provider.mjs'),
+      PROVIDER_SOURCE.replace('singleUnit: true', 'singleUnit: false'),
+      'utf-8'
+    )
+    providerUrl = pathToFileURL(join(root, 'multi-provider.mjs')).href
+    const resultFile = join(root, 'result.json')
+    await deployPlan.func(
+      {
+        logger,
+        config: config(),
+        getInspectorState: async () => ({
+          ...inspectorState(),
+          http: { meta: {} },
+        }),
+        bundler: bundlerWith([]),
+      } as never,
+      { resultFile } as never,
+      {} as never
+    )
+    const result = JSON.parse(readFileSync(resultFile, 'utf-8'))
+    assert.equal(result.success, true)
+    assert.equal(result.unitCount, 0)
+    const manifest = JSON.parse(
+      readFileSync(
+        join(result.providerDir, 'deployment-manifest.json'),
+        'utf-8'
+      )
+    )
+    assert.deepEqual(manifest.units, [])
+  })
+})
+
 describe('deploy apply bundle failures', () => {
   test('throws and never deploys when a unit failed to bundle', async () => {
     await assert.rejects(
