@@ -4,7 +4,7 @@ import { dirname, join } from 'path'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { mcpSurfaceSlug } from '../../../utils/mcp-surface.js'
-import { serializeMCPJson } from '@pikku/inspector'
+import { serializeMCPJson } from '@pikku/inspector/state'
 
 export const pikkuMCPJSON = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {

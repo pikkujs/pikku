@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { dirname } from 'path'
 import type { VersionManifest } from '@pikku/inspector'
-import { serializeManifest, createEmptyManifest } from '@pikku/inspector'
+import { serializeManifest, createEmptyManifest } from '@pikku/inspector/state'
 
 export { createEmptyManifest }
 

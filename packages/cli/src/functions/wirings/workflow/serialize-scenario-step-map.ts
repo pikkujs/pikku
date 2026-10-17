@@ -8,7 +8,8 @@
  * autocomplete and type-check its data.
  */
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
+import type { TypesMap } from '@pikku/inspector'
+import { generateCustomTypes } from '@pikku/inspector/state'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
 
 /**

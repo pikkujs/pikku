@@ -11,7 +11,10 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
-import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
+import {
+  addonResolutionDirs,
+  createAddonResolver,
+} from '@pikku/inspector/state'
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import {

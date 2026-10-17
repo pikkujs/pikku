@@ -3,7 +3,7 @@ import { readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { glob } from 'tinyglobby'
-import { ErrorCode } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/state'
 
 // Bounded globs (no unbounded `**`) covering the copies reachable without a
 // content-addressed store: the hoisted root, and one level of npm/yarn nesting

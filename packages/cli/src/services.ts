@@ -24,14 +24,14 @@ import {
 } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
-  inspect as inspectWithTypeScript,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
   getInitialInspectorState,
   ErrorCode,
-} from '@pikku/inspector'
+} from '@pikku/inspector/state'
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
+import { loadTypeScriptHelpers } from './inspector-helpers.js'
 import {
   getInspectorEngine,
   resolveInspectorEngine,
@@ -79,8 +79,14 @@ const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
  * The inspect function for an engine. The native engine ignores `oldProgram`:
  * the binary keeps no program between runs.
  */
-const inspectorFor = (engine: InspectorEngine): typeof inspectWithTypeScript =>
-  engine === 'native' ? inspectWithGo : inspectWithTypeScript
+// The TypeScript engine is imported on first use, so a native run never loads
+// the compiler.
+const inspectorFor = async (
+  engine: InspectorEngine
+): Promise<typeof inspectWithGo> =>
+  engine === 'native'
+    ? inspectWithGo
+    : (await import('@pikku/inspector')).inspect
 
 export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
@@ -245,6 +251,7 @@ export const createConfig: CreateConfig<
     config: cliConfig.inspector,
   })
   setInspectorEngine(inspector)
+  if (inspector === 'typescript') await loadTypeScriptHelpers()
   return {
     ...cliConfig,
     ...dataWithoutOutDir,
@@ -405,9 +412,10 @@ export const createSingletonServices: CreateSingletonServices<
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
       const tsGenerationAtInspect = getTsWriteGeneration()
-      unfilteredState = await inspectorFor(
+      const inspect = await inspectorFor(
         config.inspector ?? getInspectorEngine()
-      )(logger, wiringFiles, {
+      )
+      unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,

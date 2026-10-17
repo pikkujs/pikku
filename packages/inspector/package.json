@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/inspector"
   },
-  "description": "TypeScript inspector for Pikku \u2014 discovers functions and wirings to drive code generation",
+  "description": "TypeScript inspector for Pikku — discovers functions and wirings to drive code generation",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "type": "module",
@@ -17,6 +17,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./state": {
+      "types": "./dist/state.d.ts",
+      "import": "./dist/state.js",
+      "default": "./dist/state.js"
     },
     "./schema-generator": {
       "types": "./dist/schema-generator.d.ts",

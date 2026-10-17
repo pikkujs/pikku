@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { ErrorCode } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/state'
 import { runKnowledgeValidate } from '@pikku/knowledge'
 import { renderKnowledgeValidate } from '../knowledge/render.js'
 import {

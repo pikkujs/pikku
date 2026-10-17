@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
-import { CodeEditService } from '@pikku/code-edit'
 import type { CodeEditOperation } from '@pikku/code-edit'
 import { readFile } from 'node:fs/promises'
 import { relative, resolve } from 'node:path'
@@ -617,6 +616,8 @@ export const pikkuMetaApply = pikkuSessionlessFunc<{ file?: string }, void>({
     const operations = parseOperations(await readOperationsInput(data.file))
 
     const rootDir = (config as any).rootDir ?? process.cwd()
+    // Imported here: code-edit loads the TypeScript compiler.
+    const { CodeEditService } = await import('@pikku/code-edit')
     const codeEdit = new CodeEditService(rootDir)
     const files = await codeEdit.applyOperations(operations)
 

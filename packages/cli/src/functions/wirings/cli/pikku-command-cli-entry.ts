@@ -12,7 +12,7 @@ import {
 } from './serialize-channel-cli-client.js'
 import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
-import { ErrorCode } from '@pikku/inspector'
+import { ErrorCode } from '@pikku/inspector/state'
 
 export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
