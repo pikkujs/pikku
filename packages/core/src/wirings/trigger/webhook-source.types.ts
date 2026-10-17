@@ -2,7 +2,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { HmacAlgorithm, SecretEncoding } from '../../utils/hmac.js'
 
-export const PIKKU_INCOMING_WEBHOOK_QUEUE_NAME = 'pikku-incoming-webhooks'
+export { PIKKU_INCOMING_WEBHOOK_QUEUE_NAME } from '../../services/incoming-webhook-queue.js'
 
 /** `github` → `githubWebhookSecret`, `microsoft-outlook` → `microsoftOutlookWebhookSecret`. */
 export const webhookSecretCredentialName = (source: string): string =>

@@ -2,7 +2,7 @@ export { wireChannel } from './channel-runner.js'
 export {
   addChannelMiddleware,
   combineChannelMiddleware,
-} from './channel-middleware-runner.js'
+} from '../../channel-middleware-runner.js'
 export { logChannels } from './log-channels.js'
 export { PikkuAbstractChannelHandler } from './pikku-abstract-channel-handler.js'
 export type { EventHubService } from './eventhub-service.js'
