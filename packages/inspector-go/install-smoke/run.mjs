@@ -46,9 +46,10 @@ const host = `${process.platform}-${process.arch}`
 const platformDirs = PLATFORMS.map(
   (p) => `packages/inspector-go/npm/${targetName(p)}`
 )
-// Every workspace package the CLI reaches through its dependencies is packed
-// too: the branch's CLI can import a subpath that a published dependency does
-// not export yet.
+// Every workspace package the CLI reaches through its dependencies, peer
+// dependencies and optional dependencies is packed too: the branch's CLI can
+// import a subpath that a published dependency does not export yet. @pikku/core
+// is a peer of the CLI, so leaving peers out installed the registry's core.
 const WORKSPACE_GROUPS = [
   'packages',
   'packages/addon',
@@ -72,9 +73,15 @@ for (let i = 0; i < reached.length; i++) {
   const m = JSON.parse(
     readFileSync(join(repo, reached[i], 'package.json'), 'utf8')
   )
-  for (const dep of Object.keys(m.dependencies ?? {})) {
-    const dir = workspaceDirs.get(dep)
-    if (dir && !reached.includes(dir)) reached.push(dir)
+  for (const field of [
+    'dependencies',
+    'peerDependencies',
+    'optionalDependencies',
+  ]) {
+    for (const dep of Object.keys(m[field] ?? {})) {
+      const dir = workspaceDirs.get(dep)
+      if (dir && !reached.includes(dir)) reached.push(dir)
+    }
   }
 }
 const dirs = [...reached, ...platformDirs]
