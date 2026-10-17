@@ -192,8 +192,7 @@ jobs:
   # @ts-expect-error in a type-test project, or a test file that drifted from
   # the API it exercises passes every other job. Each package's `tsc` script
   # is the check. Packages only: examples, verifiers, templates and e2e need
-  # their generated .pikku output first. @pikku/workflow-graph is excluded
-  # until it can type-check @pikku/react's use of `process`.
+  # their generated .pikku output first.
   typecheck:
     name: Typecheck
     if: ${{ !github.event.pull_request.draft }}
@@ -207,7 +206,7 @@ jobs:
       # Sequential: each composite package's plain `tsc` re-emits its dist, so in
       # parallel core's emit races a dependent reading core/dist and it fails
       # with "File ... is not a module".
-      - run: bun run --filter './packages/**' --filter '!@pikku/workflow-graph' --sequential tsc
+      - run: bun run --filter './packages/**' --sequential tsc
 
   build:
     name: Build
