@@ -3,6 +3,7 @@ export interface AuthProviderVariable {
   description: string
 }
 
+/** What the CLI declares for one better-auth social provider. */
 export interface AuthProviderDef {
   /** Secret key stored in SecretService — holds the provider's OAuth credentials
    *  (an object matching {@link AuthProviderDef.fields}). */
@@ -116,4 +117,5 @@ export const PROVIDER_REGISTRY = {
   zoom: oauth('zoom', 'Zoom OAuth'),
 } satisfies Record<string, AuthProviderDef>
 
+/** A social provider id the registry knows. */
 export type AuthProvider = keyof typeof PROVIDER_REGISTRY

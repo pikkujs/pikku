@@ -1,7 +1,8 @@
 # @pikku/better-auth
 
-Better Auth integration for Pikku — mounts the auth handler, resolves sessions
-into Pikku's user session, and maps roles onto scopes.
+Better Auth integration for Pikku. It mounts the auth handler, resolves
+sessions into Pikku's user session with scopes from your `ScopeService`, and
+ships the plugins Pikku's console, scenarios and credentials rely on.
 
 ## Install
 
@@ -11,14 +12,78 @@ npm install @pikku/better-auth better-auth
 
 ## Usage
 
-```typescript
-import { createAuthHandler, betterAuthSession } from '@pikku/better-auth'
+Define the instance once with `pikkuBetterAuth`. The CLI reads it and generates
+the catch-all `/api/auth/**` route (`createAuthHandler()`), the session
+middleware and a `defineSecret` for `BETTER_AUTH_SECRET`:
 
-const authHandler = createAuthHandler(auth)
+```typescript
+import { betterAuth } from 'better-auth'
+import { pikkuBan } from '@pikku/better-auth'
+import { pikkuBetterAuth } from '#pikku/auth'
+
+export const auth = pikkuBetterAuth(async ({ secrets, kysely }) =>
+  betterAuth({
+    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
+    database: { db: kysely, type: 'sqlite' },
+    emailAndPassword: { enabled: true },
+    session: { cookieCache: { enabled: true } },
+    plugins: [pikkuBan()],
+  })
+)
 ```
 
-Add `betterAuthSession` to your middleware so Pikku functions see the resolved
-session, and `withResolvedScopes` to attach scopes for authorization.
+`createAuthHandler()` takes no arguments; it reads `services.auth`.
+
+### Session middleware
+
+Every middleware maps the better-auth session to `{ userId, orgId? }` (or your
+`mapSession`), stamps `virtualUser`, resolves scopes through the registered
+`ScopeService` (`withResolvedScopes`), and stands down when an earlier
+middleware already set a session. Pick one:
+
+| Middleware                          | Reads                               | Bundles the server | Sees a revocation             |
+| ----------------------------------- | ----------------------------------- | ------------------ | ----------------------------- |
+| `betterAuthSession()`               | the database, via `services.auth()` | yes                | immediately                   |
+| `betterAuthStatelessSession()`      | the signed `session_data` cookie    | no                 | when the cookie cache expires |
+| `betterAuthStoreSession({ store })` | better-auth's `secondaryStorage`    | no                 | immediately                   |
+
+The CLI generates the first or the second, depending on `session.cookieCache`.
+Register your own globally to pass options. The stateless middleware has to be
+told any custom `advanced.cookiePrefix` and `cookieCache.version`, because it
+never builds the instance that holds them:
+
+```typescript
+betterAuthStatelessSession({
+  cookiePrefix: 'my-app',
+  cookieCache: { version: '2' },
+})
+```
+
+The store middleware takes the same storage you hand better-auth.
+`inMemorySessionStore()` and `prefixedSessionStore()` build one, and your own
+only has to implement `AuthSessionStorage`, which is better-auth's
+`SecondaryStorage` contract.
+
+Outside a pikku function, `getAuthSession(auth, request, createConfig,
+createSingletonServices)` reads the session and builds a factory's services
+and instance only once.
+
+### Plugins
+
+- `pikkuBan()` adds the ban columns and refuses a banned user a session.
+- `pikkuVirtualUser()` lets scenarios sign in as virtual users.
+- `pikkuCredentialOAuth()` links OAuth2 API credentials to a user, or to the
+  reserved platform user for `type: 'singleton'`.
+- `pikkuDelegatedAuth()` uses an upstream API as the identity provider. It does
+  not link to an existing local user by email unless you opt in with
+  `linkExistingUsersByEmail`.
+
+User administration (`createAuthUser`, `setAuthUserBanned`,
+`setAuthUserPassword`, `deleteAuthUser`, `revokeAuthUserSessions`,
+`sendAuthUserSignInLink`) is plain calls against the internal adapter. The scope
+on the function calling them decides who may.
+
+The full guide is the `pikku-auth` skill (`references/better-auth.md`).
 
 ## Embedding an app cross-site
 
@@ -37,8 +102,7 @@ It turns on two mechanisms, because browsers disagree about which one works:
   `x-pikku-cross-site-cookie` — over storage a third-party frame is allowed to
   use on every engine, including WebKit. Every place this package hands caller
   headers to better-auth merges that header into `Cookie` first:
-  `createAuthHandler`, `betterAuthSession`, `betterAuthStatelessSession`,
-  `getAuthSession` and `callAdminApi`.
+  `createAuthHandler`, all three session middlewares and `getAuthSession`.
 
 A real cookie always wins over a relayed one of the same name, so a browser
 that did store it stays authoritative. Implement the browser half with

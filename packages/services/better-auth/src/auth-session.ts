@@ -21,6 +21,7 @@ export type BetterAuthSessionResult = { user: any; session: any }
  */
 type VerifiedApiKey = { valid: boolean; error: unknown; key: any }
 
+/** Options for {@link betterAuthSession}. */
 export type BetterAuthSessionOptions = {
   /**
    * Map a human/cookie/bearer session (from `getSession`) to the app session.
@@ -32,6 +33,7 @@ export type BetterAuthSessionOptions = {
     result: BetterAuthSessionResult,
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
+  /** Honour the impersonation header for callers allowed to; off when omitted. */
   impersonation?: ImpersonationOptions
   /**
    * Where this sits in the middleware order. The CLI generates its default-map
@@ -70,6 +72,19 @@ export type BetterAuthSessionOptions = {
   }
 }
 
+/**
+ * The stateful better-auth session middleware: resolves the session through
+ * `services.auth().api.getSession`, so it sees a revoked session on the next
+ * request — and bundles the better-auth server wherever it runs. See
+ * {@link betterAuthStatelessSession} and {@link betterAuthStoreSession} for the
+ * lean alternatives.
+ *
+ * Stands down when an earlier middleware already set a session or when
+ * `services.auth` is absent (an addon's scope). A failing `getSession` throws
+ * rather than serving the request anonymously.
+ *
+ * @example snippet: betterAuthSessionMiddleware
+ */
 export const betterAuthSession = (
   options: BetterAuthSessionOptions = {}
 ): CorePikkuMiddleware => {

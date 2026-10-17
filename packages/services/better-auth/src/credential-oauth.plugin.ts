@@ -46,6 +46,7 @@ export const findPlatformUserId = async (internalAdapter: {
 }): Promise<string | null> =>
   (await internalAdapter.findUserByEmail(PLATFORM_USER_EMAIL))?.user.id ?? null
 
+/** Options for {@link pikkuCredentialOAuth}. */
 export interface CredentialOAuthOptions {
   /** Built by `credentialOAuthProviders(CREDENTIAL_OAUTH2_CONFIGS, secrets)`. */
   config: CredentialOAuthProvider[]
@@ -67,6 +68,7 @@ export interface CredentialOAuthOptions {
   ) => boolean | Promise<boolean>
 }
 
+/** The caller {@link CredentialOAuthOptions.canLinkSingleton} is asked about. */
 export interface CredentialOAuthSession {
   user: {
     id: string
@@ -99,6 +101,8 @@ export interface CredentialOAuthSession {
  * provider registration (`context.socialProviders`), which is what supplies the
  * token exchange and the `refreshAccessToken` that `getAccessToken` calls. Only
  * the two identity-bound endpoints are replaced.
+ *
+ * @example snippet: betterAuthCredentialOAuth
  */
 export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
   const base = genericOAuth({ config: options.config })

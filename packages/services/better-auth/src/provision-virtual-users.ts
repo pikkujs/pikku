@@ -46,6 +46,7 @@ export interface ProvisionVirtualUsersServices {
  */
 export type VirtualUserOrphanPolicy = 'report' | 'ban'
 
+/** What {@link provisionVirtualUsers} provisions, and where. */
 export interface ProvisionVirtualUsersOptions {
   /** Virtual user id → the declaration with its address filled in — `virtualUserConfigs`. */
   virtualUsers: Record<string, ResolvedVirtualUser>
@@ -57,6 +58,7 @@ export interface ProvisionVirtualUsersOptions {
   orphans?: VirtualUserOrphanPolicy
 }
 
+/** What {@link provisionVirtualUsers} did. */
 export interface ProvisionVirtualUsersResult {
   created: number
   granted: number
