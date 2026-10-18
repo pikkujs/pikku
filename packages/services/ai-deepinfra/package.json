@@ -14,19 +14,22 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "files": [
-    "dist/"
+    "dist/",
+    "!dist/**/*.tsbuildinfo"
   ],
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "test": "bash run-tests.sh",
     "test:coverage": "bash run-tests.sh --coverage",
     "release": "npm run build && npm test",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
     "@ai-sdk/provider": "^4.0.0"

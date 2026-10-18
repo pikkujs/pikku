@@ -105,7 +105,9 @@
     "cli.schema.json",
     "surface.json",
     "snippets.json",
-    "snippets-meta.json"
+    "snippets-meta.json",
+    "!dist/**/*.tsbuildinfo",
+    "!dist/bin/pikku-bin.mjs"
   ],
   "engines": {
     "node": ">=24"
@@ -131,7 +133,8 @@
       "types": "./dist/src/cloud-client.d.ts",
       "import": "./dist/src/cloud-client.js",
       "default": "./dist/src/cloud-client.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "peerDependenciesMeta": {
     "@pikku/playwright": {

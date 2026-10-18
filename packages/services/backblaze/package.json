@@ -15,12 +15,18 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && tsc -b",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "peerDependencies": {
     "@pikku/core": "^0.12.139"
   }

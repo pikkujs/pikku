@@ -10,12 +10,18 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -b",
-    "tsc": "tsc --noEmit"
+    "build": "bun run clean && tsc -b",
+    "tsc": "tsc --noEmit",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "license": "MIT",
   "dependencies": {
     "@pikku/deploy": "^0.12.1"
