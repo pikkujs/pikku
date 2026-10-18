@@ -1,5 +1,9 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { serializeVirtualUserFunctions } from './serialize-virtual-user-functions.js'
 import { pikkuVirtualUserFunctions } from './pikku-command-virtual-user-functions.js'
 import {
@@ -123,50 +127,35 @@ describe('serializeVirtualUserFunctions', () => {
   // identity is the reserved platform user — not an invented service account,
   // which the directory would have to learn to ignore.
   test('the tick runs as the platform user', () => {
-    assert.match(out, /const PLATFORM_USER_ID = 'pikku-platform'/)
-    assert.doesNotMatch(out, /@pikku\/better-auth/)
+    assert.match(
+      out,
+      /import \{ findPlatformUserId, PLATFORM_USER_ID \} from '@pikku\/better-auth'/
+    )
     assert.match(
       out,
       /export const virtualUserPlatformSession = pikkuMiddleware\(/
     )
+    // Under uuid or serial ids the platform row is not `pikku-platform`, so a
+    // session naming that literal would attribute every scheduled run to a user
+    // that does not exist: the row is found by its reserved address.
+    assert.doesNotMatch(out, /const PLATFORM_USER_ID = /)
     assert.match(
       out,
-      /setSession\?\.\(\{\n\s+userId: PLATFORM_USER_ID,\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
+      /\(context && \(await findPlatformUserId\(context\.internalAdapter\)\)\) \?\?\n\s+PLATFORM_USER_ID/
+    )
+    assert.match(
+      out,
+      /async \(\{ auth \}, \{ setSession \}, next\) => \{\n\s+await setSession\?\.\(\{\n\s+userId: await platformUserId\(auth\),\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
     )
     // Attached to the task's own middleware — tag middleware over `/rpc` cannot
     // set a session at all.
     assert.match(out, / \* {3}middleware: \[virtualUserPlatformSession\],/)
   })
 
-  // Under uuid or serial ids the platform row is not `pikku-platform`, so a
-  // session naming that literal would attribute every scheduled run to a user
-  // that does not exist.
-  test('with better-auth, the tick looks the platform user up by its address', () => {
-    const { functions } = serializeVirtualUserFunctions(
-      leaf,
-      '../../../.pikku/workflow/pikku-virtual-users.gen.js',
-      { betterAuth: true }
-    )
-    assert.match(
-      functions,
-      /import \{ findPlatformUserId, PLATFORM_USER_ID \} from '@pikku\/better-auth'/
-    )
-    assert.doesNotMatch(functions, /const PLATFORM_USER_ID = /)
-    assert.match(
-      functions,
-      /\(context && \(await findPlatformUserId\(context\.internalAdapter\)\)\) \?\?\n\s+PLATFORM_USER_ID/
-    )
-    assert.match(
-      functions,
-      /async \(\{ auth \}, \{ setSession \}, next\) => \{\n\s+await setSession\?\.\(\{\n\s+userId: await platformUserId\(auth\),/
-    )
-  })
-
   test('the generated lookup resolves the row better-auth assigned', async () => {
     const { functions } = serializeVirtualUserFunctions(
       leaf,
-      '../../../.pikku/workflow/pikku-virtual-users.gen.js',
-      { betterAuth: true }
+      '../../../.pikku/workflow/pikku-virtual-users.gen.js'
     )
     const start = functions.indexOf('const platformUserId = ')
     const end = functions.indexOf('\n}\n', start) + 3
@@ -350,6 +339,46 @@ describe('pikkuVirtualUserFunctions', () => {
     await assert.rejects(
       (pikkuVirtualUserFunctions as any).func(services({}), undefined, {}),
       /no virtual users are declared/
+    )
+  })
+
+  // The generated file imports `@pikku/better-auth`, so the package that owns
+  // it has to list it, or the app fails to build with a missing module.
+  test('declares @pikku/better-auth in the package that owns the generated file', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-virtual-user-dep-'))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'app', dependencies: {} }, null, 2)
+    )
+    const withFiles = services({ susan: {} })
+    withFiles.config.virtualUserFunctionsFile = join(
+      root,
+      'src',
+      'scaffold',
+      'virtual-user.gen.ts'
+    )
+    withFiles.config.virtualUserSchemasFile = join(
+      root,
+      'src',
+      'scaffold',
+      'virtual-user.schemas.gen.ts'
+    )
+
+    await (pikkuVirtualUserFunctions as any).func(withFiles, undefined, {})
+
+    const declared = JSON.parse(
+      await readFile(join(root, 'package.json'), 'utf-8')
+    ).dependencies['@pikku/better-auth']
+    const shipped = JSON.parse(
+      readFileSync(
+        new URL('../../../../package.json', import.meta.url),
+        'utf-8'
+      )
+    )
+    assert.equal(
+      declared,
+      (shipped.dependencies ?? {})['@pikku/better-auth'] ??
+        shipped.devDependencies['@pikku/better-auth']
     )
   })
 
