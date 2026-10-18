@@ -1,5 +1,34 @@
 # @pikku/deploy-cloudflare
 
+## 0.12.22
+
+### Patch Changes
+
+- be98e56: `@pikku/deploy-cloudflare` applies the generated column coercion map, as `pikku dev` does.
+
+  The adapter now ships `coercionContributor`, on by default: when `db/coercion.gen.ts` exists, every entry's `createPlatformServices` wraps the platform's `services.kysely` with `createCoercionPlugin` and the map as a literal. It runs after every other contributor so it wraps the kysely they built. A platform whose own contributor already applies the map passes `coercion: false`.
+
+  `EntryGenerationContext` gains `coercionMap`, filled by the deploy build from the project's `coercion.gen.ts`, and a contributor's `imports` function now receives the entry context as a second argument (`collectContributorImports` takes it as a third).
+
+- 939dac7: Cloudflare units register their addons' functions and schemas on first use instead of at Worker startup.
+
+  `pikku all --lazy-addons` splits each wired addon's published bootstrap: its meta is still imported statically, while `schemas/register.gen.js` and `function/pikku-functions.gen.js` move into an exported, memoised `loadAddons()` as dynamic imports. Per-unit deploy codegen passes the flag for a provider whose adapter sets the new `ProviderAdapter.lazyAddonRegistration`; the Cloudflare adapter does, and its worker entries await `loadAddons()` before building singleton services. Addons already published work unchanged — the split reads their existing bootstrap, and one it does not recognise is imported whole. Other runtimes and the server container keep the eager bootstrap.
+
+  On a synthetic addon the size of `@pikku/addon-github` (811 functions, 1416 schemas) module evaluation at startup fell from ~438ms to ~191ms and registers nothing until the first request.
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [674af8a]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+  - @pikku/deploy@0.12.16
+
 ## 0.12.21
 
 ### Patch Changes

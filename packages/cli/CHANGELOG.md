@@ -1,3 +1,205 @@
+## 0.12.192
+
+### Patch Changes
+
+- 3a9c9d8: `agentApprove(agentName)` now only approves runs of the agent it was built for. It used to ignore its argument, so a route such as `wireHTTP({ route: '/agents/ops/approve', func: agentApprove('opsAgent') })` accepted approvals for any agent run the caller owned. A run that belongs to a different agent is now refused with a `ForbiddenError` (403): `Run <runId> belongs to agent '<actual>', not '<expected>'`. The ownership check still runs first.
+
+  The same mismatch in `rpc.agent.approve(runId, approvals, expectedAgentName)` and `approveAgent(...)` now throws `ForbiddenError` (403). It used to throw a plain `Error`, which reached HTTP clients as a 500.
+
+- 65682fc: `@pikku/better-auth/constants` exports the provider and plugin registries, OAuth proxy ids and virtual-user env names without loading the better-auth library. The CLI reads them from there, so it no longer loads better-auth on every command: `pikku --help` 0.53s → 0.43s.
+- 01036e4: Pin bun 1.4.3: new projects declare `"packageManager": "bun@1.4.3"`, and `pikku validate` and the Studio Cloud smoke check recommend it.
+- ca35477: The test project `pikku new addon` scaffolds imports its application types from `@pikku/core/types`, like the addon itself, instead of the package root, which no longer exports them. Four skill references (`pikku-middleware`, `pikku-services`, `pikku-wiring` channels, `pikku-deploy` ws) import `addGlobalMiddleware`, `pikkuServerLifecycle`, `pikkuChannelMiddleware` and `stopSingletonServices` from the subpaths that export them. The CLI tarball no longer ships `dist/bin/pikku-bin.mjs`, the entry the native binaries are compiled from, nor the bootstrap leaf index `dist/.pikku/node/index.js` whose source the build regenerates away.
+- 031f001: `pikku deploy plan` on a project with no backend units (a frontend-only app) now writes an empty deployment manifest, infra manifest and a successful `--resultFile` instead of exiting without them, so a frontend-only project deploys its frontend rather than failing the build.
+- 50314e2: `pikku experiment native-comparison` runs a project's codegen (`pikku all`) with the TypeScript inspector and then the native one, each from the same `.pikku` state, and prints them side by side: wall time, CPU time across the process tree, peak memory per process and for the whole tree (RSS everywhere, plus the kernel's physical footprint on macOS), and whether the two engines generated identical output, listing the files that differ when they did not. `--runs N` reports the median of N runs per engine; `--json` emits the full result. The project's `.pikku` directories and `*.gen.*` files are put back as they were before each run and when it finishes.
+- 534f971: `pikku inspector parity` runs the project's codegen with the TypeScript inspector and then the native one, from the same generated state, and fails unless both save the same inspector state, generate the same files and log the same diagnostics.
+- 6a9488c: perf(cli): load the TypeScript compiler only for commands that inspect. `@pikku/inspector`, `@pikku/n8n-import`, the `@pikku/code-edit` root and the mocks stub scanner are now imported inside the functions that need them, and eager values come from the new compiler-free `@pikku/inspector/lite` entry. `pikku --help` drops from ~535 ms to ~415 ms under node (~245 ms to ~195 ms for the compiled binary). Drops the unused `@openapi-contrib/json-schema-to-openapi-schema` dependency and moves `ts-json-schema-generator` (used only by the `schema` script) to devDependencies.
+- 46e2c7e: The CLI no longer loads the TypeScript compiler under the native inspector. `@pikku/inspector/lite` also carries everything a consumer of an `InspectorState` needs (initial state, filtering, workflow deserializers, schema references), and the TypeScript engine and its source helpers load only once that engine is selected. The CLI process peaks about 60 MB lower on a native build.
+- 237ec7c: A standalone `pikku` (Homebrew, the release binaries) with no `pikku-inspect` beside it now fails with where to put one, instead of falling back to the TypeScript inspector, which cannot run inside a standalone build.
+- a0ae9bb: The generated `betterAuthStatelessSession` now reads the session cookie the way the auth config writes it. The inspector reads `advanced.cookiePrefix`, `session.cookieCache.strategy` and `session.cookieCache.version` from the `betterAuth({...})` call when they are string literals, and the CLI passes them through. Before this, an app with a custom cookie prefix was anonymous on every request, and bumping the cookie version invalidated nothing.
+
+  If one of these options is set but isn't a string literal (an environment variable, for example), or a later spread in the same object can replace it (`{ version: '2', ...override }`), the inspector warns about it and does not pass the value on. A spread written before the option is fine, because the option wins. In that case, register `betterAuthStatelessSession({ cookiePrefix, cookieCache })` yourself with `addGlobalMiddleware`. Your registration runs before the generated one, and the generated one then does nothing. `cookieCache.jwt` is never passed through and needs that same manual registration.
+
+- 7178b88: The scaffolded `virtualUserPlatformSession` now finds the platform user by its reserved address (`findPlatformUserId` from `@pikku/better-auth`). Before this, scheduled virtual-user ticks always ran as the hardcoded `userId: 'pikku-platform'`, which matches no user row when better-auth generates `uuid` or `serial` ids. Until the platform user exists, or when the app has no `auth` service, the session falls back to `'pikku-platform'`.
+
+  `scaffold.virtualUser` now requires `@pikku/better-auth`. The generated file imports it unconditionally, and `pikku all` adds it to the `package.json` that owns the generated file when it is not already listed (the way a generated channel client adds `@pikku/websocket`), so run your package manager's install afterwards. Before, a project without `pikkuBetterAuth` got a second form of the middleware with the literal id, which differed only because of that branch; the sign-in plugin, the provisioning and the platform user are all better-auth's.
+
+- fbee6df: `pikku virtual-user sync` and its `--help` text now point at `provisionVirtualUsers` from `@pikku/better-auth`, the function that provisions virtual users in a deployment. They used to name `pikkuCloud`, which `@pikku/better-auth` does not export.
+- 2edf04f: The `coercion.gen.ts` header no longer says nothing applies the map. It names where it is applied — `pikku dev` / `serve` / the local CLI, standalone deploys and `@pikku/deploy-cloudflare`'s `coercionContributor` — and warns against attaching it a second time to that kysely, since the plugin is not idempotent for json columns.
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- fa308d4: Docs only, no runtime change. Every export reachable from `@pikku/core`'s
+  entry points now carries TSDoc (1,100 of 1,100, up from 447), including
+  `runPikkuFunc`, `wireHTTP`, `pikkuState`, `PikkuRPCService`, `wireQueueWorker`,
+  `wireScheduler`, the service contracts and every error class (with the HTTP
+  status it maps to). Framework plumbing that generated code calls is tagged
+  `@internal`; nothing was removed from the exports.
+
+  `@pikku/cli`: the generated `wireAddon`, `pikkuServerLifecycle` and the addon
+  `wireTriggerWebhookSource` now point their `@example` at online-shop snippets.
+
+- 802076e: Generate the custom types once, into `pikku-custom-types.gen.d.ts` in `outDir` (configurable as `customTypesDeclarationFile`), instead of copying them into every typed map. Each map now imports the shared file by a relative path and re-exports each custom type under its old name, so map exports are unchanged. Generated maps no longer contain absolute import paths.
+- be98e56: `@pikku/deploy-cloudflare` applies the generated column coercion map, as `pikku dev` does.
+
+  The adapter now ships `coercionContributor`, on by default: when `db/coercion.gen.ts` exists, every entry's `createPlatformServices` wraps the platform's `services.kysely` with `createCoercionPlugin` and the map as a literal. It runs after every other contributor so it wraps the kysely they built. A platform whose own contributor already applies the map passes `coercion: false`.
+
+  `EntryGenerationContext` gains `coercionMap`, filled by the deploy build from the project's `coercion.gen.ts`, and a contributor's `imports` function now receives the entry context as a second argument (`collectContributorImports` takes it as a third).
+
+- 1112955: Deploy: `wireGateway` routes reach the deployment manifest.
+
+  A webhook gateway is now served from its handler's unit — the POST/GET wrappers, the handler they call and the services it builds — and is listed under the new `manifest.gateways` (`GatewayDefinition`). Previously the wrappers became two units of their own without the handler's services or meta, and the gateway itself appeared nowhere in the manifest.
+
+  Websocket and listener gateways have no unit a multi-unit provider can host, so `pikku deploy plan` / `apply` now fails naming each one and its route instead of building without it. Single-unit (standalone) deploys are unaffected.
+
+  The inspector filter now filters gateways — by handler function id, gateway name, tags or route — so a per-unit build only imports the gateway wirings it serves, and `tags` on `wireGateway` takes effect on `pikku all` as documented.
+
+  Breaking: `DeploymentManifest` has a required `gateways` field; code that constructs a manifest by hand has to supply it.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 54b8891: `pikku dev` takes the same platform-service contributors a deploy does. List modules exporting a `PlatformServiceContributor` under `dev.contributors` in `pikku.config.json`; `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts` from them (nothing when none are configured), and `pikku dev` merges its `createPlatformServices(env)` over the local services before `createSingletonServices`, so a host can inject an `emailService` into a running project. `pikku serve` never loads it (dev only) and `NODE_ENV=production` ignores it. A contributor import given as a `file://` URL or absolute path is emitted as the package export that resolves to it, or relative to `.pikku/`, so the generated file typechecks.
+- a8eb397: `addGlobalPermission` registrations now reach the runtime. The inspector never recorded them, and the generated `pikku-permissions.gen.ts` imported nothing, so a file whose only job was `addGlobalPermission([...])` was never loaded and every function ran without that global gate. The inspector records each call in `permissions.global`. The generated permissions file imports each file for its side effect, or imports and calls the exported zero-argument factory the call sits in. A permission written inline in the global array is no longer reported as unassigned. The services used by global permissions and global middleware are now counted as required.
+
+  A factory is found in every common shape: an exported arrow with a block body, an exported `function` declaration, and a function exported through an `export { }` list. A call inside any other function that nothing calls (not exported, takes a parameter, or a default export) is no longer recorded as if it ran; the inspector warns that the global permission is not registered. `addGlobalPermission` also follows a `const` array or object, declared in the file or imported, instead of giving up on anything but a literal, so the services its permissions use are counted. The generated file imports each factory under its own alias, so two files that export a factory of the same name both register.
+
+- ffb53f2: The CLI can inspect with a native engine: the `pikku-inspect` binary from `@pikku/inspector-go`, built on typescript-go (TypeScript 7). It is the default, and generates output identical to the TypeScript inspector (`@pikku/inspector`, TypeScript 6 compiler API). Choose the TypeScript one with `"inspector": "typescript"` in `pikku.config.json`, `--inspector typescript`, or `PIKKU_INSPECTOR=typescript`. The flag beats the environment variable, which beats the config key. Any other value is rejected, including the old `PIKKU_INSPECTOR=go`; use `native`.
+
+  When no engine is chosen and no `pikku-inspect` binary exists for the platform, the CLI warns and uses the TypeScript engine. An explicit `native` with no binary stops with an error that names the TypeScript engine. The codegen child that `pikku dev` and watch mode start inherits the parent's engine.
+
+- ef17c47: Split `inspect()` into `analyzeProgram()` (engine-specific, needs the checker) and `finalizeInspectorState()` (shared, checker-free, served typescript-free from `@pikku/inspector/finalize`). The serialized inspector state now carries every field finalize reads, so a state produced by another engine can be finalized identically.
+
+  Add `@pikku/inspector-go`, which runs analysis in the `pikku-inspect` binary over the `--stdin` JSON protocol and finalizes the result, plus a parity harness that diffs it against the TypeScript inspector. The CLI chooses between the two engines as described in the inspector-engine changeset.
+
+- 939dac7: Cloudflare units register their addons' functions and schemas on first use instead of at Worker startup.
+
+  `pikku all --lazy-addons` splits each wired addon's published bootstrap: its meta is still imported statically, while `schemas/register.gen.js` and `function/pikku-functions.gen.js` move into an exported, memoised `loadAddons()` as dynamic imports. Per-unit deploy codegen passes the flag for a provider whose adapter sets the new `ProviderAdapter.lazyAddonRegistration`; the Cloudflare adapter does, and its worker entries await `loadAddons()` before building singleton services. Addons already published work unchanged — the split reads their existing bootstrap, and one it does not recognise is imported whole. Other runtimes and the server container keep the eager bootstrap.
+
+  On a synthetic addon the size of `@pikku/addon-github` (811 functions, 1416 schemas) module evaluation at startup fell from ~438ms to ~191ms and registers nothing until the first request.
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- 40855aa: Remove dev quick login. The `${basePath}/dev/quick-login` route, the `PIKKU_DEV_QUICK_LOGIN` flag that `pikku dev` and `pikku serve` set by default, and the `admin@pikku.dev` account it created are gone, and `createAuthHandler` now forwards every request to better-auth. Nothing in this repository called the route. Sign in through your normal sign-in, or `virtualUser()` under `pikku dev`. An `admin@pikku.dev` user already in a dev database is left as it is.
+- a88391a: **Breaking:** `setSession` now means the same in middleware as in a function body (#1451). It marks the session changed — so `authCookie` re-issues the cookie on the way out — and writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for the request, under the same name and type.
+
+  Middleware that works out who the caller is from a credential it was handed (a cookie, a bearer token, an API key) should call the new `setInitialSession` instead. It sets the session the function sees without marking it changed or writing anything:
+
+  ```diff
+  -const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setSession, session }, next) => {
+  +const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setInitialSession, session }, next) => {
+     if (session) return next()
+     const row = await db.findKey(http?.request?.header('x-api-key'))
+  -  if (row) await setSession?.({ userId: row.userId })
+  +  if (row) setInitialSession?.({ userId: row.userId })
+     return next()
+   })
+  ```
+
+  Left on `setSession`, such a middleware re-issues the auth cookie and writes the session store on every request. Middleware that genuinely signs someone in keeps `setSession`, and now persists. `clearSession` is on the middleware wire too.
+
+  `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session middleware and the CLI's studio and virtual-user sessions all use `setInitialSession`. `SessionService.set` stores a session under its own `userId` when no user was resolved yet, so a sign-in is persisted rather than dropped, and the function runner reads a middleware-set session from the session service explicitly rather than through the order `freezeInitial` happens to run in.
+
+- 3df9013: A trigger source can now say which user an event belongs to (#1618): `trigger.invoke(data, { pikkuUserId })`. The target RPC or workflow runs as that user, the way a queue job or workflow run carrying a `pikkuUserId` does — its `type: 'wire'` credentials and stored session resolve for them, and a started workflow records the id on the run. Without the option nothing changes: the target runs as nobody.
+
+  The user is a separate argument so nothing in the event data can choose it; a source should pass only a user it established itself, such as the one whose credential it polled with. A `pikkuUserId` that is not a non-empty string drops the event with an error log.
+
+  `PikkuTrigger` and the new `TriggerInvokeOptions` are exported from `@pikku/core/trigger`. A custom `PikkuTriggerService` subclass must pass the new optional `options` argument of the `onTrigger` callback through to `onTriggerFire`, or the user never reaches the target.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [8c85de6]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [65682fc]
+- Updated dependencies [c702ed6]
+- Updated dependencies [8bd70db]
+- Updated dependencies [ca35477]
+- Updated dependencies [6a9488c]
+- Updated dependencies [46e2c7e]
+- Updated dependencies [a0ae9bb]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [802076e]
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [0a4676a]
+- Updated dependencies [dfc5bb7]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [54b8891]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a8eb397]
+- Updated dependencies [ffb53f2]
+- Updated dependencies [8325c75]
+- Updated dependencies [10f98d3]
+- Updated dependencies [ffc0fa4]
+- Updated dependencies [832eda5]
+- Updated dependencies [bdb67e5]
+- Updated dependencies [6bdfd67]
+- Updated dependencies [ef17c47]
+- Updated dependencies [b9df997]
+- Updated dependencies [6d8a949]
+- Updated dependencies [927210d]
+- Updated dependencies [939dac7]
+- Updated dependencies [94676e4]
+- Updated dependencies [6a16989]
+- Updated dependencies [19895c4]
+- Updated dependencies [afe6fe4]
+- Updated dependencies [40855aa]
+- Updated dependencies [a88391a]
+- Updated dependencies [bec7622]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/skills@0.12.59
+  - @pikku/better-auth@0.12.57
+  - @pikku/inspector@0.12.107
+  - @pikku/inspector-go@0.12.1
+  - @pikku/deploy-standalone@0.12.27
+  - @pikku/deploy@0.12.16
+  - @pikku/deploy-cloudflare@0.12.22
+  - @pikku/kysely@0.13.39
+  - @pikku/ai-vercel@0.12.16
+  - @pikku/bun-server@0.12.15
+  - @pikku/code-edit@0.12.8
+  - @pikku/knowledge@0.12.21
+  - @pikku/migrator-sql@0.12.9
+  - @pikku/openapi-parser@0.12.24
+  - @pikku/playwright@0.12.89
+  - @pikku/schedule@0.12.11
+  - @pikku/websocket@0.12.6
+  - @pikku/fetch@0.12.13
+  - @pikku/n8n-import@0.0.9
+  - @pikku/node-http-server@0.12.21
+  - @pikku/ws@0.12.11
+
 ## 0.12.191
 
 ### Patch Changes

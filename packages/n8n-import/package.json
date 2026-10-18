@@ -1,6 +1,6 @@
 {
   "name": "@pikku/n8n-import",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -29,7 +29,7 @@
     "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@pikku/openapi-to-zod-schema": "^0.12.7",
+    "@pikku/openapi-to-zod-schema": "^0.12.8",
     "to-json-schema": "^0.2.5",
     "typescript": "^6.0.3"
   },

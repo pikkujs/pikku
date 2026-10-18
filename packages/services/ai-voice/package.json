@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ai-voice",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -31,6 +31,6 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.138"
+    "@pikku/core": "^0.12.144"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "pikku",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -22,9 +22,9 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.108",
-    "@pikku/jose": "^0.12.7",
-    "@pikku/schema-ajv": "^0.12.7"
+    "@pikku/core": "^0.12.144",
+    "@pikku/jose": "^0.12.10",
+    "@pikku/schema-ajv": "^0.12.8"
   },
   "engines": {
     "node": ">=24"
