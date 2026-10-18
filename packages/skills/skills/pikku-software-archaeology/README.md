@@ -75,6 +75,8 @@ pikku-software-archaeology/
 ├── references/
 │   ├── blueprint.schema.json         # the output contract (JSON Schema)
 │   ├── pikku-mapping.md              # blueprint → Pikku primitives
+│   ├── tests-to-scenarios.md         # legacy test suite → blueprint scenarios → pikkuScenario
+│   ├── sources/                      # per-framework guides: rails, laravel, nestjs, express
 │   ├── second-opinion.md             # blueprint → owner-facing report: method, voice, red flags
 │   └── second-opinion-report-template.md  # the layered structure to fill in
 ├── example/
@@ -82,3 +84,12 @@ pikku-software-archaeology/
 └── scripts/
     └── validate.mjs                  # schema + cross-file validation (node, no deps)
 ```
+
+## Backlog: real-app test runs
+
+The framework guides in `references/sources/` are written from general knowledge of each framework and have not been run against a real codebase yet. Run the skill on these, scoped to one slice each (not the whole repo), clone into a scratch directory rather than a pikku repo, and fix whatever the guides miss:
+
+- **Redmine** (Rails, issue tracker, ~2006): the hardest test of `sources/rails.md` — callbacks, workflow states, plugins. Scope to issues + workflow transitions.
+- **Immich** (NestJS, photo backend): exercises `sources/nestjs.md` — guards, cron/queues, event handlers. Scope to one domain (e.g. albums or sharing).
+
+Things to check on each run: implicit events found, validator passes, which grep patterns in the guide come up empty, and how `tests-to-scenarios.md` handles the repo's own suite.
