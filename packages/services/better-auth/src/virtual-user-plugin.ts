@@ -79,14 +79,18 @@ export interface VirtualUserPluginOptions {
   /**
    * Upstream credentials a virtual user carries into its session, e.g. the token an
    * addon calls a third-party API with. Read at every sign-in from
-   * `VIRTUAL_USER_CREDENTIAL_<VIRTUAL_USER>_<NAME>`, so a value never lives in code.
+   * `VIRTUAL_USER_CREDENTIAL_<LOCAL_PART>_<NAME>`, so a value never lives in code.
+   * `<LOCAL_PART>` is the part of the virtual user's email before the `@` (the
+   * domain is not read), and both it and `<NAME>` are uppercased with each run of
+   * non-alphanumeric characters replaced by a single `_`.
    */
   credentials?: VirtualUserCredentialsOptions
 }
 
 /**
  * Upstream credentials a virtual user carries, read from
- * `VIRTUAL_USER_CREDENTIAL_<ADDRESS>_<NAME>` variables at each sign-in.
+ * `VIRTUAL_USER_CREDENTIAL_<LOCAL_PART>_<NAME>` variables at each sign-in, where
+ * `<LOCAL_PART>` is the email before the `@`. See {@link virtualUserCredentialEnvKey}.
  */
 export interface VirtualUserCredentialsOptions {
   /** Credential names to look up, as the addon declares them (`defineCredential({ name })`). */
@@ -102,7 +106,14 @@ export interface VirtualUserCredentialsOptions {
 const envSegment = (value: string) =>
   value.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()
 
-/** `dan@virtualuser.local` + `dolibarr` → `VIRTUAL_USER_CREDENTIAL_DAN_DOLIBARR`. */
+/**
+ * The variable a virtual user's credential is read from. Only the email's local
+ * part is used, never the domain; the local part and the credential name are each
+ * uppercased with runs of non-alphanumeric characters replaced by `_`.
+ *
+ * `dan@virtualuser.local` + `dolibarr` → `VIRTUAL_USER_CREDENTIAL_DAN_DOLIBARR`.
+ * `a.b-c@x.test` + `my token` → `VIRTUAL_USER_CREDENTIAL_A_B_C_MY_TOKEN`.
+ */
 export const virtualUserCredentialEnvKey = (email: string, name: string) =>
   `VIRTUAL_USER_CREDENTIAL_${envSegment(email.split('@')[0]!)}_${envSegment(name)}`
 
