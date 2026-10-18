@@ -1,16 +1,14 @@
 ---
 name: pikku-knowledge
 description: >-
-  Use when writing, reading, reorganising or validating a project's knowledge/ directory — the
-  notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
-  note (path-as-identity markdown, only `type` required), the sections (entities, decisions,
-  questions, wishlist), how notes become changes (`pikku knowledge
-  gaps`), the `resource:` URI scheme tying a note to its code, and `pikku knowledge validate|index|gaps`. TRIGGER when: user asks to write down a decision,
-  requirement, entity or open question; asks what the app does or is; asks about knowledge/
-  notes or a diagram, callout or decision block; or hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes, tables or permissions exist
-  (`pikku meta` / `pikku info`, never a note), wants a scenario test (use pikku-scenario), writes a
-  changeset plan (use pikku-architect), or extracts a `.knowledge/` blueprint from a legacy repo
-  (use pikku-software-archaeology).
+  Write, read, reorganise or validate a project's knowledge/ directory: Open Knowledge Format notes
+  (path-as-identity markdown, only `type` required), sections (entities, decisions, questions,
+  wishlist), notes becoming changes (`pikku knowledge gaps`), the `resource:` URI scheme, `pikku
+  knowledge validate|index|gaps`. TRIGGER when: asked to record a decision, requirement, entity or
+  open question, what the app does or is, a knowledge note/diagram/callout, or a product brief. DO
+  NOT TRIGGER for what functions/routes/tables exist (`pikku meta`/`pikku info`), scenarios (use
+  pikku-scenario), changeset plans (use pikku-architect) or legacy blueprint extraction (use
+  pikku-software-archaeology).
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
@@ -21,7 +19,6 @@ agent:
     verify:
       - id: knowledge-consistent
         command: pikku knowledge validate
-
 ---
 
 # Pikku Knowledge
@@ -72,14 +69,14 @@ worse than one of them losing access mid-session.
 
 Frontmatter fields:
 
-| Field         | Meaning                                                                                                                 |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Field         | Meaning                                                                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `type`        | **The only required field.** One of `entity`, `decision`, `note`, `overview`. Lowercase — every gate compares it literally, so a near-miss is a note no command can see. |
-| `title`       | What to call the note in a listing. Falls back to the first heading, then the filename.                                 |
-| `description` | One line, used as the note's subtitle in a section index.                                                               |
-| `resource`    | Comma-separated `<kind>:<id>` URIs — the code this note is about. See below.                                            |
-| `tags`        | Flow list (`[a, b]`) or a `- item` block; both are read.                                                                |
-| `timestamp`   | When it was written, if it matters.                                                                                     |
+| `title`       | What to call the note in a listing. Falls back to the first heading, then the filename.                                                                                  |
+| `description` | One line, used as the note's subtitle in a section index.                                                                                                                |
+| `resource`    | Comma-separated `<kind>:<id>` URIs — the code this note is about. See below.                                                                                             |
+| `tags`        | Flow list (`[a, b]`) or a `- item` block; both are read.                                                                                                                 |
+| `timestamp`   | When it was written, if it matters.                                                                                                                                      |
 
 `index.md` and `log.md` are **reserved**: an `index.md` maps a directory, a `log.md` is an append-only record. Neither is ever listed as a note by an index.
 
@@ -109,13 +106,13 @@ knowledge/
 
 Each section answers exactly one question, which is what lets a reader find a note without an index of indexes:
 
-| Section               | The question it answers                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| `entities/`           | What is this thing, in the words users use for it?                 |
-| `decisions/`          | What was chosen, and what does that rule out?                      |
-| `decisions/security/` | Who may do what?                                                   |
-| `questions/`          | What has been asked and not yet answered?                          |
-| `wishlist/`           | What does somebody want that nobody has asked to be built?         |
+| Section               | The question it answers                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `entities/`           | What is this thing, in the words users use for it?         |
+| `decisions/`          | What was chosen, and what does that rule out?              |
+| `decisions/security/` | Who may do what?                                           |
+| `questions/`          | What has been asked and not yet answered?                  |
+| `wishlist/`           | What does somebody want that nobody has asked to be built? |
 
 **Create a section the turn you have a note for it** — never a scaffold of empty directories, and never a section without its own `index.md`. A section index says in one line what belongs in it; that sentence is the reason the file exists, so `pikku knowledge index` writes only the note listing and leaves your prose alone.
 
@@ -193,19 +190,19 @@ It is a **summary, not the note** — the argument continues in prose underneath
 
 **Every kind resolves.** That is the whole design: a kind that cannot be checked lets notes accumulate references nothing validates, and the graph rots into fiction exactly where it looks most authoritative.
 
-| Kind        | An id is                                           | Where it resolves                                                                          |
-| ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `func:`     | a function id                                      | generated function meta                                                                    |
-| `workflow:` | a workflow name                                    | generated workflow meta                                                                    |
-| `schema:`   | a schema name                                      | generated schemas                                                                          |
-| `http:`     | a route, `method:route`, or the function behind it | generated http wirings                                                                     |
-| `queue:`    | a queue name                                       | generated queue wirings                                                                    |
-| `cron:`     | a scheduled task name                              | generated scheduler wirings                                                                |
-| `channel:`  | a channel name                                     | generated channel meta                                                                     |
-| `table:`    | a table name                                       | the generated db schema                                                                    |
-| `addon:`    | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                                  |
-| `scope:`    | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
-| `virtualUser:`  | a virtual user name                                     | `defineVirtualUsers()`                                                                         |
+| Kind           | An id is                                           | Where it resolves                                                                          |
+| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `func:`        | a function id                                      | generated function meta                                                                    |
+| `workflow:`    | a workflow name                                    | generated workflow meta                                                                    |
+| `schema:`      | a schema name                                      | generated schemas                                                                          |
+| `http:`        | a route, `method:route`, or the function behind it | generated http wirings                                                                     |
+| `queue:`       | a queue name                                       | generated queue wirings                                                                    |
+| `cron:`        | a scheduled task name                              | generated scheduler wirings                                                                |
+| `channel:`     | a channel name                                     | generated channel meta                                                                     |
+| `table:`       | a table name                                       | the generated db schema                                                                    |
+| `addon:`       | `@pikku/addon-x` or bare `x`                       | the manifests that declare the dependency                                                  |
+| `scope:`       | a scope name                                       | the `scopes:` a function gates itself with, plus the scopes a `defineSystemRole()` confers |
+| `virtualUser:` | a virtual user name                                | `defineVirtualUsers()`                                                                     |
 
 Ids are case-sensitive: `createEntry` is not `createentry`.
 
@@ -217,14 +214,14 @@ There is no kind for a service, a middleware or a component. Say it in prose ins
 
 These are all things that exist somewhere better, so a note is always the copy that drifts:
 
-| Do not write                        | Because it lives in                                        |
-| ----------------------------------- | ---------------------------------------------------------- |
-| a `virtual users/` section               | `defineVirtualUsers()` in the project's own code               |
+| Do not write                        | Because it lives in                                          |
+| ----------------------------------- | ------------------------------------------------------------ |
+| a `virtual users/` section          | `defineVirtualUsers()` in the project's own code             |
 | a `scenarios/` section              | the `scenarios` of the plan for the changeset that builds it |
-| a `permissions/` section            | a decision note under `decisions/security/`                |
-| a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema        |
-| a changelog                         | `CHANGELOG.md` at the repo root                            |
-| **secrets or credentials**          | a secrets service. Never here — `knowledge/` is committed. |
+| a `permissions/` section            | a decision note under `decisions/security/`                  |
+| a list of tables, columns or routes | `pikku meta` — the generated schema _is_ the schema          |
+| a changelog                         | `CHANGELOG.md` at the repo root                              |
+| **secrets or credentials**          | a secrets service. Never here — `knowledge/` is committed.   |
 
 And two shapes that look like a knowledge base but are not:
 

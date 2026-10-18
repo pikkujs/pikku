@@ -47,7 +47,7 @@ harmless but worth knowing before you align it to the surrounding code.
 One more thing worth knowing before writing a rich virtual user: **`virtualUser.converse`
 builds its prompt from `name`, `jobTitle`, `personality` and the scenario's
 `task` only.** Fields like `disposition`, `goals` and `roles` are read and
-stored, and the console shows them, but they do not reach the conversing
+stored, but they do not reach the conversing
 virtual user's instructions. Anything that must shape how someone talks belongs in
 `personality` or in the task.
 

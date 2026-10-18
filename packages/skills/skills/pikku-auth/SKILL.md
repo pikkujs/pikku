@@ -1,16 +1,12 @@
 ---
 name: pikku-auth
 description: >-
-  Use for identity in a Pikku app: authenticating a caller (login, logout, sessions, cookies,
-  bearer tokens, API keys, JWT, OAuth/social providers, MFA, Better Auth, machine callers,
-  `pikku login`). Covers telling authentication from authorization, the built-in strategies and
-  the JWT service. Authorization rules (ownership, roles, scopes, global permissions) live in
-  pikku-permissions. TRIGGER when: user asks about login, logout, session, cookie auth, bearer
-  tokens, API keys, JWT, Better Auth, social providers, how a CLI/agent/sandbox authenticates,
-  or hits InvalidSessionError. DO NOT TRIGGER when: the question is who may call a function,
-  such as ownership, roles, per-row checks, scopes or MissingScopeError (use pikku-permissions),
-  middleware mechanics with no identity involved (use pikku-middleware), or secrets and env
-  vars (use pikku-services).
+  Identity in a Pikku app: authenticating a caller via login, logout, sessions, cookies, bearer
+  tokens, API keys, JWT, OAuth/social, MFA, Better Auth, machine callers, `pikku login`. TRIGGER
+  when: the user asks about those, how a CLI/agent/sandbox authenticates, or hits
+  InvalidSessionError. DO NOT TRIGGER for who may call a function: ownership, roles, scopes,
+  MissingScopeError (use pikku-permissions); identity-free middleware mechanics (use
+  pikku-middleware); secrets and env vars (use pikku-services).
 installGroups: [core]
 ---
 
@@ -39,19 +35,19 @@ middleware instead.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Restricting who may call a function — ownership, roles, scopes | the pikku-permissions skill |
-| Reading or setting the session, or wiring `authBearer`/`authCookie`/`authAPIKey` | `references/sessions.md` |
-| Standing up user sign-in — OAuth, email+password, MFA, organizations | `references/better-auth.md` |
-| Authenticating a CLI, agent, sandbox or worker — API keys, `pikku login` | `references/machine-auth.md` |
-| Configuring the JWT service, or rotating a signing secret | `references/jose.md` |
+| You are…                                                                         | Read                         |
+| -------------------------------------------------------------------------------- | ---------------------------- |
+| Restricting who may call a function — ownership, roles, scopes                   | the pikku-permissions skill  |
+| Reading or setting the session, or wiring `authBearer`/`authCookie`/`authAPIKey` | `references/sessions.md`     |
+| Standing up user sign-in — OAuth, email+password, MFA, organizations             | `references/better-auth.md`  |
+| Authenticating a CLI, agent, sandbox or worker — API keys, `pikku login`         | `references/machine-auth.md` |
+| Configuring the JWT service, or rotating a signing secret                        | `references/jose.md`         |
 
 ## All authentication goes through `@pikku/better-auth`
 
 There is no second auth story. A hand-rolled user table, a bespoke password
-hash, a custom OAuth dance — all of them are the wrong answer, and the console
-will not work against them. `references/better-auth.md` has the setup; the
+hash, a custom OAuth dance — all of them are the wrong answer, and nothing else
+in Pikku will work against them. `references/better-auth.md` has the setup; the
 built-in strategies in `references/sessions.md` are how a resolved credential
 becomes a Pikku session, not a replacement for it.
 

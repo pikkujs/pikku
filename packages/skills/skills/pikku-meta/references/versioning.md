@@ -208,7 +208,7 @@ A release with neither says it holds internal changes only. Branch names are con
 while it waits to ship.
 
 Functions and wirings defined under a `scaffold/` directory or in a generated
-`*.gen.*` file are platform plumbing (auth, console, a host's injected shims)
+`*.gen.*` file are platform plumbing (auth, a host's injected shims)
 and are left out of the surface, so the same app diffs the same locally and in
 a platform's build.
 

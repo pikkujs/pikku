@@ -1,16 +1,14 @@
 ---
 name: pikku-service-backends
 description: >-
-  Use when picking or wiring a backend for one of Pikku's core service interfaces — ContentService
-  (S3, Backblaze B2), QueueService (SQS), SecretService (AWS Secrets Manager, Redis, MongoDB),
-  SchemaService (AJV, cfworker), ChannelStore, EventHubStore, WorkflowService, SessionStore or
-  AgentRunService (Redis, MongoDB). Covers which backend to choose, what each one silently does
-  differently, and the failures they swallow. TRIGGER when: code uses S3Content, B2Content,
-  SQSQueueService, AWSSecrets, RedisChannelStore, RedisSecretService, MongoDBChannelStore,
-  PikkuMongoDB, AjvSchemaService or CFWorkerSchemaService, or the user asks how to store files,
-  secrets, channel state or sessions. DO NOT TRIGGER when: defining service factories themselves
-  (use pikku-services), SQL via Kysely (use pikku-kysely), or the Lambda/Cloudflare runtimes
-  themselves (use pikku-deploy).
+  Picking or wiring a backend for Pikku's core service interfaces: ContentService (S3, B2),
+  QueueService (SQS), SecretService (AWS Secrets Manager, Redis, MongoDB), SchemaService (AJV,
+  cfworker), ChannelStore, EventHubStore, WorkflowService, SessionStore, AgentRunService (Redis,
+  MongoDB). Covers which to choose, silent differences, swallowed failures. TRIGGER when: code uses
+  S3Content, B2Content, SQSQueueService, AWSSecrets, Redis*/MongoDB* stores, PikkuMongoDB,
+  AjvSchemaService or CFWorkerSchemaService, or asked how to store files, secrets, channel state or
+  sessions. DO NOT TRIGGER for defining service factories (use pikku-services), Kysely SQL (use
+  pikku-kysely) or the Lambda/Cloudflare runtimes (use pikku-deploy).
 installGroups: [core]
 ---
 
@@ -26,17 +24,17 @@ behind the interface.
 
 ## Pick a backend
 
-| Interface | Backends | Package |
-| --- | --- | --- |
-| `ContentService` | `S3Content`, `B2Content` | `@pikku/aws-services`, `@pikku/backblaze` |
-| `QueueService` | `SQSQueueService` | `@pikku/aws-services` |
-| `SecretService` | `AWSSecrets`, `RedisSecretService`, `MongoDBSecretService` | `@pikku/aws-services`, `@pikku/redis`, `@pikku/mongodb` |
-| `SchemaService` | `AjvSchemaService`, `CFWorkerSchemaService` | `@pikku/schema-ajv`, `@pikku/schema-cfworker` |
-| `ChannelStore`, `EventHubStore` | Redis, MongoDB | `@pikku/redis`, `@pikku/mongodb` |
-| `PikkuWorkflowService`, `WorkflowRunService` | Redis, MongoDB | `@pikku/redis`, `@pikku/mongodb` |
-| `SessionStore`, `AgentRunService`, `DeploymentService` | Redis, MongoDB | `@pikku/redis`, `@pikku/mongodb` |
-| `AgentStorageService`, `AgentRunStateService` | MongoDB **only** | `@pikku/mongodb` |
-| `LeaseService` | `RedisLeaseService` | `@pikku/redis` |
+| Interface                                              | Backends                                                   | Package                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------- |
+| `ContentService`                                       | `S3Content`, `B2Content`                                   | `@pikku/aws-services`, `@pikku/backblaze`               |
+| `QueueService`                                         | `SQSQueueService`                                          | `@pikku/aws-services`                                   |
+| `SecretService`                                        | `AWSSecrets`, `RedisSecretService`, `MongoDBSecretService` | `@pikku/aws-services`, `@pikku/redis`, `@pikku/mongodb` |
+| `SchemaService`                                        | `AjvSchemaService`, `CFWorkerSchemaService`                | `@pikku/schema-ajv`, `@pikku/schema-cfworker`           |
+| `ChannelStore`, `EventHubStore`                        | Redis, MongoDB                                             | `@pikku/redis`, `@pikku/mongodb`                        |
+| `PikkuWorkflowService`, `WorkflowRunService`           | Redis, MongoDB                                             | `@pikku/redis`, `@pikku/mongodb`                        |
+| `SessionStore`, `AgentRunService`, `DeploymentService` | Redis, MongoDB                                             | `@pikku/redis`, `@pikku/mongodb`                        |
+| `AgentStorageService`, `AgentRunStateService`          | MongoDB **only**                                           | `@pikku/mongodb`                                        |
+| `LeaseService`                                         | `RedisLeaseService`                                        | `@pikku/redis`                                          |
 
 SQL is the third option for every store interface in that table —
 `KyselyChannelStore`, `KyselyWorkflowService`, `KyselySecretService` and friends
@@ -79,12 +77,12 @@ wrapper has to be constructed and initialised before any of them.
 
 Where they diverge:
 
-| | `S3Content` | `B2Content` |
-| --- | --- | --- |
-| Signing failure | **Fails open** — logs and returns the *unsigned* URL | Throws |
-| `writeFile` memory | Streams | **Buffers the whole stream** to compute a SHA-1 |
-| Client-side upload integrity | Presigned, expires at a fixed 3600s | `X-Bz-Content-Sha1: do_not_verify` — unverified |
-| Credential rotation | Picked up by the SDK provider chain | Auth is cached for the instance's lifetime — construct a new `B2Content` |
+|                              | `S3Content`                                          | `B2Content`                                                              |
+| ---------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| Signing failure              | **Fails open** — logs and returns the _unsigned_ URL | Throws                                                                   |
+| `writeFile` memory           | Streams                                              | **Buffers the whole stream** to compute a SHA-1                          |
+| Client-side upload integrity | Presigned, expires at a fixed 3600s                  | `X-Bz-Content-Sha1: do_not_verify` — unverified                          |
+| Credential rotation          | Picked up by the SDK provider chain                  | Auth is cached for the instance's lifetime — construct a new `B2Content` |
 
 The S3 fail-open is the one to design around: on a private CloudFront
 distribution the client gets a 403, and on a public one you have just handed out
@@ -119,7 +117,7 @@ Swapping them changes behaviour without changing types:
   becomes `1` in the wiring layer, not here.
 
 Both throw `UnprocessableContentError` (422) on a failed validation, and both
-throw a **bare string** — `Missing validator for <name>` — for a *missing*
+throw a **bare string** — `Missing validator for <name>` — for a _missing_
 schema. It is not an `Error`, so `catch (e) { e.message }` reads `undefined`.
 That almost always means codegen did not run.
 

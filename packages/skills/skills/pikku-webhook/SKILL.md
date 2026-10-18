@@ -1,16 +1,15 @@
 ---
 name: pikku-webhook
 description: >-
-  Use when an application needs to SEND outgoing webhooks — notifying a customer's endpoint that
-  something happened, with signing, retries and a delivery log. Covers WebhookService,
-  QueueWebhookService, the `pikku-outgoing-webhooks` queue worker, `scaffold.webhook`,
-  `config.webhook`, signature verification on the receiving side, and KyselyWebhookService's
-  delivery history. TRIGGER when: code uses webhookService, QueueWebhookService,
-  KyselyWebhookService, pikkuWebhookWorkerFunc, PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
-  SendWebhookInput or X-Pikku-Signature. TRIGGER when: the user asks to emit events to a
-  customer URL, build a webhook endpoint settings screen, add a signing secret, or show
-  delivery attempts. DO NOT TRIGGER when: the user is RECEIVING webhooks from a third party
-  into a route — that is an ordinary wireHTTP function (use pikku-wiring).
+  Sending OUTGOING webhooks from a Pikku app (notify a customer's endpoint, with signing, retries
+  and a delivery log): WebhookService, QueueWebhookService, the `pikku-outgoing-webhooks` queue
+  worker, `scaffold.webhook`, `config.webhook`, receiver signature verification,
+  KyselyWebhookService delivery history. TRIGGER when: code uses webhookService,
+  QueueWebhookService, KyselyWebhookService, pikkuWebhookWorkerFunc,
+  PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME, SendWebhookInput or X-Pikku-Signature; or asked to emit events
+  to a customer URL, build a webhook settings screen, add a signing secret or show delivery
+  attempts. DO NOT TRIGGER for RECEIVING third-party webhooks (an ordinary wireHTTP function; use
+  pikku-wiring).
 installGroups: [core]
 ---
 
@@ -201,7 +200,7 @@ const deliveries = await webhookService.listDeliveries({
 const detail = await webhookService.getDelivery(deliveryId) // { delivery, attempts }
 ```
 
-Building a console screen is `listDeliveries` for the list and `getDelivery` for
+Building a deliveries screen is `listDeliveries` for the list and `getDelivery` for
 the drill-in. A hand-written select over `webhookDelivery` is a sign the wrong
 service is registered.
 

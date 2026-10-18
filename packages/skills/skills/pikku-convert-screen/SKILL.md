@@ -1,6 +1,12 @@
 ---
 name: pikku-convert-screen
-description: Use when an old screen, page or feature (from an old console, another repo, screenshots, or a description) has to be rebuilt in the current app. Extracts what it does as plain business logic, with no layout or code detail, then designs it fresh in the current design system. TRIGGER on "convert this screen", "port the old console page", "we had this before, bring it back", "redesign X from the old console". DO NOT TRIGGER for whole-repo reverse engineering (use pikku-software-archaeology) or for restyling a screen that already exists in the app.
+description: >-
+  Rebuild an old screen, page or feature (from an old console, another repo, screenshots or a
+  description) in the current app: extract what it does as plain business logic, no layout or code
+  detail, then design it fresh in the current design system. TRIGGER on "convert this screen", "port
+  the old console page", "we had this before, bring it back", "redesign X from the old console". DO
+  NOT TRIGGER for whole-repo reverse engineering (use pikku-software-archaeology) or restyling a
+  screen already in the app.
 installGroups: [core]
 ---
 

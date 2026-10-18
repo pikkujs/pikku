@@ -1,14 +1,13 @@
 ---
 name: pikku-workflow
 description: >-
-  Use when building multi-step, durable workflows with Pikku — pikkuWorkflowFunc,
-  pikkuWorkflowGraph, workflow.do / sleep / suspend / approval, retries, compensate, sub-workflows,
-  and starting or resuming runs. Includes deciding whether something should be a workflow at all.
-  TRIGGER when: code uses pikkuWorkflowFunc or pikkuWorkflowGraph, or the user asks about
-  workflows, multi-step processes, durable execution, suspend/resume, approval gates, sagas or DAG
-  orchestration. DO NOT TRIGGER when: the user wants a single background job (use the queue
-  reference in pikku-wiring) or a cron task (use the scheduler reference in pikku-wiring), or is
-  converting an n8n export (use pikku-n8n-import).
+  Multi-step durable workflows with Pikku: pikkuWorkflowFunc, pikkuWorkflowGraph,
+  workflow.do/sleep/suspend/approval, retries, compensate, sub-workflows, starting/resuming runs,
+  and deciding whether something should be a workflow at all. TRIGGER when: code uses
+  pikkuWorkflowFunc or pikkuWorkflowGraph, or asked about workflows, multi-step processes, durable
+  execution, suspend/resume, approval gates, sagas or DAG orchestration. DO NOT TRIGGER for a single
+  background job or cron task (use pikku-wiring's queue/scheduler references) or n8n exports (use
+  pikku-n8n-import).
 installGroups: [core]
 ---
 

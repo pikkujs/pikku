@@ -48,10 +48,6 @@ Better Auth owns its own HTTP surface, database tables, and session cookie. The 
 
 You do NOT hand-write routes, the session middleware, or the secret wiring — `pikkuBetterAuth` + the CLI generate all of it. Re-run `pikku all` to regenerate.
 
-### The console requires Better Auth
-
-The Pikku console (`@pikku/addon-console`, enabled via `scaffold.console` in `pikku.config.json`) is an admin surface: **every console RPC now requires an authenticated session** (the functions are `pikkuFunc`; unauthenticated calls return `403`). So `scaffold.console` alone is **no longer the minimum** — you also need an auth strategy, and Better Auth is the supported one. `pikku all` **throws** if `scaffold.console` is set but no `pikkuBetterAuth(...)` is found in the project. Baseline is "must be logged in"; finer policy (admin-only, org scoping) is layered host-side via tag/HTTP middleware. See `pikku-meta` for the console's Security screen.
-
 ---
 
 ## Standard Setup
@@ -162,7 +158,7 @@ strings):
 | ------------------------------------------------------ | -------------------------- |
 | `impersonation` (any of the three session middlewares) | `admin:impersonate`        |
 | `credentialOAuth`'s `canLinkSingleton`                 | `admin:credentials:link`   |
-| the console's user directory                           | `admin:users:list`         |
+| the admin user directory                               | `admin:users:list`         |
 | create a user out of band                              | `admin:users:create`       |
 | ban / unban                                            | `admin:users:ban`          |
 | delete a user and their data                           | `admin:users:remove`       |
@@ -180,7 +176,7 @@ everything nested beneath it — so `admin` is the direct replacement for the ol
 
 Declare the tree in your own `defineScope` (the CLI extracts it by AST, so it must
 be an inline literal; `ADMIN_SCOPE_TREE` is exported from `@pikku/better-auth`
-as the reference shape). Apps wiring `@pikku/addon-console` inherit it already.
+as the reference shape).
 
 ```typescript
 defineScope({
@@ -377,7 +373,7 @@ opt in, because it is still the upstream's word for that address:
 ```typescript
 pikkuDelegatedAuth({
   // false (default): a first sign-in whose email is taken is refused.
-  // 'non-admins': link unless the local user holds an admin or pikku:console
+  // 'non-admins': link unless the local user holds an admin
   //               scope; needs scopeService, and links nobody without it.
   // 'all': link anyone, administrators included.
   linkExistingUsersByEmail: 'non-admins',
@@ -643,7 +639,7 @@ await provisionVirtualUsers(
 )
 ```
 
-It writes the same `banned` column the console's ban RPC writes (so it needs the
+It writes the same `banned` column the ban RPC writes (so it needs the
 `pikkuBan()` plugin wired, and says so if it isn't), revokes the account's sessions,
 and leaves the row, its grants and its history intact — provisioning lifts the
 ban again by itself if the virtual user comes back. Deleting is deliberately not

@@ -1,15 +1,13 @@
 ---
 name: pikku-architect
 description: >-
-  Use to turn one claimed changeset into the technical plan its build is measured against —
-  the tables, functions, wires, roles, scopes, screens and scenarios it owes, split into passes and
-  written through `pikku knowledge plan set`. The plan is the denominator
-  `pikku knowledge plan progress` divides by, so it is written BEFORE any of the changeset's code
-  exists and never edited afterwards to match what got built. TRIGGER when: `pikku changes
-  claim` says a changeset needs a plan, `changes done` or `pikku changes next` refuses one for having no
-  plan, or the user asks to plan or architect a changeset. DO NOT TRIGGER when: the knowledge notes
-  themselves are still being written (use pikku-knowledge), the plan already exists and the job is
-  to build it (use pikku-changes), or the changeset was claimed with no plan needed.
+  Turn one claimed changeset into its technical plan (tables, functions, wires, roles, scopes,
+  screens, scenarios, split into passes) via `pikku knowledge plan set`. The plan is the denominator
+  `pikku knowledge plan progress` divides by, so write it BEFORE any code and never edit it to match
+  the build. TRIGGER when: `pikku changes claim` says a plan is needed, `changes done` or `pikku
+  changes next` refuses for lack of one, or the user asks to plan/architect a changeset. DO NOT
+  TRIGGER while knowledge notes are still being written (use pikku-knowledge), when the plan exists
+  and the job is building it (use pikku-changes), or when no plan was needed.
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
@@ -20,7 +18,6 @@ agent:
     verify:
       - id: knowledge-consistent
         command: pikku knowledge validate
-
 ---
 
 # Plan one changeset

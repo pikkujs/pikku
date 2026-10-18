@@ -49,7 +49,7 @@ defaults are the point.
 Do not ask about language either — take the defaults and note them in §6.
 Identifiers are English in every project, whatever the product's market;
 `metaLocale` in `pikku.config.json` (the language of `description`/`title`/step
-`template`, which the Console renders) stays `en` unless the user already told
+`template`) stays `en` unless the user already told
 you otherwise. If the request says the app's UI is not English, that is the
 message catalogue only: add the locale and set `defaultLocale`, and leave
 `baseLocale` at `en`. the app workflow's §1a has the three axes in full; getting
@@ -262,7 +262,7 @@ bunx --bun pikku scenario run local --spawn
 ## 6. Hand it over honestly
 
 Tell the user, in one short paragraph and at their level (SKILL.md, "Who you
-are talking to"), with console links rather than descriptions: what runs, what
+are talking to"), with the app and API links `bun run dev` printed: what runs, what
 it is seeded with, and that this is a quick build — no knowledge base, no
 changesets, no design pass, access control clicked-through rather than proven.
 

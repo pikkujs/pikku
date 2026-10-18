@@ -65,7 +65,7 @@ schemas (`yarn pikku meta functions get <id>`) or workflow steps
 
 **Language rule:** read `metaLocale` in `pikku.config.json` (default `en`). It is
 the language of every `description`, `title` and step `template` you author —
-the meta the Pikku Console renders back to the team. It renames nothing:
+the meta that is read back to the team. It renames nothing:
 functions, components, types, files, tables and columns are English in every
 project, and what the app says to its users is the message catalogue. See
 `pikku-concepts` → _What Language You Write In_.
@@ -260,9 +260,7 @@ your branch and silently breaks theirs.
 
 Tell the user the branch name and how to review. Two options:
 
-- **Local review:** open the pikku console — the changes view diffs the
-  current branch against `main` with pikku-aware structure (added functions,
-  new wires, migrations).
+- **Local review:** `git diff main` on the branch.
 - **PR review:** ask before pushing. Once they confirm, `git push -u origin
 feature/<slug>` and surface the PR-create URL.
 
@@ -300,7 +298,7 @@ explanation of why and what would change.
 - Stage 2 (intent statement) is plain English, one paragraph.
 - Between stages, give one-line updates: "Discovered 30 functions, http+queue
   in use. Drafting intent..." → "Branch `feature/todos` created, implementing..."
-  → "`pikku all` clean, `tsc` clean, committed. Review via console or run
+  → "`pikku all` clean, `tsc` clean, committed. Review with
   `git diff main`."
 - Don't narrate file-by-file. Only surface what's interesting (new patterns,
   judgment calls, things you suppressed).

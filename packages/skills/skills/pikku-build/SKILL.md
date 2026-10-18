@@ -1,17 +1,14 @@
 ---
 name: pikku-build
 description: >-
-  Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
-  or a showcase that exercises every surface), adding a feature to an app that already exists, and
-  the one-off cleanup right after a template is cloned. Covers the knowledge base, virtual users and
-  roles, filing the work as changes, the scenario that proves each one, theming, multi-app
-  layouts and deploying. TRIGGER when: the user asks for an app to be built on
-  Pikku, a freshly scaffolded project needs turning into a product, the user asks to add a feature
-  or wire up a new endpoint in a working app, or a template was just cloned or scaffolded. DO NOT
-  TRIGGER when: the user asks for a one-off edit to an existing function, asks about Pikku concepts
-  (use pikku-concepts), wants one specific surface explained rather than built (use that surface's
-  skill), only needs the technical plan for one claimed changeset (use pikku-architect), or is
-  working items off a deployed stage's changes queue (use pikku-changes).
+  Owns app-level work on Pikku (new app, feature, conversion); load pikku-concepts first. Turn a fresh scaffold into a working app (spike, real product or showcase), add a
+  feature or endpoint to an existing app, and the cleanup after a template is cloned. Covers
+  knowledge base, virtual users, changes, proving scenarios, theming, multi-app layouts, deploying.
+  TRIGGER when: asked to build an app on Pikku, a scaffold/template was just created or cloned, or
+  asked to add a feature or wire a new endpoint in a working app. DO NOT TRIGGER for one-off
+  function edits, Pikku concepts (use pikku-concepts), explaining one surface (use that surface's
+  skill), planning one claimed changeset (use pikku-architect) or working a stage's changes queue
+  (use pikku-changes).
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku cloud report *), Bash(npx --no pikku cloud report *)
 argument-hint: '[feature description]'
 installGroups: [core]
@@ -32,29 +29,30 @@ agent:
 
 ## Which mode
 
-| The situation                                                                  | Read                                                                                          |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| A template was just cloned or scaffolded, and the tree still looks like one    | `references/post-clone.md` first, then come back                                              |
-| A real product, meant to be picked up by someone else                          | `references/app.md` — the default                                                             |
-| A spike, a throwaway demo, an idea nobody has committed to                     | `references/quick.md`                                                                         |
-| A showcase meant to exercise every Pikku surface                               | `references/platform.md`, read together with `references/app.md`                              |
-| A feature added to an app that already has its knowledge base                  | `references/feature.md`                                                                       |
-| Writing or fixing the scenarios that prove a changeset (app §7, §7a)           | `references/scenarios.md`                                                                     |
-| Before the first screen is built: a picture of the screens, a design direction | `references/design.md`                                                                        |
-| Authoring or changing the theme (app §8a)                                      | `references/theming.md`                                                                       |
-| A screen needs data no function returns yet                                    | `references/mocks.md`                                                                         |
-| Adding a second frontend (app §4), at the changeset that needs it              | `references/multi-app.md`                                                                     |
-| Shipping an app as a desktop or Android app                                    | `references/native-app.md`                                                                    |
-| Deploying, and the deploy-readiness contract (app §9)                          | `references/ship.md`                                                                          |
-| The request is built on an OpenAPI spec (auth mode, sign-in or connect screen) | `references/openapi.md`                                                                       |
+| The situation                                                                  | Read                                                                                             |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| A template was just cloned or scaffolded, and the tree still looks like one    | `references/post-clone.md` first, then come back                                                 |
+| A real product, meant to be picked up by someone else                          | `references/app.md` (index), then the phase file it names for the phase you are in — the default |
+| A spike, a throwaway demo, an idea nobody has committed to                     | `references/quick.md`                                                                            |
+| A showcase meant to exercise every Pikku surface                               | `references/platform.md`, read together with `references/app.md`                                 |
+| A feature added to an app that already has its knowledge base                  | `references/feature.md`                                                                          |
+| Writing or fixing the scenarios that prove a changeset (app §7, §7a)           | `references/scenarios.md`                                                                        |
+| Before the first screen is built: a picture of the screens, a design direction | `references/design.md`                                                                           |
+| Authoring or changing the theme (app §8a)                                      | `references/theming.md`                                                                          |
+| A screen needs data no function returns yet                                    | `references/mocks.md`                                                                            |
+| Adding a second frontend (app §4), at the changeset that needs it              | `references/multi-app.md`                                                                        |
+| Shipping an app as a desktop or Android app                                    | `references/native-app.md`                                                                       |
+| Deploying, and the deploy-readiness contract (app §9)                          | `references/ship.md`                                                                             |
+| The request is built on an OpenAPI spec (auth mode, sign-in or connect screen) | `references/openapi.md`                                                                          |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
 plus more effort" — it is App plus a deliberate surface checklist: read both
 files, follow the base in full, and do not blend the two into one plan.
 
-Each reference names the topics it leans on but never tells you to open
-another file; this table is the only routing. Open a reference when its row
+Apart from `app.md`, which indexes its own phase files, each reference names
+the topics it leans on but never tells you to open another file; this table is
+the only routing. Open a reference when its row
 matches, not up front.
 
 ## Bootstrap before anything else
@@ -109,7 +107,7 @@ generated functions through `ref()`.
   calls for a scheduled task and `capabilities.scheduler` is `false`, check
   `pikku doc` for the door before concluding you cannot build it.
 - **`metaLocale` in `pikku.config.json` is the language of authored meta** —
-  every `description`, `title` and step `template` the console renders.
+  every `description`, `title` and step `template` authored in meta.
   Identifiers stay English whatever it says, and the product's own language
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
@@ -146,8 +144,6 @@ generated functions through `ref()`.
   - **App** — the frontend's URL (`http://localhost:7104` in the template; each
     frontend in `frontends` in `pikku.config.json` has its own port)
   - **API** — `http://localhost:3000`
-  - **Console** — `http://localhost:3000/console`, plus a deep link to each
-    page that shows what this turn produced (the paths are below)
 
   A person who has to go hunting for the port assumes the app did not start.
 
@@ -166,46 +162,18 @@ again with `--consent <answer>`. If it says reporting is off, do not ask.
 ## Who you are talking to
 
 The prompt asks first how technical the person is: **not technical**,
-**technical, no code**, or **developer** (the default when unsaid). Whenever the
-build makes or changes something the console can show, give the
-`http://localhost:<port>/console/...` link instead of describing it.
+**technical, no code**, or **developer** (the default when unsaid). Report in
+plain words at that level, and give the links `bun run dev` printed (the app
+and the API). No per-feature deep links.
 
-Until the app is deployed that is the local open-source console, on the port
-`pikku dev` printed. Once it is deployed, link the hosted console for the stage
-you are talking about instead.
-
-| Level              | Links                       | Code in the conversation |
-| ------------------ | --------------------------- | ------------------------ |
-| Not technical      | Product pages only          | Never                    |
-| Technical, no code | Product and technical pages | Never                    |
-| Developer          | Product and technical pages | As normal                |
+| Level              | Code in the conversation |
+| ------------------ | ------------------------ |
+| Not technical      | Never                    |
+| Technical, no code | Never                    |
+| Developer          | As normal                |
 
 "Never" includes snippets and command lines; say what changed in the person's
-words and link to where they can see it.
-
-**Product pages** — the only ones a non-technical person gets:
-
-| Shows                 | Path                                                                       |
-| --------------------- | -------------------------------------------------------------------------- |
-| Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                  |
-| Virtual users              | `/console/virtual-users`, `/console/virtual-users?virtual user=<id>`                 |
-| Roles and permissions | `/console/roles`, `/console/scopes` (only with `@pikku/addon-admin` wired) |
-| Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>`  |
-| Workflows             | `/console/workflow?id=<id>`                                                |
-| Agents                | `/console/agents`, `/console/agents/playground?id=<agent id>`              |
-
-**Technical pages** — never for a non-technical person: `/console/overview`,
-`/console/functions`, `/console/surface`, `/console/database`,
-`/console/changes`, `/console/wires/http`, `/console/wires/channel`,
-`/console/wires/mcp`, `/console/wires/cli`, `/console/wires/gateway`,
-`/console/async/scheduler`, `/console/async/queue`, `/console/async/trigger`,
-`/console/runtime`, `/console/emails`, `/console/webhooks`, `/console/secrets`,
-`/console/variables`, `/console/security`, `/console/auth-providers`,
-`/console/addons`, `/console/analytics`, `/console/credentials`,
-`/console/users`, `/console/audit`, `/console/flags`, `/console/scorers`.
-
-These come from `packages/console/src/App.tsx`; do not link a path that is not
-listed here.
+words and point at the running app.
 
 ## What NOT to do
 

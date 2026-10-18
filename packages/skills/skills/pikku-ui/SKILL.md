@@ -1,9 +1,10 @@
 ---
 name: pikku-ui
 description: >-
-  How a screen gets made: it is delegated to a subagent, which is handed the project's design rules and designs it with the impeccable skill.
-  TRIGGER when: the user asks for a screen, page, view, form, dashboard or empty/error state, or asks for an existing screen to be redone or restyled.
-  DO NOT TRIGGER when: the change is backend only, copy only (use pikku-i18n), or a one-line fix to a screen that already looks right.
+  How a screen gets made: delegated to a subagent handed the project's design rules, designing with
+  the impeccable skill. TRIGGER when: asked for a screen, page, view, form, dashboard or empty/error
+  state, or to redo/restyle an existing screen. DO NOT TRIGGER for backend-only changes, copy-only
+  changes (use pikku-i18n) or a one-line fix to a screen that already looks right.
 installGroups: [client]
 ---
 
