@@ -5,8 +5,6 @@
 - [Agent Operating Procedure](#agent-operating-procedure)
 - [The `pikku audit` command](#the-pikku-audit-command)
 - [The `pikku update` command](#the-pikku-update-command)
-- [Console integration (@pikku/addon-console)](#console-integration-pikkuaddon-console)
-- [Console UI (@pikku/console)](#console-ui-pikkuconsole)
 - [Report shape (SecurityAuditReport)](#report-shape-securityauditreport)
 
 ## Agent Operating Procedure
@@ -14,7 +12,7 @@
 1. The audit is a generated artifact, not live state. `pikku audit` writes the
    normalised report to `.pikku/audit.json` (config `outDir`), so it rides the
    same meta pipeline as every other codegen output — uploaded on deploy,
-   readable by the console addon and any tooling. Read it via
+   readable by any tooling. Read it via
    `metaService.readFile('audit.json')`, never by shelling out to the package
    manager from a function.
 2. One source of truth for the shape: `SecurityAuditReport` (and
@@ -80,48 +78,6 @@ Peers are read off the version the run **lands on**, not the one installed —
 the point is what the target needs. An @pikku peer the same run already brings
 forward is not reported, and an unsatisfied _optional_ peer the project never
 declared is skipped.
-
-## Console integration (@pikku/addon-console)
-
-Three RPCs, all reading/writing the same artifact via the meta service. Shared
-spawn/read helpers live in `lib/audit-exec.ts` (`readAuditReport`,
-`runPikkuAudit`, `spawnProcess`, `findBin`), alongside `lib/find-project-root.ts`
-and `lib/resolve-package-manager.ts` (`resolvePackageManager`, `installArgs`,
-`execPrefix`) — reuse them, don't re-implement. `resolvePackageManager` reads
-package.json's corepack `packageManager` field first and only falls back to
-lockfiles, because that field states intent before a lockfile exists and a
-project can carry a stale one from another tool. Guessing wrong is not a soft
-failure: the spawn dies with `Executable not found in $PATH`.
-Like every console RPC these require an **authenticated session** (the console
-is admin-only), so the host must have Better Auth wired — see `pikku-auth`.
-
-- `getSecurityAudit` — reads `.pikku/audit.json`, returns the report (or `null`).
-- `runSecurityAudit` — runs `pikku audit --outdated` server-side (regenerates the
-  artifact) then returns the fresh report. Same shape as the Run Tests action.
-- `updateDependency({ package, version })` — bumps the package in `package.json`
-  (preserving the `^`/`~` range prefix), runs `bun install`, re-audits, and
-  returns the fresh report. Throws if the package is not a direct dependency.
-  NOTE: `bun install` must be scoped to a standalone project — do not run it
-  inside a yarn/bun monorepo member (it resolves the whole workspace).
-
-## Console UI (@pikku/console)
-
-- `SecurityPage` — the page: **Run audit** button (`lead`) + responsive
-  `ShellHeader` (structured `search` + `selection` for the Issues/Dependencies
-  lens; never cram raw controls into the non-collapsing `filters`/`view` escape
-  hatch). Empty state until an audit has run.
-- `SecurityAuditView` — exported presentational component. Two lenses
-  (Issues grouped by severity; Dependencies table). Each finding row carries its
-  actions **right-aligned in the row header** (`Accordion.Control` sibling, so a
-  click acts instead of toggling): "View advisory" + a per-finding
-  **remediation slot**.
-- `renderRemediation({ pkg, version, issue })` — the extension seam. OSS default
-  is `UpdateDependencyButton` (the free bump + `bun install`). Downstream
-  consoles pass their own sandbox-verified action here — replace the
-  action, keep the view.
-- Hooks: `useSecurityAudit` (read), `useRunSecurityAudit` (run),
-  `useUpdateDependency` (bump). All are `useMutation`/`useQuery` — surface
-  `mutation.error`, never hand-roll loading/error state or swallow the error.
 
 ## Report shape (SecurityAuditReport)
 

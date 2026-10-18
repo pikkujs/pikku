@@ -46,8 +46,8 @@ middleware instead.
 ## All authentication goes through `@pikku/better-auth`
 
 There is no second auth story. A hand-rolled user table, a bespoke password
-hash, a custom OAuth dance — all of them are the wrong answer, and the console
-will not work against them. `references/better-auth.md` has the setup; the
+hash, a custom OAuth dance — all of them are the wrong answer, and nothing else
+in Pikku will work against them. `references/better-auth.md` has the setup; the
 built-in strategies in `references/sessions.md` are how a resolved credential
 becomes a Pikku session, not a replacement for it.
 

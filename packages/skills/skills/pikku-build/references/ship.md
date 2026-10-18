@@ -41,7 +41,6 @@ shape:
   "grouping": {
     "strategy": "single",
     "rules": [
-      { "unit": "console", "addon": "console" },
       { "unit": "pdf", "tags": ["pdf"] }
     ]
   }
@@ -50,11 +49,11 @@ shape:
 
 `strategy` is the fallback for a function no rule matches:
 
-| strategy | fallback |
-| --- | --- |
+| strategy   | fallback                                                      |
+| ---------- | ------------------------------------------------------------- |
 | `services` | one unit per distinct set of singleton services (the default) |
-| `function` | one unit each |
-| `single` | one shared unit |
+| `function` | one unit each                                                 |
+| `single`   | one shared unit                                               |
 
 Rules are ordered, first match wins, and match on `tags`, an `addon` namespace
 or `routes` globs. A rule always beats the strategy, so under `function` a rule
