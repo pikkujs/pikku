@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
-    "@pikku/cli": "^0.12.192",
+    "@pikku/cli": "^0.12.193",
     "@pikku/deploy-standalone": "workspace:*",
     "@pikku/playwright": "workspace:*",
     "@playwright/test": "^1.64.1",
