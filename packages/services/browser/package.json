@@ -15,15 +15,21 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "test": "bash run-tests.sh",
     "test:coverage": "bash run-tests.sh --coverage",
     "release": "npm run build && npm test",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "peerDependencies": {
     "puppeteer-core": "25.7.0"
   },

@@ -11,9 +11,10 @@
   "bin": "dist/index.js",
   "scripts": {
     "build:esm": "npx tsc",
-    "build": "bun run build:esm",
+    "build": "bun run clean && bun run build:esm",
     "test": "bash run-tests.sh",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",
@@ -28,7 +29,12 @@
   },
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "license": "MIT"
 }

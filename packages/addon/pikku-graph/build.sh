@@ -55,6 +55,7 @@ if [ "${1:-}" = "pikku" ]; then
   exit 0
 fi
 
+rm -rf dist tsconfig.tsbuildinfo
 run_pikku
 tsc
 copy_generated_types

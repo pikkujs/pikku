@@ -16,15 +16,21 @@
     ".": {
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "scripts": {
     "tsc": "tsc",
     "test": "bash run-tests.sh",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "bun run build:esm && bun run build:cjs",
-    "prepublishOnly": "bun run build"
+    "build": "bun run clean && bun run build:esm && bun run build:cjs",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
     "react": "^18 || ^19"

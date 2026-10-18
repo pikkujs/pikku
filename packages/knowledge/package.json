@@ -15,22 +15,25 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "ncu": "npx npm-check-updates",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.tsbuildinfo"
   ],
   "dependencies": {
     "zod": "^4.6.7"

@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/runtimes/cloudflare"
   },
-  "description": "Cloudflare Workers runtime for Pikku \u2014 fetch, scheduled, queues, D1 and hibernating WebSockets",
+  "description": "Cloudflare Workers runtime for Pikku — fetch, scheduled, queues, D1 and hibernating WebSockets",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -19,12 +19,13 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "build": "tsc -b",
+    "build": "bun run clean && tsc -b",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "exports": {
     ".": "./dist/index.js",
@@ -36,8 +37,13 @@
     "./deployment": "./dist/cloudflare-deployment-service.js",
     "./websocket": "./dist/cloudflare-hibernation-websocket-server.js",
     "./eventhub": "./dist/cloudflare-eventhub-service.js",
-    "./workflow-do": "./dist/workflow-do/index.js"
+    "./workflow-do": "./dist/workflow-do/index.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
   "dependencies": {
     "kysely-d1": "^0.4.0"
   },
