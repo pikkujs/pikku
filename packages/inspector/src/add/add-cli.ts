@@ -786,6 +786,7 @@ function extractEnumFromPropertyType(
 
   // Check if it's a union type (e.g., 'debug' | 'info' | 'warn')
   if (propertyType.isUnion()) {
+    let fromEnum = false
     for (const unionType of propertyType.types) {
       // Check if it's a string literal type
       if (unionType.flags & ts.TypeFlags.StringLiteral) {
@@ -794,6 +795,7 @@ function extractEnumFromPropertyType(
       }
       // Check if it's an enum member (could be string or number enum)
       else if (unionType.flags & ts.TypeFlags.EnumLiteral) {
+        fromEnum = true
         const enumLiteralType = unionType as ts.LiteralType
         // For string enums, use the value directly
         if (typeof enumLiteralType.value === 'string') {
@@ -808,6 +810,7 @@ function extractEnumFromPropertyType(
         }
       }
     }
+    if (!fromEnum) enumValues.sort()
   }
   // Check if it's an enum type directly
   else if (propertyType.flags & ts.TypeFlags.Enum) {
