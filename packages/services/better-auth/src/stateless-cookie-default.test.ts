@@ -199,6 +199,36 @@ describe('applyStatelessCookieCacheDefault', () => {
     assert.equal(await sessionMaxAge(instance), 60)
   })
 
+  const readerFor = (version?: string) => ({
+    cookiePrefix: 'better-auth',
+    cookieCache: version === undefined ? {} : { version },
+  })
+
+  test('reports a cookieCache.version that differs from the auth config', async () => {
+    markStatelessSessionInUse(readerFor('2'))
+    const errors: string[] = []
+    await applyStatelessCookieCacheDefault(
+      instanceWith({ enabled: true, maxAge: 60, version: '3' }, 60) as any,
+      {
+        logger: { error: (message: string) => errors.push(message) },
+      } as any
+    )
+    assert.equal(errors.length, 1)
+    assert.match(errors[0]!, /cookieCache\.version is '2'.*uses '3'/)
+  })
+
+  test('stays quiet when the cookieCache.version matches the auth config', async () => {
+    markStatelessSessionInUse(readerFor('3'))
+    const errors: string[] = []
+    await applyStatelessCookieCacheDefault(
+      instanceWith({ enabled: true, maxAge: 60, version: '3' }, 60) as any,
+      {
+        logger: { error: (message: string) => errors.push(message) },
+      } as any
+    )
+    assert.deepEqual(errors, [])
+  })
+
   test('reports rather than throws when the context rejects', async () => {
     markStatelessSessionInUse()
     const errors: string[] = []
