@@ -1,7 +1,7 @@
 import assert from 'node:assert'
 import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { describe, test } from 'node:test'
 import { parse } from 'yaml'
 import {
@@ -226,11 +226,15 @@ describe('bundled skills corpus', () => {
       const docs: Array<[string, string]> = [['SKILL.md', skill.body]]
       const refs = join(skill.dir, 'references')
       if (existsSync(refs))
-        for (const file of await readdir(refs))
-          docs.push([
-            `references/${file}`,
-            await readFile(join(refs, file), 'utf-8'),
-          ])
+        for (const entry of await readdir(refs, {
+          recursive: true,
+          withFileTypes: true,
+        }))
+          if (entry.isFile())
+            docs.push([
+              `references/${relative(refs, join(entry.parentPath, entry.name))}`,
+              await readFile(join(entry.parentPath, entry.name), 'utf-8'),
+            ])
 
       for (const [where, doc] of docs) {
         let inFence = false
