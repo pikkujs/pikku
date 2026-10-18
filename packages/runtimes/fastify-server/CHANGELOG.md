@@ -1,3 +1,27 @@
+## 0.12.12
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/fastify-plugin@0.12.10
+
 ## 0.12.11
 
 ### Patch Changes

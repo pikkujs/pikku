@@ -1,5 +1,11 @@
 # @pikku/react
 
+## 0.12.17
+
+### Patch Changes
+
+- 6a254e4: `createLocaleStore` now reads `I18N_DEBUG` through `globalThis.process`, so the source compiles without Node type definitions. Packages that type-check `@pikku/react` from source, such as `@pikku/workflow-graph`, used to fail with TS2591. Runtime behaviour is unchanged.
+
 ## 0.12.16
 
 ### Patch Changes

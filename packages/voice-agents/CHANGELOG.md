@@ -1,5 +1,11 @@
 # @pikku/voice-agents
 
+## 0.0.7
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+
 ## 0.0.6
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @pikku/assistant-ui
 
+## 0.12.14
+
+### Patch Changes
+
+- 0a4676a: Move AG-UI to 0.0.59 with the matching @assistant-ui packages.
+
+  **Wire change:** `RUN_FINISHED.usage` is now an array of `{ model?, inputTokens, outputTokens, totalTokens }`, the @ag-ui/core 0.0.59 shape, replacing a top-level `model` plus `usage: { promptTokens, completionTokens, totalTokens }`. AG-UI clients that read the old fields need updating.
+
+  AG-UI 1.0 is held back: no release of @assistant-ui/react-ag-ui accepts @ag-ui/client 1.x yet.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- Updated dependencies [674af8a]
+  - @pikku/voice-agents@0.0.7
+
 ## 0.12.13
 
 ### Patch Changes

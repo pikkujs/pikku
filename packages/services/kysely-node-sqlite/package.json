@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-node-sqlite",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -25,15 +25,15 @@
     "node": ">=22.10"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.25",
-    "@pikku/kysely-sqlite": "^0.12.15",
+    "@pikku/kysely": "^0.13.39",
+    "@pikku/kysely-sqlite": "^0.12.18",
     "kysely": "^0.29.6"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.124"
+    "@pikku/core": "^0.12.144"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.124",
+    "@pikku/core": "^0.12.144",
     "@types/node": "^26",
     "tsx": "^4.23.15"
   },

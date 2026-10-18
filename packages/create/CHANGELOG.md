@@ -1,3 +1,11 @@
+## 0.12.13
+
+### Patch Changes
+
+- 01036e4: Pin bun 1.4.3: new projects declare `"packageManager": "bun@1.4.3"`, and `pikku validate` and the Studio Cloud smoke check recommend it.
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+
 ## 0.12.12
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.24
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+
 ## 0.12.23
 
 ### Patch Changes

@@ -1,5 +1,96 @@
 # @pikku/skills
 
+## 0.12.59
+
+### Patch Changes
+
+- dc952a8: An agent's structured output is now validated (#1823).
+
+  **Breaking:** a `pikkuAgent` with an `output` schema fails its run with the new `AgentOutputValidationError` (502; `issues` lists what did not match) when the model's object does not match, instead of returning the malformed object. This applies to `rpc.agent.run`, `rpc.agent.approve` and sub-agent calls, and uses the app's `SchemaService`, like function input validation. The run is marked `failed` and `onError` agent middleware runs, as for any other agent failure; nothing is retried. A `null` the model sends for an optional field — which `@pikku/ai-vercel` invites by making optional properties nullable for OpenAI strict mode — is now dropped, so the field comes back absent rather than `null`.
+
+  A streamed run (`streamAgent`) is not validated: its answer reaches the client as it is generated, before there is a complete object to check. A direct `agentRunner.run` call has no agent, so no declared `output`, and is not validated either.
+
+- c702ed6: Harden `@pikku/better-auth` for 0.13.
+
+  **Breaking:**
+
+  - `SessionStore` and `InMemorySessionStore` are renamed to `AuthSessionStorage` and `InMemoryAuthSessionStorage`, so they no longer clash with `@pikku/core`'s unrelated `SessionStore`. The interface is now better-auth 1.7's `SecondaryStorage` contract and adds `getAndDelete` and `increment`, so a custom implementation must provide both. `inMemorySessionStore()` and `prefixedSessionStore()` keep their names, and the in-memory store can be passed directly as `secondaryStorage`.
+  - `pikkuDelegatedAuth` no longer links an upstream identity to an existing local user with the same email unless you set `linkExistingUsersByEmail`. With `'non-admins'` it refuses anyone holding an `admin` or `pikku:console` scope, and links nobody when there is no ScopeService. With `'all'` it links anyone.
+
+  **Fixes:**
+
+  - The package no longer imports `@better-auth/core` or `@better-auth/utils`, which were only devDependencies. Under pnpm, isolated bun or Yarn PnP, `import '@pikku/better-auth'` used to fail at load time.
+  - The tarball ships only `dist`, `README.md` and `LICENSE`. The build clears `dist` and the tsbuildinfo first, so modules that were removed (fabric and the old virtual-user modules) can no longer ship. Adds a `types` export condition.
+  - `betterAuthStoreSession` now shares its session handling with the other two middlewares. It never overwrites a session that an earlier middleware set. It stands down when an addon's scope withholds the auth secret. It reads relayed cross-site cookies and reports an impersonation header that nothing is configured to honour. It also accepts storages that return parsed objects, treats a malformed `expiresAt` as expired, and takes a `cookiePrefix`.
+  - `betterAuthStatelessSession` recognises `jwe` and `jwt` cookie-cache strategies from the cookie's shape, and takes `cookiePrefix` and `cookieCache: { strategy, version, jwt }`. `pikkuBetterAuth` logs an error at startup when these disagree with the auth config.
+  - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` is ignored under `NODE_ENV=production`.
+  - The singleton-credential platform user is now found by its reserved email (`PLATFORM_USER_EMAIL`, `findPlatformUserId`). Under `generateId: 'uuid' | 'serial'`, every link used to create another Platform user.
+  - `findPlatformUserId` no longer accepts whoever holds `platform@pikku.internal`. The platform user is created on first link, so until then anyone could sign up with that address by email and password and would have owned every singleton credential. A user with a password account there now throws the new `ReservedPlatformEmailError`, the link endpoint answers `409 PLATFORM_USER_RESERVED`, and `findPlatformUserId` needs `findAccounts` on the adapter it is given (better-auth's `internalAdapter` has it).
+  - `betterAuthStatelessSession` also reports a `cookieCache.version` that differs from the auth config's, which used to reject every cookie without a log line.
+  - `getAuthSession(factory, …)` builds the singleton services and the auth instance once, not once per call. The cache is weak at every level, so builders the caller drops are not kept alive.
+  - The option types that appear in public signatures are now exported. Unneeded `as any` casts are removed, and TSDoc is added to every export.
+
+- a0ae9bb: The generated `betterAuthStatelessSession` now reads the session cookie the way the auth config writes it. The inspector reads `advanced.cookiePrefix`, `session.cookieCache.strategy` and `session.cookieCache.version` from the `betterAuth({...})` call when they are string literals, and the CLI passes them through. Before this, an app with a custom cookie prefix was anonymous on every request, and bumping the cookie version invalidated nothing.
+
+  If one of these options is set but isn't a string literal (an environment variable, for example), or a later spread in the same object can replace it (`{ version: '2', ...override }`), the inspector warns about it and does not pass the value on. A spread written before the option is fine, because the option wins. In that case, register `betterAuthStatelessSession({ cookiePrefix, cookieCache })` yourself with `addGlobalMiddleware`. Your registration runs before the generated one, and the generated one then does nothing. `cookieCache.jwt` is never passed through and needs that same manual registration.
+
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 54b8891: `pikku dev` takes the same platform-service contributors a deploy does. List modules exporting a `PlatformServiceContributor` under `dev.contributors` in `pikku.config.json`; `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts` from them (nothing when none are configured), and `pikku dev` merges its `createPlatformServices(env)` over the local services before `createSingletonServices`, so a host can inject an `emailService` into a running project. `pikku serve` never loads it (dev only) and `NODE_ENV=production` ignores it. A contributor import given as a `file://` URL or absolute path is emitted as the package export that resolves to it, or relative to `.pikku/`, so the generated file typechecks.
+- afe6fe4: Split the pikku-build app reference by phase: `references/app.md` is now a short index and the rules that hold throughout, and each phase has its own file (`phase-1-what-it-is`, `phase-2-people-and-apps`, `phase-3-plan`, `phase-4-build`, `phase-5-prove-and-ship`). Section numbers are unchanged, and sections that restated the scenarios, theming, design and ship references now point at them.
+- 40855aa: Remove dev quick login. The `${basePath}/dev/quick-login` route, the `PIKKU_DEV_QUICK_LOGIN` flag that `pikku dev` and `pikku serve` set by default, and the `admin@pikku.dev` account it created are gone, and `createAuthHandler` now forwards every request to better-auth. Nothing in this repository called the route. Sign in through your normal sign-in, or `virtualUser()` under `pikku dev`. An `admin@pikku.dev` user already in a dev database is left as it is.
+- a88391a: **Breaking:** `setSession` now means the same in middleware as in a function body (#1451). It marks the session changed — so `authCookie` re-issues the cookie on the way out — and writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for the request, under the same name and type.
+
+  Middleware that works out who the caller is from a credential it was handed (a cookie, a bearer token, an API key) should call the new `setInitialSession` instead. It sets the session the function sees without marking it changed or writing anything:
+
+  ```diff
+  -const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setSession, session }, next) => {
+  +const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setInitialSession, session }, next) => {
+     if (session) return next()
+     const row = await db.findKey(http?.request?.header('x-api-key'))
+  -  if (row) await setSession?.({ userId: row.userId })
+  +  if (row) setInitialSession?.({ userId: row.userId })
+     return next()
+   })
+  ```
+
+  Left on `setSession`, such a middleware re-issues the auth cookie and writes the session store on every request. Middleware that genuinely signs someone in keeps `setSession`, and now persists. `clearSession` is on the middleware wire too.
+
+  `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session middleware and the CLI's studio and virtual-user sessions all use `setInitialSession`. `SessionService.set` stores a session under its own `userId` when no user was resolved yet, so a sign-in is persisted rather than dropped, and the function runner reads a middleware-set session from the session service explicitly rather than through the order `freezeInitial` happens to run in.
+
+- bec7622: Tighten every skill description (about 24% fewer characters, same TRIGGER and DO NOT TRIGGER conditions) so less sits in context on every task, and correct the runtime package names in `pikku-concepts` (`@pikku/express`, `@pikku/fastify`, `@pikku/lambda`, `@pikku/uws`, not the directory names).
+
+  Remove the deleted Console from the skills (no console links, deep-link tables or console-inspection steps; progress is reported in plain words with the app and API links `bun run dev` prints), and split `pikku-concepts` so its look-up material (CLI commands, functions, schemas, testing) lives in references and `SKILL.md` drops from about 23 KB to 9 KB.
+
+- 3df9013: A trigger source can now say which user an event belongs to (#1618): `trigger.invoke(data, { pikkuUserId })`. The target RPC or workflow runs as that user, the way a queue job or workflow run carrying a `pikkuUserId` does — its `type: 'wire'` credentials and stored session resolve for them, and a started workflow records the id on the run. Without the option nothing changes: the target runs as nobody.
+
+  The user is a separate argument so nothing in the event data can choose it; a source should pass only a user it established itself, such as the one whose credential it polled with. A `pikkuUserId` that is not a non-empty string drops the event with an error log.
+
+  `PikkuTrigger` and the new `TriggerInvokeOptions` are exported from `@pikku/core/trigger`. A custom `PikkuTriggerService` subclass must pass the new optional `options` argument of the `onTrigger` callback through to `onTriggerFire`, or the user never reaches the target.
+
 ## 0.12.58
 
 ### Patch Changes

@@ -1,3 +1,31 @@
+## 0.12.13
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- ec7fa25: Move Next to 16; @pikku/next accepts Next 15 or 16 as a peer.
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [65682fc]
+- Updated dependencies [c702ed6]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [40855aa]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/better-auth@0.12.57
+
 ## 0.12.12
 
 ### Patch Changes

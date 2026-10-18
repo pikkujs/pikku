@@ -1,6 +1,6 @@
 {
   "name": "@pikku/pino",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -20,7 +20,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.138",
+    "@pikku/core": "^0.12.144",
     "pino": "^9.5.0 || ^10.0.0"
   },
   "devDependencies": {

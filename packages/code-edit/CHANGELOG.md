@@ -1,5 +1,12 @@
 # @pikku/code-edit
 
+## 0.12.8
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+
 ## 0.12.7
 
 ### Patch Changes

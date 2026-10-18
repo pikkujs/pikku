@@ -1,5 +1,12 @@
 # @pikku/knowledge
 
+## 0.12.21
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+
 ## 0.12.20
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/uws",
-  "version": "0.12.13",
+  "version": "0.12.14",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -26,16 +26,16 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.141"
+    "@pikku/core": "^0.12.144"
   },
   "dependencies": {
-    "@pikku/uws-handler": "^0.12.10",
+    "@pikku/uws-handler": "^0.12.11",
     "@types/qs": "^6",
     "qs": "^6.16.1",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.141"
+    "@pikku/core": "^0.12.144"
   },
   "engines": {
     "node": ">=24"
