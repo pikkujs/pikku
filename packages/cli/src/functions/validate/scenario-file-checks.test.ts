@@ -96,10 +96,31 @@ describe('scenario and virtual-user file placement', () => {
     }
   })
 
-  test('virtual users outside a *.virtual-user.ts file are an error', async () => {
+  test('the starter template names — *.feature.ts and *.step.ts — are fine', async () => {
     const tmp = await makeTmp()
     try {
-      await write(tmp, 'scenarios/virtual-users.ts', VIRTUAL_USERS)
+      await write(tmp, 'test/features/auth.feature.ts', FEATURE)
+      await write(tmp, 'test/steps/clicks.step.ts', STEP)
+      assert.deepStrictEqual(ids(await runScenarioFileChecks(tmp, srcDirs)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('virtual-users.ts is the scaffold\'s own file and is fine', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(tmp, 'virtual-users.ts', VIRTUAL_USERS)
+      assert.deepStrictEqual(ids(await runScenarioFileChecks(tmp, srcDirs)), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('virtual users outside a dedicated file are an error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(tmp, 'scenarios/people.ts', VIRTUAL_USERS)
       const findings = await runScenarioFileChecks(tmp, srcDirs)
       assert.deepStrictEqual(ids(findings), [
         'virtual-user-declared-outside-virtual-user-file',
