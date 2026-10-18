@@ -1,17 +1,15 @@
 ---
 name: pikku-wiring
 description: >-
-  Use when exposing a Pikku function over a transport — HTTP routes and SSE, WebSocket channels,
-  typed realtime pub/sub, internal and exposed RPC, queue workers, cron schedules, event triggers,
-  MCP tools/resources/prompts, CLI commands, or a Slack gateway. Covers choosing the wiring, what
-  every wiring shares, and what differs: function type, session source, and which calls throw
-  instead of returning. TRIGGER when: code uses wireHTTP, defineHTTPRoutes, wireChannel,
-  wireQueueWorker, wireScheduler, wireTrigger, wireTriggerSource, wireCLI, wireMCPResource,
-  wireMCPPrompt, `mcp: true`, `sse: true`, `expose: true`, rpc.invoke, SlackGatewayAdapter, or the
-  user asks how to expose, route, schedule, queue, stream or publish a function. DO NOT TRIGGER
-  when: writing the function body (use pikku-concepts), authorization (use pikku-permissions), serving on
-  a runtime (use pikku-deploy), building a live-updating view (use pikku-realtime), or sending
-  outgoing webhooks (use pikku-webhook).
+  Exposing a Pikku function over a transport: HTTP and SSE, WebSocket channels, typed pub/sub, RPC,
+  queue workers, cron, event triggers, MCP tools/resources/prompts, CLI commands, Slack gateway;
+  choosing the wiring and what differs by function type, session source and throw-vs-return. TRIGGER
+  when: code uses wireHTTP, defineHTTPRoutes, wireChannel, wireQueueWorker, wireScheduler,
+  wireTrigger, wireTriggerSource, wireCLI, wireMCPResource, wireMCPPrompt, `mcp: true`, `sse: true`,
+  `expose: true`, rpc.invoke or SlackGatewayAdapter, or asked how to expose, route, schedule, queue,
+  stream or publish a function. DO NOT TRIGGER for function bodies (use pikku-concepts),
+  authorization (use pikku-permissions), runtimes (use pikku-deploy), live views (use
+  pikku-realtime) or outgoing webhooks (use pikku-webhook).
 installGroups: [core]
 ---
 
@@ -55,7 +53,7 @@ Three consequences that hold for every wiring below:
 - **Permissions are never declared on the wiring.** Wire-level permissions were
   removed in #972 — declare them on the function (`pikkuFunc({ permissions })`,
   see `pikku-permissions`) or app-wide via `addGlobalPermission`. Tags and
-  patterns now target *middleware* only.
+  patterns now target _middleware_ only.
 - **The wire is the third argument**, not a service. `channel`, `rpc`, `session`,
   `setSession`, `mcp`, `queue`, `scheduledTask` and `cli` all live there.
 
@@ -70,30 +68,30 @@ exactly the typing that makes the wiring worth having, silently.
 naming the `#pikku` leaf to use instead. `@pikku/core/services` is the one
 subpath it exempts — the service implementations bootstrap picks.
 
-| Wiring | Import from |
-| --- | --- |
-| `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes` | `#pikku/http` |
-| `wireChannel`, `defineChannelRoutes` | `#pikku/channel` |
-| `wireQueueWorker` | `#pikku/queue` |
-| `wireScheduler` | `#pikku/scheduler` |
-| `wireTrigger`, `wireTriggerSource`, `pikkuTriggerFunc` | `#pikku/trigger` |
-| `wireCLI`, `pikkuCLICommand`, `pikkuCLIRender` | `#pikku/cli` |
-| `pikkuMCPToolFunc`, `pikkuMCPResourceFunc`, `pikkuMCPPromptFunc`, `wireMCPResource`, `wireMCPPrompt` | `#pikku/mcp` |
+| Wiring                                                                                               | Import from        |
+| ---------------------------------------------------------------------------------------------------- | ------------------ |
+| `wireHTTP`, `defineHTTPRoutes`, `wireHTTPRoutes`                                                     | `#pikku/http`      |
+| `wireChannel`, `defineChannelRoutes`                                                                 | `#pikku/channel`   |
+| `wireQueueWorker`                                                                                    | `#pikku/queue`     |
+| `wireScheduler`                                                                                      | `#pikku/scheduler` |
+| `wireTrigger`, `wireTriggerSource`, `pikkuTriggerFunc`                                               | `#pikku/trigger`   |
+| `wireCLI`, `pikkuCLICommand`, `pikkuCLIRender`                                                       | `#pikku/cli`       |
+| `pikkuMCPToolFunc`, `pikkuMCPResourceFunc`, `pikkuMCPPromptFunc`, `wireMCPResource`, `wireMCPPrompt` | `#pikku/mcp`       |
 
 ## Pick a wiring
 
-| Reach for | When | Reference |
-| --- | --- | --- |
-| **HTTP** | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only) | `references/http.md`; every field in `references/http-options.md` |
-| **Channel** | A hand-designed WebSocket protocol with your own action routing | `references/channel.md` |
-| **Realtime** | Typed pub/sub push — the scaffolded `/events` channel and SSE topics, plus subscribing to any other `sse: true` route or channel from the client | `references/realtime.md` |
-| **RPC** | One function calling another, or dispatching a name from outside | `references/rpc.md` |
-| **Queue** | Reliable background work that must survive a crash and retry | `references/queue.md` |
-| **Scheduler** | Recurring work on a cron expression | `references/scheduler.md` |
-| **Trigger** | Reacting in-process to an external event source (Redis pub/sub, PG LISTEN) | `references/trigger.md` |
-| **MCP** | Exposing functions to an AI assistant as tools, resources or prompts | `references/mcp.md` |
-| **CLI** | A terminal program with commands, subcommands and options | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
-| **Gateway** | An inbound integration from a third-party product — Slack is the shipped adapter | `references/gateway-slack.md` |
+| Reach for     | When                                                                                                                                             | Reference                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **HTTP**      | REST endpoints, web APIs, and SSE streams (`sse: true`, `get` only)                                                                              | `references/http.md`; every field in `references/http-options.md`                   |
+| **Channel**   | A hand-designed WebSocket protocol with your own action routing                                                                                  | `references/channel.md`                                                             |
+| **Realtime**  | Typed pub/sub push — the scaffolded `/events` channel and SSE topics, plus subscribing to any other `sse: true` route or channel from the client | `references/realtime.md`                                                            |
+| **RPC**       | One function calling another, or dispatching a name from outside                                                                                 | `references/rpc.md`                                                                 |
+| **Queue**     | Reliable background work that must survive a crash and retry                                                                                     | `references/queue.md`                                                               |
+| **Scheduler** | Recurring work on a cron expression                                                                                                              | `references/scheduler.md`                                                           |
+| **Trigger**   | Reacting in-process to an external event source (Redis pub/sub, PG LISTEN)                                                                       | `references/trigger.md`                                                             |
+| **MCP**       | Exposing functions to an AI assistant as tools, resources or prompts                                                                             | `references/mcp.md`                                                                 |
+| **CLI**       | A terminal program with commands, subcommands and options                                                                                        | `references/cli.md`; end-to-end walkthrough in `references/cli-complete-example.md` |
+| **Gateway**   | An inbound integration from a third-party product — Slack is the shipped adapter                                                                 | `references/gateway-slack.md`                                                       |
 
 Realtime and Channel are the pair most often confused. If the shape is "server
 pushes typed events to subscribers", use Realtime — `pikku enable events`
@@ -104,11 +102,11 @@ only when the client also sends structured messages you need to route on.
 
 ### Each wiring demands a particular function type
 
-| Wiring | Function type | Why |
-| --- | --- | --- |
-| HTTP, Channel, Queue, CLI, MCP | `pikkuFunc` / `pikkuSessionlessFunc` | Ordinary request/response |
-| Scheduler | **`pikkuVoidFunc`** | A cron has no input and no caller to return to |
-| Trigger *source* | **`pikkuTriggerFunc`** | Runs **once at startup**, not once per event |
+| Wiring                         | Function type                        | Why                                            |
+| ------------------------------ | ------------------------------------ | ---------------------------------------------- |
+| HTTP, Channel, Queue, CLI, MCP | `pikkuFunc` / `pikkuSessionlessFunc` | Ordinary request/response                      |
+| Scheduler                      | **`pikkuVoidFunc`**                  | A cron has no input and no caller to return to |
+| Trigger _source_               | **`pikkuTriggerFunc`**               | Runs **once at startup**, not once per event   |
 
 A trigger source is the one that surprises people: it sets up a listener, calls
 `trigger.invoke(...)` per event, and returns a teardown function. It receives
@@ -145,11 +143,11 @@ logging them as errors.
 
 ### Delivery semantics differ, and that is usually the real choice
 
-| Wiring | Delivery | Runs where |
-| --- | --- | --- |
-| Trigger | **At-most-once**, synchronous | In-process, alongside the listener |
-| Queue | **At-least-once** with retries and a dead-letter queue | Distributed workers |
-| Scheduler | Depends on the runtime — see below | Wherever the scheduler service runs |
+| Wiring    | Delivery                                               | Runs where                          |
+| --------- | ------------------------------------------------------ | ----------------------------------- |
+| Trigger   | **At-most-once**, synchronous                          | In-process, alongside the listener  |
+| Queue     | **At-least-once** with retries and a dead-letter queue | Distributed workers                 |
+| Scheduler | Depends on the runtime — see below                     | Wherever the scheduler service runs |
 
 Reach for a trigger to react immediately, and a queue when the work must not be
 lost. A trigger that must not drop events is a queue with extra steps.
@@ -160,11 +158,11 @@ cron expression can decide which tasks fire. `pikku-deploy` has the comparison.
 
 ### Codegen owns several wirings — do not hand-write them
 
-| Turn it on | Codegen writes | Never hand-write |
-| --- | --- | --- |
-| `pikku enable rpc` | `rpc-public.gen.ts` — the `POST /rpc/:rpcName` route | A second route on the same path collides |
+| Turn it on            | Codegen writes                                                   | Never hand-write                                  |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| `pikku enable rpc`    | `rpc-public.gen.ts` — the `POST /rpc/:rpcName` route             | A second route on the same path collides          |
 | `pikku enable events` | `events.gen.ts` — the `/events` channel and `GET /events/:topic` | A hand-rolled `/events` misses disconnect cleanup |
-| `wireCLI` | `<program>-channel.gen.ts` — the same commands over a channel | It is regenerated on every build |
+| `wireCLI`             | `<program>-channel.gen.ts` — the same commands over a channel    | It is regenerated on every build                  |
 
 Enabling the RPC endpoint says the endpoint exists, not who may call it — each
 `expose: true` function is still gated by its own `auth`, permissions and scopes.

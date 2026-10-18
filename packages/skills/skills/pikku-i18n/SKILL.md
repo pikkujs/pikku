@@ -1,13 +1,12 @@
 ---
 name: pikku-i18n
 description: >-
-  Use when writing user-facing text in a Pikku frontend, or making one speak another language.
-  Covers Paraglide JS message functions compiled from per-locale messages JSON files, adding a second
-  language, generated enum-label maps with @pikku/paraglide, and right-to-left support (document direction, flow-relative
-  styles) for Arabic, Hebrew, Farsi and Urdu. TRIGGER when: scaffolding or editing a frontend and writing display
-  text, asked to make copy translatable, adding a language, labelling an enum/status/role value,
-  or asked to support RTL / mirror the layout. DO NOT TRIGGER for backend functions, error
-  messages thrown from functions, or log output — none of those are display strings.
+  Writing user-facing text in a Pikku frontend or making it speak another language: Paraglide JS
+  message functions from per-locale JSON, adding a language, generated enum-label maps
+  (@pikku/paraglide), and RTL support (Arabic, Hebrew, Farsi, Urdu). TRIGGER when: writing display
+  text in a frontend, making copy translatable, adding a language, labelling an enum/status/role
+  value, or supporting RTL. DO NOT TRIGGER for backend functions, error messages thrown from
+  functions, or log output.
 installGroups: [client]
 ---
 
@@ -22,11 +21,11 @@ type-checks them, so an i18n mistake blocks the build rather than the release.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Writing copy, wiring Paraglide, or adding a language | `references/messages.md` |
-| Labelling an enum, status, kind or role value | `references/enum-labels.md` |
-| Adding Arabic (or Hebrew, Farsi, Urdu), or writing layout styles | `references/rtl.md` |
+| You are…                                                         | Read                        |
+| ---------------------------------------------------------------- | --------------------------- |
+| Writing copy, wiring Paraglide, or adding a language             | `references/messages.md`    |
+| Labelling an enum, status, kind or role value                    | `references/enum-labels.md` |
+| Adding Arabic (or Hebrew, Farsi, Urdu), or writing layout styles | `references/rtl.md`         |
 
 ## Three axes, and a brief usually means only one
 
@@ -34,14 +33,14 @@ type-checks them, so an i18n mistake blocks the build rather than the release.
 codebase. Reading it as one about the codebase is the most expensive mistake
 available here.
 
-| Axis | What it covers | What sets it |
-| --- | --- | --- |
-| **Identifiers** | Function, component, type and file names; tables and columns | Nothing — always English |
-| **Meta** | `description` / `name` / `title` authored in code, rendered by the console | `metaLocale` in `pikku.config.json` |
-| **Product UI** | Every string the app shows a user | `messages/<locale>.json` + `defaultLocale` |
+| Axis            | What it covers                                                             | What sets it                               |
+| --------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
+| **Identifiers** | Function, component, type and file names; tables and columns               | Nothing — always English                   |
+| **Meta**        | `description` / `name` / `title` authored in code, rendered by the console | `metaLocale` in `pikku.config.json`        |
+| **Product UI**  | Every string the app shows a user                                          | `messages/<locale>.json` + `defaultLocale` |
 
 `baseLocale` stays `en` whatever language the product speaks — it names the
-message *source* catalogue every other locale is derived from, not the language
+message _source_ catalogue every other locale is derived from, not the language
 the app is in. Set `defaultLocale` instead.
 
 ## Direction is one setting, not per-component work
@@ -59,7 +58,7 @@ is what makes an RTL language just another locale file.
   `m['enum__' + x]()`, no key-string resolver. A computed key cannot be
   type-checked or tree-shaken, so a renamed message degrades to silent runtime
   text. Where the key is genuinely dynamic, map the discriminant to a message
-  *function* — the map is checked, a string is not.
+  _function_ — the map is checked, a string is not.
 - **Do not `asI18n()` a hardcoded English string.** `asI18n` exists to pass
   opaque server data (a name, a slug, an id) through the i18n gate. An enum value
   goes through its generated label map.

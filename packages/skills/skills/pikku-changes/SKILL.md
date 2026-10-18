@@ -1,6 +1,12 @@
 ---
 name: pikku-changes
-description: 'Work a project''s changes queue — the todo list someone filed by circling things in the running app. Covers `pikku changes wait|claim|show|ask|reply|shot|done`: waiting for work without polling, asking instead of guessing, saying why an item is left undone, offering options as images, one commit per item. TRIGGER when: the user says "run the changes against a stage", "work the changes (queue)", "watch the changes", "pick up the changes", names a change by its #number, or you are otherwise idle in a checkout with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, and not for deploying or debugging a stage.'
+description: >-
+  Work a project's changes queue, the todo list filed by circling things in the running app: `pikku
+  changes wait|claim|show|ask|reply|shot|done`, asking instead of guessing, saying why an item is
+  undone, options as images, one commit per item. TRIGGER when: the user says to run/work/watch/pick
+  up the changes (e.g. against a stage), names a change by #number, or you are idle in a checkout
+  with open changes (`pikku changes list`). DO NOT TRIGGER for git changes, diffs or changelogs, or
+  for deploying or debugging a stage.
 ---
 
 # Working a changes queue
@@ -39,12 +45,12 @@ something changed. `wait` does the waiting and exits only when there is work.
 
 2. When it exits, read the exit code:
 
-   | code | meaning                                                | do                                              |
-   | ---- | ------------------------------------------------------ | ----------------------------------------------- |
-   | 0    | work printed (claimed, and/or `Answered`)              | work it, then step 3                            |
-   | 2    | `--timeout`/`--once` found nothing                     | stop, or restart `wait`                         |
-   | 3    | auth refused                                           | relay the CLI's message; stop                   |
-   | 1    | anything else                                          | report the message; stop                        |
+   | code | meaning                                   | do                            |
+   | ---- | ----------------------------------------- | ----------------------------- |
+   | 0    | work printed (claimed, and/or `Answered`) | work it, then step 3          |
+   | 2    | `--timeout`/`--once` found nothing        | stop, or restart `wait`       |
+   | 3    | auth refused                              | relay the CLI's message; stop |
+   | 1    | anything else                             | report the message; stop      |
 
 3. For each item: `show` → fix → commit → `done`; or `ask` and move on; or `reply`
    saying why you are leaving it. Then start `wait` again, in the background.

@@ -1,16 +1,13 @@
 ---
 name: pikku-meta
 description: >-
-  Use to inspect or evolve a project you did not just write — `pikku meta` and `pikku info` for
-  what the project declares (functions, schemas, wires, workflows, middleware, permissions) and
-  `pikku meta apply` to change it, `pikku versions` / `pikku release` for contract hashes,
-  breaking-change detection, the semver a release should get and shipping it, and `pikku audit` / `pikku
-  update` for dependency advisories and moving Pikku forward. TRIGGER when: user asks what
-  functions or routes exist, wants a function's input/output shape, wants to retag a function or
-  set config on a declaration, asks about API versioning, breaking changes, what semver a release
-  deserves, dependency vulnerabilities, the console Security screen, or upgrading Pikku. DO NOT
-  TRIGGER when: user is writing a new function or wiring (use the wiring skill) or asking about
-  Pikku concepts (use pikku-concepts).
+  Inspect or evolve a project you did not just write: `pikku meta`/`pikku info` for functions,
+  schemas, wires, workflows, middleware, permissions; `pikku meta apply`; `pikku versions`/`pikku
+  release` for contract hashes, breaking changes and semver; `pikku audit`/`pikku update` for
+  advisories and upgrades. TRIGGER when: asked what functions or routes exist, a function's
+  input/output shape, retagging, API versioning, breaking changes, release semver, dependency
+  vulnerabilities or upgrading Pikku. DO NOT TRIGGER when writing a new function or wiring (use the
+  wiring skill) or on Pikku concepts (use pikku-concepts).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
 argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|release|audit|update]'
@@ -23,11 +20,11 @@ and change it through the write path rather than by hand.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Asking what exists, or setting config on a declaration | `references/meta.md` |
+| You are…                                                    | Read                       |
+| ----------------------------------------------------------- | -------------------------- |
+| Asking what exists, or setting config on a declaration      | `references/meta.md`       |
 | Versioning a contract, or versioning and shipping a release | `references/versioning.md` |
-| Chasing a dependency advisory, or upgrading Pikku | `references/audit.md` |
+| Chasing a dependency advisory, or upgrading Pikku           | `references/audit.md`      |
 
 ## Start with `pikku meta context`
 
@@ -48,7 +45,7 @@ that asymmetry built in, so let it decide rather than eyeballing a diff.
 
 - **Do not infer a function's input or output by reading its body**, and do not
   cast a call site to make it compile. The schema is the type; `pikku meta
-  functions get <id>` has it.
+functions get <id>` has it.
 - **Do not expect an unversioned function to be promoted for you.** Without an
   explicit `version: 2` it is version 1 of its contract, collides with the
   pinned `@v1`, and `pikku versions check` reports the published contract as
@@ -63,5 +60,5 @@ that asymmetry built in, so let it decide rather than eyeballing a diff.
   companions come from `@pikku/core`; the CLI writes it, the addon reads it, the
   UI renders it.
 - **Do not treat a failed audit run as a clean one.** `bun audit` exits non-zero
-  when it *finds* advisories and still writes its payload, so non-zero with
+  when it _finds_ advisories and still writes its payload, so non-zero with
   output is data; non-zero with no output throws on purpose.
