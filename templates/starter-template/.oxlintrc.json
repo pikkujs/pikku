@@ -5,7 +5,10 @@
     "browser": true,
     "es2022": true
   },
-  "rules": {},
+  "rules": {
+    "typescript/no-misused-promises": "error",
+    "typescript/no-floating-promises": "error"
+  },
   "ignorePatterns": [
     "**/*.gen.ts",
     "**/*.gen.tsx",
@@ -13,5 +16,8 @@
     "**/.deploy/**",
     "**/node_modules/**",
     "**/next-env.d.ts"
-  ]
+  ],
+  "options": {
+    "typeAware": true
+  }
 }

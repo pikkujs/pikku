@@ -14,7 +14,7 @@
  * local and pre-deploy runs have no hostname to seed from, and the deploy gate
  * must not demand a value it is itself about to write.
  */
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku/variables'
 import { z } from 'zod'
 
 export const AppUrlSchema = z.string()

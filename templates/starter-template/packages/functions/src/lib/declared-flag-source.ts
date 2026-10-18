@@ -1,4 +1,3 @@
-import type { DeclaredFlag } from '@pikku/core/flag'
 import type { FeatureFlagSource } from '@pikku/core/services'
 import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
 
@@ -20,7 +19,7 @@ import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
  */
 export function declareFlagsTo(source: FeatureFlagSource): void {
   const takesDeclarations = source as Partial<{
-    setDeclared(declared: DeclaredFlag[]): void
+    setDeclared(declared: typeof declaredFeatureFlags): void
   }>
   takesDeclarations.setDeclared?.(declaredFeatureFlags)
 }

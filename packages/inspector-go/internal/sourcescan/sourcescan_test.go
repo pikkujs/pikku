@@ -28,6 +28,14 @@ func TestReadJsxLiteralText(t *testing.T) {
 	}
 }
 
+func TestReadJsxLiteralTextSkipsClassBuilders(t *testing.T) {
+	src := "const v = cva('leading-none', { variants: { size: { heading: 'font-heading text-xl', title: 'Big Title Here' } } })\n" +
+		"export const A = () => <p className={cn('Flex Gap', x)}>{cn('a b')}</p>\n"
+	if got := asJSON(t, ReadJsxLiteralText("a.tsx", src)); got != "[]" {
+		t.Fatalf("got %s, want []", got)
+	}
+}
+
 func TestReadModuleSpecifiers(t *testing.T) {
 	src := "import a from './a.js'\nimport type { B } from \"b\"\nexport * from './c.js'\n" +
 		"export { d } from './d.js'\nconst t = `import x from 'not-an-import'`\n" +

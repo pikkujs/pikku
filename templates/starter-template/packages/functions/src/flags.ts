@@ -8,7 +8,7 @@
  * declarations: a typo'd flag reads `false`, hides its feature permanently, and
  * leaves every test and screenshot green.
  */
-import { defineFeatureFlags } from '@pikku/core/flag'
+import { defineFeatureFlags } from '#pikku/scopes'
 
 defineFeatureFlags({
   assistantPanel: {

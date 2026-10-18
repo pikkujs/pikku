@@ -24,7 +24,7 @@
  * someone is looking for when they open the screen.
  */
 import { z } from 'zod'
-import { defineAnalyticsEvents } from '@pikku/core/analytics'
+import { defineAnalyticsEvents } from '#pikku/analytics'
 
 export const analyticsEvents = defineAnalyticsEvents({
   page_viewed: z.object({
