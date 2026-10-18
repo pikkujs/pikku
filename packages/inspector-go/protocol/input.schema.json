@@ -93,7 +93,7 @@
             },
             "vendorScript": {
               "type": "string",
-              "description": "The Node script that converts Zod schemas to JSON Schema."
+              "description": "The Node script that converts the Zod schemas QuickJS cannot (a schema built from a package import, or a module that only loads under Node)."
             },
             "cacheDir": {
               "type": "string"

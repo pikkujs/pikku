@@ -32,14 +32,15 @@ export type InspectorGoAnalysisOptions = Pick<
 > & {
   schemaConfig?: NonNullable<InspectorOptions['schemaConfig']> & {
     /**
-     * The Node script that turns Zod schemas into JSON Schema. Zod schemas
-     * are runtime values, so the binary cannot read them itself.
+     * The Node script that turns into JSON Schema the Zod schemas the
+     * binary's own QuickJS cannot: one built from a package import, or
+     * declared in a module that only loads under Node.
      */
     vendorScript?: string
   }
 }
 
-/** The Zod converter this package ships, run by the binary through Node. */
+/** The Node Zod converter this package ships, the binary's fallback. */
 export const VENDOR_SCHEMA_SCRIPT = fileURLToPath(
   new URL('../scripts/vendor-schemas.mjs', import.meta.url)
 )

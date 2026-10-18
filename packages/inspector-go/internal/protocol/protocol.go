@@ -60,9 +60,9 @@ type SchemaConfig struct {
 	SchemasFromTypes []string        `json:"schemasFromTypes,omitempty"`
 	Schema           json.RawMessage `json:"schema,omitempty"`
 	CacheDir         string          `json:"cacheDir,omitempty"`
-	// VendorScript is the Node script that converts Zod (vendor) schemas,
-	// scripts/vendor-schemas.mjs or its published copy. Required when the
-	// project has schemaLookup entries.
+	// VendorScript is the Node script that converts the Zod (vendor) schemas
+	// QuickJS cannot, scripts/vendor-schemas.mjs or its published copy.
+	// Without it those schemas are errors.
 	VendorScript string `json:"vendorScript,omitempty"`
 }
 

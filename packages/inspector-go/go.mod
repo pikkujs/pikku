@@ -19,6 +19,8 @@ replace (
 )
 
 require (
+	github.com/evanw/esbuild v0.28.2
+	github.com/fastschema/qjs v0.0.6
 	github.com/microsoft/typescript-go/shim/ast v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/bundled v0.0.0-00010101000000-000000000000
 	github.com/microsoft/typescript-go/shim/checker v0.0.0-00010101000000-000000000000
@@ -40,6 +42,7 @@ require (
 	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/microsoft/typescript-go v0.0.0-20260708042240-2bd066d87f5b // indirect
+	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect

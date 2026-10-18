@@ -47,7 +47,8 @@ out: {"protocol":1,"finalized":false,"state":{...},"diagnostics":[{"level","code
 - `setupOnly` runs only the setup sweep, as in TS.
 - `types` is passed through untouched; only finalize reads it.
 - `schemaConfig` turns schema generation on. `schemaConfig.vendorScript` names
-  the Node script that converts Zod schemas (see Schema generation).
+  the Node script that converts the Zod schemas QuickJS cannot (see Schema
+  generation).
 
 `pikku-inspect serve` reads NDJSON `{"id","method":"inspect","params":<request>}`
 and answers `{"id","result"|"error"}` per line.
@@ -242,10 +243,16 @@ read it.
 
   Primitives are skipped.
 - **Zod first.** Vendor (Zod) schemas from `schemaLookup` are converted first,
-  through `VendorSchemaConverter`. The default `NodeConverter` runs
-  `vendorScript` (scripts/vendor-schemas.mjs). That script imports the schema
-  modules through tsx and replays the Zod branch of `schema-generator.ts`,
-  using helpers from `packages/inspector/dist`.
+  through `VendorSchemaConverter`. The default is `zodjs.Converter`, which needs
+  no Node: esbuild bundles the modules declaring the schemas with the project's
+  own zod, and QuickJS (WebAssembly, run by wazero) runs the Zod branch of
+  `schema-generator.ts` inside the binary. Every import outside the project is
+  a stub; a schema built from one, or declared in a module that does not load
+  without Node, goes to `NodeConverter`, which runs `vendorScript`
+  (scripts/vendor-schemas.mjs) through tsx. With no `node` on the PATH, or the
+  script not on disk (a compiled CLI), those schemas are errors instead.
+  `PIKKU_INSPECTOR_ZOD=node` sends everything to Node. See
+  [knowledge/decisions/zod-schemas-convert-in-quickjs.md](knowledge/decisions/zod-schemas-convert-in-quickjs.md).
 - **Missing converter.** No converter with a non-empty `schemaLookup` is an
   error, not a silent skip.
 - **Disk cache.** When `cacheDir` is set, the TS schemas are cached in
@@ -270,11 +277,9 @@ Timing for the TS-type part:
 | online-shop | 510 ms | 107 ms | 71 ms |
 | functions | 238 ms | 179 ms | 126 ms |
 
-In schemas mode, the Node Zod converter (545–672 ms on online-shop) dominates
-Go's wall time.
-
-**Open decision:** ship `vendor-schemas.mjs` with the package, or export the
-Zod conversion from `@pikku/inspector` and have the wrapper do it.
+The Zod conversion in QuickJS takes about 100 ms on field-service (81 schemas,
+19 files) once wazero's compiled QuickJS is cached in `<cacheDir>/quickjs`,
+against 340–770 ms for the Node converter.
 
 ## Status
 
