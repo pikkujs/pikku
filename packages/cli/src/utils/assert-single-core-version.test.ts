@@ -85,7 +85,7 @@ describe('assertSingleCoreVersion', () => {
         readFile(new URL('../../../package.json', import.meta.url), 'utf-8')
       )
     )
-    return pkg.peerDependencies['@pikku/core'] as string
+    return pkg.dependencies['@pikku/core'] as string
   }
 
   afterEach(() => {

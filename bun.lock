@@ -298,7 +298,7 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.192",
+        "@pikku/cli": "^0.12.193",
         "@pikku/core": "^0.12.144",
         "zod": "^4",
       },
@@ -318,7 +318,7 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.192",
+        "@pikku/cli": "^0.12.193",
         "@pikku/core": "^0.12.144",
         "zod": "^4",
       },
@@ -404,12 +404,13 @@
         "@pikku/better-auth": "^0.12.57",
         "@pikku/bun-server": "^0.12.15",
         "@pikku/code-edit": "^0.12.8",
+        "@pikku/core": "^0.12.144",
         "@pikku/deploy": "^0.12.16",
         "@pikku/deploy-cloudflare": "^0.12.22",
         "@pikku/deploy-standalone": "^0.12.27",
         "@pikku/fetch": "^0.12.13",
         "@pikku/inspector": "^0.12.107",
-        "@pikku/inspector-go": "^0.12.1",
+        "@pikku/inspector-go": "^0.12.2",
         "@pikku/knowledge": "^0.12.21",
         "@pikku/kysely": "^0.13.39",
         "@pikku/migrator-sql": "^0.12.9",
@@ -443,7 +444,6 @@
       "devDependencies": {
         "@pikku/addon-changes-cli": "workspace:*",
         "@pikku/addon-cloud-cli": "workspace:*",
-        "@pikku/core": "^0.12.144",
         "@pikku/playwright": "^0.12.89",
         "@pikku/ws": "^0.12.11",
         "@playwright/test": "^1.64.1",
@@ -457,7 +457,6 @@
         "ws": "^8.22.0",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.144",
         "@pikku/playwright": "^0.12.89",
         "@pikku/ws": "^0.12.11",
         "better-auth": "^1.7.5",
@@ -1569,7 +1568,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.192",
+        "@pikku/cli": "^0.12.193",
         "@pikku/core": "^0.12.144",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
@@ -5911,6 +5910,8 @@
     "@pikku/templates-workflows-pg-boss/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@pikku/templates-ws-server/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "@pikku/uws/uWebSockets.js": ["uWebSockets.js@github:uNetworking/uWebSockets.js#dddd8ff", {}, "uNetworking-uWebSockets.js-dddd8ff", "sha512-fDaDQQEj+Jn8LsDXGGE629Nna1MGnRS8j9kxsaqtPHBMq3pBDIbKs2sGxk1QMWpQ78+o4F9jV/tuBZZqfanBWQ=="],
 
     "@sinonjs/samsam/type-detect": ["type-detect@4.1.0", "", {}, "sha512-Acylog8/luQ8L7il+geoSxhEkazvkslg7PSNKOX59mbB9cOveP5aq9h74Y7YU8yDpJwetzQQrfIwtf4Wp4LKcw=="],
 
