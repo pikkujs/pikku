@@ -26,7 +26,8 @@
       "verifiers/addon-registry/consumer",
       "verifiers/db-schema/addon",
       "verifiers/db-schema/remote-addon",
-      "verifiers/addon-workspace/functions"
+      "verifiers/addon-workspace/functions",
+      "verifiers/dev-platform-contributors/host-mail"
     ]
   },
   "scripts": {
