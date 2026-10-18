@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import { readFileSync } from 'node:fs'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 import {
   devContributorPlatform,
@@ -53,5 +54,22 @@ describe('serializeDevPlatformServices', () => {
       serializeDevPlatformServices([queue], devContributorPlatform([])),
       /Q } from/
     )
+  })
+
+  test('the generated source imports nothing from @pikku/deploy', () => {
+    const code = serializeDevPlatformServices([email], platform)
+    assert.doesNotMatch(code, /@pikku\/deploy/)
+    assert.deepEqual(
+      [...code.matchAll(/^import [^;]*?from '([^']+)'/gm)].map((m) => m[1]),
+      ['./host-email.js']
+    )
+  })
+
+  test('pikku serve never loads or merges the generated file', () => {
+    const serve = readFileSync(
+      new URL('../../commands/serve.ts', import.meta.url),
+      'utf8'
+    )
+    assert.doesNotMatch(serve, /dev-platform-services|devPlatformServices/)
   })
 })
