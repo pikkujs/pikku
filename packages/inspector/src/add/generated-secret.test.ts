@@ -49,20 +49,20 @@ defineSecret({
 `
 
 describe('defineSecret generate', () => {
-  test('the generate type and size reach the definition', async () => {
+  test('the generate size reaches the definition', async () => {
     const { state, criticals } = await inspectSource(
-      secret(`rotationPeriod: '30day', generate: { type: 'hex', size: 32 },`)
+      secret(`rotationPeriod: '30day', generate: { size: 32 },`)
     )
     assert.deepEqual(criticals, [])
     const def = state.secrets.definitions.find(
       (d) => d.secretId === 'VISITOR_KEY'
     )
-    assert.deepEqual(def?.generate, { type: 'hex', size: 32 })
+    assert.deepEqual(def?.generate, { size: 32 })
   })
 
   test("rotationPeriod 'never' is accepted", async () => {
     const { state, criticals } = await inspectSource(
-      secret(`rotationPeriod: 'never', generate: { type: 'uuid' },`)
+      secret(`rotationPeriod: 'never', generate: { size: 32 },`)
     )
     assert.deepEqual(criticals, [])
     const def = state.secrets.definitions.find(
@@ -72,18 +72,24 @@ describe('defineSecret generate', () => {
   })
 
   test('a generated secret without a rotationPeriod is a build error', async () => {
-    const { criticals } = await inspectSource(
-      secret(`generate: { type: 'hex', size: 32 },`)
-    )
+    const { criticals } = await inspectSource(secret(`generate: { size: 32 },`))
     assert.equal(criticals.length, 1)
     assert.match(criticals[0]!.message, /rotationPeriod/)
   })
 
-  test('an unknown generate type is a build error', async () => {
+  test('a size below the minimum is a build error', async () => {
     const { criticals } = await inspectSource(
-      secret(`rotationPeriod: '30day', generate: { type: 'banana' },`)
+      secret(`rotationPeriod: '30day', generate: { size: 3 },`)
     )
     assert.equal(criticals.length, 1)
-    assert.match(criticals[0]!.message, /generate/)
+    assert.match(criticals[0]!.message, /size/)
+  })
+
+  test('a missing size is a build error', async () => {
+    const { criticals } = await inspectSource(
+      secret(`rotationPeriod: '30day', generate: {},`)
+    )
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /size/)
   })
 })

@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3309 observable things**: 1110 exported names, plus
+**3308 observable things**: 1109 exported names, plus
 2199 members on the classes and interfaces among them, reachable
 through 62 entry points.
 
@@ -51,8 +51,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 47 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
-| `./secret` | 11 | 11 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
+| `./secret` | 10 | 10 | 0 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
@@ -4568,7 +4568,7 @@ export type OAuth2CredentialConfig = {
   pkce?: boolean
   additionalParams?: Record<string, string>
 }
-SECRET_GENERATE_TYPES: readonly ["hex", "base64", "uuid", "password"]
+SECRET_GENERATE_MIN_SIZE: 16
 export type SecretDefinitionMeta = {
   name: string
   displayName: string
@@ -4586,10 +4586,8 @@ export type SecretDefinitionMeta = {
 export type SecretDefinitions = SecretDefinitionMeta[]
 export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
 export type SecretGenerate = {
-  type: SecretGenerateType
-  size?: number
+  size: number
 }
-export type SecretGenerateType = (typeof SECRET_GENERATE_TYPES)[number]
 validateAndBuildSecretDefinitionsMeta: (definitions: SecretDefinitions, schemaLookup: Map<string, SchemaRefLike>) => SecretDefinitionsMeta
 ```
 
