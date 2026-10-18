@@ -253,7 +253,7 @@ export const createConfig: CreateConfig<
     nativeAvailable: nativeInspectorAvailable,
     onFallback: () =>
       logger.warn(
-        'No pikku-inspect binary for this platform; using the TypeScript inspector. Reinstall with optional dependencies, or set "inspector": "typescript" in pikku.config.json to silence this.'
+        'No pikku-inspect binary for this platform; using the TypeScript inspector. Reinstall @pikku/cli, or set "inspector": "typescript" in pikku.config.json to silence this.'
       ),
   })
   setInspectorEngine(inspector)
