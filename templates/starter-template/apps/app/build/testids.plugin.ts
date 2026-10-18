@@ -26,24 +26,30 @@ export function testIds(): Plugin {
   return {
     name: 'pikku:testids',
     enforce: 'pre',
-    async transform(code, id) {
-      const file = id.split('?')[0]
-      if (!file || !JSX_FILE.test(file) || file.includes('/node_modules/'))
-        return null
+    transform: {
+      // tanstackStart's route code-splitter is also `enforce: 'pre'` and rewrites route
+      // modules differently for client and SSR. Hook order 'pre' runs this ahead of it
+      // wherever the plugin sits, so both builds stamp the original source lines.
+      order: 'pre',
+      async handler(code, id) {
+        const file = id.split('?')[0]
+        if (!file || !JSX_FILE.test(file) || file.includes('/node_modules/'))
+          return null
 
-      const result = await babel.transformAsync(code, {
-        filename: file,
-        babelrc: false,
-        configFile: false,
-        sourceMaps: true,
-        parserOpts: { plugins: ['jsx', 'typescript'] },
-        plugins: [[injectTestIds, { sourceAnchors }]],
-      })
-      if (!result?.code) return null
-      return {
-        code: result.code,
-        map: result.map && JSON.stringify(result.map),
-      }
+        const result = await babel.transformAsync(code, {
+          filename: file,
+          babelrc: false,
+          configFile: false,
+          sourceMaps: true,
+          parserOpts: { plugins: ['jsx', 'typescript'] },
+          plugins: [[injectTestIds, { sourceAnchors }]],
+        })
+        if (!result?.code) return null
+        return {
+          code: result.code,
+          map: result.map && JSON.stringify(result.map),
+        }
+      },
     },
   }
 }
