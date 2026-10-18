@@ -115,19 +115,19 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
-      # The @pikku/inspector-go-<platform>-<arch> packages carry only the
-      # pikku-inspect binary, which is gitignored, so it is built here before
-      # `bun run release` publishes them. Every package is checked up front:
-      # each one's prepublishOnly checks it too, but only as npm reaches it, by
-      # which time packages before it in the run are already on npm.
+      # @pikku/inspector-go ships a pikku-inspect binary for every target under
+      # prebuilt/, which is gitignored, so they are built here before
+      # `bun run release` publishes it. They are checked up front too: its
+      # prepublishOnly checks them, but only as npm reaches it, by which time
+      # packages before it in the run are already on npm.
       - uses: actions/setup-go@v6
         with:
           go-version-file: packages/inspector-go/go.mod
           cache-dependency-path: packages/inspector-go/**/go.sum
-      - name: Cross-compile pikku-inspect into its platform packages
+      - name: Cross-compile pikku-inspect for every target
         run: node packages/inspector-go/scripts/build-go.mjs --all
-      - name: Check every platform package has its binary
-        run: node packages/inspector-go/scripts/check-platform-binary.mjs --all
+      - name: Check every target has its binary
+        run: node packages/inspector-go/scripts/check-platform-binary.mjs
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
@@ -187,11 +187,11 @@ jobs:
           fi
           tag="@pikku/inspector-go@${version}"
           assets=$(mktemp -d)
-          for dir in packages/inspector-go/npm/*/; do
+          for dir in packages/inspector-go/prebuilt/*/; do
             target=$(basename "$dir")
             ext=""
             [[ "$target" == win32-* ]] && ext=".exe"
-            cp "${dir}bin/pikku-inspect${ext}" "$assets/pikku-inspect-${target}${ext}"
+            cp "${dir}pikku-inspect${ext}" "$assets/pikku-inspect-${target}${ext}"
           done
           (cd "$assets" && sha256sum pikku-inspect-* > SHA256SUMS)
           echo "Uploading pikku-inspect binaries for $tag"

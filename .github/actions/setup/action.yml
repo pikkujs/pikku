@@ -11,7 +11,7 @@ inputs:
   download-inspector-go:
     description: >-
       Download the pikku-inspect binaries from the inspector-go-build job into
-      their platform packages, for jobs that run the native inspector engine.
+      inspector-go's prebuilt/, for jobs that run the native inspector engine.
       Such a job must also need inspector-go-build.
     default: 'false'
   enable-yarn:

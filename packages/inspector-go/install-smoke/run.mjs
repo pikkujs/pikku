@@ -2,19 +2,18 @@
 // Installs @pikku/cli the way a user does — `bun install` from a registry —
 // and checks that the native engine's binary for this platform came with it.
 //
-// The branch's @pikku/cli, @pikku/inspector, @pikku/inspector-go and its
-// platform packages, and every workspace package they depend on, are packed with `npm pack` (what `changeset publish`
-// ships) at a prerelease version, served by a local registry that proxies
-// everything else to npm, and installed into an empty project with each of
-// bun's linkers. For each install it checks that:
-//   - the lockfile records every platform package, so a lockfile written on
-//     one platform installs the right binary on another;
-//   - exactly this platform's package was installed;
-//   - @pikku/inspector-go, resolved from the installed CLI, finds the binary
-//     in it and the binary runs.
+// The branch's @pikku/cli, @pikku/inspector, @pikku/inspector-go and every
+// workspace package they depend on are packed with `npm pack` (what
+// `changeset publish` ships) at a prerelease version, served by a local
+// registry that proxies everything else to npm, and installed into an empty
+// project with each of bun's linkers. For each install it checks that:
+//   - @pikku/inspector-go arrived with every target's binary under prebuilt/,
+//     so one lockfile installs the same package on every platform;
+//   - @pikku/inspector-go, resolved from the installed CLI, picks this
+//     platform's binary and the binary runs.
 //
-// Needs the packages built (dist) and this platform's binary in
-// npm/<platform>-<arch>/bin.
+// Needs the packages built (dist) and every binary in prebuilt/
+// (`node scripts/build-go.mjs --all`).
 //
 //   node packages/inspector-go/install-smoke/run.mjs
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
@@ -32,9 +31,9 @@ import {
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PLATFORMS, targetName } from '../scripts/platforms.mjs'
+import { PLATFORMS, executableName, targetName } from '../scripts/platforms.mjs'
 
 const pkgDir = fileURLToPath(new URL('..', import.meta.url))
 const repo = join(pkgDir, '..', '..')
@@ -43,9 +42,6 @@ const tarballs = join(work, 'tarballs')
 mkdirSync(tarballs)
 
 const host = `${process.platform}-${process.arch}`
-const platformDirs = PLATFORMS.map(
-  (p) => `packages/inspector-go/npm/${targetName(p)}`
-)
 // Every workspace package the CLI reaches through its dependencies is packed
 // too: the branch's CLI can import a subpath that a published dependency does
 // not export yet.
@@ -77,7 +73,7 @@ for (let i = 0; i < reached.length; i++) {
     if (dir && !reached.includes(dir)) reached.push(dir)
   }
 }
-const dirs = [...reached, ...platformDirs]
+const dirs = reached
 
 const fail = (message) => {
   console.error(`✗ ${message}`)
@@ -216,37 +212,27 @@ const smoke = async (linker) => {
     return
   }
 
-  const lock = readFileSync(join(project, 'bun.lock'), 'utf8')
-  const locked = PLATFORMS.filter((p) =>
-    lock.includes(`"@pikku/inspector-go-${targetName(p)}@`)
-  ).map(targetName)
-  if (locked.length !== PLATFORMS.length) {
-    fail(`[${linker}] bun.lock records only ${locked.join(', ')}`)
-  }
-
   const cli = realpathSync(join(project, 'node_modules', '@pikku', 'cli'))
   const goEntry = createRequire(join(cli, 'package.json')).resolve(
     '@pikku/inspector-go'
   )
-  const goRequire = createRequire(goEntry)
-  const installed = PLATFORMS.filter((p) => {
-    try {
-      goRequire.resolve(`@pikku/inspector-go-${targetName(p)}/package.json`)
-      return true
-    } catch {
-      return false
-    }
-  }).map(targetName)
-  if (installed.length !== 1 || installed[0] !== host) {
+  const goDir = realpathSync(join(dirname(goEntry), '..'))
+  const shipped = PLATFORMS.filter((p) =>
+    existsSync(
+      join(goDir, 'prebuilt', targetName(p), executableName(p.platform))
+    )
+  ).map(targetName)
+  if (shipped.length !== PLATFORMS.length) {
     fail(
-      `[${linker}] installed ${installed.join(', ') || 'none'}, want ${host}`
+      `[${linker}] @pikku/inspector-go has prebuilt binaries for only ${shipped.join(', ') || 'none'}`
     )
   }
 
   const { findInspectorBinary } = await import(pathToFileURL(goEntry).href)
   const binary = findInspectorBinary({})
-  if (!realpathSync(binary).includes(`inspector-go-${host}`)) {
-    fail(`[${linker}] the CLI's inspector-go found ${binary}`)
+  const want = join(goDir, 'prebuilt', host, executableName(process.platform))
+  if (realpathSync(binary) !== want) {
+    fail(`[${linker}] the CLI's inspector-go found ${binary}, want ${want}`)
   }
   const run = spawnSync(binary, ['helper', 'readModuleSpecifiers'], {
     input: JSON.stringify({
@@ -268,13 +254,13 @@ const smoke = async (linker) => {
     fail(`[${linker}] pikku --help exited ${help.status}:\n${help.stderr}`)
   }
   if (!process.exitCode) {
-    console.log(`✓ [${linker}] ${installed.join(', ')}: ${binary}`)
+    console.log(`✓ [${linker}] ${host}: ${binary}`)
   }
 }
 
 try {
-  if (!existsSync(join(pkgDir, 'npm', host))) {
-    throw new Error(`no platform package for ${host}`)
+  if (!existsSync(join(pkgDir, 'prebuilt', host))) {
+    throw new Error(`no prebuilt binary for ${host}`)
   }
   for (const linker of ['hoisted', 'isolated']) await smoke(linker)
 } finally {

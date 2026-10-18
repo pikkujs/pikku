@@ -1,12 +1,11 @@
-// Refuses to publish a platform package without its binary.
+// Refuses to publish @pikku/inspector-go without every prebuilt binary.
 //
-//   node ../../scripts/check-platform-binary.mjs   from npm/<target> (prepublishOnly)
-//   node scripts/check-platform-binary.mjs --all   every npm/<target>
+//   node scripts/check-platform-binary.mjs   every prebuilt/<target> (prepublishOnly)
 //
-// The binary must exist, be large enough to be real, and be an executable for
-// the os/cpu the package.json declares: Mach-O, static ELF (no PT_INTERP) or PE
-// with the matching machine. A wrong-target binary would install cleanly and
-// fail only when a user runs codegen.
+// Each binary must exist, be large enough to be real, and be an executable for
+// its target: Mach-O, static ELF (no PT_INTERP) or PE with the matching
+// machine. A missing or wrong-target binary would install cleanly and fail only
+// when a user on that platform runs codegen.
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -65,47 +64,48 @@ export const binaryProblem = (buf, platform, arch) => {
   return `unsupported platform ${platform}`
 }
 
-const checkPackage = (dir) => {
-  const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-  const [platform] = pkg.os ?? []
-  const [arch] = pkg.cpu ?? []
-  const binary = join(dir, 'bin', executableName(platform))
+const checkTarget = ({ platform, arch }) => {
+  const binary = join(
+    PKG_DIR,
+    'prebuilt',
+    targetName({ platform, arch }),
+    executableName(platform)
+  )
   const where = relative(process.cwd(), binary) || binary
   let buf
   try {
     if (!statSync(binary).isFile()) throw new Error('not a file')
     buf = readFileSync(binary)
   } catch {
-    return `${pkg.name}: ${where} is missing. Run \`node scripts/build-go.mjs --target ${platform}-${arch}\` in packages/inspector-go first.`
+    return `${where} is missing. Run \`node scripts/build-go.mjs --all\` in packages/inspector-go first.`
   }
   if (platform !== 'win32' && (statSync(binary).mode & 0o111) === 0) {
-    return `${pkg.name}: ${where} is not executable`
+    return `${where} is not executable`
   }
   const problem = binaryProblem(buf, platform, arch)
-  if (problem) return `${pkg.name}: ${where} ${problem}`
-  console.log(
-    `✓ ${pkg.name}: ${where} (${(buf.length / 1024 / 1024).toFixed(1)} MB)`
-  )
+  if (problem) return `${where} ${problem}`
+  console.log(`✓ ${where} (${(buf.length / 1024 / 1024).toFixed(1)} MB)`)
   return undefined
 }
 
 const isMain =
   process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
-  const dirs = process.argv.includes('--all')
-    ? PLATFORMS.map((p) => join(PKG_DIR, 'npm', targetName(p)))
-    : [process.cwd()]
-  if (process.argv.includes('--all')) {
-    const onDisk = readdirSync(join(PKG_DIR, 'npm')).sort()
-    const expected = PLATFORMS.map(targetName).sort()
-    if (onDisk.join() !== expected.join()) {
-      console.error(
-        `npm/ holds ${onDisk.join(', ')} but scripts/platforms.mjs lists ${expected.join(', ')}`
-      )
-      process.exit(1)
-    }
+  const problems = []
+  let onDisk = []
+  try {
+    onDisk = readdirSync(join(PKG_DIR, 'prebuilt')).sort()
+  } catch {
+    // reported per target below
   }
-  const problems = dirs.map(checkPackage).filter(Boolean)
+  const expected = PLATFORMS.map(targetName).sort()
+  const unknown = onDisk.filter((t) => !expected.includes(t))
+  if (unknown.length > 0) {
+    problems.push(
+      `prebuilt/ holds ${unknown.join(', ')}, which scripts/platforms.mjs does not list`
+    )
+  }
+  problems.push(...PLATFORMS.map(checkTarget).filter(Boolean))
   if (problems.length > 0) {
     console.error(problems.join('\n'))
     process.exit(1)

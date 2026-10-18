@@ -74,14 +74,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Cross-compile every platform package
+      - name: Cross-compile every target
         run: node scripts/build-go.mjs --all
-      - name: Check every platform package has its binary
-        run: node scripts/check-platform-binary.mjs --all
+      - name: Check every target has its binary
+        run: node scripts/check-platform-binary.mjs
       - name: Smoke-test the linux-x64 binary
         run: |
           out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
-            | npm/linux-x64/bin/pikku-inspect helper readModuleSpecifiers)
+            | prebuilt/linux-x64/pikku-inspect helper readModuleSpecifiers)
           echo "$out"
           [ "$out" = '{"result":["./b.js"]}' ]
 
@@ -108,11 +108,11 @@ jobs:
       - name: Smoke-test the linux-x64 binary
         run: |
           out=$(printf '%s' '{"fileName":"a.ts","content":"export * from \"./b.js\""}' \
-            | packages/inspector-go/npm/linux-x64/bin/pikku-inspect helper readModuleSpecifiers)
+            | packages/inspector-go/prebuilt/linux-x64/pikku-inspect helper readModuleSpecifiers)
           echo "$out"
           [ "$out" = '{"result":["./b.js"]}' ]
       - name: Pack
-        run: tar cf pikku-inspect.tar packages/inspector-go/npm/linux-x64/bin packages/inspector-go/npm/darwin-arm64/bin
+        run: tar cf pikku-inspect.tar packages/inspector-go/prebuilt/linux-x64 packages/inspector-go/prebuilt/darwin-arm64
       - uses: actions/upload-artifact@v7
         with:
           name: pikku-inspect
@@ -143,9 +143,9 @@ jobs:
         run: bun parity/parity.ts --strict --project ../../templates/functions --project ../../examples/field-service
       - name: Parity of finalize alone
         working-directory: packages/inspector-go
-        run: bun parity/finalize-parity.ts --bin npm/linux-x64/bin/pikku-inspect --project ../../templates/functions --project ../../examples/field-service
-      # `bun install @pikku/cli` from a registry, as a user does: only this
-      # platform's binary package arrives, and the CLI's inspector-go runs it.
+        run: bun parity/finalize-parity.ts --bin prebuilt/linux-x64/pikku-inspect --project ../../templates/functions --project ../../examples/field-service
+      # `bun install @pikku/cli` from a registry, as a user does: inspector-go
+      # arrives with every binary, and the CLI's inspector-go runs this platform's.
       - name: Install smoke test
         run: node packages/inspector-go/install-smoke/run.mjs
 

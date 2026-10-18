@@ -347,22 +347,20 @@ names another version, when `go mod verify` fails, or when re-running
 
 ## Distribution
 
-The binary ships esbuild style. `npm/<platform>-<arch>/` holds one package per
-target, `@pikku/inspector-go-<platform>-<arch>`, with `os`/`cpu` set and only
-`bin/pikku-inspect[.exe]` in it. `@pikku/inspector-go` lists them as exact
-`optionalDependencies`, so a package manager installs the one matching the
-host, and `src/binary.ts` resolves it. They are in a changesets `fixed` group
-with `@pikku/inspector-go`, so every release bumps all six together.
+The binaries ship inside `@pikku/inspector-go`, one per target under
+`prebuilt/<platform>-<arch>/pikku-inspect[.exe]`, and `src/binary.ts` picks the
+host's at runtime. Every install carries all five (about 41 MB packed), so a
+lockfile written on one platform installs the same package on any other, and
+`--omit=optional` cannot drop the binary.
 
 - `node scripts/build-go.mjs` builds `bin/` for the host (local development).
 - `node scripts/build-go.mjs --all` (or `--target linux-x64`) is the release
-  build: `CGO_ENABLED=0 -trimpath -ldflags "-s -w"` into `npm/*/bin/`. The
+  build: `CGO_ENABLED=0 -trimpath -ldflags "-s -w"` into `prebuilt/`. The
   Publish workflow runs it before `changeset publish`.
-- `node scripts/check-platform-binary.mjs` is each platform package's
-  `prepublishOnly`: no binary, a truncated one, a wrong os/arch or a
-  dynamically linked ELF refuses the publish.
+- `node scripts/check-platform-binary.mjs` runs in `prepublishOnly`: a missing
+  binary, a truncated one, a wrong os/arch or a dynamically linked ELF refuses
+  the publish.
 
 The targets are listed in `scripts/platforms.mjs` and again in
-`src/binary.ts`; `binary.test.ts` fails if those, `npm/` and
-`optionalDependencies` disagree. There are no musl packages: the static linux
-binaries run on Alpine as they are.
+`src/binary.ts`; `binary.test.ts` fails if they disagree. There are no musl
+builds: the static linux binaries run on Alpine as they are.

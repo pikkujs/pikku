@@ -1,11 +1,10 @@
-import { existsSync } from 'node:fs'
-import { createRequire } from 'node:module'
+import { accessSync, chmodSync, constants, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * The `process.platform-process.arch` pairs with a prebuilt binary, one
- * `@pikku/inspector-go-<platform>-<arch>` package each. Mirrors
- * scripts/platforms.mjs.
+ * The `process.platform-process.arch` pairs with a prebuilt binary, each under
+ * `prebuilt/<platform>-<arch>/` in this package. Mirrors scripts/platforms.mjs.
  */
 export const SUPPORTED_PLATFORMS = [
   'darwin-arm64',
@@ -18,24 +17,34 @@ export const SUPPORTED_PLATFORMS = [
 export const executableName = (platform: string = process.platform): string =>
   platform === 'win32' ? 'pikku-inspect.exe' : 'pikku-inspect'
 
-/** The per-platform package that ships a prebuilt binary, esbuild style. */
-export const platformPackageName = (
-  platform: string = process.platform,
-  arch: string = process.arch
-): string => `@pikku/inspector-go-${platform}-${arch}`
-
 export interface FindInspectorBinaryOptions {
   platform?: string
   arch?: string
-  /** Resolves a module specifier to a file; `require.resolve` by default. */
-  resolve?: (specifier: string) => string
+  /** Holds `<platform>-<arch>/pikku-inspect`; this package's `prebuilt/` by default. */
+  prebuiltDir?: string
   /** The binary `bun run build:go` writes; this package's `bin/` by default. */
   localBinary?: string
   exists?: (path: string) => boolean
 }
 
-const defaultResolve = (specifier: string): string =>
-  createRequire(import.meta.url).resolve(specifier)
+const PREBUILT_DIR = fileURLToPath(new URL('../prebuilt', import.meta.url))
+
+/**
+ * Package managers do not all keep a tarball's executable bit, so a prebuilt
+ * binary that lost it gets it back on first use.
+ */
+const ensureExecutable = (path: string, platform: string): void => {
+  if (platform === 'win32' || process.platform === 'win32') return
+  try {
+    accessSync(path, constants.X_OK)
+  } catch {
+    try {
+      chmodSync(path, 0o755)
+    } catch {
+      // read-only install; running it reports the problem
+    }
+  }
+}
 
 export class InspectorBinaryNotFoundError extends Error {
   constructor(message: string) {
@@ -46,13 +55,9 @@ export class InspectorBinaryNotFoundError extends Error {
 
 const notFoundMessage = (platform: string, arch: string): string => {
   const target = `${platform}-${arch}`
-  const pkg = platformPackageName(platform, arch)
   const supported = (SUPPORTED_PLATFORMS as readonly string[]).includes(target)
   const hint = supported
-    ? `${pkg} is not installed. It is an optional dependency of ` +
-      `@pikku/inspector-go, so it is skipped by \`--no-optional\`/` +
-      `\`--omit=optional\`, or when the lockfile was written on another ` +
-      `platform; reinstall with optional dependencies.`
+    ? `@pikku/inspector-go is missing prebuilt/${target}; reinstall it.`
     : `There is no prebuilt binary for ${target} (prebuilt: ` +
       `${SUPPORTED_PLATFORMS.join(', ')}). Build one with \`go build ` +
       `./cmd/pikku-inspect\` in @pikku/inspector-go and point ` +
@@ -68,7 +73,7 @@ const notFoundMessage = (platform: string, arch: string): string => {
 
 /**
  * Finds the `pikku-inspect` binary: `PIKKU_INSPECTOR_GO_BIN` first, then the
- * installed per-platform package, then a binary built in this package.
+ * prebuilt one for this platform, then a binary built in this package.
  */
 export const findInspectorBinary = (
   env: NodeJS.ProcessEnv = process.env,
@@ -76,7 +81,6 @@ export const findInspectorBinary = (
 ): string => {
   const platform = options.platform ?? process.platform
   const arch = options.arch ?? process.arch
-  const resolve = options.resolve ?? defaultResolve
   const exists = options.exists ?? existsSync
   const executable = executableName(platform)
 
@@ -90,13 +94,14 @@ export const findInspectorBinary = (
     return override
   }
 
-  try {
-    const installed = resolve(
-      `${platformPackageName(platform, arch)}/bin/${executable}`
-    )
-    if (exists(installed)) return installed
-  } catch {
-    // not installed for this platform; fall through to a local build
+  const prebuilt = join(
+    options.prebuiltDir ?? PREBUILT_DIR,
+    `${platform}-${arch}`,
+    executable
+  )
+  if (exists(prebuilt)) {
+    ensureExecutable(prebuilt, platform)
+    return prebuilt
   }
 
   const local =

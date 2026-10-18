@@ -5,11 +5,9 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
-  realpathSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
-import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,7 +16,6 @@ import {
   SUPPORTED_PLATFORMS,
   executableName,
   findInspectorBinary,
-  platformPackageName,
 } from './binary.js'
 // @ts-ignore -- plain .mjs build script, no declarations
 import { PLATFORMS, targetName } from '../scripts/platforms.mjs'
@@ -28,41 +25,32 @@ import { binaryProblem } from '../scripts/check-platform-binary.mjs'
 const PKG_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'))
 
-/**
- * A project with `@pikku/inspector-go-<target>` installed in node_modules, and
- * a resolver rooted in it, the way the real `require.resolve` sees an install.
- */
-const installProject = (target: string, withBinary = true) => {
-  const root = realpathSync(
-    mkdtempSync(join(tmpdir(), 'pikku-inspector-go-install-'))
-  )
-  const [platform] = target.split('-')
-  const pkgDir = join(root, 'node_modules', '@pikku', `inspector-go-${target}`)
-  mkdirSync(join(pkgDir, 'bin'), { recursive: true })
-  writeFileSync(
-    join(pkgDir, 'package.json'),
-    JSON.stringify({ name: `@pikku/inspector-go-${target}`, version: '0.0.0' })
-  )
-  const binary = join(pkgDir, 'bin', executableName(platform))
-  if (withBinary) {
+/** A `prebuilt/` directory holding a binary for each of `targets`. */
+const prebuiltDir = (...targets: string[]) => {
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-inspector-go-prebuilt-'))
+  const binaries: Record<string, string> = {}
+  for (const target of targets) {
+    const [platform] = target.split('-')
+    mkdirSync(join(dir, target))
+    const binary = join(dir, target, executableName(platform))
     writeFileSync(binary, '')
     chmodSync(binary, 0o755)
+    binaries[target] = binary
   }
-  const resolve = createRequire(join(root, 'index.js')).resolve
-  return { root, binary, resolve }
+  return { dir, binaries }
 }
 
 const nowhere = join(tmpdir(), 'pikku-inspector-go-no-local-build')
 
 describe('findInspectorBinary', () => {
-  test('PIKKU_INSPECTOR_GO_BIN wins over an installed package', () => {
-    const { binary, resolve } = installProject('linux-x64')
-    const override = join(dirname(binary), 'override')
+  test('PIKKU_INSPECTOR_GO_BIN wins over a prebuilt binary', () => {
+    const { dir } = prebuiltDir('linux-x64')
+    const override = join(dir, 'override')
     writeFileSync(override, '')
     assert.equal(
       findInspectorBinary(
         { PIKKU_INSPECTOR_GO_BIN: override },
-        { platform: 'linux', arch: 'x64', resolve }
+        { platform: 'linux', arch: 'x64', prebuiltDir: dir }
       ),
       override
     )
@@ -80,69 +68,110 @@ describe('findInspectorBinary', () => {
     )
   })
 
-  test('resolves the installed platform package', () => {
-    const { binary, resolve } = installProject('linux-arm64')
-    assert.equal(
-      findInspectorBinary(
-        {},
-        { platform: 'linux', arch: 'arm64', resolve, localBinary: nowhere }
-      ),
-      binary
-    )
+  test('picks the prebuilt binary for the platform out of all of them', () => {
+    const { dir, binaries } = prebuiltDir(...SUPPORTED_PLATFORMS)
+    for (const target of SUPPORTED_PLATFORMS) {
+      const [platform, arch] = target.split('-')
+      assert.equal(
+        findInspectorBinary(
+          {},
+          { platform, arch, prebuiltDir: dir, localBinary: nowhere }
+        ),
+        binaries[target]
+      )
+    }
   })
 
   test('looks for pikku-inspect.exe on Windows', () => {
-    const { binary, resolve } = installProject('win32-x64')
-    assert.ok(binary.endsWith('pikku-inspect.exe'))
+    const { dir, binaries } = prebuiltDir('win32-x64')
+    assert.ok(binaries['win32-x64']!.endsWith('pikku-inspect.exe'))
     assert.equal(
       findInspectorBinary(
         {},
-        { platform: 'win32', arch: 'x64', resolve, localBinary: nowhere }
+        {
+          platform: 'win32',
+          arch: 'x64',
+          prebuiltDir: dir,
+          localBinary: nowhere,
+        }
       ),
-      binary
+      binaries['win32-x64']
     )
   })
 
-  test('does not pick another platform’s package', () => {
-    const { resolve } = installProject('linux-x64')
+  test('does not pick another platform’s binary', () => {
+    const { dir } = prebuiltDir('linux-x64')
     assert.throws(
       () =>
         findInspectorBinary(
           {},
-          { platform: 'linux', arch: 'arm64', resolve, localBinary: nowhere }
+          {
+            platform: 'linux',
+            arch: 'arm64',
+            prebuiltDir: dir,
+            localBinary: nowhere,
+          }
         ),
       InspectorBinaryNotFoundError
     )
   })
 
-  test('falls back to the local build when the package has no binary', () => {
-    const { root, resolve } = installProject('darwin-arm64', false)
-    const local = join(root, 'pikku-inspect')
+  test(
+    'restores an executable bit the install dropped',
+    {
+      skip: process.platform === 'win32',
+    },
+    () => {
+      const { dir, binaries } = prebuiltDir('linux-x64')
+      chmodSync(binaries['linux-x64']!, 0o644)
+      findInspectorBinary(
+        {},
+        {
+          platform: 'linux',
+          arch: 'x64',
+          prebuiltDir: dir,
+          localBinary: nowhere,
+        }
+      )
+      assert.equal(statSync(binaries['linux-x64']!).mode & 0o111, 0o111)
+    }
+  )
+
+  test('falls back to the local build when there is no prebuilt binary', () => {
+    const { dir } = prebuiltDir()
+    const local = join(dir, 'pikku-inspect')
     writeFileSync(local, '')
     assert.equal(
       findInspectorBinary(
         {},
-        { platform: 'darwin', arch: 'arm64', resolve, localBinary: local }
+        {
+          platform: 'darwin',
+          arch: 'arm64',
+          prebuiltDir: dir,
+          localBinary: local,
+        }
       ),
       local
     )
   })
 
-  test('names the platform, the package and a fix when nothing matches', () => {
-    const { resolve } = installProject('darwin-arm64', false)
+  test('names the platform and a fix when nothing matches', () => {
+    const { dir } = prebuiltDir()
     assert.throws(
       () =>
         findInspectorBinary(
           {},
-          { platform: 'darwin', arch: 'arm64', resolve, localBinary: nowhere }
+          {
+            platform: 'darwin',
+            arch: 'arm64',
+            prebuiltDir: dir,
+            localBinary: nowhere,
+          }
         ),
       (error: Error) =>
         error instanceof InspectorBinaryNotFoundError &&
         error.message.includes('for darwin-arm64') &&
-        error.message.includes(
-          '@pikku/inspector-go-darwin-arm64 is not installed'
-        ) &&
-        error.message.includes('optional dependencies') &&
+        error.message.includes('missing prebuilt/darwin-arm64') &&
         error.message.includes('PIKKU_INSPECTOR_GO_BIN')
     )
   })
@@ -161,61 +190,24 @@ describe('findInspectorBinary', () => {
         error.message.includes('"inspector": "typescript"')
     )
   })
-
-  test('names the per-platform package esbuild style', () => {
-    assert.equal(
-      platformPackageName('darwin', 'arm64'),
-      '@pikku/inspector-go-darwin-arm64'
-    )
-  })
 })
 
-describe('platform packages', () => {
+describe('package', () => {
   const pkg = readJson(join(PKG_DIR, 'package.json'))
-  const targets: string[] = PLATFORMS.map(targetName)
 
-  test('binary.ts, scripts/platforms.mjs and npm/ list the same targets', () => {
-    assert.deepEqual([...SUPPORTED_PLATFORMS].sort(), [...targets].sort())
+  test('binary.ts and scripts/platforms.mjs list the same targets', () => {
     assert.deepEqual(
-      readdirSync(join(PKG_DIR, 'npm')).sort(),
-      [...targets].sort()
+      [...SUPPORTED_PLATFORMS].sort(),
+      PLATFORMS.map(targetName).sort()
     )
   })
 
-  test('each is an exact optional dependency in lockstep with this package', () => {
-    assert.deepEqual(
-      pkg.optionalDependencies,
-      Object.fromEntries(
-        targets
-          .sort()
-          .map((t) => [platformPackageName(...split(t)), pkg.version])
-      )
-    )
+  test('ships prebuilt/ and refuses to publish without every binary', () => {
+    assert.ok(pkg.files.includes('prebuilt'))
+    assert.match(pkg.scripts.prepublishOnly, /check-platform-binary/)
+    assert.equal(pkg.optionalDependencies, undefined)
   })
-
-  for (const { platform, arch } of PLATFORMS) {
-    test(`npm/${platform}-${arch} declares its os, cpu and binary`, () => {
-      const dir = join(PKG_DIR, 'npm', `${platform}-${arch}`)
-      const platformPkg = readJson(join(dir, 'package.json'))
-      assert.equal(platformPkg.name, platformPackageName(platform, arch))
-      assert.equal(platformPkg.version, pkg.version)
-      assert.equal(platformPkg.license, pkg.license)
-      assert.deepEqual(platformPkg.os, [platform])
-      assert.deepEqual(platformPkg.cpu, [arch])
-      assert.deepEqual(platformPkg.files, ['bin', 'LICENSE'])
-      assert.match(platformPkg.scripts.prepublishOnly, /check-platform-binary/)
-      assert.equal(
-        platformPkg.repository.directory,
-        `packages/inspector-go/npm/${platform}-${arch}`
-      )
-    })
-  }
 })
-
-const split = (target: string): [string, string] => {
-  const [platform, arch] = target.split('-')
-  return [platform!, arch!]
-}
 
 describe('binaryProblem', () => {
   const MB = 1024 * 1024
