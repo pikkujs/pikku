@@ -16,9 +16,9 @@ func init() {
 	Register(Visitor{Name: "addPermission", Phase: PhaseSetup, Order: OrderAddPermission, Visit: (*Context).addPermission})
 }
 
-func isInsidePermissionContainer(node *ast.Node) bool {
+func (s *Context) isInsidePermissionContainer(node *ast.Node) bool {
 	for cur := node.Parent; cur != nil; cur = cur.Parent {
-		if ast.IsCallExpression(cur) && ast.IsIdentifier(cur.Expression()) && cur.Expression().Text() == "pikkuPermissionFactory" {
+		if ast.IsCallExpression(cur) && s.resolveCalleeName(cur, permissionHelpers) == "pikkuPermissionFactory" {
 			return true
 		}
 	}
@@ -26,10 +26,7 @@ func isInsidePermissionContainer(node *ast.Node) bool {
 }
 
 func (s *Context) addPermission(node *ast.Node) {
-	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
-		return
-	}
-	switch node.Expression().Text() {
+	switch s.resolveCalleeName(node, permissionHelpers) {
 	case "pikkuPermission":
 		s.addPermissionDefinition(node, false)
 	case "pikkuAuth":
@@ -42,7 +39,7 @@ func (s *Context) addPermission(node *ast.Node) {
 // addPermissionDefinition handles pikkuPermission and pikkuAuth. pikkuAuth's
 // second parameter is the session, not a wires bag, and it never needs data.
 func (s *Context) addPermissionDefinition(node *ast.Node, isAuth bool) {
-	if isInsidePermissionContainer(node) {
+	if s.isInsidePermissionContainer(node) {
 		return
 	}
 	wrapper, example := "pikkuPermission", "myPermission"
@@ -120,7 +117,7 @@ func (s *Context) addPermissionFactory(node *ast.Node) {
 	}
 	services := state.ServicesMeta{Optimized: false, Services: []string{}}
 	wires := WiresMeta{Optimized: true, Wires: []string{}}
-	if call := findCall(factory, "pikkuPermission"); call != nil && len(call.Arguments()) > 0 {
+	if call := s.findCall(factory, permissionHelpers, "pikkuPermission"); call != nil && len(call.Arguments()) > 0 {
 		if h := call.Arguments()[0]; tsutil.IsFunctionLike(h) {
 			services = servicesOf(h)
 			wires = extractUsedWires(h, 2)

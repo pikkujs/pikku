@@ -416,7 +416,7 @@ func (s *Context) populateTypesLookup(pikkuFuncId string, call *ast.Node) {
 func (s *Context) ensureInlineWiringFunction(pikkuFuncId, fallbackName string, funcInit *ast.Node, isHelper bool) {
 	s.ensureFunctionMetadata(pikkuFuncId, fallbackName, funcInit, isHelper)
 	if m := s.State.Functions.Meta.At(pikkuFuncId); m != nil && m.Sessionless == nil && ast.IsCallExpression(funcInit) && ast.IsIdentifier(funcInit.Expression()) {
-		m.Sessionless = tsutil.BoolPtr(funcInit.Expression().Text() != "pikkuFunc")
+		m.Sessionless = tsutil.BoolPtr(s.resolveCalleeName(funcInit, isPikkuFunc) != "pikkuFunc")
 	}
 }
 
