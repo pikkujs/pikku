@@ -1,5 +1,11 @@
-import { accessSync, chmodSync, constants, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import {
+  accessSync,
+  chmodSync,
+  constants,
+  existsSync,
+  realpathSync,
+} from 'node:fs'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
@@ -22,6 +28,11 @@ export interface FindInspectorBinaryOptions {
   arch?: string
   /** Holds `<platform>-<arch>/pikku-inspect`; this package's `prebuilt/` by default. */
   prebuiltDir?: string
+  /**
+   * The running executable. A compiled `pikku` (Homebrew) has no prebuilt/,
+   * so it looks for pikku-inspect beside itself; `process.execPath` by default.
+   */
+  execPath?: string
   /** The binary `bun run build:go` writes; this package's `bin/` by default. */
   localBinary?: string
   exists?: (path: string) => boolean
@@ -73,7 +84,8 @@ const notFoundMessage = (platform: string, arch: string): string => {
 
 /**
  * Finds the `pikku-inspect` binary: `PIKKU_INSPECTOR_GO_BIN` first, then the
- * prebuilt one for this platform, then a binary built in this package.
+ * prebuilt one for this platform, then a binary built in this package, then
+ * one beside the running executable (the compiled CLI).
  */
 export const findInspectorBinary = (
   env: NodeJS.ProcessEnv = process.env,
@@ -108,6 +120,18 @@ export const findInspectorBinary = (
     options.localBinary ??
     fileURLToPath(new URL(`../bin/${executable}`, import.meta.url))
   if (exists(local)) return local
+
+  const execPath = options.execPath ?? process.execPath
+  const besides = [dirname(execPath)]
+  try {
+    besides.push(dirname(realpathSync(execPath)))
+  } catch {
+    // execPath is not on disk (a test); its own directory is enough
+  }
+  for (const dir of besides) {
+    const beside = join(dir, executable)
+    if (exists(beside)) return beside
+  }
 
   throw new InspectorBinaryNotFoundError(notFoundMessage(platform, arch))
 }

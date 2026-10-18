@@ -155,6 +155,43 @@ describe('findInspectorBinary', () => {
     )
   })
 
+  test('finds pikku-inspect beside a compiled CLI', () => {
+    const { dir } = prebuiltDir()
+    const beside = join(dir, 'pikku-inspect')
+    writeFileSync(beside, '')
+    assert.equal(
+      findInspectorBinary(
+        {},
+        {
+          platform: 'darwin',
+          arch: 'arm64',
+          prebuiltDir: join(dir, 'none'),
+          localBinary: nowhere,
+          execPath: join(dir, 'pikku'),
+        }
+      ),
+      beside
+    )
+  })
+
+  test('prefers the prebuilt binary to one beside the executable', () => {
+    const { dir, binaries } = prebuiltDir('darwin-arm64')
+    writeFileSync(join(dir, 'pikku-inspect'), '')
+    assert.equal(
+      findInspectorBinary(
+        {},
+        {
+          platform: 'darwin',
+          arch: 'arm64',
+          prebuiltDir: dir,
+          localBinary: nowhere,
+          execPath: join(dir, 'pikku'),
+        }
+      ),
+      binaries['darwin-arm64']
+    )
+  })
+
   test('names the platform and a fix when nothing matches', () => {
     const { dir } = prebuiltDir()
     assert.throws(
