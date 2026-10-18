@@ -241,8 +241,19 @@ type AgentMiddleware struct {
 }
 
 type Permissions struct {
-	Definitions Record[*MiddlewareDefinition] `json:"definitions"`
-	Instances   Record[Raw]                   `json:"instances"`
+	Definitions Record[*MiddlewareDefinition]       `json:"definitions"`
+	Instances   Record[Raw]                         `json:"instances"`
+	Global      List[*GlobalPermissionRegistration] `json:"global"`
+}
+
+// GlobalPermissionRegistration is InspectorGlobalPermissionRegistration: one
+// addGlobalPermission call, which codegen imports the file of, or calls
+// ExportName from when the call sits in an exported zero-argument factory.
+type GlobalPermissionRegistration struct {
+	SourceFile    string  `json:"sourceFile"`
+	Position      int     `json:"position"`
+	ExportName    *string `json:"exportName"`
+	DefinitionIds Strings `json:"definitionIds"`
 }
 
 type ServiceAggregation struct {

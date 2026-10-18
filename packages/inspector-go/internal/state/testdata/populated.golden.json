@@ -268,7 +268,8 @@
   },
   "permissions": {
     "definitions": {},
-    "instances": {}
+    "instances": {},
+    "global": []
   },
   "serviceAggregation": {
     "requiredServices": [],
