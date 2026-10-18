@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-mysql",
-  "version": "0.12.29",
+  "version": "0.12.30",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -20,14 +20,14 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.33",
+    "@pikku/kysely": "^0.13.39",
     "kysely": "^0.29.6"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.133"
+    "@pikku/core": "^0.12.144"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.133"
+    "@pikku/core": "^0.12.144"
   },
   "exports": {
     ".": "./dist/src/index.js",

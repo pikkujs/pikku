@@ -1,3 +1,71 @@
+## 0.12.107
+
+### Patch Changes
+
+- 8bd70db: Printed unions now list their members alphabetically, with `null` and `undefined` last, in both inspectors. A union's order used to follow which file the type checker reached first, so it could differ between Node and Bun, and between the TypeScript and native inspectors, and with it the generated schema's `enum` and the function's contract hash. CLI `choices` taken from a union of string literals are sorted the same way; an `enum` keeps its declaration order.
+
+  The first codegen after upgrading reorders those unions once. A function whose input or output is an inline union that was not already in this order gets a new contract hash, so a `versions.pikku.json` that recorded the old one reports it as modified.
+
+- 6a9488c: perf(cli): load the TypeScript compiler only for commands that inspect. `@pikku/inspector`, `@pikku/n8n-import`, the `@pikku/code-edit` root and the mocks stub scanner are now imported inside the functions that need them, and eager values come from the new compiler-free `@pikku/inspector/lite` entry. `pikku --help` drops from ~535 ms to ~415 ms under node (~245 ms to ~195 ms for the compiled binary). Drops the unused `@openapi-contrib/json-schema-to-openapi-schema` dependency and moves `ts-json-schema-generator` (used only by the `schema` script) to devDependencies.
+- 46e2c7e: The CLI no longer loads the TypeScript compiler under the native inspector. `@pikku/inspector/lite` also carries everything a consumer of an `InspectorState` needs (initial state, filtering, workflow deserializers, schema references), and the TypeScript engine and its source helpers load only once that engine is selected. The CLI process peaks about 60 MB lower on a native build.
+- a0ae9bb: The generated `betterAuthStatelessSession` now reads the session cookie the way the auth config writes it. The inspector reads `advanced.cookiePrefix`, `session.cookieCache.strategy` and `session.cookieCache.version` from the `betterAuth({...})` call when they are string literals, and the CLI passes them through. Before this, an app with a custom cookie prefix was anonymous on every request, and bumping the cookie version invalidated nothing.
+
+  If one of these options is set but isn't a string literal (an environment variable, for example), or a later spread in the same object can replace it (`{ version: '2', ...override }`), the inspector warns about it and does not pass the value on. A spread written before the option is fine, because the option wins. In that case, register `betterAuthStatelessSession({ cookiePrefix, cookieCache })` yourself with `addGlobalMiddleware`. Your registration runs before the generated one, and the generated one then does nothing. `cookieCache.jwt` is never passed through and needs that same manual registration.
+
+- 802076e: Generate the custom types once, into `pikku-custom-types.gen.d.ts` in `outDir` (configurable as `customTypesDeclarationFile`), instead of copying them into every typed map. Each map now imports the shared file by a relative path and re-exports each custom type under its old name, so map exports are unchanged. Generated maps no longer contain absolute import paths.
+- 1112955: Deploy: `wireGateway` routes reach the deployment manifest.
+
+  A webhook gateway is now served from its handler's unit — the POST/GET wrappers, the handler they call and the services it builds — and is listed under the new `manifest.gateways` (`GatewayDefinition`). Previously the wrappers became two units of their own without the handler's services or meta, and the gateway itself appeared nowhere in the manifest.
+
+  Websocket and listener gateways have no unit a multi-unit provider can host, so `pikku deploy plan` / `apply` now fails naming each one and its route instead of building without it. Single-unit (standalone) deploys are unaffected.
+
+  The inspector filter now filters gateways — by handler function id, gateway name, tags or route — so a per-unit build only imports the gateway wirings it serves, and `tags` on `wireGateway` takes effect on `pikku all` as documented.
+
+  Breaking: `DeploymentManifest` has a required `gateways` field; code that constructs a manifest by hand has to supply it.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 2e05e48: `defineSecret` takes `generate: { size }`, the number of random bytes (at least 16) a deployment creates for the value, hex encoded. A secret with `generate` is created and replaced by the deployment, so nobody supplies its value. It must also declare a `rotationPeriod`, and `'never'` is the explicit way to generate it once. A generated secret without a `rotationPeriod`, or with a missing or too small size, fails the build. `generate` reaches the secret's meta for deployment targets to act on; this release does not generate or rotate anything yet.
+- a8eb397: `addGlobalPermission` registrations now reach the runtime. The inspector never recorded them, and the generated `pikku-permissions.gen.ts` imported nothing, so a file whose only job was `addGlobalPermission([...])` was never loaded and every function ran without that global gate. The inspector records each call in `permissions.global`. The generated permissions file imports each file for its side effect, or imports and calls the exported zero-argument factory the call sits in. A permission written inline in the global array is no longer reported as unassigned. The services used by global permissions and global middleware are now counted as required.
+
+  A factory is found in every common shape: an exported arrow with a block body, an exported `function` declaration, and a function exported through an `export { }` list. A call inside any other function that nothing calls (not exported, takes a parameter, or a default export) is no longer recorded as if it ran; the inspector warns that the global permission is not registered. `addGlobalPermission` also follows a `const` array or object, declared in the file or imported, instead of giving up on anything but a literal, so the services its permissions use are counted. The generated file imports each factory under its own alias, so two files that export a factory of the same name both register.
+
+- ef17c47: Split `inspect()` into `analyzeProgram()` (engine-specific, needs the checker) and `finalizeInspectorState()` (shared, checker-free, served typescript-free from `@pikku/inspector/finalize`). The serialized inspector state now carries every field finalize reads, so a state produced by another engine can be finalized identically.
+
+  Add `@pikku/inspector-go`, which runs analysis in the `pikku-inspect` binary over the `--stdin` JSON protocol and finalizes the result, plus a parity harness that diffs it against the TypeScript inspector. The CLI chooses between the two engines as described in the inspector-engine changeset.
+
+- 6d8a949: The inspector now recognises middleware, permission, auth and function helpers by what the callee resolves to, not by its spelling (#1461). `import { addTagMiddleware as guard }`, `import * as pikku from '#pikku'`, a re-export under another name and `const guard = addTagMiddleware` all register their middleware, permissions and `pikkuBetterAuth` definition, where before they registered nothing and the gate silently never ran. The same applies to `pikkuMiddleware`, `pikkuMiddlewareFactory`, `addGlobalMiddleware`, `addHTTPMiddleware`, the channel and agent middleware helpers, `pikkuPermission`, `pikkuAuth`, `pikkuPermissionFactory` and `betterAuth` (so the `admin()` refusal still applies under an alias).
+
+  An aliased `pikkuFunc` now requires a session. Previously `sessionless` was derived from the spelling, so `pikkuFunc as pikkuOpenFunc` produced a function the runtime ran without one.
+
+  A middleware or permission helper used as a value — passed as an argument, put in an array or object, returned from a ternary — is reported as the new `PKU577` (`REGISTRATION_NOT_A_DIRECT_CALL`, severity `error`), because what it registers is invisible to codegen.
+
+- 927210d: Schema generation reuses the source files the inspector already parsed instead of parsing the project a second time. `pikku all` on examples/online-shop: 4.4s → 3.4s, peak RSS 1.41GB → 1.03GB, output unchanged.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+
 ## 0.12.106
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # @pikku/deploy-serverless
 
+## 0.12.5
+
+### Patch Changes
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [674af8a]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+  - @pikku/deploy@0.12.16
+
 ## 0.12.4
 
 ### Patch Changes

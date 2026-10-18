@@ -15,11 +15,11 @@
     "test:http-fetch": "tsx client/test-remote-rpc.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.143",
-    "@pikku/express": "^0.12.17",
-    "@pikku/jose": "^0.12.9",
-    "@pikku/kysely-postgres": "^0.12.27",
-    "@pikku/schema-cfworker": "^0.12.8",
+    "@pikku/core": "^0.12.144",
+    "@pikku/express": "^0.12.18",
+    "@pikku/jose": "^0.12.10",
+    "@pikku/kysely-postgres": "^0.12.28",
+    "@pikku/schema-cfworker": "^0.12.9",
     "kysely": "^0.29.6",
     "kysely-postgres-js": "^5.0.1",
     "pino-pretty": "^13.2.0",
@@ -29,7 +29,7 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.191",
+    "@pikku/cli": "^0.12.192",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26"
   },

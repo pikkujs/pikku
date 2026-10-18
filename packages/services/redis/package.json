@@ -1,6 +1,6 @@
 {
   "name": "@pikku/redis",
-  "version": "0.12.23",
+  "version": "0.12.24",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -24,7 +24,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.133"
+    "@pikku/core": "^0.12.144"
   },
   "dependencies": {
     "ioredis": "^6.0.0"

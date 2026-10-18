@@ -1,3 +1,61 @@
+## 0.12.64
+
+### Patch Changes
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [3a9c9d8]
+- Updated dependencies [dc952a8]
+- Updated dependencies [7e44a0c]
+- Updated dependencies [65682fc]
+- Updated dependencies [c702ed6]
+- Updated dependencies [01036e4]
+- Updated dependencies [ca35477]
+- Updated dependencies [031f001]
+- Updated dependencies [50314e2]
+- Updated dependencies [534f971]
+- Updated dependencies [6a9488c]
+- Updated dependencies [46e2c7e]
+- Updated dependencies [237ec7c]
+- Updated dependencies [a0ae9bb]
+- Updated dependencies [7178b88]
+- Updated dependencies [fbee6df]
+- Updated dependencies [2edf04f]
+- Updated dependencies [8ec91f0]
+- Updated dependencies [ffbe1a2]
+- Updated dependencies [9999ec1]
+- Updated dependencies [228faad]
+- Updated dependencies [84de1eb]
+- Updated dependencies [e659614]
+- Updated dependencies [6c79f8d]
+- Updated dependencies [fa308d4]
+- Updated dependencies [802076e]
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [0a4676a]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [54b8891]
+- Updated dependencies [2e05e48]
+- Updated dependencies [a8eb397]
+- Updated dependencies [ffb53f2]
+- Updated dependencies [ef17c47]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+- Updated dependencies [40855aa]
+- Updated dependencies [a88391a]
+- Updated dependencies [3df9013]
+  - @pikku/core@0.12.144
+  - @pikku/cli@0.12.192
+  - @pikku/better-auth@0.12.57
+  - @pikku/code-edit@0.12.8
+  - @pikku/knowledge@0.12.21
+
 ## 0.12.63
 
 ### Patch Changes

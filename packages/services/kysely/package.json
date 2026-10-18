@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely",
-  "version": "0.13.38",
+  "version": "0.13.39",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -28,7 +28,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.143"
+    "@pikku/core": "^0.12.144"
   },
   "dependencies": {
     "kysely": "^0.29.6"

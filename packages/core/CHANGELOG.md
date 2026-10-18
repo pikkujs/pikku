@@ -1,3 +1,116 @@
+## 0.12.144
+
+### Patch Changes
+
+- 3a9c9d8: `agentApprove(agentName)` now only approves runs of the agent it was built for. It used to ignore its argument, so a route such as `wireHTTP({ route: '/agents/ops/approve', func: agentApprove('opsAgent') })` accepted approvals for any agent run the caller owned. A run that belongs to a different agent is now refused with a `ForbiddenError` (403): `Run <runId> belongs to agent '<actual>', not '<expected>'`. The ownership check still runs first.
+
+  The same mismatch in `rpc.agent.approve(runId, approvals, expectedAgentName)` and `approveAgent(...)` now throws `ForbiddenError` (403). It used to throw a plain `Error`, which reached HTTP clients as a 500.
+
+- dc952a8: An agent's structured output is now validated (#1823).
+
+  **Breaking:** a `pikkuAgent` with an `output` schema fails its run with the new `AgentOutputValidationError` (502; `issues` lists what did not match) when the model's object does not match, instead of returning the malformed object. This applies to `rpc.agent.run`, `rpc.agent.approve` and sub-agent calls, and uses the app's `SchemaService`, like function input validation. The run is marked `failed` and `onError` agent middleware runs, as for any other agent failure; nothing is retried. A `null` the model sends for an optional field — which `@pikku/ai-vercel` invites by making optional properties nullable for OpenAI strict mode — is now dropped, so the field comes back absent rather than `null`.
+
+  A streamed run (`streamAgent`) is not validated: its answer reaches the client as it is generated, before there is a complete object to check. A direct `agentRunner.run` call has no agent, so no declared `output`, and is not validated either.
+
+- 7e44a0c: `AWSSecrets.hasSecret` returns `false` only when Secrets Manager reports `ResourceNotFoundException` (or the secret holds no string value). Any other failure, such as throttling, expired credentials or a network error, is now thrown. Before this, an outage looked like "secret not configured", so `@pikku/core`'s remote calls went out without authentication instead of failing closed.
+
+  `AWSSecrets.getSecrets` follows the same rule: it leaves out keys that don't exist and throws on a backend failure. Before this, every key that failed was silently dropped.
+
+  The `SecretService.hasSecret` contract in `@pikku/core` now says what it always has to for callers that fail closed: it resolves `false` for a key that is absent or not allowed, and throws on a backend failure. It used to say it "must not throw". The other backends (Kysely, MongoDB, Redis, Vault, local) already behaved this way; AWS was the one that swallowed errors.
+
+- 8ec91f0: `wireAddon({ scopes, auth, tags })` are applied from the package the function belongs to rather than the package of the wire that reached it. A `wireHTTP({ func: ref('ns:fn') })` route records no package, so for it the addon's scope floor, `auth: true` and tag middleware were all skipped, and a public route to a public addon function was reachable with no session (#1362).
+- ffbe1a2: Internal deduplication in core, with no public API change:
+
+  - `authBearer` and `remoteJobsSecret` compare tokens with the shared `timingSafeStringEqual` (UTF-8 bytes) instead of private copies comparing UTF-16 code units.
+  - One `stableStringify` (sorted keys, otherwise `JSON.stringify` semantics) replaces the two private serializers in queue identity signing and scenario witness comparison. Queue identity signatures are unchanged: the payload is round-tripped through JSON before serialization, so no `undefined` reaches it and the output is byte-for-byte the same. Scenario witness comparison now treats `undefined` inside arrays as `null` and honours `toJSON` (two different `Date`s previously both serialized as `{}` and compared equal).
+  - The unused `utils/hash.ts` (`canonicalJSON`, `hashString`) is removed; it was not reachable from any entry point.
+  - The in-flight step-status set and the virtual-user `readObject` helper are defined once.
+
+- 9999ec1: `@pikku/core/http` exports `mergeRequestData(...parts)`, the params/query/body merge and conflict check every `PikkuHTTPRequest.data()` performs. The fetch request and the Express, Fastify and uWS adapters now all call it instead of carrying their own copy.
+
+  Behaviour change for the Express, Fastify and uWS adapters: a request whose params, query or body carries a `__proto__`, `constructor` or `prototype` key now has that key dropped, as the fetch adapter already did, instead of being rejected with a 422 "Conflicting values" error.
+
+  All four adapters (fetch included) now check for a conflict only against keys the merge itself has set, using `Object.hasOwn`. A request key that names an `Object.prototype` member, such as `?toString=1` or `hasOwnProperty`, used to collide with the inherited member and fail with a 422; it is now merged like any other key.
+
+  These adapters need an `@pikku/core` that exports `mergeRequestData`.
+
+- 228faad: `buildRemoteHeaders` (`@pikku/core/remote`) now fails closed when the secrets service errors while reading `PIKKU_REMOTE_SECRET`: it throws `Could not read PIKKU_REMOTE_SECRET from the secrets service; refusing to send an unauthenticated remote call` (with the backend error as `cause`) instead of silently sending the call without an `authorization` header, which the peer then answered with a bare 401. A secret that is simply not set (`hasSecret` returns false), or no secrets service at all, still sends an unauthenticated call as before. The lookup now goes through `secrets.hasSecret` before `getSecret`, so a custom `SecretService` must implement `hasSecret` as the interface already requires.
+- 84de1eb: Wire-level and channel middleware named in metadata are looked up in the package's own namespace before the application's, instead of only the application's (#267). The middleware chain caches are keyed by package as well as wire id, so an addon function and an application function with the same wire id no longer share one cached chain — whichever ran first used to decide the gates of both.
+- e659614: Tighten what `@pikku/core` publishes.
+
+  - The tarball now ships only `dist/`, `README.md`, `LICENSE` and `package.json` (a `files` allow-list). It no longer carries `knowledge/`, `scripts/`, `run-tests.sh`, `src/public-surface.json` or the CHANGELOG: 1,055 entries / 961 KB packed down to 723 / 548 KB.
+  - `build` now deletes `dist/` and `tsconfig.tsbuildinfo` first, so a local publish can no longer ship modules whose sources were deleted.
+  - `esbuild` is declared as an optional peer dependency (`>=0.28.2 <1`). Only `@pikku/core/dev` needs it; when it is missing, the module runner now fails with an error that names the package to install instead of a bare module-not-found.
+  - The unused `json-schema` runtime dependency is removed (`@types/json-schema` stays: the emitted `.d.ts` imports from it).
+  - `@pikku/core/package.json` is exported, and a top-level `types` field points at the root entry's declarations for resolvers that ignore `exports`.
+
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- fa308d4: Docs only, no runtime change. Every export reachable from `@pikku/core`'s
+  entry points now carries TSDoc (1,100 of 1,100, up from 447), including
+  `runPikkuFunc`, `wireHTTP`, `pikkuState`, `PikkuRPCService`, `wireQueueWorker`,
+  `wireScheduler`, the service contracts and every error class (with the HTTP
+  status it maps to). Framework plumbing that generated code calls is tagged
+  `@internal`; nothing was removed from the exports.
+
+  `@pikku/cli`: the generated `wireAddon`, `pikkuServerLifecycle` and the addon
+  `wireTriggerWebhookSource` now point their `@example` at online-shop snippets.
+
+- 0a4676a: Move AG-UI to 0.0.59 with the matching @assistant-ui packages.
+
+  **Wire change:** `RUN_FINISHED.usage` is now an array of `{ model?, inputTokens, outputTokens, totalTokens }`, the @ag-ui/core 0.0.59 shape, replacing a top-level `model` plus `usage: { promptTokens, completionTokens, totalTokens }`. AG-UI clients that read the old fields need updating.
+
+  AG-UI 1.0 is held back: no release of @assistant-ui/react-ag-ui accepts @ag-ui/client 1.x yet.
+
+- 674af8a: Bump every external dependency to its latest minor or patch release.
+- 135811c: Move @types/node to 26.
+- 2e05e48: `defineSecret` takes `generate: { size }`, the number of random bytes (at least 16) a deployment creates for the value, hex encoded. A secret with `generate` is created and replaced by the deployment, so nobody supplies its value. It must also declare a `rotationPeriod`, and `'never'` is the explicit way to generate it once. A generated secret without a `rotationPeriod`, or with a missing or too small size, fails the build. `generate` reaches the secret's meta for deployment targets to act on; this release does not generate or rotate anything yet.
+- a88391a: **Breaking:** `setSession` now means the same in middleware as in a function body (#1451). It marks the session changed — so `authCookie` re-issues the cookie on the way out — and writes the session store under the session's `userId`. Until now a middleware's `setSession` only set the session for the request, under the same name and type.
+
+  Middleware that works out who the caller is from a credential it was handed (a cookie, a bearer token, an API key) should call the new `setInitialSession` instead. It sets the session the function sees without marking it changed or writing anything:
+
+  ```diff
+  -const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setSession, session }, next) => {
+  +const apiKeyAuth = pikkuMiddleware(async ({ db }, { http, setInitialSession, session }, next) => {
+     if (session) return next()
+     const row = await db.findKey(http?.request?.header('x-api-key'))
+  -  if (row) await setSession?.({ userId: row.userId })
+  +  if (row) setInitialSession?.({ userId: row.userId })
+     return next()
+   })
+  ```
+
+  Left on `setSession`, such a middleware re-issues the auth cookie and writes the session store on every request. Middleware that genuinely signs someone in keeps `setSession`, and now persists. `clearSession` is on the middleware wire too.
+
+  `authCookie`, `authBearer`, `authAPIKey`, `pikkuRemoteAuthMiddleware`, `addonScopeCap`, the better-auth session middleware and the CLI's studio and virtual-user sessions all use `setInitialSession`. `SessionService.set` stores a session under its own `userId` when no user was resolved yet, so a sign-in is persisted rather than dropped, and the function runner reads a middleware-set session from the session service explicitly rather than through the order `freezeInitial` happens to run in.
+
+- 3df9013: A trigger source can now say which user an event belongs to (#1618): `trigger.invoke(data, { pikkuUserId })`. The target RPC or workflow runs as that user, the way a queue job or workflow run carrying a `pikkuUserId` does — its `type: 'wire'` credentials and stored session resolve for them, and a started workflow records the id on the run. Without the option nothing changes: the target runs as nobody.
+
+  The user is a separate argument so nothing in the event data can choose it; a source should pass only a user it established itself, such as the one whose credential it polled with. A `pikkuUserId` that is not a non-empty string drops the event with an error log.
+
+  `PikkuTrigger` and the new `TriggerInvokeOptions` are exported from `@pikku/core/trigger`. A custom `PikkuTriggerService` subclass must pass the new optional `options` argument of the `onTrigger` callback through to `onTriggerFire`, or the user never reaches the target.
+
 ## 0.12.143
 
 ### Patch Changes

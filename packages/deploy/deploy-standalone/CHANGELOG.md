@@ -1,5 +1,53 @@
 # @pikku/deploy-standalone
 
+## 0.12.27
+
+### Patch Changes
+
+- 6c79f8d: **Breaking:** `@pikku/core/services` no longer re-exports the in-memory implementations of a wire, so importing it stops loading the workflow, queue, trigger and gateway runtimes (102 modules down to 40). Each implementation now has its own subpath, and the remote job runners moved to the wire they run:
+
+  | Export                        | Was                    | Now                                       |
+  | ----------------------------- | ---------------------- | ----------------------------------------- |
+  | `InMemoryWorkflowService`     | `@pikku/core/services` | `@pikku/core/services/in-memory-workflow` |
+  | `InMemoryQueueService`        | `@pikku/core/services` | `@pikku/core/services/in-memory-queue`    |
+  | `InMemoryTriggerService`      | `@pikku/core/services` | `@pikku/core/services/in-memory-trigger`  |
+  | `LocalGatewayService`         | `@pikku/core/services` | `@pikku/core/services/local-gateway`      |
+  | `pikkuRemoteQueueJobFunc`     | `@pikku/core/services` | `@pikku/core/queue`                       |
+  | `pikkuRemoteScheduledJobFunc` | `@pikku/core/services` | `@pikku/core/scheduler`                   |
+
+  ```diff
+  -import { ConsoleLogger, InMemoryTriggerService } from '@pikku/core/services'
+  +import { ConsoleLogger } from '@pikku/core/services'
+  +import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
+  ```
+
+  The `REMOTE_*` constants and the `RemoteQueueJobData`/`RemoteScheduledJobData` types stay on `@pikku/core/services`. `@pikku/core/middleware` no longer loads the queue and scheduler runners through `remoteJobsSecret` (50 modules down to 23).
+
+  Core also has no runtime import cycles left: the rpc runner and an agent's sub-agent tools reach the runners that call them lazily, and `wirings-stay-decoupled.test.ts` now fails on any module cycle, on a new cycle between areas, on code outside `wirings/` reaching a wire it is not declared to, and on `@pikku/core/services` loading wire runtime or more than 45 modules.
+
+  The CLI's generated local services and remote job inbox, and the standalone deploy entry, import from the new paths.
+
+- be98e56: `@pikku/deploy-cloudflare` applies the generated column coercion map, as `pikku dev` does.
+
+  The adapter now ships `coercionContributor`, on by default: when `db/coercion.gen.ts` exists, every entry's `createPlatformServices` wraps the platform's `services.kysely` with `createCoercionPlugin` and the map as a literal. It runs after every other contributor so it wraps the kysely they built. A platform whose own contributor already applies the map passes `coercion: false`.
+
+  `EntryGenerationContext` gains `coercionMap`, filled by the deploy build from the project's `coercion.gen.ts`, and a contributor's `imports` function now receives the entry context as a second argument (`collectContributorImports` takes it as a third).
+
+- 19895c4: Every publishable package now ships only what it needs,, as `@pikku/core` does:
+
+  - A `files` allow-list: `dist` (and `@pikku/aws-services`' `scripts`), plus the `README.md`, `LICENSE` and `package.json` npm always includes. Tarballs no longer carry `knowledge/`, `run-tests.sh`, test fixtures, stray `src/` files, the CHANGELOG or `tsconfig.tsbuildinfo`.
+  - `build` deletes `dist/` and `tsconfig.tsbuildinfo` first (`bun run clean`), so a local publish can no longer ship modules whose sources were deleted.
+  - `./package.json` is exported, so `import pkg from '@pikku/<name>/package.json'` resolves under an `exports` map.
+
+- Updated dependencies [be98e56]
+- Updated dependencies [1112955]
+- Updated dependencies [674af8a]
+- Updated dependencies [135811c]
+- Updated dependencies [939dac7]
+- Updated dependencies [19895c4]
+  - @pikku/deploy@0.12.16
+  - @pikku/migrator-sql@0.12.9
+
 ## 0.12.26
 
 ### Patch Changes
