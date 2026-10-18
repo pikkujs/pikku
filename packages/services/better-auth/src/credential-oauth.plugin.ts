@@ -36,15 +36,45 @@ export const PLATFORM_USER_ID = 'pikku-platform'
 export const PLATFORM_USER_EMAIL = 'platform@pikku.internal'
 
 /**
+ * Thrown by {@link findPlatformUserId} when {@link PLATFORM_USER_EMAIL} belongs
+ * to a user who can sign in with a password, which the platform user never can.
+ */
+export class ReservedPlatformEmailError extends Error {
+  constructor() {
+    super(
+      `${PLATFORM_USER_EMAIL} is reserved for the platform user but belongs to a user with a password, so it is not treated as the platform user. Remove that user.`
+    )
+    this.name = 'ReservedPlatformEmailError'
+  }
+}
+
+/**
  * The platform user's actual row id, or `null` before the first singleton
  * credential has been linked.
  *
+ * The row is created on demand, so until then the reserved address is free to
+ * sign up with. A match is therefore not proof of ownership: a user holding an
+ * email-and-password account is someone who took the address, and binding every
+ * singleton credential to them would hand them the app's tokens.
+ *
  * @param internalAdapter - better-auth's `$context.internalAdapter`.
+ * @throws {ReservedPlatformEmailError} when the address belongs to a user with a
+ * password account.
  */
 export const findPlatformUserId = async (internalAdapter: {
   findUserByEmail: (email: string) => Promise<{ user: { id: string } } | null>
-}): Promise<string | null> =>
-  (await internalAdapter.findUserByEmail(PLATFORM_USER_EMAIL))?.user.id ?? null
+  findAccounts: (userId: string) => Promise<Array<{ providerId: string }>>
+}): Promise<string | null> => {
+  const found = await internalAdapter.findUserByEmail(PLATFORM_USER_EMAIL)
+  if (!found) {
+    return null
+  }
+  const accounts = await internalAdapter.findAccounts(found.user.id)
+  if (accounts.some((account) => account.providerId === 'credential')) {
+    throw new ReservedPlatformEmailError()
+  }
+  return found.user.id
+}
 
 /** Options for {@link pikkuCredentialOAuth}. */
 export interface CredentialOAuthOptions {
@@ -124,7 +154,18 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
    */
   const ensurePlatformUser = async (ctx: any): Promise<string> => {
     const adapter = ctx.context.internalAdapter
-    const existing = await findPlatformUserId(adapter)
+    let existing: string | null
+    try {
+      existing = await findPlatformUserId(adapter)
+    } catch (error) {
+      if (error instanceof ReservedPlatformEmailError) {
+        throw new APIError('CONFLICT', {
+          message: error.message,
+          code: 'PLATFORM_USER_RESERVED',
+        })
+      }
+      throw error
+    }
     if (existing) {
       return existing
     }

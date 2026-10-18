@@ -20,5 +20,7 @@ Harden `@pikku/better-auth` for 0.13.
 - `PIKKU_DEV_VIRTUAL_USER_SIGN_IN` is ignored under `NODE_ENV=production`.
 - Dev quick login also refuses `Sec-Fetch-Site: cross-site` and non-loopback `Origin` headers.
 - The singleton-credential platform user is now found by its reserved email (`PLATFORM_USER_EMAIL`, `findPlatformUserId`). Under `generateId: 'uuid' | 'serial'`, every link used to create another Platform user.
-- `getAuthSession(factory, …)` builds the singleton services and the auth instance once, not once per call.
+- `findPlatformUserId` no longer accepts whoever holds `platform@pikku.internal`. The platform user is created on first link, so until then anyone could sign up with that address by email and password and would have owned every singleton credential. A user with a password account there now throws the new `ReservedPlatformEmailError`, the link endpoint answers `409 PLATFORM_USER_RESERVED`, and `findPlatformUserId` needs `findAccounts` on the adapter it is given (better-auth's `internalAdapter` has it).
+- `betterAuthStatelessSession` also reports a `cookieCache.version` that differs from the auth config's, which used to reject every cookie without a log line.
+- `getAuthSession(factory, …)` builds the singleton services and the auth instance once, not once per call. The cache is weak at every level, so builders the caller drops are not kept alive.
 - The option types that appear in public signatures are now exported. Unneeded `as any` casts are removed, and TSDoc is added to every export.
