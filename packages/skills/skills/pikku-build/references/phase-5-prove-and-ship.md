@@ -1,4 +1,4 @@
-# Phase 4 — Prove it, make it look designed, ship it (§7-§9)
+# Phase 5 — Prove it, make it look designed, ship it (§7-§9)
 
 Part of the app workflow (`app.md` is the index and the rules that hold throughout). Building a changeset is §6-§6b, in `phase-4-build.md`.
 
