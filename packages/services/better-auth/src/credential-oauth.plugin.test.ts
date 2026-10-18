@@ -294,6 +294,43 @@ describe('credentialOAuth plugin', () => {
     assert.equal(res.status, 200)
   })
 
+  // The platform user is found by its reserved address and created on first
+  // use, so until then that address is free to sign up with. Whoever took it
+  // must not become the owner of every singleton credential.
+  test('a user who signed up with the reserved address is refused as platform owner', async () => {
+    const db = emptyDb()
+    let auth = makeAuth(db, [provider('shared', 'singleton')])
+    const squatter = await signUp(auth, PLATFORM_USER_EMAIL)
+    const admin = await signUp(auth, 'admin@example.com')
+    auth = makeAuth(db, [provider('shared', 'singleton')], {
+      scopeService: scopeStore({ [admin.userId]: ['admin:credentials:link'] }),
+    })
+
+    const res = await link(auth, 'shared', admin.cookie)
+
+    assert.equal(res.status, 409)
+    assert.equal(((await res.json()) as any).code, 'PLATFORM_USER_RESERVED')
+    assert.equal(
+      db.account!.some(
+        (a) => a.userId === squatter.userId && a.providerId !== 'credential'
+      ),
+      false,
+      'no credential account may hang off the squatter'
+    )
+  })
+
+  test('the platform user is still found by its reserved address once created', async () => {
+    const db = emptyDb()
+    let auth = makeAuth(db, [provider('shared', 'singleton')])
+    const { userId, cookie } = await signUp(auth, 'admin@example.com')
+    auth = makeAuth(db, [provider('shared', 'singleton')], {
+      scopeService: scopeStore({ [userId]: ['admin:credentials:link'] }),
+    })
+
+    assert.equal((await link(auth, 'shared', cookie)).status, 200)
+    assert.equal((await link(auth, 'shared', cookie)).status, 200)
+  })
+
   // Created on demand, once: an app with no singleton credentials should never
   // grow the row, and two links should not race a second one into existence.
   test('the platform user is created once and reused', async () => {

@@ -112,6 +112,7 @@ export type {
 export {
   pikkuCredentialOAuth,
   findPlatformUserId,
+  ReservedPlatformEmailError,
   PLATFORM_USER_EMAIL,
   PLATFORM_USER_ID,
 } from './credential-oauth.plugin.js'
