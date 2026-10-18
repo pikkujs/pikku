@@ -1,9 +1,11 @@
 ---
 name: pikku-list-query
 description: >-
-  Use when building a paginated or infinite-scroll list: any RPC that returns rows a user scrolls through (tables, card grids, search results). Covers the backend pikkuListFunc, the ListInput/ListOutput cursor contract, the filter tree, and the generated usePikkuInfiniteQuery hook.
-  TRIGGER when: user asks for infinite scroll, "load more", a paginated table/list/grid, or a list that could grow beyond a single page.
-  DO NOT TRIGGER when: the list is small and fixed (for example 5 settings items), where a plain pikkuFunc plus usePikkuQuery returning a full array is correct, or when the task is general React provider and hook setup (use pikku-react).
+  Paginated or infinite-scroll lists: pikkuListFunc, the ListInput/ListOutput cursor contract, the
+  filter tree, the generated usePikkuInfiniteQuery hook. TRIGGER when: asked for infinite scroll,
+  "load more", a paginated table/list/grid, or a list that could outgrow one page. DO NOT TRIGGER
+  for small fixed lists (a plain pikkuFunc plus usePikkuQuery is correct) or general React provider
+  and hook setup (use pikku-react).
 installGroups: [core, client]
 ---
 
@@ -22,7 +24,10 @@ installGroups: [core, client]
 A list function is a normal `pikkuFunc`/`pikkuSessionlessFunc` whose input/output conform to two shared shapes from `@pikku/core`:
 
 ```typescript
-interface ListInput<F extends Record<string, unknown> = {}, S extends string = never> {
+interface ListInput<
+  F extends Record<string, unknown> = {},
+  S extends string = never,
+> {
   cursor?: string // opaque — echo back whatever you returned as nextCursor
   limit?: number // page size; server may cap it
   sort?: Array<{ column: S; direction: 'asc' | 'desc' }>
@@ -57,7 +62,10 @@ export const listItems = pikkuListFunc<{ status?: string }, Item>({
   func: async ({ kysely }, input, { session }) => {
     // `limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted —
     // `ListInput` says "server may cap" and this is where that happens.
-    const limit = Math.min(Math.max(Math.trunc(input.limit ?? 20) || 20, 1), 100)
+    const limit = Math.min(
+      Math.max(Math.trunc(input.limit ?? 20) || 20, 1),
+      100
+    )
     const parsed = input.cursor ? Number(input.cursor) : 0
     const offset = Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
 
@@ -67,7 +75,11 @@ export const listItems = pikkuListFunc<{ status?: string }, Item>({
       query = query.where('status', '=', status)
     }
 
-    const rows = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).execute()
+    const rows = await query
+      .orderBy('createdAt', 'desc')
+      .offset(offset)
+      .limit(limit)
+      .execute()
     const nextOffset = offset + rows.length
     const totalCount = await query
       .select((eb) => eb.fn.countAll<number>().as('count'))
@@ -92,10 +104,11 @@ Generated automatically alongside `usePikkuQuery`/`usePikkuMutation` once `react
 import { usePikkuInfiniteQuery } from '.pikku/pikku-react-query.gen'
 
 function ItemList() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = usePikkuInfiniteQuery(
-    'listItems',
-    { limit: 20 }, // never pass cursor here — the hook manages it
-  )
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    usePikkuInfiniteQuery(
+      'listItems',
+      { limit: 20 } // never pass cursor here — the hook manages it
+    )
 
   const rows = data?.pages.flatMap((page) => page.rows) ?? []
 
@@ -142,10 +155,10 @@ Read exactly the shape you support, and refuse the rest rather than ignoring it:
 import type { Filter } from '@pikku/core/function'
 
 /** The one shape this endpoint accepts: a single-key leaf with a plain value. */
-function leafEquals<F extends Record<string, unknown>, K extends keyof F & string>(
-  filter: Filter<F> | undefined,
-  field: K,
-): F[K] | undefined {
+function leafEquals<
+  F extends Record<string, unknown>,
+  K extends keyof F & string,
+>(filter: Filter<F> | undefined, field: K): F[K] | undefined {
   if (!filter || Array.isArray(filter)) return undefined
   const keys = Object.keys(filter)
   if (keys.length !== 1 || keys[0] !== field) return undefined

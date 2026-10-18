@@ -1,9 +1,13 @@
 ---
 name: pikku-middleware
 description: >-
-  Use when adding middleware to a Pikku app: global (addGlobalMiddleware), HTTP and prefix (addHTTPMiddleware), tag-scoped (addTagMiddleware), per-wiring, session-setting middleware, and execution order and priority. Covers the pikkuMiddleware factory, where a token is resolved into a session (HTTP middleware, cron tasks), and service-to-service bearer gates.
-  TRIGGER when: user wants middleware on some or all routes, tag-scoped cross-cutting concerns, global interceptors, middleware priority or order questions, or middleware that calls setSession for a machine caller.
-  DO NOT TRIGGER when: the question is choosing or configuring an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`), permissions or scopes (use pikku-permissions), or deployment.
+  Middleware in a Pikku app: global (addGlobalMiddleware), HTTP/prefix (addHTTPMiddleware),
+  tag-scoped (addTagMiddleware), per-wiring, session-setting; execution order and priority; the
+  pikkuMiddleware factory; resolving a token into a session (HTTP, cron); service-to-service bearer
+  gates. TRIGGER when: middleware on some or all routes, tag-scoped concerns, global interceptors,
+  priority/order questions, or middleware calling setSession for a machine caller. DO NOT TRIGGER
+  for choosing an auth strategy (authBearer, authCookie, Better Auth, API keys, `pikku login`),
+  permissions or scopes (use pikku-permissions), or deployment.
 installGroups: [core]
 ---
 
@@ -225,10 +229,15 @@ An unresolved token leaves the session unset and the function throws `MissingSes
 A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the task's own `middleware`:
 
 ```typescript
-const cronSession = pikkuMiddleware(async (_services, { scheduledTask, setSession }, next) => {
-  setSession?.({ userId: `cron:${scheduledTask?.name}`, scopes: ['machine:cron'] } as UserSession)
-  return next()
-})
+const cronSession = pikkuMiddleware(
+  async (_services, { scheduledTask, setSession }, next) => {
+    setSession?.({
+      userId: `cron:${scheduledTask?.name}`,
+      scopes: ['machine:cron'],
+    } as UserSession)
+    return next()
+  }
+)
 
 wireScheduler({
   name: 'tickVirtualUserSchedules',

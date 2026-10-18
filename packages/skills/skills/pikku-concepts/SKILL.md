@@ -1,13 +1,12 @@
 ---
 name: pikku-concepts
 description: >-
-  Use FIRST in any Pikku codebase, before writing an import or reaching for another pikku skill.
-  Covers the core mental model, function types, project structure, code generation and testing,
-  and how to read `pikku doc` — the API surface of the pikku actually installed here, which also
-  indexes which skill teaches each door. TRIGGER when: starting any Pikku task, about to import
-  from `#pikku/*`, unsure whether an export exists or what its options are called, choosing which
-  pikku skill to load, a build failed on an unknown import or option, or migrating an existing
-  backend to Pikku. DO NOT TRIGGER when: the task is not a Pikku project.
+  Use FIRST in any Pikku codebase: core mental model, function types, project structure, code
+  generation, testing, and reading `pikku doc` (the installed API surface, which also indexes which
+  skill teaches each area). TRIGGER when: starting any Pikku task, about to import from `#pikku/*`,
+  unsure an export or option exists, choosing which pikku skill to load, a build failed on an
+  unknown import or option, or migrating a backend to Pikku. DO NOT TRIGGER when: the task is not a
+  Pikku project.
 installGroups: [core]
 ---
 
@@ -406,4 +405,4 @@ expect(result.todos).toHaveLength(3)
 
 ## Available Packages
 
-Pikku ships runtime adapters (`@pikku/express-server`, `@pikku/fastify-server`, `@pikku/next`, `@pikku/aws-lambda`, `@pikku/cloudflare`, `@pikku/uws-server`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
+Pikku ships runtime adapters (`@pikku/express`, `@pikku/fastify`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/uws`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.

@@ -1,17 +1,14 @@
 ---
 name: pikku-build
 description: >-
-  Use to build on Pikku — turning a fresh scaffold into a working app (quick spike, real product,
-  or a showcase that exercises every surface), adding a feature to an app that already exists, and
-  the one-off cleanup right after a template is cloned. Covers the knowledge base, virtual users and
-  roles, filing the work as changes, the scenario that proves each one, theming, multi-app
-  layouts and deploying. TRIGGER when: the user asks for an app to be built on
-  Pikku, a freshly scaffolded project needs turning into a product, the user asks to add a feature
-  or wire up a new endpoint in a working app, or a template was just cloned or scaffolded. DO NOT
-  TRIGGER when: the user asks for a one-off edit to an existing function, asks about Pikku concepts
-  (use pikku-concepts), wants one specific surface explained rather than built (use that surface's
-  skill), only needs the technical plan for one claimed changeset (use pikku-architect), or is
-  working items off a deployed stage's changes queue (use pikku-changes).
+  Build on Pikku: turn a fresh scaffold into a working app (spike, real product or showcase), add a
+  feature or endpoint to an existing app, and the cleanup after a template is cloned. Covers
+  knowledge base, virtual users, changes, proving scenarios, theming, multi-app layouts, deploying.
+  TRIGGER when: asked to build an app on Pikku, a scaffold/template was just created or cloned, or
+  asked to add a feature or wire a new endpoint in a working app. DO NOT TRIGGER for one-off
+  function edits, Pikku concepts (use pikku-concepts), explaining one surface (use that surface's
+  skill), planning one claimed changeset (use pikku-architect) or working a stage's changes queue
+  (use pikku-changes).
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku cloud report *), Bash(npx --no pikku cloud report *)
 argument-hint: '[feature description]'
 installGroups: [core]

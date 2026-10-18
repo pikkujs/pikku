@@ -1,9 +1,14 @@
 ---
 name: pikku-kysely
 description: >-
-  Use when WRITING KYSELY QUERIES (select, join, aggregate, insert, update, delete) inside a Pikku function body, or when setting up SQL database services with Kysely. Covers the query builder API (joins, groupBy/having, returning, sql template, $if, transactions, jsonArrayFrom), how many round trips a function body costs and how to collapse sequential awaits into one statement, and @pikku/kysely service setup (channel stores, workflow, secret, AI storage and deployment services).
-  TRIGGER when: writing any non-trivial kysely query (join, count/sum, groupBy, subquery, transaction, conditional query), a function body awaits more than one query, the injected `kysely` service is used, code uses PikkuKysely, KyselyChannelStore, KyselyWorkflowService or KyselySecretService, or the user asks about SQL setup with Pikku.
-  DO NOT TRIGGER when: the services are MongoDB or Redis backed (use pikku-service-backends), or the task is the pagination contract rather than the query (use pikku-list-query).
+  Writing Kysely queries (select, join, aggregate, insert, update, delete, transactions, sql
+  template, jsonArrayFrom) in Pikku function bodies, collapsing sequential awaits into fewer round
+  trips, and @pikku/kysely service setup (channel stores, workflow, secret, AI storage, deployment).
+  TRIGGER when: writing a non-trivial kysely query, a function body awaits several queries, the
+  injected `kysely` service or
+  PikkuKysely/KyselyChannelStore/KyselyWorkflowService/KyselySecretService is used, or asked about
+  SQL setup. DO NOT TRIGGER for MongoDB/Redis services (use pikku-service-backends) or the
+  pagination contract (use pikku-list-query).
 installGroups: [core]
 ---
 
@@ -119,15 +124,27 @@ just stop queuing behind each other.
 
 ```typescript
 // Three hops, in series
-const item = await kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst()
-const bins = await kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute()
-const moves = await kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute()
+const item = await kysely
+  .selectFrom('item')
+  .where('id', '=', id)
+  .selectAll()
+  .executeTakeFirst()
+const bins = await kysely
+  .selectFrom('bin')
+  .where('warehouseId', '=', wid)
+  .selectAll()
+  .execute()
+const moves = await kysely
+  .selectFrom('stockMove')
+  .where('itemId', '=', id)
+  .selectAll()
+  .execute()
 
 // One hop's worth of latency
 const [item, bins, moves] = await Promise.all([
-  kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst(),
-  kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute(),
-  kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute(),
+  kysely.selectFrom('item').where('id', '=', id).selectAll().executeTakeFirst(),
+  kysely.selectFrom('bin').where('warehouseId', '=', wid).selectAll().execute(),
+  kysely.selectFrom('stockMove').where('itemId', '=', id).selectAll().execute(),
 ])
 ```
 
@@ -142,7 +159,11 @@ wants.
 // N+1 — one extra hop per warehouse
 const warehouses = await kysely.selectFrom('warehouse').selectAll().execute()
 for (const w of warehouses) {
-  w.bins = await kysely.selectFrom('bin').where('warehouseId','=',w.id).selectAll().execute()
+  w.bins = await kysely
+    .selectFrom('bin')
+    .where('warehouseId', '=', w.id)
+    .selectAll()
+    .execute()
 }
 // One hop — see NESTED DATA above
 ```
@@ -158,7 +179,11 @@ and what comes back tells you which branch happened.
 
 ```typescript
 // Two hops and a race
-const existing = await kysely.selectFrom('item').where('sku','=',sku).select('id').executeTakeFirst()
+const existing = await kysely
+  .selectFrom('item')
+  .where('sku', '=', sku)
+  .select('id')
+  .executeTakeFirst()
 if (existing) throw new ConflictError()
 await kysely.insertInto('item').values({ sku, name }).execute()
 
@@ -183,8 +208,20 @@ never have crossed the wire.
 
 ```typescript
 // Two hops — the ids are only ever used as a filter
-const ids = await kysely.selectFrom('bin').where('warehouseId','=',wid).select('id').execute()
-const stock = await kysely.selectFrom('stock').where('binId','in', ids.map((b) => b.id)).selectAll().execute()
+const ids = await kysely
+  .selectFrom('bin')
+  .where('warehouseId', '=', wid)
+  .select('id')
+  .execute()
+const stock = await kysely
+  .selectFrom('stock')
+  .where(
+    'binId',
+    'in',
+    ids.map((b) => b.id)
+  )
+  .selectAll()
+  .execute()
 
 // One hop
 const stock = await kysely

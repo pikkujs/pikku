@@ -1,15 +1,13 @@
 ---
 name: pikku-theme
 description: >-
-  Use when giving a Pikku Tailwind + shadcn/ui app its look: picking and applying a theme with `pikku
-  ui theme list|apply`, composing brand colours, fonts, page and ink over a preset's structure, matching
-  an existing look by hand, declaring component variants in the component's `cva` definition,
-  replacing template names (`pikku validate` flags them), and keeping emails/theme.json on-brand.
-  Also the light/dark and WCAG contrast rules a theme must clear. TRIGGER when: the user asks to
-  theme, restyle, rebrand or recolour an app; the project has packages/theme (themes/*.json,
-  active.json); a screen needs a colour, font, radius or shadow; or the app still shows a template
-  name. DO NOT TRIGGER when: rendering data or RTL layout (use pikku-tailwind),
-  writing email templates (use pikku-emails), or accessibility beyond colour (use pikku-a11y).
+  Giving a Pikku Tailwind + shadcn/ui app its look: `pikku ui theme list|apply`, brand
+  colours/fonts/page/ink over a preset, matching an existing look, cva component variants, replacing
+  template names (`pikku validate` flags them), emails/theme.json, plus light/dark and WCAG contrast
+  rules. TRIGGER when: asked to theme, restyle, rebrand or recolour; the project has packages/theme
+  (themes/*.json, active.json); a screen needs a colour, font, radius or shadow; or template names
+  still show. DO NOT TRIGGER for data rendering or RTL layout (use pikku-tailwind), email templates
+  (use pikku-emails) or accessibility beyond colour (use pikku-a11y).
 installGroups: [client]
 ---
 
@@ -86,14 +84,14 @@ pikku ui theme apply --preset storybook \
 pikku ui theme apply --preset quorum --structure monopro
 ```
 
-| Flag | Sets |
-| --- | --- |
-| `--preset <id>` | starting brand + structure; the theme is written as `themes/<id>.json` (no preset → `custom`, based on the first preset) |
-| `--structure <id>` | swap in another preset's structure (depth) under this brand |
-| `--primary`, `--secondary`, `--accent` | brand colours, hex |
-| `--font-heading`, `--font-body` | Google Fonts families |
-| `--page` | light-mode page colour (`structure.page`) — paper, linen, bone instead of white |
-| `--ink` | light-mode text colour (`structure.ink`) |
+| Flag                                   | Sets                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--preset <id>`                        | starting brand + structure; the theme is written as `themes/<id>.json` (no preset → `custom`, based on the first preset) |
+| `--structure <id>`                     | swap in another preset's structure (depth) under this brand                                                              |
+| `--primary`, `--secondary`, `--accent` | brand colours, hex                                                                                                       |
+| `--font-heading`, `--font-body`        | Google Fonts families                                                                                                    |
+| `--page`                               | light-mode page colour (`structure.page`) — paper, linen, bone instead of white                                          |
+| `--ink`                                | light-mode text colour (`structure.ink`)                                                                                 |
 
 Flags are flat scalars, one value each; there is no nested `--colors` object. One call writes the
 theme, makes it active, regenerates `themes/index.ts` (so the running app reloads) and re-brands

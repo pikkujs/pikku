@@ -1,9 +1,12 @@
 ---
 name: pikku-seo
 description: >-
-  On-page SEO rules for the app's PUBLIC pages: per-route head() titles and meta descriptions, Open Graph tags, crawlable links and URLs, JSON-LD on the landing page, and noindex for the logged-in area.
-  TRIGGER when: building or reworking any public page (landing, pricing, about, blog/content pages), writing page titles or meta tags, or the user asks about SEO / Google / discoverability / social sharing previews.
-  DO NOT TRIGGER when: the task is accessibility, including heading order, landmarks or alt text (use pikku-a11y), or working on logged-in /app screens (they are noindexed — only the one robots rule below applies), backend functions, database, or deployment.
+  On-page SEO for the app's PUBLIC pages: per-route head() titles and meta descriptions, Open Graph,
+  crawlable links/URLs, landing-page JSON-LD, noindex for the logged-in area. TRIGGER when: building
+  or reworking a public page (landing, pricing, about, blog), writing page titles or meta tags, or
+  asked about SEO, Google, discoverability or social share previews. DO NOT TRIGGER for
+  accessibility incl. heading order, landmarks, alt text (use pikku-a11y), logged-in /app screens
+  (noindexed; only the one robots rule applies), backend, database or deployment.
 installGroups: [client]
 ---
 
@@ -31,7 +34,10 @@ export const Route = createFileRoute('/pricing')({
           'Simple per-seat pricing for Acme Scheduling. Start free, upgrade when your team grows — no setup fees, cancel anytime.',
       },
       { property: 'og:title', content: 'Pricing — Acme Scheduling' },
-      { property: 'og:description', content: 'Simple per-seat pricing. Start free.' },
+      {
+        property: 'og:description',
+        content: 'Simple per-seat pricing. Start free.',
+      },
     ],
   }),
   component: PricingPage,
@@ -90,16 +96,18 @@ or offers (fake schema is a Google penalty, not a boost):
 
 ```tsx
 head: () => ({
-  meta: [
-    /* title + description as above */
-  ],
+  meta: [/* title + description as above */],
   scripts: [
     {
       type: 'application/ld+json',
       children: JSON.stringify({
         '@context': 'https://schema.org',
         '@graph': [
-          { '@type': 'Organization', name: 'Acme Scheduling', description: '…' },
+          {
+            '@type': 'Organization',
+            name: 'Acme Scheduling',
+            description: '…',
+          },
           { '@type': 'WebSite', name: 'Acme Scheduling' },
         ],
       }),

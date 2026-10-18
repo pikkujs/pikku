@@ -1,14 +1,13 @@
 ---
 name: pikku-addon
 description: >-
-  Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon,
-  ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, addons that ship
-  database tables (pikku db export), generating an addon from an OpenAPI/Swagger spec, and
-  cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, the
-  user asks about addons, reusable function packages, cross-project sharing or addon package
-  structure, or hands over an OpenAPI/Swagger spec (file or URL) to build on. DO NOT TRIGGER when:
-  the user asks about internal function composition (use pikku-wiring), general function
-  definitions (use pikku-concepts), or importing an n8n export (use pikku-n8n-import).
+  Creating or consuming reusable Pikku function packages (addons): wireAddon, ref(),
+  pikkuAddonServices/pikkuAddonWireServices, package structure, shipping DB tables (pikku db
+  export), generating an addon from an OpenAPI/Swagger spec. TRIGGER when: code uses those APIs, or
+  the user asks about addons or cross-project function sharing, or hands over an OpenAPI/Swagger
+  spec (file or URL) to build on. DO NOT TRIGGER for internal function composition (use
+  pikku-wiring), general function definitions (use pikku-concepts) or n8n imports (use
+  pikku-n8n-import).
 installGroups: [core]
 ---
 
@@ -393,7 +392,7 @@ calls, one field out of fifty), or when the app adds a permission of its own.
 carries middleware, not permissions, so a rule on one addon function lives in
 the `permissions` of an app function that calls it. An addon called with the
 user's own credential is already limited upstream to what that user may do, so
-a data-aware `pikkuPermission` repeating that check (may they read *this*
+a data-aware `pikkuPermission` repeating that check (may they read _this_
 invoice?) adds nothing. A session-only `pikkuAuth` (a role, a tier) is still
 worth it: it can be checked before any input exists, so the functions a user
 can't call drop out of the tools an MCP client, an agent or a workflow is

@@ -1,9 +1,13 @@
 ---
 name: pikku-permissions
 description: >-
-  Use when deciding WHO may call a function: resource ownership, role gates, admin-only actions, or any "only their own rows" rule. Covers the `permissions` field, `pikkuPermission`, `pikkuAuth`, scopes and `defineScope`, `addGlobalPermission`, the three gates, `permissionsInBody`, and where ownership belongs versus where it does not.
-  TRIGGER when: writing or reviewing any function that touches a row a user owns, gating an action on a role, building the permissions half of a contract in build PHASE 2, about to write an `if` in a function body that decides whether the caller is allowed, or hitting `MissingScopeError`.
-  DO NOT TRIGGER when: the question is how a caller proves who they are, such as sign-in, sessions, tokens, API keys or seeding a virtual user (use pikku-auth), or how to shape a paginated list (use pikku-list-query).
+  Deciding WHO may call a function: resource ownership, role gates, admin-only actions, "only their
+  own rows" rules; the `permissions` field, pikkuPermission, pikkuAuth, scopes/defineScope,
+  addGlobalPermission, permissionsInBody. TRIGGER when: writing or reviewing a function that touches
+  a user-owned row, gating on a role, building the permissions half of a contract in build PHASE 2,
+  about to write an `if` in a body deciding whether the caller is allowed, or hitting
+  MissingScopeError. DO NOT TRIGGER for how a caller proves identity: sign-in, sessions, tokens, API
+  keys, seeding a virtual user (use pikku-auth), or paginated lists (use pikku-list-query).
 installGroups: [core]
 ---
 
@@ -54,8 +58,8 @@ user's row by passing its id. Every function that takes a row id needs BOTH: `au
 for the session, and a `permissions` entry for the ownership.
 
 Equally: do NOT write an `isSignedIn` permission that returns `!!session`. That re-checks
-authentication, which `auth: true` already did. A permission answers *may this user do
-this* — role, ownership, tier — never *is there a session*.
+authentication, which `auth: true` already did. A permission answers _may this user do
+this_ — role, ownership, tier — never _is there a session_.
 
 ## Single row vs list — where ownership actually goes
 
@@ -88,11 +92,13 @@ export const isBookOwner = pikkuPermission(
       .where('bookId', '=', bookId)
       .executeTakeFirst()
     return book?.ownerId === session?.userId
-  },
+  }
 )
 
 // Session-only: no input needed. Use for role and flag gates.
-export const isAdmin = pikkuAuth(async (_services, session) => session?.role === 'admin')
+export const isAdmin = pikkuAuth(
+  async (_services, session) => session?.role === 'admin'
+)
 ```
 
 ## OR and AND

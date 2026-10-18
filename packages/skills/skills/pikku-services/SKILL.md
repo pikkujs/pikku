@@ -1,15 +1,14 @@
 ---
 name: pikku-services
 description: >-
-  Use for the service layer of a Pikku app — dependency injection with pikkuServices and
-  pikkuWireServices, startup/shutdown work with pikkuServerLifecycle, configuration through the
-  secrets, variables and credentials services, the audit sink and buffer, and structured logging.
-  TRIGGER when: code uses pikkuServices/pikkuWireServices/pikkuServerLifecycle, defineSecret,
-  defineVariable or defineCredential, user asks about services.ts, lifecycle.ts, dependency
-  injection, env vars, secrets, API credentials, audit logging, AuditService, PinoLogger, or a
-  built-in service. DO NOT TRIGGER when: user asks about middleware (use pikku-middleware),
-  authentication or permissions (use pikku-auth), or a third-party backend such as Redis, S3 or
-  MongoDB (use pikku-service-backends).
+  The Pikku service layer: dependency injection with pikkuServices/pikkuWireServices,
+  startup/shutdown via pikkuServerLifecycle, config through the secrets, variables and credentials
+  services, audit sink and buffer, structured logging. TRIGGER when: code uses
+  pikkuServices/pikkuWireServices/pikkuServerLifecycle/defineSecret/defineVariable/defineCredential,
+  or asked about services.ts, lifecycle.ts, DI, env vars, secrets, API credentials, audit logging,
+  PinoLogger or a built-in service. DO NOT TRIGGER for middleware (use pikku-middleware),
+  authentication or permissions (use pikku-auth), or third-party backends such as Redis, S3, MongoDB
+  (use pikku-service-backends).
 installGroups: [core]
 ---
 

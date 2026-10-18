@@ -1,14 +1,13 @@
 ---
 name: pikku-agent
 description: >-
-  Use when building AI agents, chatbots or LLM-powered assistants with Pikku — pikkuAgent, ref()
-  tool registration, memory, streaming, tool approval, thread ownership, invocation via rpc.agent,
-  the VercelAgentRunner and its provider map, and the voiceInput/voiceOutput middlewares. TRIGGER
-  when: code uses pikkuAgent/rpc.agent/runAgent/streamAgent/VercelAgentRunner/voiceInput, or the
-  user asks about AI agents, chatbots, tool-calling, agent memory or streaming, model providers,
-  speech in or out, or `pikku enable agent`. DO NOT TRIGGER when: the user asks about MCP tool
-  exposure (use pikku-wiring), workflows (use pikku-workflow), React agent hooks (use pikku-react),
-  or general function definitions (use pikku-concepts).
+  Building AI agents, chatbots and LLM assistants with Pikku: pikkuAgent, ref() tools, memory,
+  streaming, tool approval, thread ownership, rpc.agent, VercelAgentRunner and its provider map,
+  voiceInput/voiceOutput. TRIGGER when: code uses
+  pikkuAgent/rpc.agent/runAgent/streamAgent/VercelAgentRunner/voiceInput, or the user asks about
+  agents, tool-calling, agent memory, model providers, speech in/out or `pikku enable agent`. DO NOT
+  TRIGGER for MCP exposure (use pikku-wiring), workflows (use pikku-workflow), React agent hooks
+  (use pikku-react) or general functions (use pikku-concepts).
 installGroups: [core]
 ---
 
@@ -21,11 +20,11 @@ than what they look like.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Defining or invoking an agent — tools, memory, streaming, approval, threads, images | `references/agents.md` |
-| Wiring the runner, or pointing model strings at a provider or gateway | `references/runner-vercel.md` |
-| Adding speech in or out of an agent | `references/voice.md` |
+| You are…                                                                            | Read                          |
+| ----------------------------------------------------------------------------------- | ----------------------------- |
+| Defining or invoking an agent — tools, memory, streaming, approval, threads, images | `references/agents.md`        |
+| Wiring the runner, or pointing model strings at a provider or gateway               | `references/runner-vercel.md` |
+| Adding speech in or out of an agent                                                 | `references/voice.md`         |
 
 ## An agent is a function that reaches other functions
 

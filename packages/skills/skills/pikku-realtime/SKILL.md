@@ -1,15 +1,13 @@
 ---
 name: pikku-realtime
 description: >-
-  Use when making a view live in a Pikku app — a board, shared list, dashboard, ticker, bidding
-  room, live count — or when adding two-way chat or presence. Covers the default event-hub SSE path
-  (`eventHub.publish` on the backend, `PikkuRealtime.subscribeToTopic` on the client) and the
-  two-way WebSocket channel. TRIGGER when: the user wants live updates, realtime, "update without
-  refresh", a live board/feed/ticker/room, presence or chat, or data that more than one signed-in
-  user can change should reflect to others. DO NOT TRIGGER when: a one-shot query/refetch is enough
-  (data only one user changes, or a manual refresh is acceptable), for background jobs (use
-  pikku-workflow, or pikku-wiring's queue and scheduler references), or for the full wiring
-  reference of channels, SSE routes and the `/events` scaffold (use pikku-wiring).
+  Making a view live in a Pikku app (board, shared list, dashboard, ticker, bidding room, live
+  count) or adding two-way chat/presence: the default event-hub SSE path (`eventHub.publish`,
+  `PikkuRealtime.subscribeToTopic`) and the WebSocket channel. TRIGGER when: asked for live updates,
+  realtime, "update without refresh", presence or chat, or data several signed-in users can change
+  should reflect to others. DO NOT TRIGGER when a one-shot refetch is enough, for background jobs
+  (use pikku-workflow, or pikku-wiring's queue/scheduler references), or for the full
+  channel/SSE/`/events` wiring reference (use pikku-wiring).
 installGroups: [core, client]
 ---
 
@@ -115,8 +113,15 @@ import { pikkuChannelFunc, wireChannel } from '#pikku/channel'
 
 export const onMessage = pikkuChannelFunc<{ text: string }>({
   func: async ({ eventHub }, input, { channel, session }) => {
-    const message = { id: crypto.randomUUID(), text: input.text, userId: session!.userId }
-    await eventHub.publish('room', channel.channelId, { topic: 'room', data: message })
+    const message = {
+      id: crypto.randomUUID(),
+      text: input.text,
+      userId: session!.userId,
+    }
+    await eventHub.publish('room', channel.channelId, {
+      topic: 'room',
+      data: message,
+    })
     return message
   },
 })

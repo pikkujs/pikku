@@ -1,14 +1,13 @@
 ---
 name: pikku-deploy
 description: >-
-  Use when deploying a Pikku app to a runtime — Express, Fastify, uWebSockets.js, the `ws` library,
-  Next.js, AWS Lambda, Cloudflare Workers or Azure Functions. Covers the bootstrap every runtime
-  shares, choosing between them, and the behaviour that differs: which accept
-  `RunHTTPWiringOptions`, how each one runs scheduled tasks, and where CORS and health checks live.
-  TRIGGER when: writing or debugging `start.ts` / a worker entry / a Lambda handler, code imports
-  `@pikku/express`, `@pikku/fastify`, `@pikku/uws`, `@pikku/ws`, `@pikku/next`, `@pikku/lambda`,
-  `@pikku/cloudflare` or `@pikku/azure-functions`, or the user asks how to serve, host or deploy a
-  Pikku app. DO NOT TRIGGER when: defining functions or wirings with no runtime-specific code.
+  Deploying a Pikku app to a runtime: Express, Fastify, uWebSockets.js, `ws`, Next.js, AWS Lambda,
+  Cloudflare Workers, Azure Functions. Covers the shared bootstrap, choosing a runtime, which accept
+  RunHTTPWiringOptions, scheduled tasks per runtime, CORS and health checks. TRIGGER when: writing
+  or debugging `start.ts`, a worker entry or Lambda handler, importing
+  @pikku/express|fastify|uws|ws|next|lambda|cloudflare|azure-functions, or asked how to serve, host
+  or deploy a Pikku app. DO NOT TRIGGER when: defining functions or wirings with no runtime-specific
+  code.
 installGroups: [core]
 ---
 
@@ -35,23 +34,23 @@ Two families, and the difference decides how you write the entry file.
 **Long-running servers** own a process. Services are built once at startup and
 live in module scope for the life of the server.
 
-| Runtime | Package | Reach for it when |
-| --- | --- | --- |
-| Express | `@pikku/express` | An existing Express app, or you want static assets and upload handling |
-| Fastify | `@pikku/fastify` | An existing Fastify app, or you want its stricter defaults |
-| uWebSockets.js | `@pikku/uws` | Highest throughput, HTTP and WebSocket on one port |
-| ws | `@pikku/ws` | WebSocket only, attached to an `http.Server` you own |
+| Runtime        | Package          | Reach for it when                                                      |
+| -------------- | ---------------- | ---------------------------------------------------------------------- |
+| Express        | `@pikku/express` | An existing Express app, or you want static assets and upload handling |
+| Fastify        | `@pikku/fastify` | An existing Fastify app, or you want its stricter defaults             |
+| uWebSockets.js | `@pikku/uws`     | Highest throughput, HTTP and WebSocket on one port                     |
+| ws             | `@pikku/ws`      | WebSocket only, attached to an `http.Server` you own                   |
 
 **Per-invocation runtimes** are handed a request and torn down. Services are
 cached in module scope across warm invocations, and the deploy codegen writes
 that caching for you.
 
-| Runtime | Package | Reach for it when |
-| --- | --- | --- |
-| AWS Lambda | `@pikku/lambda` | API Gateway, EventBridge, SQS |
-| Cloudflare Workers | `@pikku/cloudflare` | Edge, Durable Objects for channels |
-| Azure Functions | `@pikku/azure-functions` | Azure hosting — note channels are not implemented |
-| Next.js | `@pikku/next` | Pikku behind Next routes, or RPC from Server Components |
+| Runtime            | Package                  | Reach for it when                                       |
+| ------------------ | ------------------------ | ------------------------------------------------------- |
+| AWS Lambda         | `@pikku/lambda`          | API Gateway, EventBridge, SQS                           |
+| Cloudflare Workers | `@pikku/cloudflare`      | Edge, Durable Objects for channels                      |
+| Azure Functions    | `@pikku/azure-functions` | Azure hosting — note channels are not implemented       |
+| Next.js            | `@pikku/next`            | Pikku behind Next routes, or RPC from Server Components |
 
 Then read the reference for the one you picked: `references/express.md`,
 `references/fastify.md`, `references/uws.md`, `references/ws.md`,
@@ -84,16 +83,16 @@ hand-written handlers are for the cases the deploy codegen does not cover.
 `maxBodySize`, `respondWith404`, `coerceDataFromSchema` and `bubbleErrors` reach
 the request only on the runtimes that thread them through.
 
-| Runtime | Accepts options | Where an oversized body is actually stopped |
-| --- | --- | --- |
-| Express | `init(httpOptions)` | The `express.json` parser limit, fed by `maxBodySize` |
-| Fastify | `init(httpOptions)` | Fastify's own `bodyLimit`, set from `maxBodySize` |
-| uWS | HTTP handler only | The handler counts bytes itself and answers `413` |
-| ws | Yes, on the handler | `maxPayload` on the `WebSocketServer` |
-| Next.js | Only via your own `PikkuNextJS` handler | Next's own limits |
-| Lambda | **No** | API Gateway's payload limit |
-| Cloudflare | Partially — `runFetch(request, hibernation, options)` | The platform's limit |
-| Azure | **No** | Azure's request limits |
+| Runtime    | Accepts options                                       | Where an oversized body is actually stopped           |
+| ---------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Express    | `init(httpOptions)`                                   | The `express.json` parser limit, fed by `maxBodySize` |
+| Fastify    | `init(httpOptions)`                                   | Fastify's own `bodyLimit`, set from `maxBodySize`     |
+| uWS        | HTTP handler only                                     | The handler counts bytes itself and answers `413`     |
+| ws         | Yes, on the handler                                   | `maxPayload` on the `WebSocketServer`                 |
+| Next.js    | Only via your own `PikkuNextJS` handler               | Next's own limits                                     |
+| Lambda     | **No**                                                | API Gateway's payload limit                           |
+| Cloudflare | Partially — `runFetch(request, hibernation, options)` | The platform's limit                                  |
+| Azure      | **No**                                                | Azure's request limits                                |
 
 On Fastify, leaving `maxBodySize` unset keeps Fastify's stricter 1MB default
 rather than loosening it to Pikku's 10MB fallback. On uWS the chunks are dropped
