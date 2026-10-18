@@ -7,13 +7,14 @@
 // `changeset publish` ships) at a prerelease version, served by a local
 // registry that proxies everything else to npm, and installed into an empty
 // project with each of bun's linkers. For each install it checks that:
-//   - @pikku/inspector-go arrived with every target's binary under prebuilt/,
-//     so one lockfile installs the same package on every platform;
+//   - @pikku/inspector-go arrived with every binary built into prebuilt/, so
+//     one lockfile installs the same package on every platform (CI builds only
+//     the targets it runs on; publish.yml checks that all five are there);
 //   - @pikku/inspector-go, resolved from the installed CLI, picks this
 //     platform's binary and the binary runs.
 //
-// Needs the packages built (dist) and every binary in prebuilt/
-// (`node scripts/build-go.mjs --all`).
+// Needs the packages built (dist) and at least this platform's binary in
+// prebuilt/ (`node scripts/build-go.mjs --all` for every target).
 //
 //   node packages/inspector-go/install-smoke/run.mjs
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
@@ -224,14 +225,13 @@ const smoke = async (linker) => {
     '@pikku/inspector-go'
   )
   const goDir = realpathSync(join(dirname(goEntry), '..'))
-  const shipped = PLATFORMS.filter((p) =>
-    existsSync(
-      join(goDir, 'prebuilt', targetName(p), executableName(p.platform))
-    )
-  ).map(targetName)
-  if (shipped.length !== PLATFORMS.length) {
+  const missing = built.filter(
+    (target) =>
+      !existsSync(join(goDir, 'prebuilt', target, executable[target]))
+  )
+  if (missing.length > 0) {
     fail(
-      `[${linker}] @pikku/inspector-go has prebuilt binaries for only ${shipped.join(', ') || 'none'}`
+      `[${linker}] @pikku/inspector-go was installed without prebuilt/${missing.join(', prebuilt/')}`
     )
   }
 
@@ -265,8 +265,15 @@ const smoke = async (linker) => {
   }
 }
 
+const executable = Object.fromEntries(
+  PLATFORMS.map((p) => [targetName(p), executableName(p.platform)])
+)
+const built = Object.keys(executable).filter((target) =>
+  existsSync(join(pkgDir, 'prebuilt', target, executable[target]))
+)
+
 try {
-  if (!existsSync(join(pkgDir, 'prebuilt', host))) {
+  if (!built.includes(host)) {
     throw new Error(`no prebuilt binary for ${host}`)
   }
   for (const linker of ['hoisted', 'isolated']) await smoke(linker)
