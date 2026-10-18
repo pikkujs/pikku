@@ -58,6 +58,7 @@ const (
 	ExposedFunctionHasNoGate          Code = "PKU574"
 	TagResolvesToNoMiddleware         Code = "PKU575"
 	PermissionsInBodyNotAllowed       Code = "PKU576"
+	RegistrationNotADirectCall        Code = "PKU577"
 	DuplicateFunctionVersion          Code = "PKU850"
 	DuplicateFunctionName             Code = "PKU851"
 	ManifestMissing                   Code = "PKU860"
