@@ -210,6 +210,9 @@ export interface PikkuCLICoreOutputFiles {
   // `pikku serve` injects them into createSingletonServices
   localServicesFile: string
 
+  // Platform services a host injects over the local ones in `pikku dev`
+  devPlatformServicesFile: string
+
   // Middleware
   middlewareFile: string
   middlewareGroupsMetaJsonFile: string
@@ -603,6 +606,25 @@ export type PikkuCLIInput = {
   schema?: {
     additionalProperties?: boolean
     supportsImportAttributes?: boolean
+  }
+
+  /**
+   * Platform services a host injects into `pikku dev`, the way a deploy
+   * injects them into a bundle.
+   */
+  dev?: {
+    /**
+     * Modules exporting a `PlatformServiceContributor`. Codegen turns them into
+     * `createPlatformServices(env)`; `pikku dev` merges what it returns over the
+     * local services. Never read by `pikku serve`, and ignored when
+     * `NODE_ENV=production`.
+     */
+    contributors?: Array<{
+      /** Relative to the project root, or a package specifier. */
+      module: string
+      /** Defaults to `default`. */
+      export?: string
+    }>
   }
 
   db?: {

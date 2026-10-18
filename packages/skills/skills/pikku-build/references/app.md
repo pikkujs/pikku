@@ -558,6 +558,26 @@ grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(op
 `.env` is gitignored and local only — never commit it. A deployed stage gets its
 secrets from the hosting platform, not from this file.
 
+**A host can inject platform services into `pikku dev`** the way a deploy does, with
+`dev.contributors` in `pikku.config.json`:
+
+```json
+{
+  "dev": {
+    "contributors": [
+      { "module": "./dev/email-contributor.ts", "export": "email" }
+    ]
+  }
+}
+```
+
+The module exports a `PlatformServiceContributor` (`{ name, imports?, emit }`, the
+type `@pikku/deploy` takes). `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
+from them, and `pikku dev` merges what it returns over the local services before
+`createSingletonServices` runs, so a contributed `emailService` beats
+`LocalEmailService` (and the test-mode spy). Nothing is written without
+contributors, `pikku serve` never loads it, and `NODE_ENV=production` ignores it.
+
 Then run it:
 
 ```sh

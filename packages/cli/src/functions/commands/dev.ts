@@ -48,6 +48,7 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
+import { mergeDevPlatformServices } from './dev-platform-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -258,7 +259,7 @@ export const dev = pikkuSessionlessFunc<
     // content store and credentials, the workflow service codegen already runs
     // through, and the gates read off the live inspector rather than the ones
     // baked in at the last codegen.
-    const localServices = await createLocalServices(
+    const baseLocalServices = await createLocalServices(
       userConfig,
       {
         kysely: kysely ?? null,
@@ -291,6 +292,12 @@ export const dev = pikkuSessionlessFunc<
           inspectorState.systemRoles.definitions
         ),
       }
+    )
+
+    const localServices = await mergeDevPlatformServices(
+      baseLocalServices,
+      config.rootDir,
+      config.devPlatformServicesFile
     )
 
     const singletonServices = await userCreateSingletonServices(
