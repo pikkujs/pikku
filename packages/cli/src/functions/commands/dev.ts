@@ -93,7 +93,6 @@ export const dev = pikkuSessionlessFunc<
     },
     { port, watch, hmr, coverage, test, model }
   ) => {
-    process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
       config.environments ?? {}
     )

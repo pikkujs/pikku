@@ -57,7 +57,6 @@ export const serve = pikkuSessionlessFunc<
     },
     { port, model }
   ) => {
-    process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     disableDevVirtualUserSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const telemetry = startRunTelemetry({
