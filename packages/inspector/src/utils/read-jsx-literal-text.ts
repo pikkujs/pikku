@@ -46,6 +46,37 @@ const NON_TEXT_ATTRIBUTES = new Set([
   'key',
 ])
 
+/**
+ * Calls whose string arguments are class lists. A literal anywhere inside one —
+ * `cva('…', { variants: { size: { heading: 'font-heading text-xl' } } })` — is
+ * styling, even under a key like `heading` that would otherwise read as text.
+ */
+const CLASS_BUILDERS = new Set([
+  'cn',
+  'cva',
+  'clsx',
+  'cx',
+  'classNames',
+  'classnames',
+  'tv',
+  'twMerge',
+  'twJoin',
+])
+
+const isInsideClassBuilder = (node: ts.Node): boolean => {
+  for (let at = node.parent; at; at = at.parent) {
+    if (ts.isJsxElement(at) || ts.isJsxSelfClosingElement(at)) return false
+    if (
+      ts.isCallExpression(at) &&
+      ts.isIdentifier(at.expression) &&
+      CLASS_BUILDERS.has(at.expression.text)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
 const isProse = (text: string) =>
   /^\p{Lu}[^\s]*(\s+[^\s]+)+/u.test(text.trim()) &&
   !/[:/[\]=_#]/.test(text.split(/\s+/)[0] ?? '')
@@ -94,7 +125,12 @@ export const readJsxLiteralText = (
   const found: JsxLiteralText[] = []
   const seen = new Set<number>()
   const add = (node: ts.Node, text: string) => {
-    if (!hasLetter(text) || seen.has(node.getStart(source))) return
+    if (
+      !hasLetter(text) ||
+      seen.has(node.getStart(source)) ||
+      isInsideClassBuilder(node)
+    )
+      return
     seen.add(node.getStart(source))
     const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
     found.push({ text: text.trim(), line: line + 1 })

@@ -53,7 +53,9 @@ describe('core import checks', () => {
       `import { NotFoundError } from '@pikku/core/errors'\n` +
         `import { defineSecret } from '@pikku/core/secret'\n` +
         `import { defineSystemRole } from '@pikku/core/role'\n` +
-        `import { pikkuAgentScorer } from '@pikku/core/agent-scorer'\n`
+        `import { pikkuAgentScorer } from '@pikku/core/agent-scorer'\n` +
+        `import { defineFeatureFlags } from '@pikku/core/flag'\n` +
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n`
     )
 
     const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
@@ -62,6 +64,8 @@ describe('core import checks', () => {
       "Import the same names from '#pikku/secrets'",
       "Import the same names from '#pikku/scopes'",
       "Import the same names from '#pikku/agent'",
+      "Import the same names from '#pikku/scopes'",
+      "Import the same names from '#pikku/analytics'",
     ])
   })
 

@@ -36,6 +36,18 @@ describe('definition types', () => {
     )
   })
 
+  test('the scopes leaf carries the flag surface an app names', () => {
+    const scopes = serializeScopeDefinitionTypes()
+    assert.match(
+      scopes,
+      /export \{ defineFeatureFlags \} from '@pikku\/core\/flag'/
+    )
+    assert.match(
+      scopes,
+      /export type \{ DeclaredFlag \} from '@pikku\/core\/flag'/
+    )
+  })
+
   test('the analytics leaf carries defineAnalyticsEvents', () => {
     assert.match(
       serializeAnalyticsDefinitionTypes(),

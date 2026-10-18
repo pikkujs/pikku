@@ -38,6 +38,28 @@ var nonTextAttributes = map[string]bool{
 	"value": true, "key": true,
 }
 
+// classBuilders are calls whose string arguments are class lists. A literal
+// anywhere inside one is styling, even under a key like `heading`.
+var classBuilders = map[string]bool{
+	"cn": true, "cva": true, "clsx": true, "cx": true, "classNames": true,
+	"classnames": true, "tv": true, "twMerge": true, "twJoin": true,
+}
+
+func isInsideClassBuilder(n *ast.Node) bool {
+	for at := n.Parent; at != nil; at = at.Parent {
+		if ast.IsJsxElement(at) || ast.IsJsxSelfClosingElement(at) {
+			return false
+		}
+		if ast.IsCallExpression(at) {
+			callee := at.Expression()
+			if ast.IsIdentifier(callee) && classBuilders[callee.Text()] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 const ws = `[` + jsWhitespace + `]`
 const nonWs = `[^` + jsWhitespace + `]`
 
@@ -96,7 +118,7 @@ func ReadJsxLiteralText(fileName, content string) []JsxLiteralText {
 	found := []JsxLiteralText{}
 	seen := map[int]bool{}
 	add := func(n *ast.Node, text string) {
-		if !hasLetter(text) {
+		if !hasLetter(text) || isInsideClassBuilder(n) {
 			return
 		}
 		pos := start(n, sf)

@@ -1,4 +1,4 @@
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku/variables'
 import { z } from 'zod'
 import type { SingletonServices } from '#pikku/function'
 

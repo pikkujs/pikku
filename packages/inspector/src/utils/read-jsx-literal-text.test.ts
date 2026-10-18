@@ -43,6 +43,15 @@ describe('readJsxLiteralText', () => {
     )
   })
 
+  test('ignores class lists inside class builders, even under a text-like key', () => {
+    const found = readJsxLiteralText(
+      'a.tsx',
+      `const v = cva('leading-none', { variants: { size: { heading: 'font-heading text-xl', title: 'Big Title Here' } } })\n` +
+        `export const A = () => <p className={cn('Flex Gap', x)}>{cn('a b')}</p>\n`
+    )
+    assert.deepEqual(found, [])
+  })
+
   test('finds strings in conditional branches', () => {
     assert.deepEqual(
       read(

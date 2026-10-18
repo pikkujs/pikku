@@ -7,6 +7,7 @@ export const serializeScopeDefinitionTypes = () => {
   return `export { defineScope } from '@pikku/core/scope'
 export { defineSystemRole } from '@pikku/core/role'
 export { defineFeatureFlags } from '@pikku/core/flag'
+export type { DeclaredFlag } from '@pikku/core/flag'
 `
 }
 
