@@ -180,9 +180,15 @@ const generateGroup = (group: string[]): Map<string, string> => {
       encoding: 'utf8',
       env: { ...process.env, PIKKU_INSPECTOR: 'typescript' },
     })
-    return out.status === 0
-      ? undefined
-      : `${out.stderr}\n${out.stdout}`.trim().split('\n').slice(-5).join('\n')
+    if (out.status === 0) return undefined
+    const lines = `${out.stderr}\n${out.stdout}`
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('at '))
+    const errors = lines.filter((line) =>
+      /error|PKU\d|failed|cannot/i.test(line)
+    )
+    return (errors.length ? errors : lines).slice(0, 8).join('\n')
   }
   let failed = new Map<string, string>()
   for (const dir of group) {
