@@ -57,7 +57,10 @@ type Context struct {
 	// only during analysis. What finalize needs from it is serialized as
 	// state.coreTypeProperties instead.
 	typesLookup map[string][]*checker.Type
-	coreTypes   []coreType
+
+	// gateNames caches localGateNames per file (check_indirect.go).
+	gateNames map[*ast.SourceFile]map[string]bool
+	coreTypes []coreType
 
 	// cliConfigTypeWarned is add-cli.ts's module-level configTypeWarningShown.
 	cliConfigTypeWarned bool
