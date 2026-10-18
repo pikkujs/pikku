@@ -15,7 +15,7 @@
 //
 // Release builds are static (CGO_ENABLED=0), reproducible (-trimpath) and
 // stripped (-s -w). Any failure in --all/--target/--strict exits non-zero.
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -98,28 +98,39 @@ const selected = all
       return target
     })
 
-for (const target of selected) {
-  const name = targetName(target)
-  const out = join(PKG_DIR, 'prebuilt', name, executableName(target.platform))
-  mkdirSync(dirname(out), { recursive: true })
-  const started = Date.now()
-  const build = spawnSync(
-    'go',
-    ['build', '-trimpath', '-ldflags', '-s -w', '-o', out, MAIN],
-    {
-      cwd: PKG_DIR,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        CGO_ENABLED: '0',
-        GOOS: target.goos,
-        GOARCH: target.goarch,
-      },
-    }
-  )
-  if (build.status !== 0) fail(`go build for ${name} failed`)
-  const mb = (statSync(out).size / 1024 / 1024).toFixed(1)
-  console.log(
-    `built ${relative(PKG_DIR, out)} (${mb} MB, ${((Date.now() - started) / 1000).toFixed(1)}s)`
-  )
-}
+// Targets build concurrently: each one compiles the standard library and every
+// dependency for its own GOOS/GOARCH, so in sequence a cold --all is minutes.
+const builds = selected.map(
+  (target) =>
+    new Promise((resolve) => {
+      const name = targetName(target)
+      const out = join(PKG_DIR, 'prebuilt', name, executableName(target.platform))
+      mkdirSync(dirname(out), { recursive: true })
+      const started = Date.now()
+      const build = spawn(
+        'go',
+        ['build', '-trimpath', '-ldflags', '-s -w', '-o', out, MAIN],
+        {
+          cwd: PKG_DIR,
+          stdio: 'inherit',
+          env: {
+            ...process.env,
+            CGO_ENABLED: '0',
+            GOOS: target.goos,
+            GOARCH: target.goarch,
+          },
+        }
+      )
+      build.on('error', () => resolve(name))
+      build.on('close', (code) => {
+        if (code !== 0) return resolve(name)
+        const mb = (statSync(out).size / 1024 / 1024).toFixed(1)
+        console.log(
+          `built ${relative(PKG_DIR, out)} (${mb} MB, ${((Date.now() - started) / 1000).toFixed(1)}s)`
+        )
+        resolve(null)
+      })
+    })
+)
+const failed = (await Promise.all(builds)).filter(Boolean)
+if (failed.length) fail(`go build for ${failed.join(', ')} failed`)
