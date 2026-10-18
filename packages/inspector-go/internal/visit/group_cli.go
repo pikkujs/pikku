@@ -496,7 +496,7 @@ func (s *Context) enumFromPropertyType(t *checker.Type, propertyName string) []s
 	var values []string
 	switch {
 	case pt.IsUnion():
-		for _, m := range pt.Types() {
+		for _, m := range tsutil.UnionTypesInIdOrder(pt) {
 			switch {
 			case m.Flags()&checker.TypeFlagsStringLiteral != 0:
 				if v, ok := m.AsLiteralType().Value().(string); ok {
