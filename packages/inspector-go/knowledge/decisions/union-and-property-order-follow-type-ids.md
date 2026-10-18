@@ -1,11 +1,17 @@
 ---
 type: decision
-title: Union and property order follow Strada's type ids, not source order
-description: Printed unions and mapped-type properties are reordered by the ids of the types they came from, and the Go engine makes the checker calls TS makes so those ids come out in the same order
+title: Mapped-type property order follows Strada's type ids, not source order
+description: A mapped type's properties are reordered by the ids of the key literals they came from, and the Go engine makes the checker calls TS makes so those ids come out in the same order
 tags: [inspector-go, parity, schemas, typescript-go]
 ---
 
-# Union and property order follow Strada's type ids, not source order
+# Mapped-type property order follows Strada's type ids, not source order
+
+> [!NOTE]
+> Unions no longer follow ids: both engines sort a printed union by text (see
+> `packages/inspector/knowledge/decisions/printed-unions-are-sorted-by-text.md`).
+> The id sort below still decides property order, and still runs on unions
+> before they are canonicalized.
 
 typescript-go sorts a union's members by value; Strada sorts them by type id,
 which is creation order. The same sort lays out a mapped type's properties when

@@ -467,6 +467,72 @@
             "route": "/gateways/whatsapp",
             "method": "post",
             "requiresSession": false
+          },
+          "/api/shop/charge": {
+            "pikkuFuncId": "shop:charge",
+            "packageName": "@fixture/shop-addon",
+            "route": "/api/shop/charge",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "tags": [
+              "app"
+            ],
+            "groupBasePath": "/api/shop",
+            "requiresSession": true
+          },
+          "/api/shop/refund": {
+            "pikkuFuncId": "shop:refund",
+            "packageName": "@other/pkg",
+            "route": "/api/shop/refund",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "tags": [
+              "app"
+            ],
+            "groupBasePath": "/api/shop",
+            "requiresSession": false
+          },
+          "/api/ext/charge": {
+            "pikkuFuncId": "shop:charge",
+            "packageName": "@fixture/shop-addon",
+            "route": "/api/ext/charge",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "tags": [
+              "app"
+            ],
+            "groupBasePath": "/api/ext",
+            "requiresSession": true
+          },
+          "/api/ext/refund": {
+            "pikkuFuncId": "shop:refund",
+            "packageName": "@other/pkg",
+            "route": "/api/ext/refund",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "tags": [
+              "app"
+            ],
+            "groupBasePath": "/api/ext",
+            "requiresSession": false
+          },
+          "/shop/charge": {
+            "pikkuFuncId": "shop:charge",
+            "packageName": "@fixture/shop-addon",
+            "route": "/shop/charge",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "groupBasePath": "/shop",
+            "requiresSession": true
+          },
+          "/shop/refund": {
+            "pikkuFuncId": "shop:refund",
+            "packageName": "@other/pkg",
+            "route": "/shop/refund",
+            "sourceFile": "<fixture>/src/http.ts",
+            "method": "post",
+            "groupBasePath": "/shop",
+            "requiresSession": false
           }
         },
         "put": {},
@@ -476,7 +542,8 @@
         "options": {}
       },
       "files": [
-        "<fixture>/src/gateway.ts"
+        "<fixture>/src/gateway.ts",
+        "<fixture>/src/http.ts"
       ],
       "routeMiddleware": []
     },
@@ -791,11 +858,11 @@
           "pikkuFuncId": "shop:charge",
           "name": "shop:charge",
           "description": "Charge a card",
+          "inputSchema": "ChargeInput",
+          "outputSchema": "ChargeOutput",
           "tags": [
             "payments"
           ],
-          "inputSchema": "ChargeInput",
-          "outputSchema": "ChargeOutput",
           "surface": "shop"
         },
         "shop:listCharges": {
@@ -1083,7 +1150,8 @@
     },
     "permissions": {
       "definitions": {},
-      "instances": {}
+      "instances": {},
+      "global": []
     },
     "serviceAggregation": {
       "requiredServices": [
@@ -1097,6 +1165,7 @@
         "bare:ping",
         "chatHandler",
         "gateway:chat-ws",
+        "shop:refund",
         "nightly",
         "scheduler:inline-job",
         "onPush",
@@ -1441,6 +1510,21 @@
     },
     {
       "level": "critical",
+      "code": "PKU559",
+      "message": "No function metadata found for 'x:listCharges'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU559",
+      "message": "No function metadata found for 'x:listCharges'."
+    },
+    {
+      "level": "critical",
+      "code": "PKU559",
+      "message": "No function metadata found for 'x:listCharges'."
+    },
+    {
+      "level": "critical",
       "code": "PKU247",
       "message": "Scheduler 'numeric' has invalid 'tags' property - must be an array of strings."
     },
@@ -1528,7 +1612,7 @@
     }
   ],
   "validationPass": {
-    "start": 21,
-    "end": 32
+    "start": 24,
+    "end": 35
   }
 }

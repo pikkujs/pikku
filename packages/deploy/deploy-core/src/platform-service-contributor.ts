@@ -14,7 +14,8 @@ export interface PlatformServiceContributor<
 > {
   name: string
   requires?: BindingSource[]
-  imports?: string[] | ((platform: TPlatform) => string[])
+  imports?:
+    string[] | ((platform: TPlatform, ctx: EntryGenerationContext) => string[])
   emit(args: {
     ctx: EntryGenerationContext
     platform: TPlatform
@@ -79,14 +80,15 @@ export const collectContributorImports = <
   TPlatform extends ContributorPlatform,
 >(
   contributors: readonly PlatformServiceContributor<TPlatform>[],
-  platform: TPlatform
+  platform: TPlatform,
+  ctx: EntryGenerationContext
 ): string[] => {
   const seen = new Set<string>()
   const out: string[] = []
   for (const contributor of contributors) {
     const lines =
       typeof contributor.imports === 'function'
-        ? contributor.imports(platform)
+        ? contributor.imports(platform, ctx)
         : (contributor.imports ?? [])
     for (const line of lines) {
       if (!seen.has(line)) {

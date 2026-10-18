@@ -172,6 +172,23 @@ func aggregateRequiredServices(st *state.State) {
 		}
 	}
 
+	// 3b. Global permissions and global middleware apply to every function.
+	for _, g := range st.Permissions.Global {
+		for _, id := range g.DefinitionIds {
+			if r, ok := st.Permissions.Definitions.Get(id); ok {
+				addRaw(decode[definitionMeta](encode(r)).Services)
+			}
+		}
+	}
+	st.Middleware.Instances.Each(func(id string, instance *state.MiddlewareInstance) {
+		if !strings.HasPrefix(id, "global:") || instance == nil {
+			return
+		}
+		if r, ok := st.Middleware.Definitions.Get(instance.DefinitionId); ok {
+			addRaw(decode[definitionMeta](encode(r)).Services)
+		}
+	})
+
 	// 4. Tag and HTTP-pattern middleware groups the wirings use.
 	for _, method := range aggregateHTTPMethods {
 		routes, ok := st.HTTP.Meta.Get(method)

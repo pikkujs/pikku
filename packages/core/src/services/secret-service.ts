@@ -10,7 +10,12 @@ export interface SecretService {
    * `.reveal()`.
    */
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
-  /** Answers for any key, including a disallowed one — it must not throw. */
+  /**
+   * Resolves `false` for a key that is absent or not allowed, rather than
+   * throwing. A backend failure (the store is unreachable, access is denied)
+   * must throw instead, so callers relying on the check fail closed rather
+   * than treating an outage as "no such secret".
+   */
   hasSecret(key: string): Promise<boolean>
   setSecret(key: string, value: unknown): Promise<void>
   /**

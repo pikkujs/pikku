@@ -16,9 +16,9 @@ import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
  * silently provisioned the wrong database for every other environment.
  *
  * So the deployment provisions itself: an app hands its virtual users to
- * `pikkuCloud` from `@pikku/better-auth`, and the plugin creates a missing one
- * on the operator handshake that asks for it, where the database connection and
- * better-auth's own adapter are both already open. What is left here is the
+ * `provisionVirtualUsers` from `@pikku/better-auth`, called from the route that
+ * resolves the address a caller wants to act as, where the database connection
+ * and better-auth's own adapter are both already open. What is left here is the
  * half that needs no database — the
  * declaration, and the environment rule applied to it — which is what tells you
  * before a deploy whether the accounts you expect will appear.
@@ -103,7 +103,7 @@ export const virtualUserSync = pikkuSessionlessFunc<
       logger.info(`  skipped: ${refusal}`)
     }
     logger.info(
-      "  Provisioning runs in the deployment: pass `virtualUsers: { virtualUsers: virtualUserConfigs, environments: virtualUserEnvironments }` from the generated virtual users file to `pikkuCloud` from '@pikku/better-auth'."
+      "  Provisioning runs in the deployment: call `provisionVirtualUsers({ auth, scopeService, logger }, { virtualUsers: virtualUserConfigs, environments: virtualUserEnvironments })` from '@pikku/better-auth', with both from the generated virtual users file."
     )
   },
 })

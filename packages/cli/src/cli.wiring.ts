@@ -57,6 +57,10 @@ import {
   renderExperimentNativeComparison,
 } from './functions/commands/experiment-native-comparison.js'
 import {
+  inspectorParity,
+  renderInspectorParity,
+} from './functions/commands/inspector-parity.js'
+import {
   examplesAdd,
   examplesList,
   examplesShow,
@@ -418,6 +422,11 @@ wireCLI({
         forceRelativeImports: {
           description:
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
+          default: false,
+        },
+        lazyAddons: {
+          description:
+            "Register wired addons' functions and schemas from an exported loadAddons() instead of at startup (used by per-unit deploy codegen)",
           default: false,
         },
       },
@@ -1280,6 +1289,23 @@ wireCLI({
         },
       },
     }),
+    inspector: {
+      description: 'Check the inspectors that analyse this project',
+      subcommands: {
+        parity: pikkuCLICommand({
+          func: inspectorParity,
+          render: renderInspectorParity,
+          description:
+            "Run this project's codegen with the TypeScript inspector and then the native one, from the same .pikku state, and fail unless both save the same inspector state, generate the same files and log the same diagnostics",
+          options: {
+            details: {
+              description: 'Most state differences to list',
+              default: '20',
+            },
+          },
+        }),
+      },
+    },
     experiment: {
       description: 'Experiments that measure or compare how the CLI behaves',
       subcommands: {
@@ -1638,7 +1664,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: virtualUserSync,
           description:
-            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to pikkuCloud from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
+            "Report which virtual users an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated virtual users to provisionVirtualUsers from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({

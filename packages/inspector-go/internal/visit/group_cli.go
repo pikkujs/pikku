@@ -496,19 +496,24 @@ func (s *Context) enumFromPropertyType(t *checker.Type, propertyName string) []s
 	var values []string
 	switch {
 	case pt.IsUnion():
-		for _, m := range pt.Types() {
+		fromEnum := false
+		for _, m := range tsutil.UnionTypesInIdOrder(pt) {
 			switch {
 			case m.Flags()&checker.TypeFlagsStringLiteral != 0:
 				if v, ok := m.AsLiteralType().Value().(string); ok {
 					values = append(values, v)
 				}
 			case m.Flags()&checker.TypeFlagsEnumLiteral != 0:
+				fromEnum = true
 				if v, ok := m.AsLiteralType().Value().(string); ok {
 					values = append(values, v)
 				} else if sym := m.Symbol(); sym != nil && sym.Name != "" {
 					values = append(values, tsutil.SymbolName(sym))
 				}
 			}
+		}
+		if !fromEnum {
+			tsutil.SortStringsJS(values)
 		}
 	case pt.Flags()&checker.TypeFlagsEnum != 0:
 		if sym := pt.Symbol(); sym != nil {

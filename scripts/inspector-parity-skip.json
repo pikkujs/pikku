@@ -1,0 +1,14 @@
+[
+  {
+    "project": "templates/starter-template",
+    "reason": "not a workspace package (excluded in the root package.json), so its dependencies are not installed in the monorepo"
+  },
+  {
+    "project": "verifiers/binary",
+    "reason": "a config for `pikku binary` alone (srcDirectories is empty), so `pikku all` has no project to generate"
+  },
+  {
+    "project": "verifiers/db-vectors/pglite",
+    "reason": "holds only the pglite database migrations db-vectors's test reads; it has no sources for `pikku all` to generate"
+  }
+]

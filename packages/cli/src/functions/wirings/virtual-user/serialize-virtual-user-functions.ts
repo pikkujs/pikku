@@ -281,6 +281,7 @@ import {
   writeVirtualUserSchedule,
 } from '@pikku/core/virtual-user'
 import { createVirtualUsers, virtualUserConfigs, virtualUserEnvironments } from '${pathToVirtualUsers}'
+import { findPlatformUserId, PLATFORM_USER_ID } from '@pikku/better-auth'
 import {
   ExecuteVirtualUserRunInput,
   ExecuteVirtualUserRunOutput,
@@ -507,12 +508,23 @@ export const listVirtualUserSchedules = pikkuFunc({
  * builds its wire with a \`sessionService\`, so the session set here is the one
  * the function is frozen with.
  */
-const PLATFORM_USER_ID = 'pikku-platform'
+// \`pikku-platform\` is only the id the row is asked for: under uuid or serial
+// ids better-auth assigns its own, so the row is looked up by its reserved
+// address, falling back to the requested id before the row exists.
+const platformUserId = async (
+  auth: (() => Promise<{ $context?: Promise<any> }>) | undefined
+): Promise<string> => {
+  const context = await (await auth?.())?.$context
+  return (
+    (context && (await findPlatformUserId(context.internalAdapter))) ??
+    PLATFORM_USER_ID
+  )
+}
 
 export const virtualUserPlatformSession = pikkuMiddleware(
-  async (_services, { setSession }, next) => {
+  async ({ auth }, { setSession }, next) => {
     await setSession?.({
-      userId: PLATFORM_USER_ID,
+      userId: await platformUserId(auth),
       scopes: ['virtualUser:run'],
     } as Session)
     return next()

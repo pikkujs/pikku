@@ -26,6 +26,12 @@ func init() {
 }
 
 var pikkuFuncPattern = regexp.MustCompile(`(?i)pikku.*func`)
+
+func isFunctionHelper(name string) bool {
+	_, isScenarioStep := scenarioStepKinds[name]
+	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || isScenarioStep
+}
+
 var validVarName = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$]*$`)
 var channelConnRe = regexp.MustCompile(`(?i)ChannelConnection`)
 
@@ -51,14 +57,11 @@ func (s *Context) addFunctions(node *ast.Node) {
 		return
 	}
 	expression := node.Expression()
-	if !ast.IsIdentifier(expression) {
+	wrapper := s.resolveCalleeName(node, isFunctionHelper)
+	if wrapper == "" {
 		return
 	}
-	wrapper := expression.Text()
 	scenarioStepKind, isScenarioStep := scenarioStepKinds[wrapper]
-	if !pikkuFuncPattern.MatchString(wrapper) && wrapper != "pikkuScenario" && wrapper != "pikkuWebhookReceive" && !isScenarioStep {
-		return
-	}
 	isScenario := wrapper == "pikkuScenario"
 	isWebhookReceive := wrapper == "pikkuWebhookReceive"
 	if !strings.HasPrefix(wrapper, "pikku") {

@@ -6,24 +6,25 @@ package visit
 
 // visitSetup
 const (
-	OrderCoreSingletonServices   = 0  // addFileExtendsCoreType CoreSingletonServices
-	OrderCoreServices            = 10 // addFileExtendsCoreType CoreServices
-	OrderCoreUserSession         = 20 // addFileExtendsCoreType CoreUserSession
-	OrderCoreConfig              = 30 // addFileExtendsCoreType CoreConfig
-	OrderCreateSingletonServices = 40 // addFileWithFactory CreateSingletonServices
-	OrderCreateWireServices      = 50 // addFileWithFactory CreateWireServices
-	OrderCreateConfig            = 60 // addFileWithFactory CreateConfig
-	OrderServerLifecycle         = 70 // addFileWithFactory ServerLifecycle
-	OrderAddAnalytics            = 80
-	OrderAddOutgoingWebhook      = 90
-	OrderAddRPCInvocations       = 100
-	OrderAddWireAddon            = 110
-	OrderAddDefineScreens        = 120
-	OrderAddWireRemoteAddon      = 130
-	OrderAddMiddleware           = 140
-	OrderAddPermission           = 150
-	OrderAddApprovalDescription  = 160
-	OrderAddWorkflow             = 170
+	OrderCoreSingletonServices      = 0  // addFileExtendsCoreType CoreSingletonServices
+	OrderCoreServices               = 10 // addFileExtendsCoreType CoreServices
+	OrderCoreUserSession            = 20 // addFileExtendsCoreType CoreUserSession
+	OrderCoreConfig                 = 30 // addFileExtendsCoreType CoreConfig
+	OrderCreateSingletonServices    = 40 // addFileWithFactory CreateSingletonServices
+	OrderCreateWireServices         = 50 // addFileWithFactory CreateWireServices
+	OrderCreateConfig               = 60 // addFileWithFactory CreateConfig
+	OrderServerLifecycle            = 70 // addFileWithFactory ServerLifecycle
+	OrderAddAnalytics               = 80
+	OrderAddOutgoingWebhook         = 90
+	OrderAddRPCInvocations          = 100
+	OrderAddWireAddon               = 110
+	OrderAddDefineScreens           = 120
+	OrderAddWireRemoteAddon         = 130
+	OrderAddMiddleware              = 140
+	OrderAddPermission              = 150
+	OrderCheckIndirectRegistrations = 155
+	OrderAddApprovalDescription     = 160
+	OrderAddWorkflow                = 170
 )
 
 // visitFunctions

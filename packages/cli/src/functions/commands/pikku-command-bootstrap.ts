@@ -1,7 +1,11 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import {
+  serializeLoadAddons,
+  splitAddonBootstrap,
+} from './lazy-addon-bootstrap.js'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
 
@@ -13,6 +17,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   func: async ({ logger, config, getInspectorState }, { allImports }) => {
     const stateBeforeBootstrap = await getInspectorState()
     const addonBootstraps: string[] = []
+    const deferredAddonImports: string[] = []
 
     for (const [, decl] of stateBeforeBootstrap.rpc?.wireAddonDeclarations ??
       []) {
@@ -21,8 +26,23 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       // and drag in the runtime deps remote consumption exists to avoid. The
       // consumer's own wireRemoteAddon() call registers the remote binding.
       if (decl.remote) continue
-      addonBootstraps.push(`${decl.package}/.pikku/pikku-bootstrap.gen.js`)
-      logger.debug(`• Addon bootstrap: ${decl.package}`)
+      const bootstrapSpecifier = `${decl.package}/.pikku/pikku-bootstrap.gen.js`
+      const split = config.lazyAddons
+        ? await readAddonBootstrap(
+            stateBeforeBootstrap.rootDir,
+            decl.file,
+            decl.package,
+            bootstrapSpecifier
+          )
+        : null
+      if (split) {
+        addonBootstraps.push(...split.eager)
+        deferredAddonImports.push(...split.deferred)
+        logger.debug(`• Addon bootstrap (lazy): ${decl.package}`)
+      } else {
+        addonBootstraps.push(bootstrapSpecifier)
+        logger.debug(`• Addon bootstrap: ${decl.package}`)
+      }
     }
 
     const wireAddonFileImports = Array.from(
@@ -96,7 +116,13 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       })
       .join('\n')
 
-    await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
+    await writeFileInDir(
+      logger,
+      config.bootstrapFile,
+      config.lazyAddons
+        ? `${allBootstrapImports}\n\n${serializeLoadAddons(deferredAddonImports)}`
+        : allBootstrapImports
+    )
 
     // The scenario bootstrap is the only entry point that registers scenarios,
     // features and their steps. It pulls in the app bootstrap first so a runner
@@ -121,3 +147,24 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     )
   },
 })
+
+const readAddonBootstrap = async (
+  rootDir: string,
+  declFile: string | undefined,
+  packageName: string,
+  bootstrapSpecifier: string
+) => {
+  try {
+    // Dynamic, like the other inspector uses in this package: a static import
+    // would load the TypeScript compiler on every command, `pikku --help`
+    // included (startup-imports.test.ts).
+    const { addonResolutionDirs, createAddonResolver } =
+      await import('@pikku/inspector')
+    const path = createAddonResolver(
+      addonResolutionDirs(rootDir, declFile)
+    ).resolve(bootstrapSpecifier)
+    return splitAddonBootstrap(packageName, readFileSync(path, 'utf8'))
+  } catch {
+    return null
+  }
+}

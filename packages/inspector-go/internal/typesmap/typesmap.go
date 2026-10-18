@@ -54,7 +54,7 @@ func (m *TypesMap) AddCustomType(name, typ string, references []string) {
 	if references == nil {
 		references = []string{}
 	}
-	m.customTypes[name] = CustomType{Type: typ, References: references}
+	m.customTypes[name] = CustomType{Type: CanonicalTypeString(typ), References: references}
 }
 
 func (m *TypesMap) AddType(originalName, path string) {

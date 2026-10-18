@@ -11,8 +11,8 @@ import (
 )
 
 // The governance fixture exercises every branch of the governance groups;
-// parity against TS is checked by `bun parity/parity.ts --project
-// testdata/governance`. This pins the headline outputs so a regression shows
+// parity against TS is checked by `pikku inspector parity` run in
+// testdata/governance. This pins the headline outputs so a regression shows
 // up in `go test` too.
 func TestGovernanceFixture(t *testing.T) {
 	root, _ := filepath.Abs("../../testdata/governance")

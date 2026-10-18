@@ -63,11 +63,14 @@ describe('platform service contributors', () => {
   })
 
   test('imports are resolved against the platform and de-duplicated', () => {
-    assert.deepEqual(collectContributorImports([kysely, browser], platform), [
-      `import { Kysely } from 'kysely'`,
-      `import { agentTables } from './agent.js'`,
-      `import { Browser } from './browser.js'`,
-    ])
+    assert.deepEqual(
+      collectContributorImports([kysely, browser], platform, ctx),
+      [
+        `import { Kysely } from 'kysely'`,
+        `import { agentTables } from './agent.js'`,
+        `import { Browser } from './browser.js'`,
+      ]
+    )
   })
 
   test('lines are emitted in registration order and empty emits vanish', () => {

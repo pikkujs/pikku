@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
+import { ensurePackageDependency } from '../../../utils/ensure-package-dependency.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeVirtualUserFunctions } from './serialize-virtual-user-functions.js'
 
@@ -47,6 +48,11 @@ export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
     )
     await writeFileInDir(logger, config.virtualUserSchemasFile, schemas)
     await writeFileInDir(logger, config.virtualUserFunctionsFile, functions)
+    await ensurePackageDependency(
+      logger,
+      config.virtualUserFunctionsFile,
+      '@pikku/better-auth'
+    )
     return true
   },
   middleware: [

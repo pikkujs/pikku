@@ -1552,6 +1552,75 @@ describe('filterInspectorState exclude filters', () => {
   })
 })
 
+describe('filterInspectorState gateways', () => {
+  const withGateways = () => {
+    const state = createMockInspectorState()
+    state.gateways = {
+      meta: {
+        slack: {
+          pikkuFuncId: 'handleSlack',
+          name: 'slack',
+          type: 'webhook',
+          route: '/webhooks/slack',
+          gateway: true,
+          tags: ['chat'],
+        },
+        discord: {
+          pikkuFuncId: 'handleDiscord',
+          name: 'discord',
+          type: 'listener',
+          gateway: true,
+        },
+      },
+      files: new Set(['/test/project/src/gateways.ts']),
+    }
+    return state
+  }
+
+  // A deploy unit names the functions it holds, so the gateway has to survive
+  // by its handler: before, every unit imported every gateway.
+  test('a gateway is kept by the function it runs', () => {
+    const result = filterInspectorState(
+      withGateways(),
+      { names: ['handleSlack'] },
+      mockLogger
+    )
+    assert.deepEqual(Object.keys(result.gateways.meta), ['slack'])
+    assert.deepEqual(
+      [...result.gateways.files],
+      ['/test/project/src/gateways.ts']
+    )
+  })
+
+  test('a gateway is kept by its own name', () => {
+    const result = filterInspectorState(
+      withGateways(),
+      { names: ['discord'] },
+      mockLogger
+    )
+    assert.deepEqual(Object.keys(result.gateways.meta), ['discord'])
+  })
+
+  test('a filter matching no gateway drops their files', () => {
+    const result = filterInspectorState(
+      withGateways(),
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.deepEqual(result.gateways.meta, {})
+    assert.equal(result.gateways.files.size, 0)
+  })
+
+  test('tags filter a gateway in and out', () => {
+    const result = filterInspectorState(
+      withGateways(),
+      { tags: ['chat'] },
+      mockLogger
+    )
+    assert.deepEqual(Object.keys(result.gateways.meta), ['slack'])
+  })
+})
+
 describe('addonServerlessIncompatible scoping', () => {
   // Service names inside addons are scoped to that addon's namespace.
   // 'FfmpegService' in addon A is unrelated to 'FfmpegService' in the app or
