@@ -1,10 +1,12 @@
-import { isAbsolute, resolve } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 import type { InspectorState } from '@pikku/inspector'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
 import { loadUserModule } from '../../commands/load-user-project.js'
+import { resolveFromProject } from '../../../utils/resolve-from-project.js'
 import {
   devContributorPlatform,
   serializeDevPlatformServices,
@@ -14,6 +16,54 @@ type ContributorRef = NonNullable<
   NonNullable<Config['dev']>['contributors']
 >[number]
 
+const IMPORT_CONDITIONS = ['import', 'node', 'default']
+
+const importTarget = (entry: unknown): string | undefined => {
+  if (typeof entry === 'string') return entry
+  if (!entry || typeof entry !== 'object') return undefined
+  for (const condition of IMPORT_CONDITIONS) {
+    const target = importTarget((entry as Record<string, unknown>)[condition])
+    if (target) return target
+  }
+  return undefined
+}
+
+const exportedImport = (exports: unknown, subpath: string) => {
+  if (typeof exports === 'string') return subpath === '.' ? exports : undefined
+  if (!exports || typeof exports !== 'object') return undefined
+  const keyed = Object.keys(exports).some((key) => key.startsWith('.'))
+  if (!keyed) return subpath === '.' ? importTarget(exports) : undefined
+  return importTarget((exports as Record<string, unknown>)[subpath])
+}
+
+export const resolveContributorModule = (
+  rootDir: string,
+  specifier: string
+): string => {
+  if (specifier.startsWith('.') || isAbsolute(specifier)) {
+    return resolve(rootDir, specifier)
+  }
+  const parts = specifier.split('/')
+  const name = parts.slice(0, specifier.startsWith('@') ? 2 : 1).join('/')
+  const subpath = `.${specifier.slice(name.length)}`
+  for (let dir = rootDir; ; dir = dirname(dir)) {
+    const packageDir = join(dir, 'node_modules', name)
+    const packageJson = join(packageDir, 'package.json')
+    if (existsSync(packageJson)) {
+      const { exports } = JSON.parse(readFileSync(packageJson, 'utf-8'))
+      const target = exportedImport(exports, subpath)
+      if (target) return join(packageDir, target)
+      break
+    }
+    if (dir === dirname(dir)) break
+  }
+  const resolved = resolveFromProject(rootDir, specifier)
+  if (resolved) return resolved
+  throw new Error(
+    `dev.contributors: cannot resolve '${specifier}' from ${rootDir}`
+  )
+}
+
 export const loadDevContributors = async (
   rootDir: string,
   refs: readonly ContributorRef[]
@@ -21,11 +71,9 @@ export const loadDevContributors = async (
   const contributors: PlatformServiceContributor[] = []
   for (const ref of refs) {
     const exportName = ref.export ?? 'default'
-    const specifier =
-      ref.module.startsWith('.') || isAbsolute(ref.module)
-        ? resolve(rootDir, ref.module)
-        : ref.module
-    const loaded = await loadUserModule(specifier)
+    const loaded = await loadUserModule(
+      resolveContributorModule(rootDir, ref.module)
+    )
     const contributor = loaded[exportName]
     if (
       !contributor ||
@@ -61,7 +109,11 @@ export const writeDevPlatformServices = async (
   const contributors = await loadDevContributors(config.rootDir, refs)
   const code = serializeDevPlatformServices(
     contributors,
-    devContributorPlatform(visitState.serviceAggregation.requiredServices)
+    devContributorPlatform(visitState.serviceAggregation.requiredServices),
+    {
+      file: config.devPlatformServicesFile,
+      packageMappings: config.packageMappings,
+    }
   )
   await writeFileInDir(logger, config.devPlatformServicesFile, code)
 }

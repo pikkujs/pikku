@@ -284,6 +284,7 @@ jobs:
             functions,
             hmr,
             dev-bun,
+            dev-platform-contributors,
             deploy-cloudflare,
             deploy-serverless,
             deploy-grouping,

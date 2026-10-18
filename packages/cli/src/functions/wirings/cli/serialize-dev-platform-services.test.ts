@@ -1,8 +1,17 @@
-import { describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 import {
@@ -77,26 +86,10 @@ describe('serializeDevPlatformServices', () => {
   })
 })
 
-describe('the generated file typechecks', () => {
-  test('under strict, with a contributor whose emitted code is typed', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pikku-dev-platform-tsc-'))
-    try {
-      writeFileSync(
-        join(dir, 'host-email.ts'),
-        `export class HostEmailService {\n  constructor(readonly url: string | undefined) {}\n  send(template: 'welcome', locale: 'en'): void {}\n}\n`
-      )
-      const typed: PlatformServiceContributor = {
-        name: 'email',
-        imports: [`import { HostEmailService } from './host-email.js'`],
-        emit: () => [
-          `  const email = new HostEmailService(env.MAIL_URL)`,
-          `  services.emailService = email`,
-          `  ;[1].forEach((n: number) => email.send('welcome', 'en'))`,
-        ],
-      }
-      const file = join(dir, 'dev-platform-services.gen.ts')
-      writeFileSync(file, serializeDevPlatformServices([typed], platform))
-      const program = ts.createProgram([file], {
+const typecheck = (file: string) =>
+  ts
+    .getPreEmitDiagnostics(
+      ts.createProgram([file], {
         strict: true,
         noEmit: true,
         skipLibCheck: true,
@@ -105,12 +98,108 @@ describe('the generated file typechecks', () => {
         moduleResolution: ts.ModuleResolutionKind.NodeNext,
         types: [],
       })
-      const diagnostics = ts
-        .getPreEmitDiagnostics(program)
-        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
-      assert.deepEqual(diagnostics, [])
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
+    )
+    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
+
+const mailService = `export class HostEmailService {
+  constructor(readonly options: { url: string; onError?: (error: unknown) => void }) {}
+  send(template: 'welcome', locale: 'en'): void {}
+}
+`
+
+describe('the generated file typechecks', () => {
+  let root: string
+  let project: string
+  let outside: string
+
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'pikku-dev-platform-tsc-')))
+    project = join(root, 'project')
+    outside = join(root, 'host-repo', 'mail')
+    mkdirSync(join(project, '.pikku'), { recursive: true })
+    mkdirSync(join(project, 'node_modules', '@host'), { recursive: true })
+    mkdirSync(join(project, 'src'), { recursive: true })
+    mkdirSync(join(outside, 'src'), { recursive: true })
+    writeFileSync(join(project, 'package.json'), '{"type":"module"}')
+    writeFileSync(
+      join(outside, 'package.json'),
+      JSON.stringify({
+        name: '@host/mail',
+        type: 'module',
+        exports: {
+          './service': {
+            types: './src/service.ts',
+            import: './src/service.ts',
+          },
+        },
+      })
+    )
+    writeFileSync(join(outside, 'src', 'service.ts'), mailService)
+    writeFileSync(join(project, 'src', 'local-mail.ts'), mailService)
+    symlinkSync(outside, join(project, 'node_modules', '@host', 'mail'), 'dir')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const contributor = (from: string): PlatformServiceContributor => ({
+    name: 'email',
+    imports: [`import { HostEmailService } from ${JSON.stringify(from)}`],
+    emit: () => [
+      `  if (env.MAIL_URL) {`,
+      `    const email = new HostEmailService({`,
+      `      url: env.MAIL_URL,`,
+      `      onError: (error) => console.warn(error instanceof Error ? error.message : String(error)),`,
+      `    })`,
+      `    services.emailService = email`,
+      `    email.send('welcome', 'en')`,
+      `  }`,
+    ],
+  })
+
+  const generate = (from: string) => {
+    const file = join(project, '.pikku', 'pikku-dev-platform-services.gen.ts')
+    const code = serializeDevPlatformServices([contributor(from)], platform, {
+      file,
+    })
+    writeFileSync(file, code)
+    return { file, code }
+  }
+
+  test('a file:// URL into an installed package becomes its package export', () => {
+    const { file, code } = generate(
+      pathToFileURL(join(outside, 'src', 'service.ts')).href
+    )
+    assert.match(code, /from "@host\/mail\/service"/)
+    assert.doesNotMatch(code, /file:/)
+    assert.deepEqual(typecheck(file), [])
+  })
+
+  test('an absolute path outside any package becomes a path relative to .pikku', () => {
+    const { file, code } = generate(join(project, 'src', 'local-mail.ts'))
+    assert.match(code, /from "\.\.\/src\/local-mail\.js"/)
+    assert.deepEqual(typecheck(file), [])
+  })
+
+  test('a file:// URL is what breaks it without the rewrite', () => {
+    const file = join(project, '.pikku', 'pikku-dev-platform-services.gen.ts')
+    writeFileSync(
+      file,
+      serializeDevPlatformServices(
+        [contributor(pathToFileURL(join(outside, 'src', 'service.ts')).href)],
+        platform
+      )
+    )
+    assert.ok(typecheck(file).some((d) => d.startsWith('Cannot find module')))
+  })
+
+  test('bare and relative specifiers are left alone', () => {
+    const code = serializeDevPlatformServices(
+      [contributor('@host/mail/service')],
+      platform,
+      { file: join(project, '.pikku', 'x.gen.ts') }
+    )
+    assert.match(code, /from "@host\/mail\/service"/)
   })
 })

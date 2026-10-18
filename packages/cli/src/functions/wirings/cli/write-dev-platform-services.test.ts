@@ -2,6 +2,7 @@ import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -9,7 +10,10 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { writeDevPlatformServices } from './write-dev-platform-services.js'
+import {
+  resolveContributorModule,
+  writeDevPlatformServices,
+} from './write-dev-platform-services.js'
 
 const logger = new Proxy({}, { get: () => () => {} }) as never
 const state = {
@@ -69,6 +73,43 @@ describe('writeDevPlatformServices', () => {
     assert.match(
       readFileSync(devPlatformServicesFile, 'utf8'),
       /services\.emailService = \{ host: true \}/
+    )
+  })
+
+  test('a package contributor exported for import only is loaded from the project', async () => {
+    const packageDir = join(root, 'node_modules', '@host', 'mail')
+    mkdirSync(join(packageDir, 'src'), { recursive: true })
+    writeFileSync(
+      join(packageDir, 'package.json'),
+      JSON.stringify({
+        name: '@host/mail',
+        type: 'module',
+        exports: { './contributor': { import: './src/contributor.ts' } },
+      })
+    )
+    writeFileSync(
+      join(packageDir, 'src', 'contributor.ts'),
+      `export default { name: 'mail', emit: () => ["  services.emailService = { package: true }"] }\n`
+    )
+    await writeDevPlatformServices(
+      logger,
+      {
+        rootDir: root,
+        devPlatformServicesFile,
+        dev: { contributors: [{ module: '@host/mail/contributor' }] },
+      } as never,
+      state
+    )
+    assert.match(
+      readFileSync(devPlatformServicesFile, 'utf8'),
+      /services\.emailService = \{ package: true \}/
+    )
+  })
+
+  test('a contributor the project cannot resolve is refused by name', () => {
+    assert.throws(
+      () => resolveContributorModule(root, '@host/missing/contributor'),
+      /dev\.contributors: cannot resolve '@host\/missing\/contributor'/
     )
   })
 })

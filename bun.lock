@@ -2131,6 +2131,20 @@
         "tsx": "^4",
       },
     },
+    "verifiers/dev-platform-contributors": {
+      "name": "@pikku/verifiers-dev-platform-contributors",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/deploy": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/feature-flags": {
       "name": "@pikku/verifiers-feature-flags",
       "dependencies": {
@@ -3443,6 +3457,8 @@
     "@pikku/verifiers-deploy-standalone": ["@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"],
 
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
+
+    "@pikku/verifiers-dev-platform-contributors": ["@pikku/verifiers-dev-platform-contributors@workspace:verifiers/dev-platform-contributors"],
 
     "@pikku/verifiers-feature-flags": ["@pikku/verifiers-feature-flags@workspace:verifiers/feature-flags"],
 
