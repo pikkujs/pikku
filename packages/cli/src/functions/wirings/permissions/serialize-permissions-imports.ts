@@ -14,7 +14,8 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
  * registers at module evaluation, and nothing else is guaranteed to import its
  * file. Without this a file whose only job is `addGlobalPermission([...])` was
  * never loaded, and every function ran without the gate. A call inside an
- * exported zero-argument factory is imported by name and called.
+ * exported zero-argument factory is imported by name and called. Two files can
+ * export a factory with the same name, so each is imported under its own alias.
  */
 export const serializePermissionsImports = (
   outputPath: string,
@@ -24,7 +25,7 @@ export const serializePermissionsImports = (
   _fullState?: InspectorState
 ) => {
   const sideEffectImports = new Set<string>()
-  const factories = new Map<string, string>()
+  const factories = new Map<string, { exportName: string; filePath: string }>()
 
   for (const registration of permissionsState.global ?? []) {
     const filePath = getFileImportRelativePath(
@@ -33,7 +34,10 @@ export const serializePermissionsImports = (
       packageMappings
     )
     if (registration.exportName) {
-      factories.set(registration.exportName, filePath)
+      factories.set(`${filePath}\0${registration.exportName}`, {
+        exportName: registration.exportName,
+        filePath,
+      })
     } else {
       sideEffectImports.add(filePath)
     }
@@ -48,11 +52,15 @@ export const serializePermissionsImports = (
   }
   if (factories.size > 0) {
     lines.push('/* Call global permission factories to register them */')
-    for (const [exportName, filePath] of factories) {
-      lines.push(`import { ${exportName} } from '${filePath}'`)
+    const aliased = [...factories.values()].map((factory, index) => ({
+      ...factory,
+      alias: `globalPermissionFactory${index}`,
+    }))
+    for (const { exportName, filePath, alias } of aliased) {
+      lines.push(`import { ${exportName} as ${alias} } from '${filePath}'`)
     }
-    for (const exportName of factories.keys()) {
-      lines.push(`${exportName}()`)
+    for (const { alias } of aliased) {
+      lines.push(`${alias}()`)
     }
   }
   return lines.join('\n')

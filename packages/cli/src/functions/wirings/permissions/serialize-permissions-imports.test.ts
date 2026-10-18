@@ -91,8 +91,61 @@ describe('serializePermissionsImports', () => {
     assert.match(result, /^import '\.\.\/\.\.\/src\/security\.js'$/m)
     assert.match(
       result,
-      /^import \{ adminGate \} from '\.\.\/\.\.\/src\/admin-gate\.js'$/m
+      /^import \{ adminGate as (\w+) \} from '\.\.\/\.\.\/src\/admin-gate\.js'$/m
     )
-    assert.match(result, /^adminGate\(\)$/m)
+    const alias = /import \{ adminGate as (\w+) \}/.exec(result)![1]!
+    assert.match(result, new RegExp(`^${alias}\\(\\)$`, 'm'))
+  })
+
+  const factory = (sourceFile: string, exportName: string) => ({
+    sourceFile,
+    position: 0,
+    exportName,
+    definitionIds: [],
+  })
+  const serialize = (
+    global: ReturnType<typeof factory>[]
+  ): { imports: string[]; calls: string[] } => {
+    const result = serializePermissionsImports(
+      '/test/.pikku/permissions/pikku-permissions.gen.ts',
+      { definitions: {}, instances: {}, global },
+      createHTTPState(),
+      {}
+    )
+    const lines = result.split('\n')
+    return {
+      imports: lines.filter((line) => line.startsWith('import {')),
+      calls: lines.filter((line) => /^\w+\(\)$/.test(line)),
+    }
+  }
+
+  test('two files exporting a factory of the same name are both registered', () => {
+    const { imports, calls } = serialize([
+      factory('/test/src/a.ts', 'registerGlobalPermissions'),
+      factory('/test/src/b.ts', 'registerGlobalPermissions'),
+    ])
+
+    assert.strictEqual(imports.length, 2)
+    assert.match(imports[0]!, /from '\.\.\/\.\.\/src\/a\.js'$/)
+    assert.match(imports[1]!, /from '\.\.\/\.\.\/src\/b\.js'$/)
+    assert.strictEqual(calls.length, 2)
+    assert.strictEqual(new Set(calls).size, 2, 'each call has its own alias')
+    for (const call of calls) {
+      const alias = call.replace('()', '')
+      assert.ok(
+        imports.some((line) => line.includes(` as ${alias} `)),
+        `${alias} is imported`
+      )
+    }
+  })
+
+  test('a factory with several registrations is called once', () => {
+    const { imports, calls } = serialize([
+      factory('/test/src/security.ts', 'globalGate'),
+      factory('/test/src/security.ts', 'globalGate'),
+    ])
+
+    assert.strictEqual(imports.length, 1)
+    assert.strictEqual(calls.length, 1)
   })
 })
