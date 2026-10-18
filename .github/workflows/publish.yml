@@ -210,7 +210,7 @@ jobs:
           # built in this run go out together. The compiled CLI has no
           # prebuilt/ of its own and finds pikku-inspect beside itself.
           archives=$(mktemp -d)
-          for arch in arm64 x64; do
+          for arch in arm64; do
             dir=$(mktemp -d)
             cp "packages/cli/release/binaries/pikku-darwin-${arch}" "$dir/pikku"
             cp "packages/inspector-go/prebuilt/darwin-${arch}/pikku-inspect" "$dir/pikku-inspect"
@@ -219,7 +219,6 @@ jobs:
           done
           gh release upload "@pikku/cli@${CLI_VERSION}" "$archives"/*.tar.gz --clobber
           ARM_SHA=$(sha256sum "$archives/pikku-darwin-arm64.tar.gz" | cut -d' ' -f1)
-          X64_SHA=$(sha256sum "$archives/pikku-darwin-x64.tar.gz" | cut -d' ' -f1)
 
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/pikkujs/homebrew-pikku.git" tap
           cd tap
@@ -232,10 +231,6 @@ jobs:
             on_arm do
               url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64.tar.gz"
               sha256 "${ARM_SHA}"
-            end
-            on_intel do
-              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-x64.tar.gz"
-              sha256 "${X64_SHA}"
             end
 
             binary "pikku"

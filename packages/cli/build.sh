@@ -448,7 +448,7 @@ await updateCheck
 process.exit(process.exitCode ?? 0)
 ENTRY
 
-  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64 bun-windows-x64; do
+  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-arm64 bun-windows-x64; do
     suffix="${target#bun-}"
     echo "  → $target"
     # istanbul-lib-instrument (babel) uses dynamic requires bun can't bundle;
