@@ -1,7 +1,7 @@
 ---
 name: pikku-build
 description: >-
-  Build on Pikku: turn a fresh scaffold into a working app (spike, real product or showcase), add a
+  Owns app-level work on Pikku (new app, feature, conversion); load pikku-concepts first. Turn a fresh scaffold into a working app (spike, real product or showcase), add a
   feature or endpoint to an existing app, and the cleanup after a template is cloned. Covers
   knowledge base, virtual users, changes, proving scenarios, theming, multi-app layouts, deploying.
   TRIGGER when: asked to build an app on Pikku, a scaffold/template was just created or cloned, or

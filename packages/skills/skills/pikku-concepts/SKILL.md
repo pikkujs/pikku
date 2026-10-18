@@ -1,8 +1,8 @@
 ---
 name: pikku-concepts
 description: >-
-  Use FIRST in any Pikku codebase: core mental model, function types, project structure, code
-  generation, testing, and reading `pikku doc` (the installed API surface, which also indexes which
+  Use FIRST, and whenever you are about to write or change Pikku code: core mental model, function
+  types, project structure, code generation, testing, and reading `pikku doc` (the installed API surface, which also indexes which
   skill teaches each area). TRIGGER when: starting any Pikku task, about to import from `#pikku/*`,
   unsure an export or option exists, choosing which pikku skill to load, a build failed on an
   unknown import or option, or migrating a backend to Pikku. DO NOT TRIGGER when: the task is not a
@@ -71,70 +71,6 @@ which is what decides whether a thrown error becomes a 409 or a 500.
 `pikku doc` needs `@pikku/cli` 0.12.115 or newer. On an older pin, fall back to the door's
 skill and `pikku meta --json`, and do not guess at names the doc would have given you.
 
-## The CLI commands
-
-`pikku doc` is the API surface — the `#pikku/*` exports. It does **not** list
-commands, so this table is where they exist. `pikku <command> --help` has the
-flags; the "Read" column is the skill that teaches the thing, where one does.
-
-**Generating**
-
-| Command                                    | What it does                                         | Read                          |
-| ------------------------------------------ | ---------------------------------------------------- | ----------------------------- |
-| `all`                                      | Everything: types, schemas, wirings, clients         | this skill                    |
-| `bootstrap`                                | Type files only (the setup phase)                    | this skill                    |
-| `schemas`                                  | JSON Schemas for function input/output types         | this skill                    |
-| `fetch` / `websocket` / `rpc` / `realtime` | One client each, when you do not want `all`          | `pikku-wiring`, `pikku-react` |
-| `react-query` / `tanstack-start`           | React Query hooks; the TanStack Start `makeApi` shim | `pikku-react`                 |
-| `queue-service`                            | The queue service wrapper                            | `pikku-wiring`                |
-| `openapi`                                  | An OpenAPI spec from the HTTP routes                 | —                             |
-| `nextjs`                                   | Next.js backend and HTTP wrappers                    | `pikku-deploy`                |
-| `new`                                      | Scaffold a function or wiring                        | `pikku-wiring`                |
-| `enable`                                   | Turn a Pikku feature on                              | `pikku-build`                 |
-| `import`                                   | Import workflows from another system                 | `pikku-n8n-import`            |
-
-**Running**
-
-| Command                           | What it does                                                                   | Read                                         |
-| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
-| `dev`                             | Local dev server, all services wired, watch + HMR                              | `pikku-build`                                |
-| `serve`                           | Bundled bun/node runner — no watch, no codegen                                 | `pikku-deploy`                               |
-| `watch`                           | Regenerate on file change, without a server                                    | —                                            |
-| `scenario list\|run`              | Scenarios as e2e tests and health checks                                       | `pikku-scenario`                             |
-| `virtual-user run`                | A declared virtual user, model-driven, against a stage                         | `pikku-scenario`, virtual-user-run reference |
-| `virtual-user list\|sync\|secret` | Who is declared; what an environment will provision; minting their credentials | `pikku-scenario`, virtual-user-run reference |
-| `db`                              | Local development database                                                     | `pikku-kysely`                               |
-
-**Inspecting and evolving**
-
-| Command                | What it does                                                            | Read                         |
-| ---------------------- | ----------------------------------------------------------------------- | ---------------------------- |
-| `doc`                  | The installed API surface                                               | this skill                   |
-| `meta` / `info`        | What the project declares, machine- and human-readable                  | `pikku-meta`                 |
-| `validate`             | Every check that applies — app structure, an addon's published file set | `pikku-build`, `pikku-addon` |
-| `versions` / `release` | Contract hashes, breaking-change detection, versioned releases          | `pikku-meta`                 |
-| `audit` / `update`     | Advisories; which `@pikku/*` can move and what peers that needs         | `pikku-meta`                 |
-| `scopes` / `roles`     | Declared authorization scopes; roles from `defineSystemRole`            | `pikku-auth`                 |
-| `knowledge`            | The knowledge base — what this app is, in its users' language           | `pikku-knowledge`            |
-| `emails`               | Email template generation                                               | `pikku-emails`               |
-
-**Shipping, and the CLI itself**
-
-| Command                       | What it does                                                                                                                                   | Read           |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `deploy`                      | Deploy to cloud infrastructure                                                                                                                 | `pikku-deploy` |
-| `binary`                      | Compile an entrypoint to a native binary (`bun build --compile`)                                                                               | —              |
-| `dist`                        | Copy what `tsc` cannot emit — `.gen.json` meta, hand-authored `.d.ts` — into the build output. Run it after `tsc`, as a package's build script | —              |
-| `login` / `logout` / `whoami` | The CLI's session against a pikku server                                                                                                       | —              |
-| `skills`                      | Install these skills into an agent (Claude Code, opencode, pi)                                                                                 | —              |
-
-`-c/--config`, `--log-level`, `--json` and the filter flags are **global
-options**, not commands — they attach to the generating commands above.
-
-A dash means no skill covers it beyond this line. `--help` is then the whole of
-it — which is a reason to read `--help` rather than to assume the command does
-what its name suggests.
-
 ## Core Mental Model
 
 ```text
@@ -165,141 +101,6 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 ## Concept Mapping: Generic Backend → Pikku
 
 Controllers/routes → `pikkuFunc`; auth/sessions and authorization checks → `pikku-auth`, a separate install; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
-
-## Functions
-
-Three main function types:
-
-```typescript
-// Requires authentication — receives session in wire context.
-// input/output are Zod schemas; the data + return types are inferred from them.
-const updateTodo = pikkuFunc({
-  input: UpdateTodoInput,
-  output: TodoOutput,
-  func: async (services, data, wire) => {
-    const { session } = wire
-    return services.todoStore.update(data.id, data)
-  },
-})
-
-// No authentication required
-const listTodos = pikkuSessionlessFunc({
-  input: ListTodosInput,
-  output: TodoListOutput,
-  func: async (services, data) => {
-    return { todos: services.todoStore.list(data.filters) }
-  },
-})
-
-// No input or output (for scheduled tasks, lifecycle hooks)
-const cleanup = pikkuVoidFunc(async (services) => {
-  services.todoStore.cleanOldItems()
-})
-```
-
-Services can be destructured inline in the `func` signature (e.g. `async ({ logger, todoStore }, { title }) => ...`). Full config options:
-
-```typescript
-pikkuFunc({
-  // Identity and documentation — prose, so it follows `metaLocale` in
-  // pikku.config.json (default `en`). The identifier does not; see
-  // "What Language You Write In".
-  title?: string,           // Human-readable name
-  description?: string,     // What the function does
-  version?: number,         // Contract version (see pikku-meta)
-  override?: string,        // Logical name override, so several exports share a versioned base
-  tags?: string[],          // For grouping and middleware targeting
-
-  // Contract
-  input?: ZodSchema,        // Input validation schema
-  output?: ZodSchema,       // Output validation schema
-  errors?: Array<typeof PikkuError>,  // Errors this function may throw
-
-  // Reachability
-  expose?: boolean,         // Allow external RPC calls (see pikku-wiring)
-  remote?: boolean,         // Allow remote RPC calls
-  mcp?: boolean,            // Expose as MCP tool (see pikku-wiring)
-  readonly?: boolean,       // Declares the function performs no writes
-  deploy?: 'serverless' | 'server' | 'auto',
-
-  // Authorization — see pikku-auth
-  auth?: boolean,           // Override default auth requirement
-  scopes?: ScopeId[],       // AND-ed, checked before permissions; session required
-  permissions?: PermissionGroup,  // OR-ed pool
-  permissionsInBody?: boolean,    // Last resort; needs allow.permissionsInBody in config
-  middleware?: PikkuMiddleware[], // See pikku-middleware
-
-  // Agent tooling — see pikku-agent
-  approvalRequired?: boolean,
-  approvalDescription?: (services, data) => Promise<string>,
-
-  // Workflow step behavior — see pikku-workflow
-  workflowQueued?: boolean, // Dispatch via queue instead of inline
-  workflowRetries?: number,
-  workflowTimeout?: string, // e.g. '30s', '5m'
-
-  audit?: boolean | { durability?: 'best-effort' | 'transactional' },
-
-  func: async (services, data, wire) => { ... },
-})
-```
-
-`scopes` is the one option `pikkuSessionlessFunc` does not accept, and the
-omission is deliberate: scopes are AND-ed and fail closed, so an anonymous
-caller holds none and satisfies none — a sessionless function with scopes would
-reject every caller it exists to serve. Gate those with `permissions`, which
-receive the optional session and may pass anonymous.
-
-**Generics XOR `input`/`output` — never both.** A function's data and return
-types come from _one_ source: either the `input`/`output` schemas (preferred —
-they double as runtime validation and OpenAPI) or type generics
-(`pikkuFunc<In, Out>({ ... })`). Passing both makes the two disagree and forces
-`as any` casts. Do not annotate the `func` return type inline either — let the
-`output` schema (or the generic) be the single source of truth for the type.
-
-```typescript
-// Correct — schema-based (no generics, no inline return type)
-pikkuFunc({ input: MyInput, output: MyOutput, func: async (s, d) => { ... } })
-// Correct — generic-based (no input/output)
-pikkuFunc<MyIn, MyOut>({ func: async (s, d) => { ... } })
-// WRONG — mixing the two
-pikkuFunc<MyIn, MyOut>({ input: MyInput as any, func: async (s, d) => { ... } })
-```
-
-## Schemas (Validation)
-
-Pikku uses Standard Schema — works with Zod, Valibot, ArkType:
-
-```typescript
-import { z } from 'zod'
-
-const CreateTodoInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
-  tags: z.array(z.string()).optional(),
-})
-```
-
-Schemas serve triple duty: runtime validation, TypeScript types, and OpenAPI documentation.
-
-## Server Bootstrap
-
-Two ways to start a Pikku app, and the choice is whether you need to own the HTTP server.
-
-**Let Pikku own it** — `pikku dev` and `pikku serve` create the config and singleton services,
-start the server and shut it down cleanly, so you write no bootstrap code at all. Startup and
-shutdown work goes in one exported `pikkuServerLifecycle` (`beforeStart` / `afterStart` /
-`beforeStop`). **Only `dev` and `serve` invoke those hooks** — no deploy runtime does, so anything
-a Workers or serverless stage needs done belongs on the request path that needs it.
-
-**Bootstrap it yourself** — required for Express, Fastify, uWS, Lambda, Cloudflare and Next.js,
-where Pikku is embedded in a server you own. Lifecycle hooks do not run on this path; do the
-startup work in the entrypoint.
-
-`pikku validate` warns when a project starts a server by hand _and_ depends on no runtime adapter,
-because that means the first path was available and unused.
-
-**`references/bootstrap.md`** has both entrypoints in full.
 
 ## Code Generation
 
@@ -350,59 +151,20 @@ src/
 
 ## What Language You Write In
 
-Three different things in a Pikku project have a human language, and they are **not** the same
-language. Collapsing them is the common mistake:
-
-| Axis            | Covers                                                                        | Decided by                                                    |
-| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Identifiers** | Function, component, type and file names; tables and columns; commit messages | Nothing. **Always English.** There is no setting              |
-| **Meta**        | Prose authored inside the code — `description`, `title`, step `template`      | `metaLocale` in `pikku.config.json` (default `en`)            |
-| **Product UI**  | Every string the app shows a user                                             | `messages/<locale>.json`, and `active.json`'s `defaultLocale` |
-
-Identifiers are the surface every other tool binds to — the generated clients, the RPC map a
-scenario is typed over, the SQL types — and unlike a string an identifier cannot be translated
-later: renaming one is a migration. `metaLocale` exists so a team can read their own meta in
-their own language; it is not licence to rename anything. And `baseLocale` in
-`project.inlang/settings.json` stays `en`, because it names the message _source_ every other
-language is cloned from.
-
-**When a brief tells you the product speaks a language, it is telling you about the third axis and
-nothing else.** `references/language.md` has the three settings that satisfy such a brief, and the
-failure to avoid: reading one sentence about a product's users as an instruction about its codebase
-(German RPC names, German tables, no English catalogue to translate from).
-
-## Environment Variables
-
-Never use `process.env` inside Pikku functions. Use the `variables` service (see `pikku-services`):
-
-```typescript
-const apiKey = services.variables.get('API_KEY')
-```
-
-`process.env` belongs in server bootstrap code (`start.ts`) only.
-
-## Secrets
-
-`secrets` is not part of a function's services. It is available only in
-`pikkuServices`, `pikkuWireServices`, addon service factories and middleware —
-read it there, give the value to a service, and have the function ask that
-service. Reaching for it through a cast throws at runtime.
-
-## Testing
-
-Functions are easily testable because they're pure:
-
-```typescript
-const mockServices = {
-  logger: new MockLogger(),
-  todoStore: new MockTodoStore(),
-}
-
-// Call function directly — no HTTP, no framework
-const result = await listTodos.func(mockServices, { userId: 'test' })
-expect(result.todos).toHaveLength(3)
-```
+Identifiers (function, type, file, table and column names) are **always English**. `metaLocale` in
+`pikku.config.json` is the language of authored meta (`description`, `title`, step `template`).
+A product speaking another language is only about the UI strings in `messages/<locale>.json`.
+Read `references/language.md` before touching any of the three.
 
 ## Available Packages
 
 Pikku ships runtime adapters (`@pikku/express`, `@pikku/fastify`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/uws`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
+
+## Where the rest lives
+
+- `references/cli.md` — every CLI command, with its flags.
+- `references/functions.md` — function types, config keys and schemas (Standard Schema).
+- `references/bootstrap.md` — letting Pikku own the server versus bootstrapping it yourself.
+- `references/testing.md` — calling `.func` directly with mock services.
+- Env vars and secrets: `pikku-services`. Never `process.env` inside a function.
+- `references/language.md`, `references/concept-mapping.md`, `references/packages.md`.
