@@ -87,16 +87,6 @@ singleton services and the instance on the first call and reuses them.
 
 ## What is safe to turn on
 
-**Dev quick login** (`PIKKU_DEV_QUICK_LOGIN=true`, set by `pikku dev` and
-`pikku serve`) signs `admin@pikku.dev` in with the `admin` and `pikku:console`
-roots. The account never has a lasting password. Each process sets a random one
-just before it signs in, so `/sign-in/email` can't be used to sign into it. The
-route is off under `NODE_ENV=production`. It also refuses proxied requests,
-non-loopback `Host` or `Origin` headers, and `Sec-Fetch-Site: cross-site`.
-The client writes all of those headers, so the actual boundary is the loopback
-bind address `pikku serve` and `pikku dev` use. Leave the flag unset on any
-runtime that listens on `0.0.0.0`.
-
 **Virtual user sign-in** opens under `pikku dev`
 (`PIKKU_DEV_VIRTUAL_USER_SIGN_IN=true`, which is ignored under
 `NODE_ENV=production`). On a deployed stage it also opens when
@@ -132,7 +122,8 @@ own ids.
   `prefixedSessionStore()` keep their names.
 - `pikkuDelegatedAuth` no longer links by email unless you set
   `linkExistingUsersByEmail`.
-- Dev quick login no longer accepts the fixed password `pikku-dev-password`.
-  Use the quick-login route.
+- Dev quick login is removed: the `${basePath}/dev/quick-login` route,
+  `PIKKU_DEV_QUICK_LOGIN`, and the `admin@pikku.dev` account it created. Sign in
+  through your normal sign-in, or `virtualUser()` under `pikku dev`.
 - The package no longer imports `@better-auth/core` or `@better-auth/utils`
   itself. It needs only `better-auth` as a peer.
