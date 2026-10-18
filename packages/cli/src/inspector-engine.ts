@@ -32,6 +32,15 @@ export interface InspectorEngineSources {
   nativeAvailable?: () => boolean
   /** Told when the default falls back to `typescript`. */
   onFallback?: () => void
+  /**
+   * Whether this is a `bun build --compile` pikku. The TypeScript inspector
+   * does not run inside one (the compiler's lib files and the project's
+   * modules are not where it looks), so with no binary the default fails
+   * instead of falling back.
+   */
+  standalone?: boolean
+  /** The running executable, named in that failure. */
+  execPath?: string
 }
 
 /**
@@ -46,6 +55,8 @@ export const resolveInspectorEngine = ({
   config,
   nativeAvailable,
   onFallback,
+  standalone,
+  execPath,
 }: InspectorEngineSources = {}): InspectorEngine => {
   const [source, value] = flag
     ? ['--inspector', flag]
@@ -59,6 +70,11 @@ export const resolveInspectorEngine = ({
       DEFAULT_INSPECTOR_ENGINE === 'native' &&
       nativeAvailable?.() === false
     ) {
+      if (standalone) {
+        throw new Error(
+          `No pikku-inspect binary beside ${execPath ?? 'this pikku'}. A standalone pikku inspects projects with it alone: reinstall pikku (brew reinstall pikku), put the pikku-inspect from the same release next to it, or set PIKKU_INSPECTOR_GO_BIN to its path.`
+        )
+      }
       onFallback?.()
       return 'typescript'
     }
@@ -84,6 +100,13 @@ export const setInspectorEngine = (engine: InspectorEngine): void => {
   selected = engine
 }
 
+/**
+ * Whether this CLI is a `bun build --compile` binary, which embeds its modules
+ * under a virtual `$bunfs` (`B:/~BUN` on Windows) root.
+ */
+export const isStandaloneCli = (moduleUrl: string = import.meta.url): boolean =>
+  moduleUrl.includes('$bunfs') || moduleUrl.includes('~BUN')
+
 /** Whether a `pikku-inspect` binary exists for this platform. */
 export const nativeInspectorAvailable = (): boolean => {
   try {
@@ -103,4 +126,6 @@ export const getInspectorEngine = (): InspectorEngine =>
   (selected ??= resolveInspectorEngine({
     env: process.env.PIKKU_INSPECTOR,
     nativeAvailable: nativeInspectorAvailable,
+    standalone: isStandaloneCli(),
+    execPath: process.execPath,
   }))
