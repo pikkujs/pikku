@@ -38,7 +38,7 @@ Concept names are the stable IDs. On re-run after code changes, re-extract only 
 
 ## How Pikku consumes the blueprint
 
-Full mapping table in `references/pikku-mapping.md`. Summary: entities → Kysely migrations + Zod schemas; commands/queries → `pikkuFunc`s; api surfaces → `wireHTTP`; policies → shared permission functions (collapsing duplicated legacy checks); system workflows → `wireScheduler`/`wireQueueWorker`/`pikkuWorkflowFunc`; integrations → injected services with `defineSecret`/`defineCredential`; test-derived scenarios → `pikkuUserFlow` stories / e2e tests. Humans resolve `migration.json.decisionsNeeded` before any generation starts.
+Full mapping table in `references/pikku-mapping.md`. Summary: entities → Kysely migrations + Zod schemas; commands/queries → `pikkuFunc`s; api surfaces → `wireHTTP`; policies → shared permission functions (collapsing duplicated legacy checks); system workflows → `wireScheduler`/`wireQueueWorker`/`pikkuWorkflowFunc`; integrations → injected services with `defineSecret`/`defineCredential`; test-derived scenarios → `pikkuScenario` / `pikkuFeature` (see `references/tests-to-scenarios.md`). Humans resolve `migration.json.decisionsNeeded` before any generation starts.
 
 ## How uncertainty is represented
 
