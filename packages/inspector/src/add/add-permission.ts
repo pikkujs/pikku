@@ -72,6 +72,146 @@ function inlineGlobalPermissionId(
  * Inspect pikkuPermission, pikkuAuth and pikkuPermissionFactory definitions,
  * and addGlobalPermission registrations.
  */
+type PermissionLiteral = ts.ArrayLiteralExpression | ts.ObjectLiteralExpression
+
+const unwrapExpression = (expression: ts.Expression): ts.Expression => {
+  let current = expression
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isTypeAssertionExpression(current)
+  ) {
+    current = current.expression
+  }
+  return current
+}
+
+/**
+ * Follows `addGlobalPermission`'s argument to the array or object literal it was
+ * written as: a literal itself, or a `const` (declared here or imported) that is
+ * initialised with one. `undefined` when it is built any other way.
+ */
+const resolvePermissionLiteral = (
+  argument: ts.Expression,
+  checker: ts.TypeChecker
+): PermissionLiteral | undefined => {
+  let current = unwrapExpression(argument)
+  for (let hops = 0; hops < 8; hops++) {
+    if (
+      ts.isArrayLiteralExpression(current) ||
+      ts.isObjectLiteralExpression(current)
+    ) {
+      return current
+    }
+    if (!ts.isIdentifier(current)) return undefined
+    let symbol = checker.getSymbolAtLocation(current)
+    if (symbol && symbol.flags & ts.SymbolFlags.Alias) {
+      symbol = checker.getAliasedSymbol(symbol)
+    }
+    const declaration = symbol?.valueDeclaration
+    if (
+      !declaration ||
+      !ts.isVariableDeclaration(declaration) ||
+      !declaration.initializer
+    ) {
+      return undefined
+    }
+    current = unwrapExpression(declaration.initializer)
+  }
+  return undefined
+}
+
+const isNamedExportedFunction = (
+  declaration: ts.FunctionDeclaration,
+  checker: ts.TypeChecker
+): boolean => {
+  if (!declaration.name) return false
+  const flags = ts.getCombinedModifierFlags(declaration)
+  if (flags & ts.ModifierFlags.Default) return false
+  if (flags & ts.ModifierFlags.Export) return true
+  const moduleSymbol = checker.getSymbolAtLocation(declaration.getSourceFile())
+  const symbol = checker.getSymbolAtLocation(declaration.name)
+  return (
+    !!moduleSymbol &&
+    !!symbol &&
+    checker.getExportsOfModule(moduleSymbol).some((exported) => {
+      const resolved =
+        exported.flags & ts.SymbolFlags.Alias
+          ? checker.getAliasedSymbol(exported)
+          : exported
+      return resolved === symbol
+    })
+  )
+}
+
+const isImmediatelyInvoked = (fn: ts.Node): boolean => {
+  let current = fn
+  while (current.parent && ts.isParenthesizedExpression(current.parent)) {
+    current = current.parent
+  }
+  return (
+    !!current.parent &&
+    ts.isCallExpression(current.parent) &&
+    current.parent.expression === current
+  )
+}
+
+type GlobalPermissionActivation =
+  | { kind: 'import' }
+  | { kind: 'factory'; exportName: string }
+  | { kind: 'unreachable' }
+
+/**
+ * How the generated permissions file makes this `addGlobalPermission` call run.
+ * Importing a file only evaluates its top level, so a call at the top level (or
+ * in a function invoked right where it is written) runs on import. A call inside
+ * an exported zero-argument function runs when the generated file calls that
+ * function. Anywhere else nothing ever calls it, so the gate would not exist.
+ */
+const globalPermissionActivation = (
+  call: ts.CallExpression,
+  checker: ts.TypeChecker
+): GlobalPermissionActivation => {
+  let current: ts.Node = call.parent
+  while (current && !ts.isSourceFile(current)) {
+    if (
+      ts.isArrowFunction(current) ||
+      ts.isFunctionExpression(current) ||
+      ts.isFunctionDeclaration(current) ||
+      ts.isMethodDeclaration(current) ||
+      ts.isConstructorDeclaration(current) ||
+      ts.isGetAccessorDeclaration(current) ||
+      ts.isSetAccessorDeclaration(current)
+    ) {
+      if (isImmediatelyInvoked(current)) {
+        current = current.parent
+        continue
+      }
+      if (current.parameters.length > 0) return { kind: 'unreachable' }
+      if (
+        (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) &&
+        ts.isVariableDeclaration(current.parent) &&
+        ts.isIdentifier(current.parent.name) &&
+        isNamedExport(current.parent, checker)
+      ) {
+        return { kind: 'factory', exportName: current.parent.name.text }
+      }
+      if (
+        ts.isFunctionDeclaration(current) &&
+        current.name &&
+        isNamedExportedFunction(current, checker)
+      ) {
+        return { kind: 'factory', exportName: current.name.text }
+      }
+      return { kind: 'unreachable' }
+    }
+    current = current.parent
+  }
+  return { kind: 'import' }
+}
+
 export const addPermission: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
@@ -365,10 +505,12 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     const permissionsArg = args[0]
     const sourceFile = node.getSourceFile().fileName
     let entries: readonly ts.Expression[] | undefined
-    if (permissionsArg && ts.isArrayLiteralExpression(permissionsArg)) {
-      entries = permissionsArg.elements
-    } else if (permissionsArg && ts.isObjectLiteralExpression(permissionsArg)) {
-      entries = permissionsArg.properties.flatMap((p) =>
+    const literal =
+      permissionsArg && resolvePermissionLiteral(permissionsArg, checker)
+    if (literal && ts.isArrayLiteralExpression(literal)) {
+      entries = literal.elements
+    } else if (literal) {
+      entries = literal.properties.flatMap((p) =>
         ts.isPropertyAssignment(p)
           ? [p.initializer]
           : ts.isShorthandPropertyAssignment(p)
@@ -378,7 +520,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     if (!entries) {
       logger.warn(
-        `• addGlobalPermission(...) in ${sourceFile} is not given a literal array or object, so the services its permissions use cannot be seen.`
+        `• addGlobalPermission(...) in ${sourceFile} is not given an array or object it can follow to a literal, so the services its permissions use cannot be seen.`
       )
     }
 
@@ -414,17 +556,15 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       return []
     })
 
-    let exportName: string | null = null
-    const parent = node.parent
-    if (
-      ts.isArrowFunction(parent) &&
-      parent.parameters.length === 0 &&
-      ts.isVariableDeclaration(parent.parent) &&
-      ts.isIdentifier(parent.parent.name) &&
-      isNamedExport(parent.parent, checker)
-    ) {
-      exportName = parent.parent.name.text
+    const activation = globalPermissionActivation(node, checker)
+    if (activation.kind === 'unreachable') {
+      logger.warn(
+        `• addGlobalPermission(...) in ${sourceFile} sits inside a function that nothing calls: only a call at the top level, or inside an exported function with no parameters, is run by the generated permissions file. This global permission is NOT registered. Export it as \`export const name = () => { addGlobalPermission(...) }\` or move it to the top level.`
+      )
+      return
     }
+    const exportName =
+      activation.kind === 'factory' ? activation.exportName : null
 
     const position = node.getStart()
     if (
