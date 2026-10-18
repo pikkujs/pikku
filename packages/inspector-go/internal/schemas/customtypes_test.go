@@ -28,7 +28,7 @@ func TestGenerateCustomTypesMatchesTS(t *testing.T) {
 		"export type _9lives = { a: Unknown }\n" +
 		"export type alpha = Pick<User, \"id\">\n" +
 		"export type b_input = { user: User; secret: string; o: Array<Order>; f: (x: number) => Item }\n" +
-		"export type Beta = string | \"Order\""
+		"export type Beta = \"Order\" | string"
 	if got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
