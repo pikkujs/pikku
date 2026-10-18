@@ -244,6 +244,16 @@ jobs:
         with:
           templates: 'false'
 
+  cli-bunx-smoke:
+    name: CLI bunx smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: bash scripts/cli-bunx-smoke.sh
+
   # Two runners. The sequential one holds what cannot share a machine: the CLI
   # suite spawns subprocesses with 120s timeouts and writes fixtures inside
   # packages/cli that the core suite walks, and the database suites. The rest
