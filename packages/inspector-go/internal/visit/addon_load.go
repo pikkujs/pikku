@@ -445,6 +445,7 @@ func (s *Context) loadAddonMCPTools(ns string, decl *addonDecl, meta *ojson) {
 				s.Log.Debugf("Skipping MCP tool %s: %s", toolName, err.Error())
 				return
 			}
+			tool.FromAddon = true
 			s.State.MCPEndpoints.ToolsMeta.Set(toolName, tool)
 		})
 	}

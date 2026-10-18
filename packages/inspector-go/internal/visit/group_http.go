@@ -131,16 +131,129 @@ func (s *Context) processRoutes(node *ast.Node, parent groupConfig, sourceFile s
 			return
 		}
 		for _, p := range node.Properties() {
-			// refHTTP(...) addon contracts are not ported.
 			if ast.IsPropertyAssignment(p) {
-				s.processRoutes(p.Initializer(), parent, sourceFile)
+				if !s.processRefHTTPContract(p.Initializer(), parent, sourceFile) {
+					s.processRoutes(p.Initializer(), parent, sourceFile)
+				}
 			}
 		}
+	case ast.IsCallExpression(node):
+		s.processRefHTTPContract(node, parent, sourceFile)
 	case ast.IsIdentifier(node):
 		if resolved := s.resolveIdentifier(node, "defineHTTPRoutes"); resolved != nil {
 			s.processRoutes(resolved, parent, sourceFile)
 		}
 	}
+}
+
+// exportedRoute is ExportedHTTPRouteConfigMeta or ExportedHTTPRoutesGroupMeta,
+// as an addon's pikku-http-contracts-meta.gen.json holds them.
+type exportedRoute struct {
+	Method   *string `json:"method"`
+	Route    *string `json:"route"`
+	BasePath string  `json:"basePath"`
+	Tags     []string
+	Auth     *bool
+	SSE      bool
+	Func     *struct {
+		PikkuFuncId string `json:"pikkuFuncId"`
+		PackageName string `json:"packageName"`
+	} `json:"func"`
+	Routes state.Raw `json:"routes"`
+}
+
+// processRefHTTPContract is processRefHTTPContract: refHTTP('ns:name') mounts
+// the routes the addon exported, under the consumer's basePath when it
+// passes one. It reports whether node was such a call.
+func (s *Context) processRefHTTPContract(node *ast.Node, parent groupConfig, sourceFile string) bool {
+	raw, ok := resolveRefContract(node, "refHTTP", &s.State.ExportedContracts.AddonHTTP)
+	if !ok {
+		return false
+	}
+	var contract exportedRoute
+	if raw.Decode(&contract) != nil {
+		return true
+	}
+	basePath := contract.BasePath
+	if args := node.Arguments(); len(args) > 1 && ast.IsObjectLiteralExpression(args[1]) {
+		if p := tsutil.FindPropertyAssignment(args[1], "basePath"); p != nil && ast.IsStringLiteral(p.Initializer()) {
+			basePath = p.Initializer().Text()
+		}
+	}
+	s.processExportedRouteMap(contract.Routes, mergeConfigs(parent, groupConfig{basePath: basePath, tags: contract.Tags, auth: contract.Auth}), sourceFile)
+	return true
+}
+
+func (s *Context) processExportedRouteMap(routes state.Raw, parent groupConfig, sourceFile string) {
+	var entries state.Record[state.Raw]
+	if routes.Decode(&entries) != nil {
+		return
+	}
+	entries.Each(func(_ string, raw state.Raw) {
+		var value exportedRoute
+		if raw.Decode(&value) != nil {
+			return
+		}
+		switch {
+		case value.Method != nil && value.Route != nil && value.Func != nil:
+			s.registerHTTPRouteMeta(&value, sourceFile, parent)
+		case value.Routes != nil && value.Method == nil:
+			s.processExportedRouteMap(value.Routes, mergeConfigs(parent, groupConfig{basePath: value.BasePath, tags: value.Tags, auth: value.Auth}), sourceFile)
+		default:
+			s.processExportedRouteMap(raw, parent, sourceFile)
+		}
+	})
+}
+
+// registerHTTPRouteMeta is registerHTTPRouteMeta: one route an addon exported,
+// recorded from its metadata rather than from source.
+func (s *Context) registerHTTPRouteMeta(route *exportedRoute, sourceFile string, group groupConfig) {
+	method := strings.ToLower(*route.Method)
+	fullRoute := group.basePath + *route.Route
+	tags := append(append([]string{}, group.tags...), route.Tags...)
+	funcName := route.Func.PikkuFuncId
+	fnMeta := s.resolveFunctionMeta(funcName)
+	if fnMeta == nil {
+		s.Log.Critical(diag.FunctionMetadataNotFound, fmt.Sprintf("No function metadata found for '%s'.", funcName))
+		return
+	}
+	params, err := tsutil.PathParams(fullRoute)
+	if err != nil {
+		s.Log.Error(fmt.Sprintf("Failed to parse route '%s': %s", fullRoute, err))
+		return
+	}
+	if route.Func.PackageName == "" {
+		var input string
+		if len(fnMeta.Inputs) > 0 {
+			input = fnMeta.Inputs[0]
+		}
+		s.computeInputTypes(method, input, nil, params)
+	}
+	auth := route.Auth
+	if auth == nil {
+		auth = group.auth
+	}
+	meta := &HTTPRouteMeta{
+		PikkuFuncId: funcName, PackageName: route.Func.PackageName, Route: fullRoute,
+		SourceFile: sourceFile, Method: method, Auth: auth, GroupBasePath: group.basePath,
+	}
+	if len(params) > 0 {
+		meta.Params = params
+	}
+	if len(tags) > 0 {
+		meta.Tags = tags
+	}
+	if route.SSE {
+		meta.SSE = tsutil.BoolPtr(true)
+	}
+	s.State.ServiceAggregation.UsedFunctions.Add(funcName)
+	s.State.HTTP.Files.Add(sourceFile)
+	routes, ok := s.State.HTTP.Meta.Get(method)
+	if !ok {
+		routes = state.NewRecord[*HTTPRouteMeta]()
+		s.State.HTTP.Meta.Set(method, routes)
+	}
+	routes.Set(fullRoute, meta)
 }
 
 func (s *Context) resolveIdentifier(node *ast.Node, unwrap ...string) *ast.Node {

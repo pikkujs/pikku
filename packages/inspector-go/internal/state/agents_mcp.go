@@ -1,5 +1,7 @@
 package state
 
+import "github.com/pikkujs/pikku/packages/inspector-go/internal/jsjson"
+
 // Typed element structs for the mcpEndpoints, agents and scorers sections
 // (add-mcp-resource.ts, add-mcp-prompt.ts, the MCP tool branch of
 // add-functions.ts, add-agent.ts, add-agent-scorer.ts). Field order is the
@@ -36,6 +38,25 @@ type MCPToolMeta struct {
 	OutputSchema *string   `json:"outputSchema"`
 	Middleware   []WireRef `json:"middleware,omitempty"`
 	Surface      string    `json:"surface,omitempty"`
+	// FromAddon: offered from an addon, which load-addon-functions-meta.ts
+	// writes with a key order of its own.
+	FromAddon bool `json:"-"`
+}
+
+func (m *MCPToolMeta) MarshalJSON() ([]byte, error) {
+	if m.FromAddon {
+		return jsjson.Marshal(&struct {
+			PikkuFuncId  string   `json:"pikkuFuncId"`
+			Name         string   `json:"name"`
+			Description  *string  `json:"description,omitempty"`
+			InputSchema  *string  `json:"inputSchema"`
+			OutputSchema *string  `json:"outputSchema"`
+			Tags         []string `json:"tags,omitzero"`
+			Surface      string   `json:"surface,omitempty"`
+		}{m.PikkuFuncId, m.Name, m.Description, m.InputSchema, m.OutputSchema, m.Tags, m.Surface}, "")
+	}
+	type plain MCPToolMeta
+	return jsjson.Marshal((*plain)(m), "")
 }
 
 // MCPPromptMeta is a mcpEndpoints.promptsMeta entry. Arguments is always []
