@@ -237,16 +237,13 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
           displayName: 'Visitor key',
           secretId: 'VISITOR_KEY',
           rotationPeriod: '30day',
-          generate: { type: 'hex', size: 32 },
+          generate: { size: 32 },
           sourceFile: 'a.ts',
         },
       ] as any,
       new Map()
     )
-    assert.deepStrictEqual(result['visitorKey'].generate, {
-      type: 'hex',
-      size: 32,
-    })
+    assert.deepStrictEqual(result['visitorKey'].generate, { size: 32 })
   })
 
   test('a generated secret must declare a rotationPeriod', () => {
@@ -258,7 +255,7 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
               name: 'visitorKey',
               displayName: 'Visitor key',
               secretId: 'VISITOR_KEY',
-              generate: { type: 'hex', size: 32 },
+              generate: { size: 32 },
               sourceFile: 'a.ts',
             },
           ] as any,
@@ -276,7 +273,7 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
           displayName: 'Visitor key',
           secretId: 'VISITOR_KEY',
           rotationPeriod: 'never',
-          generate: { type: 'uuid' },
+          generate: { size: 32 },
           sourceFile: 'a.ts',
         },
       ] as any,

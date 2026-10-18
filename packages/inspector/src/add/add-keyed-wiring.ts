@@ -9,8 +9,8 @@ import type { AddWiring, InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import { parseDurationString } from '@pikku/core/utils'
-import { SECRET_GENERATE_TYPES } from '@pikku/core/secret'
-import type { SecretGenerate, SecretGenerateType } from '@pikku/core/secret'
+import { SECRET_GENERATE_MIN_SIZE } from '@pikku/core/secret'
+import type { SecretGenerate } from '@pikku/core/secret'
 
 export interface KeyedWiringConfig {
   functionName: string
@@ -151,27 +151,15 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
           ? getObjectPropertyLiteral(obj, 'generate')
           : null
       if (generateObj) {
-        const typeValue = getPropertyValue(generateObj, 'type')
         const sizeValue = getPropertyValue(generateObj, 'size')
         if (
-          typeof typeValue !== 'string' ||
-          !(SECRET_GENERATE_TYPES as readonly string[]).includes(typeValue)
+          typeof sizeValue !== 'number' ||
+          !Number.isInteger(sizeValue) ||
+          sizeValue < SECRET_GENERATE_MIN_SIZE
         ) {
           logger.critical(
             ErrorCode.INVALID_VALUE,
-            `${config.label} '${nameValue}' has an invalid 'generate' type. Use one of: ${SECRET_GENERATE_TYPES.join(', ')}.`
-          )
-          return
-        }
-        if (
-          sizeValue !== null &&
-          (typeof sizeValue !== 'number' ||
-            !Number.isInteger(sizeValue) ||
-            sizeValue < 1)
-        ) {
-          logger.critical(
-            ErrorCode.INVALID_VALUE,
-            `${config.label} '${nameValue}' has an invalid 'generate' size. Use a positive whole number.`
+            `${config.label} '${nameValue}' needs a 'generate' size of at least ${SECRET_GENERATE_MIN_SIZE} bytes.`
           )
           return
         }
@@ -182,10 +170,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
           )
           return
         }
-        generateValue = {
-          type: typeValue as SecretGenerateType,
-          ...(typeof sizeValue === 'number' ? { size: sizeValue } : {}),
-        }
+        generateValue = { size: sizeValue }
       }
 
       const sourceFile = node.getSourceFile().fileName

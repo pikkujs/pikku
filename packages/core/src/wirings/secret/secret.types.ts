@@ -1,25 +1,14 @@
+export const SECRET_GENERATE_MIN_SIZE = 16
+
+/** A deployment creates the value: `size` random bytes, hex encoded. */
+export type SecretGenerate = {
+  size: number
+}
+
 /**
  * The declaration {@link defineSecret} takes. It describes a secret, never its
  * value: the value lives in the `SecretService` under `secretId`.
  */
-export const SECRET_GENERATE_TYPES = [
-  'hex',
-  'base64',
-  'uuid',
-  'password',
-] as const
-
-export type SecretGenerateType = (typeof SECRET_GENERATE_TYPES)[number]
-
-/**
- * How a deployment creates the value. `size` is bytes for `hex` and `base64`,
- * characters for `password`, and ignored for `uuid`.
- */
-export type SecretGenerate = {
-  type: SecretGenerateType
-  size?: number
-}
-
 export type CoreSecret<T = unknown> = {
   /** The key code reads it by: `secrets.getSecret('NAME')`. SCREAMING_SNAKE_CASE. */
   name: string
