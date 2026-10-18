@@ -494,24 +494,9 @@ Better Auth serves everything under `basePath` (default `/api/auth`). Call these
 
 The session cookie is `better-auth.session_token` (dev) / `__Secure-better-auth.session_token` (prod).
 
-### Dev quick login
-
-Set `PIKKU_DEV_QUICK_LOGIN=true` and `${basePath}/dev/quick-login` signs in a
-dev admin (`admin@pikku.dev`), creating the user if needed and granting it the
-`admin` and `pikku:console` roots. The account has no lasting password: each
-process sets a random one just before signing in, so it cannot be signed into
-through `/sign-in/email`. The route is off under `NODE_ENV=production` whatever
-the flag says, and refuses a request carrying a proxy-forwarding header, a
-non-loopback `Host` or `Origin`, or `Sec-Fetch-Site: cross-site`. Those are
-headers the client writes, so the real boundary is that `pikku serve` and
-`pikku dev` listen on 127.0.0.1 — don't set the flag on a runtime bound to
-0.0.0.0. An app that has not declared the scopes still gets a session, with a
-warning, since a scopeless dev user is useful.
-
 ### Virtual user sign-in (`virtualUser` plugin)
 
-A different thing from dev quick login, and the one to reach for when "sign in as
-someone" means **a particular kind of user** rather than one fixed admin.
+Signs in as **a particular kind of user**, for development and scenario runs.
 Register it explicitly — it is not automatic:
 
 ```typescript
