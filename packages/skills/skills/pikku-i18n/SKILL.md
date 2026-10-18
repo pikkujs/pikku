@@ -33,11 +33,11 @@ type-checks them, so an i18n mistake blocks the build rather than the release.
 codebase. Reading it as one about the codebase is the most expensive mistake
 available here.
 
-| Axis            | What it covers                                                             | What sets it                               |
-| --------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
-| **Identifiers** | Function, component, type and file names; tables and columns               | Nothing — always English                   |
-| **Meta**        | `description` / `name` / `title` authored in code, rendered by the console | `metaLocale` in `pikku.config.json`        |
-| **Product UI**  | Every string the app shows a user                                          | `messages/<locale>.json` + `defaultLocale` |
+| Axis            | What it covers                                                           | What sets it                               |
+| --------------- | ------------------------------------------------------------------------ | ------------------------------------------ |
+| **Identifiers** | Function, component, type and file names; tables and columns             | Nothing — always English                   |
+| **Meta**        | `description` / `name` / `title` authored in code, read back to the team | `metaLocale` in `pikku.config.json`        |
+| **Product UI**  | Every string the app shows a user                                        | `messages/<locale>.json` + `defaultLocale` |
 
 `baseLocale` stays `en` whatever language the product speaks — it names the
 message _source_ catalogue every other locale is derived from, not the language

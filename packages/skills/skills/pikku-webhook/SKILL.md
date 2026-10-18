@@ -200,7 +200,7 @@ const deliveries = await webhookService.listDeliveries({
 const detail = await webhookService.getDelivery(deliveryId) // { delivery, attempts }
 ```
 
-Building a console screen is `listDeliveries` for the list and `getDelivery` for
+Building a deliveries screen is `listDeliveries` for the list and `getDelivery` for
 the drill-in. A hand-written select over `webhookDelivery` is a sign the wrong
 service is registered.
 

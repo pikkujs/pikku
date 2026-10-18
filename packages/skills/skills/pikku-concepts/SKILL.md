@@ -361,7 +361,7 @@ language. Collapsing them is the common mistake:
 
 Identifiers are the surface every other tool binds to — the generated clients, the RPC map a
 scenario is typed over, the SQL types — and unlike a string an identifier cannot be translated
-later: renaming one is a migration. `metaLocale` exists so a team can read their own Console in
+later: renaming one is a migration. `metaLocale` exists so a team can read their own meta in
 their own language; it is not licence to rename anything. And `baseLocale` in
 `project.inlang/settings.json` stays `en`, because it names the message _source_ every other
 language is cloned from.

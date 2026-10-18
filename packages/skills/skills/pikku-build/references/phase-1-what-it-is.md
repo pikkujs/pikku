@@ -85,9 +85,9 @@ this phase, before there is any meta to be wrong:
 { "metaLocale": "de" }
 ```
 
-It exists for the Pikku Console. Meta is the one part of a project the Console
-renders back to a human, so a team working in German reads their own functions,
-features and scenario reports in German. Default `en` and do not ask when the
+Meta is the one part of a project that is read back by a human, so a team
+working in German reads their own functions, features and scenario reports in
+German. Default `en` and do not ask when the
 project is obviously English. **On every later run, read this field first and
 author descriptions, titles and step templates in it** — a project whose
 `metaLocale` you ignored reports half in one language and half in another.

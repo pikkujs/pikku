@@ -33,9 +33,9 @@ screen, though — see below).
    wirings, schemas or generated clients may have changed.
 4. If validation fails, fix the source cause and rerun. Do not paper over
    generated errors by editing generated files.
-5. Report at the person's level (SKILL.md, "Who you are talking to"): a console
-   link for everything the console can show, and no code unless they are a
-   developer.
+5. Report at the person's level (SKILL.md, "Who you are talking to"): plain
+   words, the app and API links `bun run dev` printed, and no code unless they
+   are a developer.
 
 ## Rules that hold in every phase
 

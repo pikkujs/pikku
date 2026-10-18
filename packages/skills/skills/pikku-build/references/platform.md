@@ -26,9 +26,9 @@ failed; a showcase where every surface is a stub has also failed. The bar for
 each surface below: **it does something the app genuinely needs, and a scenario
 proves it.** A cron job that logs "tick" is not a schedule — it is a comment.
 
-Each surface lands with its console link, filtered by the person's level
-(SKILL.md, "Who you are talking to"): a non-technical person sees the workflow
-or agent page, never the queue, scheduler or wire pages behind it.
+Each surface is reported at the person's level (SKILL.md, "Who you are talking
+to"): a non-technical person hears about the workflow or the agent, never the
+queue, scheduler or wire behind it.
 
 Budget the extra surfaces at one changeset each. They are not free, and a
 half-wired workflow engine is worse than no workflow engine.
@@ -46,7 +46,7 @@ at §1, and it is much cheaper than contriving a use later.
 
 The rest — MCP, triggers and webhooks, extra locales, contract versioning,
 addons — are chosen on merit. Write the motivation into the note. If you cannot
-name what one of *those* is for in this app, drop it and say why in
+name what one of _those_ is for in this app, drop it and say why in
 `knowledge/decisions/`: a documented omission is a stronger showcase than a
 contrived inclusion.
 
@@ -63,7 +63,6 @@ bunx --bun pikku enable events        # realtime events channel + SSE stream
 bunx --bun pikku enable remote-rpc    # internal RPC queue worker + HTTP endpoint
 bunx --bun pikku enable webhook       # outgoing webhook delivery queue worker
 bunx --bun pikku enable scenarios     # scenario instrumentation
-bunx --bun pikku enable console       # console functions
 bunx --bun pikku enable rpc           # public RPC endpoint
 ```
 
@@ -73,7 +72,7 @@ write the function — not the other way round.
 ## The surfaces
 
 Each has an installed skill that is authoritative on its API. Read it before
-writing the wiring; this section says what the surface is *for* and how to prove
+writing the wiring; this section says what the surface is _for_ and how to prove
 it, not how to call it.
 
 ### Workflows — `pikku-workflow`
