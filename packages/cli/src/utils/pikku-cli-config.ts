@@ -992,6 +992,13 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.devPlatformServicesFile) {
+      result.devPlatformServicesFile = join(
+        result.outDir,
+        'pikku-dev-platform-services.gen.ts'
+      )
+    }
+
     // Middleware
     if (!result.middlewareFile) {
       result.middlewareFile = join(middlewareDir, 'pikku-middleware.gen.ts')

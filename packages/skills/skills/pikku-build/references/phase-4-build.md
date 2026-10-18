@@ -166,6 +166,26 @@ it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
 
+**A host can inject platform services into `pikku dev`** the way a deploy does, with
+`dev.contributors` in `pikku.config.json`:
+
+```json
+{
+  "dev": {
+    "contributors": [
+      { "module": "./dev/email-contributor.ts", "export": "email" }
+    ]
+  }
+}
+```
+
+The module exports a `PlatformServiceContributor` (`{ name, imports?, emit }`, the
+type `@pikku/deploy` takes). `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
+from them, and `pikku dev` merges what it returns over the local services before
+`createSingletonServices` runs, so a contributed `emailService` beats
+`LocalEmailService` (and the test-mode spy). Nothing is written without
+contributors, `pikku serve` never loads it, and `NODE_ENV=production` ignores it. An import a contributor names by `file://` URL or absolute path is written as the package export that points at it, or as a path relative to `.pikku/`, so the file typechecks under the project's tsconfig as long as the lines a contributor emits are typed.
+
 ## 6a. Close the changeset against its plan, not against your memory
 
 ```sh
