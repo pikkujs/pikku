@@ -191,7 +191,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: bun run --filter './packages/**' --filter '!@pikku/workflow-graph' tsc
+      # Sequential: each composite package's plain `tsc` re-emits its dist, so in
+      # parallel core's emit races a dependent reading core/dist and it fails
+      # with "File ... is not a module".
+      - run: bun run --filter './packages/**' --filter '!@pikku/workflow-graph' --sequential tsc
 
   build:
     name: Build
