@@ -75,9 +75,19 @@ const reportStatelessCookieMismatch = (
         `cookieCache.strategy is '${reader.cookieCache.strategy}' but the auth config uses '${cookieCache.strategy ?? 'compact'}'`
       )
     }
-    if (cookieCache.version !== undefined && !reader.cookieCache.version) {
+    const configuredVersion = cookieCache.version
+    const readVersion = reader.cookieCache.version
+    if (configuredVersion !== undefined && !readVersion) {
       problems.push(
         'the auth config sets cookieCache.version but the middleware was given none, so cookies of every version still verify'
+      )
+    } else if (
+      typeof configuredVersion === 'string' &&
+      typeof readVersion === 'string' &&
+      configuredVersion !== readVersion
+    ) {
+      problems.push(
+        `cookieCache.version is '${readVersion}' but the auth config uses '${configuredVersion}', so every cookie the instance writes is rejected`
       )
     }
     if (problems.length > 0) {
