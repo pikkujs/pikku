@@ -127,7 +127,7 @@ func readPluginEntry(el *ast.Node, b pluginBindings) (id, betterAuthExport strin
 }
 
 func (s *Context) addAuth(node *ast.Node) {
-	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) || node.Expression().Text() != "pikkuBetterAuth" {
+	if s.resolveCalleeName(node, isPikkuBetterAuth) == "" {
 		return
 	}
 	sourceFile := fileOf(node)
@@ -170,7 +170,7 @@ func (s *Context) addAuth(node *ast.Node) {
 	basePath := defaultAuthBasePath
 	hasCredentials, cookieCache := false, false
 	var config *ast.Node
-	if call := findCall(factory, "betterAuth"); call != nil && len(call.Arguments()) > 0 {
+	if call := s.findCall(factory, isBetterAuth, "betterAuth"); call != nil && len(call.Arguments()) > 0 {
 		config = call.Arguments()[0]
 	}
 

@@ -395,11 +395,28 @@ func (s *Context) addChannel(node *ast.Node) {
 	connectRef := slot(connect, "connect")
 	disconnectRef := slot(disconnect, "disconnect")
 
-	// TS synthesizes a partial FunctionMeta ({pikkuFuncId, sessionless,
-	// inputSchemaName: null, outputSchemaName: null}) for a connect/disconnect
-	// id missing from functions.meta. Not ported: FunctionMeta cannot express
-	// that partial shape, and addFunctions registers every local
-	// pikkuChannelConnectionFunc / pikkuChannelDisconnectionFunc first.
+	// A connect/disconnect handler addFunctions skipped (a local, unexported
+	// pikkuChannelConnectionFunc) gets a partial entry, so the runtime knows
+	// whether it is sessionless.
+	var sessionless *bool
+	if auth := tsutil.GetPropertyValue(obj, "auth").Bool; auth != nil && !*auth {
+		sessionless = tsutil.BoolPtr(true)
+	}
+	for _, ref := range []*channelFuncRef{connectRef, disconnectRef} {
+		if ref == nil || s.State.Functions.Meta.At(ref.PikkuFuncId) != nil {
+			continue
+		}
+		var fm jsObject
+		fm.set("pikkuFuncId", ref.PikkuFuncId)
+		if sessionless != nil {
+			fm.set("sessionless", true)
+		}
+		fm.set("inputSchemaName", state.Raw("null"))
+		fm.set("outputSchemaName", state.Raw("null"))
+		s.State.Functions.Meta.Set(ref.PikkuFuncId, &FunctionMeta{
+			PikkuFuncId: ref.PikkuFuncId, Sessionless: sessionless, Verbatim: fm.raw(),
+		})
+	}
 
 	if message != nil {
 		s.State.ServiceAggregation.UsedFunctions.Add(message.PikkuFuncId)

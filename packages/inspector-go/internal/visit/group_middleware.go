@@ -99,10 +99,7 @@ func renameTempDefinitions(defs *state.Record[*state.MiddlewareDefinition], defi
 }
 
 func (s *Context) addMiddleware(node *ast.Node) {
-	if !ast.IsCallExpression(node) || !ast.IsIdentifier(node.Expression()) {
-		return
-	}
-	switch node.Expression().Text() {
+	switch s.resolveCalleeName(node, middlewareHelpers) {
 	case "pikkuMiddleware":
 		s.addPikkuMiddleware(node)
 	case "pikkuMiddlewareFactory":
@@ -189,7 +186,7 @@ func (s *Context) addPikkuMiddlewareFactory(node *ast.Node) {
 	services := state.ServicesMeta{Optimized: false, Services: []string{}}
 	wires := WiresMeta{Optimized: true, Wires: []string{}}
 	var name, description *string
-	if call := findCall(factory, "pikkuMiddleware"); call != nil && len(call.Arguments()) > 0 {
+	if call := s.findCall(factory, middlewareHelpers, "pikkuMiddleware"); call != nil && len(call.Arguments()) > 0 {
 		mwArg := call.Arguments()[0]
 		if ast.IsObjectLiteralExpression(mwArg) {
 			name, description = nameAndDescription(mwArg)
@@ -372,7 +369,7 @@ func (s *Context) addPikkuChannelMiddlewareFactory(node *ast.Node) {
 		return
 	}
 	services := state.ServicesMeta{Optimized: false, Services: []string{}}
-	if call := findCall(factory, "pikkuChannelMiddleware"); call != nil && len(call.Arguments()) > 0 {
+	if call := s.findCall(factory, middlewareHelpers, "pikkuChannelMiddleware"); call != nil && len(call.Arguments()) > 0 {
 		if h := call.Arguments()[0]; tsutil.IsFunctionLike(h) {
 			services = servicesOf(h)
 		}

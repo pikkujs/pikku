@@ -240,15 +240,15 @@ func (s *Context) definitionId(node *ast.Node, wrapper, example string) (id stri
 	return id, r.exportedName, true
 }
 
-// findCall is the `findPikkuXCall` walk: the first call to callee in
-// pre-order, node itself included.
-func findCall(node *ast.Node, callee string) *ast.Node {
-	if ast.IsCallExpression(node) && ast.IsIdentifier(node.Expression()) && node.Expression().Text() == callee {
+// findCall is the `findPikkuXCall` walk: the first call in pre-order, node
+// itself included, that resolves to callee among the helpers isKnown names.
+func (s *Context) findCall(node *ast.Node, isKnown func(string) bool, callee string) *ast.Node {
+	if ast.IsCallExpression(node) && s.resolveCalleeName(node, isKnown) == callee {
 		return node
 	}
 	var found *ast.Node
 	node.ForEachChild(func(c *ast.Node) bool {
-		found = findCall(c, callee)
+		found = s.findCall(c, isKnown, callee)
 		return found != nil
 	})
 	return found
