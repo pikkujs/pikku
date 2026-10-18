@@ -216,6 +216,21 @@ export function aggregateRequiredServices(
     }
   })
 
+  // 3b. Global permissions and global middleware apply to every function, so
+  // whatever they touch is required wherever any function runs.
+  for (const registration of state.permissions?.global ?? []) {
+    for (const definitionId of registration.definitionIds) {
+      addServices(state.permissions.definitions[definitionId]?.services)
+    }
+  }
+  for (const [instanceId, instance] of Object.entries(
+    state.middleware?.instances ?? {}
+  )) {
+    if (instanceId.startsWith('global:')) {
+      addServices(state.middleware.definitions[instance.definitionId]?.services)
+    }
+  }
+
   // 4. Services from middleware/permission groups used in wirings
   // We need to check all wirings and expand any tag/HTTP-pattern groups they use
   for (const method of [

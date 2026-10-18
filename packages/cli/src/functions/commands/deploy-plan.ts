@@ -92,11 +92,6 @@ export const deployPlan = pikkuSessionlessFunc<
       bundler,
     })
 
-    if (result.manifest.units.length === 0) {
-      logger.info('No deployment units found.')
-      return
-    }
-
     // Show plan
     const deployProvider = createEmptyProvider()
     const currentState = await deployProvider.getCurrentState(
