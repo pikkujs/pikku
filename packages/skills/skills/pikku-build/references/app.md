@@ -4,7 +4,7 @@ You have a scaffolded project with skills installed. This skill owns everything
 from here: no hosted account, no card, no hosted build — while keeping the
 project shaped so a hosting platform can adopt it later with zero rework.
 
-**Four phases, and you do not skip ahead.** This file is the index: read it,
+**Five phases, and you do not skip ahead.** This file is the index: read it,
 then open each phase file when you reach that phase, not before. Section
 numbers (§0-§9) are stable and are cited elsewhere as "app §N".
 
@@ -14,7 +14,7 @@ numbers (§0-§9) are stable and are cited elsewhere as "app §N".
 | 2. Who it is for — virtual users, roles, frontends             | §3 people, §4 apps                                                  | `references/phase-2-people-and-apps.md` |
 | 3. The plan — file the work as changes, in dependency order    | §5 changes, §5a technical plan                                      | `references/phase-3-plan.md`            |
 | 4. Build, one changeset at a time                              | §6 build, §6a close against the plan, §6b feed back                 | `references/phase-4-build.md`           |
-| 4. Prove it, make it look designed, ship it                    | §7 scenarios, §7a coverage, §8 look and theme (§8a, §8b), §9 ship   | `references/phase-4-prove-and-ship.md`  |
+| 5. Prove it, make it look designed, ship it                    | §7 scenarios, §7a coverage, §8 look and theme (§8a, §8b), §9 ship   | `references/phase-5-prove-and-ship.md`  |
 
 Work through them in order rather than searching. Each changeset repeats §5a,
 §6-§7a; §8 and §9 run when the queue is empty (design is read before the first

@@ -1,6 +1,6 @@
 # Phase 4 — Build (§6, §6a, §6b)
 
-Part of the app workflow (`app.md` is the index and the rules that hold throughout). Read this for each changeset. Proving and shipping it are §7-§9, in `phase-4-prove-and-ship.md`.
+Part of the app workflow (`app.md` is the index and the rules that hold throughout). Read this for each changeset. Proving and shipping it are §7-§9, in `phase-5-prove-and-ship.md`.
 
 ## 6. Build each changeset
 
