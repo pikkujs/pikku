@@ -7,27 +7,27 @@
       "dependencies": {
         "@ai-sdk/openai": "^4.0.96",
         "@ai-sdk/openai-compatible": "^3.0.71",
-        "@pikku/addon-admin": "^0.12.12",
-        "@pikku/addon-console": "^0.12.62",
+        "@pikku/addon-admin": "^0.12.13",
+        "@pikku/addon-console": "^0.12.63",
         "@pikku/ai-vercel": "^0.12.15",
         "@pikku/assistant-ui": "^0.12.13",
         "@pikku/better-auth": "^0.12.56",
         "@pikku/bun-server": "^0.12.14",
         "@pikku/cloudflare": "^0.12.29",
-        "@pikku/core": "0.12.142",
+        "@pikku/core": "0.12.143",
         "@pikku/fetch": "0.12.12",
-        "@pikku/kysely": "0.13.37",
+        "@pikku/kysely": "0.13.38",
         "@pikku/kysely-bun-sqlite": "^0.12.10",
         "@pikku/kysely-node-sqlite": "^0.12.9",
         "@pikku/kysely-sqlite": "^0.12.17",
         "@pikku/react": "^0.12.16",
-        "@pikku/schedule": "^0.12.9",
+        "@pikku/schedule": "^0.12.10",
         "@pikku/schema-cfworker": "^0.12.8",
         "ai": "^7.0.143",
         "sqlite-vec": "^0.1.9",
       },
       "devDependencies": {
-        "@pikku/cli": "0.12.190",
+        "@pikku/cli": "0.12.191",
         "@pikku/deploy-standalone": "^0.12.26",
         "@types/node": "^26",
         "oxfmt": "^0.73.0",
@@ -91,13 +91,13 @@
       "dependencies": {
         "@ai-sdk/openai": "^4.0.96",
         "@ai-sdk/openai-compatible": "^3.0.71",
-        "@pikku/addon-admin": "^0.12.12",
-        "@pikku/addon-console": "^0.12.62",
+        "@pikku/addon-admin": "^0.12.13",
+        "@pikku/addon-console": "^0.12.63",
         "@pikku/ai-vercel": "^0.12.15",
         "@pikku/better-auth": "^0.12.56",
         "@pikku/cloudflare": "^0.12.29",
-        "@pikku/core": "^0.12.142",
-        "@pikku/kysely": "^0.13.37",
+        "@pikku/core": "^0.12.143",
+        "@pikku/kysely": "^0.13.38",
         "@pikku/schema-cfworker": "^0.12.8",
         "@standard-schema/spec": "^1.1.0",
         "ai": "^7.0.143",
@@ -128,12 +128,12 @@
     },
   },
   "overrides": {
-    "@pikku/cli": "0.12.190",
-    "@pikku/core": "0.12.142",
+    "@pikku/cli": "0.12.191",
+    "@pikku/core": "0.12.143",
     "@pikku/deploy": "0.12.15",
     "@pikku/fetch": "0.12.12",
     "@pikku/knowledge": "0.12.20",
-    "@pikku/kysely": "0.13.37",
+    "@pikku/kysely": "0.13.38",
     "@pikku/ws": "0.12.10",
     "typescript": "^6.0.3",
   },
@@ -516,9 +516,9 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.88.0", "", { "os": "win32", "cpu": "x64" }, "sha512-3Sz6rVWe8Dy+ufsXurFN1GX2dX43F/lQMSLelK9gFjiba7nHvLlqlhR5cHlWVnCpSqUY1hN9pyCX9XToe6ve6g=="],
 
-    "@pikku/addon-admin": ["@pikku/addon-admin@0.12.12", "", { "peerDependencies": { "@pikku/better-auth": "^0.12.55", "@pikku/core": "^0.12.140", "zod": "^4" }, "optionalPeers": ["@pikku/better-auth"] }, "sha512-cXBuMrikNZAO8QMoMDi2cXCQgnjrMst8xBeJPP8ZIdBVWkPKuz33EkLlap8ZiJzmCpxFrWutMXdyoIw+M9BRmg=="],
+    "@pikku/addon-admin": ["@pikku/addon-admin@0.12.13", "", { "peerDependencies": { "@pikku/better-auth": "^0.12.55", "@pikku/core": "^0.12.143", "zod": "^4" }, "optionalPeers": ["@pikku/better-auth"] }, "sha512-6C6TFaz9dm8tHKKhz1hsixkNkbvOgZER62JhpACtdLZfclJENM7gz3QF+J0s6SJ7EYxnIYuESK8fuPt2DxWMxw=="],
 
-    "@pikku/addon-console": ["@pikku/addon-console@0.12.62", "", { "dependencies": { "@pikku/code-edit": "^0.12.7", "@pikku/knowledge": "^0.12.20", "json-schema": "^0.4.0", "open": "^11.0.1" }, "peerDependencies": { "@pikku/better-auth": "^0.12.56", "@pikku/cli": "^0.12.189", "@pikku/core": "^0.12.142" }, "optionalPeers": ["@pikku/better-auth"] }, "sha512-IgULo5S7lR6tGB7PzHALQ9PJdBNb8nUrxZ7hd0kO4iSX/lDahh1N4I63M9DjznvvdSa6ACRPB+qObayOokgeyQ=="],
+    "@pikku/addon-console": ["@pikku/addon-console@0.12.63", "", { "dependencies": { "@pikku/code-edit": "^0.12.7", "@pikku/knowledge": "^0.12.20", "json-schema": "^0.4.0", "open": "^11.0.1" }, "peerDependencies": { "@pikku/better-auth": "^0.12.56", "@pikku/cli": "^0.12.191", "@pikku/core": "^0.12.143" }, "optionalPeers": ["@pikku/better-auth"] }, "sha512-tM6+fiqCoDB0XN2M24zcNwxFXabTPxu8VRkIz6kFZpZbW9EbAtKN53X8stCDkbU1TKZ4fG8ojDQZVNbfqRATGg=="],
 
     "@pikku/ai-vercel": ["@pikku/ai-vercel@0.12.15", "", { "peerDependencies": { "@pikku/core": "^0.12.138", "ai": "^7.0.0" } }, "sha512-GzHLgdFdBwyHsfk7oXrvmrHd6cGeNMdW/dq+yHoIq+nbqDJ0MT0rtruperrq8JrZSqK1MHurAtMdLuSJTRcKyw=="],
 
@@ -528,13 +528,13 @@
 
     "@pikku/bun-server": ["@pikku/bun-server@0.12.14", "", { "peerDependencies": { "@pikku/core": "^0.12.141", "@pikku/modelcontextprotocol": "^0.12.14" }, "optionalPeers": ["@pikku/modelcontextprotocol"] }, "sha512-NwGMt+ZAvQ+BEzu2VuPDw2ncInW9s6OgyYNUEypszkZ91Jm4p6C97U0/9QIY8OB/iBTCcWjMCSw4tnsBDisy8g=="],
 
-    "@pikku/cli": ["@pikku/cli@0.12.190", "", { "dependencies": { "@ai-sdk/openai": "^4.0.42", "@ai-sdk/openai-compatible": "^3.0.30", "@electric-sql/pglite": "0.5.8", "@electric-sql/pglite-pgvector": "0.0.9", "@jridgewell/trace-mapping": "^0.3.31", "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4", "@pikku/ai-vercel": "^0.12.15", "@pikku/better-auth": "^0.12.56", "@pikku/bun-server": "^0.12.14", "@pikku/code-edit": "^0.12.7", "@pikku/deploy": "^0.12.15", "@pikku/deploy-cloudflare": "^0.12.21", "@pikku/deploy-standalone": "^0.12.26", "@pikku/fetch": "^0.12.12", "@pikku/inspector": "^0.12.106", "@pikku/knowledge": "^0.12.20", "@pikku/kysely": "^0.13.37", "@pikku/migrator-sql": "^0.12.8", "@pikku/n8n-import": "^0.0.8", "@pikku/node-http-server": "^0.12.20", "@pikku/openapi-parser": "^0.12.23", "@pikku/schedule": "^0.12.9", "@pikku/skills": "^0.12.57", "@pikku/websocket": "^0.12.5", "@types/cookie": "^1.0.0", "@types/json-schema": "^7.0.15", "ai": "^7.0.66", "chalk": "^6.0.0", "chokidar": "^5.0.0", "esbuild": "~0.28.2", "giget": "^3.3.1", "istanbul-lib-instrument": "^6.0.3", "kysely": "^0.29.5", "mysql2": "^3.24.5", "open": "^11.0.1", "openapi-types": "^12.1.3", "path-to-regexp": "^8.4.2", "pg": "^8.23.0", "semver": "^7.8.5", "sqlite-vec": "0.1.9", "tinyglobby": "^0.2.17", "ts-json-schema-generator": "2.9.1-next.18", "tsx": "^4.23.12", "yaml": "^2.9.0", "zod": "^4.4.3" }, "peerDependencies": { "@pikku/core": "^0.12.142", "@pikku/playwright": "^0.12.88", "@pikku/ws": "^0.12.10", "better-auth": "^1.7.5", "ws": "^8.21.3" }, "optionalPeers": ["@pikku/playwright", "@pikku/ws", "better-auth", "ws"], "bin": { "pikku": "dist/bin/pikku.js" } }, "sha512-DyszGvP8ehGxm3V5ya7PH9j5dpm5rSavci658g9X6cHhzEF7zingNIXiFs7WbQ0cq3GICGC8BzwysTv6TL2khQ=="],
+    "@pikku/cli": ["@pikku/cli@0.12.191", "", { "dependencies": { "@ai-sdk/openai": "^4.0.42", "@ai-sdk/openai-compatible": "^3.0.30", "@electric-sql/pglite": "0.5.8", "@electric-sql/pglite-pgvector": "0.0.9", "@jridgewell/trace-mapping": "^0.3.31", "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4", "@pikku/ai-vercel": "^0.12.15", "@pikku/better-auth": "^0.12.56", "@pikku/bun-server": "^0.12.14", "@pikku/code-edit": "^0.12.7", "@pikku/deploy": "^0.12.15", "@pikku/deploy-cloudflare": "^0.12.21", "@pikku/deploy-standalone": "^0.12.26", "@pikku/fetch": "^0.12.12", "@pikku/inspector": "^0.12.106", "@pikku/knowledge": "^0.12.20", "@pikku/kysely": "^0.13.38", "@pikku/migrator-sql": "^0.12.8", "@pikku/n8n-import": "^0.0.8", "@pikku/node-http-server": "^0.12.20", "@pikku/openapi-parser": "^0.12.23", "@pikku/schedule": "^0.12.10", "@pikku/skills": "^0.12.58", "@pikku/websocket": "^0.12.5", "@types/cookie": "^1.0.0", "@types/json-schema": "^7.0.15", "ai": "^7.0.66", "chalk": "^6.0.0", "chokidar": "^5.0.0", "esbuild": "~0.28.2", "giget": "^3.3.1", "istanbul-lib-instrument": "^6.0.3", "kysely": "^0.29.5", "mysql2": "^3.24.5", "open": "^11.0.1", "openapi-types": "^12.1.3", "path-to-regexp": "^8.4.2", "pg": "^8.23.0", "semver": "^7.8.5", "sqlite-vec": "0.1.9", "tinyglobby": "^0.2.17", "ts-json-schema-generator": "2.9.1-next.18", "tsx": "^4.23.12", "yaml": "^2.9.0", "zod": "^4.4.3" }, "peerDependencies": { "@pikku/core": "^0.12.143", "@pikku/playwright": "^0.12.88", "@pikku/ws": "^0.12.10", "better-auth": "^1.7.5", "ws": "^8.21.3" }, "optionalPeers": ["@pikku/playwright", "@pikku/ws", "better-auth", "ws"], "bin": { "pikku": "dist/bin/pikku.js" } }, "sha512-8GXs3fHuT/pYbHVvzvazmiE0mpiBkGwQl5a6ZN5vlsZzs1QUJD34bm7nVb0KXPrPWIRzxOXsNpVhm909SNiXxQ=="],
 
     "@pikku/cloudflare": ["@pikku/cloudflare@0.12.29", "", { "dependencies": { "kysely-d1": "^0.4.0" }, "peerDependencies": { "@pikku/core": "^0.12.138", "@pikku/kysely": "^0.13.35", "@pikku/modelcontextprotocol": "^0.12.17", "kysely": "^0.29.0" }, "optionalPeers": ["@pikku/modelcontextprotocol"] }, "sha512-4tAUA894NU/LbrBODJZn1yR42HfuRbjCuyUIo247yYnNdjA64b1ou4MByA3KENj9EY+weirvBtkYCUWqjKfcyg=="],
 
     "@pikku/code-edit": ["@pikku/code-edit@0.12.7", "", { "dependencies": { "typescript": "^6.0.3" } }, "sha512-SkrK9320mnEHV5LI1uK6p7YzVISG7n7knrKkQNeRySZS7R99xmhA8UPp+8Q0GcB0oig/Mx++3gjS2UKYeUKHRw=="],
 
-    "@pikku/core": ["@pikku/core@0.12.142", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@types/json-schema": "^7.0.15", "cookie": "^2.0.1", "json-schema": "^0.4.0", "path-to-regexp": "^8.4.2", "picoquery": "^2.5.0" } }, "sha512-B0x0u4w6hucZ4xZIwTeEw+f3KxPRHGoCLwY+XopPaJzNKfMlvBQSw+vUyjvMZzeUhOxtUtceiQHUR7SSqOe8Gg=="],
+    "@pikku/core": ["@pikku/core@0.12.143", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@types/json-schema": "^7.0.15", "cookie": "^2.0.1", "json-schema": "^0.4.0", "path-to-regexp": "^8.4.2", "picoquery": "^2.5.0" } }, "sha512-WSD5tQqe6EYdhILkR7w/VHyfpa9MyG0JRCy83IMK6xuRHViLSKD9jELsR4blYlrX/e2F9sAHxEmhgrLZrqPOnA=="],
 
     "@pikku/deploy": ["@pikku/deploy@0.12.15", "", { "dependencies": { "semver": "^7.8.5" } }, "sha512-1x9XHoy7Z2dGi4+Yw9uTYtSnZFCiT9WlG4+4+HCnJOxH08zwX7u/6IMRW4xj9Ljz9FnBk4VbttqMALbLE7IewA=="],
 
@@ -550,7 +550,7 @@
 
     "@pikku/knowledge": ["@pikku/knowledge@0.12.20", "", { "dependencies": { "zod": "^4.4.3" } }, "sha512-5FDxmFJ7GpeBEP427azHZmvoIj1dd4qmU1UjnjEyYBL4IJnS8IjzwNgVdeT3yl2V7ELs51pcxUk6zwzOua1JBw=="],
 
-    "@pikku/kysely": ["@pikku/kysely@0.13.37", "", { "dependencies": { "kysely": "^0.29.5" }, "peerDependencies": { "@pikku/core": "^0.12.142" }, "bin": { "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js" } }, "sha512-yvtQ1Wfbm4SthM+mbsEy+4H/LNxz0Gau3ub1ryn17mvvHXB0MifAoUiLqvLA0Kbr3ZNCIFMlsfJGSxrXXD52zA=="],
+    "@pikku/kysely": ["@pikku/kysely@0.13.38", "", { "dependencies": { "kysely": "^0.29.5" }, "peerDependencies": { "@pikku/core": "^0.12.143" }, "bin": { "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js" } }, "sha512-2kUxu1fsy4L2gT9f0uAdNe7cbAyNwMEySxRTvsgI6VFWL68ws157kKzhG5zuQKVtqOa3mCj8HtF/FDQESz6YkA=="],
 
     "@pikku/kysely-bun-sqlite": ["@pikku/kysely-bun-sqlite@0.12.10", "", { "dependencies": { "@pikku/kysely": "^0.13.18", "@pikku/kysely-sqlite": "^0.12.15", "kysely": "^0.29.5" }, "peerDependencies": { "@pikku/core": "^0.12.124" } }, "sha512-y0KDxLAVu8ACiSTAdhfu1Bax2wmF5bbKvp+mhr0q32lKWkKc7S+oI1Vfobuucg8jsb8JOmYm5AoevgWOYSn4TA=="],
 
@@ -572,11 +572,11 @@
 
     "@pikku/react": ["@pikku/react@0.12.16", "", { "dependencies": { "@pikku/fetch": "^0.12.11" }, "peerDependencies": { "react": "^18 || ^19", "react-dom": "^18 || ^19" } }, "sha512-TZyxFeIz50xBmJ5MkyA+wJEKvxXPuoJYgaJlLFnj+VY7tV4glj+TRGgyCFaApUGtu0QtnRH9xpWt3dyck2SLpw=="],
 
-    "@pikku/schedule": ["@pikku/schedule@0.12.9", "", { "dependencies": { "cron": "^4.4.0", "cron-schedule": "^6.0.0" }, "peerDependencies": { "@pikku/core": "^0.12.138" } }, "sha512-r6AVYFc0ONdjO+GMdQSsKV02Wqkc7sEB7ys9Mt8I602VRZkzYznZmoe0aDJynOnxtkCzIOIURMVUhp/Aj+/wOA=="],
+    "@pikku/schedule": ["@pikku/schedule@0.12.10", "", { "dependencies": { "cron": "^4.4.0", "cron-schedule": "^6.0.0" }, "peerDependencies": { "@pikku/core": "^0.12.143" } }, "sha512-qaBlGBksUb/TnU27osWcNydkkzGx5KAqWMFIQJfViCVeIlud0KV0EHshGqQz/LolgtiTF7aQI2E1Cvw2XbHLNQ=="],
 
     "@pikku/schema-cfworker": ["@pikku/schema-cfworker@0.12.8", "", { "dependencies": { "@cfworker/json-schema": "^4.1.1" }, "peerDependencies": { "@pikku/core": "^0.12.138" } }, "sha512-JV3INh5jsG3LHdXBu8fKNA4f2Wthri5A/zBcbAvPfxRqsjD+KMzBkMgs+EN+SGsz+fs/sG4qljygUBd/iiSSqQ=="],
 
-    "@pikku/skills": ["@pikku/skills@0.12.57", "", {}, "sha512-3c4AKfYHoKbnjT5euTlqBj/B/DnKGZMy4dEuS709AqA6KZlJrwLyeohGk99CphBkEu8Pi3jbOiXRuWXOzQ0Lsg=="],
+    "@pikku/skills": ["@pikku/skills@0.12.58", "", {}, "sha512-cNMQ7mShwKg90pRQK0RcF3Fbh1noxwTSGPnV3Fn9fV6nUz4p6ypq9WY8ZK6lU0Bg1FvjbrZGpeZroMz96tIG4Q=="],
 
     "@pikku/voice-agents": ["@pikku/voice-agents@0.0.6", "", { "peerDependencies": { "react": "^18 || ^19" } }, "sha512-AJ6m4TQmaiSkklSfE23TX0TwIeLAgLs8tE0dTpjKkA/SX39C/OfZVGwfMZgdm3GPI4rO0t1dR1SYkvm2tSk5bg=="],
 

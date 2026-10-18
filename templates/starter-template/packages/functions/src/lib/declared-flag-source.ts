@@ -1,6 +1,6 @@
 import type { DeclaredFlag } from '@pikku/core/flag'
 import type { FeatureFlagSource } from '@pikku/core/services'
-import { FEATURE_FLAGS } from '#pikku/scopes/pikku-flags.gen.js'
+import { declaredFeatureFlags } from '#pikku/scopes/pikku-flags-manifest.gen.js'
 
 /**
  * Tell a flag source which flags this app declares.
@@ -22,5 +22,5 @@ export function declareFlagsTo(source: FeatureFlagSource): void {
   const takesDeclarations = source as Partial<{
     setDeclared(declared: DeclaredFlag[]): void
   }>
-  takesDeclarations.setDeclared?.(FEATURE_FLAGS)
+  takesDeclarations.setDeclared?.(declaredFeatureFlags)
 }
