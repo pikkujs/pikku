@@ -18,12 +18,24 @@
 //   2. A peer another package bounds may not be declared unbounded (`*`).
 //      A wildcard intersects everything, so rule 1 can never catch it, yet it
 //      promises compatibility with majors that do not exist yet.
+//   3. A range on a workspace package, in any dependency field of any
+//      workspace, must admit that package's current version. Under 0.x caret
+//      rules `^0.12.108` excludes the next minor, so a range nobody moved
+//      after a minor bump tells npm to fetch the old version instead of the
+//      one built beside it. `changeset version` rewrites the ranges of the
+//      packages it versions; this catches the ones it does not reach.
 //
 // Run with --fix to narrow unbounded ranges. A first-party peer narrows to the
 // version of that workspace package, which is demonstrably what the declaring
 // package compiles against; a third-party peer narrows to the widest bound its
 // siblings declare. Rule 1 conflicts are a judgement call, never auto-fixed.
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs'
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+  existsSync,
+} from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -35,6 +47,14 @@ import {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SCAN_DIRS = ['packages', 'templates']
+// Rule 3 also covers the workspaces that only consume packages.
+const CONSUMER_DIRS = ['examples', 'verifiers', 'e2e']
+const DEPENDENCY_FIELDS = [
+  'dependencies',
+  'peerDependencies',
+  'devDependencies',
+  'optionalDependencies',
+]
 const FIX = process.argv.includes('--fix')
 
 /** Recursively collect every package.json, skipping build and install output. */
@@ -64,18 +84,25 @@ function compareFloors(a, b) {
 }
 
 const files = SCAN_DIRS.flatMap((d) => findPackageJsons(join(ROOT, d)))
+const consumerFiles = CONSUMER_DIRS.filter((d) =>
+  existsSync(join(ROOT, d))
+).flatMap((d) => findPackageJsons(join(ROOT, d)))
+
+const readPackageJson = (file) => {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    return undefined
+  }
+}
 
 /** peer name -> range -> [{ pkg, file }] */
 const declarations = new Map()
 /** workspace package name -> its own version */
 const workspaceVersions = new Map()
 for (const file of files) {
-  let pkg
-  try {
-    pkg = JSON.parse(readFileSync(file, 'utf8'))
-  } catch {
-    continue
-  }
+  const pkg = readPackageJson(file)
+  if (!pkg) continue
   if (pkg.name && pkg.version) workspaceVersions.set(pkg.name, pkg.version)
   for (const [name, range] of Object.entries(pkg.peerDependencies ?? {})) {
     if (typeof range !== 'string') continue
@@ -134,13 +161,62 @@ for (const [name, byRange] of [...declarations].sort()) {
   if (pairs.length > 0) disjoint.push({ name, pairs, byRange })
 }
 
+/**
+ * The range a `workspace:` spec stands for, or null when it names no range
+ * (`workspace:*`, `workspace:^`), which always resolves to the local copy.
+ */
+function workspaceRange(spec) {
+  const range = spec.startsWith('workspace:')
+    ? spec.slice('workspace:'.length)
+    : spec
+  if (['*', '^', '~', ''].includes(range)) return null
+  return isParseable(range) ? range : null
+}
+
+const stale = []
+for (const file of [...files, ...consumerFiles]) {
+  const pkg = readPackageJson(file)
+  if (!pkg) continue
+  for (const field of DEPENDENCY_FIELDS) {
+    for (const [name, spec] of Object.entries(pkg[field] ?? {})) {
+      const local = workspaceVersions.get(name)
+      if (!local || typeof spec !== 'string') continue
+      const range = workspaceRange(spec)
+      if (range && intersects(range, local) === false) {
+        stale.push({ pkg: pkg.name ?? file, field, name, spec, local })
+      }
+    }
+  }
+}
+
 const label = (users) => users.map((u) => u.pkg).join(', ')
 
-if (disjoint.length === 0 && unbounded.length === 0 && invalid.length === 0) {
+if (
+  disjoint.length === 0 &&
+  unbounded.length === 0 &&
+  invalid.length === 0 &&
+  stale.length === 0
+) {
   console.log(
-    `✓ ${declarations.size} peer dependencies across ${files.length} package.json files — every range mutually satisfiable, none unbounded`
+    `✓ ${declarations.size} peer dependencies across ${files.length} package.json files — every range mutually satisfiable, none unbounded; every internal range admits its workspace version`
   )
   process.exit(0)
+}
+
+for (const { pkg, field, name, spec, local } of stale) {
+  console.error(
+    `✖ ${pkg}: ${field}.${name} is "${spec}", which excludes the workspace's ${name}@${local}`
+  )
+}
+if (stale.length > 0) {
+  console.error(
+    `  Widen each range to admit the version in the repo (\`changeset version\` does this for the packages it versions).\n`
+  )
+  if (FIX && disjoint.length === 0 && invalid.length === 0) {
+    // --fix narrows wildcards only; a stale range is a compatibility claim
+    // somebody has to make.
+    process.exit(1)
+  }
 }
 
 if (!FIX || disjoint.length > 0 || invalid.length > 0) {
