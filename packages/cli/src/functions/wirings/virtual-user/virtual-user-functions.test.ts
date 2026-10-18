@@ -178,14 +178,17 @@ describe('serializeVirtualUserFunctions', () => {
       'PLATFORM_USER_ID',
       js
     )(findPlatformUserId, PLATFORM_USER_ID)
-    const authWith = (row: { id: string } | null) => async () => ({
-      $context: Promise.resolve({
-        internalAdapter: {
-          findUserByEmail: async (email: string) =>
-            row && email === PLATFORM_USER_EMAIL ? { user: row } : null,
-        },
-      }),
-    })
+    const authWith =
+      (row: { id: string } | null, accounts: { providerId: string }[] = []) =>
+      async () => ({
+        $context: Promise.resolve({
+          internalAdapter: {
+            findUserByEmail: async (email: string) =>
+              row && email === PLATFORM_USER_EMAIL ? { user: row } : null,
+            findAccounts: async () => accounts,
+          },
+        }),
+      })
 
     assert.equal(
       await platformUserId(authWith({ id: '0b7c5e1a-uuid' })),
@@ -193,6 +196,13 @@ describe('serializeVirtualUserFunctions', () => {
     )
     assert.equal(await platformUserId(authWith(null)), 'pikku-platform')
     assert.equal(await platformUserId(undefined), 'pikku-platform')
+    await assert.rejects(
+      platformUserId(
+        authWith({ id: 'squatter' }, [{ providerId: 'credential' }])
+      ),
+      /reserved for the platform user/,
+      'a user who signed up with the reserved address must not become the scheduler session'
+    )
   })
 
   // A run is capped by a budget; how often runs happen is the schedule. The two
