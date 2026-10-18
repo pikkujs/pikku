@@ -21,12 +21,14 @@ export default defineConfig({
     // on message edits. Must run first.
     paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
     tailwindcss(),
-    tanstackStart(),
     // Stamps the `data-testid`s browser scenarios address controls by, derived from each
     // control's i18n message key. A standalone pre-transform rather than a `babel` option
     // on react(): @vitejs/plugin-react@6 (rolldown/oxc) drops that option, and this must
     // not quietly stop running on the bump. NOT dev-only — scenarios drive the built app.
+    // Before tanstackStart: its client transform rewrites route modules, so a later stamp
+    // anchors client and server builds to different lines and every page fails to hydrate.
     testIds(),
+    tanstackStart(),
     react(),
     // Dev-only (apply: 'serve'), and nothing in src/ imports it: keeps the app
     // signed in inside the console's cross-site preview iframe on browsers that
