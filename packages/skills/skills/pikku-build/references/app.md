@@ -572,11 +572,11 @@ secrets from the hosting platform, not from this file.
 ```
 
 The module exports a `PlatformServiceContributor` (`{ name, imports?, emit }`, the
-type `@pikku/deploy` takes). `pikku all` writes `.pikku/pikku-dev-platform-services.gen.ts`
+type `@pikku/deploy` takes). `pikku all` writes `.pikku-runtime/dev-platform-services.gen.ts`
 from them, and `pikku dev` merges what it returns over the local services before
 `createSingletonServices` runs, so a contributed `emailService` beats
 `LocalEmailService` (and the test-mode spy). Nothing is written without
-contributors, `pikku serve` never loads it, and `NODE_ENV=production` ignores it.
+contributors, `pikku serve` never loads it, and `NODE_ENV=production` ignores it. The file lives in the runtime directory, outside the project's tsconfig, so a contributor's own imports are never typechecked by the project; type the emitted lines yourself.
 
 Then run it:
 

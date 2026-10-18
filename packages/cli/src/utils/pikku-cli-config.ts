@@ -994,8 +994,11 @@ const _getPikkuCLIConfig = async (
 
     if (!result.devPlatformServicesFile) {
       result.devPlatformServicesFile = join(
-        result.outDir,
-        'pikku-dev-platform-services.gen.ts'
+        resolve(
+          result.rootDir,
+          result.runtimeDir ?? join(result.rootDir, '.pikku-runtime')
+        ),
+        'dev-platform-services.gen.ts'
       )
     }
 

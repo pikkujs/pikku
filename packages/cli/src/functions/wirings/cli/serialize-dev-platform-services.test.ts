@@ -1,6 +1,9 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import ts from 'typescript'
 import type { PlatformServiceContributor } from '@pikku/deploy'
 import {
   devContributorPlatform,
@@ -71,5 +74,43 @@ describe('serializeDevPlatformServices', () => {
       'utf8'
     )
     assert.doesNotMatch(serve, /dev-platform-services|devPlatformServices/)
+  })
+})
+
+describe('the generated file typechecks', () => {
+  test('under strict, with a contributor whose emitted code is typed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-dev-platform-tsc-'))
+    try {
+      writeFileSync(
+        join(dir, 'host-email.ts'),
+        `export class HostEmailService {\n  constructor(readonly url: string | undefined) {}\n  send(template: 'welcome', locale: 'en'): void {}\n}\n`
+      )
+      const typed: PlatformServiceContributor = {
+        name: 'email',
+        imports: [`import { HostEmailService } from './host-email.js'`],
+        emit: () => [
+          `  const email = new HostEmailService(env.MAIL_URL)`,
+          `  services.emailService = email`,
+          `  ;[1].forEach((n: number) => email.send('welcome', 'en'))`,
+        ],
+      }
+      const file = join(dir, 'dev-platform-services.gen.ts')
+      writeFileSync(file, serializeDevPlatformServices([typed], platform))
+      const program = ts.createProgram([file], {
+        strict: true,
+        noEmit: true,
+        skipLibCheck: true,
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.NodeNext,
+        moduleResolution: ts.ModuleResolutionKind.NodeNext,
+        types: [],
+      })
+      const diagnostics = ts
+        .getPreEmitDiagnostics(program)
+        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
+      assert.deepEqual(diagnostics, [])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
