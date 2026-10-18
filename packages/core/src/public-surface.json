@@ -366,6 +366,7 @@
     "validateAndBuildSystemRoleDefinitionsMeta"
   ],
   "./secret": [
+    "SECRET_GENERATE_MIN_SIZE",
     "defineSecret",
     "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
