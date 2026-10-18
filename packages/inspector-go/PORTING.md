@@ -251,7 +251,8 @@ read it.
   without Node, goes to `NodeConverter`, which runs `vendorScript`
   (scripts/vendor-schemas.mjs) through tsx. With no `node` on the PATH, or the
   script not on disk (a compiled CLI), those schemas are errors instead.
-  `PIKKU_INSPECTOR_ZOD=node` sends everything to Node. See
+  `PIKKU_INSPECTOR_ZOD=node` sends everything to Node; `=quickjs` never falls
+  back, so a refused schema is an error (CI's parity run). See
   [knowledge/decisions/zod-schemas-convert-in-quickjs.md](knowledge/decisions/zod-schemas-convert-in-quickjs.md).
 - **Missing converter.** No converter with a non-empty `schemaLookup` is an
   error, not a silent skip.

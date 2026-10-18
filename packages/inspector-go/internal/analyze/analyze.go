@@ -125,9 +125,17 @@ func schemaConfig(sc *protocol.SchemaConfig, rootDir string) schemas.Config {
 		CacheDir:             sc.CacheDir,
 	}
 	node := nodeConverter(sc.VendorScript, rootDir)
-	if node != nil && os.Getenv("PIKKU_INSPECTOR_ZOD") == "node" {
-		cfg.Vendor = node
-		return cfg
+	// PIKKU_INSPECTOR_ZOD=node converts every Zod schema under Node;
+	// =quickjs never does, so a schema QuickJS refuses is an error (CI's
+	// parity run, which must not pass by way of Node).
+	switch os.Getenv("PIKKU_INSPECTOR_ZOD") {
+	case "node":
+		if node != nil {
+			cfg.Vendor = node
+			return cfg
+		}
+	case "quickjs":
+		node = nil
 	}
 	cfg.Vendor = zodjs.Converter{Dir: rootDir, Tsconfig: sc.Tsconfig, CacheDir: sc.CacheDir, Fallback: node}
 	return cfg

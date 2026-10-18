@@ -14,13 +14,23 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 )
 
+// fixture is testdata/project, whose zod resolves from the repository's
+// node_modules. The Go CI job does not install them, so the tests that
+// convert skip there and run in the parity job, which does.
 func fixture(t *testing.T) string {
 	t.Helper()
 	dir, err := filepath.Abs("testdata/project")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return dir
+	for d := dir; ; d = filepath.Dir(d) {
+		if _, err := os.Stat(filepath.Join(d, "node_modules", "zod", "package.json")); err == nil {
+			return dir
+		}
+		if filepath.Dir(d) == d {
+			t.Skip("zod is not installed (bun install)")
+		}
+	}
 }
 
 func ref(dir, name, file, variable string) schemas.VendorRef {
