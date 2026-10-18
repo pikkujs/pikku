@@ -57,6 +57,10 @@ import {
   renderExperimentNativeComparison,
 } from './functions/commands/experiment-native-comparison.js'
 import {
+  inspectorParity,
+  renderInspectorParity,
+} from './functions/commands/inspector-parity.js'
+import {
   examplesAdd,
   examplesList,
   examplesShow,
@@ -1285,6 +1289,23 @@ wireCLI({
         },
       },
     }),
+    inspector: {
+      description: 'Check the inspectors that analyse this project',
+      subcommands: {
+        parity: pikkuCLICommand({
+          func: inspectorParity,
+          render: renderInspectorParity,
+          description:
+            "Run this project's codegen with the TypeScript inspector and then the native one, from the same .pikku state, and fail unless both save the same inspector state, generate the same files and log the same diagnostics",
+          options: {
+            details: {
+              description: 'Most state differences to list',
+              default: '20',
+            },
+          },
+        }),
+      },
+    },
     experiment: {
       description: 'Experiments that measure or compare how the CLI behaves',
       subcommands: {

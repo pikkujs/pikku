@@ -16,6 +16,5 @@ A rule that was chosen, and what it rules out.
 - [Union and property order follow Strada's type ids, not source order](union-and-property-order-follow-type-ids.md) — Printed unions and mapped-type properties are reordered by the ids of the types they came from, and the Go engine makes the checker calls TS makes so those ids come out in the same order
 - [Each TypeScript reference inspection runs in its own node process](the-typescript-reference-runs-in-its-own-node-process.md) — The parity harness and the roundtrip test never run two inspections in one process, and never run the reference under bun
 - [Zod schemas convert in QuickJS inside the binary, Node only as a fallback](zod-schemas-convert-in-quickjs.md) — esbuild bundles the schema modules with stubbed package imports and QuickJS runs the real z.toJSONSchema; a schema that touches a stub goes to Node, or is an error without it
-- [Parity runs on every example, template and verifier](parity-runs-on-every-project.md) — The two engines are compared on every project in the repo, so a fix covered by a verifier is covered for the Go inspector too; there is no separate engine test corpus
 
 <!-- /pikku:knowledge-index -->

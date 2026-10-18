@@ -34,7 +34,6 @@
     "build:go:all": "node scripts/build-go.mjs --all",
     "check:binaries": "node scripts/check-platform-binary.mjs",
     "check:tsgo-pin": "bash scripts/check-tsgo-pin.sh",
-    "parity": "bun parity/parity.ts",
     "ncu": "npx npm-check-updates",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",

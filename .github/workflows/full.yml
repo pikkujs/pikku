@@ -133,13 +133,11 @@ jobs:
           retention-days: 1
 
   # Both inspector engines stay supported until TypeScript 7 ships a compiler
-  # API (`inspector: 'native' | 'typescript'`), so the Go one is held to the
-  # TypeScript one on real projects: section by section after analysis and
-  # finalize (parity.ts --strict also fails on any section not ported), and
-  # the Go finalize alone on the TypeScript analysis (finalize-parity.ts).
-  # Every project under examples/, templates/ and verifiers/: a fix lands with
-  # a verifier, so the verifier is what proves the Go inspector has it too.
-  # parity.ts generates each project (TypeScript engine) before comparing.
+  # API (`inspector: 'native' | 'typescript'`), so the native one is held to the
+  # TypeScript one on real projects: `pikku inspector parity` runs codegen with
+  # both on every project under examples/, templates/ and verifiers/ and fails
+  # unless the state, the generated files and the diagnostics match. A fix lands
+  # with a verifier, so the verifier is what proves the native inspector has it.
   inspector-parity-projects:
     name: Inspector parity (projects ${{ matrix.shard }}/4)
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
@@ -155,16 +153,17 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           download-inspector-go: 'true'
-      - name: Parity of analysis and finalize
-        working-directory: packages/inspector-go
+      - name: Both inspectors on every project
         # Zod schemas convert in the binary's QuickJS only: a schema it refused
         # must fail here, not pass by way of the Node fallback.
         env:
           PIKKU_INSPECTOR_ZOD: quickjs
-        run: bun parity/parity.ts --strict --generate --shard ${{ matrix.shard }}/4
+        run: node scripts/inspector-parity.mjs --shard ${{ matrix.shard }}/4
 
+  # The Go finalize alone on the TypeScript analysis (finalize-parity.ts), the
+  # Zod converter's tests and the install smoke test.
   inspector-parity:
-    name: Inspector parity (native vs typescript)
+    name: Inspector-go (finalize parity, Zod, install smoke)
     if: ${{ !startsWith(github.event.head_commit.message, 'Version Packages') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
