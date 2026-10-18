@@ -136,6 +136,32 @@ describe('getAuthSession', () => {
     assert.equal(authCalls, 1)
   })
 
+  test('each builder pair gets its own build, and an omitted createConfig is cached', async () => {
+    let authCalls = 0
+    const factory = async (_services: any) => {
+      authCalls += 1
+      return {
+        handler: async () => new Response(null, { status: 204 }),
+        api: { getSession: async () => ({}) },
+      }
+    }
+    const counts = { first: 0, second: 0 }
+    const servicesFor = (name: keyof typeof counts) => async (_config: any) => {
+      counts[name] += 1
+      return {} as any
+    }
+    const first = servicesFor('first')
+    const second = servicesFor('second')
+    const headers = () => new Headers()
+
+    await getAuthSession(factory, headers(), undefined, first)
+    await getAuthSession(factory, headers(), undefined, first)
+    await getAuthSession(factory, headers(), undefined, second)
+
+    assert.deepEqual(counts, { first: 1, second: 1 })
+    assert.equal(authCalls, 2)
+  })
+
   test('a failed build is retried on the next call rather than cached', async () => {
     let attempts = 0
     const factory = async (_services: any) => {
