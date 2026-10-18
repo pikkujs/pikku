@@ -38,12 +38,12 @@ because: The native engine is several times faster, uses far less memory and
 
 ## What holds the two together
 
-- **Parity is measured, in CI.** `parity/parity.ts --strict` compares each
-  project's state after analysis and after finalize, and the diagnostics of each
-  phase, section by section, against the TypeScript engine; `finalize-parity.ts`
-  feeds the Go finalize the TypeScript analysis alone. The `Inspector parity`
-  job runs both on `templates/functions` and `examples/field-service`.
-  `allow-list.json` records every accepted difference with a reason.
+- **Parity is measured, in CI.** `pikku inspector parity` runs codegen with
+  both engines and fails unless the saved state, the generated files and the
+  diagnostics match; CI runs it on every example, template and verifier (see
+  the CLI's `inspector-parity-runs-on-every-project` decision).
+  `finalize-parity.ts` feeds the Go finalize the TypeScript analysis alone, on
+  `templates/functions` and `examples/field-service`.
 - **One resolver.** `createConfig` resolves the engine once and records it, so
   the inspection, the source helpers in `inspector-helpers.ts`
   (`collectSurface`, `readModuleSpecifiers`, `readJsxLiteralText`,
