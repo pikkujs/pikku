@@ -3,10 +3,12 @@
  * Parity of the Go inspector against the TypeScript reference.
  *
  *   bun parity/parity.ts [--project <dir>]... [--bin <path>] [--strict]
+ *                        [--generate] [--shard <k>/<n>]
  *                        [--json <file>] [--details <n>]
  *
- * Per project with a pikku.config.json under examples/ and templates/ (or
- * each --project), it compares, section by top-level section:
+ * Per project with a pikku.config.json under examples/, templates/ and
+ * verifiers/, nested ones included (or each --project), it compares, section
+ * by top-level section:
  *   pre          the state analysis hands to finalize (skipped once the
  *                binary finalizes itself)
  *   post         the state after finalize, which is what codegen reads
@@ -15,7 +17,15 @@
  * allow-list.json entry covers is "normalized" away or "allowed". Exit status
  * is 1 on any unexpected difference or engine failure (and, with --strict, on
  * any section not ported), and 2 when there is no binary to compare.
+ *
+ * --generate runs `pikku` in each project first, on the TypeScript engine, so
+ * both engines inspect the reference's own generated files. --shard k/n takes
+ * every n-th top-level project directory, keeping a verifier's nested projects
+ * together. A project the reference cannot inspect is skipped only when
+ * skip-projects.json names it, with a reason; with --strict an unlisted one,
+ * or a listed one that no longer fails, is a failure.
  */
+import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -71,6 +81,8 @@ interface SectionResult {
 
 interface ProjectResult {
   project: string
+  /** skip-projects.json's reason, when it lists this project. */
+  skipped?: string
   /** The binary failed or broke the protocol. */
   error?: string
   /** The TypeScript reference itself failed, so there is nothing to compare. */
@@ -88,21 +100,102 @@ const strict = args.includes('--strict')
 const detailLimit = Number(values('--details')[0] ?? 5)
 const jsonOut = values('--json')[0]
 
-const discoverProjects = (): string[] =>
-  ['examples', 'templates'].flatMap((group) =>
-    readdirSync(join(REPO, group), { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isDirectory() &&
-          existsSync(join(REPO, group, entry.name, 'pikku.config.json'))
-      )
-      .map((entry) => join(REPO, group, entry.name))
-      .sort()
-  )
+const generate = args.includes('--generate')
+const shard = values('--shard')[0]
 
-const projects = values('--project').length
-  ? values('--project').map((p) => resolve(p))
-  : discoverProjects()
+const PROJECT_GROUPS = ['examples', 'templates', 'verifiers']
+const NOT_PROJECTS = new Set([
+  'node_modules',
+  '.pikku',
+  'dist',
+  'build',
+  '.next',
+])
+
+const findConfigs = (dir: string, depth: number): string[] => {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  const here = entries.some((e) => e.isFile() && e.name === 'pikku.config.json')
+    ? [dir]
+    : []
+  if (depth === 0) return here
+  return [
+    ...here,
+    ...entries
+      .filter(
+        (e) =>
+          e.isDirectory() &&
+          !e.name.startsWith('.') &&
+          !NOT_PROJECTS.has(e.name)
+      )
+      .flatMap((e) => findConfigs(join(dir, e.name), depth - 1)),
+  ]
+}
+
+/** Top-level project directories, each with the projects found under it. */
+const discoverProjects = (): string[][] =>
+  PROJECT_GROUPS.flatMap((group) =>
+    readdirSync(join(REPO, group), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => findConfigs(join(REPO, group, entry.name), 2).sort())
+      .filter((found) => found.length > 0)
+  ).sort((a, b) => a[0].localeCompare(b[0]))
+
+const inShard = <T>(items: T[]): T[] => {
+  if (!shard) return items
+  const [k, n] = shard.split('/').map(Number)
+  if (!(n >= 1 && k >= 1 && k <= n)) {
+    console.error(`parity: --shard must be k/n with 1 <= k <= n, not ${shard}`)
+    process.exit(2)
+  }
+  return items.filter((_, i) => i % n === k - 1)
+}
+
+const projectGroups: string[][] = values('--project').length
+  ? values('--project').map((p) => [resolve(p)])
+  : inShard(discoverProjects())
+const projects = projectGroups.flat()
+
+interface SkipEntry {
+  /** Project path relative to the repo root. */
+  project: string
+  reason: string
+}
+const skipList: SkipEntry[] = JSON.parse(
+  readFileSync(new URL('./skip-projects.json', import.meta.url), 'utf8')
+)
+
+// ---- generation ----
+
+const CLI = join(REPO, 'packages/cli/dist/bin/pikku.js')
+
+/**
+ * Runs `pikku` in each project of a group, then once more in those that
+ * failed: a nested project generated from another (an addon and its
+ * consumer) succeeds once the other has been generated.
+ */
+const generateGroup = (group: string[]): Map<string, string> => {
+  const run = (dir: string) => {
+    const out = spawnSync('node', [CLI, 'all'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, PIKKU_INSPECTOR: 'typescript' },
+    })
+    return out.status === 0
+      ? undefined
+      : `${out.stderr}\n${out.stdout}`.trim().split('\n').slice(-5).join('\n')
+  }
+  let failed = new Map<string, string>()
+  for (const dir of group) {
+    const error = run(dir)
+    if (error) failed.set(dir, error)
+  }
+  for (const dir of [...failed.keys()]) {
+    const error = run(dir)
+    if (error) failed.set(dir, error)
+    else failed.delete(dir)
+  }
+  return failed
+}
 
 let binary: string
 try {
@@ -357,9 +450,16 @@ const printProject = (result: ProjectResult) => {
   console.log(`\n== ${result.project}`)
   if (result.referenceError) {
     console.log(
-      `   skipped, the TypeScript reference failed: ${result.referenceError}`
+      result.skipped
+        ? `   skipped (${result.skipped}): ${result.referenceError}`
+        : `   the TypeScript reference failed: ${result.referenceError}`
     )
     return
+  }
+  if (result.skipped) {
+    console.log(
+      `   listed in skip-projects.json (${result.skipped}) but did not fail: remove it`
+    )
   }
   if (result.error) {
     console.log(`   engine failed: ${result.error}`)
@@ -384,10 +484,26 @@ const printProject = (result: ProjectResult) => {
 
 console.log(`parity: ${binary} against the TypeScript reference`)
 const results: ProjectResult[] = []
-for (const projectDir of projects) {
-  const result = await runProject(projectDir)
-  results.push(result)
-  printProject(result)
+for (const group of projectGroups) {
+  const generateErrors = generate ? generateGroup(group) : new Map()
+  for (const projectDir of group) {
+    const project = relative(REPO, projectDir) || projectDir
+    const generateError = generateErrors.get(projectDir)
+    const result: ProjectResult = generateError
+      ? {
+          project,
+          referenceError: `pikku all failed:\n${generateError}`,
+          sections: [],
+        }
+      : await runProject(projectDir).catch((error: any): ProjectResult => ({
+          project,
+          referenceError: error.message.split('\n')[0],
+          sections: [],
+        }))
+    result.skipped = skipList.find((s) => s.project === project)?.reason
+    results.push(result)
+    printProject(result)
+  }
 }
 
 const counts = new Map<Status, number>()
@@ -396,7 +512,15 @@ for (const r of results.flatMap((p) => p.sections)) {
 }
 const engineFailures = results.filter((p) => p.error).length
 const referenceFailures = results.filter((p) => p.referenceError).length
+// Under --strict every project counts: one the reference cannot inspect fails
+// unless skip-projects.json says why, and a listed one that now works fails
+// until it is taken off the list.
+const unlistedReferenceFailures = results.filter(
+  (p) => p.referenceError && !p.skipped
+).length
+const staleSkips = results.filter((p) => p.skipped && !p.referenceError).length
 const failures =
+  (strict ? unlistedReferenceFailures + staleSkips : 0) +
   engineFailures +
   results.flatMap((p) => p.sections).filter((r) => FAILING.includes(r.status))
     .length
@@ -405,8 +529,11 @@ const summary = [
   ...[...counts].map(([status, n]) => `${n} ${status}`),
   ...(engineFailures ? [`${engineFailures} engine failures`] : []),
   ...(referenceFailures
-    ? [`${referenceFailures} skipped (reference failed)`]
+    ? [
+        `${referenceFailures} reference failures (${referenceFailures - unlistedReferenceFailures} listed in skip-projects.json)`,
+      ]
     : []),
+  ...(staleSkips ? [`${staleSkips} stale skip-projects.json entries`] : []),
 ]
 console.log(`\n${results.length} projects: ${summary.join(', ')}`)
 for (const entry of allowList) {
