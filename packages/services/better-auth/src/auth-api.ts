@@ -71,19 +71,25 @@ export const createResolvedAuthGetter = <
   return async () => auth as I
 }
 
-type FactoryGetterEntry = {
-  createConfig: unknown
-  createSingletonServices: unknown
-  getter: () => Promise<BetterAuthInstance>
-}
+type FactoryGetter = () => Promise<BetterAuthInstance>
+
+/** Stands in for an omitted `createConfig`, which a `WeakMap` cannot key on. */
+const NO_CONFIG = {}
 
 /**
- * One getter per (factory, createConfig, createSingletonServices), so calling
+ * One getter per (factory, createSingletonServices, createConfig), so calling
  * {@link getAuthSession} with a factory on every request builds the singleton
  * services — database pools included — and the better-auth instance once,
  * rather than once per call.
+ *
+ * Weak at every level: a builder the caller no longer holds, such as a closure
+ * written inline in a route handler, is not kept alive here along with the
+ * services its getter built.
  */
-const factoryGetters = new WeakMap<object, FactoryGetterEntry[]>()
+const factoryGetters = new WeakMap<
+  object,
+  WeakMap<object, WeakMap<object, FactoryGetter>>
+>()
 
 const cachedFactoryGetter = <
   I extends BetterAuthInstance,
@@ -94,22 +100,27 @@ const cachedFactoryGetter = <
   createConfig: CreateConfig<C> | undefined,
   createSingletonServices: (config: C) => Promise<S>
 ): (() => Promise<I>) => {
-  const entries = factoryGetters.get(auth) ?? []
-  factoryGetters.set(auth, entries)
-  const found = entries.find(
-    (entry) =>
-      entry.createConfig === createConfig &&
-      entry.createSingletonServices === createSingletonServices
-  )
+  let byServices = factoryGetters.get(auth)
+  if (!byServices) {
+    byServices = new WeakMap()
+    factoryGetters.set(auth, byServices)
+  }
+  let byConfig = byServices.get(createSingletonServices)
+  if (!byConfig) {
+    byConfig = new WeakMap()
+    byServices.set(createSingletonServices, byConfig)
+  }
+  const configKey = createConfig ?? NO_CONFIG
+  const found = byConfig.get(configKey)
   if (found) {
-    return found.getter as () => Promise<I>
+    return found as () => Promise<I>
   }
   const getter = createResolvedAuthGetter<I, C, S>(
     auth,
     createConfig,
     createSingletonServices
   )
-  entries.push({ createConfig, createSingletonServices, getter })
+  byConfig.set(configKey, getter)
   return getter
 }
 
