@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url'
  */
 export const SUPPORTED_PLATFORMS = [
   'darwin-arm64',
-  'darwin-x64',
   'linux-x64',
   'linux-arm64',
   'win32-x64',
