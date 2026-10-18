@@ -15,5 +15,6 @@ A rule that was chosen, and what it rules out.
 - [Both inspector engines stay, behind a switch, until TypeScript 7 has a compiler API](both-engines-stay-behind-a-switch-until-typescript-7.md) — The Go engine (native) is the default and the TypeScript inspector is selectable through one resolver; both are held byte-identical by the parity harness, and the TypeScript one is retired only once TypeScript 7 ships a stable API
 - [Union and property order follow Strada's type ids, not source order](union-and-property-order-follow-type-ids.md) — Printed unions and mapped-type properties are reordered by the ids of the types they came from, and the Go engine makes the checker calls TS makes so those ids come out in the same order
 - [Each TypeScript reference inspection runs in its own node process](the-typescript-reference-runs-in-its-own-node-process.md) — The parity harness and the roundtrip test never run two inspections in one process, and never run the reference under bun
+- [Zod schemas convert in QuickJS inside the binary, Node only as a fallback](zod-schemas-convert-in-quickjs.md) — esbuild bundles the schema modules with stubbed package imports and QuickJS runs the real z.toJSONSchema; a schema that touches a stub goes to Node, or is an error without it
 
 <!-- /pikku:knowledge-index -->

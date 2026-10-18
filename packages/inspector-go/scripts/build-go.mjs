@@ -4,13 +4,13 @@
 //                                        development; without a Go toolchain
 //                                        it warns and exits 0, so the package
 //                                        still builds (the binary then comes
-//                                        from PIKKU_INSPECTOR_GO_BIN or the
-//                                        per-platform package)
+//                                        from PIKKU_INSPECTOR_GO_BIN or
+//                                        prebuilt/)
 //   node scripts/build-go.mjs --strict   host build that fails without go
 //   PIKKU_INSPECTOR_GO_SKIP_BUILD=1      skip the host build (CI, where the
 //                                        binary is built by its own job)
 //   node scripts/build-go.mjs --all      release build of every target into
-//                                        npm/<platform>-<arch>/bin/
+//                                        prebuilt/<platform>-<arch>/
 //   node scripts/build-go.mjs --target linux-x64 [--target ...]
 //
 // Release builds are static (CGO_ENABLED=0), reproducible (-trimpath) and
@@ -69,13 +69,13 @@ if (!all && targets.length === 0) {
     if (strict) fail(`go build failed, ${out} not updated`)
     console.warn(`@pikku/inspector-go: go build failed, ${out} not updated`)
   }
-  // The workspace links npm/<host> as the installed platform package, which
-  // findInspectorBinary prefers to bin/. Release builds leave it in place.
+  // findInspectorBinary prefers prebuilt/<host> to bin/. Release builds leave
+  // it in place.
   const host = PLATFORMS.find(
     (p) => p.platform === process.platform && p.arch === process.arch
   )
   const shadow =
-    host && join('npm', targetName(host), 'bin', executableName(host.platform))
+    host && join('prebuilt', targetName(host), executableName(host.platform))
   if (shadow && existsSync(join(PKG_DIR, shadow))) {
     console.warn(
       `@pikku/inspector-go: ${shadow} (from --all/--target) is resolved before ${out}; delete it to use this build`
@@ -100,7 +100,7 @@ const selected = all
 
 for (const target of selected) {
   const name = targetName(target)
-  const out = join(PKG_DIR, 'npm', name, 'bin', executableName(target.platform))
+  const out = join(PKG_DIR, 'prebuilt', name, executableName(target.platform))
   mkdirSync(dirname(out), { recursive: true })
   const started = Date.now()
   const build = spawnSync(

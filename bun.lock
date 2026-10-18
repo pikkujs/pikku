@@ -672,36 +672,9 @@
         "ajv": "^8.20.0",
         "tinyglobby": "^0.2.17",
       },
-      "optionalDependencies": {
-        "@pikku/inspector-go-darwin-arm64": "0.12.0",
-        "@pikku/inspector-go-darwin-x64": "0.12.0",
-        "@pikku/inspector-go-linux-arm64": "0.12.0",
-        "@pikku/inspector-go-linux-x64": "0.12.0",
-        "@pikku/inspector-go-win32-x64": "0.12.0",
-      },
       "peerDependencies": {
         "@pikku/core": "^0.12.142",
       },
-    },
-    "packages/inspector-go/npm/darwin-arm64": {
-      "name": "@pikku/inspector-go-darwin-arm64",
-      "version": "0.12.0",
-    },
-    "packages/inspector-go/npm/darwin-x64": {
-      "name": "@pikku/inspector-go-darwin-x64",
-      "version": "0.12.0",
-    },
-    "packages/inspector-go/npm/linux-arm64": {
-      "name": "@pikku/inspector-go-linux-arm64",
-      "version": "0.12.0",
-    },
-    "packages/inspector-go/npm/linux-x64": {
-      "name": "@pikku/inspector-go-linux-x64",
-      "version": "0.12.0",
-    },
-    "packages/inspector-go/npm/win32-x64": {
-      "name": "@pikku/inspector-go-win32-x64",
-      "version": "0.12.0",
     },
     "packages/knowledge": {
       "name": "@pikku/knowledge",
@@ -3308,16 +3281,6 @@
     "@pikku/inspector": ["@pikku/inspector@workspace:packages/inspector"],
 
     "@pikku/inspector-go": ["@pikku/inspector-go@workspace:packages/inspector-go"],
-
-    "@pikku/inspector-go-darwin-arm64": ["@pikku/inspector-go-darwin-arm64@workspace:packages/inspector-go/npm/darwin-arm64"],
-
-    "@pikku/inspector-go-darwin-x64": ["@pikku/inspector-go-darwin-x64@workspace:packages/inspector-go/npm/darwin-x64"],
-
-    "@pikku/inspector-go-linux-arm64": ["@pikku/inspector-go-linux-arm64@workspace:packages/inspector-go/npm/linux-arm64"],
-
-    "@pikku/inspector-go-linux-x64": ["@pikku/inspector-go-linux-x64@workspace:packages/inspector-go/npm/linux-x64"],
-
-    "@pikku/inspector-go-win32-x64": ["@pikku/inspector-go-win32-x64@workspace:packages/inspector-go/npm/win32-x64"],
 
     "@pikku/jose": ["@pikku/jose@workspace:packages/services/jose"],
 

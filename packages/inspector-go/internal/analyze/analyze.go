@@ -7,6 +7,8 @@ package analyze
 
 import (
 	"encoding/json"
+	"os"
+	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/program"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/schemas"
+	"github.com/pikkujs/pikku/packages/inspector-go/internal/schemas/zodjs"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/state"
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/visit"
 )
@@ -121,8 +124,34 @@ func schemaConfig(sc *protocol.SchemaConfig, rootDir string) schemas.Config {
 		AdditionalProperties: schema.AdditionalProperties,
 		CacheDir:             sc.CacheDir,
 	}
-	if sc.VendorScript != "" {
-		cfg.Vendor = schemas.NodeConverter{Script: sc.VendorScript, Dir: rootDir}
+	node := nodeConverter(sc.VendorScript, rootDir)
+	// PIKKU_INSPECTOR_ZOD=node converts every Zod schema under Node;
+	// =quickjs never does, so a schema QuickJS refuses is an error (CI's
+	// parity run, which must not pass by way of Node).
+	switch os.Getenv("PIKKU_INSPECTOR_ZOD") {
+	case "node":
+		if node != nil {
+			cfg.Vendor = node
+			return cfg
+		}
+	case "quickjs":
+		node = nil
 	}
+	cfg.Vendor = zodjs.Converter{Dir: rootDir, Tsconfig: sc.Tsconfig, CacheDir: sc.CacheDir, Fallback: node}
 	return cfg
+}
+
+// nodeConverter is the Node fallback, or nil without a node on the PATH or
+// with the script out of reach (inside a compiled CLI it is not on disk).
+func nodeConverter(script, rootDir string) schemas.VendorSchemaConverter {
+	if script == "" {
+		return nil
+	}
+	if _, err := os.Stat(script); err != nil {
+		return nil
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		return nil
+	}
+	return schemas.NodeConverter{Script: script, Dir: rootDir}
 }

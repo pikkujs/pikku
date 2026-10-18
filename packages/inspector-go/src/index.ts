@@ -1,7 +1,6 @@
 export { inspect } from './inspect.js'
 export {
   findInspectorBinary,
-  platformPackageName,
   executableName,
   SUPPORTED_PLATFORMS,
   InspectorBinaryNotFoundError,

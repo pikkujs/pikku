@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { describe, test } from 'node:test'
-import { resolveInspectorEngine } from './inspector-engine.js'
+import { isStandaloneCli, resolveInspectorEngine } from './inspector-engine.js'
 
 describe('resolveInspectorEngine', () => {
   test('defaults to native', () => {
@@ -22,6 +22,25 @@ describe('resolveInspectorEngine', () => {
       'typescript'
     )
     assert.equal(warned, true)
+  })
+
+  test('a standalone pikku without a binary fails rather than fall back', () => {
+    let warned = false
+    assert.throws(
+      () =>
+        resolveInspectorEngine({
+          nativeAvailable: () => false,
+          onFallback: () => (warned = true),
+          standalone: true,
+          execPath: '/opt/homebrew/bin/pikku',
+        }),
+      /No pikku-inspect binary beside \/opt\/homebrew\/bin\/pikku/
+    )
+    assert.equal(warned, false)
+    assert.equal(
+      resolveInspectorEngine({ nativeAvailable: () => true, standalone: true }),
+      'native'
+    )
   })
 
   test('an explicit native never falls back', () => {
@@ -99,6 +118,19 @@ describe('resolveInspectorEngine', () => {
   test('an invalid higher-precedence value is an error, not skipped', () => {
     assert.throws(() =>
       resolveInspectorEngine({ flag: 'nope', config: 'typescript' })
+    )
+  })
+})
+
+describe('isStandaloneCli', () => {
+  test('recognises a bun --compile module url', () => {
+    assert.equal(isStandaloneCli('file:///$bunfs/root/pikku'), true)
+    assert.equal(isStandaloneCli('file:///B:/~BUN/root/pikku.exe'), true)
+    assert.equal(
+      isStandaloneCli(
+        'file:///usr/lib/node_modules/@pikku/cli/dist/src/inspector-engine.js'
+      ),
+      false
     )
   })
 })
