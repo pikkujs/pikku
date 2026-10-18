@@ -22,7 +22,7 @@ var middlewareHelpers = setOf(
 	"addChannelMiddleware",
 )
 
-var permissionHelpers = setOf("pikkuPermission", "pikkuAuth", "pikkuPermissionFactory")
+var permissionHelpers = setOf("pikkuPermission", "pikkuAuth", "pikkuPermissionFactory", "addGlobalPermission")
 
 func setOf(names ...string) func(string) bool {
 	set := make(map[string]bool, len(names))
