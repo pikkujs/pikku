@@ -8,13 +8,19 @@ export const DEV_QUICK_LOGIN_USER = {
   email: 'admin@pikku.dev',
 }
 
+let devQuickLoginPassword: string | undefined
+
 /**
  * Minted per process and never shown to anyone. Quick login rewrites the dev
  * admin's password to this before every sign-in, so the account carries no
  * credential that outlives the process — a copied dev database or a stage that
  * shares it cannot be signed into through `/sign-in/email`.
+ *
+ * Minted on first use, never on import: Cloudflare Workers refuses to start a
+ * worker that generates random values in global scope.
  */
-const DEV_QUICK_LOGIN_PASSWORD = `${crypto.randomUUID()}${crypto.randomUUID()}`
+const devQuickLoginPasswordForProcess = (): string =>
+  (devQuickLoginPassword ??= `${crypto.randomUUID()}${crypto.randomUUID()}`)
 
 export const DEV_QUICK_LOGIN_SUBPATH = '/dev/quick-login'
 
@@ -116,7 +122,7 @@ export const isDevQuickLoginRequest = (
 
 /**
  * Creates the dev admin if it is missing and sets its password to this
- * process's {@link DEV_QUICK_LOGIN_PASSWORD}, so the sign-in that follows works
+ * process's {@link devQuickLoginPasswordForProcess}, so the sign-in that follows works
  * and no earlier password — including the fixed one older versions used —
  * keeps working afterwards.
  */
@@ -126,7 +132,7 @@ const ensureDevAdminCredential = async (
   const { name, email } = DEV_QUICK_LOGIN_USER
   const ctx = await auth.$context
   const adapter = ctx.internalAdapter
-  const hash = await ctx.password.hash(DEV_QUICK_LOGIN_PASSWORD)
+  const hash = await ctx.password.hash(devQuickLoginPasswordForProcess())
 
   const found = await adapter.findUserByEmail(email)
   const user =
@@ -208,7 +214,7 @@ export const handleDevQuickLogin = async (
   return (await auth.api.signInEmail({
     body: {
       email: DEV_QUICK_LOGIN_USER.email,
-      password: DEV_QUICK_LOGIN_PASSWORD,
+      password: devQuickLoginPasswordForProcess(),
     },
     headers: request.headers,
     asResponse: true,
