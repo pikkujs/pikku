@@ -62,6 +62,31 @@ const hasProp = (obj: ts.ObjectLiteralExpression, name: string): boolean =>
       p.name.text === name
   )
 
+/**
+ * True when a spread comes after the last assignment of `name` in `obj`, so the
+ * value written there may not be the one that applies. A spread before it is
+ * harmless: the property wins.
+ */
+const isOverriddenBySpread = (
+  obj: ts.ObjectLiteralExpression,
+  name: string
+): boolean => {
+  let assigned = -1
+  obj.properties.forEach((p, index) => {
+    if (
+      (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === name
+    ) {
+      assigned = index
+    }
+  })
+  return (
+    assigned >= 0 &&
+    obj.properties.slice(assigned + 1).some(ts.isSpreadAssignment)
+  )
+}
+
 /** Find an object-literal-valued property off an object literal, if present. */
 const readObjectProp = (
   obj: ts.ObjectLiteralExpression,
@@ -287,6 +312,20 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
   let cookieCacheStrategy: string | undefined
   let cookieCacheVersion: string | undefined
   const unreadCookieOptions: string[] = []
+  const readCookieOption = (
+    block: ts.ObjectLiteralExpression,
+    name: string,
+    path: string,
+    enclosingOverridden: boolean
+  ): string | undefined => {
+    if (!hasProp(block, name)) return undefined
+    const value =
+      enclosingOverridden || isOverriddenBySpread(block, name)
+        ? undefined
+        : readStringProp(block, name)
+    if (value === undefined) unreadCookieOptions.push(path)
+    return value
+  }
   const betterAuthCall = findBetterAuthCall(factory, checker)
   const config = betterAuthCall?.arguments[0]
 
@@ -308,14 +347,21 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
           !enabledProp ||
           enabledProp.initializer.kind !== ts.SyntaxKind.FalseKeyword
 
-        cookieCacheStrategy = readStringProp(cookieCacheBlock, 'strategy')
-        if (!cookieCacheStrategy && hasProp(cookieCacheBlock, 'strategy')) {
-          unreadCookieOptions.push('session.cookieCache.strategy')
-        }
-        cookieCacheVersion = readStringProp(cookieCacheBlock, 'version')
-        if (!cookieCacheVersion && hasProp(cookieCacheBlock, 'version')) {
-          unreadCookieOptions.push('session.cookieCache.version')
-        }
+        const sessionOverridden =
+          isOverriddenBySpread(config, 'session') ||
+          isOverriddenBySpread(session, 'cookieCache')
+        cookieCacheStrategy = readCookieOption(
+          cookieCacheBlock,
+          'strategy',
+          'session.cookieCache.strategy',
+          sessionOverridden
+        )
+        cookieCacheVersion = readCookieOption(
+          cookieCacheBlock,
+          'version',
+          'session.cookieCache.version',
+          sessionOverridden
+        )
       }
     }
 
@@ -324,14 +370,16 @@ export const addAuth: AddWiring = (logger, node, checker, state) => {
     // its verification, and say so when one is not a literal.
     const advanced = readObjectProp(config, 'advanced')
     if (advanced) {
-      cookiePrefix = readStringProp(advanced, 'cookiePrefix')
-      if (!cookiePrefix && hasProp(advanced, 'cookiePrefix')) {
-        unreadCookieOptions.push('advanced.cookiePrefix')
-      }
+      cookiePrefix = readCookieOption(
+        advanced,
+        'cookiePrefix',
+        'advanced.cookiePrefix',
+        isOverriddenBySpread(config, 'advanced')
+      )
     }
     if (cookieCache && unreadCookieOptions.length > 0) {
       logger.warn(
-        `pikkuBetterAuth in ${sourceFile}: ${unreadCookieOptions.join(', ')} is not a string literal, so the generated betterAuthStatelessSession cannot read the session cookie the way it is written. Write it as a literal, or register betterAuthStatelessSession({ cookiePrefix, cookieCache: { strategy, version } }) yourself with addGlobalMiddleware — yours runs first and the generated one then does nothing.`
+        `pikkuBetterAuth in ${sourceFile}: ${unreadCookieOptions.join(', ')} is not a string literal, or a later spread can replace it, so the generated betterAuthStatelessSession cannot read the session cookie the way it is written. Write it as a literal, or register betterAuthStatelessSession({ cookiePrefix, cookieCache: { strategy, version } }) yourself with addGlobalMiddleware — yours runs first and the generated one then does nothing.`
       )
     }
 
