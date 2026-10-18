@@ -40,6 +40,27 @@ export const getArrayPropertyValue = (
 }
 
 /**
+ * Returns the object literal assigned to a property, or null when the property
+ * is absent or is not an inline object.
+ */
+export const getObjectPropertyLiteral = (
+  obj: ts.ObjectLiteralExpression,
+  propertyName: string
+): ts.ObjectLiteralExpression | null => {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === propertyName
+  )
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return null
+  }
+  const initializer = unwrapAs(property.initializer)
+  return ts.isObjectLiteralExpression(initializer) ? initializer : null
+}
+
+/**
  * Extracts a string->string record from an object property.
  *
  * `getPropertyValue` falls through to `getText()` for an object literal, which

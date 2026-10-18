@@ -2,12 +2,15 @@ import * as ts from 'typescript'
 import {
   getPropertyValue,
   getArrayPropertyValue,
+  getObjectPropertyLiteral,
   assertStringLiteralProperty,
 } from '../utils/get-property-value.js'
 import type { AddWiring, InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import { parseDurationString } from '@pikku/core/utils'
+import { SECRET_GENERATE_TYPES } from '@pikku/core/secret'
+import type { SecretGenerate, SecretGenerateType } from '@pikku/core/secret'
 
 export interface KeyedWiringConfig {
   functionName: string
@@ -130,7 +133,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         return
       }
 
-      if (rotationPeriodValue) {
+      if (rotationPeriodValue && rotationPeriodValue !== 'never') {
         try {
           parseDurationString(rotationPeriodValue)
         } catch {
@@ -139,6 +142,49 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
             `${config.label} '${nameValue}' has an invalid 'rotationPeriod': '${rotationPeriodValue}'. Use a duration like '1d', '30day', or '1w'.`
           )
           return
+        }
+      }
+
+      let generateValue: SecretGenerate | undefined
+      const generateObj =
+        config.idField === 'secretId'
+          ? getObjectPropertyLiteral(obj, 'generate')
+          : null
+      if (generateObj) {
+        const typeValue = getPropertyValue(generateObj, 'type')
+        const sizeValue = getPropertyValue(generateObj, 'size')
+        if (
+          typeof typeValue !== 'string' ||
+          !(SECRET_GENERATE_TYPES as readonly string[]).includes(typeValue)
+        ) {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `${config.label} '${nameValue}' has an invalid 'generate' type. Use one of: ${SECRET_GENERATE_TYPES.join(', ')}.`
+          )
+          return
+        }
+        if (
+          sizeValue !== null &&
+          (typeof sizeValue !== 'number' ||
+            !Number.isInteger(sizeValue) ||
+            sizeValue < 1)
+        ) {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `${config.label} '${nameValue}' has an invalid 'generate' size. Use a positive whole number.`
+          )
+          return
+        }
+        if (!rotationPeriodValue) {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `${config.label} '${nameValue}' is generated, so it needs a 'rotationPeriod' such as '30day', or 'never' to generate it once.`
+          )
+          return
+        }
+        generateValue = {
+          type: typeValue as SecretGenerateType,
+          ...(typeof sizeValue === 'number' ? { size: sizeValue } : {}),
         }
       }
 
@@ -168,6 +214,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         displayName: displayNameValue,
         description: descriptionValue || undefined,
         rotationPeriod: rotationPeriodValue || undefined,
+        generate: generateValue,
         docsUrl: docsUrlValue || undefined,
         allowedHosts: allowedHostsValue || undefined,
         [config.idField]: idValue,

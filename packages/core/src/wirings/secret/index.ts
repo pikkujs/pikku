@@ -1,7 +1,9 @@
-export { defineSecret } from './secret.types.js'
+export { defineSecret, SECRET_GENERATE_TYPES } from './secret.types.js'
 export type {
   CoreSecret,
   OAuth2CredentialConfig,
+  SecretGenerate,
+  SecretGenerateType,
   SecretDefinitionMeta,
   SecretDefinitionsMeta,
   SecretDefinitions,

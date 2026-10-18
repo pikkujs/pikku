@@ -10,7 +10,8 @@ export type { SchemaRefLike }
  * Merges the secret declarations the inspector found into meta keyed by name.
  * Declarations that share a `secretId` must agree on schema and OAuth 2 config.
  *
- * @throws Error when two declarations of one `secretId` disagree.
+ * @throws Error when two declarations of one `secretId` disagree, or when a
+ * generated secret has no `rotationPeriod`.
  * @internal Called by the CLI when generating meta.
  */
 export function validateAndBuildSecretDefinitionsMeta(
@@ -21,6 +22,14 @@ export function validateAndBuildSecretDefinitionsMeta(
   const secretIdToDefinition: Map<string, SecretDefinitions[0]> = new Map()
 
   for (const def of definitions) {
+    if (def.generate && !def.rotationPeriod) {
+      throw new Error(
+        `Secret '${def.secretId}' is generated but has no 'rotationPeriod'.\n` +
+          `  Declared in: ${def.sourceFile}\n` +
+          `Add a rotationPeriod such as '30day', or 'never' to generate it once.`
+      )
+    }
+
     const existingDef = secretIdToDefinition.get(def.secretId)
 
     if (existingDef) {
@@ -64,6 +73,7 @@ export function validateAndBuildSecretDefinitionsMeta(
           optional: def.optional,
           oauth2: def.oauth2,
           rotationPeriod: def.rotationPeriod,
+          generate: def.generate,
           allowedHosts: def.allowedHosts,
           docsUrl: def.docsUrl,
           sourceFile: def.sourceFile,
@@ -84,6 +94,7 @@ export function validateAndBuildSecretDefinitionsMeta(
         optional: def.optional,
         oauth2: def.oauth2,
         rotationPeriod: def.rotationPeriod,
+        generate: def.generate,
         allowedHosts: def.allowedHosts,
         docsUrl: def.docsUrl,
         sourceFile: def.sourceFile,
