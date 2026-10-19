@@ -1,6 +1,7 @@
 import { defineContributors } from '@pikku/core/contributors'
 import { hookA } from './hook-a.js'
 import { hookB } from './hook-b.js'
+import { lazyReaderDeploy } from './lazy-reader.js'
 import { markerDeploy } from './marker.js'
 import { markerReaderDeploy } from './marker-reader.js'
 import { notOptedInDeploy } from './not-opted-in.js'
@@ -10,6 +11,9 @@ import { notOptedInDeploy } from './not-opted-in.js'
 // from needs/provides and not from the order here. Each variant lives in its
 // own module, which is what lets an unselected one stay out of a bundle.
 export const contributors = defineContributors({
+  // Registered first and needing nothing, so it runs before hook-b and can only
+  // see hookB later through the live services bag.
+  'lazy-reader': { deploy: lazyReaderDeploy },
   'marker-reader': { deploy: markerReaderDeploy },
   marker: { deploy: markerDeploy },
   // Registered out of order again: hook-b needs hook-a, which decides the hook order.
