@@ -70,10 +70,7 @@ describe('betterAuthOAuthAccessToken', () => {
   })
 
   test('a token signed with another key resolves nothing', async () => {
-    assert.equal(
-      await resolve(`Bearer ${await mint({}, otherKey)}`),
-      null
-    )
+    assert.equal(await resolve(`Bearer ${await mint({}, otherKey)}`), null)
   })
 
   test('a token from another issuer resolves nothing', async () => {
