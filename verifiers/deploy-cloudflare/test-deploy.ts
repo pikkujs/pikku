@@ -14,6 +14,7 @@ import {
   statSync,
   mkdirSync,
   rmSync,
+  symlinkSync,
 } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
@@ -58,6 +59,26 @@ const COERCION_FILE = join(FUNCTIONS_DIR, '.pikku', 'db', 'coercion.gen.ts')
 const COERCION_MAP = { todo: { due_at: 'date', done: 'bool' } }
 const GATEWAY_ROUTE = '/verifier/webhook'
 
+// The template has no database, so nothing provides `kysely` and the adapter's
+// coercion contributor (which decorates it) is correctly left out. An addon that
+// provides one is linked into the shared project for the run, so the coercion
+// check below covers a real selection; both are removed on exit.
+const ADDON_DIR = join(process.cwd(), 'contrib-kysely')
+const ADDON_LINK = join(
+  FUNCTIONS_DIR,
+  'node_modules',
+  '@verifier',
+  'contrib-kysely'
+)
+// A coercion map only reaches a contributor for an app with a known database
+// dialect, so the run also gives the project an (empty) db/sqlite folder.
+const DB_DIALECT_DIR = join(FUNCTIONS_DIR, 'db')
+const ADDON_WIRING_FILE = join(
+  FUNCTIONS_DIR,
+  'src',
+  'zz-contributors-wiring.ts'
+)
+
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
 const restoreConfig = () => {
   writeFileSync(CONFIG_FILE, originalConfig)
@@ -65,8 +86,11 @@ const restoreConfig = () => {
     GATEWAY_FUNCTION_FILE,
     GATEWAY_WIRING_FILE,
     COERCION_FILE,
+    ADDON_WIRING_FILE,
+    ADDON_LINK,
+    DB_DIALECT_DIR,
   ]) {
-    rmSync(fixture, { force: true })
+    rmSync(fixture, { force: true, recursive: true })
   }
 }
 process.on('exit', restoreConfig)
@@ -87,6 +111,7 @@ pinnedConfig.deploy = {
   ...pinnedConfig.deploy,
   grouping: { strategy: 'function' },
 }
+pinnedConfig.db = { engine: 'sqlite' }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
 writeFileSync(
@@ -124,6 +149,26 @@ wireGateway({
 
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
+execSync(`node ${PIKKU_BIN} all`, {
+  cwd: ADDON_DIR,
+  stdio: 'pipe',
+  timeout: 60_000,
+})
+mkdirSync(join(DB_DIALECT_DIR, 'sqlite'), { recursive: true })
+mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
+rmSync(ADDON_LINK, { force: true })
+symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
+writeFileSync(
+  ADDON_WIRING_FILE,
+  `import { wireAddon } from '#pikku/addon'
+
+wireAddon({
+  name: 'kyselyStandIn',
+  package: '@verifier/contrib-kysely',
+  contributors: ['kysely-stand-in'],
+})
+`
+)
 execSync(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
@@ -507,15 +552,21 @@ check('a unit without the gateway does not import its wiring', () => {
 
 // --- Column coercion (#1913) ---
 check('a worker entry applies the generated coercion map', () => {
-  const entry = readText(join(getUnitPath('greet'), 'entry.ts'))
-  if (!entry.includes(`import { createCoercionPlugin } from '@pikku/kysely'`))
-    throw new Error('entry does not import createCoercionPlugin')
-  if (
-    !entry.includes(
-      `createCoercionPlugin({ map: ${JSON.stringify(COERCION_MAP)} })`
+  const unit = getUnitPath('greet')
+  const services = readText(join(unit, 'platform-services.gen.ts'))
+  if (!services.includes('// kysely-coercion'))
+    throw new Error(
+      'platform services do not run the kysely-coercion contributor'
     )
+  if (!services.includes(JSON.stringify(COERCION_MAP)))
+    throw new Error('platform services do not carry the coercion map')
+  if (
+    services.indexOf('// kysely-stand-in') >
+    services.indexOf('// kysely-coercion')
   )
-    throw new Error('entry does not attach the coercion map')
+    throw new Error('coercion runs before the contributor providing kysely')
+  if (!readText(join(unit, 'bundle.js')).includes('createCoercionPlugin'))
+    throw new Error('the unit bundle does not contain createCoercionPlugin')
 })
 
 // --- Lazy addon registration (#1497) ---
