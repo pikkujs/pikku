@@ -1,1 +1,0 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"orgId":{"type":"string"},"seats":{"type":"number"},"members":{"type":"number"}},"required":["orgId","seats","members"],"additionalProperties":false}

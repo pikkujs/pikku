@@ -1,1 +1,0 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"postcode":{"type":"string"},"country":{"type":"string"}},"required":["postcode","country"],"additionalProperties":false}

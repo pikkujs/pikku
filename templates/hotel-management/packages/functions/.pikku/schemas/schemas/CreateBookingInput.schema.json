@@ -1,1 +1,0 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"roomTypeId":{"type":"string"},"arrival":{"type":"string"},"departure":{"type":"string"},"guests":{"default":1,"type":"integer","exclusiveMinimum":0,"maximum":9007199254740991}},"required":["roomTypeId","arrival","departure"],"additionalProperties":false}

@@ -1,1 +1,0 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"issueId":{"type":"string"},"resolution":{"default":"done","type":"string","enum":["done","closed"]}},"required":["issueId"],"additionalProperties":false}

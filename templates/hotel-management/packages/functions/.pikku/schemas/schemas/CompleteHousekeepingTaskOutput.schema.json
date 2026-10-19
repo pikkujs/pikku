@@ -1,1 +1,0 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"taskId":{"type":"string"},"roomId":{"type":"string"},"roomNumber":{"type":"string"}},"required":["taskId","roomId","roomNumber"],"additionalProperties":false}
